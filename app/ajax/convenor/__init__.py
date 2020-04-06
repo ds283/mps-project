@@ -8,6 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from .add_bookmark import add_student_bookmark
+from .add_ranking import add_student_ranking
 from .faculty import faculty_data
 from .selectors import selectors_data
 from .enroll_selectors import enroll_selectors_data

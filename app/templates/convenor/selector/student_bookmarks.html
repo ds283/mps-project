@@ -53,6 +53,14 @@
                 </div>
                 <div class="panel-body">
                     {{ bookmark_projects(sel, sel.ordered_bookmarks, 'selector bookmarks view', url_for('convenor.selector_bookmarks', id=sel.id)) }}
+                    <hr class="intro-divider" role="separator">
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <div class="pull-right">
+                                <a href="{{ url_for('convenor.add_student_bookmark', sid=sel.id) }}" class="btn btn-default">Add bookmark</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

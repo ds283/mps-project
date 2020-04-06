@@ -4558,6 +4558,12 @@ def selector_bookmarks(id):
     if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to view selector rankings before the corresponding project '
+              'class has gone live.', 'error')
+        return redirect(request.referrer)
+
     return render_template('convenor/selector/student_bookmarks.html', sel=sel)
 
 
@@ -4569,6 +4575,12 @@ def project_bookmarks(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(proj.config.project_class):
+        return redirect(request.referrer)
+
+    state = proj.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to view selector rankings before the corresponding project '
+              'class has gone live.', 'error')
         return redirect(request.referrer)
 
     return render_template('convenor/selector/project_bookmarks.html', project=proj)
@@ -4695,14 +4707,111 @@ def perform_delete_student_bookmark(sid, bid):
     return redirect(url_for('convenor.selector_bookmarks', id=sid))
 
 
+@convenor.route('/add_student_bookmark/<int:sid>')
+@roles_accepted('faculty', 'admin', 'office')
+def add_student_bookmark(sid):
+    # sid is a SelectingStudent
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to add a selector bookmark before the corresponding project '
+              'class has gone live.', 'error')
+        return redirect(request.referrer)
+
+    return render_template('convenor/selector/add_bookmark.html', sel=sel)
+
+
+@convenor.route('/add_student_bookmark_ajax/<int:sid>')
+@roles_accepted('faculty', 'admin', 'office')
+def add_student_bookmark_ajax(sid):
+    # sid is a SelectingStudent
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(sel.config.project_class):
+        return jsonify({})
+
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to add a selector bookmark before the corresponding project '
+              'class has gone live.', 'error')
+        return jsonify({})
+
+    config = sel.config
+    projects = config.live_projects.filter(~LiveProject.bookmarks.any(owner_id=sid))
+
+    return ajax.convenor.add_student_bookmark(projects.all(), sel)
+
+
+@convenor.route('/create_student_bookmark/<int:sel_id>/<int:proj_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def create_student_bookmark(sel_id, proj_id):
+    # proj_id is a LiveProject
+    proj: LiveProject = LiveProject.query.get_or_404(proj_id)
+
+    # sel_id is a SelectingStudent
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sel_id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('convenor.selector_bookmarks', id=sel_id)
+
+    # check project and selector belong to the same project class
+    if proj.config_id != sel.config_id:
+        flash('Project "{pname}" and selector "{sname}" do not belong to the same project class, so a '
+              'bookmark cannot be created for this pair.'.format(pname=proj.name, sname=sel.student.user.name),
+              'error')
+        return redirect(url)
+
+    # check whether a bookmark with this project already exists
+    q = sel.bookmarks.filter_by(liveproject_id=proj_id)
+
+    if get_count(q) > 0:
+        flash('A request to create a bookmark for project "{pname}" and selector "{sname}" was ignored, '
+              'because a bookmark for this pair already exists'.format(pname=proj.name, sname=sel.student.user.name),
+              'info')
+        return redirect(url)
+
+    bm = Bookmark(liveproject_id=proj.id,
+                  owner_id=sel.id,
+                  rank=sel.number_bookmarks+1)
+
+    try:
+        db.session.add(bm)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not create bookmark due to a database error. Please contact a system administrator', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+
+    return redirect(url)
+
+
 @convenor.route('/selector_choices/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def selector_choices(id):
     # id is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(id)
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to view selector rankings before the corresponding project '
+              'class has gone live.', 'error')
+        return redirect(request.referrer)
+
+    if not sel.has_submitted:
+        flash('The ranking list for {name} can not yet be inspected because this selector has '
+              'not yet submitted their ranked project choices (or accepted a '
+              'custom offer.'.format(name=sel.student.user.name), 'info')
         return redirect(request.referrer)
 
     return render_template('convenor/selector/student_choices.html', sel=sel)
@@ -4712,10 +4821,16 @@ def selector_choices(id):
 @roles_accepted('faculty', 'admin', 'root')
 def project_choices(id):
     # id is a LiveProject
-    proj = LiveProject.query.get_or_404(id)
+    proj: LiveProject = LiveProject.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(proj.config.project_class):
+        return redirect(request.referrer)
+
+    state = proj.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to view project rankings before the corresponding project '
+              'class has gone live.', 'error')
         return redirect(request.referrer)
 
     return render_template('convenor/selector/project_choices.html', project=proj)
@@ -4838,14 +4953,118 @@ def perform_delete_student_choice(sid, cid):
     return redirect(url_for('convenor.selector_choices', id=sid))
 
 
+@convenor.route('/add_student_ranking/<int:sid>')
+@roles_accepted('faculty', 'admin', 'office')
+def add_student_ranking(sid):
+    # sid is a SelectingStudent
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to add a selector ranking before the corresponding project '
+              'class has gone live.', 'error')
+        return redirect(request.referrer)
+
+    if not sel.has_submitted:
+        flash('It is not possible to add a new ranking until the selector has submitted their '
+              'own ranked list.', 'info')
+        return redirect(request.referrer)
+
+    return render_template('convenor/selector/add_ranking.html', sel=sel)
+
+
+@convenor.route('/add_student_ranking_ajax/<int:sid>')
+@roles_accepted('faculty', 'admin', 'office')
+def add_student_ranking_ajax(sid):
+    # sid is a SelectingStudent
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(sel.config.project_class):
+        return jsonify({})
+
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        return jsonify({})
+
+    if not sel.has_submitted:
+        return jsonify({})
+
+    config = sel.config
+    projects = config.live_projects.filter(~LiveProject.selections.any(owner_id=sid))
+
+    return ajax.convenor.add_student_ranking(projects.all(), sel)
+
+
+@convenor.route('/create_student_ranking/<int:sel_id>/<int:proj_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def create_student_ranking(sel_id, proj_id):
+    # proj_id is a LiveProject
+    proj: LiveProject = LiveProject.query.get_or_404(proj_id)
+
+    # sel_id is a SelectingStudent
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sel_id)
+
+    if not sel.has_submitted:
+        flash('It is not possible to add a new ranking until the selector has submitted their '
+              'own ranked list.', 'info')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('convenor.selector_bookmarks', id=sel_id)
+
+    # check project and selector belong to the same project class
+    if proj.config_id != sel.config_id:
+        flash('Project "{pname}" and selector "{sname}" do not belong to the same project class, so a '
+              'ranking cannot be created for this pair.'.format(pname=proj.name, sname=sel.student.user.name),
+              'error')
+        return redirect(url)
+
+    # check whether a bookmark with this project already exists
+    q = sel.selections.filter_by(liveproject_id=proj_id)
+
+    if get_count(q) > 0:
+        flash('A request to create a ranking for project "{pname}" and selector "{sname}" was ignored, '
+              'because a ranking for this pair already exists'.format(pname=proj.name, sname=sel.student.user.name),
+              'info')
+        return redirect(url)
+
+    rec = SelectionRecord(liveproject_id=proj.id,
+                         owner_id=sel.id,
+                         rank=sel.number_selections + 1,
+                         converted_from_bookmark=False,
+                         hint=SelectionRecord.SELECTION_HINT_NEUTRAL)
+
+    try:
+        db.session.add(rec)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not create ranking due to a database error. Please contact a system administrator', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+
+    return redirect(url)
+
+
 @convenor.route('/selector_confirmations/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def selector_confirmations(id):
     # id is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(id)
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to view selector confirmations before the corresponding project '
+              'class has gone live.', 'error')
         return redirect(request.referrer)
 
     return render_template('convenor/selector/student_confirmations.html', sel=sel, now=datetime.now())
@@ -4855,10 +5074,16 @@ def selector_confirmations(id):
 @roles_accepted('faculty', 'admin', 'root')
 def project_custom_offers(proj_id):
     # proj_id is a LiveProject
-    proj = LiveProject.query.get_or_404(proj_id)
+    proj: LiveProject = LiveProject.query.get_or_404(proj_id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(proj.config.project_class):
+        return redirect(request.referrer)
+
+    state = proj.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to view project custom offers before the corresponding project '
+              'class has gone live.', 'error')
         return redirect(request.referrer)
 
     return render_template('convenor/selector/project_custom_offers.html', project=proj,
@@ -4869,10 +5094,14 @@ def project_custom_offers(proj_id):
 @roles_accepted('faculty', 'admin', 'root')
 def project_custom_offers_ajax(proj_id):
     # proj_id is a LiveProject
-    proj = LiveProject.query.get_or_404(proj_id)
+    proj: LiveProject = LiveProject.query.get_or_404(proj_id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(proj.config.project_class):
+        return jsonify({})
+
+    state = proj.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         return jsonify({})
 
     return ajax.convenor.project_offer_data(proj.ordered_custom_offers.all())
@@ -4886,6 +5115,12 @@ def selector_custom_offers(sel_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to view selector custom offers before the corresponding project '
+              'class has gone live.', 'error')
         return redirect(request.referrer)
 
     return render_template('convenor/selector/student_custom_offers.html', sel=sel,
@@ -4902,6 +5137,10 @@ def selector_custom_offers_ajax(sel_id):
     if not validate_is_convenor(sel.config.project_class):
         return jsonify({})
 
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        return jsonify({})
+
     return ajax.convenor.student_offer_data(sel.ordered_custom_offers.all())
 
 
@@ -4913,6 +5152,12 @@ def new_selector_offer(sel_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to set up a new selector custom offer before the corresponding project '
+              'class has gone live.', 'error')
         return redirect(request.referrer)
 
     return render_template('convenor/selector/student_new_offer.html', sel=sel,
@@ -4927,6 +5172,10 @@ def new_selector_offer_ajax(sel_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
+        return jsonify({})
+
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         return jsonify({})
 
     config = sel.config
@@ -4945,6 +5194,12 @@ def new_project_offer(proj_id):
     if not validate_is_convenor(proj.config.project_class):
         return redirect(request.referrer)
 
+    state = proj.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to set up a new custom offer before the corresponding project '
+              'class has gone live.', 'error')
+        return redirect(request.referrer)
+
     return render_template('convenor/selector/project_new_offer.html', project=proj,
                            pclass_id=proj.config.project_class.id)
 
@@ -4959,6 +5214,12 @@ def new_project_offer_ajax(proj_id):
     if not validate_is_convenor(proj.config.project_class):
         return jsonify({})
 
+    state = proj.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to set up a new custom offer before the corresponding project '
+              'class has gone live.', 'error')
+        return redirect(request.referrer)
+
     # get list of available selectors
     config = proj.config
     selectors = config.selecting_students.filter(~SelectingStudent.custom_offers.any(liveproject_id=proj_id))
@@ -4970,10 +5231,10 @@ def new_project_offer_ajax(proj_id):
 @roles_accepted('faculty', 'admin', 'root')
 def create_new_offer(sel_id, proj_id):
     # proj_id is a LiveProject
-    proj = LiveProject.query.get_or_404(proj_id)
+    proj: LiveProject = LiveProject.query.get_or_404(proj_id)
 
     # sel_id is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(sel_id)
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sel_id)
 
     url = request.args.get('url', None)
     if url is None:

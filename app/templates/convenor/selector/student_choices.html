@@ -83,6 +83,14 @@
                                 <strong>{{ sel.submission_IP }}</strong>
                             </div>
                             {{ ranked_selection(sel, sel.ordered_selections, lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING, 'selector submission view', url_for('convenor.selector_choices', id=sel.id)) }}
+                            <hr class="intro-divider" role="separator">
+                            <div class="row">
+                                <div class="col-xs-12">
+                                    <div class="pull-right">
+                                        <a href="{{ url_for('convenor.add_student_ranking', sid=sel.id) }}" class="btn btn-default">Add ranking</a>
+                                    </div>
+                                </div>
+                            </div>
                         {% endif %}
                     {% else %}
                         No preferences have been received for this student.

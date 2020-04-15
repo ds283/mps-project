@@ -96,7 +96,6 @@ _info = \
 </div>
 <div>
     <div>Matching</div>
-    <span class="label label-default">Group {{ m.intra_group_tension }}</span>
     <span class="label label-default">Programme {{ m.programme_bias }}</span>
     <span class="label label-default">Bookmarks {{ m.bookmark_bias }}</span>
 </div>

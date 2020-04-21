@@ -3,16 +3,19 @@ Dear {{ user.first_name }}
 Thank you for your efforts in preparing project descriptions and accommodating
 student meetings over the last term. We now have a draft of the student
 project allocation for next academic year, {{ attempt.year+1 }}-{{ attempt.year+2 }}.
+At the moment this draft allocation covers FYP-MPhys, MPP and RP projects.
 
 At this stage you have not been allocated any projects to supervise next year.
-However, not all students have yet been allocated to projects because the
-necessary information is unavailable. This includes students who decide to transfer
-from MPhys to BSc, together with any students who are moved or withdrawn by the PAB.
+However, not all students have yet been allocated to projects. In particular,
+the allocation for FYP-BSc project students is likely to be done later in the
+year, after we know which students have decided to transfer into the BSc
+programme, and those who were moved or withdrawn by the summer PAB.
 
-A final, definitive list of students who require supervisors may not be available
-until early September. At that point, or earlier, we may contact you to discuss
-supervising students as they become known to us. Thanks very much for your
-patience during this process.
+Since you have not yet been allocated any students, if you are participating
+in FYP-BSc supervision then it is probable that we will need to ask you take
+one or more students as part of these later matching rounds. This year we
+estimate the typical faculty load will be roughly two students per faculty
+supervisor.
 
 Best wishes,
 the project convenors

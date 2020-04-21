@@ -7,7 +7,7 @@ Dear {{ user.first_name }}
 You are receiving this email because we expect you will undertake a project
 of type "{{ config.name }}" in academic year {{ config.year+1 }}-{{ config.year+2 }}.
 If you believe this is incorrect, please advise the project convenor
-(contact details are given below).
+as soon as possible (contact details are given below).
 
 We have now reached a provisional allocation of projects. Please be aware that
 this is not yet the final version. We do not expect significant alterations,

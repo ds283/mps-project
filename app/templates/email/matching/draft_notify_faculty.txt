@@ -3,6 +3,7 @@ Dear {{ user.first_name }}
 Thank you for your efforts in preparing project descriptions and accommodating
 student meetings over the last term. We now have a draft of the student
 project allocation for next academic year, {{ attempt.year+1 }}-{{ attempt.year+2 }}.
+At the moment this draft allocation covers FYP-MPhys, MPP and RP projects.
 {% for key in matches %}
 {%- set match_list = matches[key] -%}
 {%- set config = match_list[0].selector.config %}
@@ -20,6 +21,17 @@ convenor {{ config.convenor_name }} <{{ config.convenor_email }}>
 {% endfor %}
 If you anticipate any problems with this allocation, please let the
 appropriate project convenor know as soon as possible.
+
+Not all students have yet been allocated to projects. In particular,
+the allocation for BSc project students is likely to be done later in the
+year, after we know which students have decided to transfer into the BSc
+progamme, and those who were moved or withdrawn by the summer PAB.
+
+If you are participating in FYP-BSc supervision and you currently have a
+low allocation, then it is possible that we may have to ask you take one
+or more students as part of these later matching rounds. This year we
+estimate the typical faculty load will be roughly two students per
+faculty supervisor.
 
 Best wishes,
 {% for convenor in convenors -%}

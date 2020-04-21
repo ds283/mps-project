@@ -4046,10 +4046,10 @@ class ProjectClassConfig(db.Model):
             db.session.add(period)
             db.session.commit()
 
-        if not period.feedback_open:
+        if not period.is_feedback_open:
             return self.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
 
-        if period.feedback_open and not period.closed:
+        if period.is_feedback_open and not period.closed:
             return self.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
 
         # can assume period.closed at this point
@@ -4346,6 +4346,11 @@ class SubmissionPeriodRecord(db.Model):
     @property
     def number_attachments(self):
         return get_count(self.attachments)
+
+
+    @property
+    def is_feedback_open(self):
+        return self.feedback_open
 
 
     def get_supervisor_records(self, fac):
@@ -7195,7 +7200,7 @@ class SubmissionRecord(db.Model):
         if not period.config.project_class.publish:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
-        if not period.feedback_open:
+        if not period.is_feedback_open:
             return SubmissionRecord.FEEDBACK_NOT_YET
 
         if submitted:
@@ -7254,7 +7259,7 @@ class SubmissionRecord(db.Model):
         if count == 0:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
-        closed = not slot.owner.owner.feedback_open
+        closed = not slot.owner.owner.is_feedback_open
 
         today = date.today()
         if today <= slot.session.date:
@@ -7276,7 +7281,7 @@ class SubmissionRecord(db.Model):
         if not self.period.config.project_class.publish:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
-        if not period.feedback_open or not self.student_feedback_submitted:
+        if not period.is_feedback_open or not self.student_feedback_submitted:
             return SubmissionRecord.FEEDBACK_NOT_YET
 
         if self.faculty_response_submitted:
@@ -7315,14 +7320,14 @@ class SubmissionRecord(db.Model):
             slot = self.schedule_slot
 
             if slot is not None:
-                closed = not slot.owner.owner.feedback_open
+                closed = not slot.owner.owner.is_feedback_open
             else:
                 if not self.period.has_deployed_schedule:
                     closed = False
                 else:
                     schedule = self.period.deployed_schedule
                     assessment = schedule.owner
-                    closed = not assessment.feedback_open
+                    closed = not assessment.is_feedback_open
 
             if closed:
                 for feedback in self.presentation_feedback:
@@ -9613,6 +9618,11 @@ class PresentationAssessment(db.Model):
 
 
     @property
+    def is_feedback_open(self):
+        return self.feedback_open
+
+
+    @property
     def availability_outstanding_count(self):
         return get_count(self.outstanding_assessors)
 
@@ -9861,7 +9871,7 @@ class PresentationAssessment(db.Model):
 
     @property
     def is_closable(self):
-        if not self.feedback_open:
+        if not self.is_feedback_open:
             return False
 
         if not self.is_deployed:
@@ -11214,7 +11224,7 @@ class ScheduleAttempt(db.Model, PuLPMixin):
     @property
     def is_revokable(self):
         # can't revoke if parent event is closed for feedback
-        if not self.owner.feedback_open:
+        if not self.owner.is_feedback_open:
             return False
 
         today = date.today()

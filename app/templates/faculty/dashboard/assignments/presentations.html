@@ -48,7 +48,7 @@
                                             <div>
                                                 {% if submitted %}
                                                     <span class="label label-success"><i class="fa fa-check"></i> Feedback submitted</span>
-                                                {% elif not slot.owner.owner.feedback_open and not submitted %}
+                                                {% elif not slot.owner.owner.is_feedback_open and not submitted %}
                                                     <span class="label label-warning"><i class="fa fa-times"></i> Feedback missing</span>
                                                 {% endif %}
                                             </div>
@@ -63,7 +63,7 @@
                                                     <ul class="dropdown-menu dropdown-menu-right">
                                                         <li><a href="{{ url_for('documents.submitter_documents', sid=talk.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ talk.number_attachments }})...</a></li>
                                                         {% if slot.feedback_state(faculty_id) > slot.FEEDBACK_NOT_YET %}
-                                                            {% if slot.owner.owner.feedback_open or (not slot.owner.owner.feedback_open and not submitted) %}
+                                                            {% if slot.owner.owner.is_feedback_open or (not slot.owner.owner.is_feedback_open and not submitted) %}
                                                                 {% if valid %}
                                                                     <li><a href="{{ url_for('faculty.view_feedback', id=talk.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> Preview feedback...</a></li>
                                                                 {% else %}

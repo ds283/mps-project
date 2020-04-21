@@ -4705,7 +4705,7 @@ def close_assessment(id):
     if not validate_assessment(data, current_year=current_year):
         return redirect(request.referrer)
 
-    if not data.feedback_open:
+    if not data.is_feedback_open:
         return redirect(request.referrer)
 
     if not data.is_closable:
@@ -4743,7 +4743,7 @@ def perform_close_assessment(id):
     if not validate_assessment(data, current_year=current_year):
         return redirect(request.referrer)
 
-    if not data.feedback_open:
+    if not data.is_feedback_open:
         return redirect(request.referrer)
 
     if not data.is_closable:
@@ -4753,7 +4753,7 @@ def perform_close_assessment(id):
 
     url = request.args.get('url', url_for('admin.manage_assessments'))
 
-    data.feedback_open = False
+    data.is_feedback_open = False
     db.session.commit()
 
     return redirect(url)
@@ -5170,7 +5170,7 @@ def add_session(id):
     if not validate_assessment(data):
         return redirect(request.referrer)
 
-    if not data.feedback_open:
+    if not data.is_feedback_open:
         flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
               'edited'.format(name=data.name), 'info')
         return redirect(request.referrer)
@@ -5214,7 +5214,7 @@ def edit_session(id):
     if not validate_assessment(sess.owner):
         return redirect(request.referrer)
 
-    if not sess.owner.feedback_open:
+    if not sess.owner.is_feedback_open:
         flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
               'edited'.format(name=sess.owner.name), 'info')
         return redirect(request.referrer)
@@ -5253,7 +5253,7 @@ def delete_session(id):
     if not validate_assessment(sess.owner):
         return redirect(request.referrer)
 
-    if not sess.owner.feedback_open:
+    if not sess.owner.is_feedback_open:
         flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
               'edited'.format(name=sess.owner.name), 'info')
         return redirect(request.referrer)
@@ -5294,7 +5294,7 @@ def assessor_session_availability(id):
 
     sess = PresentationSession.query.get_or_404(id)
 
-    if not sess.owner.feedback_open:
+    if not sess.owner.is_feedback_open:
         flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
               'edited'.format(name=sess.owner.name), 'info')
         return redirect(request.referrer)

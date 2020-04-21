@@ -1643,7 +1643,7 @@ def supervisor_edit_feedback(id):
 
     period = record.period
 
-    if not period.feedback_open:
+    if not period.is_feedback_open:
         flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
               'period for feedback and marking.',
               'error')
@@ -1695,7 +1695,7 @@ def marker_edit_feedback(id):
 
     period = record.period
 
-    if not period.feedback_open:
+    if not period.is_feedback_open:
         flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
               'period for feedback and marking.',
               'error')
@@ -1750,7 +1750,7 @@ def supervisor_submit_feedback(id):
 
     period = record.period
 
-    if not period.feedback_open:
+    if not period.is_feedback_open:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
         return redirect(request.referrer)
 
@@ -1804,7 +1804,7 @@ def marker_submit_feedback(id):
 
     period = record.period
 
-    if not period.feedback_open:
+    if not period.is_feedback_open:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
         return redirect(request.referrer)
 
@@ -1858,7 +1858,7 @@ def supervisor_acknowledge_feedback(id):
 
     period = record.period
 
-    if not period.feedback_open:
+    if not period.is_feedback_open:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
         return redirect(request.referrer)
 
@@ -1894,7 +1894,7 @@ def presentation_edit_feedback(slot_id, talk_id):
         flash('Can not edit feedback because the schedule containing this slot has not been deployed.', 'error')
         return redirect(request.referrer)
 
-    if not slot.owner.owner.feedback_open and talk.presentation_assessor_submitted(current_user.id):
+    if not slot.owner.owner.is_feedback_open and talk.presentation_assessor_submitted(current_user.id):
         flash('It is not possible to edit feedback after an assessment event has been closed.', 'error')
         return redirect(request.referrer)
 
@@ -1996,7 +1996,7 @@ def presentation_unsubmit_feedback(slot_id, talk_id):
         flash('Can not submit feedback because the schedule containing this slot has not been deployed.', 'error')
         return redirect(request.referrer)
 
-    if not slot.owner.owner.feedback_open:
+    if not slot.owner.owner.is_feedback_open:
         flash('Cannot unsubmit feedback after an assessment has closed.', 'error')
         return redirect(request.referrer)
 

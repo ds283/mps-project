@@ -281,7 +281,7 @@ def overview(id):
 
     issue_form = IssueFacultyConfirmRequestForm(request.form)
 
-    if period is not None and period.feedback_open:
+    if period is not None and period.is_feedback_open:
         OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Change deadline',
                                                    datebox_label='The current deadline for feedback is',
                                                    include_send_button=True)
@@ -5631,7 +5631,7 @@ def open_feedback(id):
         flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
-    if period is not None and period.feedback_open:
+    if period is not None and period.is_feedback_open:
         OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=True)
     else:
         OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=False)
@@ -5651,7 +5651,7 @@ def open_feedback(id):
 
         if feedback_form.submit_button.data:
             # set feedback deadline and mark feedback open
-            period.feedback_open = True
+            period.is_feedback_open = True
             period.feedback_deadline = feedback_form.feedback_deadline.data
 
             if period.feedback_id is None:
@@ -6302,7 +6302,7 @@ def manual_assign(id):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    if rec.period.feedback_open:
+    if rec.period.is_feedback_open:
         flash('Can not reassign for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
@@ -6354,7 +6354,7 @@ def manual_assign_ajax(id):
     if not validate_is_convenor(config.project_class):
         return jsonify({})
 
-    if rec.period.feedback_open:
+    if rec.period.is_feedback_open:
         flash('Can not reassign for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return jsonify({})
@@ -6379,7 +6379,7 @@ def assign_revert(id):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    if rec.period.feedback_open:
+    if rec.period.is_feedback_open:
         flash('Can not revert assignment for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
@@ -6412,7 +6412,7 @@ def assign_from_selection(id, sel_id):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    if rec.period.feedback_open:
+    if rec.period.is_feedback_open:
         flash('Can not reassign for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
@@ -6452,7 +6452,7 @@ def assign_liveproject(id, pid):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    if rec.period.feedback_open:
+    if rec.period.is_feedback_open:
         flash('Can not reassign for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
@@ -6492,7 +6492,7 @@ def deassign_project(id):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    if rec.period.feedback_open:
+    if rec.period.is_feedback_open:
         flash('Can not reassign for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
@@ -6526,7 +6526,7 @@ def deassign_marker(id):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    if rec.period.feedback_open:
+    if rec.period.is_feedback_open:
         flash('Can not reassign for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
@@ -6713,7 +6713,7 @@ def supervisor_submit_feedback(id):
 
     period = record.period
 
-    if not period.feedback_open:
+    if not period.is_feedback_open:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
         return redirect(request.referrer)
 
@@ -6777,7 +6777,7 @@ def marker_submit_feedback(id):
 
     period = record.period
 
-    if not period.feedback_open:
+    if not period.is_feedback_open:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
         return redirect(request.referrer)
 
@@ -6925,7 +6925,7 @@ def presentation_unsubmit_feedback(feedback_id):
         flash('Can not edit feedback because the schedule containing this slot has not been deployed.', 'error')
         return redirect(request.referrer)
 
-    if not slot.owner.owner.feedback_open:
+    if not slot.owner.owner.is_feedback_open:
         flash('Cannot unsubmit feedback after an assessment has closed.', 'error')
         return redirect(request.referrer)
 

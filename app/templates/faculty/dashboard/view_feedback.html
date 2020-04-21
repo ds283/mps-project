@@ -42,7 +42,7 @@
                                             <span class="label label-default">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                         {% endif %}
                                         {% if current_user.id == record.supervisor.id %}
-                                            {% if (record.period.feedback_open and not record.period.closed) or (record.period.closed and not record.supervisor_submitted) %}
+                                            {% if (record.period.is_feedback_open and not record.period.closed) or (record.period.closed and not record.supervisor_submitted) %}
                                                 <a href="{{ url_for('faculty.supervisor_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
                                                 {% if not record.supervisor_submitted %}
                                                     <a href="{{ url_for('faculty.supervisor_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
@@ -84,7 +84,7 @@
                                             <span class="label label-default">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                         {% endif %}
                                         {% if current_user.id == record.marker_id %}
-                                            {% if (record.period.feedback_open and not record.period.closed) or (record.period.closed and not record.marker_submitted) %}
+                                            {% if (record.period.is_feedback_open and not record.period.closed) or (record.period.closed and not record.marker_submitted) %}
                                                 <a href="{{ url_for('faculty.marker_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
                                                 {% if not record.marker_submitted %}
                                                     <a href="{{ url_for('faculty.marker_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
@@ -132,7 +132,7 @@
                                             {% set valid = record.is_presentation_assessor_valid(feedback.assessor_id) %}
                                             {% set submitted = record.presentation_assessor_submitted(feedback.assessor_id) %}
                                             {% if slot.feedback_state(current_user.id) > slot.FEEDBACK_NOT_YET %}
-                                                {% if slot.owner.owner.feedback_open or (not slot.owner.owner.feedback_open and not submitted) %}
+                                                {% if slot.owner.owner.is_feedback_open or (not slot.owner.owner.is_feedback_open and not submitted) %}
                                                     {% if current_user.id == feedback.assessor_id %}
                                                         <a href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
                                                         {% if not submitted %}

@@ -80,7 +80,7 @@ _menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
         {% set a = s.owner %}
-        {% set disabled = not s.owner.feedback_open %}
+        {% set disabled = not s.owner.is_feedback_open %}
         <li class="dropdown-header">Edit session</li>
         <li {% if disabled %}class="disabled"{% endif %}>
             <a {% if not disabled %}href="{{ url_for('admin.edit_session', id=s.id) }}"{% endif %}>
@@ -98,7 +98,7 @@ _menu = \
                 <i class="fa fa-cogs"></i> Assessors...
             </a>
         </li>
-        {% set disabled = not a.feedback_open %}
+        {% set disabled = not a.is_feedback_open %}
         <li {% if disabled %}class="disabled"{% endif %}>
             <a {% if not disabled %}href="{{ url_for('admin.delete_session', id=s.id) }}"{% endif %}>
                 <i class="fa fa-trash"></i> Delete

@@ -55,7 +55,7 @@ _projects = \
                     ({{ r.supervisor.user.last_name }})
                 <span class="caret"></span></a>
                 <ul class="dropdown-menu">
-                    {% set disabled = r.period.feedback_open or r.student_engaged %}
+                    {% set disabled = r.period.is_feedback_open or r.student_engaged %}
                     {% if disabled %}
                         <li class="disabled">
                             <a>Can't reassign: Feedback open or student engaged</a>
@@ -163,7 +163,7 @@ _markers = \
                     <span class="caret"></span>
                 </a>
                 <ul class="dropdown-menu">
-                    {% set disabled = r.period.feedback_open or r.student_engaged %}
+                    {% set disabled = r.period.is_feedback_open or r.student_engaged %}
                     {% if disabled %}
                         <li class="disabled">
                             <a>Can't reassign: Feedback open or student engaged</a>
@@ -371,7 +371,7 @@ _menu = \
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">Manual reassignment</li>
         {% for r in recs %}
-            {% set disabled = r.period.feedback_open %}
+            {% set disabled = r.period.is_feedback_open %}
             <li {% if disabled %}class="disabled"{% endif %}>
                 <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
                     <i class="fa fa-wrench"></i> Period #{{ r.submission_period }}

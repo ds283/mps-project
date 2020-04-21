@@ -78,11 +78,11 @@
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-right">
                                         <li><a href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ rec.number_attachments }})...</a></li>
-                                        {% if not period.feedback_open and not rec.student_engaged and rec.owner.published %}
+                                        {% if not period.is_feedback_open and not rec.student_engaged and rec.owner.published %}
                                             {% if rec.submission_period <= rec.owner.config.submission_period %}
                                                 <li><a href="{{ url_for('faculty.mark_started', id=rec.id) }}"><i class="fa fa-check"></i> Mark as started</a></li>
                                             {% endif %}
-                                        {% elif (period.feedback_open and not period.closed) or (period.closed and not rec.supervisor_submitted) %}
+                                        {% elif (period.is_feedback_open and not period.closed) or (period.closed and not rec.supervisor_submitted) %}
                                             {% if valid %}
                                                 <li><a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> Preview feedback...</a></li>
                                             {% else %}

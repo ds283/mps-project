@@ -104,7 +104,7 @@ def get_schedule_message_data(configs=None):
                 if period.has_deployed_schedule:
                     schedule = period.deployed_schedule
 
-                    if schedule.owner.feedback_open:
+                    if schedule.owner.is_feedback_open:
                         if schedule.owner.has_errors:
                             if schedule.event_name not in error_events:
                                 messages.append(('error', 'Event "{event}" and deployed schedule "{name}" for project class '

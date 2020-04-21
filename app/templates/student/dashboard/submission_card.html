@@ -5,7 +5,7 @@
             {% if n+1 == config.submission_period %}
                 {% if period.closed %}
                     panel-default
-                {% elif period.feedback_open %}
+                {% elif period.is_feedback_open %}
                     panel-info
                 {% elif period.start_date and period.start_date > today %}
                     panel-default
@@ -27,7 +27,7 @@
                 {% if period.closed %}
                     <p>Activity for this submission period is now closed.</p>
                 {% else %}
-                    {% if period.feedback_open %}
+                    {% if period.is_feedback_open %}
                         <p>Marking and feedback for this submission period is now underway.</p>
                     {% else %}
                         {% if period.submission_period > config.submission_period %}

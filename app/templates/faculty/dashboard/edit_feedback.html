@@ -21,7 +21,7 @@
                     but once submitted it will not be possible to make further edits, or to unsubmit.
                 </div>
             {% endif %}
-            {% if assessment is defined and assessment is not none and not assessment.feedback_open %}
+            {% if assessment is defined and assessment is not none and not assessment.is_feedback_open %}
                 <div class="alert alert-danger">
                     An administrative user has closed feedback for this assessment event. You are still able to
                     enter and edit feedback, but once submitted it will not be possible to make further

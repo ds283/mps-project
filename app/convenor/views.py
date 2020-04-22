@@ -6302,16 +6302,6 @@ def manual_assign(id):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    if rec.period.is_feedback_open:
-        flash('Can not reassign for {name} '
-              'because feedback is already open'.format(name=rec.period.display_name), 'error')
-        return redirect(request.referrer)
-
-    if rec.student_engaged:
-        flash('Can not reassign for {name} '
-              'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
-        return redirect(request.referrer)
-
     AssignMarkerForm = AssignMarkerFormFactory(rec.project, rec.pclass_id, config.uses_marker)
     form = AssignMarkerForm(request.form)
 
@@ -6336,7 +6326,8 @@ def manual_assign(id):
         url = request.referrer
 
     return render_template('convenor/dashboard/manual_assign.html', rec=rec, config=config, url=url, text=text,
-                           form=form if config.uses_marker else None)
+                           form=form if config.uses_marker else None,
+                           allow_reassign_project=not (rec.period.is_feedback_open or rec.student_engaged))
 
 
 @convenor.route('/manual_assign_ajax/<int:id>')
@@ -6352,11 +6343,6 @@ def manual_assign_ajax(id):
         return jsonify({})
 
     if not validate_is_convenor(config.project_class):
-        return jsonify({})
-
-    if rec.period.is_feedback_open:
-        flash('Can not reassign for {name} '
-              'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return jsonify({})
 
     data = config.live_projects.all()
@@ -6382,6 +6368,11 @@ def assign_revert(id):
     if rec.period.is_feedback_open:
         flash('Can not revert assignment for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
+        return redirect(request.referrer)
+
+    if rec.student_engaged:
+        flash('Can not revert assignment for {name} '
+              'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
     if rec.matching_record is None:
@@ -6415,6 +6406,11 @@ def assign_from_selection(id, sel_id):
     if rec.period.is_feedback_open:
         flash('Can not reassign for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
+        return redirect(request.referrer)
+
+    if rec.student_engaged:
+        flash('Can not reassign for {name} '
+              'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
     if rec.matching_record is None:
@@ -6457,6 +6453,11 @@ def assign_liveproject(id, pid):
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
+    if rec.student_engaged:
+        flash('Can not reassign for {name} '
+              'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
+        return redirect(request.referrer)
+
     lp = LiveProject.query.get_or_404(pid)
 
     if lp.config_id != config.id:
@@ -6493,12 +6494,12 @@ def deassign_project(id):
         return redirect(request.referrer)
 
     if rec.period.is_feedback_open:
-        flash('Can not reassign for {name} '
+        flash('Can not de-assign project for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
     if rec.student_engaged:
-        flash('Can not reassign for {name} '
+        flash('Can not de-assign project for {name} '
               'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
@@ -6524,16 +6525,6 @@ def deassign_marker(id):
         return redirect(request.referrer)
 
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
-
-    if rec.period.is_feedback_open:
-        flash('Can not reassign for {name} '
-              'because feedback is already open'.format(name=rec.period.display_name), 'error')
-        return redirect(request.referrer)
-
-    if rec.student_engaged:
-        flash('Can not reassign for {name} '
-              'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
     # as long as we don't set both marker and marker_id simultaneously to zero, the before-update listener

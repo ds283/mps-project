@@ -78,7 +78,7 @@ _projects = \
         </div>
     </div>
 {% else %}
-    <span class="label label-danger">No projects</span>
+    <span class="label label-danger">No project confirmations outstanding</span>
 {% endfor %}
 """
 

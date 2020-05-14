@@ -73,37 +73,50 @@
 
 
 {% macro show_submission_status(config, sel) %}
+    {% set is_valid, messages = sel.is_valid_selection %}
     <div class="row vertical-top">
-        <div class="col-xs-6">
-            {% if sel.has_submitted %}
-                {% if sel.has_accepted_offer %}
-                    {% set offer = sel.accepted_offer %}
-                    {% set project = offer.liveproject %}
-                    {% if project is not none %}
-                        <div>
-                            You have accepted a custom offer for the project
-                            <strong>{{ project.name }}</strong>
-                            supervised by
-                            <i class="fa fa-user"></i> {{ project.owner.user.name }}
-                        </div>
-                    {% else %}
-                        <span class="label label-danger">MISSING ACCEPTED PROJECT</span>
-                        <p>This is an internal error. Please contact a system administrator.</p>
-                    {% endif %}
-                {% else %}
-                    <div>
-                        You have already submitted a valid list of project preferences.
-                    </div>
-                    <div>
-                        <span class="label label-success"><i class="fa fa-check"></i> Preferences received</span>
-                        <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
-                    </div>
-                {% endif %}
-            {% else %}
-                <div>You have not yet submitted your project preferences.</div>
-            {% endif %}
+        <div class="col-xs-12">
+            <ul class="list-group" id="P{{ config.id }}-status-list">
+                {% for message in messages %}
+                    <li class="list-group-item {% if is_valid %}list-group-item-success{% else %}list-group-item-danger{% endif %}">{{ message }}</li>
+                {% endfor %}
+            </ul>
         </div>
-        <div class="col-xs-6" style="text-align: right;">
+    </div>
+    <div class="row vertical-top">
+        <div class="col-xs-12">
+            <ul class="list-group">
+                <li class="list-group-item">
+                    {% if sel.has_submitted %}
+                        {% if sel.has_accepted_offer %}
+                            {% set offer = sel.accepted_offer %}
+                            {% set project = offer.liveproject %}
+                            {% if project is not none %}
+                                You have accepted a custom offer for the project
+                                <strong>{{ project.name }}</strong>
+                                supervised by
+                                <i class="fa fa-user"></i> {{ project.owner.user.name }}
+                            {% else %}
+                                <span class="label label-danger">MISSING ACCEPTED PROJECT</span>
+                                <p>This is an internal error. Please contact a system administrator.</p>
+                            {% endif %}
+                        {% else %}
+                            You have already submitted a valid list of project preferences,
+                            but you may continue to revise your list up to the deadline.
+                            <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
+                        {% endif %}
+                    {% else %}
+                        You have not yet submitted your project preferences.
+                    {% endif %}
+                </li>
+                {% if sel.has_sumission_list and sel.submission_time %}
+                    Last submission received at <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>.
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    <div class="row vertical-top">
+        <div class="col-xs-12" style="text-align: right;">
             <div class="pull-right">
                 <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-success student-dashboard-button">Show available projects...</a>
                 {% if sel.has_submission_list %}
@@ -111,7 +124,6 @@
                         Clear submission
                     </a>
                 {% endif %}
-                {% set is_valid, sel_errors = sel.is_valid_selection %}
                 <a id="P{{ config.id }}-valid-button"
                    class="btn btn-primary {% if not is_valid %}hidden{% endif %} student-dashboard-button"
                    href="{{ url_for('student.submit', sid=sel.id) }}">
@@ -124,16 +136,6 @@
             </div>
         </div>
     </div>
-    {% if sel.has_submission_list %}
-        <div class="row">
-            <div class="col-xs-12">
-                <div>You may continue to revise your list up to the deadline.</div>
-                {% if sel.submission_time %}
-                    <div>Last submission received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.</div>
-                {% endif %}
-            </div>
-        </div>
-    {% endif %}
 {% endmacro %}
 
 
@@ -307,10 +309,6 @@
                                 To change supervisor, select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
                             </p>
                         {% endif %}
-                        <p>
-                            Bookmarks highlighted in <span class="label label-success">green</span> will be included in your selection.
-                            Bookmarks highlighted in <span class="label label-danger">red</span> will not be included.
-                        </p>
                     </div>
                 </div>
 
@@ -318,7 +316,6 @@
                 {% if sel.has_bookmarks %}
                     {{ render_bookmarks(config, sel) }}
                 {% endif %}
-                <hr class="intro-divider">
                 {% if sel.number_custom_offers > 0 %}
                     <div class="row vertical-align">
                         <div class="col-xs-8">
@@ -330,7 +327,6 @@
                             </div>
                         </div>
                     </div>
-                    <hr class="intro-divider">
                 {% endif %}
                 {{ show_submission_status(config, sel) }}
 

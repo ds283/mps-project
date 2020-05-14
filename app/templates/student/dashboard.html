@@ -20,9 +20,39 @@
                 data: JSON.stringify({ranking: ranking, configid: configid, sid: selid}),
                 contentType: "application/json; charset=utf-8",
                 success: function(dat) {
+                    // write payload to console for debugging
                     console.log(dat);
-                    $("#" + dat['hide']).addClass('hidden');
-                    $("#" + dat['reveal']).removeClass('hidden');
+
+                    // get server response
+                    let valid = dat['submittable'];
+                    let list_class = valid ? 'list-group-item-success' : 'list-group-item-danger';
+
+                    // sort through list of DOM elements that need to be hidden/revealed
+                    let hide_list = dat['hide'];
+                    for (let i=0; i < hide_list.length; i++) {
+                        $("#" + hide_list[i]).addClass('hidden');
+                    }
+
+                    let reveal_list = dat['reveal'];
+                    for (let i=0; i < reveal_list.length; i++) {
+                        $("#" + reveal_list[i]).removeClass('hidden')
+                    }
+
+                    // destroy existing contents
+                    let ul_group_id = dat['message-id'];
+                    let ul_group = $('#' + ul_group_id);
+                    ul_group.empty()
+
+                    // repopulate with new elements
+                    let messages = dat['messages']
+                    for (let i=0; i < messages.length; i++) {
+                        let item = document.createElement("li");
+                        item.classList.add('list-group-item');
+                        item.classList.add(list_class);
+                        let txt = document.createTextNode(messages[i]);
+                        item.appendChild(txt);
+                        ul_group.append(item);
+                    }
                 }
             });
         }

@@ -637,16 +637,20 @@ def update_ranking():
         return jsonify({'status': 'database_failure'})
 
     # work out which HTML elements to make visible and which to hide, based on validity of this selection
-    valid, errors = sel.is_valid_selection
-    if valid:
-        hide_elt = 'P{config}-invalid-button'.format(config=config.id)
-        reveal_elt = 'P{config}-valid-button'.format(config=config.id)
-    else:
-        hide_elt = 'P{config}-valid-button'.format(config=config.id)
-        reveal_elt = 'P{config}-invalid-button'.format(config=config.id)
+    valid, messages = sel.is_valid_selection
+    hide_list = []
+    reveal_list = []
 
-    return jsonify({'status': 'success', 'hide': hide_elt, 'reveal': reveal_elt,
-                    'submittable': valid, 'errors': errors})
+    if valid:
+        hide_list.append('P{config}-invalid-button'.format(config=config.id))
+        reveal_list.append('P{config}-valid-button'.format(config=config.id))
+    else:
+        hide_list.append('P{config}-valid-button'.format(config=config.id))
+        reveal_list.append('P{config}-invalid-button'.format(config=config.id))
+
+    return jsonify({'status': 'success', 'hide': hide_list, 'reveal': reveal_list,
+                    'submittable': valid, 'message-id': 'P{n}-status-list'.format(n=config.id),
+                    'messages': messages})
 
 
 @student.route('/submit/<int:sid>')

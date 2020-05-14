@@ -6673,15 +6673,16 @@ class SelectingStudent(db.Model):
         Determine whether the current selection is valid
         :return:
         """
-        errors = []
+        messages = []
         valid = True
 
         # STEP 1 - total number of bookmarks must equal or exceed required number of choices
         num_choices = self.number_choices
         if self.bookmarks.count() < num_choices:
             valid = False
-            errors.append("You have insufficient bookmarks. You must submit at least {n} "
-                          "choices.".format(n=num_choices))
+            messages.append("You have insufficient bookmarks. You must submit at least {n} "
+                            "choice{pl}.".format(n=num_choices,
+                                                 pl='' if num_choices == 1 else 's'))
 
         rank = 0
         counts = {}
@@ -6691,9 +6692,9 @@ class SelectingStudent(db.Model):
 
             if not item.liveproject.is_available(self):
                 valid = False
-                errors.append("The project '{name}' currently ranked #{rk} is not yet available for "
-                              "selection.".format(name=item.liveproject.name,
-                                                  rk=rank))
+                messages.append("The project '{name}' currently ranked #{rk} is not yet available for "
+                                "selection.".format(name=item.liveproject.name,
+                                                    rk=rank))
 
             # STEP 3 - check that the maximum number of projects for a single faculty member
             # is not exceeded
@@ -6709,18 +6710,23 @@ class SelectingStudent(db.Model):
         if self.config.faculty_maximum is not None:
             max = self.config.faculty_maximum
             for owner_id in counts:
-                if counts[owner_id] > max:
+                count = counts[owner_id]
+                if count > max:
                     valid = False
 
                     owner = db.session.query(FacultyData).filter_by(id=owner_id).first()
                     if owner is not None:
-                        errors.append("You have selected {n} projects offered by {name}, "
-                                      "but you are only allowed to choose a maximum of {nmax} "
-                                      "projects from the same supervisor.".format(n=counts[owner_id],
-                                                                                  name=owner.user.name,
-                                                                                  nmax=max))
+                        messages.append("You have selected {n} project{npl} offered by {name}, "
+                                        "but you are only allowed to choose a maximum of {nmax} "
+                                        "project{nmaxpl} from the same "
+                                        "supervisor.".format(n=count, npl='' if count == 1 else 's',
+                                                             name=owner.user.name, nmax=max,
+                                                             nmaxpl='' if max == 1 else 's'))
 
-        return (valid, errors)
+        if valid:
+            messages = ['Your current selection of bookmarks is ready to submit.']
+
+        return (valid, messages)
 
 
     @property

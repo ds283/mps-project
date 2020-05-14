@@ -6,13 +6,12 @@ a.label {
 }
 
 .selected-project {
-    background-color: #dff0d8;
     /*border-width: 3px;*/
     margin: 3px;
 }
 
 .deselected-project {
-    background-color: #f2dede;
+    background-color: #e3e3e3;
     /*border-width: 3px;*/
     margin: 3px;
 }

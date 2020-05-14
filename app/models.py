@@ -6675,9 +6675,10 @@ class SelectingStudent(db.Model):
             errors.append("You have insufficient bookmarks. You must submit at least {n} "
                           "choices.".format(n=num_choices))
 
-        # STEP 2 - all bookmarks in "active" positions must be available to this user
         rank = 0
+        counts = {}
         for item in self.bookmarks.order_by(Bookmark.rank).all():
+            # STEP 2 - all bookmarks in "active" positions must be available to this user
             rank += 1
 
             if not item.liveproject.is_available(self):
@@ -6686,11 +6687,29 @@ class SelectingStudent(db.Model):
                               "selection.".format(name=item.liveproject.name,
                                                   rk=rank))
 
+            # STEP 3 - check that the maximum number of projects for a single faculty member
+            # is not exceeded
+            if item.liveproject.owner_id not in counts:
+                counts[item.liveproject.owner_id] = 1
+            else:
+                counts[item.liveproject.owner_id] += 1
+
             if rank >= num_choices:
                 break
 
-        # STEP 3 - check that the maximum number of projects for a single faculty member
-        # is not exceeded
+        if self.config.faculty_maximum is not None:
+            max = self.config.faculty_maximum
+            for owner_id in counts:
+                if counts[owner_id] > max:
+                    valid = False
+
+                    owner = db.session.query(FacultyData).filter_by(id=owner_id).first()
+                    if owner is not None:
+                        errors.append("You have selected {n} projects offered by {name}, "
+                                      "but you are only allowed to choose a maximum of {nmax} "
+                                      "projects from the same supervisor.".format(n=counts[owner_id],
+                                                                                  name=owner.user.name,
+                                                                                  nmax=max))
 
         return (valid, errors)
 

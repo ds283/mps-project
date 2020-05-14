@@ -14,7 +14,7 @@ from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy import QuerySelectField
 
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
-    GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses
+    GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses, GetAccommodatableMatchings
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodCommonMixin
 from functools import partial
 
@@ -38,6 +38,11 @@ def GoLiveFormFactory(submit_label='Go live', live_and_close_label='Go live and 
 
         # notify selectors checkbox
         notify_selectors = BooleanField('Send e-mail notifications to selectors')
+
+        # accommodate a matching
+        accommodate_matching = QuerySelectField('Accommodate existing matching',
+                                                query_factory=GetAccommodatableMatchings, get_label='name',
+                                                allow_blank=True, blank_text='None')
 
     return GoLiveForm
 

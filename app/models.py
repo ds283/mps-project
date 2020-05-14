@@ -6697,6 +6697,7 @@ class SelectingStudent(db.Model):
             if rank >= num_choices:
                 break
 
+        # STEP 3 - second part: check the final counts
         if self.config.faculty_maximum is not None:
             max = self.config.faculty_maximum
             for owner_id in counts:

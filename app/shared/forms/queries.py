@@ -374,3 +374,9 @@ def GetDestinationProjectsPClass(user_id, project_id, pclass_id):
 def GetActiveAssetLicenses():
     return db.session.query(AssetLicense).filter_by(active=True) \
         .order_by(AssetLicense.name.asc(), AssetLicense.version.asc())
+
+
+def GetAccommodatableMatchings():
+    year = get_current_year()
+
+    return db.session.query(MatchingAttempt).filter_by(year=year, selected=True)

@@ -16,7 +16,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, Project, FacultyData, EnrollmentRecord, \
-    LiveProject, SelectingStudent
+    LiveProject, SelectingStudent, MatchingAttempt
 
 from ..task_queue import progress_update, register_task
 
@@ -32,7 +32,8 @@ from dateutil import parser
 def register_golive_tasks(celery):
 
     @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
-    def pclass_golive(self, task_id, config_id, convenor_id, deadline, auto_close, notify_faculty, notify_selectors):
+    def pclass_golive(self, task_id, config_id, convenor_id, deadline, auto_close, notify_faculty, notify_selectors,
+                      accommodate_matching, full_CATS):
         progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to Go Live...', autocommit=True)
 
         if isinstance(deadline, str):
@@ -49,6 +50,10 @@ def register_golive_tasks(celery):
 
         if not isinstance(notify_selectors, bool):
             notify_selectors = bool(notify_selectors)
+
+        if isinstance(accommodate_matching, int):
+            accommodate_matching: MatchingAttempt = db.session.query(MatchingAttempt) \
+                .filter_by(id=accommodate_matching).first()
 
         # get database records for this project class
         try:
@@ -111,6 +116,29 @@ def register_golive_tasks(celery):
         # weed out projects that do not satisfy is_offerable predicate
         attached_projects = [p for p in attached_projects if p.is_offerable]
 
+        # weed out projects belonging to supervisors that are 'full' as defined by the accommodated matching
+        if accommodate_matching is not None:
+            def is_full(supervisor_id):
+                sup_CATS, mark_CATS = accommodate_matching.get_faculty_CATS(supervisor_id)
+
+                if full_CATS is not None:
+                    return sup_CATS >= full_CATS
+                else:
+                    return sup_CATS > accommodate_matching.CATS_max
+
+            config.accommodate_matching = accommodate_matching
+            config.full_CATS = full_CATS
+
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+            attached_projects = [p for p in attached_projects if not is_full(p.owner_id)]
+
+        # check whether the list of projects is empty
         if len(attached_projects) == 0 and not auto_close:
             convenor.post_message('Cannot yet Go Live for {name} {yra}-{yrb} '
                                   'because there would be no attached projects. If this is not what you expect, '

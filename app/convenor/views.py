@@ -3648,7 +3648,7 @@ def go_live(id):
         return request.referrer
 
     GoLiveForm = GoLiveFormFactory()
-    form = GoLiveForm(request.form)
+    form: GoLiveForm = GoLiveForm(request.form)
 
     if form.is_submitted():
         # schedule an asynchronous go-live task
@@ -3662,12 +3662,16 @@ def go_live(id):
 
         notify_faculty = bool(form.notify_faculty.data)
         notify_selectors = bool(form.notify_selectors.data)
+        accommodate_matching = form.accommodate_matching.data
+        full_CATS = form.full_CATS.data
 
         if deadline is None:
             flash('A request to Go Live was ignored because no deadline was entered.', 'error')
         else:
             return redirect(url_for('convenor.confirm_go_live', id=id, close=int(close), deadline=deadline.isoformat(),
-                                    notify_faculty=int(notify_faculty), notify_selectors=int(notify_selectors)))
+                                    notify_faculty=int(notify_faculty), notify_selectors=int(notify_selectors),
+                                    accommodate_matching=accommodate_matching.id if accommodate_matching is not None else None,
+                                    full_CATS=full_CATS if full_CATS is not None else None))
 
     return redirect(request.referrer)
 
@@ -3695,6 +3699,12 @@ def confirm_go_live(id):
     deadline = request.args.get('deadline', None)
     notify_faculty = bool(int(request.args.get('notify_faculty', 0)))
     notify_selectors = bool(int(request.args.get('notify_selectors', 0)))
+    accommodate_matching = request.args.get('accommodate_matching', None)
+    full_CATS = request.args.get('full_CATS', None)
+    if accommodate_matching is not None:
+        accommodate_matching = int(accommodate_matching)
+    if full_CATS is not None:
+        full_CATS = int(full_CATS)
 
     if deadline is None:
         flash('A request to Go Live was ignored because the deadline was not correctly received', 'error')
@@ -3706,7 +3716,8 @@ def confirm_go_live(id):
     title = 'Go Live for "{name}" {yeara}&ndash;{yearb}'.format(name=config.project_class.name,
                                                                 yeara=year, yearb=year + 1)
     action_url = url_for('convenor.perform_go_live', id=id, close=int(close), notify_faculty=int(notify_faculty),
-                         notify_selectors=int(notify_selectors), deadline=deadline.isoformat())
+                         notify_selectors=int(notify_selectors), deadline=deadline.isoformat(),
+                         accommodate_matching=accommodate_matching, full_CATS=full_CATS)
     message = '<p>Please confirm that you wish to Go Live for project class "{name}" {yeara}&ndash;{yearb}, ' \
               'with deadline {deadline}.</p>' \
               '<p>This action cannot be undone.</p>'.format(name=config.project_class.name,
@@ -3741,6 +3752,12 @@ def perform_go_live(id):
     deadline = request.args.get('deadline', None)
     notify_faculty = bool(int(request.args.get('notify_faculty', 0)))
     notify_selectors = bool(int(request.args.get('notify_selectors', 0)))
+    accommodate_matching = request.args.get('accommodate_matching', None)
+    full_CATS = request.args.get('full_CATS', None)
+    if accommodate_matching is not None:
+        accommodate_matching = int(accommodate_matching)
+    if full_CATS is not None:
+        full_CATS = int(full_CATS)
 
     if deadline is None:
         flash('A request to Go Live was ignored because the deadline was not correctly received', 'error')
@@ -3760,7 +3777,8 @@ def perform_go_live(id):
                             owner=current_user, description='Perform Go Live of "{proj}"'.format(proj=config.name))
 
     if close:
-        seq = chain(golive.si(task_id, id, current_user.id, deadline, True, notify_faculty, notify_selectors),
+        seq = chain(golive.si(task_id, id, current_user.id, deadline, True, notify_faculty, notify_selectors,
+                              accommodate_matching, full_CATS),
                     golive_close.si(id, current_user.id)).on_error(golive_fail.si(task_id, current_user.id))
         seq.apply_async()
 

@@ -3570,6 +3570,14 @@ class ProjectClassConfig(db.Model):
     # deadline for students to make their choices on the live system
     live_deadline = db.Column(db.Date())
 
+    # should we accommodate an existing matching when offering projects?
+    accommodate_matching_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'))
+    accommodate_matching = db.relationship('MatchingAttempt', uselist=False, foreign_keys=[accommodate_matching_id])
+
+    # if an existing match is being accommodated, the maximum number of CATS a supervisor can carry
+    # before they are regarded as "full"
+    full_CATS = db.Column(db.Integer())
+
     # is project selection closed?
     selection_closed = db.Column(db.Boolean())
 

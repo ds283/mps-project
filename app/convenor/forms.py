@@ -44,6 +44,14 @@ def GoLiveFormFactory(submit_label='Go live', live_and_close_label='Go live and 
                                                 query_factory=GetAccommodatableMatchings, get_label='name',
                                                 allow_blank=True, blank_text='None')
 
+        # CATS limit before a supervisor is regarded as 'full'
+        full_CATS = IntegerField('Maximum number of CATS before a supervisor is full',
+                                 description='Optional. If an existing matching is being accommodated, this is '
+                                             'the maximum number of CATS that a supervisor can carry before they '
+                                             'are regarded as full. Leave blank to use the maximum number of '
+                                             'supervisor CATS specified in the matching.',
+                                 validators=[Optional()])
+
     return GoLiveForm
 
 

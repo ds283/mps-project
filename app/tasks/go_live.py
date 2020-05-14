@@ -118,6 +118,7 @@ def register_golive_tasks(celery):
 
         # weed out projects belonging to supervisors that are 'full' as defined by the accommodated matching
         if accommodate_matching is not None:
+            print('## Filtering projects to accommodate matching "{name}"'.format(name=accommodate_matching.name))
             def is_full(supervisor_id):
                 sup_CATS, mark_CATS = accommodate_matching.get_faculty_CATS(supervisor_id)
 
@@ -136,7 +137,17 @@ def register_golive_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-            attached_projects = [p for p in attached_projects if not is_full(p.owner_id)]
+            filtered_projects = []
+            for p in attached_projects:
+                if is_full(p.owner_id):
+                    print('## dropping project "{pname}" offered by supervisor "{sname}" because their CATS '
+                          'allocation exceeds the limit (full_CATS={fc})'.format(sname=p.owner.user.name,
+                                                                                 pname=p.name,
+                                                                                 fc=full_CATS))
+                else:
+                    filtered_projects.append(p)
+
+            attached_projects = filtered_projects
 
         # check whether the list of projects is empty
         if len(attached_projects) == 0 and not auto_close:

@@ -3783,7 +3783,8 @@ def perform_go_live(id):
         seq.apply_async()
 
     else:
-        golive.apply_async(args=(task_id, id, current_user.id, deadline, False, notify_faculty, notify_selectors),
+        golive.apply_async(args=(task_id, id, current_user.id, deadline, False, notify_faculty, notify_selectors,
+                                 accommodate_matching, full_CATS),
                            task_id=task_id, link_error=golive_fail.si(task_id, current_user.id))
 
     return redirect(url_for('convenor.overview', id=config.pclass_id))

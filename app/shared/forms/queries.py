@@ -21,6 +21,8 @@ from ...models import project_pclasses, description_pclasses, roles_to_users
 
 from ..utils import get_current_year
 
+from sqlalchemy import or_
+
 
 def GetActiveDegreeTypes():
     return DegreeType.query.filter_by(active=True).order_by(DegreeType.name.asc())
@@ -379,4 +381,6 @@ def GetActiveAssetLicenses():
 def GetAccommodatableMatchings():
     year = get_current_year()
 
-    return db.session.query(MatchingAttempt).filter_by(year=year, selected=True)
+    return db.session.query(MatchingAttempt).filter(MatchingAttempt.year == year,
+                                                    or_(MatchingAttempt.selected == True,
+                                                        MatchingAttempt.published == True))

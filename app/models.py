@@ -6657,21 +6657,34 @@ class SelectingStudent(db.Model):
         Determine whether the current selection is valid
         :return:
         """
+        errors = []
+        valid = True
+
+        # STEP 1 - total number of bookmarks must equal or exceed required number of choices
         num_choices = self.number_choices
-
         if self.bookmarks.count() < num_choices:
-            return False
+            valid = False
+            errors.append("You have insufficient bookmarks. You must submit at least {n} "
+                          "choices.".format(n=num_choices))
 
-        count = 0
+        # STEP 2 - all bookmarks in "active" positions must be available to this user
+        rank = 0
         for item in self.bookmarks.order_by(Bookmark.rank).all():
-            if not item.liveproject.is_available(self):
-                return False
+            rank += 1
 
-            count += 1
-            if count >= num_choices:
+            if not item.liveproject.is_available(self):
+                valid = False
+                errors.append("The project '{name}' currently ranked #{rk} is not yet available for "
+                              "selection.".format(name=item.liveproject.name,
+                                                  rk=rank))
+
+            if rank >= num_choices:
                 break
 
-        return True
+        # STEP 3 - check that the maximum number of projects for a single faculty member
+        # is not exceeded
+
+        return (valid, errors)
 
 
     @property

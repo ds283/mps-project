@@ -156,7 +156,7 @@ def register_close_selection_tasks(celery):
     @celery.task(bind=True)
     def selector_close(self, sel_id):
         try:
-            sel = db.session.query(SelectingStudent).filter_by(id=sel_id).first()
+            sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sel_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -168,7 +168,7 @@ def register_close_selection_tasks(celery):
         # if a submission does not exist, and this is not a 'submit to subscribe' type of project
         # (tagged by 'selection_open_to_all'), then convert bookmarks into a submission
         # provided they exist and are a valid selection. Otherwise treat as a non-submission.
-        elif not sel.config.selection_open_to_all and sel.is_valid_selection:
+        elif not sel.config.selection_open_to_all and sel.is_valid_selection[0]:
             convert_bookmarks(sel)
 
 

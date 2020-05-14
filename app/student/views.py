@@ -592,6 +592,10 @@ def update_ranking():
     if 'ranking' not in data or 'configid' not in data or 'sid' not in data:
         return jsonify({'status': 'ill_formed'})
 
+    # extract data from payload:
+    #  - config_id identifies a ProjectClassConfig instance
+    #  - sid identified a SelectingStudent instance
+    #  - ranking is the new project ranking
     config_id = data['configid']
     sid = data['sid']
     ranking = data['ranking']
@@ -609,6 +613,7 @@ def update_ranking():
     if current_user.id != sel.student.id:
         return jsonify({'status': 'insufficient_privileges'})
 
+    # convert ranking data from the payload into an ordered list of project ids
     projects = map(_demap_project, ranking)
 
     rmap = {}
@@ -619,6 +624,9 @@ def update_ranking():
 
     # update ranking
     for bookmark in sel.bookmarks:
+        if bookmark.liveproject.id not in rmap:
+            raise RuntimeError("Failed to demap POSTed ranking to bookmark list in update_ranking()")
+
         bookmark.rank = rmap[bookmark.liveproject.id]
 
     try:
@@ -629,28 +637,31 @@ def update_ranking():
         return jsonify({'status': 'database_failure'})
 
     # work out which HTML elements to make visible and which to hide, based on validity of this selection
-    if sel.is_valid_selection:
+    valid, errors = sel.is_valid_selection
+    if valid:
         hide_elt = 'P{config}-invalid-button'.format(config=config.id)
         reveal_elt = 'P{config}-valid-button'.format(config=config.id)
     else:
         hide_elt = 'P{config}-valid-button'.format(config=config.id)
         reveal_elt = 'P{config}-invalid-button'.format(config=config.id)
 
-    return jsonify({'status': 'success', 'hide': hide_elt, 'reveal': reveal_elt})
+    return jsonify({'status': 'success', 'hide': hide_elt, 'reveal': reveal_elt,
+                    'submittable': valid, 'errors': errors})
 
 
 @student.route('/submit/<int:sid>')
 @roles_required('student')
 def submit(sid):
     # sid is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(sid)
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
 
     # verify logged-in user is the selector
     if current_user.id != sel.student_id:
         flash('You do not have permission to submit project preferences for this selector.', 'error')
         return redirect(request.referrer)
 
-    if not sel.is_valid_selection:
+    valid, errors = sel.is_valid_selection
+    if not valid:
         flash('The current bookmark list is not a valid set of project preferences. This is an internal error; '
               'please contact a system administrator.', 'error')
         return redirect(request.referrer)

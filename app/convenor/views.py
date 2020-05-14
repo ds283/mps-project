@@ -3864,13 +3864,14 @@ def adjust_selection_deadline(configid):
 @roles_accepted('faculty', 'admin', 'root')
 def submit_student_selection(sel_id):
     # sel_id is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(sel_id)
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sel_id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
-    if not sel.is_valid_selection:
+    valid, errors = sel.is_valid_selection
+    if not valid:
         flash('The current bookmark list is not a valid set of project preferences. This is an internal error; '
               'please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -3907,7 +3908,6 @@ def submit_student_selection(sel_id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
-
 
 
 @convenor.route('/enroll/<int:userid>/<int:pclassid>')

@@ -111,7 +111,7 @@
                         Clear submission
                     </a>
                 {% endif %}
-                {% set is_valid = sel.is_valid_selection %}
+                {% set is_valid, sel_errors = sel.is_valid_selection %}
                 <a id="P{{ config.id }}-valid-button"
                    class="btn btn-primary {% if not is_valid %}hidden{% endif %} student-dashboard-button"
                    href="{{ url_for('student.submit', sid=sel.id) }}">

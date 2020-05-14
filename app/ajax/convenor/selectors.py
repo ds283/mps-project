@@ -43,7 +43,7 @@ _menu = \
 
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">Selections</li>
-        {% if student.is_valid_selection %}
+        {% if student.is_valid_selection[0] %}
             <li>
                 <a href="{{ url_for('convenor.submit_student_selection', sel_id=student.id) }}">
                     <i class="fa fa-paper-plane"></i> Submit selection
@@ -185,7 +185,7 @@ _submitted = \
 {% else %}
     {% if state >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
         <span class="label label-default">No</span>
-        {% if sel.is_valid_selection %}
+        {% if sel.is_valid_selection[0] %}
             <span class="label label-success">Valid selection</span>
         {% else %}
             <span class="label label-danger">Invalid selection</span>

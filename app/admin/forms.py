@@ -249,6 +249,12 @@ class ProjectClassMixin():
                                   description='Number of preferences to allow in subsequent years, '
                                               'if switching is allowed.')
 
+    faculty_maximum = IntegerField('Maximum number of project selections from the same faculty member',
+                                   description='Optional. Specify a maximum number of projects that '
+                                               'students can select if they are offered by the same '
+                                               'faculty supervisor. Leave blank to disable.',
+                                   validators=[Optional()])
+
     CATS_supervision = IntegerField('CATS awarded for project supervision',
                                     validators=[InputRequired(message='Please enter an integer value')])
 

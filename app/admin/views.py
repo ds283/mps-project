@@ -1144,7 +1144,7 @@ def add_pclass():
         flash('No degree types are available. Set up at least one active degree type before adding a project class.')
         return redirect(request.referrer)
 
-    form = AddProjectClassForm(request.form)
+    form: AddProjectClassForm = AddProjectClassForm(request.form)
 
     if form.validate_on_submit():
         # make sure convenor and coconvenors don't have overlap
@@ -1175,6 +1175,7 @@ def add_pclass():
                             programmes=form.programmes.data,
                             initial_choices=form.initial_choices.data,
                             switch_choices=form.switch_choices.data,
+                            faculty_maximum=form.faculty_maximum.data,
                             active=True,
                             CATS_supervision=form.CATS_supervision.data,
                             CATS_marking=form.CATS_marking.data,
@@ -1267,8 +1268,8 @@ def edit_pclass(id):
     :param id:
     :return:
     """
-    data = ProjectClass.query.get_or_404(id)
-    form = EditProjectClassForm(obj=data)
+    data: ProjectClass = ProjectClass.query.get_or_404(id)
+    form: EditProjectClassForm = EditProjectClassForm(obj=data)
 
     form.project_class = data
 
@@ -1303,6 +1304,7 @@ def edit_pclass(id):
         data.programmes = form.programmes.data
         data.initial_choices = form.initial_choices.data
         data.switch_choices = form.switch_choices.data
+        data.faculty_maximum = form.faculty_maximum.data
         data.CATS_supervision = form.CATS_supervision.data
         data.CATS_marking = form.CATS_marking.data
         data.CATS_presentation = form.CATS_presentation.data
@@ -1315,8 +1317,14 @@ def edit_pclass(id):
             old_convenor.remove_convenorship(data)
             data.convenor.add_convenorship(data)
 
-        db.session.commit()
-        data.validate_presentations()
+        try:
+            db.session.commit()
+            data.validate_presentations()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash('Could not save project class configuration because a database error occurred. '
+                  'Please check the logs for further information.', 'error')
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_project_classes'))
 

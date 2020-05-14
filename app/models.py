@@ -3075,6 +3075,9 @@ class ProjectClass(db.Model, ColouredLabelMixin):
     # how many switch choices should students be allowed?
     switch_choices = db.Column(db.Integer())
 
+    # how many choices can be with the same faculty member?
+    faculty_maximum = db.Column(db.Integer())
+
     # is project selection open to all students?
     selection_open_to_all = db.Column(db.Boolean())
 
@@ -3871,6 +3874,11 @@ class ProjectClassConfig(db.Model):
     @property
     def switch_choices(self):
         return self.project_class.switch_choices
+
+
+    @property
+    def faculty_maximum(self):
+        return self.project_class.faculty_maximum
 
 
     @property

@@ -5200,7 +5200,7 @@ class Project(db.Model,
             return None
 
         previous_config: ProjectClassConfig = db.session.query(ProjectClassConfig) \
-            .filter_by(year=current_config.year-1, class_id=current_config.pclass_id).first()
+            .filter_by(year=current_config.year-1, pclass_id=current_config.pclass_id).first()
         if previous_config is None:
             return None
 

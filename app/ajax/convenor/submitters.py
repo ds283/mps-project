@@ -163,7 +163,7 @@ _markers = \
                     <span class="caret"></span>
                 </a>
                 <ul class="dropdown-menu">
-                    {% set disabled = r.period.is_feedback_open or r.student_engaged %}
+                    {% set disabled = r.period.is_feedback_open %}
                     {% if disabled %}
                         <li class="disabled">
                             <a>Can't reassign: Feedback open or student engaged</a>

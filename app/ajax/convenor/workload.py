@@ -138,7 +138,7 @@ _marking = \
                     <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Show feedback</a>
                 </li>
                 
-                {% set disabled = r.period.is_feedback_open or r.student_engaged %}
+                {% set disabled = r.period.is_feedback_open %}
                 {% if disabled %}
                     <li class="disabled">
                         <a>Can't reassign: Feedback open or student engaged</a>

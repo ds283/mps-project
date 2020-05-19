@@ -5345,7 +5345,7 @@ def _ProjectDescription_is_valid(id):
     errors = {}
     warnings = {}
 
-    # CONSTRAINT 1 - At least on supervisory role must be specified
+    # CONSTRAINT 1 - At least one supervisory role must be specified
     if get_count(obj.team.filter(Supervisor.active)) == 0:
         errors['supervisors'] = 'No active supervisory roles assigned'
 

@@ -861,7 +861,10 @@ def enroll_selectors(id):
     # get current academic year
     current_year = get_current_year()
 
-    candidates = build_enroll_selector_candidates(config)
+    candidates = \
+        build_enroll_selector_candidates(config,
+                                         disable_programme_filter=True if isinstance(prog_filter, str)
+                                                                  and prog_filter.lower() == 'off' else False)
 
     # build list of available cohorts and degree programmes
     cohorts = set()
@@ -892,7 +895,8 @@ def enroll_selectors(id):
     if prog_filter is None and session.get('convenor_sel_enroll_prog_filter'):
         prog_filter = session['convenor_sel_enroll_prog_filter']
 
-    if isinstance(prog_filter, str) and prog_filter != 'all' and int(prog_filter) not in programmes:
+    if isinstance(prog_filter, str) and prog_filter != 'all' and prog_filter != 'off' \
+            and int(prog_filter) not in programmes:
         prog_filter = 'all'
 
     if prog_filter is not None:
@@ -946,7 +950,10 @@ def enroll_selectors_ajax(id):
     # get current year
     current_year = get_current_year()
 
-    candidates = build_enroll_selector_candidates(config)
+    candidates = \
+        build_enroll_selector_candidates(config,
+                                         disable_programme_filter=True if isinstance(prog_filter, str)
+                                                                  and prog_filter.lower() == 'off' else False)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
@@ -983,6 +990,8 @@ def enroll_all_selectors(configid):
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
+    convert = bool(int(request.args.get('convert', 1)))
+
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
@@ -990,7 +999,10 @@ def enroll_all_selectors(configid):
     # get current year
     current_year = get_current_year()
 
-    candidates = build_enroll_selector_candidates(config)
+    candidates = \
+        build_enroll_selector_candidates(config,
+                                         disable_programme_filter=True if isinstance(prog_filter, str)
+                                                                  and prog_filter.lower() == 'off' else False)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
@@ -1009,7 +1021,7 @@ def enroll_all_selectors(configid):
         candidates = candidates.all()
 
     for c in candidates:
-        add_selector(c, configid, autocommit=False)
+        add_selector(c, configid, convert=convert, autocommit=False)
 
     try:
         db.session.commit()
@@ -1046,7 +1058,9 @@ def enroll_selector(sid, configid):
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
-    add_selector(sid, configid, autocommit=True)
+    convert = bool(int(request.args.get('convert', 1)))
+
+    add_selector(sid, configid, convert=convert, autocommit=True)
 
     return redirect(request.referrer)
 

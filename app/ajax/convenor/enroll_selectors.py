@@ -14,9 +14,24 @@ from flask import render_template_string, jsonify
 
 _enroll_action = \
 """
-<a href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id) }}" class="btn btn-warning btn-sm">
-    <i class="fa fa-plus"></i> Manually enroll
-</a>
+<div class="dropdown">
+    <button class="btn btn-default btn-sm btn-block dropdown-toggle table-button" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-right">
+        <li>
+            <a href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id, convert=1) }}">
+                <i class="fa fa-plus"></i> Enroll
+            </a>
+        <li>
+        <li>
+            <a href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id, convert=0) }}">
+                <i class="fa fa-plus"></i> Enroll without conversion
+            </a>
+        <li>
+    </ul>
+</dic>
 """
 
 

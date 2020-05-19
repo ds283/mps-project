@@ -858,6 +858,9 @@ def enroll_selectors(id):
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
 
+    if prog_filter is None and session.get('convenor_sel_enroll_prog_filter'):
+        prog_filter = session['convenor_sel_enroll_prog_filter']
+
     # get current academic year
     current_year = get_current_year()
 
@@ -891,9 +894,6 @@ def enroll_selectors(id):
 
     if cohort_filter is not None:
         session['convenor_sel_enroll_cohort_filter'] = cohort_filter
-
-    if prog_filter is None and session.get('convenor_sel_enroll_prog_filter'):
-        prog_filter = session['convenor_sel_enroll_prog_filter']
 
     if isinstance(prog_filter, str) and prog_filter != 'all' and prog_filter != 'off' \
             and int(prog_filter) not in programmes:

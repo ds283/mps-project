@@ -695,7 +695,7 @@ def _compute_existing_mark_CATS(record, fac_data):
     return CATS
 
 
-def _enumerate_missing_markers(self, config, task_id):
+def _enumerate_missing_markers(self, config, task_id, user: User):
     mark_dict = {}
     mark_CATS_dict = {}
     submit_dict = {}
@@ -710,7 +710,7 @@ def _enumerate_missing_markers(self, config, task_id):
                     autocommit=True)
 
     # loop through all submissions in all periods to capture all those with missing markers
-    for period in self.periods:                       #type: SubmissionPeriodRecord
+    for period in config.periods:                     #type: SubmissionPeriodRecord
         for sub in period.submissions:                #type: SubmissionRecord
             # do nothing if project not assigned (no assessor pool)
             if sub.project is None:
@@ -729,8 +729,19 @@ def _enumerate_missing_markers(self, config, task_id):
             number_submitters += 1
 
             # loop through markers in the assessor pool for this project
-            project = sub.project
-            for marker in project.assessor_list:        # type: FacultyData
+            # note - LiveProject.assessor_list will only return a list of assessors who are
+            # currently enrolled as active markers
+            assessors = sub.project.assessor_list
+            if len(assessors) == 0:
+                progress_update(task_id, TaskRecord.FAILURE, 100, 'Failed because LiveProject "{name}" has no '
+                                                                  'active assessors'.format(name=sub.project.name),
+                                autocommit=True)
+                user.post_message('Failed to populate markers because LiveProject "{name}" has no acive '
+                                  'assessors.'.format(name=sub.project.name), 'error', autocommit=True)
+                self.update_state('FAILURE', meta='LiveProject did not have active assessors')
+                raise Ignore()
+
+            for marker in assessors:        # type: FacultyData
                 if marker not in inverse_mark_dict:
                     mark_dict[number_markers] = marker
                     inverse_mark_dict[marker] = number_markers
@@ -1256,7 +1267,7 @@ def _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config):
     CATS_per_assignment = _floatify(config.CATS_marking)
 
     # generate PuLP problem
-    prob: pulp.LpProblem = pulp.LpProblem("populate marker", pulp.LpMinimize)
+    prob: pulp.LpProblem = pulp.LpProblem("populate_marker", pulp.LpMinimize)
 
     # generate decision variables for marker assignment
     number_markers = len(mark_dict)
@@ -1538,8 +1549,7 @@ def _execute_from_solution(self, file, record, prob, X, Y, W, R, create_time,
                                   multiplicity, sel_dict, sup_dict, mark_dict, lp_dict, mean_CATS_per_project)
 
 
-def _execute_marker_problem(self, task_id, prob, Y, mark_dict, inverse_mark_dict, submit_dict, inverse_submit_dict,
-                            user: User):
+def _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user: User):
     print('Solving PuLP problem to populate markers')
 
     progress_update(task_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...",
@@ -1562,19 +1572,20 @@ def _execute_marker_problem(self, task_id, prob, Y, mark_dict, inverse_mark_dict
             number_populated = 0
 
             for j in range(number_submitters):
-                sub: SubmissionRecord = inverse_submit_dict[j]
+                sub: SubmissionRecord = submit_dict[j]
 
                 for i in range(number_markers):
                     Y[(i, j)].round()
                     if pulp.value(Y[(i, j)]) == 1:
-                        marker: FacultyData = inverse_mark_dict[i]
+                        marker: FacultyData = mark_dict[i]
 
                         sub.marker_id = marker.id
                         number_populated += 1
                         break
 
             db.session.commit()
-            user.post_message("Populated {num} missing marker assignments".format(num=number_populated))
+            user.post_message("Populated {num} missing marker assignments".format(num=number_populated), 'success',
+                              autocommit=True)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1586,7 +1597,7 @@ def _execute_marker_problem(self, task_id, prob, Y, mark_dict, inverse_mark_dict
         user.post_message("Could not populate markers because the optimization task failed",
                           'error', autocommit=True)
 
-    progress_update(task_id, TaskRecord.RUNNING, 100, 'Matching task complete', autocommit=True)
+    progress_update(task_id, TaskRecord.SUCCESS, 100, 'Matching task complete', autocommit=True)
 
 
 def _process_PuLP_solution(self, record, output, solve_time, X, Y, W, R, create_time,
@@ -1942,7 +1953,7 @@ def register_matching_tasks(celery):
 
         with Timer() as create_time:
             mark_dict, inverse_mark_dict, submit_dict, inverse_submit_dict, mark_CATS_dict = \
-                _enumerate_missing_markers(self, config, task_id)
+                _enumerate_missing_markers(self, config, task_id, user)
 
             progress_update(task_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                             autocommit=True)
@@ -1951,8 +1962,7 @@ def register_matching_tasks(celery):
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
-        return _execute_marker_problem(task_id, prob, Y, mark_dict, inverse_mark_dict,
-                                       submit_dict, inverse_submit_dict, user)
+        return _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user)
 
 
     @celery.task(bind=True, default_retry_delay=30)

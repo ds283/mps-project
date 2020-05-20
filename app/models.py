@@ -4523,12 +4523,12 @@ class SubmissionPeriodRecord(db.Model):
 
     @property
     def all_markers_assigned(self):
-        return self.submissions.filter(marker_id=None).first() is not None
+        return self.submissions.filter_by(marker_id=None).first() is None
 
 
     @property
     def all_supervisors_assigned(self):
-        return self.aubmissions.filter(project_id=None).first() is not None
+        return self.aubmissions.filter_by(project_id=None).first() is None
 
 
 class EnrollmentRecord(db.Model):

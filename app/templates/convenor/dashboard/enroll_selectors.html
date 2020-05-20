@@ -108,33 +108,36 @@
                     </div>
                 {% endif %}
 
-                {% if progs and progs is not none and progs|length > 1 %}
-                    {% if needs_rule %}
-                        <hr class="intro-divider">
-                    {% endif %}
-                    {% set needs_rule = true %}
-                    <p>Filter by degree programme</p>
-                    <a class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='all') }}">
-                        All
-                    </a>
-                    {% for prog in progs %}
-                        <a class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog.id) }}">
-                            {{ prog.full_name }}
-                        </a>
-                    {% endfor %}
-                {% endif %}
-
                 {% if needs_rule %}
                     <hr class="intro-divider">
                 {% endif %}
+                <p>Filter by degree programme</p>
+                <a class="btn btn-sm filter-btn {% if prog_filter == 'off' %}btn-primary{% else %}btn-default{% endif %}"
+                    href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='off') }}">
+                    Don't filter by programme
+                </a>
+                <a class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
+                    href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='all') }}">
+                    All attached programmes
+                </a>
+                {% for prog in progs %}
+                    <a class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-default{% endif %}"
+                        href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog.id) }}">
+                        {{ prog.full_name }}
+                    </a>
+                {% endfor %}
+
+                <hr class="intro-divider">
                 <div class="row vertical-align">
                     <div class="col-xs-12">
                         <div class="pull-right">
-                            <a href="{{ url_for('convenor.enroll_all_selectors', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter) }}"
-                               class="btn btn-warning">
-                                <i class="fa fa-check"></i> Manually enroll all
+                            <a href="{{ url_for('convenor.enroll_all_selectors', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, convert=0) }}"
+                               class="btn btn-default">
+                                <i class="fa fa-check"></i> Enroll all without conversion
+                            </a>
+                            <a href="{{ url_for('convenor.enroll_all_selectors', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, convert=1) }}"
+                               class="btn btn-default">
+                                <i class="fa fa-check"></i> Enroll all
                             </a>
                         </div>
                     </div>

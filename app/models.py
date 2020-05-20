@@ -5220,7 +5220,7 @@ class Project(db.Model,
             return None
 
         previous_config: ProjectClassConfig = db.session.query(ProjectClassConfig) \
-            .filter_by(year=current_config.year-1, class_id=current_config.pclass_id).first()
+            .filter_by(year=current_config.year-1, pclass_id=current_config.pclass_id).first()
         if previous_config is None:
             return None
 
@@ -5365,7 +5365,7 @@ def _ProjectDescription_is_valid(id):
     errors = {}
     warnings = {}
 
-    # CONSTRAINT 1 - At least on supervisory role must be specified
+    # CONSTRAINT 1 - At least one supervisory role must be specified
     if get_count(obj.team.filter(Supervisor.active)) == 0:
         errors['supervisors'] = 'No active supervisory roles assigned'
 

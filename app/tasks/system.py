@@ -36,11 +36,18 @@ def register_system_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        task = chain(group(reset_background_tasks.si(), reset_notifications.si()),
-                     group(reset_matching.si(ident[0]) for ident in in_progress_matching),
-                     group(reset_scheduling.si(ident[0]) for ident in in_progress_scheduling),
-                     group(reset_batch.si(ident[0]) for ident in in_progress_batches),
-                     reset_tasks_notify.si(user_id)).on_error(reset_tasks_fail.si(user_id))
+        task = reset_background_tasks.si() | reset_notifications.si()
+
+        if len(in_progress_matching) > 0:
+            task = task | group(reset_matching.si(t[0]) for t in in_progress_matching)
+
+        if len(in_progress_scheduling) > 0:
+            task = task | group(reset_scheduling.si(t[0]) for t in in_progress_scheduling)
+
+        if len(in_progress_batches) > 0:
+            task = task | group(reset_batch.si(t[0]) for t in in_progress_batches)
+
+        task = (task | reset_tasks_notify.si(user_id)).on_error(reset_tasks_fail.si(user_id))
 
         raise self.replace(task)
 

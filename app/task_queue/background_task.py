@@ -8,8 +8,11 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from flask import current_app, flash
 from ..database import db
 from ..models import TaskRecord
+
+from sqlalchemy.exc import SQLAlchemyError
 
 from uuid import uuid4
 
@@ -38,15 +41,24 @@ def register_task(name, owner=None, description=None):
                       progress=None,
                       message=None)
 
-    db.session.add(data)
-    db.session.flush()
+    try:
+        db.session.add(data)
+        db.session.flush()
 
-    if data.owner is not None:
-        data.owner.post_task_update(data.id, {'task': data.name, 'state': TaskRecord.PENDING,
-                                               'progress': 0, 'message': 'Awaiting scheduling...'},
-                                    autocommit=False)
+        if data.owner is not None:
+            data.owner.post_task_update(data.id, {'task': data.name, 'state': TaskRecord.PENDING,
+                                                   'progress': 0, 'message': 'Awaiting scheduling...'},
+                                        autocommit=False)
 
-    db.session.commit()
+        db.session.commit()
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not register new task due to a database error. '
+              'Please contact a system administrator', 'error')
+
+        return None
 
     return uuid
 

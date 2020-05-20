@@ -2685,7 +2685,7 @@ def duplicate_description(did, pclass_id):
 
 
 @convenor.route('/move_description/<int:did>/<int:pclass_id>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def move_description(did, pclass_id):
     desc = ProjectDescription.query.get_or_404(did)
     old_project = desc.parent
@@ -3363,7 +3363,7 @@ def issue_confirm_requests(id):
 
 
 @convenor.route('/outstanding_confirm/<int:id>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def outstanding_confirm(id):
     # id is a ProjectClassConfig
     config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
@@ -3580,7 +3580,7 @@ def force_confirm(id, uid):
 
 
 @convenor.route('/confirm_description/<int:config_id>/<int:did>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def confirm_description(config_id, did):
     # get details for project class
     config = ProjectClassConfig.query.get_or_404(config_id)
@@ -5752,7 +5752,7 @@ def close_feedback(id):
 
 
 @convenor.route('/edit_submission_record/<int:pid>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def edit_submission_record(pid):
     # pid is a SubmissionPeriodRecord
     record = SubmissionPeriodRecord.query.get_or_404(pid)
@@ -5806,7 +5806,7 @@ def edit_submission_record(pid):
 
 
 @convenor.route('/publish_assignment/<int:id>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def publish_assignment(id):
     # id is a SubmittingStudent
     sub = SubmittingStudent.query.get_or_404(id)
@@ -5830,7 +5830,7 @@ def publish_assignment(id):
 
 
 @convenor.route('/unpublish_assignment/<int:id>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def unpublish_assignment(id):
 
     # id is a SubmittingStudent
@@ -5855,7 +5855,7 @@ def unpublish_assignment(id):
 
 
 @convenor.route('/publish_all_assignments/<int:id>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def publish_all_assignments(id):
     # id is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(id)
@@ -5888,7 +5888,7 @@ def publish_all_assignments(id):
 
 
 @convenor.route('/unpublish_all_assignments/<int:id>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def unpublish_all_assignments(id):
     # id is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(id)
@@ -5921,7 +5921,7 @@ def unpublish_all_assignments(id):
 
 
 @convenor.route('/mark_started/<int:id>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def mark_started(id):
     # id is a SubmissionRecord
     rec = SubmissionRecord.query.get_or_404(id)
@@ -5953,7 +5953,7 @@ def mark_started(id):
 
 
 @convenor.route('/mark_all_started/<int:id>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def mark_all_started(id):
     # id is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(id)
@@ -5988,9 +5988,8 @@ def mark_all_started(id):
 
 
 @convenor.route('/mark_waiting/<int:id>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def mark_waiting(id):
-
     # id is a SubmissionRecord
     rec = SubmissionRecord.query.get_or_404(id)
 
@@ -6020,8 +6019,31 @@ def mark_waiting(id):
     return redirect(request.referrer)
 
 
+@convenor.route('/populate_markers/<int:configid>')
+@roles_accepted('faculty', 'admin', 'root')
+def populate_markers(configid):
+    # configid is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(configid)
+
+    # reject if logged-in user is not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    uuid = register_task('Populate markers for "{proj}"'.format(proj=config.name),
+                         owner=current_user,
+                         description='Populate missing marker assignments for '
+                                     '"{proj}"'.format(proj=config.name))
+
+    celery = current_app.extensions['celery']
+    populate = celery.tasks['app.tasks.matching.populate_markers']
+
+    populate.apply_async(args=(config.id, current_user.id, uuid), task_id=uuid)
+
+    return redirect(request.referrer)
+
+
 @convenor.route('/view_feedback/<int:id>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def view_feedback(id):
     # id is a SubmissionRecord
     rec = SubmissionRecord.query.get_or_404(id)
@@ -6043,7 +6065,7 @@ def view_feedback(id):
 
 
 @convenor.route('/faculty_workload/<int:id>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def faculty_workload(id):
     # get details for project class
     pclass: ProjectClass = ProjectClass.query.get_or_404(id)
@@ -7141,7 +7163,7 @@ def custom_CATS_limits(record_id):
 
 
 @convenor.route('/submission_record_documents/<int:pid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def submission_record_documents(pid):
     # id is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)

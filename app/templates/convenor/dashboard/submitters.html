@@ -170,9 +170,14 @@
                 <div class="col-xs-12">
                     <div class="pull-right">
                         {% if is_admin or is_root or is_emailer %}
-                            <a href="{{ url_for('convenor.email_submitters', configid=config.id, id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter) }}"
+                            <a href="{{ url_for('convenor.email_submitters', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter) }}"
                                class="btn btn-default top-row-button">
                                 <i class="fa fa-envelope-o"></i> Email
+                            </a>
+                        {% endif %}
+                        {% if not config.all_markers_assigned %}
+                            <a href="{{ url_for('convenor.populate_markers', configid=config.id) }}" class="btn btn-default top-row-button">
+                                <i class="fa fa-wrench"></i> Populate markers
                             </a>
                         {% endif %}
                         {% if pclass.publish %}

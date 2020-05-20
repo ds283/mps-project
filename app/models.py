@@ -4263,6 +4263,16 @@ class ProjectClassConfig(db.Model):
         return self.get_period(self.submission_period)
 
 
+    @property
+    def all_markers_assigned(self):
+        return all([p.all_markers_assigned for p in self.periods])
+
+
+    @property
+    def all_supervisors_assigned(self):
+        return all([p.all_supervisors_assigned for p in self.periods])
+
+
 class SubmissionPeriodRecord(db.Model):
     """
     Capture details about a submission period
@@ -4509,6 +4519,16 @@ class SubmissionPeriodRecord(db.Model):
     @property
     def number_submitters_presentation_feedback(self):
         return get_count(self.submissions.filter(SubmissionRecord.presentation_feedback.any(submitted=True)))
+
+
+    @property
+    def all_markers_assigned(self):
+        return self.submissions.filter(marker_id=None).first() is not None
+
+
+    @property
+    def all_supervisors_assigned(self):
+        return self.aubmissions.filter(project_id=None).first() is not None
 
 
 class EnrollmentRecord(db.Model):

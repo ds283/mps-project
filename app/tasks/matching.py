@@ -26,7 +26,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import MatchingAttempt, TaskRecord, LiveProject, SelectingStudent, \
     User, EnrollmentRecord, MatchingRecord, SelectionRecord, ProjectClass, GeneratedAsset, MatchingEnumeration, \
-    TemporaryAsset, FacultyData, ProjectClassConfig
+    TemporaryAsset, FacultyData, ProjectClassConfig, SubmissionRecord
 from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename, \
     canonical_generated_asset_filename
 from ..shared.sqlalchemy import get_count
@@ -695,6 +695,61 @@ def _compute_existing_mark_CATS(record, fac_data):
     return CATS
 
 
+def _enumerate_missing_markers(self, config, task_id):
+    mark_dict = {}
+    mark_CATS_dict = {}
+    submit_dict = {}
+
+    inverse_mark_dict = {}
+    inverse_submit_dict = {}
+
+    number_markers = 0
+    number_submitters = 0
+
+    progress_update(task_id, TaskRecord.RUNNING, 10, "Enumerating submission records with missing records...",
+                    autocommit=True)
+
+    # loop through all submissions in all periods to capture all those with missing markers
+    for period in self.periods:                       #type: SubmissionPeriodRecord
+        for sub in period.submissions:                #type: SubmissionRecord
+            # do nothing if project not assigned (no assessor pool)
+            if sub.project is None:
+                continue
+
+            # do nothing if marker already assigned
+            if sub.marker is not None:
+                continue
+
+            # store this submission record in the submitter dictionary
+            if sub in inverse_submit_dict:
+                raise RuntimeError("Non-unique submitter when enumerating missing markers")
+
+            submit_dict[number_submitters] = sub
+            inverse_submit_dict[sub] = number_submitters
+            number_submitters += 1
+
+            # loop through markers in the assessor pool for this project
+            project = sub.project
+            for marker in project.assessor_list:        # type: FacultyData
+                if marker not in inverse_mark_dict:
+                    mark_dict[number_markers] = marker
+                    inverse_mark_dict[marker] = number_markers
+                    mark_CATS_dict[number_markers] = marker.CATS_assignment(config.project_class)
+                    number_markers += 1
+
+    return mark_dict, inverse_mark_dict, submit_dict, inverse_submit_dict, mark_CATS_dict
+
+
+def _floatify(item):
+    if item is None:
+        return None
+
+    if isinstance(item, float):
+        return item
+
+    return float(item)
+
+
 def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_supervisor, CATS_marker, capacity,
                          sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits,
                          multiplicity, number_lp, number_mark, number_sel, number_sup,
@@ -708,14 +763,6 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
     :param sup_pclass_limits:
     :param mark_pclass_limits:
     """
-    def _floatify(item):
-        if item is None:
-            return None
-
-        if isinstance(item, float):
-            return item
-
-        return float(item)
 
     levelling_bias = _floatify(record.levelling_bias)
     intra_group_tension = _floatify(record.intra_group_tension)
@@ -728,7 +775,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
     mean_CATS_per_project = _floatify(mean_CATS_per_project)
 
     # generate PuLP problem
-    prob = pulp.LpProblem(record.name, pulp.LpMaximize)
+    prob: pulp.LpProblem = pulp.LpProblem(record.name, pulp.LpMaximize)
 
     # generate decision variables for project assignment matrix
     # the entries of this matrix are either 0 or 1
@@ -1204,6 +1251,67 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
             db.session.add(data)
 
 
+def _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config):
+    # capture number of CATS assigned per marking task
+    CATS_per_assignment = _floatify(config.CATS_marking)
+
+    # generate PuLP problem
+    prob: pulp.LpProblem = pulp.LpProblem("populate marker", pulp.LpMinimize)
+
+    # generate decision variables for marker assignment
+    number_markers = len(mark_dict)
+    number_submitters = len(submit_dict)
+    Y = pulp.LpVariable.dicts("Y", itertools.product(range(number_markers), range(number_submitters)),
+                              cat=pulp.LpBinary)
+
+    # to implement workload balancing we use pairs of continuous variables that relax
+    # to the maximum and minimum workload
+    max_CATS = pulp.LpVariable("max_CATS", lowBound=0, cat=pulp.LpContinuous)
+    min_CATS = pulp.LpVariable("min_CATS", lowBound=0, cat=pulp.LpContinuous)
+
+    # track maximum number of marking assignments for any individual faculty member
+    max_assigned = pulp.LpVariable("max_assigned", lowBound=0, cat=pulp.LpContinuous)
+
+
+    # OBJECTIVE FUNCTION
+
+    # maximization problem is to assign everyone while keeping difference between max and min CATS
+    # small, and keeping max_assigned small
+    prob += 10.0*(max_CATS - min_CATS) + 5.0*max_assigned
+
+    for i in range(number_markers):
+        # max_CATS and min_CATS should bracket the CATS workload of all faculty
+        prob += mark_CATS_dict[i] \
+                + CATS_per_assignment * sum([Y[(i, j)] for j in range(number_submitters)]) <= max_CATS
+        prob += mark_CATS_dict[i] \
+                + CATS_per_assignment * sum([Y[(i, j)] for j in range(number_submitters)]) >= min_CATS
+
+        # max_assigned should relax to total assigned
+        prob += sum([Y[(i, j)] for j in range(number_submitters)]) <= max_assigned
+
+
+    # CONSTRAINT: EXACTLY ONE MARKER ASSIGNED PER SUBMITTER
+
+    for j in range(number_submitters):
+        prob += sum([Y[(i, j)] for i in range(number_markers)]) == 1
+
+
+    # CONSTRAINT: MARKERS CAN ONLY BE ASSIGNED TO PROJECTS FOR WHICH THEY ARE IN THE ASSESSOR POOL
+
+    for j in range(number_submitters):
+        sub: SubmissionRecord = submit_dict[j]
+
+        for i in range(number_markers):
+            marker: FacultyData = mark_dict[i]
+
+            if sub.is_in_assessor_pool(marker.id):
+                prob += Y[(i, j)] <= 1
+            else:
+                prob += Y[(i, j)] == 0
+
+    return prob, Y
+
+
 def _initialize(self, record, read_serialized=False):
     progress_update(record.celery_id, TaskRecord.RUNNING, 5, "Collecting information...", autocommit=True)
 
@@ -1428,6 +1536,57 @@ def _execute_from_solution(self, file, record, prob, X, Y, W, R, create_time,
     return _process_PuLP_solution(self, record, status, solve_time, X, Y, W, R, create_time,
                                   number_sel, number_to_sel, number_lp, number_to_lp, number_mark, number_to_mark,
                                   multiplicity, sel_dict, sup_dict, mark_dict, lp_dict, mean_CATS_per_project)
+
+
+def _execute_marker_problem(self, task_id, prob, Y, mark_dict, inverse_mark_dict, submit_dict, inverse_submit_dict,
+                            user: User):
+    print('Solving PuLP problem to populate markers')
+
+    progress_update(task_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...",
+                    autocommit=True)
+
+    with Timer() as solve_time:
+        status = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
+
+    print('-- solved PuLP problem in time {t}'.format(t=solve_time.interval))
+
+    progress_update(task_id, TaskRecord.RUNNING, 70, "Processing PuLP solution...", autocommit=True)
+
+    state = pulp.LpStatus[status]
+
+    if state == 'Optimal':
+        try:
+            number_markers = len(mark_dict)
+            number_submitters = len(submit_dict)
+
+            number_populated = 0
+
+            for j in range(number_submitters):
+                sub: SubmissionRecord = inverse_submit_dict[j]
+
+                for i in range(number_markers):
+                    Y[(i, j)].round()
+                    if pulp.value(Y[(i, j)]) == 1:
+                        marker: FacultyData = inverse_mark_dict[i]
+
+                        sub.marker_id = marker.id
+                        number_populated += 1
+                        break
+
+            db.session.commit()
+            user.post_message("Populated {num} missing marker assignments".format(num=number_populated))
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            user.post_message("Could not populate markers because, although the optimization task succeeded "
+                              "there was a failure while storing the solution.", 'error', autocommit=True)
+
+    else:
+        user.post_message("Could not populate markers because the optimization task failed",
+                          'error', autocommit=True)
+
+    progress_update(task_id, TaskRecord.RUNNING, 100, 'Matching task complete', autocommit=True)
 
 
 def _process_PuLP_solution(self, record, output, solve_time, X, Y, W, R, create_time,
@@ -1703,9 +1862,10 @@ def register_matching_tasks(celery):
         progress_update(record.celery_id, TaskRecord.SUCCESS, 100,
                         'File generation for offline project matching now complete', autocommit=True)
         user.post_message('The files necessary to perform offline matching have been emailed to you.',
-                          'info', autocommit=True) \
- \
-        @ celery.task(bind=True, default_retry_delay=30)
+                          'info', autocommit=True)
+
+
+    @celery.task(bind=True, default_retry_delay=30)
     def process_offline_solution(self, matching_id, asset_id, user_id):
         self.update_state(state='STARTED',
                           meta='Looking up TemporaryAsset record for id={id}'.format(id=asset_id))
@@ -1759,6 +1919,40 @@ def register_matching_tasks(celery):
                                       number_sel, number_lp, number_mark, number_to_sel, number_to_lp, number_to_mark,
                                       sel_dict, lp_dict, sup_dict, mark_dict, multiplicity, mean_CATS_per_project)
 
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def populate_markers(self, config_id, user_id, task_id):
+        self.update_state(state='STARTED',
+                          meta='Looking up ProjectClassConfig record for id={id}'.format(id=config_id))
+
+        try:
+            config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+            user = db.session.query(User).filter_by(id=user_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if config is None:
+            self.update_state(state='FAILURE', meta='Could not load ProjectClassConfig record from database')
+            raise Ignore()
+
+        if user is None:
+            self.update_state(state='FAILURE', meta='Could not load User record from database')
+            raise Ignore()
+
+        with Timer() as create_time:
+            mark_dict, inverse_mark_dict, submit_dict, inverse_submit_dict, mark_CATS_dict = \
+                _enumerate_missing_markers(self, config, task_id)
+
+            progress_update(task_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+                            autocommit=True)
+
+            prob, Y = _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config)
+
+        print(' -- creation complete in time {t}'.format(t=create_time.interval))
+
+        return _execute_marker_problem(task_id, prob, Y, mark_dict, inverse_mark_dict,
+                                       submit_dict, inverse_submit_dict, user)
 
 
     @celery.task(bind=True, default_retry_delay=30)

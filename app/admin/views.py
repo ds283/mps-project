@@ -3264,20 +3264,26 @@ def create_match():
                     if _validate_included_match(match):
                         attempt.include_matches.append(match)
 
-        db.session.add(attempt)
-        db.session.commit()
+        try:
+            db.session.add(attempt)
+            db.session.commit()
 
-        if offline:
-            celery = current_app.extensions['celery']
-            match_task = celery.tasks['app.tasks.matching.offline_match']
+            if offline:
+                celery = current_app.extensions['celery']
+                match_task = celery.tasks['app.tasks.matching.offline_match']
 
-            match_task.apply_async(args=(attempt.id, current_user.id), task_id=uuid)
+                match_task.apply_async(args=(attempt.id, current_user.id), task_id=uuid)
 
-        else:
-            celery = current_app.extensions['celery']
-            match_task = celery.tasks['app.tasks.matching.create_match']
+            else:
+                celery = current_app.extensions['celery']
+                match_task = celery.tasks['app.tasks.matching.create_match']
 
-            match_task.apply_async(args=(attempt.id,), task_id=uuid)
+                match_task.apply_async(args=(attempt.id,), task_id=uuid)
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not perform matching due to a database error. '
+                  'Please contact a system administrator', 'error')
 
         return redirect(url_for('admin.manage_matching'))
 
@@ -3298,7 +3304,6 @@ def create_match():
 @admin.route('/terminate_match/<int:id>')
 @roles_required('root')
 def terminate_match(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if record.finished:
@@ -6245,7 +6250,7 @@ def rename_schedule(id):
 
 
 @admin.route('/compare_schedule/<int:id>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def compare_schedule(id):
     record = ScheduleAttempt.query.get_or_404(id)
 

@@ -91,8 +91,13 @@ def register_email_notification_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def send_daily_notifications(self):
-        # test whether today is a working day, and if not then bail out; we don't want to bother people
-        # with emails at the weekend or on statutory holidays
+        """
+        Send daily summary mail notification. The opposite of notify_user()
+        :param self:
+        :return:
+        """
+        # test whether today is a working day (a "business day" or "bday"), and if not then bail out;
+        # we don't want to bother people with emails at the weekend or on statutory holidays
         today = date.today()
         if not isbday(today, holidays=holidays.UK()):
             return
@@ -101,18 +106,16 @@ def register_email_notification_tasks(celery):
         # we treat students and faculty slightly differently so we have different dispatchers for them
 
         # find all students
-        student_recs = db.session.query(User) \
-            .filter(User.active == True,
-                    User.roles.any(Role.name == 'student')).all()
+        students = db.session.query(User).filter(User.active == True,
+                                                 User.roles.any(Role.name == 'student')).all()
 
-        student_tasks = group(dispatch_student_notifications.si(r.id) for r in student_recs if r is not None)
+        student_tasks = group(dispatch_student_notifications.si(r.id) for r in students if r is not None)
 
         # find all faculty
-        faculty_recs = db.session.query(User) \
-            .filter(User.active == True,
-                    User.roles.any(Role.name == 'faculty')).all()
+        faculty = db.session.query(User).filter(User.active == True,
+                                                User.roles.any(Role.name == 'faculty')).all()
 
-        faculty_tasks = group(dispatch_faculty_notifications.si(r.id) for r in faculty_recs if r is not None)
+        faculty_tasks = group(dispatch_faculty_notifications.si(r.id) for r in faculty if r is not None)
 
         task = group(student_tasks, faculty_tasks)
         raise self.replace(task)
@@ -120,6 +123,13 @@ def register_email_notification_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def notify_user(self, task_id, user_id):
+        """
+        Send prompt email notification. The opposite of send_daily_notifications()
+        :param self:
+        :param task_id:
+        :param user_id:
+        :return:
+        """
         progress_update(task_id, TaskRecord.RUNNING, 10, "Preparing to send email...", autocommit=True)
 
         try:
@@ -159,6 +169,12 @@ def register_email_notification_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def dispatch_faculty_notifications(self, user_id):
+        """
+        Dispatch daily summary notifications that are directed at faculty
+        :param self:
+        :param user_id:
+        :return:
+        """
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
@@ -172,7 +188,11 @@ def register_email_notification_tasks(celery):
         # create snapshot of notifications list; this is what we use *everywhere* to decide which notifications
         # to process, in order to avoid race conditions with other threads adding notifications to the database
         raw_list = [(n.id, n.event_type) for n in user.email_notifications]
+
+        # strip out all notification ids, no matter what type of event we are dealing with
         n_ids = [x[0] for x in raw_list]
+
+        # strip out all notification ids for newly created events
         c_ids = [x[0] for x in raw_list if x[1] == EmailNotification.CONFIRMATION_REQUEST_CREATED]
 
         # if we are not grouping notifications into summaries for this user,
@@ -502,23 +522,26 @@ def register_email_notification_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=req.project.owner.user.email,
-                      recipients=[req.owner.student.user.email, req.project.owner.user.email],
-                      subject='{name}: project meeting request'.format(
-                          name=req.project.config.project_class.name))
+        # if req is None, assume ConfirmRequest has been deleted but the corresponding EmailNotification has been
+        # orphaned. That means we should do nothing
+        if req is not None:
+            msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                          reply_to=req.project.owner.user.email,
+                          recipients=[req.owner.student.user.email, req.project.owner.user.email],
+                          subject='{name}: project meeting request'.format(
+                              name=req.project.config.project_class.name))
 
-        msg.body = render_template('email/notifications/request_meeting.txt',
-                                   supervisor=req.project.owner.user,
-                                   student=req.owner.student, config=req.project.config,
-                                   project=req.project)
+            msg.body = render_template('email/notifications/request_meeting.txt',
+                                       supervisor=req.project.owner.user,
+                                       student=req.owner.student, config=req.project.config,
+                                       project=req.project)
 
-        # register a new task in the database
-        task_id = register_task(msg.subject, description='Send meeting setup email for "{proj}"'.format(proj=req.project.name))
+            # register a new task in the database
+            task_id = register_task(msg.subject, description='Send meeting setup email for "{proj}"'.format(proj=req.project.name))
 
-        # queue Celery task to send the email
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+            # queue Celery task to send the email
+            send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+            send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         # pass through previous_ids
         return previous_ids

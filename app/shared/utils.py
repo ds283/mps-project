@@ -1083,6 +1083,14 @@ def build_submitters_data(config, cohort_filter, prog_filter, state_filter, year
         data = [x for x in submitters.all() if not x.has_late_feedback]
     elif state_filter == 'not-started':
         data = [x for x in submitters.all() if x.has_not_started_flags]
+    elif state_filter == 'report':
+        data = [x for x in submitters.all() if x.has_report]
+    elif state_filter == 'no-report':
+        data = [x for x in submitters.all() if not x.has_report]
+    elif state_filter == 'attachments':
+        data = [x for x in submitters.all() if x.has_attachments]
+    elif state_filter == 'no-attachments':
+        data = [x for x in submitters.all() if not x.has_attachments]
     else:
         data = submitters.all()
 

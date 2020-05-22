@@ -6924,8 +6924,10 @@ class SubmittingStudent(db.Model):
         return self.student.academic_year_label(self.config.year, show_details=show_details)
 
 
-    def get_assignment(self, period):
-        if isinstance(period, SubmissionPeriodRecord):
+    def get_assignment(self, period=None):
+        if period is None:
+            period_number = self.config.current_period
+        elif isinstance(period, SubmissionPeriodRecord):
             period_number = period.submission_period
         elif isinstance(period, int):
             period_number = period
@@ -6985,6 +6987,26 @@ class SubmittingStudent(db.Model):
                     SubmissionRecord.student_engaged == False)
 
         return get_count(q) > 0
+
+
+    @property
+    def has_report(self):
+        """
+        Returns true if a report has been uploaded for the current submission period
+        :return:
+        """
+        sub: SubmissionRecord = self.get_assignment()
+        return sub.report is not None
+
+
+    @property
+    def has_attachments(self):
+        """
+        Returns true if attachments have been uploaded for the current submission period
+        :return:
+        """
+        sub: SubmissionRecord = self.get_assignment()
+        return sub.number_record_attachments > 0
 
 
     def detach_records(self):

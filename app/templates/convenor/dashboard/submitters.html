@@ -142,6 +142,22 @@
                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='not-started', data_display=data_display) }}">
                             Not started
                         </a>
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'not-started' %}btn-primary{% else %}btn-default{% endif %}"
+                           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='report', data_display=data_display) }}">
+                            Report uploaded
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'not-started' %}btn-primary{% else %}btn-default{% endif %}"
+                           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='no-report', data_display=data_display) }}">
+                            Report not uploaded
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'not-started' %}btn-primary{% else %}btn-default{% endif %}"
+                           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='attachments', data_display=data_display) }}">
+                            Has attachments
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'not-started' %}btn-primary{% else %}btn-default{% endif %}"
+                           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='no-attachments', data_display=data_display) }}">
+                            No attachments
+                        </a>
                     </div>
                     <div class="col-xs-6">
                         <p>Display data</p>

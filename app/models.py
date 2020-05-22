@@ -4287,6 +4287,7 @@ class SubmissionPeriodRecord(db.Model):
                              backref=db.backref('periods', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # submission period
+    # note this does not directly link to SubmissionPeriodDefinition
     submission_period = db.Column(db.Integer(), index=True)
 
     # optional start date - purely for UI purposes
@@ -4295,6 +4296,9 @@ class SubmissionPeriodRecord(db.Model):
     # alternative textual name for this period (eg. "Autumn Term", "Spring Term");
     # can be null if not used
     name = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+
+    # PRESENTATION DATA, IF USED
 
     # does this submission period have an associated presentation assessment?
     has_presentation = db.Column(db.Boolean())
@@ -4319,6 +4323,9 @@ class SubmissionPeriodRecord(db.Model):
 
     # use platform to collect presentation feedback?
     collect_presentation_feedback = db.Column(db.Boolean(), default=True)
+
+
+    # LIFECYCLE DATA
 
     # retired flag, set by rollover code
     retired = db.Column(db.Boolean(), index=True)
@@ -4531,6 +4538,25 @@ class SubmissionPeriodRecord(db.Model):
         return self.aubmissions.filter_by(project_id=None).first() is None
 
 
+    @property
+    def validate(self):
+        messages = []
+
+        if self.start_date is None:
+            messages.append('A start date for this submission period has not yet been configured')
+
+        if self.name is None:
+            messages.append('A unique name for this submission period has not yet been configured')
+
+        if not self.all_supervisors_assigned:
+            messages.append('Some students still require projects to be assigned')
+
+        if not self.all_markers_assigned:
+            messages.append('Some students still require markers to be assigned')
+
+        return messages
+
+
 class EnrollmentRecord(db.Model):
     """
     Capture details about a faculty member's enrollment in a single project class
@@ -4604,7 +4630,7 @@ class EnrollmentRecord(db.Model):
     presentations_reenroll = db.Column(db.Integer())
 
 
-    # CUSTOM CATS LIMITS - these are blanked every year
+    # CUSTOM CATS LIMITS - these should be blanked every year
 
     # custom limit for supervising
     CATS_supervision = db.Column(db.Integer())

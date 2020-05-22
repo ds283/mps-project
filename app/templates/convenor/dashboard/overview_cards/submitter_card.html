@@ -6,6 +6,7 @@
     {% set period = config.get_period(n+1) %}
 
     {% if period %}
+        {% set validation_messages = period.validate %}
         <div class="panel
             {% if n+1 == config.submission_period %}
                 {% if period.closed %}
@@ -29,6 +30,13 @@
                 {% endif %}
             </div>
             <div class="panel-body">
+                {% if validation_messages is not none and validation_messages|length > 0 %}
+                    <ul class="list-group">
+                        {% for msg in validation_messages %}
+                            <li class="list-group-item list-group-item-warning">{{ msg }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
                 {% if period.submission_period < config.submission_period or period.closed %}
                     {{ period_closed(config, period) }}
                 {% elif period.submission_period > config.submission_period %}

@@ -693,6 +693,10 @@ def selectors(id):
     if state_filter is None and session.get('convenor_selectors_state_filter'):
         state_filter = session['convenor_selectors_state_filter']
 
+    if isinstance(state_filter, str) and state_filter not in ['all', 'submitted', 'bookmarks', 'none', 'confirmations',
+                                                              'convert', 'no-convert']:
+        state_filter = 'all'
+
     if state_filter is not None:
         session['convenor_selectors_state_filter'] = state_filter
 
@@ -1406,6 +1410,11 @@ def submitters(id):
     if state_filter is None and session.get('convenor_submitters_state_filter'):
         state_filter = session['convenor_submitters_state_filter']
 
+    if isinstance(state_filter, str) and state_filter not in ['all', 'published', 'unpublished', 'late-feedback',
+                                                              'no-late-feedback', 'not-started', 'report',
+                                                              'no-report', 'attachments', 'no-attachments']:
+        state_filter = 'all'
+
     if state_filter is not None:
         session['convenor_submitters_state_filter'] = state_filter
 
@@ -1421,8 +1430,7 @@ def submitters(id):
     if data_display is None and session.get('convenor_submitters_data_display'):
         data_display = session['convenor_submitters_data_display']
 
-    if data_display != 'name' and data_display != 'number' and data_display != 'both-name' \
-            and data_display != 'both-number':
+    if isinstance(data_display, str) and data_display not in ['name', 'number', 'both-name', 'both-number']:
         data_display = 'name'
 
     if data_display is not None:

@@ -6926,8 +6926,9 @@ class SubmittingStudent(db.Model):
 
     def get_assignment(self, period=None):
         if period is None:
-            period_number = self.config.current_period
-        elif isinstance(period, SubmissionPeriodRecord):
+            period = self.config.current_period
+
+        if isinstance(period, SubmissionPeriodRecord):
             period_number = period.submission_period
         elif isinstance(period, int):
             period_number = period

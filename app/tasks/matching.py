@@ -15,7 +15,7 @@ from os import path
 from shutil import copyfile
 
 import pulp
-import pulp.solvers as solvers
+import pulp.apis as pulp_apis
 from celery import group, chain
 from celery.exceptions import Ignore
 from flask import current_app, render_template
@@ -1473,17 +1473,17 @@ def _execute_live(self, record, prob, X, Y, W, R, create_time,
         record.awaiting_upload = False
 
         if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
-            status = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
+            status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
         elif record.solver == MatchingAttempt.SOLVER_CBC_CMD:
-            status = prob.solve(solvers.COIN_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
+            status = prob.solve(pulp_apis.COIN_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
         elif record.solver == MatchingAttempt.SOLVER_GLPK_CMD:
-            status = prob.solve(solvers.GLPK_CMD())
+            status = prob.solve(pulp_apis.GLPK_CMD())
         elif record.solver == MatchingAttempt.SOLVER_CPLEX_CMD:
-            status = prob.solve(solvers.CPLEX_CMD())
+            status = prob.solve(pulp_apis.CPLEX_CMD())
         elif record.solver == MatchingAttempt.SOLVER_GUROBI_CMD:
-            status = prob.solve(solvers.GUROBI_CMD())
+            status = prob.solve(pulp_apis.GUROBI_CMD())
         elif record.solver == MatchingAttempt.SOLVER_SCIP_CMD:
-            status = prob.solve(solvers.SCIP_CMD())
+            status = prob.solve(pulp_apis.SCIP_CMD())
         else:
             status = prob.solve()
 
@@ -1505,29 +1505,29 @@ def _execute_from_solution(self, file, record, prob, X, Y, W, R, create_time,
     progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Processing uploaded solution file...",
                     autocommit=True)
 
-    # TODO: catch pulp.solvers.PulpSolverError: Unknown status returned by CPLEX
+    # TODO: catch pulp.pulp_apis.PulpSolverError: Unknown status returned by CPLEX
     #  and handle it gracefully (or fix it on the fly)
     with Timer() as solve_time:
         record.awaiting_upload = False
         wasNone, dummyVar = prob.fixObjective()
 
         if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
-            solver = solvers.PULP_CBC_CMD()
+            solver = pulp_apis.PULP_CBC_CMD()
             status, values, reducedCosts, shadowPrices, slacks = solver.readsol_LP(file, prob, prob.variables())
         elif record.solver == MatchingAttempt.SOLVER_CBC_CMD:
-            solver = solvers.COIN_CMD()
+            solver = pulp_apis.COIN_CMD()
             status, values, reducedCosts, shadowPrices, slacks = solver.readsol_LP(file, prob, prob.variables())
         elif record.solver == MatchingAttempt.SOLVER_GLPK_CMD:
-            solver = solvers.GLPK_CMD()
+            solver = pulp_apis.GLPK_CMD()
             status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
         elif record.solver == MatchingAttempt.SOLVER_CPLEX_CMD:
-            solver = solvers.CPLEX_CMD()
+            solver = pulp_apis.CPLEX_CMD()
             status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
         elif record.solver == MatchingAttempt.SOLVER_GUROBI_CMD:
-            solver = solvers.GUROBI_CMD()
+            solver = pulp_apis.GUROBI_CMD()
             status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
         elif record.solver == MatchingAttempt.SOLVER_SCIP_CMD:
-            solver = solvers.SCIP_CMD()
+            solver = pulp_apis.SCIP_CMD()
             status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
         else:
             progress_update(record.celery_id, TaskRecord.FAILURE, 100, "Unknown solver",
@@ -1556,7 +1556,7 @@ def _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user: User
                     autocommit=True)
 
     with Timer() as solve_time:
-        status = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
+        status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
 
     print('-- solved PuLP problem in time {t}'.format(t=solve_time.interval))
 

@@ -4535,7 +4535,7 @@ class SubmissionPeriodRecord(db.Model):
 
     @property
     def all_supervisors_assigned(self):
-        return self.aubmissions.filter_by(project_id=None).first() is None
+        return self.submissions.filter_by(project_id=None).first() is None
 
 
     @property

@@ -114,7 +114,8 @@
                 <div class="row vertical-top" style="height: 54px;">
                     <div class="col-xs-6">
                         <div class="container-fluid">
-                            {{ number_sessions }} session documents in MongoDB backend
+                            {% set pl = 's' %}{% if number_sessions == 1 %}{% set pl = '' %}{% endif %}
+                            {{ number_sessions }} session document{{ pl }} in MongoDB backend
                         </div>
                     </div>
                     <div class="col-xs-6">

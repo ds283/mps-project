@@ -4545,7 +4545,7 @@ class SubmissionPeriodRecord(db.Model):
         if self.start_date is None:
             messages.append('A start date for this submission period has not yet been configured')
 
-        if self.name is None:
+        if self.name is None or len(self.name) == 0:
             messages.append('A unique name for this submission period has not yet been configured')
 
         if not self.all_supervisors_assigned:

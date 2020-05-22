@@ -52,8 +52,10 @@ def submitter_documents(sid):
     return render_template('documents/submitter_manager.html', record=record, period=period, url=url, text=text,
                            is_editable=partial(is_editable, record, period=period, config=config, message=False),
                            deletable=is_deletable(record, period, config, message=False), is_admin=is_admin,
-                           report_uploadable=is_uploadable(record, message=False, allow_student=False),
-                           attachment_uploadable=is_uploadable(record, message=False, allow_student=True))
+                           report_uploadable=is_uploadable(record, message=False, allow_student=False,
+                                                           allow_faculty=False),
+                           attachment_uploadable=is_uploadable(record, message=False, allow_student=True,
+                                                               allow_faculty=True))
 
 
 @documents.route('/delete_submitter_report/<int:sid>')
@@ -135,7 +137,7 @@ def upload_submitter_report(sid):
     # check is convenor for the project's class, or has suitable admin/root privileges
     config = record.owner.config
     pclass = config.project_class
-    if not is_uploadable(record, message=True, allow_student=False):
+    if not is_uploadable(record, message=True, allow_student=False, allow_faculty=False):
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -403,7 +405,7 @@ def upload_submitter_attachment(sid):
     # check is convenor for the project's class, or has suitable admin/root privileges
     config = record.owner.config
     pclass = config.project_class
-    if not is_uploadable(record, message=True, allow_student=True):
+    if not is_uploadable(record, message=True, allow_student=True, allow_faculty=True):
         return redirect(request.referrer)
 
     url = request.args.get('url', None)

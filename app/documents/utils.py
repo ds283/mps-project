@@ -88,6 +88,13 @@ def is_deletable(record, period=None, config=None, message=False):
 
 
 def is_listable(record, message=False):
+    """
+    Determine whether the currently logged-in user has permissions to view the documents attached to
+    a SubmissionRecord
+    :param record:
+    :param message:
+    :return:
+    """
     # 'root', 'admin', 'faculty' and 'office' users can always list the documents attached to a SubmissionRecord
     if current_user.has_role('root') or current_user.has_role('admin') or current_user.has_role('faculty') \
             or current_user.has_role('office'):
@@ -110,20 +117,38 @@ def is_listable(record, message=False):
     return False
 
 
-def is_uploadable(record, message=False, allow_student=True):
+def is_uploadable(record, message=False, allow_student=True, allow_faculty=True):
+    """
+    Determine whether the currently logged-in user has permissions to upload a document to a SubmissionRecord
+    :param allow_faculty:
+    :param record:
+    :param message:
+    :param allow_student:
+    :return:
+    """
     # 'root', 'admin', 'faculty' and 'office' users can always upload new documents to a SubmissionRecord
-    if current_user.has_role('root') or current_user.has_role('admin') or current_user.has_role('faculty') \
+    if current_user.has_role('root') or current_user.has_role('admin') \
             or current_user.has_role('office'):
         return True
 
-    if not allow_student:
+    if current_user.has_role('faculty'):
+        if allow_faculty:
+            return True
+
         if message:
-            flash('You do not have sufficient privileges to attach documents to this submission record.', 'info')
+            flash('You do not have sufficient privileges to attach documents to this submission record. '
+                  'Please contact the convenor or an administrator to arrange for documents to be uploaded.', 'info')
 
         return False
 
     # 'student' users can only list the documents attached if they are the submitter
     if current_user.has_role('student'):
+        if not allow_student:
+            if message:
+                flash('You do not have sufficient privileges to attach documents to this submission record.', 'info')
+
+            return False
+
         if current_user.id == record.owner.student.id:
             return True
 

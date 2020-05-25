@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from functools import partial
 
-from flask import render_template, redirect, url_for, flash, request, current_app, jsonify, abort
+from flask import render_template, redirect, url_for, flash, request, current_app, jsonify, abort, session
 from flask_security import login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_
@@ -555,12 +555,22 @@ def attachment_acl(attach_type, attach_id):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
     pane = request.args.get('pane', None)
+    state_filter = request.args.get('state_filter', None)
 
     if pane not in ['users', 'roles']:
         pane = 'users'
 
+    if state_filter is None and session.get('documents_acl_state_filter'):
+        state_filter = session['documents_acl_state_filter']
+
+    if state_filter not in ['all', 'access', 'no-access']:
+        state_filter = 'all'
+
+    if state_filter is not None:
+        session['documents_acl_state_filter'] = state_filter
+
     return render_template('documents/edit_acl.html', asset=asset, pclass_id=pclass.id, url=url, text=text,
-                           type=attach_type, attachment=attachment, pane=pane)
+                           type=attach_type, attachment=attachment, pane=pane, state_filter=state_filter)
 
 
 @documents.route('/acl_user_ajax/<int:attach_type>/<int:attach_id>')
@@ -575,9 +585,19 @@ def acl_user_ajax(attach_type, attach_id):
     if not validate_is_convenor(pclass, message=True):
         return jsonify({})
 
+    state_filter = request.args.get('state_filter', None)
+
+    if state_filter not in ['all', 'access', 'no-access']:
+        state_filter = 'all'
+
     user_list = db.session.query(User).filter_by(active=True).all()
     role_list = db.session.query(Role).filter(or_(Role.name == 'faculty',
                                                   or_(Role.name == 'student', Role.name == 'office'))).all()
+
+    if state_filter == 'access':
+        user_list = [u for u in user_list if asset.has_access(u)]
+    elif state_filter == 'no-access':
+        user_list = [u for u in user_list if not asset.has_access(u)]
 
     return ajax.documents.acl_user(user_list, role_list, asset, attachment, attach_type)
 
@@ -594,7 +614,17 @@ def acl_role_ajax(attach_type, attach_id):
     if not validate_is_convenor(pclass, message=True):
         return jsonify({})
 
+    state_filter = request.args.get('state_filter', None)
+
+    if state_filter not in ['all', 'access', 'no-access']:
+        state_filter = 'all'
+
     role_list = db.session.query(Role).all()
+
+    if state_filter == 'access':
+        role_list = [r for r in role_list if asset.in_role_acl(r)]
+    elif state_filter == 'no-access':
+        role_list = [r for r in role_list if not asset.in_role_acl(r)]
 
     return ajax.documents.acl_role(role_list, asset, attachment, attach_type)
 
@@ -625,6 +655,8 @@ def add_user_acl(user_id, attach_type, attach_id):
         flash('Could not grant access to this asset due to a database error. '
               'Please contact a system administrator', 'error')
 
+    return redirect(request.referrer)
+
 
 @documents.route('/remove_user_acl/<int:user_id>/<int:attach_type>/<int:attach_id>')
 @login_required
@@ -651,6 +683,8 @@ def remove_user_acl(user_id, attach_type, attach_id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash('Could not remove access to this asset due to a database error. '
               'Please contact a system administrator', 'error')
+
+    return redirect(request.referrer)
 
 
 @documents.route('/add_role_acl/<int:role_id>/<int:attach_type>/<int:attach_id>')
@@ -679,6 +713,8 @@ def add_role_acl(role_id, attach_type, attach_id):
         flash('Could not grant role-based access to this asset due to a database error. '
               'Please contact a system administrator', 'error')
 
+    return redirect(request.referrer)
+
 
 @documents.route('/remove_role_acl/<int:role_id>/<int:attach_type>/<int:attach_id>')
 @login_required
@@ -705,6 +741,8 @@ def remove_role_acl(role_id, attach_type, attach_id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash('Could not remove role-based access to this asset due to a database error. '
               'Please contact a system administrator', 'error')
+
+    return redirect(request.referrer)
 
 
 @documents.route('/attachment_download_log/<int:attach_type>/<int:attach_id>')

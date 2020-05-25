@@ -34,7 +34,11 @@ _access = \
 {% if in_user_acl %}
     <span class="label label-success"><i class="fa fa-check"></i> Has individual access</span>
 {% elif has_role_access %}
+    {% set eligible_roles = asset.get_eligible_roles(user) %}
     <span class="label label-primary"><i class="fa fa-check"></i> Has role-based access</span>
+    {% for role in eligible_roles %}
+        {{ role.make_label()|safe }}
+    {% endfor %}
 {% else %}
     <span class="label label-danger"><i class="fa fa-times"></i> No access</span>
 {% endif %}

@@ -676,6 +676,24 @@ def AssetMixinFactory(acl_name, acr_name):
                     return True
 
 
+        def get_eligible_roles(self, user):
+            user_obj = self._get_user(user)
+
+            role_list = []
+
+            key_roles = db.session.query(Role).filter(or_(Role.name == 'root', Role.name == 'admin')).all()
+
+            for r in key_roles:
+                if user_obj.has_role(r) and r not in role_list:
+                    role_list.append(r)
+
+            for r in self.access_control_roles:
+                if user_obj.has_role(r) and r not in role_list:
+                    role_list.append(r)
+
+            return role_list
+
+
         def in_user_acl(self, user):
             user_id = self._get_userid(user)
 

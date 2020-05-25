@@ -19,7 +19,7 @@
                 $('#user-acl-table').DataTable({
                     responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                     buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                    ajax: { 'url': $SCRIPT_ROOT + '/documents/acl_user_ajax/{{ type }}/{{ attachment.id }}', dataSrc: '' },
+                    ajax: { 'url': $SCRIPT_ROOT + '/documents/acl_user_ajax/{{ type }}/{{ attachment.id }}?state_filter={{ state_filter }}', dataSrc: '' },
                     "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                     columns: [
                         { data: 'name',
@@ -61,12 +61,12 @@
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
         <li {% if pane=='users' %}class="active"{% endif %}>
-            <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane='users') }}">
+            <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane='users', state_filter=state_filter) }}">
                 User-based access control
             </a>
         </li>
         <li {% if pane=='roles' %}class="active"{% endif %}>
-            <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane='roles') }}">
+            <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane='roles', state_filter=state_filter) }}">
                 Role-based access control
             </a>
         </li>
@@ -85,6 +85,22 @@
             </a>
         </div>
     {% endif %}
+
+    <div class="well">
+        <p>Filter by state</p>
+        <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='all') }}"
+           class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+            All
+        </a>
+        <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='access') }}"
+           class="btn btn-sm filter-btn {% if state_filter == 'access' %}btn-primary{% else %}btn-default{% endif %}">
+            Has access
+        </a>
+        <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='no-access') }}"
+           class="btn btn-sm filter-btn {% if state_filter == 'no-access' %}btn-primary{% else %}btn-default{% endif %}">
+            No access
+        </a>
+    </div>
 
     <div class="panel panel-primary panel-primary-bg">
         {% if pane == 'users' %}

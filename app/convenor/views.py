@@ -7184,9 +7184,9 @@ def custom_CATS_limits(record_id):
                            user=record.owner.user)
 
 
-@convenor.route('/submission_record_documents/<int:pid>')
+@convenor.route('/submission_period_documents/<int:pid>')
 @roles_accepted('faculty', 'admin', 'root')
-def submission_record_documents(pid):
+def submission_period_documents(pid):
     # id is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
     config: ProjectClassConfig = record.config
@@ -7325,7 +7325,7 @@ def perform_delete_period_attachment(aid):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(url_for('convenor.submission_record_documents', pid=pid, url=url, text=text))
+    return redirect(url_for('convenor.submission_period_documents', pid=pid, url=url, text=text))
 
 
 @convenor.route('/upload_period_attachment/<int:pid>', methods=['GET', 'POST'])
@@ -7379,7 +7379,7 @@ def upload_period_attachment(pid):
             except SQLAlchemyError as e:
                 flash('Could not upload attachment due to a database issue. Please contact an administrator.', 'error')
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                return redirect(url_for('convenor.submission_record_documents', pid=pid, url=url, text=text))
+                return redirect(url_for('convenor.submission_period_documents', pid=pid, url=url, text=text))
 
             # generate attachment record
             attachment = PeriodAttachment(parent_id=record.id,
@@ -7422,7 +7422,7 @@ def upload_period_attachment(pid):
 
             flash('Attachment "{file}" was successfully uploaded.'.format(file=incoming_filename), 'info')
 
-            return redirect(url_for('convenor.submission_record_documents', pid=pid, url=url, text=text))
+            return redirect(url_for('convenor.submission_period_documents', pid=pid, url=url, text=text))
 
     else:
         if request.method == 'GET':
@@ -7494,7 +7494,7 @@ def edit_period_attachment(aid):
                   'Please contact an administrator.', 'error')
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(url_for('convenor.submission_record_documents', pid=period.id, url=url, text=text))
+        return redirect(url_for('convenor.submission_period_documents', pid=period.id, url=url, text=text))
 
     else:
         if request.method == 'GET':

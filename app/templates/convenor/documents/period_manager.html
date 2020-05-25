@@ -6,7 +6,8 @@
     Manage documents for {{ record.display_name }}
 {% endblock %}
 
-{% macro asset_line(asset, attachment, download_url=none, delete_url=none, edit_url=none, deletable=true) %}
+{% macro asset_line(asset, attachment, download_url=none, delete_url=none, edit_url=none,
+                    acl_url=none, log_url=none, deletable=true) %}
     <tr>
         <td>
             <div>
@@ -60,6 +61,7 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-right">
                         {% set has_access = asset.has_access(current_user.id) %}
+                        {# no need to check whether user is admin, because anyone accessing this view must be an admin user #}
                         {% if edit_url is not none %}
                             <li><a href="{{ edit_url }}"><i class="fa fa-pencil"></i> Edit</a></li>
                         {% else %}
@@ -69,6 +71,16 @@
                             <li><a href="{{ download_url }}"><i class="fa fa-cloud-download"></i> Download</a></li>
                         {% else %}
                             <li class="disabled"><a><i class="fa fa-cloud-download"></i> Download</a></li>
+                        {% endif %}
+                        {% if acl_url is not none %}
+                            <li><a href="{{ acl_url }}"><i class="fa fa-check-square"></i> Access control...</a></li>
+                        {% else %}
+                            <li class="disabled"><a><i class="fa fa-check-square"></i> Access control...</a></li>
+                        {% endif %}
+                        {% if log_url is not none %}
+                            <li><a href="{{ log_url }}"><i class="fa fa-address-book"></i> Download log...</a></li>
+                        {% else %}
+                            <li class="disabled"><a><i class="fa fa-address-book"></i> Download log...</a></li>
                         {% endif %}
                         {% if deletable and delete_url is not none %}
                             <li><a href="{{ delete_url }}"><i class="fa fa-trash"></i> Remove</a></li>
@@ -114,6 +126,8 @@
                                               download_url=url_for('admin.download_period_asset', asset_id=asset.id),
                                               delete_url=url_for('convenor.delete_period_attachment', aid=attachment.id),
                                               edit_url=url_for('convenor.edit_period_attachment', aid=attachment.id, url=url, text=text),
+                                              acl_url=url_for('documents.attachment_acl', attach_type=0, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
+                                              log_url=url_for('documents.attachment_download_log', attach_type=0, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                               deletable=deletable) }}
                             {% endfor %}
                         </tbody>

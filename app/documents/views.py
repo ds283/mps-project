@@ -12,9 +12,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from functools import partial
 
-from flask import render_template, redirect, url_for, flash, request, current_app
+from flask import render_template, redirect, url_for, flash, request, current_app, jsonify, abort
 from flask_security import login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_
 
 from . import documents
 from .forms import UploadReportForm, UploadSubmitterAttachmentForm, EditReportForm, EditSubmitterAttachmentForm
@@ -22,10 +23,13 @@ from .utils import is_editable, is_deletable, is_listable, is_uploadable
 
 from ..database import db
 from ..models import SubmissionRecord, SubmittedAsset, SubmissionAttachment, Role, SubmissionPeriodRecord, \
-    ProjectClassConfig, ProjectClass
+    ProjectClassConfig, ProjectClass, PeriodAttachment, User, Role
 
 from ..shared.asset_tools import make_submitted_asset_filename
+from ..shared.validators import validate_is_convenor
 from ..uploads import submitted_files
+
+import app.ajax as ajax
 
 
 @documents.route('/submitter_documents/<int:sid>')
@@ -496,3 +500,227 @@ def upload_submitter_attachment(sid):
             form.license.data = current_user.default_license
 
     return render_template('documents/upload_attachment.html', record=record, form=form, url=url, text=text)
+
+
+ATTACHMENT_TYPE_PERIOD = 0
+ATTACHMENT_TYPE_SUBMISSION = 1
+ATTACHMENT_TYPE_REPORT = 2
+
+
+def _get_attachment_asset(attach_type, attach_id):
+    if attach_type == ATTACHMENT_TYPE_SUBMISSION:
+        attachment: SubmissionAttachment = db.session.query(SubmissionAttachment).filter_by(id=attach_id).first()
+        if attachment is None:
+            raise KeyError
+
+        asset: SubmittedAsset = attachment.attachment
+        pclass: ProjectClass = attachment.parent.period.config.project_class
+
+        return attachment, asset, pclass
+
+    if attach_type == ATTACHMENT_TYPE_PERIOD:
+        attachment: PeriodAttachment = PeriodAttachment.query.get_or_404(attach_id)
+        if attachment is None:
+            raise KeyError
+
+        asset: SubmittedAsset = attachment.attachment
+        pclass: ProjectClass = attachment.parent.config.project_class
+
+        return attachment, asset, pclass
+
+    if attach_type == ATTACHMENT_TYPE_REPORT:
+        attachment: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=attach_id).first()
+        if attachment is None:
+            raise KeyError
+
+        asset: SubmittedAsset = attachment.report
+        pclass: ProjectClass = attachment.period.config.project_class
+
+        return attachment, asset, pclass
+
+    raise KeyError
+
+@documents.route('/attachment_acl/<int:attach_type>/<int:attach_id>')
+@login_required
+def attachment_acl(attach_type, attach_id):
+    try:
+        attachment, asset, pclass = _get_attachment_asset(attach_type, attach_id)
+    except KeyError as e:
+        abort(404)
+
+    # ensure user is administrator or convenor for this project class
+    if not validate_is_convenor(pclass, message=True):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+    pane = request.args.get('pane', None)
+
+    if pane not in ['users', 'roles']:
+        pane = 'users'
+
+    return render_template('documents/edit_acl.html', asset=asset, pclass_id=pclass.id, url=url, text=text,
+                           type=attach_type, attachment=attachment, pane=pane)
+
+
+@documents.route('/acl_user_ajax/<int:attach_type>/<int:attach_id>')
+@login_required
+def acl_user_ajax(attach_type, attach_id):
+    try:
+        attachment, asset, pclass = _get_attachment_asset(attach_type, attach_id)
+    except KeyError as e:
+        abort(404)
+
+    # ensure user is administrator or convenor for this project class
+    if not validate_is_convenor(pclass, message=True):
+        return jsonify({})
+
+    user_list = db.session.query(User).filter_by(active=True).all()
+    role_list = db.session.query(Role).filter(or_(Role.name == 'faculty',
+                                                  or_(Role.name == 'student', Role.name == 'office'))).all()
+
+    return ajax.documents.acl_user(user_list, role_list, asset, attachment, attach_type)
+
+
+@documents.route('/acl_role_ajax/<int:attach_type>/<int:attach_id>')
+@login_required
+def acl_role_ajax(attach_type, attach_id):
+    try:
+        attachment, asset, pclass = _get_attachment_asset(attach_type, attach_id)
+    except KeyError as e:
+        abort(404)
+
+    # ensure user is administrator or convenor for this project class
+    if not validate_is_convenor(pclass, message=True):
+        return jsonify({})
+
+    role_list = db.session.query(Role).all()
+
+    return ajax.documents.acl_role(role_list, asset, attachment, attach_type)
+
+
+@documents.route('/add_user_acl/<int:user_id>/<int:attach_type>/<int:attach_id>')
+@login_required
+def add_user_acl(user_id, attach_type, attach_id):
+    # user_id identifies a user
+    user = User.query.get_or_404(user_id)
+
+    try:
+        attachment, asset, pclass = _get_attachment_asset(attach_type, attach_id)
+    except KeyError as e:
+        abort(404)
+
+    # ensure user is administrator or convenor for this project class
+    if not validate_is_convenor(pclass, message=True):
+        return redirect(request.referrer)
+
+    try:
+        if user not in asset.access_control_list:
+            asset.access_control_list.append(user)
+
+            db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not grant access to this asset due to a database error. '
+              'Please contact a system administrator', 'error')
+
+
+@documents.route('/remove_user_acl/<int:user_id>/<int:attach_type>/<int:attach_id>')
+@login_required
+def remove_user_acl(user_id, attach_type, attach_id):
+    # user_id identifies a user
+    user = User.query.get_or_404(user_id)
+
+    try:
+        attachment, asset, pclass = _get_attachment_asset(attach_type, attach_id)
+    except KeyError as e:
+        abort(404)
+
+    # ensure user is administrator or convenor for this project class
+    if not validate_is_convenor(pclass, message=True):
+        return redirect(request.referrer)
+
+    try:
+        while user in asset.access_control_list:
+            asset.access_control_list.remove(user)
+
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not remove access to this asset due to a database error. '
+              'Please contact a system administrator', 'error')
+
+
+@documents.route('/add_role_acl/<int:role_id>/<int:attach_type>/<int:attach_id>')
+@login_required
+def add_role_acl(role_id, attach_type, attach_id):
+    # role_id identifies a Role
+    role = Role.query.get_or_404(role_id)
+
+    try:
+        attachment, asset, pclass = _get_attachment_asset(attach_type, attach_id)
+    except KeyError as e:
+        abort(404)
+
+    # ensure user is administrator or convenor for this project class
+    if not validate_is_convenor(pclass, message=True):
+        return redirect(request.referrer)
+
+    try:
+        if role not in asset.access_control_roles:
+            asset.access_control_roles.append(role)
+
+            db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not grant role-based access to this asset due to a database error. '
+              'Please contact a system administrator', 'error')
+
+
+@documents.route('/remove_role_acl/<int:role_id>/<int:attach_type>/<int:attach_id>')
+@login_required
+def remove_role_acl(role_id, attach_type, attach_id):
+    # role_id identifies a Role
+    role = Role.query.get_or_404(role_id)
+
+    try:
+        attachment, asset, pclass = _get_attachment_asset(attach_type, attach_id)
+    except KeyError as e:
+        abort(404)
+
+    # ensure user is administrator or convenor for this project class
+    if not validate_is_convenor(pclass, message=True):
+        return redirect(request.referrer)
+
+    try:
+        while role in asset.access_control_roles:
+            asset.access_control_roles.remove(role)
+
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not remove role-based access to this asset due to a database error. '
+              'Please contact a system administrator', 'error')
+
+
+@documents.route('/attachment_download_log/<int:attach_type>/<int:attach_id>')
+@login_required
+def attachment_download_log(attach_type, attach_id):
+    try:
+        attachment, asset, pclass = _get_attachment_asset(attach_type, attach_id)
+    except KeyError as e:
+        abort(404)
+
+    # ensure user is administrator or convenor for ths project class
+    if not validate_is_convenor(pclass, message=True):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    return render_template('documents/download_log.html', asset=asset, pclass_id=pclass.id, url=url, text=text,
+                           type=attach_type)

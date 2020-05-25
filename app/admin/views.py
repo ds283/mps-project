@@ -92,12 +92,11 @@ def edit_groups():
     return render_template('admin/edit_groups.html')
 
 
-@admin.route('/groups_ajax', methods=['GET', 'POST'])
+@admin.route('/groups_ajax')
 @roles_required('root')
 def groups_ajax():
     """
     Ajax data point for Edit Groups view
-
     :return:
     """
 
@@ -739,7 +738,7 @@ def edit_skills():
     return render_template('admin/transferable_skills/edit_skills.html', subpane='skills')
 
 
-@admin.route('/skills_ajax', methods=['GET', 'POST'])
+@admin.route('/skills_ajax')
 @roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def skills_ajax():
     """
@@ -865,7 +864,7 @@ def edit_skill_groups():
     return render_template('admin/transferable_skills/edit_skill_groups.html', subpane='groups')
 
 
-@admin.route('/skill_groups_ajax', methods=['GET', 'POST'])
+@admin.route('/skill_groups_ajax')
 @roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def skill_groups_ajax():
     """
@@ -1697,7 +1696,7 @@ def edit_supervisors():
     return render_template('admin/edit_supervisors.html')
 
 
-@admin.route('/supervisors_ajax', methods=['GET', 'POST'])
+@admin.route('/supervisors_ajax')
 @roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def supervisors_ajax():
     """
@@ -2124,7 +2123,7 @@ def edit_messages():
     return render_template('admin/edit_messages.html')
 
 
-@admin.route('/messages_ajax', methods=['GET', 'POST'])
+@admin.route('/messages_ajax')
 @roles_accepted('faculty', 'admin', 'root')
 def messages_ajax():
     """
@@ -2319,7 +2318,7 @@ def scheduled_tasks():
     return render_template('admin/scheduled_tasks.html')
 
 
-@admin.route('/scheduled_ajax', methods=['GET', 'POST'])
+@admin.route('/scheduled_ajax')
 @roles_required('root')
 def scheduled_ajax():
     """
@@ -2775,7 +2774,7 @@ def manage_backups():
     return render_template('admin/backup_dashboard/manage.html', pane='view', backup_count=backup_count, form=form)
 
 
-@admin.route('/manage_backups_ajax', methods=['GET', 'POST'])
+@admin.route('/manage_backups_ajax')
 @roles_required('root')
 def manage_backups_ajax():
     """
@@ -2947,7 +2946,7 @@ def background_tasks():
     return render_template("admin/background_tasks.html")
 
 
-@admin.route('/background_ajax', methods=['GET', 'POST'])
+@admin.route('/background_ajax')
 @roles_required('root')
 def background_ajax():
     """
@@ -3014,7 +3013,7 @@ def delete_background_task(id):
     return redirect(request.referrer)
 
 
-@admin.route('/notifications_ajax', methods=['GET', 'POST'])
+@admin.route('/notifications_ajax')
 @limiter.exempt
 def notifications_ajax():
     """

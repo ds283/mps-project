@@ -6,7 +6,7 @@
     Manage documents for {{ record.owner.student.user.name }}
 {% endblock %}
 
-{% macro asset_line(asset, attachment, download_url=none, delete_url=none, edit_url=none,
+{% macro asset_line(asset, attachment, download_url=none, delete_url=none, edit_url=none, acl_url=none, log_url=none,
                     deletable=false, allow_student=false, is_editable=none, is_admin=false) %}
     {% set has_access = asset.has_access(current_user.id) %}
     <tr>
@@ -83,6 +83,18 @@
                                     <li class="disabled"><a><i class="fa fa-cloud-download"></i> Download</a></li>
                                 {% endif %}
                             {% endif %}
+                            {% if is_admin %}
+                                {% if acl_url is not none %}
+                                    <li><a href="{{ acl_url }}"><i class="fa fa-check-square"></i> Access control...</a></li>
+                                {% else %}
+                                    <li class="disabled"><a><i class="fa fa-check-square"></i> Access control...</a></li>
+                                {% endif %}
+                                {% if log_url is not none %}
+                                    <li><a href="{{ log_url }}"><i class="fa fa-address-book"></i> Download log...</a></li>
+                                {% else %}
+                                    <li class="disabled"><a><i class="fa fa-address-book"></i> Download log...</a></li>
+                                {% endif %}
+                            {% endif %}
                             {% if deletable %}
                                 {% if delete_url is not none %}
                                     <li><a href="{{ delete_url }}"><i class="fa fa-trash"></i> Remove</a></li>
@@ -138,8 +150,10 @@
                                 {# students can only see assets that are published to them #}
                                 {% if not is_student or attachment.publish_to_students %}
                                     {{ asset_line(asset, attachment,
-                                                  download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
-                                                  delete_url=none, edit_url=none, deletable=false, allow_student=false,
+                                                  download_url=url_for('admin.download_submitted_asset',
+                                                  asset_id=asset.id),
+                                                  delete_url=none, edit_url=none, acl_url=none, log_url=none,
+                                                  deletable=false, allow_student=false,
                                                   is_editable=none, is_admin=is_admin) }}
                                 {% endif %}
                             {% endfor %}
@@ -168,6 +182,8 @@
                                           download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
                                           delete_url=url_for('documents.delete_submitter_report', sid=record.id),
                                           edit_url=url_for('documents.edit_submitter_report', sid=record.id, url=url, text=text),
+                                          acl_url=url_for('documents.attachment_acl', attach_type=2, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
+                                          log_url=url_for('documents.attachment_download_log', attach_type=2, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                           deletable=deletable, allow_student=false, is_editable=is_editable,
                                           is_admin=is_admin) }}
                         </tbody>
@@ -210,6 +226,8 @@
                                                   download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
                                                   delete_url=url_for('documents.delete_submitter_attachment', aid=attachment.id),
                                                   edit_url=url_for('documents.edit_submitter_attachment', aid=attachment.id, url=url, text=text),
+                                                  acl_url=url_for('documents.attachment_acl', attach_type=1, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
+                                                  log_url=url_for('documents.attachment_download_log', attach_type=1, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                                   deletable=deletable, allow_student=true, is_editable=is_editable,
                                                   is_admin=is_admin) }}
                                 {% endif %}

@@ -276,7 +276,7 @@ def edit_projects():
     return render_template('faculty/edit_projects.html', groups=groups)
 
 
-@faculty.route('/projects_ajax', methods=['GET', 'POST'])
+@faculty.route('/projects_ajax')
 @roles_required('faculty')
 def projects_ajax():
     """

@@ -621,25 +621,71 @@ def AssetMixinFactory(acl_name, acr_name):
             return db.relationship('Role', secondary=acr_name, lazy='dynamic')
 
 
-        def has_access(self, user):
+        def _get_userid(self, user):
             if isinstance(user, int):
                 user_id = user
             elif isinstance(user, User):
                 user_id = user.id
             else:
-                raise RuntimeError('Unrecongnized object "current_user" passed to AssetMixin.has_access()')
+                raise RuntimeError('Unrecognized object "user" passed to AssetMixin._get_userid()')
+
+            return user_id
+
+
+        def _get_user(self, user):
+            if isinstance(user, User):
+                user_obj = user
+            elif isinstance(user, int):
+                user_obj = db.session.query(User).filter_by(id=user).first()
+            else:
+                raise RuntimeError('Unrecognized object "user" passed to AssetMixin._get_user()')
+
+            return user_obj
+
+
+        def _get_roleid(self, role):
+            if isinstance(role, int):
+                role_id = role
+            elif isinstance(role, Role):
+                role_id = role.id
+            else:
+                raise RuntimeError('Unreognized object "role" passed to AssetMixin._get_roleid()')
+
+            return role_id
+
+
+        def has_access(self, user):
+            user_id = self._get_userid(user)
+
+            if self.has_role_access(user_id):
+                return True
+
+            return self.in_user_acl(user)
+
+
+        def has_role_access(self, user):
+            user_obj = self._get_user(user)
 
             # admin and root users always have access
-            if current_user.has_role('root') or current_user.has_role('admin'):
+            if user_obj.has_role('root') or user_obj.has_role('admin'):
                 return True
 
             # test whether current user has any other roles in access_control_roles
             for role in self.access_control_roles:
-                if current_user.has_role(role):
+                if user_obj.has_role(role):
                     return True
 
-            # otherwise, check whether access is allowed at a per-user level via the ACL
+
+        def in_user_acl(self, user):
+            user_id = self._get_userid(user)
+
             return get_count(self.access_control_list.filter_by(id=user_id)) > 0
+
+
+        def in_role_acl(self, role):
+            role_id = self._get_roleid(role)
+
+            return get_count(self.access_control_roles.filter_by(id=role_id)) > 0
 
     return AssetMixin
 

@@ -124,7 +124,7 @@ def all_projects():
                            valid_filter=valid_filter, state_filter=state_filter, active_filter=active_filter)
 
 
-@reports.route('/all_projects_ajax', methods=['GET', 'POST'])
+@reports.route('/all_projects_ajax')
 @roles_required('reports')
 def all_projects_ajax():
     """

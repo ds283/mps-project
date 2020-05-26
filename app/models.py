@@ -667,7 +667,7 @@ def AssetMixinFactory(acl_name, acr_name):
             user_obj = self._get_user(user)
 
             # admin and root users always have access
-            if user_obj.has_role('root') or user_obj.has_role('admin'):
+            if user_obj.has_role('root') or user_obj.has_role('admin') or user_obj.has_role('convenor'):
                 return True
 
             # test whether current user has any other roles in access_control_roles
@@ -681,7 +681,8 @@ def AssetMixinFactory(acl_name, acr_name):
 
             role_list = []
 
-            key_roles = db.session.query(Role).filter(or_(Role.name == 'root', Role.name == 'admin')).all()
+            key_roles = db.session.query(Role).filter(or_(Role.name == 'root',
+                                                          or_(Role.name == 'admin', Role.name == 'convenor'))).all()
 
             for r in key_roles:
                 if user_obj.has_role(r) and r not in role_list:

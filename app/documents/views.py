@@ -215,6 +215,7 @@ def upload_submitter_report(sid):
 
             # TODO: in future, possible add 'moderator', 'exam_board' or 'external_examiner'
             #  roles which should have access to all reports
+            #  (already done this for convenor)
 
             try:
                 db.session.commit()

@@ -195,10 +195,6 @@ def upload_submitter_report(sid):
             # uploading user has access
             asset.access_control_list.append(current_user)
 
-            # project convenor has access
-            if pclass.convenor is not None and pclass.convenor.user not in asset.access_control_list:
-                asset.access_control_list.append(pclass.convenor.user)
-
             # project supervisor has access
             if record.project is not None and record.project.owner is not None and \
                     record.project.owner.user not in asset.access_control_list:
@@ -468,10 +464,6 @@ def upload_submitter_attachment(sid):
 
             # uploading user has access
             asset.access_control_list.append(current_user)
-
-            # project convenor has access
-            if pclass.convenor is not None and pclass.convenor.user not in asset.access_control_list:
-                asset.access_control_list.append(pclass.convenor.user)
 
             # project supervisor has access
             if record.project is not None and record.project.owner is not None and \

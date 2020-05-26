@@ -23,7 +23,6 @@ convertdate==2.2.1
 cryptography==2.9.2
 cssmin==0.2.0
 decorator==4.4.2
-defusedxml==0.6.0
 dnspython==1.16.0
 dominate==2.5.1
 Dozer==0.7
@@ -81,8 +80,6 @@ packaging==20.4
 parse==1.15.0
 parso==0.7.0
 passlib==1.7.2
-git+git://github.com/JoshData/pdf-redactor.git@12ad5c68ab4174ccf579d43be005ac90b28d7d5f#egg=pdf-redactor
-pdfrw==0.4
 pexpect==4.8.0
 pickleshare==0.7.5
 Pillow==7.1.2

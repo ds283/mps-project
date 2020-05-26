@@ -10,6 +10,7 @@
 
 from flask_security.forms import Form
 from wtforms import SubmitField, StringField
+from wtforms.validators import InputRequired
 from wtforms_alchemy import QuerySelectField
 
 from ..shared.forms.mixins import SaveChangesMixin
@@ -27,7 +28,13 @@ class UploadReportForm(Form, UploadMixin):
     submit = SubmitField('Upload report')
 
 
-class EditReportForm(Form, UploadMixin, SaveChangesMixin):
+class DownloadableAttachmentMixin():
+
+    target_name = StringField('Filename', description='The externally-visible filename used for this attachment',
+                              validators=[InputRequired()])
+
+
+class EditReportForm(Form, UploadMixin, DownloadableAttachmentMixin, SaveChangesMixin):
 
     pass
 
@@ -37,7 +44,7 @@ class AttachmentMixin(UploadMixin):
     description = StringField('Comment', description='Give a short description of the attachment')
 
 
-class UploadSubmitterAttachmentForm(Form, AttachmentMixin):
+class UploadSubmitterAttachmentForm(Form, AttachmentMixin, DownloadableAttachmentMixin):
 
     submit = SubmitField('Upload attachment')
 

@@ -36,7 +36,7 @@
                                     {% set submitted = talk.presentation_assessor_submitted(faculty_id) %}
                                     <tr>
                                         <td>
-                                            <a href="mailto:{{ talk.owner.student.user.email }}">{{ talk.owner.student.user.name }}</a>
+                                            <a href="mailto:{{ talk.owner.student.user.email }}">{{ talk.student_identifier }}</a>
                                         </td>
                                         <td>
                                             <a href="mailto:{{ talk.project.owner.user.email }}">{{ talk.project.owner.user.name }}</a>

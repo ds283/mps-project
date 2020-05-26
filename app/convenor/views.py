@@ -6699,7 +6699,7 @@ def supervisor_edit_feedback(id):
                            formtitle='Edit supervisor feedback from <i class="fa fa-user"></i> '
                                      '<strong>{supervisor}</strong> '
                                      'for <i class="fa fa-user"></i> <strong>{name}</strong>'.format(supervisor=record.project.owner.user.name,
-                                                                                                     name=record.owner.student.user.name),
+                                                                                                     name=record.student_identifier),
                            submit_url=url_for('convenor.supervisor_edit_feedback', id=id, url=url),
                            period=period, record=record, dont_show_warnings=True)
 

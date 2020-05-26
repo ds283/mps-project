@@ -7276,11 +7276,39 @@ class SubmissionRecord(db.Model):
 
 
     @property
+    def student_identifier(self):
+        """
+        Return a suitable student identifier. Markers should only see the candidate number,
+        whereas admin users can see student names
+        :return:
+        """
+
+        # marker can only see exam number
+        if self.marker_id is not None and current_user.id == self.marker_id:
+            return str(self.owner.student.exam_number)
+
+        # root, admin, and office roles can see student name; so can project convenor or co-convenors
+        if current_user.has_role('root') or current_user.has_role('admin') or current_user.has_role('office') \
+                or self.pclass.is_convenor(current_user.id):
+            return self.owner.student.user.name
+
+        # project supervisor can see student name
+        if self.project is not None and current_user.id == self.project.owner_id:
+            return self.owner.student.user.name
+
+        # by default, other users see only the exam number
+        return str(self.owner.student.exam_number)
+
+
+    @property
     def supervisor(self):
         """
         supervisor is just a pass-through to the assigned project owner
         :return:
         """
+        if self.project is None:
+            return None
+
         return self.project.owner
 
 

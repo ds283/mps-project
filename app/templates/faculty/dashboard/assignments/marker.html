@@ -18,7 +18,7 @@
                     {% set valid = rec.is_marker_valid %}
                     <tr>
                         <td>
-                            {{ rec.owner.student.exam_number }}
+                            {{ rec.student_identifier }}
                         </td>
                         <td>
                             <a href="mailto:{{ rec.project.owner.user.email }}">{{ rec.project.owner.user.name }}</a>

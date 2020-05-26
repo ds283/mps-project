@@ -8,7 +8,7 @@
 {% endif %}
 
 {% block title %}
-    Edit {{ label }} for {{ record.owner.student.user.name }}
+    Edit {{ label }} for {{ record.student_identifier }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -18,7 +18,7 @@
             <div class="panel panel-primary panel-primary-bg">
                 <div class="panel-heading">
                     Edit {{ label }} <strong>{{ asset.target_name if asset.target_name else asset.filename }}</strong>
-                    for <i class="fa fa-user"></i> <strong>{{ record.owner.student.user.name }}</strong> {{ record.period.display_name }}
+                    for <i class="fa fa-user"></i> <strong>{{ record.student_identifier }}</strong> {{ record.period.display_name }}
                 </div>
                 <div class="panel-body">
                     <form action="{{ action_url }}" method="POST" enctype="multipart/form-data" name="attachment_form">
@@ -26,6 +26,9 @@
 
                         {% if form.description is defined %}
                             {{ wtf.form_field(form.description) }}
+                        {% endif %}
+                        {% if form.target_name is defined %}
+                            {{ wtf.form_field(form.target_name) }}
                         {% endif %}
                         {{ wtf.form_field(form.license) }}
                         {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}

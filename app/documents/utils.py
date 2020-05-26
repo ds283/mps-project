@@ -12,8 +12,11 @@
 from flask import flash
 from flask_login import current_user
 
+from ..models import SubmissionRecord, SubmissionPeriodRecord, ProjectClassConfig, SubmittedAsset
 
-def is_editable(record, period=None, config=None, message=False, asset=None, allow_student=True):
+
+def is_editable(record: SubmissionRecord, period: SubmissionPeriodRecord=None, config: ProjectClassConfig=None,
+                message: bool=False, asset: SubmittedAsset=None, allow_student: bool=True):
     # 'root', 'admin' and 'office' users can always edit SubmissionRecord data
     if current_user.has_role('root') or current_user.has_role('admin') or current_user.has_role('office'):
         return True
@@ -30,6 +33,10 @@ def is_editable(record, period=None, config=None, message=False, asset=None, all
         if message:
             flash('Only the project convenor can edit documents attached to this submission record', 'info')
 
+        return False
+
+    # below this point in the privilege hierarchy, editing is not possible if the period is already closed
+    if period.closed:
         return False
 
     if current_user.has_role('student') and allow_student:

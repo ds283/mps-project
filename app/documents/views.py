@@ -32,6 +32,11 @@ from ..uploads import submitted_files
 import app.ajax as ajax
 
 
+ATTACHMENT_TYPE_PERIOD = 0
+ATTACHMENT_TYPE_SUBMISSION = 1
+ATTACHMENT_TYPE_REPORT = 2
+
+
 @documents.route('/submitter_documents/<int:sid>')
 @login_required
 def submitter_documents(sid):
@@ -42,8 +47,8 @@ def submitter_documents(sid):
     config: ProjectClassConfig = period.config
     pclass: ProjectClass = config.project_class
 
-    # editable if marking has not yet commenced (otherwise we are changing the asset after it has already
-    # been sent to markers)
+    # determine if the currently-logged-in user has permissions to view the documents associated with this
+    # submission record
     if not is_listable(record, message=True):
         return redirect(request.referrer)
 
@@ -85,7 +90,7 @@ def delete_submitter_report(sid):
 
     message = '<p>Please confirm that you wish to remove the project report for ' \
               '<i class="fa fa-user"></i> {student} {period}.</p>' \
-              '<p>This action cannot be undone.</p>'.format(student=record.owner.student.user.name,
+              '<p>This action cannot be undone.</p>'.format(student=record.student_identifier,
                                                             period=record.period.display_name)
     submit_label = 'Remove report'
 
@@ -255,6 +260,7 @@ def edit_submitter_report(sid):
 
     if form.validate_on_submit():
         asset.license = form.license.data
+        asset.target_name = form.target_name.data
 
         try:
             db.session.commit()
@@ -296,7 +302,9 @@ def edit_submitter_attachment(aid):
 
     if form.validate_on_submit():
         attachment.description = form.description.data
+
         asset.license = form.license.data
+        asset.target_name = form.target_name.data
 
         try:
             db.session.commit()
@@ -311,6 +319,7 @@ def edit_submitter_attachment(aid):
     else:
         if request.method == 'GET':
             form.license.data = asset.license
+            form.target_name.data = asset.target_name
 
     action_url = url_for('documents.edit_submitter_attachment', aid=attachment.id, url=url, text=text)
     return render_template('documents/edit_attachment.html', form=form, record=record, attachment=attachment,
@@ -348,7 +357,7 @@ def delete_submitter_attachment(aid):
     name = asset.target_name if asset.target_name is not None else asset.filename
     message = '<p>Please confirm that you wish to remove the attachment <strong>{name}</strong> for ' \
               '<i class="fa fa-user"></i> {student} {period}.</p>' \
-              '<p>This action cannot be undone.</p>'.format(name=name, student=record.owner.student.user.name,
+              '<p>This action cannot be undone.</p>'.format(name=name, student=record.student_identifier,
                                                             period=record.period.display_name)
     submit_label = 'Remove attachment'
 
@@ -500,11 +509,6 @@ def upload_submitter_attachment(sid):
             form.license.data = current_user.default_license
 
     return render_template('documents/upload_attachment.html', record=record, form=form, url=url, text=text)
-
-
-ATTACHMENT_TYPE_PERIOD = 0
-ATTACHMENT_TYPE_SUBMISSION = 1
-ATTACHMENT_TYPE_REPORT = 2
 
 
 def _get_attachment_asset(attach_type, attach_id):
@@ -761,4 +765,19 @@ def attachment_download_log(attach_type, attach_id):
     text = request.args.get('text', None)
 
     return render_template('documents/download_log.html', asset=asset, pclass_id=pclass.id, url=url, text=text,
-                           type=attach_type)
+                           type=attach_type, attachment=attachment)
+
+
+@documents.route('/download_log_ajax/<int:attach_type>/<int:attach_id>')
+@login_required
+def download_log_ajac(attach_type, attach_id):
+    try:
+        attachment, asset, pclass = _get_attachment_asset(attach_type, attach_id)
+    except KeyError as e:
+        abort(404)
+
+    # ensure user is administrator or convenor for ths project class
+    if not validate_is_convenor(pclass, message=True):
+        return jsonify({})
+
+    return ajax.documents.download_log(asset.downloads.all())

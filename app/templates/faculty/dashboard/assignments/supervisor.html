@@ -18,7 +18,7 @@
                     {% set valid = rec.is_supervisor_valid %}
                     <tr>
                         <td>
-                            <a href="mailto:{{ rec.owner.student.user.email }}">{{ rec.owner.student.user.name }}</a>
+                            <a href="mailto:{{ rec.owner.student.user.email }}">{{ rec.student_identifier }}</a>
                             <div style="padding-top: 6px;">
                                 {{ rec.owner.student.cohort_label|safe }}
                                 {{ rec.owner.student.programme.short_label|safe }}

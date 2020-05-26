@@ -10,3 +10,4 @@
 
 from .user_acl import acl_user
 from .role_acl import acl_role
+from .download_log import download_log

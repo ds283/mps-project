@@ -1679,7 +1679,7 @@ def supervisor_edit_feedback(id):
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
                            title='Edit supervisor feedback',
-                           formtitle='Edit supervisor feedback for <i class="fa fa-user"></i> <strong>{name}</strong>'.format(name=record.owner.student.user.name),
+                           formtitle='Edit supervisor feedback for <i class="fa fa-user"></i> <strong>{name}</strong>'.format(name=record.student_identifier),
                            submit_url=url_for('faculty.supervisor_edit_feedback', id=id, url=url),
                            period=period, record=record)
 

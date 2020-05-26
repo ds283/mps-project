@@ -3,7 +3,7 @@
 {% import "bootstrap/wtf.html" as wtf %}
 
 {% block title %}
-    Manage documents for {{ record.owner.student.user.name }}
+    Manage documents for {{ record.student_identifier }}
 {% endblock %}
 
 {% macro asset_line(asset, attachment, download_url=none, delete_url=none, edit_url=none, acl_url=none, log_url=none,
@@ -123,8 +123,23 @@
         </div>
     {% endif %}
 
+    {% if record.period.closed %}
+        <div class="row">
+            <div class="col-xs-1"></div>
+            <div class="col-xs-10">
+                <div class="alert alert-danger">
+                    You are viewing documents for the submission period "{{ record.period.display_name }}",
+                    for which feedback
+                    has already been closed. The uploaded documents form part of the audit record for this
+                    project submission. <strong>When making edits, please proceed with care.</strong>
+                </div>
+            </div>
+            <div class="col-xs-1"></div>
+        </div>
+    {% endif %}
+
     <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Manage documents for <i class="fa fa-user"></i> <strong>{{ record.owner.student.user.name }}</strong> {{ record.period.display_name }}</div>
+        <div class="panel-heading">Manage documents for <i class="fa fa-user"></i> <strong>{{ record.student_identifier }}</strong> {{ record.period.display_name }}</div>
         <div class="panel-body">
             {# PERIOD ATTACHMENTS #}
             {% if period.attachments.first() %}
@@ -152,7 +167,8 @@
                                     {{ asset_line(asset, attachment,
                                                   download_url=url_for('admin.download_submitted_asset',
                                                   asset_id=asset.id),
-                                                  delete_url=none, edit_url=none, acl_url=none, log_url=none,
+                                                  delete_url=none, edit_url=none, acl_url=none,
+                                                  log_url=url_for('documents.attachment_download_log', attach_type=0, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                                   deletable=false, allow_student=false,
                                                   is_editable=none, is_admin=is_admin) }}
                                 {% endif %}

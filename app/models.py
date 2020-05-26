@@ -7702,6 +7702,66 @@ class SubmissionRecord(db.Model):
                + (1 if self.report is not None else 0)
 
 
+    @property
+    def validate(self):
+        """
+        Return a list of possible issues with the current SubmissionRecord
+        :return:
+        """
+        messages = []
+
+        exam_license = db.session.query(AssetLicense).filter_by(abbreviation='Exam').first()
+
+        if self.period.closed and self.report is None:
+            messages.append('This submission period is closed, but no report has been uploaded.')
+
+        if self.report is not None:
+            rep: SubmittedAsset = self.report
+
+            if self.supervisor is not None:
+                if not rep.has_access(self.supervisor.user):
+                    messages.append('The project supervisor "{name}" does not have download permissions for the '
+                                    'report'.format(name=self.supervisor.user.name))
+
+            if self.marker is not None:
+                if not rep.has_access(self.marker.user):
+                    messages.append('The project marker "{name}" does not have download permissions for the '
+                                    'report'.format(name=self.marker.user.name))
+
+            if not rep.has_access(self.pclass.convenor.user):
+                messages.append('The project convenor "{name}" does not have download permissions for the '
+                                'report'.format(name=self.pclass.convenor_name))
+
+            if exam_license is not None:
+                if rep.license_id != exam_license.id:
+                    messages.append('The uploaded report is tagged with an unexpected license type '
+                                    '"{license}"'.format(license=rep.license.name))
+
+        for item in self.attachments:
+            item: SubmissionAttachment
+            asset: SubmittedAsset = item.attachment
+
+            if self.supervisor is not None:
+                if not asset.has_access(self.supervisor.user):
+                    messages.append('The project supervisor "{name}" does not have download permissions for the '
+                                    'attachment "{attach}"'.format(name=self.supervisor.user.name,
+                                                                   attach=asset.target_name))
+
+            if self.marker is not None:
+                if not asset.has_access(self.marker.user):
+                    messages.append('The project marker "{name}" does not have download permissions for the '
+                                    'attachment "{attach}"'.format(name=self.marker.user.name,
+                                                                   attach=asset.target_name))
+
+            if not asset.has_access(self.pclass.convenor.user):
+                messages.append('The project convenor "{name}" does not have download permissions for the '
+                                'attachment "{attach}'.format(name=self.pclass.convenor_name,
+                                                              attach=asset.target_name))
+
+        return messages
+
+
+
 class SubmissionAttachment(db.Model):
     """
     Model an attachment to a submission

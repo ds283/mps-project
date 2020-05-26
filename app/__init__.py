@@ -173,9 +173,10 @@ def create_app():
     app.config['UPLOADED_SUBMISSIONS_DEST'] = abs_submissions_path
     configure_uploads(app, [solution_files, batch_user_files, submitted_files])
 
-    # set max upload size = 64 Mb, optimizer solution files shouldn't be larger than this
+    # set max upload size = 96 Mb, optimizer solution files shouldn't be larger than this
     # (though MPS files can be quite large if those are being used)
-    patch_request_class(app, 64*1024*1024)
+    # Some student reports are very large, eg. Roisin's lensing project was 83 Mb
+    patch_request_class(app, 96*1024*1024)
 
     # configure Flask-Security, which needs access to the database models for User and Role
     from app import models

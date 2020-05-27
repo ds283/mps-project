@@ -74,7 +74,7 @@ from ..shared.forms.queries import ScheduleSessionQuery
 from ..shared.internal_redis import get_redis
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import get_current_year, home_dashboard, get_matching_dashboard_data, \
-    get_rollover_data, get_ready_to_match_data, get_automatch_pclasses
+    get_rollover_data, get_ready_to_match_data, get_automatch_pclasses, redirect_url
 from ..shared.validators import validate_is_admin_or_convenor, validate_match_inspector, \
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..task_queue import register_task, progress_update
@@ -182,7 +182,7 @@ def activate_group(id):
     group.enable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/deactivate_group/<int:id>')
@@ -198,7 +198,7 @@ def deactivate_group(id):
     group.disable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/edit_degrees_types')
@@ -352,7 +352,7 @@ def activate_degree_type(id):
     degree_type.enable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/make_type_inactive/<int:id>')
@@ -368,7 +368,7 @@ def deactivate_degree_type(id):
     degree_type.disable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/add_programme', methods=['GET', 'POST'])
@@ -382,7 +382,7 @@ def add_degree_programme():
     if not DegreeType.query.filter_by(active=True).first():
         flash('No degree types are available. Set up at least one active degree type before adding a '
               'degree programme.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = AddDegreeProgrammeForm(request.form)
 
@@ -447,7 +447,7 @@ def activate_degree_programme(id):
     programme.enable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/deactivate_programme/<int:id>')
@@ -462,7 +462,7 @@ def deactivate_degree_programme(id):
     programme.disable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/attach_modules/<int:id>/<int:level_id>', methods=['GET', 'POST'])
@@ -608,7 +608,7 @@ def activate_level(id):
     level.enable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/deactivate_level/<int:id>')
@@ -623,7 +623,7 @@ def deactivate_level(id):
     skill.disable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/add_module', methods=['GET', 'POST'])
@@ -637,7 +637,7 @@ def add_module():
     if not FHEQ_Level.query.filter_by(active=True).first():
         flash('No FHEQ Levels are available. Set up at least one active FHEQ Level before adding a '
               'module.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = AddModuleForm(request.form)
 
@@ -674,7 +674,7 @@ def edit_module(id):
     if not module.active:
         flash('Module "{code} {name}" cannot be edited because it is '
               'retired.'.format(code=module.code, name=module.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = EditModuleForm(obj=module)
     form.module = module
@@ -707,7 +707,7 @@ def retire_module(id):
     module.retire()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/unretire_module/<int:id>')
@@ -722,7 +722,7 @@ def unretire_module(id):
     module.unretire()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/edit_skills')
@@ -766,7 +766,7 @@ def add_skill():
     if not SkillGroup.query.filter_by(active=True).first():
         flash('No skill groups are available. Set up at least one active skill group before adding a '
               'transferable skill.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = AddTransferableSkillForm(request.form)
 
@@ -830,7 +830,7 @@ def activate_skill(id):
     skill.enable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/deactivate_skill/<int:id>')
@@ -848,7 +848,7 @@ def deactivate_skill(id):
     skill.disable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/edit_skill_groups')
@@ -951,7 +951,7 @@ def activate_skill_group(id):
     group.enable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/deactivate_skill_group/<int:id>')
@@ -969,7 +969,7 @@ def deactivate_skill_group(id):
     group.disable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/edit_licenses')
@@ -1086,7 +1086,7 @@ def activate_license(lid):
         flash('Could not activate license "{name}" due to a database error. '
               'Please contact a system administrator'.format(name=license.name), 'error')
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/activate_license/<int:lid>')
@@ -1107,7 +1107,7 @@ def deactivate_license(lid):
         flash('Could not deactivate license "{name}" due to a database error. '
               'Please contact a system administrator'.format(name=license.name), 'error')
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/edit_project_classes')
@@ -1141,7 +1141,7 @@ def add_pclass():
     # check whether any active degree types exist, and raise an error if not
     if not DegreeType.query.filter_by(active=True).first():
         flash('No degree types are available. Set up at least one active degree type before adding a project class.')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form: AddProjectClassForm = AddProjectClassForm(request.form)
 
@@ -1376,7 +1376,7 @@ def activate_pclass(id):
     data.enable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/deactivate_pclass/<int:id>')
@@ -1391,7 +1391,7 @@ def deactivate_pclass(id):
     data.disable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/publish_pclass/<int:id>')
@@ -1406,7 +1406,7 @@ def publish_pclass(id):
     data.set_published()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/unpublish_pclass/<int:id>')
@@ -1421,7 +1421,7 @@ def unpublish_pclass(id):
     data.set_unpublished()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/edit_submission_periods/<int:id>')
@@ -1558,7 +1558,7 @@ def regenerate_period_records(id):
     db.session.commit()
     flash('Successfully updated submission period records for this project class', 'info')
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/add_period/<int:id>', methods=['GET', 'POST'])
@@ -1680,7 +1680,7 @@ def delete_period(id):
     db.session.commit()
     pclass.validate_presentations()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/edit_supervisors')
@@ -1783,7 +1783,7 @@ def activate_supervisor(id):
     data.enable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/deactivate_supervisor/<int:id>')
@@ -1802,7 +1802,7 @@ def deactivate_supervisor(id):
     data.disable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/confirm_global_rollover')
@@ -1816,11 +1816,11 @@ def confirm_global_rollover():
 
     if not data['rollover_ready']:
         flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data['rollover_in_progress']:
         flash('Can not initiate a rollover of the academic year because one is already in progress', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     next_year = get_current_year() + 1
 
@@ -1851,11 +1851,11 @@ def perform_global_rollover():
 
     if not data['rollover_ready']:
         flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data['rollover_in_progress']:
         flash('Can not initiate a rollover of the academic year because one is already in progress', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     current_year = get_current_year()
     next_year = current_year + 1
@@ -2262,7 +2262,7 @@ def delete_message(id):
     db.session.delete(data)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/dismiss_message/<int:id>')
@@ -2281,7 +2281,7 @@ def dismiss_message(id):
         message.dismissed_by.append(current_user)
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/reset_dismissals/<int:id>')
@@ -2304,7 +2304,7 @@ def reset_dismissals(id):
     message.dismissed_by = []
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/scheduled_tasks')
@@ -2576,7 +2576,7 @@ def delete_scheduled_task(id):
     db.session.delete(task)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/activate_scheduled_task/<int:id>')
@@ -2592,7 +2592,7 @@ def activate_scheduled_task(id):
     task.enabled = True
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/deactivate_scheduled_task/<int:id>')
@@ -2608,7 +2608,7 @@ def deactivate_scheduled_task(id):
     task.enabled = False
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/launch_scheduled_task/<int:id>')
@@ -2637,7 +2637,7 @@ def launch_scheduled_task(id):
         error.si(task_id, record.name, current_user.id))
     seq.apply_async(task_id=task_id)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/backups_overview', methods=['GET', 'POST'])
@@ -2968,7 +2968,7 @@ def terminate_background_task(id):
             or record.status == TaskRecord.TERMINATED:
         flash('Could not terminate background task "{name}" because it has finished.'.format(name=record.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     celery = current_app.extensions['celery']
     celery.control.revoke(record.id, terminate=True, signal='SIGUSR1')
@@ -2986,7 +2986,7 @@ def terminate_background_task(id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/delete_background_task/<string:id>')
@@ -2997,7 +2997,7 @@ def delete_background_task(id):
     if record.status == TaskRecord.PENDING or record.status == TaskRecord.RUNNING:
         flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         # remove task from database
@@ -3010,7 +3010,7 @@ def delete_background_task(id):
               'error')
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/notifications_ajax')
@@ -3059,11 +3059,11 @@ def manage_matching():
 
     if not data['matching_ready']:
         flash('Automated matching is not yet available because some project classes are not ready', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data['rollover_in_progress']:
         flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     info = get_matching_dashboard_data()
 
@@ -3090,7 +3090,7 @@ def skip_matching():
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/matches_ajax')
@@ -3127,11 +3127,11 @@ def create_match():
 
     if not data['matching_ready']:
         flash('Automated matching is not yet available because some project classes are not ready', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data['rollover_in_progress']:
         flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     info = get_matching_dashboard_data()
 
@@ -3308,7 +3308,7 @@ def terminate_match(id):
     if record.finished:
         flash('Can not terminate matching task "{name}" because it has finished.'.format(name=record.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Terminate match'
     panel_title = 'Terminate match <strong>{name}</strong>'.format(name=record.name)
@@ -3377,17 +3377,17 @@ def delete_match(id):
     attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(attempt):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if attempt.year != year:
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not attempt.finished:
         flash('Can not delete match "{name}" because it has not terminated.'.format(name=attempt.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Delete match'
     panel_title = 'Delete match <strong>{name}</strong>'.format(name=attempt.name)
@@ -3461,17 +3461,17 @@ def clean_up_match(id):
     attempt = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(attempt):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if attempt.year != year:
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not attempt.finished:
         flash('Can not clean up match "{name}" because it has not terminated.'.format(name=attempt.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Clean up match'
     panel_title = 'Clean up match <strong>{name}</strong>'.format(name=attempt.name)
@@ -3538,12 +3538,12 @@ def revert_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if record.year != year:
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -3552,12 +3552,12 @@ def revert_match(id):
         else:
             flash('Can not revert match "{name}" because it has not yet terminated.'.format(name=record.name),
                   'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Can not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Revert match'
     panel_title = 'Revert match <strong>{name}</strong>'.format(name=record.name)
@@ -3579,12 +3579,12 @@ def perform_revert_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if record.year != year:
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     if url is None:
@@ -3598,12 +3598,12 @@ def perform_revert_match(id):
         else:
             flash('Can not revert match "{name}" because it has not yet terminated.'.format(name=record.name),
                   'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Can not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # hand off revert job to asynchronous queue
     celery = current_app.extensions['celery']
@@ -3631,12 +3631,12 @@ def duplicate_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if record.year != year:
         flash('Match "{name}" can no longer be modified because it belongs to a previous year.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -3645,12 +3645,12 @@ def duplicate_match(id):
         else:
             flash('Can not duplicate match "{name}" because it has not yet terminated.'.format(name=record.name),
                   'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Can not duplicate match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     suffix = 2
     while suffix < 100:
@@ -3664,7 +3664,7 @@ def duplicate_match(id):
     if suffix >= 100:
         flash('Can not duplicate match "{name}" because a new unique tag could not '
               'be generated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # hand off duplicate job to asynchronous queue
     celery = current_app.extensions['celery']
@@ -3683,7 +3683,7 @@ def duplicate_match(id):
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/rename_match/<int:id>', methods=['GET', 'POST'])
@@ -3692,12 +3692,12 @@ def rename_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if record.year != year:
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     if url is None:
@@ -3728,7 +3728,7 @@ def compare_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -3741,7 +3741,7 @@ def compare_match(id):
     if not record.solution_usable:
         flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -3915,20 +3915,20 @@ def merge_replace_records(src_id, dest_id):
     dest = MatchingRecord.query.get_or_404(dest_id)
 
     if not validate_match_inspector(source.matching_attempt) or not validate_match_inspector(dest.matching_attempt):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if dest.matching_attempt.year != year:
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if source.selector_id != dest.selector_id:
         flash('Cannot merge these matching records because they do not refer to the same selector', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if source.submission_period != dest.submission_period:
         flash('Cannot merge these matching records because they do not refer to the same submission period', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         dest.project_id = source.project_id
@@ -3946,7 +3946,7 @@ def merge_replace_records(src_id, dest_id):
               'Please contact a system administrator.', 'error')
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/match_student_view/<int:id>')
@@ -3961,15 +3961,15 @@ def match_student_view(id):
         else:
             flash('Match "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Match "{name}" is not available for inspection '
               'because it did not yield an optimal solution'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     pclass_filter = request.args.get('pclass_filter')
     text = request.args.get('text', None)
@@ -3998,15 +3998,15 @@ def match_faculty_view(id):
         else:
             flash('Match "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Match "{name}" is not available for inspection '
               'because it did not yield an optimal solution.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     pclass_filter = request.args.get('pclass_filter')
     show_includes = request.args.get('show_includes')
@@ -4049,15 +4049,15 @@ def match_dists_view(id):
         else:
             flash('Match "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Match "{name}" is not available for inspection '
               'because it did not yield an optimal solution.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     pclass_filter = request.args.get('pclass_filter')
 
@@ -4161,19 +4161,19 @@ def delete_match_record(record_id):
     record = MatchingRecord.query.get_or_404(record_id)
 
     if not validate_match_inspector(record.matching_attempt):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.matching_attempt.selected:
         flash('Match "{name}" cannot be edited because an administrative user has marked it as '
               '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if record.matching_attempt.year != year:
         flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     attempt = record.matching_attempt
 
@@ -4187,7 +4187,7 @@ def delete_match_record(record_id):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/reassign_match_project/<int:id>/<int:pid>')
@@ -4196,19 +4196,19 @@ def reassign_match_project(id, pid):
     record = MatchingRecord.query.get_or_404(id)
 
     if not validate_match_inspector(record.matching_attempt):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.matching_attempt.selected:
         flash('Match "{name}" cannot be edited because an administrative user has marked it as '
               '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if record.matching_attempt.year != year:
         flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     project = LiveProject.query.get_or_404(pid)
 
@@ -4234,7 +4234,7 @@ def reassign_match_project(id, pid):
                                                                        name=record.selector.student.user.name),
                   'error')
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/reassign_match_marker/<int:id>/<int:mid>')
@@ -4243,19 +4243,19 @@ def reassign_match_marker(id, mid):
     record = MatchingRecord.query.get_or_404(id)
 
     if not validate_match_inspector(record.matching_attempt):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.matching_attempt.selected:
         flash('Match "{name}" cannot be edited because an administrative user has marked it as '
               '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if record.matching_attempt.year != year:
         flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check intended mid is in list of attached second markers
     count = get_count(record.project.assessor_list_query.filter(FacultyData.id == mid))
@@ -4278,7 +4278,7 @@ def reassign_match_marker(id, mid):
         flash('Inconsistent marker counts for matching record (id={id}). '
               'Please contact a system administrator'.format(id=record.id), 'error')
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/publish_matching_selectors/<int:id>')
@@ -4287,13 +4287,13 @@ def publish_matching_selectors(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if record.year != year:
         flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -4302,12 +4302,12 @@ def publish_matching_selectors(id):
         else:
             flash('Match "{name}" is not yet available for email because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Match "{name}" did not yield an optimal solution and is not available for use. '
               'It cannot be shared by email.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     task_id = register_task('Send matching to selectors', owner=current_user,
                             description='Email details of match "{name}" to submitters'.format(name=record.name))
@@ -4317,7 +4317,7 @@ def publish_matching_selectors(id):
 
     task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/publish_matching_supervisors/<int:id>')
@@ -4326,13 +4326,13 @@ def publish_matching_supervisors(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if record.year != year:
         flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -4341,12 +4341,12 @@ def publish_matching_supervisors(id):
         else:
             flash('Match "{name}" is not yet available for email because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Match "{name}" did not yield an optimal solution and is not available for use. '
               'It cannot be shared by email.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     task_id = register_task('Send matching to supervisors', owner=current_user,
                             description='Email details of match "{name}" to supervisors'.format(name=record.name))
@@ -4356,7 +4356,7 @@ def publish_matching_supervisors(id):
 
     task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/publish_match/<int:id>')
@@ -4365,13 +4365,13 @@ def publish_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if record.year != year:
         flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -4380,17 +4380,17 @@ def publish_match(id):
         else:
             flash('Match "{name}" is not yet available for publication because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. '
               'It cannot be shared with convenors.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.published = True
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/unpublish_match/<int:id>')
@@ -4399,13 +4399,13 @@ def unpublish_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if record.year != year:
         flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -4414,17 +4414,17 @@ def unpublish_match(id):
         else:
             flash('Match "{name}" is not yet available for unpublication because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. '
               'It cannot be shared with convenors.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.published = False
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/select_match/<int:id>')
@@ -4441,13 +4441,13 @@ def select_match(id):
         url = request.referrer
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if record.year != year:
         flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -4456,12 +4456,12 @@ def select_match(id):
         else:
             flash('Match "{name}" is not yet available for selection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Match "{name}" did not yield an optimal solution '
               'and is not available for use during rollover.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.is_valid and not force:
         title = 'Select match "{name}"'.format(name=record.name)
@@ -4493,7 +4493,7 @@ def select_match(id):
     if len(intersection) > 0:
         flash('Cannot select match "{name}" because some project classes it handles are already '
               'determined by selected matches.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.selected = True
     db.session.commit()
@@ -4507,13 +4507,13 @@ def deselect_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
     if record.year != year:
         flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -4522,17 +4522,17 @@ def deselect_match(id):
         else:
             flash('Match "{name}" is not yet available for deselection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Match "{name}" did not yield an optimal solution '
               'and is not available for use during rollover.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.selected = False
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/manage_assessments')
@@ -4543,7 +4543,7 @@ def manage_assessments():
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('admin/presentations/manage.html')
 
@@ -4572,7 +4572,7 @@ def add_assessment():
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     current_year = get_current_year()
     AddPresentationAssessmentForm = AddPresentationAssessmentFormFactory(current_year)
@@ -4605,18 +4605,18 @@ def edit_assessment(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     if data.requested_availability:
         flash('It is no longer possible to change settings for an assessment once '
               'availability requests have been issued.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     EditPresentationAssessmentForm = EditPresentationAssessmentFormFactory(current_year, data.id)
     form = EditPresentationAssessmentForm(obj=data)
@@ -4646,17 +4646,17 @@ def delete_assessment(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.is_deployed:
         flash('Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(name=data.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Delete presentation assessment'
     panel_title = 'Delete presentation assessment <strong>{name}</strong>'.format(name=data.name)
@@ -4680,17 +4680,17 @@ def perform_delete_assessment(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.is_deployed:
         flash('Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(name=data.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', url_for('admin.manage_assessments'))
 
@@ -4709,21 +4709,21 @@ def close_assessment(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.is_feedback_open:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.is_closable:
         flash('Cannot close assessment "{name}" because one or more closing criteria have not been met. Check '
               'that all scheduled sessions are in the past.'.format(name=data.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Close feedback for assessment'
     panel_title = 'Close feedback for assessment <strong>{name}</strong>'.format(name=data.name)
@@ -4747,21 +4747,21 @@ def perform_close_assessment(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.is_feedback_open:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.is_closable:
         flash('Cannot close assessment "{name}" because one or more closing criteria have not been met. Check '
               'that all scheduled sessions are in the past.'.format(name=data.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', url_for('admin.manage_assessments'))
 
@@ -4780,18 +4780,18 @@ def assessment_availability(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.is_valid and data.availability_lifecycle < PresentationAssessment.AVAILABILITY_REQUESTED:
         flash('Cannot request availability for an invalid assessment. Correct any validation errors before '
               'attempting to proceed.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = AvailabilityForm(obj=data)
 
@@ -4836,64 +4836,64 @@ def assessment_availability(id):
 @roles_required('root')
 def close_availability(id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.requested_availability:
         flash('Cannot close availability collection for this assessment because it has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data.availability_closed = True
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/availability_reminder/<int:id>')
 @roles_required('root')
 def availability_reminder(id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.requested_availability:
         flash('Cannot issue reminder emails for this assessment because it has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     celery = current_app.extensions['celery']
     email_task = celery.tasks['app.tasks.availability.reminder_email']
 
     email_task.apply_async((id, current_user.id))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/availability_reminder_individual/<int:id>')
 @roles_required('root')
 def availability_reminder_individual(id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record = AssessorAttendanceData.query.get_or_404(id)
     data = record.assessment
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.requested_availability:
         flash('Cannot send a reminder email for this assessment because it has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     celery = current_app.extensions['celery']
     email_task = celery.tasks['app.tasks.availability.send_reminder_email']
@@ -4902,32 +4902,32 @@ def availability_reminder_individual(id):
     tk = email_task.si(record.id) | notify_task.s(current_user.id, 'Reminder email has been sent', 'info')
     tk.apply_async()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/reopen_availability/<int:id>')
 @roles_required('root')
 def reopen_availability(id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.requested_availability:
         flash('Cannot reopen availability collection for this assessment because it has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.availability_closed:
         flash('Cannot reopen availability collection for this assessment because it has not yet been closed', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.is_deployed:
         flash('Cannot reopen availability collection for this assessment because it has a deployed schedule', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data.availability_closed = False
     if data.availability_deadline < date.today():
@@ -4935,25 +4935,25 @@ def reopen_availability(id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/outstanding_availability/<int:id>')
 @roles_required('root')
 def outstanding_availability(id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.requested_availability:
         flash('Cannot show outstanding availability responses for this assessment because it has not yet been opened',
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('admin/presentations/availability/outstanding.html', assessment=data)
 
@@ -4982,29 +4982,29 @@ def outstanding_availability_ajax(id):
 @roles_required('root')
 def force_confirm_availability(assessment_id, faculty_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.requested_availability:
         flash('Cannot force confirm an availability response for this assessment because it has not yet been opened',
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.is_deployed:
         flash('Cannot force confirm availability for this assessment because it is currently deployed', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     faculty: FacultyData = FacultyData.query.get_or_404(faculty_id)
 
     if not data.includes_faculty(faculty_id):
         flash('Cannot force confirm availability response for {name} because this faculty member is not attached '
               'to this assessment'.format(name=faculty.user.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record = data.assessor_list.filter_by(faculty_id=faculty_id, confirmed=False).first()
 
@@ -5013,14 +5013,14 @@ def force_confirm_availability(assessment_id, faculty_id):
         record.confirmed_timestamp = datetime.now()
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/set_assignment_limit/<int:assessment_id>/<int:faculty_id>', methods=['GET', 'POST'])
 @roles_required('root')
 def schedule_set_limit(assessment_id, faculty_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
 
@@ -5071,28 +5071,28 @@ def schedule_set_limit(assessment_id, faculty_id):
 @roles_required('root')
 def remove_assessor(assessment_id, faculty_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.requested_availability:
         flash('Cannot remove assessors from this assessment because it has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.is_deployed:
         flash('Cannot remove assessors from this assessment because it is currently deployed', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     faculty: FacultyData = FacultyData.query.get_or_404(faculty_id)
 
     if not data.includes_faculty(faculty_id):
         flash('Cannot remove assessor "{name}" from "{assess_name}" because this faculty member is not attached '
               'to this assessment'.format(name=faculty.user.name, assess_name=data.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record = data.assessor_list.filter_by(faculty_id=faculty_id).first()
 
@@ -5100,7 +5100,7 @@ def remove_assessor(assessment_id, faculty_id):
         db.session.delete(record)
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/availability_as_csv/<int:id>')
@@ -5112,17 +5112,17 @@ def availability_as_csv(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.requested_availability:
         flash('Cannot generate availability data for this assessment because it has not yet been collected.',
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # add a filename
     headers = Headers()
@@ -5142,12 +5142,12 @@ def assessment_manage_sessions(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('admin/presentations/manage_sessions.html', assessment=data)
 
@@ -5175,17 +5175,17 @@ def add_session(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.is_feedback_open:
         flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
               'edited'.format(name=data.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = AddSessionForm(request.form)
 
@@ -5219,17 +5219,17 @@ def edit_session(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     sess = PresentationSession.query.get_or_404(id)
 
     if not validate_assessment(sess.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not sess.owner.is_feedback_open:
         flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
               'edited'.format(name=sess.owner.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = EditSessionForm(obj=sess)
     form.session = sess
@@ -5258,17 +5258,17 @@ def delete_session(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     sess = PresentationSession.query.get_or_404(id)
 
     if not validate_assessment(sess.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not sess.owner.is_feedback_open:
         flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
               'edited'.format(name=sess.owner.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # deletion can't be done asynchronously, because we want the database to be updated
     # by the time the user's UI is refreshed
@@ -5290,7 +5290,7 @@ def delete_session(id):
     db.session.delete(sess)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/assessor_session_availability/<int:id>')
@@ -5302,17 +5302,17 @@ def assessor_session_availability(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     sess = PresentationSession.query.get_or_404(id)
 
     if not sess.owner.is_feedback_open:
         flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
               'edited'.format(name=sess.owner.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(sess.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state_filter = request.args.get('state_filter')
 
@@ -5369,102 +5369,102 @@ def assessor_session_availability_ajax(id):
 @roles_accepted('root')
 def session_available(f_id, s_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationSession = PresentationSession.query.get_or_404(s_id)
 
     current_year = get_current_year()
     if not validate_assessment(data.owner, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.owner.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.owner.is_deployed:
         flash('Cannot modify attendance data for this assessor because the schedule is deployed', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     fac = FacultyData.query.get_or_404(f_id)
     data.faculty_make_available(fac)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/session_ifneeded/<int:f_id>/<int:s_id>')
 @roles_accepted('root')
 def session_ifneeded(f_id, s_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationSession = PresentationSession.query.get_or_404(s_id)
 
     current_year = get_current_year()
     if not validate_assessment(data.owner, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.owner.is_deployed:
         flash('Cannot modify attendance data for this assessor because the schedule is deployed', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.owner.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     fac = FacultyData.query.get_or_404(f_id)
     data.faculty_make_ifneeded(fac)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/session_unavailable/<int:f_id>/<int:s_id>')
 @roles_accepted('root')
 def session_unavailable(f_id, s_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationSession = PresentationSession.query.get_or_404(s_id)
 
     current_year = get_current_year()
     if not validate_assessment(data.owner, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.owner.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.owner.is_deployed:
         flash('Cannot modify attendance data for this assessor because the schedule is deployed', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     fac = FacultyData.query.get_or_404(f_id)
     data.faculty_make_unavailable(fac)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/session_all_available/<int:f_id>/<int:a_id>')
 @roles_accepted('root')
 def session_all_available(f_id, a_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.is_deployed:
         flash('Cannot set availability data for this session because it has already been published', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     fac = FacultyData.query.get_or_404(f_id)
 
@@ -5473,28 +5473,28 @@ def session_all_available(f_id, a_id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/session_all_unavailable/<int:f_id>/<int:a_id>')
 @roles_accepted('root')
 def session_all_unavailable(f_id, a_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.is_deployed:
         flash('Cannot set availability data for this session because it has already been published', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     fac = FacultyData.query.get_or_404(f_id)
 
@@ -5503,7 +5503,7 @@ def session_all_unavailable(f_id, a_id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/submitter_session_availability/<int:id>')
@@ -5515,17 +5515,17 @@ def submitter_session_availability(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     sess = PresentationSession.query.get_or_404(id)
 
     if sess.owner.is_deployed:
         flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
               ' altered'.format(name=sess.owner.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(sess.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     pclass_filter = request.args.get('pclass_filter')
 
@@ -5580,18 +5580,18 @@ def assessment_schedules(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.availability_closed:
         flash('It is only possible to generate schedules once collection of faculty availabilities is closed',
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     matches = get_count(data.scheduling_attempts)
 
@@ -5631,28 +5631,28 @@ def create_assessment_schedule(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.availability_closed:
         flash('It is only possible to generate schedules once collection of faculty availabilities is closed',
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.is_valid and len(data.errors) > 0:
         flash('It is not possible to generate a schedule for an assessment that contains validation errors. '
               'Correct any indicated errors before attempting to try again.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.number_slots <= 0:
         flash('It is not possible to generate a schedule for this assessment, because it does not yet have any '
               'defined session slots.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     NewScheduleForm = NewScheduleFormFactory(data)
     form = NewScheduleForm(request.form)
@@ -5737,27 +5737,27 @@ def adjust_assessment_schedule(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     schedule = ScheduleAttempt.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(schedule.owner, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not schedule.owner.availability_closed:
         flash('It is only possible to adjust a schedule once collection of faculty availabilities is closed.',
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not schedule.owner.is_valid and len(schedule.owner.errors) > 0:
         flash('It is not possible to adjust a schedule for an assessment that contains validation errors. '
               'Correct any indicated errors before attempting to try again.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if schedule.is_valid:
         flash('This schedule does not contain any validation errors, so does not require adjustment.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     ImposeConstraintsScheduleForm = ImposeConstraintsScheduleFormFactory(schedule.owner)
     form = ImposeConstraintsScheduleForm(request.form)
@@ -5785,7 +5785,7 @@ def adjust_assessment_schedule(id):
             if suffix > 100:
                 flash('Can not adjust schedule "{name}" because a new unique tag could not '
                       'be generated.'.format(name=schedule.name), 'error')
-                return redirect(request.referrer)
+                return redirect(redirect_url())
 
             form.name.data = new_name
 
@@ -5806,38 +5806,38 @@ def perform_adjust_assessment_schedule(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     old_schedule = ScheduleAttempt.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(old_schedule.owner, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not old_schedule.owner.availability_closed:
         flash('It is only possible to adjust a schedule once collection of faculty availabilities is closed.',
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not old_schedule.owner.is_valid and len(old_schedule.owner.errors) > 0:
         flash('It is not possible to adjust a schedule for an assessment that contains validation errors. '
               'Correct any indicated errors before attempting to try again.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if old_schedule.is_valid:
         flash('This schedule does not contain any validation errors, so does not require adjustment.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     new_name = request.args.get('name', None)
     new_tag = request.args.get('tag', None)
 
     if new_name is None:
         flash('A name for the adjusted schedule was not supplied.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if new_tag is None:
         flash('A tag for the adjusted schedule was not supplied.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     allow_new_slots = request.args.get('new_slots', False)
 
@@ -5877,7 +5877,7 @@ def perform_adjust_assessment_schedule(id):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     celery = current_app.extensions['celery']
     schedule_task = celery.tasks['app.tasks.scheduling.recompute_schedule']
@@ -5895,7 +5895,7 @@ def terminate_schedule(id):
     if record.finished:
         flash('Can not terminate scheduling task "{name}" because it has finished.'.format(name=record.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Terminate schedule'
     panel_title = 'Terminate schedule <strong>{name}</strong>'.format(name=record.name)
@@ -5965,22 +5965,22 @@ def delete_schedule(id):
     record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         flash('Can not delete schedule "{name}" because it has not terminated.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.deployed:
         flash('Can not delete schedule "{name}" because it has been deployed.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not current_user.has_role('root') and current_user.id != record.creator_id:
         flash('Schedule "{name}" cannot be deleted because it belongs to another user', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Delete schedule'
     panel_title = 'Delete schedule <strong>{name}</strong>'.format(name=record.name)
@@ -6018,7 +6018,7 @@ def perform_delete_schedule(id):
         return redirect(url)
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         flash('Can not delete schedule "{name}" because it has not terminated.'.format(name=record.name), 'info')
@@ -6068,10 +6068,10 @@ def revert_schedule(id):
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -6080,12 +6080,12 @@ def revert_schedule(id):
         else:
             flash('Can not revert schedule "{name}" because it has not yet terminated.'.format(name=record.name),
                   'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Can not revert schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Revert schedule'
     panel_title = 'Revert schedule <strong>{name}</strong>'.format(name=record.name)
@@ -6112,10 +6112,10 @@ def perform_revert_schedule(id):
         url = url_for('admin.assessment_schedules', id=record.owner_id)
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -6124,12 +6124,12 @@ def perform_revert_schedule(id):
         else:
             flash('Can not revert schedule "{name}" because it has not yet terminated.'.format(name=record.name),
                   'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Can not revert schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # hand off revert job to asynchronous queue
     celery = current_app.extensions['celery']
@@ -6157,26 +6157,26 @@ def duplicate_schedule(id):
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
             if not record.celery_finished:
                 flash('Can not duplicate schedule "{name}" because the files for offline processing '
                       'are still being generated.'.format(name=record.name), 'error')
-                return redirect(request.referrer)
+                return redirect(redirect_url())
         else:
             flash('Can not duplicate schedule "{name}" because it has not yet terminated.'.format(name=record.name),
                   'error')
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     if record.finished and not record.solution_usable:
         flash('Can not duplicate schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     suffix = 2
     while suffix < 100:
@@ -6190,7 +6190,7 @@ def duplicate_schedule(id):
     if suffix >= 100:
         flash('Can not duplicate schedule "{name}" because a new unique tag could not '
               'be generated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # hand off duplicate job to asynchronous queue
     celery = current_app.extensions['celery']
@@ -6209,7 +6209,7 @@ def duplicate_schedule(id):
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/rename_schedule/<int:id>', methods=['GET', 'POST'])
@@ -6222,10 +6222,10 @@ def rename_schedule(id):
         url = url_for('admin.assessment_schedules', id=record.owner_id)
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     RenameScheduleForm = RenameScheduleFormFactory(record.owner)
     form = RenameScheduleForm(obj=record)
@@ -6254,10 +6254,10 @@ def compare_schedule(id):
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -6266,12 +6266,12 @@ def compare_schedule(id):
         else:
             flash('Schedule "{name}" is not yet available for comparison because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
               'It cannot be used for comparison.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -6412,10 +6412,10 @@ def publish_schedule(id):
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -6424,22 +6424,22 @@ def publish_schedule(id):
         else:
             flash('Schedule "{name}" is not yet available for publication because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
               'It cannot be shared with convenors.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.deployed:
         flash('Schedule "{name}" is deployed and is not available to be published.'.format(name=record.name),
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.published = True
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/unpublish_schedule/<int:id>')
@@ -6448,10 +6448,10 @@ def unpublish_schedule(id):
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -6460,17 +6460,17 @@ def unpublish_schedule(id):
         else:
             flash('Schedule "{name}" is not yet available for unpublication because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
               'It cannot be shared with convenors.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.published = False
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/publish_schedule_submitters/<int:id>')
@@ -6479,10 +6479,10 @@ def publish_schedule_submitters(id):
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -6491,12 +6491,12 @@ def publish_schedule_submitters(id):
         else:
             flash('Schedule "{name}" is not yet available for sharing with submitters because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
               'It cannot be shared by email.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     task_id = register_task('Send schedule to submitters', owner=current_user,
                             description='Email details of schedule "{name}" to submitters'.format(name=record.name))
@@ -6506,7 +6506,7 @@ def publish_schedule_submitters(id):
 
     task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/publish_schedule_assessors/<int:id>')
@@ -6515,10 +6515,10 @@ def publish_schedule_assessors(id):
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -6527,12 +6527,12 @@ def publish_schedule_assessors(id):
         else:
             flash('Schedule "{name}" is not yet available for sharing with assessors because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
               'It cannot be shared by email.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     task_id = register_task('Send draft schedule to assessors', owner=current_user,
                             description='Email details of schedule "{name}" to assessors'.format(name=record.name))
@@ -6542,7 +6542,7 @@ def publish_schedule_assessors(id):
 
     task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/deploy_schedule/<int:id>')
@@ -6551,10 +6551,10 @@ def deploy_schedule(id):
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.owner.is_deployed:
         flash('The assessment "{name}" already has a deployed schedule. Only one schedule can be '
@@ -6567,18 +6567,18 @@ def deploy_schedule(id):
         else:
             flash('Schedule "{name}" is not yet available for deployment because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for '
               'deployment.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.deployed = True
     record.published = False
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/undeploy_schedule/<int:id>')
@@ -6587,10 +6587,10 @@ def undeploy_schedule(id):
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -6599,12 +6599,12 @@ def undeploy_schedule(id):
         else:
             flash('Schedule "{name}" is not yet available for undeployment because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for '
               'deployment.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.is_revokable:
         flash('Schedule "{name}" is not revokable. This may be because some scheduled slots are in '
@@ -6613,7 +6613,7 @@ def undeploy_schedule(id):
     record.deployed = False
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/schedule_view_sessions/<int:id>')
@@ -6623,12 +6623,12 @@ def schedule_view_sessions(id):
     Sessions view in schedule inspector
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -6637,15 +6637,15 @@ def schedule_view_sessions(id):
         else:
             flash('Schedule "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" is not available for inspection '
               'because it did not yield an optimal solution.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)
@@ -6671,12 +6671,12 @@ def schedule_view_faculty(id):
     Faculty view in schedule inspector
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -6685,15 +6685,15 @@ def schedule_view_faculty(id):
         else:
             flash('Schedule "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" is not available for inspection '
               'because it did not yield an optimal solution.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)
@@ -6871,13 +6871,13 @@ def schedule_view_faculty_ajax(id):
 @roles_accepted('root', 'admin', 'faculty')
 def schedule_adjust_assessors(id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     slot = ScheduleSlot.query.get_or_404(id)
     record = slot.owner # = ScheduleAttempt
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -6886,15 +6886,15 @@ def schedule_adjust_assessors(id):
         else:
             flash('Schedule "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" is not available for inspection '
               'because it did not yield an optimal solution.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)
@@ -6907,7 +6907,7 @@ def schedule_adjust_assessors(id):
 @roles_accepted('root', 'admin', 'faculty')
 def schedule_assign_assessors_ajax(id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     slot = ScheduleSlot.query.get_or_404(id)
     record = slot.owner  # = ScheduleAttempt
@@ -6956,13 +6956,13 @@ def schedule_assign_assessors_ajax(id):
 @roles_accepted('root', 'admin', 'faculty')
 def schedule_attach_assessor(slot_id, fac_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     slot = ScheduleSlot.query.get_or_404(slot_id)
     record = slot.owner # = ScheduleAttempt
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -6971,25 +6971,25 @@ def schedule_attach_assessor(slot_id, fac_id):
         else:
             flash('Schedule "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" is not available for inspection '
               'because it did not yield an optimal solution.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.owner.includes_faculty(fac_id):
         flash('The specified faculty member is not attached to this assessment', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     item = record.owner.assessors_query.filter(AssessorAttendanceData.faculty_id == fac_id).first()
 
     if item is None:
         flash('Could not attach this faculty member due to a database error', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if get_count(slot.assessors.filter_by(id=item.faculty_id)) == 0:
         slot.assessors.append(item.faculty)
@@ -6999,20 +6999,20 @@ def schedule_attach_assessor(slot_id, fac_id):
 
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/schedule_remove_assessors/<int:slot_id>/<int:fac_id>')
 @roles_accepted('root', 'admin', 'faculty')
 def schedule_remove_assessor(slot_id, fac_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     slot = ScheduleSlot.query.get_or_404(slot_id)
     record = slot.owner # = ScheduleAttempt
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -7021,25 +7021,25 @@ def schedule_remove_assessor(slot_id, fac_id):
         else:
             flash('Schedule "{name}" cannot yet be adjusted because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" cannot yet be adjusted '
               'because it did not yield an optimal solution.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.owner.includes_faculty(fac_id):
         flash('The specified faculty member is not attached to this assessment', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     item = record.owner.assessors_query.filter(AssessorAttendanceData.faculty_id == fac_id).first()
 
     if item is None:
         flash('Could not attach this faculty member due to a database error', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if get_count(slot.assessors.filter_by(id=item.faculty_id)) > 0:
         slot.assessors.remove(item.faculty)
@@ -7049,20 +7049,20 @@ def schedule_remove_assessor(slot_id, fac_id):
 
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/schedule_adjust_submitter/<int:slot_id>/<int:talk_id>')
 @roles_accepted('root', 'admin', 'faculty')
 def schedule_adjust_submitter(slot_id, talk_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     slot = ScheduleSlot.query.get_or_404(slot_id)
     record = slot.owner # = ScheduleAttempt
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -7071,15 +7071,15 @@ def schedule_adjust_submitter(slot_id, talk_id):
         else:
             flash('Schedule "{name}" cannot yet be adjusted because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" cannot yet be adjusted '
               'because it did not yield an optimal solution.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     talk = SubmissionRecord.query.get_or_404(talk_id)
 
@@ -7094,7 +7094,7 @@ def schedule_adjust_submitter(slot_id, talk_id):
 @roles_accepted('root', 'admin', 'faculty')
 def schedule_assign_submitter_ajax(slot_id, talk_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     slot = ScheduleSlot.query.get_or_404(slot_id)
     record = slot.owner  # = ScheduleAttempt
@@ -7134,7 +7134,7 @@ def schedule_assign_submitter_ajax(slot_id, talk_id):
 @roles_accepted('root', 'admin', 'faculty')
 def schedule_move_submitter(old_id, new_id, talk_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     old_slot = ScheduleSlot.query.get_or_404(old_id)
     new_slot = ScheduleSlot.query.get_or_404(new_id)
@@ -7143,10 +7143,10 @@ def schedule_move_submitter(old_id, new_id, talk_id):
     if old_slot.owner_id != new_slot.owner_id:
         flash('Cannot move specified talk because destination slot does not belong to the same'
               'ScheduleAttempt instance.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
@@ -7155,21 +7155,21 @@ def schedule_move_submitter(old_id, new_id, talk_id):
         else:
             flash('Schedule "{name}" cannot yet be adjusted because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" cannot yet be adjusted '
               'because it did not yield an optimal solution.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     talk = SubmissionRecord.query.get_or_404(talk_id)
 
     if not record.owner.includes_submitter(talk.id):
         flash('The specified submitting student is not attached to this assessment', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)
@@ -7193,7 +7193,7 @@ def schedule_move_submitter(old_id, new_id, talk_id):
 @roles_accepted('root', 'admin', 'faculty')
 def schedule_move_room(slot_id, room_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     slot = ScheduleSlot.query.get_or_404(slot_id)
     room = Room.query.get_or_404(room_id)
@@ -7207,15 +7207,15 @@ def schedule_move_room(slot_id, room_id):
         else:
             flash('Schedule "{name}" cannot yet be adjusted because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.solution_usable:
         flash('Schedule "{name}" cannot yet be adjusted '
               'because it did not yield an optimal solution.'.format(name=record.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     available_rooms = slot.alternative_rooms
     if room in available_rooms:
@@ -7226,7 +7226,7 @@ def schedule_move_room(slot_id, room_id):
         flash('Cannot assign venue "{room}" to this slot because it is unavailable, or does not meet '
               'the required criteria.'.format(room=room.full_name))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/assessment_manage_attendees/<int:id>')
@@ -7238,12 +7238,12 @@ def assessment_manage_attendees(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     pclass_filter = request.args.get('pclass_filter')
 
@@ -7308,29 +7308,29 @@ def assessment_attending(a_id, s_id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.is_deployed:
         flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
               'altered'.format(name=data.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     talk = SubmissionRecord.query.get_or_404(s_id)
 
     if talk not in data.available_talks:
         flash('Cannot mark the specified presenter as attending because they are not included in this '
               'presentation assessment', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data.submitter_attending(talk)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/assessment_not_attending/<int:a_id>/<int:s_id>')
@@ -7342,24 +7342,24 @@ def assessment_not_attending(a_id, s_id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.is_deployed:
         flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
               'altered'.format(name=data.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     talk = SubmissionRecord.query.get_or_404(s_id)
 
     if talk not in data.available_talks:
         flash('Cannot mark the specified presenter as not attending because they are not included in this '
               'presentation assessment', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data.submitter_not_attending(talk)
     db.session.commit()
@@ -7367,7 +7367,7 @@ def assessment_not_attending(a_id, s_id):
     # we leave availability information per-session intact, so that it is immediately available again
     # if this presenter is subsequently marked as attending
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/assessment_submitter_availability/<int:a_id>/<int:s_id>')
@@ -7380,19 +7380,19 @@ def assessment_submitter_availability(a_id, s_id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if not data.includes_submitter(s_id):
         flash('Cannot set availability for the specified presenter because they are not included in this '
               'presentation assessment', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -7411,19 +7411,19 @@ def assessment_assessor_availability(a_id, f_id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     assessor: FacultyData = FacultyData.query.get_or_404(f_id)
 
     if not data.includes_faculty(f_id):
         flash('Cannot set availability for the specified assessor because they are not included in this '
               'presentation assessment', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -7436,122 +7436,122 @@ def assessment_assessor_availability(a_id, f_id):
 @roles_accepted('root')
 def submitter_available(sess_id, s_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     session = PresentationSession.query.get_or_404(sess_id)
     data = session.owner
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.is_deployed:
         flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
               'altered'.format(name=data.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     submitter = SubmissionRecord.query.get_or_404(s_id)
 
     if submitter not in data.available_talks:
         flash('Cannot specify availability for the specified presenter because they are not included in this '
               'presentation assessment', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     session.submitter_make_available(submitter)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/submitter_unavailable/<int:sess_id>/<int:s_id>')
 @roles_accepted('root')
 def submitter_unavailable(sess_id, s_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     session: PresentationSession = PresentationSession.query.get_or_404(sess_id)
     data = session.owner
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.is_deployed:
         flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
               'altered'.format(name=data.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if submitter not in data.available_talks:
         flash('Cannot specify availability for the specified presenter because they are not included in this '
               'presentation assessment', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     session.submitter_make_unavailable(submitter)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/submitter_all_available/<int:a_id>/<int:s_id>')
 @roles_accepted('root')
 def submitter_all_available(a_id, s_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.is_deployed:
         flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
               'altered'.format(name=data.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if submitter not in data.available_talks:
         flash('Cannot specify availability for the specified presenter because they are not included in this '
               'presentation assessment', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     for session in data.sessions:
         session.submitter_make_available(submitter)
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/submitter_all_unavailable/<int:a_id>/<int:s_id>')
 @roles_accepted('root')
 def submitter_all_unavailable(a_id, s_id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.is_deployed:
         flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
               'altered'.format(name=data.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if submitter not in data.available_talks:
         flash('Cannot specify availability for the specified presenter because they are not included in this '
               'presentation assessment', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     for session in data.sessions:
         session.submitter_make_unavailable(submitter)
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/assessment_manage_assessors/<int:id>')
@@ -7563,12 +7563,12 @@ def assessment_manage_assessors(id):
     :return:
     """
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state_filter = request.args.get('state_filter')
 
@@ -7639,7 +7639,7 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
     target_schedule = ScheduleAttempt.query.get_or_404(target_sched)
 
     if not validate_schedule_inspector(source_schedule) or not validate_schedule_inspector(target_schedule):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check that source and target schedules are owned by the same assessent
     if source_schedule.owner_id != target_schedule.owner_id:
@@ -7649,10 +7649,10 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
                                                                    name2=target_schedule.name,
                                                                    assess1=source_schedule.owner.name,
                                                                    assess2=target_schedule.owner.name))
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(source_schedule.owner):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     if not source_schedule.finished:
         if source_schedule.awaiting_upload:
@@ -7661,12 +7661,12 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
         else:
             flash('Schedule "{name}" is not yet available for merging because it has not yet '
                   'terminated.'.format(name=source_schedule.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not source_schedule.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
               'It cannot be used for merging.'.format(name=source_schedule.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if target_schedule is not None and not target_schedule.finished:
         if target_schedule.awaiting_upload:
@@ -7675,12 +7675,12 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
         else:
             flash('Schedule "{name}" is not yet available for merging because it has not yet '
                   'terminated.'.format(name=target_schedule.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if target_schedule is not None and not target_schedule.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
               'It cannot be used for merging.'.format(name=target_schedule.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if source is None and target is not None:
         # remove target session
@@ -7708,7 +7708,7 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/edit_rooms')
@@ -7739,7 +7739,7 @@ def add_room():
     # check whether any active buildings exist, and raise an error if not
     if not db.session.query(Building).filter_by(active=True).first():
         flash('No buildings are available. Set up at least one active building before adding a room.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = AddRoomForm(request.form)
 
@@ -7794,7 +7794,7 @@ def activate_room(id):
     data.enable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/deactivate_room/<int:id>')
@@ -7806,7 +7806,7 @@ def deactivate_room(id):
     data.disable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/edit_buildings')
@@ -7885,7 +7885,7 @@ def activate_building(id):
     data.enable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/deactivate_building/<int:id>')
@@ -7897,7 +7897,7 @@ def deactivate_building(id):
     data.disable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/launch_test_task')
@@ -7941,7 +7941,7 @@ def download_generated_asset(asset_id):
     if not asset.has_access(current_user.id):
         flash('You do not have permissions to download this asset. If you think this is a mistake, please contact '
               'a system administrator.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     abs_path = canonical_generated_asset_filename(asset.filename)
     return send_file(abs_path, as_attachment=True, attachment_filename=asset.target_name)
@@ -7956,7 +7956,7 @@ def download_submitted_asset(asset_id):
     if not asset.has_access(current_user.id):
         flash('You do not have permissions to download this asset. If you think this is a mistake, please contact '
               'a system administrator.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # store download details
     record = DownloadRecord(asset_id=asset.id,
@@ -7972,7 +7972,7 @@ def download_submitted_asset(asset_id):
         flash('Could not serve download request for asset_id={number} because of a database error. '
               'Please contact a system administrator'.format(number=asset_id),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     abs_path = canonical_submitted_asset_filename(asset.filename, root_folder='ASSETS_SUBMITTED_SUBFOLDER')
     return send_file(abs_path, as_attachment=True, attachment_filename=asset.target_name,
@@ -7988,7 +7988,7 @@ def download_period_asset(asset_id):
     if not asset.has_access(current_user.id):
         flash('You do not have permissions to download this asset. If you think this is a mistake, please contact '
               'a system administrator.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     abs_path = canonical_submitted_asset_filename(asset.filename, root_folder='ASSETS_PERIODS_SUBFOLDER')
     return send_file(abs_path, as_attachment=True, attachment_filename=asset.target_name,
@@ -8171,7 +8171,7 @@ def reset_tasks():
     reset = celery.tasks['app.tasks.system.reset_tasks']
     reset.si(current_user.id).apply_async()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/reset_precompute')
@@ -8181,7 +8181,7 @@ def reset_precompute():
     reset = celery.tasks['app.tasks.system.reset_precompute_times']
     reset.si(current_user.id).apply_async()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @admin.route('/clear_redis_cache')
@@ -8191,4 +8191,4 @@ def clear_redis_cache():
 
     flash('The Redis cache has been successfully cleared.', 'success')
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())

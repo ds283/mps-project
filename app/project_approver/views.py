@@ -19,7 +19,7 @@ from .forms import EditCommentForm
 from ..database import db
 from ..models import ProjectDescription, DescriptionComment, ProjectClassConfig, EnrollmentRecord
 
-from ..shared.utils import build_project_approval_queues, home_dashboard_url
+from ..shared.utils import build_project_approval_queues, home_dashboard_url, redirect_url
 
 import app.ajax as ajax
 
@@ -154,7 +154,7 @@ def publish_comment(id):
     comment.visibility = DescriptionComment.VISIBILITY_PUBLISHED_BY_APPROVALS
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @project_approver.route('/edit_comment/<int:id>', methods=['GET', 'POST'])
@@ -165,7 +165,7 @@ def edit_comment(id):
 
     if current_user.id != comment.owner_id:
         flash('This comment belongs to another user. It is only possible to edit comments that you own.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     if url is None:
@@ -204,7 +204,7 @@ def delete_comment(id):
 
     if current_user.id != comment.owner_id:
         flash('This comment belongs to another user. It is only possible to edit comments that you own.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     if url is None:
@@ -233,7 +233,7 @@ def perform_delete_comment(id):
 
     if current_user.id != comment.owner_id:
         flash('This comment belongs to another user. It is only possible to edit comments that you own.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     if url is None:
@@ -260,7 +260,7 @@ def clean_comments(id):
     db.session.commit()
 
     flash('All deleted comments have been removed from the thread.', 'success')
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @project_approver.route('/rejected')

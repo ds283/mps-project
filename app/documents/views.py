@@ -27,6 +27,7 @@ from ..models import SubmissionRecord, SubmittedAsset, SubmissionAttachment, Rol
 
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.validators import validate_is_convenor
+from ..shared.utils import redirect_url
 from ..uploads import submitted_files
 
 import app.ajax as ajax
@@ -50,7 +51,7 @@ def submitter_documents(sid):
     # determine if the currently-logged-in user has permissions to view the documents associated with this
     # submission record
     if not is_listable(record, message=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -76,11 +77,11 @@ def delete_submitter_report(sid):
     # nothing to do if no report attached
     if record.report is None:
         flash('Could not delete report for this submitter because no file has been attached.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # validate user has permission to carry out deletions
     if not is_deletable(record, message=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -107,11 +108,11 @@ def perform_delete_submitter_report(sid):
     # nothing to do if no report attached
     if record.report is None:
         flash('Could not delete report for this submitter because no file has been attached.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # validate user has permission to carry out deletions
     if not is_deletable(record, message=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -141,13 +142,13 @@ def upload_submitter_report(sid):
 
     if record.report is not None:
         flash('Can not upload a report for this submitter because an existing report is already attached.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check is convenor for the project's class, or has suitable admin/root privileges
     config = record.owner.config
     pclass = config.project_class
     if not is_uploadable(record, message=True, allow_student=False, allow_faculty=False):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -244,11 +245,11 @@ def edit_submitter_report(sid):
     asset: SubmittedAsset = record.report
     if asset is None:
         flash('Could not edit the report for this submission record because it has not yet been attached.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # verify current user has privileges to edit the report
     if not is_editable(record, asset=asset, message=True, allow_student=False):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -285,12 +286,12 @@ def edit_submitter_attachment(aid):
     if asset is None:
         flash('Could not edit this attachment because of a database error. '
               'Please contact a system administrator.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # extract SubmissionRecord and ensure that current user has sufficient privileges to perform edits
     record: SubmissionRecord = attachment.parent
     if not is_editable(record, asset=asset, message=True, allow_student=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -334,16 +335,16 @@ def delete_submitter_attachment(aid):
     if asset is None:
         flash('Could not delete attachment because of a database error. '
               'Please contact a system administrator.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record = attachment.parent
     if record is None:
         flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check user has sufficient privileges to perform the deletion
     if not is_deletable(record, message=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -373,16 +374,16 @@ def perform_delete_submitter_attachment(aid, sid):
     if asset is None:
         flash('Could not delete attachment because of a database error. '
               'Please contact a system administrator.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record = attachment.parent
     if record is None:
         flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check user has sufficient privileges to perform the deletion
     if not is_deletable(record, message=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -416,7 +417,7 @@ def upload_submitter_attachment(sid):
     config = record.owner.config
     pclass = config.project_class
     if not is_uploadable(record, message=True, allow_student=True, allow_faculty=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -547,7 +548,7 @@ def attachment_acl(attach_type, attach_id):
 
     # ensure user is administrator or convenor for this project class
     if not validate_is_convenor(pclass, message=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -639,7 +640,7 @@ def add_user_acl(user_id, attach_type, attach_id):
 
     # ensure user is administrator or convenor for this project class
     if not validate_is_convenor(pclass, message=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         if user not in asset.access_control_list:
@@ -652,7 +653,7 @@ def add_user_acl(user_id, attach_type, attach_id):
         flash('Could not grant access to this asset due to a database error. '
               'Please contact a system administrator', 'error')
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @documents.route('/remove_user_acl/<int:user_id>/<int:attach_type>/<int:attach_id>')
@@ -668,7 +669,7 @@ def remove_user_acl(user_id, attach_type, attach_id):
 
     # ensure user is administrator or convenor for this project class
     if not validate_is_convenor(pclass, message=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         while user in asset.access_control_list:
@@ -681,7 +682,7 @@ def remove_user_acl(user_id, attach_type, attach_id):
         flash('Could not remove access to this asset due to a database error. '
               'Please contact a system administrator', 'error')
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @documents.route('/add_role_acl/<int:role_id>/<int:attach_type>/<int:attach_id>')
@@ -697,7 +698,7 @@ def add_role_acl(role_id, attach_type, attach_id):
 
     # ensure user is administrator or convenor for this project class
     if not validate_is_convenor(pclass, message=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         if role not in asset.access_control_roles:
@@ -710,7 +711,7 @@ def add_role_acl(role_id, attach_type, attach_id):
         flash('Could not grant role-based access to this asset due to a database error. '
               'Please contact a system administrator', 'error')
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @documents.route('/remove_role_acl/<int:role_id>/<int:attach_type>/<int:attach_id>')
@@ -726,7 +727,7 @@ def remove_role_acl(role_id, attach_type, attach_id):
 
     # ensure user is administrator or convenor for this project class
     if not validate_is_convenor(pclass, message=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         while role in asset.access_control_roles:
@@ -739,7 +740,7 @@ def remove_role_acl(role_id, attach_type, attach_id):
         flash('Could not remove role-based access to this asset due to a database error. '
               'Please contact a system administrator', 'error')
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @documents.route('/attachment_download_log/<int:attach_type>/<int:attach_id>')
@@ -752,7 +753,7 @@ def attachment_download_log(attach_type, attach_id):
 
     # ensure user is administrator or convenor for ths project class
     if not validate_is_convenor(pclass, message=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)

@@ -16,6 +16,7 @@ from ..models import User, FacultyData, ResearchGroup, SkillGroup, ProjectClass,
     Project, LiveProject
 
 from ..shared.conversions import is_integer
+from ..shared.utils import redirect_url
 
 import app.ajax as ajax
 
@@ -209,7 +210,7 @@ def liveproject_analytics(proj_id):
     if not authorized:
         flash('You are not authorized to view the analytics page for the project "{proj}"'.format(proj=project.name),
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)

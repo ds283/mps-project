@@ -37,7 +37,7 @@ from ..models import User, FacultyData, StudentData, StudentBatch, StudentBatchI
 from ..shared.asset_tools import make_temporary_asset_filename
 from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import func
-from ..shared.utils import get_current_year, get_main_config, home_dashboard_url
+from ..shared.utils import get_current_year, get_main_config, home_dashboard_url, redirect_url
 from ..shared.validators import validate_is_convenor
 from ..task_queue import register_task, progress_update
 from ..uploads import batch_user_files
@@ -58,7 +58,7 @@ def create_user():
     if not DegreeProgramme.query.filter_by(active=True).first():
         flash('No degree programmes are available. '
               'Set up at least one active degree programme before adding new users.')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # first task is to capture the user role
     form = UserTypeSelectForm(request.form)
@@ -601,7 +601,7 @@ def terminate_batch(batch_id):
     if record.celery_finished:
         flash('Can not terminate batch read-in for "{name}" because it has finished'.format(name=record.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Terminate batch user creation'
     panel_title = 'Terminate batch user creation for <strong>{name}</strong>'.format(name=record.name)
@@ -629,7 +629,7 @@ def perform_terminate_batch(batch_id):
     if record.celery_finished:
         flash('Can not terminate batch read-in for "{name}" because it has finished'.format(name=record.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     celery = current_app.extensions['celery']
     celery.control.revoke(record.celery_id, terminate=True, signal='SIGUSR1')
@@ -666,7 +666,7 @@ def delete_batch(batch_id):
     if not record.celery_finished:
         flash('Can not delete batch creation task for "{name}" because it has not yet '
               'finished'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Delete batch user creation task'
     panel_title = 'Delete batch user creation for <strong>{name}</strong>'.format(name=record.name)
@@ -694,7 +694,7 @@ def perform_delete_batch(batch_id):
     if not record.celery_finished:
         flash('Can not delete batch creation task for "{name}" because it has not yet '
               'finished'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         db.session.query(StudentBatchItem).filter_by(parent_id=record.id).delete()
@@ -802,7 +802,7 @@ def mark_batch_item_convert(item_id):
     item.dont_convert = False
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/mark_batch_item_dont_convert/<int:item_id>')
@@ -813,7 +813,7 @@ def mark_batch_item_dont_convert(item_id):
     item.dont_convert = True
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/import_batch/<int:batch_id>')
@@ -847,7 +847,7 @@ def import_batch(batch_id):
                 final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
     seq.apply_async(task_id=uuid)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/make_admin/<int:id>')
@@ -864,7 +864,7 @@ def make_admin(id):
 
     if not user.is_active:
         flash('Inactive users cannot be given admin privileges.')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     current_app.logger.info('Preparing to add admin role in make_admin(); request.referrer = {req}'.format(req=request.referrer))
 
@@ -873,7 +873,7 @@ def make_admin(id):
 
     current_app.logger.info('Preparing to redirect in make_admin(); request.referrer = {req}'.format(req=request.referrer))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/remove_admin/<int:id>')
@@ -890,7 +890,7 @@ def remove_admin(id):
 
     if user.has_role('root'):
         flash('Administration privileges cannot be removed from a system administrator.')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     current_app.logger.info('Preparing to remove admin role in remove_admin(); request.referrer = {req}'.format(req=request.referrer))
 
@@ -899,7 +899,7 @@ def remove_admin(id):
 
     current_app.logger.info('Preparing to redirect in remove_admin(); request.referrer = {req}'.format(req=request.referrer))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/make_root/<int:id>')
@@ -916,7 +916,7 @@ def make_root(id):
 
     if not user.is_active:
         flash('Inactive users cannot be given sysadmin privileges.')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     current_app.logger.info('Preparing to add root role in make_root(); request.referrer = {req}'.format(req=request.referrer))
 
@@ -926,7 +926,7 @@ def make_root(id):
 
     current_app.logger.info('Preparing to redirect in make_root(); request.referrer = {req}'.format(req=request.referrer))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/remove_root/<int:id>')
@@ -948,7 +948,7 @@ def remove_root(id):
 
     current_app.logger.info('Preparing to redirect in remove_root(); request.referrer = {req}'.format(req=request.referrer))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/activate_user/<int:id>')
@@ -965,7 +965,7 @@ def activate_user(id):
     _datastore.activate_user(user)
     _datastore.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/deactivate_user/<int:id>')
@@ -982,12 +982,12 @@ def deactivate_user(id):
     if user.has_role('manage_users') or user.has_role('root'):
         flash('Administrative users cannot be made inactive. '
               'Remove administration status before marking the user as inactive.')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     _datastore.deactivate_user(user)
     _datastore.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/edit_user/<int:id>', methods=['GET', 'POST'])
@@ -1265,7 +1265,7 @@ def edit_enrollment(id):
     record = EnrollmentRecord.query.get_or_404(id)
 
     if not validate_is_convenor(record.pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = EnrollmentRecordForm(obj=record)
 
@@ -1325,7 +1325,7 @@ def enroll_projects_assessor(id, pclassid):
 
     subscribe_task.apply_async(args=(id, pclassid, current_user.id))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/enroll_liveprojects_assessor/<int:id>/<int:pclassid>')
@@ -1343,7 +1343,7 @@ def enroll_liveprojects_assessor(id, pclassid):
                   adjust_task.si(id, current_year))
     tasks.apply_async()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/add_affiliation/<int:userid>/<int:groupid>')
@@ -1361,7 +1361,7 @@ def add_affiliation(userid, groupid):
     if group not in data.affiliations:
         data.add_affiliation(group, autocommit=True)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/remove_affiliation/<int:userid>/<int:groupid>')
@@ -1379,7 +1379,7 @@ def remove_affiliation(userid, groupid):
     if group in data.affiliations:
         data.remove_affiliation(group, autocommit=True)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/add_enrollment/<int:userid>/<int:pclassid>')
@@ -1397,7 +1397,7 @@ def add_enrollment(userid, pclassid):
     if not data.is_enrolled(pclass):
         data.add_enrollment(pclass)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/remove_enrollment/<int:userid>/<int:pclassid>')
@@ -1415,7 +1415,7 @@ def remove_enrollment(userid, pclassid):
     if data.is_enrolled(pclass):
         data.remove_enrollment(pclass)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/edit_roles')
@@ -1517,16 +1517,16 @@ def attach_role(user_id, role_id):
 
     if role.name == 'root' or role.name == 'admin':
         flash('Admin roles cannot be assigned through the API', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if role.name == 'faculty' or role.name == 'office' or role.name == 'student':
         flash('Account types cannot be assigned through the API', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     _datastore.add_role_to_user(data, role.name)
     _datastore.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @manage_users.route('/remove_role/<int:user_id>/<int:role_id>')
@@ -1543,13 +1543,13 @@ def remove_role(user_id, role_id):
 
     if role.name == 'root' or role.name == 'admin':
         flash('Admin roles cannot be assigned through the API', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if role.name == 'faculty' or role.name == 'office' or role.name == 'student':
         flash('Account types cannot be assigned through the API', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     _datastore.remove_role_from_user(data, role.name)
     _datastore.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())

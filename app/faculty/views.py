@@ -29,8 +29,8 @@ from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorF
     SupervisorResponseForm, FacultySettingsFormFactory, AvailabilityFormFactory
 from ..admin.forms import LevelSelectorForm
 
-from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_assessors, \
-    get_current_year, get_count, get_approvals_data, allow_approvals
+from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_assessors, \
+    get_current_year, get_count, get_approvals_data, allow_approvals, redirect_url
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable, \
     validate_assessment, validate_using_assessment, validate_presentation_assessor, \
@@ -251,7 +251,7 @@ def add_affiliation(groupid):
     if group not in data.affiliations:
         data.add_affiliation(group, autocommit=True)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/remove_affiliation/<int:groupid>')
@@ -264,7 +264,7 @@ def remove_affiliation(groupid):
     if group in data.affiliations:
         data.remove_affiliation(group, autocommit=True)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/edit_projects')
@@ -336,7 +336,7 @@ def edit_descriptions(id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(project):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -425,7 +425,7 @@ def edit_project(id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     EditProjectForm = EditProjectFormFactory(convenor_editing=False)
     form = EditProjectForm(obj=proj)
@@ -467,7 +467,7 @@ def remove_project_pclass(proj_id, pclass_id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         proj.remove_project_class(pclass)
@@ -476,7 +476,7 @@ def remove_project_pclass(proj_id, pclass_id):
         # presumably caused by a race condition?
         db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/activate_project/<int:id>')
@@ -487,12 +487,12 @@ def activate_project(id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     proj.enable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/deactivate_project/<int:id>')
@@ -503,12 +503,12 @@ def deactivate_project(id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data.disable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/delete_project/<int:id>')
@@ -519,7 +519,7 @@ def delete_project(id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(data):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Delete project'
     panel_title = 'Delete project <strong>{name}</strong>'.format(name=data.name)
@@ -571,7 +571,7 @@ def add_description(pid):
 
     # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -617,7 +617,7 @@ def edit_description(did):
 
     # if project owner is not logged-in user, object
     if not validate_edit_description(desc):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -656,7 +656,7 @@ def description_modules(did, level_id=None):
 
     # if project owner is not logged-in user, object
     if not validate_edit_description(desc):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -692,7 +692,7 @@ def description_attach_module(did, mod_id, level_id):
 
     # if project owner is not logged-in user, object
     if not validate_edit_description(desc):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
     module = Module.query.get_or_404(mod_id)
@@ -712,7 +712,7 @@ def description_detach_module(did, mod_id, level_id):
 
     # if project owner is not logged-in user, object
     if not validate_edit_description(desc):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
     module = Module.query.get_or_404(mod_id)
@@ -732,12 +732,12 @@ def delete_description(did):
 
     # if project owner is not logged-in user, object
     if not validate_edit_description(desc):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     db.session.delete(desc)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/duplicate_description/<int:did>')
@@ -747,7 +747,7 @@ def duplicate_description(did):
 
     # if project owner is not logged-in user, object
     if not validate_is_project_owner(desc.parent):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     suffix = 2
     while suffix < 100:
@@ -761,7 +761,7 @@ def duplicate_description(did):
     if suffix >= 100:
         flash('Could not duplicate description "{label}" because a new unique label could not '
               'be generated'.format(label=desc.label), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = ProjectDescription(parent_id=desc.parent_id,
                               label=new_label,
@@ -781,7 +781,7 @@ def duplicate_description(did):
     db.session.add(data)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/move_description/<int:did>', methods=['GET', 'POST'])
@@ -792,7 +792,7 @@ def move_description(did):
 
     # if project owner is not logged-in user, object
     if not validate_edit_description(desc):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -878,7 +878,7 @@ def make_default_description(pid, did=None):
 
     # if project owner is not logged-in user, object
     if not validate_edit_description(desc):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if did is not None:
         desc = ProjectDescription.query.get_or_404(did)
@@ -886,12 +886,12 @@ def make_default_description(pid, did=None):
         if desc.parent_id != pid:
             flash('Cannot set default description (id={did)) for project (id={pid}) because this description '
                   'does not belong to the project'.format(pid=pid, did=did), 'error')
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     proj.default_id = did
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/attach_skills/<int:id>/<int:sel_id>')
@@ -903,7 +903,7 @@ def attach_skills(id, sel_id=None):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = SkillSelectorForm(request.form)
 
@@ -941,7 +941,7 @@ def add_skill(projectid, skillid, sel_id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -962,7 +962,7 @@ def remove_skill(projectid, skillid, sel_id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -983,7 +983,7 @@ def attach_programmes(id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     q = proj.available_degree_programmes
 
@@ -1000,7 +1000,7 @@ def add_programme(id, prog_id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     programme = DegreeProgramme.query.get_or_404(prog_id)
 
@@ -1008,7 +1008,7 @@ def add_programme(id, prog_id):
         proj.add_programme(programme)
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/remove_programme/<int:id>/<int:prog_id>')
@@ -1019,7 +1019,7 @@ def remove_programme(id, prog_id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     programme = DegreeProgramme.query.get_or_404(prog_id)
 
@@ -1027,7 +1027,7 @@ def remove_programme(id, prog_id):
         proj.remove_programme(programme)
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/attach_assessors/<int:id>')
@@ -1038,7 +1038,7 @@ def attach_assessors(id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -1112,13 +1112,13 @@ def add_assessor(proj_id, mid):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     assessor = FacultyData.query.get_or_404(mid)
 
     proj.add_assessor(assessor, autocommit=True)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/remove_assessor/<int:proj_id>/<int:mid>')
@@ -1129,13 +1129,13 @@ def remove_assessor(proj_id, mid):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     assessor = FacultyData.query.get_or_404(mid)
 
     proj.remove_assessor(assessor, autocommit=True)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/attach_all_assessors/<int:proj_id>')
@@ -1146,7 +1146,7 @@ def attach_all_assessors(proj_id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state_filter = request.args.get('state_filter')
     pclass_filter = request.args.get('pclass_filter')
@@ -1159,7 +1159,7 @@ def attach_all_assessors(proj_id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/remove_all_assessors/<int:proj_id>')
@@ -1170,7 +1170,7 @@ def remove_all_assessors(proj_id):
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state_filter = request.args.get('state_filter')
     pclass_filter = request.args.get('pclass_filter')
@@ -1183,7 +1183,7 @@ def remove_all_assessors(proj_id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/preview/<int:id>', methods=['GET', 'POST'])
@@ -1194,7 +1194,7 @@ def project_preview(id):
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
     if not validate_edit_project(data, 'project_approver'):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     show_selector = bool(int(request.args.get('show_selector', True)))
     all_comments = bool(int(request.args.get('all_comments', False)))
@@ -1426,17 +1426,17 @@ def confirm_pclass(id):
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} '
               '{yeara}-{yearb}'.format(project=config.name, yeara=config.year, yearb=config.year+1))
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.live:
         flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
               'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year+1))
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not config.is_confirmation_required(current_user.faculty_data):
         flash('You have no outstanding confirmation requests for {project} {yeara}-{yearb}'.format(
             project=config.name, yeara=config.year, yearb=config.year+1))
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     config.mark_confirmed(current_user.faculty_data, message=True)
     db.session.commit()
@@ -1448,7 +1448,7 @@ def confirm_pclass(id):
     task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
     task.apply_async(args=(current_user.id, id))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/confirm_description/<int:did>/<int:pclass_id>')
@@ -1463,16 +1463,16 @@ def confirm_description(did, pclass_id):
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
             project=config.name, yeara=config.year, yearb=config.year+1))
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.live:
         flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
               'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # if project owner is not logged in user, object
     if not validate_is_project_owner(desc.parent):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     desc.confirmed = True
     db.session.commit()
@@ -1489,7 +1489,7 @@ def confirm_description(did, pclass_id):
     task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
     task.apply_async(args=(current_user.id, pclass_id))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/confirm/<int:sid>/<int:pid>')
@@ -1503,7 +1503,7 @@ def confirm(sid, pid):
 
     # verify that logged-in user is the owner of this liveproject
     if not validate_is_project_owner(project):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # validate that project is open
     if not validate_project_open(sel.config):
@@ -1512,7 +1512,7 @@ def confirm(sid, pid):
     if do_confirm(sel, project):
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/deconfirm/<int:sid>/<int:pid>')
@@ -1526,7 +1526,7 @@ def deconfirm(sid, pid):
 
     # verify that logged-in user is the owner of this liveproject
     if not validate_is_project_owner(project):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # validate that project is open
     if not validate_project_open(sel.config):
@@ -1535,7 +1535,7 @@ def deconfirm(sid, pid):
     if do_deconfirm(sel, project):
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/deconfirm_to_pending/<int:sid>/<int:pid>')
@@ -1550,7 +1550,7 @@ def deconfirm_to_pending(sid, pid):
 
     # verify that logged-in user is the owner of this liveproject
     if not validate_is_project_owner(project):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # validate that project is open
     if not validate_project_open(sel.config):
@@ -1559,7 +1559,7 @@ def deconfirm_to_pending(sid, pid):
     if do_deconfirm_to_pending(sel, project):
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/cancel_confirm/<int:sid>/<int:pid>')
@@ -1574,7 +1574,7 @@ def cancel_confirm(sid, pid):
 
     # verify that logged-in user is the owner of this liveproject
     if not validate_is_project_owner(project):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # validate that project is open
     if not validate_project_open(sel.config):
@@ -1583,7 +1583,7 @@ def cancel_confirm(sid, pid):
     if do_cancel_confirm(sel, project):
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/live_project/<int:pid>')
@@ -1639,7 +1639,7 @@ def supervisor_edit_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_supervisor(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
 
@@ -1647,12 +1647,12 @@ def supervisor_edit_feedback(id):
         flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
               'period for feedback and marking.',
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if period.closed and record.supervisor_submitted:
         flash('It is not possible to edit feedback after the convenor has closed this submission period.',
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = SupervisorFeedbackForm(request.form)
 
@@ -1691,7 +1691,7 @@ def marker_edit_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_marker(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
 
@@ -1699,12 +1699,12 @@ def marker_edit_feedback(id):
         flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
               'period for feedback and marking.',
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if period.closed and record.marker_submitted:
         flash('It is not possible to edit feedback after the convenor has closed this submission period.',
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = MarkerFeedbackForm(request.form)
 
@@ -1743,26 +1743,26 @@ def supervisor_submit_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_supervisor(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.supervisor_submitted:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
 
     if not period.is_feedback_open:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.is_supervisor_valid:
         flash('Cannot submit feedback because it is still incomplete.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.supervisor_submitted = True
     record.supervisor_timestamp = datetime.now()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/supervisor_unsubmit_feedback/<int:id>')
@@ -1772,22 +1772,22 @@ def supervisor_unsubmit_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_supervisor(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.supervisor_submitted:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
 
     if period.closed:
         flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.supervisor_submitted = False
     record.supervisor_timestamp = None
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/marker_submit_feedback/<int:id>')
@@ -1797,26 +1797,26 @@ def marker_submit_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_marker(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.marker_submitted:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
 
     if not period.is_feedback_open:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.is_marker_valid:
         flash('Cannot submit feedback because it is still incomplete.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.marker_submitted = True
     record.marker_timestamp = datetime.now()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/marker_unsubmit_feedback/<int:id>')
@@ -1826,22 +1826,22 @@ def marker_unsubmit_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_marker(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.marker_submitted:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
 
     if period.closed:
         flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.marker_submitted = False
     record.marker_timestamp = None
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/supervisor_acknowledge_feedback/<int:id>')
@@ -1851,25 +1851,25 @@ def supervisor_acknowledge_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_supervisor(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.acknowledge_feedback:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
 
     if not period.is_feedback_open:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.student_feedback_submitted:
         flash('Cannot acknowledge student feedback because none has been submitted.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.acknowledge_feedback = True
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/presentation_edit_feedback/<int:slot_id>/<int:talk_id>', methods=['GET', 'POST'])
@@ -1882,21 +1882,21 @@ def presentation_edit_feedback(slot_id, talk_id):
 
     if get_count(slot.talks.filter_by(id=talk.id)) != 1:
         flash('This talk/slot combination does not form a scheduled pair', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_presentation_assessor(slot):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(slot.owner.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not slot.owner.deployed:
         flash('Can not edit feedback because the schedule containing this slot has not been deployed.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not slot.owner.owner.is_feedback_open and talk.presentation_assessor_submitted(current_user.id):
         flash('It is not possible to edit feedback after an assessment event has been closed.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     feedback = talk.presentation_feedback.filter_by(assessor_id=current_user.id).first()
     if feedback is None:
@@ -1949,21 +1949,21 @@ def presentation_submit_feedback(slot_id, talk_id):
 
     if get_count(slot.talks.filter_by(id=talk.id)) != 1:
         flash('This talk/slot combination does not form a scheduled pair', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_presentation_assessor(slot):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(slot.owner.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not slot.owner.deployed:
         flash('Can not submit feedback because the schedule containing this slot has not been deployed.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not talk.is_presentation_assessor_valid(current_user.id):
         flash('Cannot submit feedback because it is still incomplete.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     feedback = talk.presentation_feedback.filter_by(assessor_id=current_user.id).one()
 
@@ -1971,7 +1971,7 @@ def presentation_submit_feedback(slot_id, talk_id):
     feedback.timestamp = datetime.now()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/presentation_unsubmit_feedback/<int:slot_id>/<int:talk_id>')
@@ -1984,21 +1984,21 @@ def presentation_unsubmit_feedback(slot_id, talk_id):
 
     if get_count(slot.talks.filter_by(id=talk.id)) != 1:
         flash('This talk/slot combination does not form a scheduled pair', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_presentation_assessor(slot):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assessment(slot.owner.owner):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not slot.owner.deployed:
         flash('Can not submit feedback because the schedule containing this slot has not been deployed.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not slot.owner.owner.is_feedback_open:
         flash('Cannot unsubmit feedback after an assessment has closed.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     feedback = talk.presentation_feedback.filter_by(assessor_id=current_user.id).one()
 
@@ -2006,7 +2006,7 @@ def presentation_unsubmit_feedback(slot_id, talk_id):
     feedback.timestamp = None
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/view_feedback/<int:id>')
@@ -2016,7 +2016,7 @@ def view_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_viewable(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -2037,7 +2037,7 @@ def edit_response(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_supervisor(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
 
@@ -2045,16 +2045,16 @@ def edit_response(id):
         flash('It is only possible to give respond to feedback from your student when '
               'their own marks and feedback are available. '
               'Try again when this submission period is closed.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if period.closed and record.faculty_response_submitted:
         flash('It is not possible to edit your response once it has been submitted', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if period.closed and not record.student_feedback_submitted:
         flash('It is not possible to write a response to feedback from your student before '
               'they have submitted it.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = SupervisorResponseForm(request.form)
 
@@ -2084,37 +2084,37 @@ def submit_response(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_supervisor(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
 
     if record.faculty_response_submitted:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not period.closed:
         flash('It is only possible to give respond to feedback from your student when '
               'their own marks and feedback are available. '
               'Try again when this submission period is closed.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if period.closed and record.faculty_response_submitted:
         flash('It is not possible to edit your response once it has been submitted', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if period.closed and not record.student_feedback_submitted:
         flash('It is not possible to write a response to feedback from your student before '
               'they have submitted it.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.is_response_valid:
         flash('Cannot submit your feedback because it is incomplete.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.faculty_response_submitted = True
     record.faculty_response_timestamp = datetime.now()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/mark_started/<int:id>')
@@ -2125,31 +2125,31 @@ def mark_started(id):
 
     # reject if logged-in user is not a convenor for the project class associated with this submission record
     if not validate_submission_supervisor(rec):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash('It is now too late to mark a submission period as started', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.submission_period > rec.owner.config.submission_period:
         flash('Cannot mark this submission period as started because it is not yet open', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not rec.owner.published:
         flash('Cannot mark this submission period as started because it is not published to the submitter', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     rec.student_engaged = True
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/set_availability/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty')
 def set_availability(id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
@@ -2158,15 +2158,15 @@ def set_availability(id):
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.requested_availability:
         flash('Cannot set availability for this assessment because it has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.availability_closed:
         flash('Cannot set availability for this assessment because it has been closed', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     include_confirm = data.is_faculty_outstanding(current_user.id)
     AvailabilityForm = AvailabilityFormFactory(include_confirm)
@@ -2207,141 +2207,141 @@ def set_availability(id):
 @roles_accepted('faculty')
 def session_available(id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationSession.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data.owner, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.owner.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.owner.availability_closed:
         flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data.faculty_make_available(current_user.faculty_data)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/session_ifneeded/<int:id>')
 @roles_accepted('faculty')
 def session_ifneeded(id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationSession.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data.owner, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.owner.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.owner.availability_closed:
         flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data.faculty_make_ifneeded(current_user.faculty_data)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/session_unavailable/<int:id>')
 @roles_accepted('faculty')
 def session_unavailable(id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationSession.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data.owner, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.owner.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.owner.availability_closed:
         flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data.faculty_make_unavailable(current_user.faculty_data)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/session_all_available/<int:id>')
 @roles_accepted('faculty')
 def session_all_available(id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.availability_closed:
         flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     for session in data.sessions:
         session.faculty_make_available(current_user.faculty_data)
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/session_all_unavailable/<int:id>')
 @roles_accepted('faculty')
 def session_all_unavailable(id):
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not data.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if data.availability_closed:
         flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     for session in data.sessions:
         session.faculty_make_unavailable(current_user.faculty_data)
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @faculty.route('/change_availability')
 @roles_accepted('faculty')
 def change_availability():
     if not validate_using_assessment():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('faculty/change_availability.html')
 
@@ -2462,19 +2462,19 @@ def past_feedback(student_id):
 
     if not user.has_role('student'):
         flash('It is only possible to view past feedback for a student account.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if user.student_data is None:
         flash('Cannot display past feedback for this student account because the corresponding '
               'StudentData record is missing.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = user.student_data
 
     if not data.has_previous_submissions:
         flash('This student does not yet have any past feedback. Feedback will be available to view once '
               'the student has made one or more project submissions.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)

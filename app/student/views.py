@@ -27,7 +27,7 @@ from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, LiveProject, \
     Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SubmissionRecord, TransferableSkill, \
     User, EmailNotification, add_notification, CustomOffer
-from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects, get_count
+from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects, get_count, redirect_url
 from ..shared.validators import validate_is_convenor, validate_submission_viewable
 from ..task_queue import register_task
 
@@ -209,7 +209,7 @@ def browse_projects(id):
 
     state = sel.config.selector_lifecycle
     if not _verify_open(sel.config, state=state):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # supply list of transferable skill groups and research groups that can be filtered against
     groups = db.session.query(ResearchGroup) \
@@ -272,7 +272,7 @@ def add_group_filter(id, gid):
             # to the same endpoint?
             db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @student.route('/remove_group_filter/<id>/<gid>')
@@ -290,7 +290,7 @@ def remove_group_filter(id, gid):
             # to the same endpoint?
             db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @student.route('/clear_group_filters/<id>')
@@ -306,7 +306,7 @@ def clear_group_filters(id):
         # to the same endpoint?
         db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @student.route('/add_skill_filter/<id>/<skill_id>')
@@ -325,7 +325,7 @@ def add_skill_filter(id, skill_id):
             db.session.rollback()
 
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @student.route('/remove_skill_filter/<id>/<skill_id>')
@@ -343,7 +343,7 @@ def remove_skill_filter(id, skill_id):
             # to the same endpoint?
             db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @student.route('/clear_skill_filters/<id>')
@@ -359,7 +359,7 @@ def clear_skill_filters(id):
         # to the same endpoint?
         db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @student.route('/view_project/<int:sid>/<int:pid>')
@@ -432,18 +432,18 @@ def add_bookmark(sid, pid):
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
     if not _verify_selector(sel):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # pid is the id for a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
     # verify project is open
     if not _verify_open(project.config, strict=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # verify student is allowed to view this live project
     if not _verify_view_project(sel, project):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # add bookmark
     if not sel.is_project_bookmarked(project):
@@ -451,7 +451,7 @@ def add_bookmark(sid, pid):
         db.session.add(bm)
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @student.route('/remove_bookmark/<int:sid>/<int:pid>')
@@ -463,18 +463,18 @@ def remove_bookmark(sid, pid):
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
     if not _verify_selector(sel):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # pid is the id for a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
     # verify project is open
     if not _verify_open(project.config, strict=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # verify student is allowed to view this live project
     if not _verify_view_project(sel, project):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # remove bookmark
     bm = sel.bookmarks.filter_by(liveproject_id=pid).first()
@@ -491,7 +491,7 @@ def remove_bookmark(sid, pid):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @student.route('/request_confirm/<int:sid>/<int:pid>')
@@ -502,28 +502,28 @@ def request_confirmation(sid, pid):
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
     if not _verify_selector(sel):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # pid is the id for a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
     # verify project is open
     if not _verify_open(project.config, strict=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # verify student is allowed to view this live project
     if not _verify_view_project(sel, project):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check if confirmation has already been issued
     if project.is_confirmed(sel):
         flash('Confirmation has already been issued for project "{n}"'.format(n=project.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check if confirmation is already pending
     if project.is_waiting(sel):
         flash('Confirmation is already pending for project "{n}"'.format(n=project.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # add confirm request
     req = project.make_confirm_request(sel)
@@ -537,7 +537,7 @@ def request_confirmation(sid, pid):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @student.route('/cancel_confirm/<int:sid>/<int:pid>')
@@ -548,23 +548,23 @@ def cancel_confirmation(sid, pid):
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
     if not _verify_selector(sel):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # pid is the id for a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
     # verify project is open
     if not _verify_open(project.config, strict=True):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # verify student is allowed to view this live project
     if not _verify_view_project(sel, project):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check if confirmation has already been issued
     if project.is_confirmed(sel):
         flash('Confirmation has already been issued for project "{n}"'.format(n=project.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # remove confirm request if one exists
     if project.is_waiting(sel):
@@ -574,7 +574,7 @@ def cancel_confirmation(sid, pid):
             db.session.delete(req)
             db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 def _demap_project(item_id):
@@ -662,13 +662,13 @@ def submit(sid):
     # verify logged-in user is the selector
     if current_user.id != sel.student_id:
         flash('You do not have permission to submit project preferences for this selector.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     valid, errors = sel.is_valid_selection
     if not valid:
         flash('The current bookmark list is not a valid set of project preferences. This is an internal error; '
               'please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         store_selection(sel)
@@ -700,7 +700,7 @@ def submit(sid):
         flash('A database error occurred during submission. Please contact a system administrator.', 'error')
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @student.route('/clear_submission/<int:sid>')
@@ -712,7 +712,7 @@ def clear_submission(sid):
     if current_user.id != sel.student_id:
 
         flash('You do not have permission to clear project preferences for this selector.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Clear submitted preferences'
     panel_title = 'Clear submitted preferences for {name}'.format(name=sel.config.name)
@@ -825,7 +825,7 @@ def view_selection(sid):
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
     if not _verify_selector(sel):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('student/choices.html', sel=sel)
 
@@ -837,7 +837,7 @@ def view_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not _verify_submitter(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -865,12 +865,12 @@ def edit_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not _verify_submitter(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.retired:
         flash('It is no longer possible to submit feedback for this submission because it belongs to a '
               'previous academic year.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     config = record.owner.config
     period = config.get_period(record.submission_period)
@@ -878,11 +878,11 @@ def edit_feedback(id):
     if not period.closed:
         flash('It is only possible to give feedback to your supervisor once your own marks and feedback are available. '
               'Try again when this submission period is closed.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if period.closed and record.student_feedback_submitted:
         flash('It is not possible to edit your feedback once it has been submitted', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = StudentFeedbackForm(request.form)
 
@@ -912,15 +912,15 @@ def submit_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not _verify_submitter(record):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.student_feedback_submitted:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.retired:
         flash('It is no longer possible to submit feedback for this submission because it belongs to a '
               'previous academic year.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     config = record.owner.config
     period = config.get_period(record.submission_period)
@@ -928,17 +928,17 @@ def submit_feedback(id):
     if not period.closed:
         flash('It is only possible to give feedback to your supervisor once your own marks and feedback are available. '
               'Try again when this submission period is closed.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.is_student_valid:
         flash('Cannot submit your feedback because it is incomplete.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.student_feedback_submitted = True
     record.student_feedback_timestamp = datetime.now()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @student.route('/settings', methods=['GET', 'POST'])
@@ -978,18 +978,18 @@ def timeline(student_id):
 
     if current_user.has_role('student') and student_id != current_user.id:
         flash('It is only possible to view the project timeline for your own account.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     user = User.query.get_or_404(student_id)
 
     if not user.has_role('student'):
         flash('It is only possible to view project timelines for a student account.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if user.student_data is None:
         flash('Cannot display project timeline for this student account because the corresponding '
               'StudentData record is missing.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = user.student_data
 
@@ -1004,7 +1004,7 @@ def timeline(student_id):
                   'will become available once one or more retired submissions have been entered '
                   'in the database.', 'info')
 
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)

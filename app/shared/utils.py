@@ -9,7 +9,7 @@
 #
 
 
-from flask import redirect, url_for, flash, current_app
+from flask import redirect, url_for, flash, current_app, request
 from flask_security import current_user
 
 from sqlalchemy import and_, or_
@@ -56,6 +56,13 @@ def home_dashboard():
 
     flash('Your role could not be identified. Please contact the system administrator.')
     return redirect(url_for('auth.logged_out'))
+
+
+def redirect_url(default=None):
+    return request.args.get('next') or \
+           (request.referrer if '/login' not in request.referrer else None) or \
+           (url_for(default) if default is not None else None) or \
+           home_dashboard()
 
 
 def get_rollover_data(configs=None, current_year=None):

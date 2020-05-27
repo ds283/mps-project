@@ -45,7 +45,7 @@ from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
-    build_enroll_submitter_candidates, build_submitters_data, get_count
+    build_enroll_submitter_candidates, build_submitters_data, get_count, redirect_url
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
 from ..student.actions import store_selection
@@ -244,7 +244,7 @@ def overview(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # get current academic year
     current_year = get_current_year()
@@ -253,13 +253,13 @@ def overview(id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # get record for current submission period
     period = config.periods.filter_by(submission_period=config.submission_period).first()
     if period is None and config.submissions > 0:
         flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # build forms
     GoLiveForm = GoLiveFormFactory()
@@ -337,7 +337,7 @@ def attached(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # get current academic year
     current_year = get_current_year()
@@ -346,7 +346,7 @@ def attached(id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     valid_filter = request.args.get('valid_filter')
 
@@ -484,7 +484,7 @@ def faculty(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     enroll_filter = request.args.get('enroll_filter')
     state_filter = request.args.get('state_filter')
@@ -511,7 +511,7 @@ def faculty(id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = get_convenor_dashboard_data(pclass, config)
 
@@ -634,7 +634,7 @@ def selectors(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
@@ -650,7 +650,7 @@ def selectors(id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # build a list of live students selecting from this project class
     selectors = config.selecting_students.filter_by(retired=False).all()
@@ -846,17 +846,17 @@ def enroll_selectors(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
@@ -984,15 +984,15 @@ def enroll_all_selectors(configid):
     config = ProjectClassConfig.query.get_or_404(configid)
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     convert = bool(int(request.args.get('convert', 1)))
 
@@ -1037,7 +1037,7 @@ def enroll_all_selectors(configid):
               'for further information.', 'error')
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/enroll_selector/<int:sid>/<int:configid>')
@@ -1052,21 +1052,21 @@ def enroll_selector(sid, configid):
     config = ProjectClassConfig.query.get_or_404(configid)
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     convert = bool(int(request.args.get('convert', 1)))
 
     add_selector(sid, configid, convert=convert, autocommit=True)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/delete_selector/<int:sid>')
@@ -1081,11 +1081,11 @@ def delete_selector(sid):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if sel.config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash('Manual deletion of selectors is only possible before student choices are closed', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         db.session.delete(sel)      # delete should cascade to Bookmark and SelectionRecord items
@@ -1096,7 +1096,7 @@ def delete_selector(sid):
               'error')
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/selector_grid/<int:id>')
@@ -1107,7 +1107,7 @@ def selector_grid(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
@@ -1122,11 +1122,11 @@ def selector_grid(id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
         flash('The selector grid view is available only after student choices are closed', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # build a list of live students selecting from this project class
     selectors = config.selecting_students.filter_by(retired=False).all()
@@ -1288,7 +1288,7 @@ def show_confirmations(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # get current academic year
     current_year = get_current_year()
@@ -1297,15 +1297,15 @@ def show_confirmations(id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash('The outstanding confirmations view is available only after student choices have opened', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
         flash('The outstanding confirmations view is not available after student choices have closed', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = get_convenor_dashboard_data(pclass, config)
 
@@ -1353,7 +1353,7 @@ def submitters(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
@@ -1368,7 +1368,7 @@ def submitters(id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     submitters = config.submitting_students.filter_by(retired=False).all()
 
@@ -1498,7 +1498,7 @@ def enroll_submitters(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # get current academic year
     current_year = get_current_year()
@@ -1507,11 +1507,11 @@ def enroll_submitters(id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash('Manual enrollment of selectors is no longer possible at this stage in the project lifecycle.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
@@ -1630,15 +1630,15 @@ def enroll_all_submitters(configid):
     config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
         flash('Manual enrollment of submitters is only possible during normal project activity', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
@@ -1679,7 +1679,7 @@ def enroll_all_submitters(configid):
               'for further information.', 'error')
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/enroll_submitter/<int:sid>/<int:configid>')
@@ -1694,21 +1694,21 @@ def enroll_submitter(sid, configid):
     config = ProjectClassConfig.query.get_or_404(configid)
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
         flash('Manual enrollment of submitters is only possible during normal project activity', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     old_config: ProjectClassConfig = config.pclass.get_config(config.year-1)
 
     add_blank_submitter(sid, old_config.id if old_config is not None else None, configid, autocommit=True)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/delete_submitter/<int:sid>')
@@ -1723,11 +1723,11 @@ def delete_submitter(sid):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sub.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if sub.config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
         flash('Manual deletion of submitters is only possible during normal project activity', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         sub.detach_records()
@@ -1739,7 +1739,7 @@ def delete_submitter(sid):
         flash('Could not delete submitter due to a database error ("{n}"). Please contact a system '
               'administrator.'.format(n=e), 'error')
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/liveprojects/<int:id>')
@@ -1750,7 +1750,7 @@ def liveprojects(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state_filter = request.args.get('state_filter')
 
@@ -1767,7 +1767,7 @@ def liveprojects(id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = get_convenor_dashboard_data(pclass, config)
 
@@ -1853,24 +1853,24 @@ def delete_live_project(pid):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project is not deletable
     if not project.is_deletable:
         flash('Cannot delete live project "{name}" because it is marked as undeletable.'.format(name=project.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # if this config has closed selections, we cannot delete any live projects
     if config.selection_closed:
         flash('Cannot delete LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
               'because selections have already closed'.format(cls=config.name, yra=config.year, yrb=config.year+1),
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Delete LiveProject "{name}" for project class "{cls}" in ' \
             '{yra}&ndash;{yrb}'.format(name=project.name, cls=config.name, yra=config.year, yrb=config.year+1)
@@ -1900,24 +1900,24 @@ def perform_delete_live_project(pid):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project is not deletable
     if not project.is_deletable:
         flash('Cannot delete live project "{name}" because it is marked as undeletable.'.format(name=project.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # if this config has closed selections, we cannot delete any live projects
     if config.selection_closed:
         flash('Cannot delete LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
               'because selections have already closed'.format(cls=config.name, yra=config.year, yrb=config.year+1),
               'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         # remove all collections associated with the liveproject
@@ -1975,7 +1975,7 @@ def attach_liveproject(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # get current academic year
     current_year = get_current_year()
@@ -1984,16 +1984,16 @@ def attach_liveproject(id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class is not live
     if not config.live:
         flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selection_closed:
         flash('Manual attachment of projects is only possible before student choices are closed', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = get_convenor_dashboard_data(pclass, config)
 
@@ -2066,16 +2066,16 @@ def manual_attach_project(id, configid):
 
     # reject user if not entitled to act as convenor
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class is not live
     if not config.live:
         flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selection_closed:
         flash('Manual attachment of projects is only possible before student choices are closed', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if desired project is not attachable
     project = Project.query.get_or_404(id)
@@ -2083,14 +2083,14 @@ def manual_attach_project(id, configid):
     if not config.project_class in project.project_classes:
         flash('Project "{p}" is not attached to "{c}". You do not have sufficient privileges to manually attached it; '
               'please consult with an administrator.'.format(p=project.name, c=config.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # get number for this project
     number = config.live_projects.count() + 1
 
     add_liveproject(number, project, configid, autocommit=True)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/attach_liveproject_other_ajax/<int:id>')
@@ -2165,11 +2165,11 @@ def manual_attach_other_project(id, configid):
     # reject if project class is not live
     if not config.live:
         flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selection_closed:
         flash('Manual attachment of projects is only possible before student choices are closed', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # get number for this project
     project = Project.query.get_or_404(id)
@@ -2177,7 +2177,7 @@ def manual_attach_other_project(id, configid):
 
     add_liveproject(number, project, configid, autocommit=True)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/edit_descriptions/<int:id>/<int:pclass_id>')
@@ -2189,7 +2189,7 @@ def edit_descriptions(id, pclass_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -2197,10 +2197,10 @@ def edit_descriptions(id, pclass_id):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
         if not validate_edit_project(project):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -2249,7 +2249,7 @@ def add_project(pclass_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -2257,7 +2257,7 @@ def add_project(pclass_id):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     # set up form
     AddProjectForm = AddProjectFormFactory(convenor_editing=True)
@@ -2341,7 +2341,7 @@ def edit_project(id, pclass_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -2349,7 +2349,7 @@ def edit_project(id, pclass_id):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     # set up form
     data = Project.query.get_or_404(id)
@@ -2402,7 +2402,7 @@ def activate_project(id, pclass_id):
 
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
 
@@ -2411,12 +2411,12 @@ def activate_project(id, pclass_id):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     proj.enable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/deactivate_project/<int:id>/<int:pclass_id>')
@@ -2428,7 +2428,7 @@ def deactivate_project(id, pclass_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -2436,16 +2436,16 @@ def deactivate_project(id, pclass_id):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     # if logged in user is not a suitable convenor, or an administrator, object
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     proj.disable()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/add_description/<int:pid>/<int:pclass_id>', methods=['GET', 'POST'])
@@ -2457,7 +2457,7 @@ def add_description(pid, pclass_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -2465,7 +2465,7 @@ def add_description(pid, pclass_id):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -2507,11 +2507,11 @@ def edit_description(did, pclass_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         if not validate_edit_description(desc):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -2549,12 +2549,12 @@ def description_modules(did, pclass_id, level_id=None):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_edit_description(desc):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -2591,12 +2591,12 @@ def description_attach_module(did, pclass_id, mod_id, level_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_edit_description(desc):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
     module = Module.query.get_or_404(mod_id)
@@ -2617,12 +2617,12 @@ def description_detach_module(did, pclass_id, mod_id, level_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_edit_description(desc):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
     module = Module.query.get_or_404(mod_id)
@@ -2643,17 +2643,17 @@ def delete_description(did, pclass_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_edit_description(desc):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     db.session.delete(desc)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/duplicate_description/<int:did>/<int:pclass_id>')
@@ -2664,12 +2664,12 @@ def duplicate_description(did, pclass_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_edit_description(desc):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     suffix = 2
     while suffix < 100:
@@ -2683,7 +2683,7 @@ def duplicate_description(did, pclass_id):
     if suffix >= 100:
         flash('Could not duplicate description "{label}" because a new unique label could not '
               'be generated'.format(label=desc.label), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = ProjectDescription(parent_id=desc.parent_id,
                               label=new_label,
@@ -2703,7 +2703,7 @@ def duplicate_description(did, pclass_id):
     db.session.add(data)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/move_description/<int:did>/<int:pclass_id>', methods=['GET', 'POST'])
@@ -2715,12 +2715,12 @@ def move_description(did, pclass_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_edit_description(desc):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -2807,7 +2807,7 @@ def make_default_description(pid, pclass_id, did=None):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -2815,7 +2815,7 @@ def make_default_description(pid, pclass_id, did=None):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     if did is not None:
         desc = ProjectDescription.query.get_or_404(did)
@@ -2823,12 +2823,12 @@ def make_default_description(pid, pclass_id, did=None):
         if desc.parent_id != pid:
             flash('Cannot set default description (id={did)) for project (id={pid}) because this description '
                   'does not belong to the project'.format(pid=pid, did=did), 'error')
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     proj.default_id = did
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/attach_skills/<int:id>/<int:pclass_id>/<int:sel_id>')
@@ -2842,7 +2842,7 @@ def attach_skills(id, pclass_id, sel_id=None):
 
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
 
@@ -2851,7 +2851,7 @@ def attach_skills(id, pclass_id, sel_id=None):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     form = SkillSelectorForm(request.form)
 
@@ -2887,7 +2887,7 @@ def add_skill(projectid, skillid, pclass_id, sel_id):
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
     if not validate_edit_project(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -2908,7 +2908,7 @@ def remove_skill(projectid, skillid, pclass_id, sel_id):
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
     if not validate_edit_project(proj):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
 
@@ -2930,7 +2930,7 @@ def attach_programmes(id, pclass_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -2938,7 +2938,7 @@ def attach_programmes(id, pclass_id):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     q = proj.available_degree_programmes
 
@@ -2957,7 +2957,7 @@ def add_programme(id, pclass_id, prog_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -2965,7 +2965,7 @@ def add_programme(id, pclass_id, prog_id):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     programme = DegreeProgramme.query.get_or_404(prog_id)
 
@@ -2973,7 +2973,7 @@ def add_programme(id, pclass_id, prog_id):
         proj.add_programme(programme)
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/remove_programme/<int:id>/<int:pclass_id>/<int:prog_id>')
@@ -2985,7 +2985,7 @@ def remove_programme(id, pclass_id, prog_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -2993,7 +2993,7 @@ def remove_programme(id, pclass_id, prog_id):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     programme = DegreeProgramme.query.get_or_404(prog_id)
 
@@ -3001,7 +3001,7 @@ def remove_programme(id, pclass_id, prog_id):
         proj.remove_programme(programme)
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/attach_assessors/<int:id>/<int:pclass_id>')
@@ -3013,7 +3013,7 @@ def attach_assessors(id, pclass_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -3021,7 +3021,7 @@ def attach_assessors(id, pclass_id):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     url = request.args.get('url')
     text = request.args.get('text')
@@ -3072,7 +3072,7 @@ def attach_assessors(id, pclass_id):
         if config is None:
             flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.',
                   'error')
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
         pcl_list.append((pcl, config))
 
@@ -3121,7 +3121,7 @@ def add_assessor(proj_id, pclass_id, mid):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -3129,13 +3129,13 @@ def add_assessor(proj_id, pclass_id, mid):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     assessor = FacultyData.query.get_or_404(mid)
 
     proj.add_assessor(assessor, autocommit=True)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/remove_assessor/<int:proj_id>/<int:pclass_id>/<int:mid>')
@@ -3147,7 +3147,7 @@ def remove_assessor(proj_id, pclass_id, mid):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -3155,13 +3155,13 @@ def remove_assessor(proj_id, pclass_id, mid):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     assessor = FacultyData.query.get_or_404(mid)
 
     proj.remove_assessor(assessor, autocommit=True)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/attach_all_assessors/<int:proj_id>/<int:pclass_id>')
@@ -3173,7 +3173,7 @@ def attach_all_assessors(proj_id, pclass_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -3181,7 +3181,7 @@ def attach_all_assessors(proj_id, pclass_id):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     state_filter = request.args.get('state_filter')
     pclass_filter = request.args.get('pclass_filter')
@@ -3194,7 +3194,7 @@ def attach_all_assessors(proj_id, pclass_id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/remove_all_assessors/<int:proj_id>/<int:pclass_id>')
@@ -3206,7 +3206,7 @@ def remove_all_assessors(proj_id, pclass_id):
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     else:
         # get project class details
@@ -3214,7 +3214,7 @@ def remove_all_assessors(proj_id, pclass_id):
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     state_filter = request.args.get('state_filter')
     pclass_filter = request.args.get('pclass_filter')
@@ -3227,7 +3227,7 @@ def remove_all_assessors(proj_id, pclass_id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/liveproject_sync_assessors/<int:proj_id>/<int:live_id>')
@@ -3242,13 +3242,13 @@ def liveproject_sync_assessors(proj_id, live_id):
 
     # if logged in user is not a suitable convenor, or an administrator, object
     if not validate_is_convenor(live_project.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # copy assessors from library project to live project, if they are current
     live_project.assessors = [f for f in library_project.assessors if library_project.is_assessor(f.id)]
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/liveproject_attach_assessor/<int:live_id>/<int:fac_id>')
@@ -3261,7 +3261,7 @@ def liveproject_attach_assessor(live_id, fac_id):
 
     # if logged in user is not a suitable convenor, or an administrator, object
     if not validate_is_convenor(live_project.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     faculty: FacultyData = FacultyData.query.get_or_404(fac_id)
 
@@ -3269,7 +3269,7 @@ def liveproject_attach_assessor(live_id, fac_id):
         live_project.assessors.append(faculty)
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/liveproject_remove_assessor/<int:live_id>/<int:fac_id>')
@@ -3282,7 +3282,7 @@ def liveproject_remove_assessor(live_id, fac_id):
 
     # if logged in user is not a suitable convenor, or an administrator, object
     if not validate_is_convenor(live_project.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     faculty = FacultyData.query.get_or_404(fac_id)
 
@@ -3290,7 +3290,7 @@ def liveproject_remove_assessor(live_id, fac_id):
         live_project.assessors.remove(faculty)
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/issue_confirm_requests/<int:id>', methods=['GET', 'POST'])
@@ -3301,11 +3301,11 @@ def issue_confirm_requests(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     year = get_current_year()
 
@@ -3381,7 +3381,7 @@ def issue_confirm_requests(id):
                 flash('Could not perform skip of confirmation requests due to a dataabase error. '
                       'Please contact a system administrator', 'error')
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/outstanding_confirm/<int:id>')
@@ -3392,11 +3392,11 @@ def outstanding_confirm(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/dashboard/outstanding_confirm.html', config=config, pclass=config.project_class)
 
@@ -3432,28 +3432,28 @@ def confirmation_reminder(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
         flash('Cannot issue reminder emails for this project class because confirmation requests '
               'have not yet been generated', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
         flash('Cannot issue reminder emails for this project class because no further confirmation '
               'requests are outstanding', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     celery = current_app.extensions['celery']
     email_task = celery.tasks['app.tasks.issue_confirm.reminder_email']
 
     email_task.apply_async((id, current_user.id))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/confirmation_reminder_individual/<int:fac_id>/<int:config_id>')
@@ -3463,21 +3463,21 @@ def confirmation_reminder_individual(fac_id, config_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
         flash('Cannot issue reminder emails for this project class because confirmation requests '
               'have not yet been generated', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
         flash('Cannot issue reminder emails for this project class because no further confirmation '
               'requests are outstanding', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     celery = current_app.extensions['celery']
     email_task = celery.tasks['app.tasks.issue_confirm.send_reminder_email']
@@ -3486,7 +3486,7 @@ def confirmation_reminder_individual(fac_id, config_id):
     tk = email_task.si(fac_id, config_id) | notify_task.s(current_user.id, 'Reminder email has been sent', 'info')
     tk.apply_async()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/show_unofferable')
@@ -3494,7 +3494,7 @@ def confirmation_reminder_individual(fac_id, config_id):
 def show_unofferable():
     # special-case of unattached projects; reject user if not administrator
     if not validate_is_administrator():
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/unofferable.html')
 
@@ -3524,21 +3524,21 @@ def force_confirm_all(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
             project=config.name, yeara=config.year, yearb=config.year+1))
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.live:
         flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
               'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     celery = current_app.extensions['celery']
     task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
@@ -3560,7 +3560,7 @@ def force_confirm_all(id):
     db.session.commit()
     flash('All outstanding confirmation requests have been removed.', 'success')
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/force_confirm/<int:id>/<int:uid>')
@@ -3571,21 +3571,21 @@ def force_confirm(id, uid):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
             project=config.name, yeara=config.year, yearb=config.year+1))
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.live:
         flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
               'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.is_confirmation_required(uid):
         config.mark_confirmed(uid, commit=False)
@@ -3598,7 +3598,7 @@ def force_confirm(id, uid):
     task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
     task.apply_async(args=(uid, config.pclass_id))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/confirm_description/<int:config_id>/<int:did>')
@@ -3609,27 +3609,27 @@ def confirm_description(config_id, did):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
             project=config.name, yeara=config.year, yearb=config.year+1))
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.live:
         flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
               'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     desc = ProjectDescription.query.get_or_404(did)
 
     # reject user if can't edit this description
     if not validate_edit_description(desc):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     desc.confirmed = True
     db.session.commit()
@@ -3647,7 +3647,7 @@ def confirm_description(config_id, did):
         task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
         task.apply_async(args=(desc.parent.owner.id, config.pclass_id))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/go_live/<int:id>', methods=['GET', 'POST'])
@@ -3658,11 +3658,11 @@ def go_live(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.live:
         flash('A request to Go Live was ignored, because project "{name}" is already '
@@ -3695,7 +3695,7 @@ def go_live(id):
                                     accommodate_matching=accommodate_matching.id if accommodate_matching is not None else None,
                                     full_CATS=full_CATS if full_CATS is not None else None))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/confirm_go_live/<int:id>')
@@ -3706,16 +3706,16 @@ def confirm_go_live(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.live:
         flash('A request to Go Live was ignored, because project "{name}" is already '
               'live.'.format(name=config.project_class.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     close = bool(int(request.args.get('close', 0)))
     deadline = request.args.get('deadline', None)
@@ -3759,11 +3759,11 @@ def perform_go_live(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.live:
         flash('A request to Go Live was ignored, because project "{name}" is already '
@@ -3783,7 +3783,7 @@ def perform_go_live(id):
 
     if deadline is None:
         flash('A request to Go Live was ignored because the deadline was not correctly received', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     deadline = parser.parse(deadline).date()
 
@@ -3820,11 +3820,11 @@ def reverse_golive(config_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     config.live = False
     config.live_deadline = None
@@ -3842,22 +3842,22 @@ def adjust_selection_deadline(configid):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class is not live
     if not config.live:
         flash('A request to adjust the selection deadline for "{proj}" was ignored, because '
               'this project class is not yet live.'.format(proj=config.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.live_deadline is None:
         flash('A request to adjust the selection deadline for "{proj}" was ignored, because '
               'the deadline has not yet been set for this project class.'.format(proj=config.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     ChangeDeadlineForm = ChangeDeadlineFormFactory()
     form = ChangeDeadlineForm(request.form)
@@ -3909,13 +3909,13 @@ def submit_student_selection(sel_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     valid, errors = sel.is_valid_selection
     if not valid:
         flash('The current bookmark list is not a valid set of project preferences. This is an internal error; '
               'please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         store_selection(sel)
@@ -3948,7 +3948,7 @@ def submit_student_selection(sel_id):
         flash('A database error occurred during submission. Please contact a system administrator.', 'error')
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/enroll/<int:userid>/<int:pclassid>')
@@ -3959,16 +3959,16 @@ def enroll(userid, pclassid):
 
     # reject user if not a suitable convenor or administrator
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = FacultyData.query.get_or_404(userid)
     data.add_enrollment(pclass)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/unenroll/<int:userid>/<int:pclassid>')
@@ -3979,16 +3979,16 @@ def unenroll(userid, pclassid):
 
     # reject user if not a suitable convenor or administrator
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = FacultyData.query.get_or_404(userid)
     data.remove_enrollment(pclass)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/confirm/<int:sid>/<int:pid>')
@@ -4006,12 +4006,12 @@ def confirm(sid, pid):
 
     # validate that project is open
     if not validate_project_open(sel.config):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if do_confirm(sel, project):
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/deconfirm/<int:sid>/<int:pid>')
@@ -4029,12 +4029,12 @@ def deconfirm(sid, pid):
 
     # validate that project is open
     if not validate_project_open(sel.config):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if do_deconfirm(sel, project):
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/deconfirm_to_pending/<int:sid>/<int:pid>')
@@ -4052,12 +4052,12 @@ def deconfirm_to_pending(sid, pid):
 
     # validate that project is open
     if not validate_project_open(sel.config):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if do_deconfirm_to_pending(sel, project):
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/cancel_confirm/<int:sid>/<int:pid>')
@@ -4075,12 +4075,12 @@ def cancel_confirm(sid, pid):
 
     # validate that project is open
     if not validate_project_open(sel.config):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if do_cancel_confirm(sel, project):
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/project_confirm_all/<int:pid>')
@@ -4098,7 +4098,7 @@ def project_confirm_all(pid):
 
     # validate that project is open
     if not validate_project_open(project.config):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     waiting = project.requests_waiting
     for req in waiting:
@@ -4106,7 +4106,7 @@ def project_confirm_all(pid):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/project_clear_requests/<int:pid>')
@@ -4124,7 +4124,7 @@ def project_clear_requests(pid):
 
     # validate that project is open
     if not validate_project_open(project.config):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     waiting = project.requests_waiting
     for req in waiting:
@@ -4133,7 +4133,7 @@ def project_clear_requests(pid):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/project_remove_confirms/<int:pid>')
@@ -4151,7 +4151,7 @@ def project_remove_confirms(pid):
 
     # validate that project is open
     if not validate_project_open(project.config):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     confirmed = project.requests_confirmed
     for req in confirmed:
@@ -4160,7 +4160,7 @@ def project_remove_confirms(pid):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/project_make_all_confirms_pending/<int:pid>')
@@ -4178,7 +4178,7 @@ def project_make_all_confirms_pending(pid):
 
     # validate that project is open
     if not validate_project_open(project.config):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     confirmed = project.requests_confirmed
     for req in confirmed:
@@ -4186,7 +4186,7 @@ def project_make_all_confirms_pending(pid):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/student_confirm_all/<int:sid>')
@@ -4198,11 +4198,11 @@ def student_confirm_all(sid):
 
     # validate that logged-in user is allowed to edit this SelectingStudent
     if not validate_is_convenor(sel.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # validate that project is open
     if not validate_project_open(sel.config):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     waiting = sel.requests_waiting
     for req in waiting:
@@ -4210,7 +4210,7 @@ def student_confirm_all(sid):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/student_remove_confirms/<int:sid>')
@@ -4226,7 +4226,7 @@ def student_remove_confirms(sid):
 
     # validate that project is open
     if not validate_project_open(sel.config):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     confirmed = sel.requests_confirmed
     for req in confirmed:
@@ -4235,7 +4235,7 @@ def student_remove_confirms(sid):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/student_clear_requests/<int:sid>')
@@ -4251,7 +4251,7 @@ def student_clear_requests(sid):
 
     # validate that project is open
     if not validate_project_open(sel.config):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     waiting = sel.requests_waiting
     for req in waiting:
@@ -4260,7 +4260,7 @@ def student_clear_requests(sid):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/student_make_all_confirms_pending/<int:sid>')
@@ -4276,7 +4276,7 @@ def student_make_all_confirms_pending(sid):
 
     # validate that project is open
     if not validate_project_open(sel.config):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     confirmed = sel.requests_confirmed
     for req in confirmed:
@@ -4284,7 +4284,7 @@ def student_make_all_confirms_pending(sid):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/enable_conversion/<int:sid>')
@@ -4300,7 +4300,7 @@ def enable_conversion(sid):
     sel.convert_to_submitter = True
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/disable_conversion/<int:sid>')
@@ -4316,7 +4316,7 @@ def disable_conversion(sid):
     sel.convert_to_submitter = False
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/email_selectors/<int:configid>')
@@ -4327,7 +4327,7 @@ def email_selectors(configid):
 
     # validate that logged-in user is a convenor for this project type
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
@@ -4361,7 +4361,7 @@ def email_submitters(configid):
 
     # validate that logged-in user is a convenor for this project type
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
@@ -4410,7 +4410,7 @@ def convert_all(configid):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/convert_none/<int:configid>')
@@ -4437,7 +4437,7 @@ def convert_none(configid):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/student_clear_bookmarks/<int:sid>')
@@ -4452,14 +4452,14 @@ def student_clear_bookmarks(sid):
 
     # validate that project is open
     if not validate_project_open(sel.config):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     for item in sel.bookmarks:
         db.session.delete(item)
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/confirm_rollover/<int:id>/<int:markers>')
@@ -4470,7 +4470,7 @@ def confirm_rollover(id, markers):
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     use_markers = bool(markers)
 
@@ -4554,7 +4554,7 @@ def reset_popularity_data(id):
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Delete popularity data'
     panel_title = 'Delete selection popularity data for <strong>{name} {yra}&ndash;{yrb}</strong>'\
@@ -4581,7 +4581,7 @@ def perform_reset_popularity_data(id):
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     db.session.query(PopularityRecord).filter_by(config_id=id).delete()
     db.session.commit()
@@ -4597,13 +4597,13 @@ def selector_bookmarks(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to view selector rankings before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/selector/student_bookmarks.html', sel=sel)
 
@@ -4616,13 +4616,13 @@ def project_bookmarks(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(proj.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = proj.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to view selector rankings before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/selector/project_bookmarks.html', project=proj)
 
@@ -4693,13 +4693,13 @@ def delete_student_bookmark(sid, bid):
     bookmark: Bookmark = Bookmark.query.get_or_404(bid)
 
     if not validate_is_convenor(sel.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to delete selector bookmarks before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Delete selector bookmark'
     panel_title = 'Delete bookmark for selector <i class="fa fa-user"></i> <strong>{name}</strong>, ' \
@@ -4756,13 +4756,13 @@ def add_student_bookmark(sid):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to add a selector bookmark before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/selector/add_bookmark.html', sel=sel)
 
@@ -4841,19 +4841,19 @@ def selector_choices(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to view selector rankings before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not sel.has_submitted:
         flash('The ranking list for {name} can not yet be inspected because this selector has '
               'not yet submitted their ranked project choices (or accepted a '
               'custom offer.'.format(name=sel.student.user.name), 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/selector/student_choices.html', sel=sel)
 
@@ -4866,13 +4866,13 @@ def project_choices(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(proj.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = proj.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to view project rankings before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/selector/project_choices.html', project=proj)
 
@@ -4936,13 +4936,13 @@ def delete_student_choice(sid, cid):
     record: SelectionRecord = SelectionRecord.query.get_or_404(cid)
 
     if not validate_is_convenor(sel.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to delete selector rankings before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     title = 'Delete selector ranking'
     panel_title = 'Delete ranking for selector <i class="fa fa-user"></i> <strong>{name}</strong>, ' \
@@ -5002,18 +5002,18 @@ def add_student_ranking(sid):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to add a selector ranking before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not sel.has_submitted:
         flash('It is not possible to add a new ranking until the selector has submitted their '
               'own ranked list.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/selector/add_ranking.html', sel=sel)
 
@@ -5053,7 +5053,7 @@ def create_student_ranking(sel_id, proj_id):
     if not sel.has_submitted:
         flash('It is not possible to add a new ranking until the selector has submitted their '
               'own ranked list.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     if url is None:
@@ -5100,13 +5100,13 @@ def selector_confirmations(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to view selector confirmations before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/selector/student_confirmations.html', sel=sel, now=datetime.now())
 
@@ -5119,13 +5119,13 @@ def project_custom_offers(proj_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(proj.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = proj.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to view project custom offers before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/selector/project_custom_offers.html', project=proj,
                            pclass_id=proj.config.project_class.id)
@@ -5156,13 +5156,13 @@ def selector_custom_offers(sel_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to view selector custom offers before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/selector/student_custom_offers.html', sel=sel,
                            pclass_id=sel.config.project_class.id)
@@ -5193,13 +5193,13 @@ def new_selector_offer(sel_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to set up a new selector custom offer before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/selector/student_new_offer.html', sel=sel,
                            pclass_id=sel.config.project_class.id)
@@ -5233,13 +5233,13 @@ def new_project_offer(proj_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(proj.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = proj.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to set up a new custom offer before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/selector/project_new_offer.html', project=proj,
                            pclass_id=proj.config.project_class.id)
@@ -5259,7 +5259,7 @@ def new_project_offer_ajax(proj_id):
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to set up a new custom offer before the corresponding project '
               'class has gone live.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # get list of available selectors
     config = proj.config
@@ -5322,12 +5322,12 @@ def accept_custom_offer(offer_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(offer.liveproject.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if offer.selector.number_offers_accepted > 0:
         flash('A custom offer has already been accepted for selector {name}'.format(name=offer.selector.student.user.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     offer.status = CustomOffer.ACCEPTED
     offer.last_edit_timestamp = datetime.now()
@@ -5335,7 +5335,7 @@ def accept_custom_offer(offer_id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/decline_custom_offer/<int:offer_id>')
@@ -5346,7 +5346,7 @@ def decline_custom_offer(offer_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(offer.liveproject.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     offer.status = CustomOffer.DECLINED
     offer.last_edit_timestamp = datetime.now()
@@ -5354,7 +5354,7 @@ def decline_custom_offer(offer_id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/delete_custom_offer/<int:offer_id>')
@@ -5365,12 +5365,12 @@ def delete_custom_offer(offer_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(offer.liveproject.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     db.session.delete(offer)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/project_confirmations/<int:id>')
@@ -5396,7 +5396,7 @@ def add_group_filter(id, gid):
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(record.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if group not in record.group_filters:
         try:
@@ -5407,7 +5407,7 @@ def add_group_filter(id, gid):
             # to the same endpoint?
             db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/remove_group_filter/<int:id>/<int:gid>')
@@ -5420,7 +5420,7 @@ def remove_group_filter(id, gid):
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(record.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if group in record.group_filters:
         try:
@@ -5431,7 +5431,7 @@ def remove_group_filter(id, gid):
             # to the same endpoint?
             db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/clear_group_filters/<int:id>')
@@ -5443,7 +5443,7 @@ def clear_group_filters(id):
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(record.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         record.group_filters = []
@@ -5453,7 +5453,7 @@ def clear_group_filters(id):
         # to the same endpoint?
         db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/add_skill_filter/<int:id>/<int:skill_id>')
@@ -5466,7 +5466,7 @@ def add_skill_filter(id, skill_id):
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(record.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if skill not in record.skill_filters:
         try:
@@ -5477,7 +5477,7 @@ def add_skill_filter(id, skill_id):
             # to the same endpoint?
             db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/remove_skill_filter/<int:id>/<int:skill_id>')
@@ -5490,7 +5490,7 @@ def remove_skill_filter(id, skill_id):
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(record.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if skill in record.skill_filters:
         try:
@@ -5501,7 +5501,7 @@ def remove_skill_filter(id, skill_id):
             # to the same endpoint?
             db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/clear_skill_filters/<int:id>')
@@ -5512,7 +5512,7 @@ def clear_skill_filters(id):
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(record.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     try:
         record.skill_filters = []
@@ -5522,7 +5522,7 @@ def clear_skill_filters(id):
         # to the same endpoint?
         db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/set_hint/<int:id>/<int:hint>')
@@ -5533,17 +5533,17 @@ def set_hint(id, hint):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
         flash('Selection hints may only be set once student choices are closed and the project class '
               'is ready to match', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     rec.set_hint(hint)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/hints_list/<int:id>')
@@ -5554,18 +5554,18 @@ def hints_list(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
         flash('Selection hints may only be set once student choices are closed and the project class '
               'is ready to match', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     hints = db.session.query(SelectionRecord) \
         .join(SelectingStudent, SelectingStudent.id == SelectionRecord.owner_id) \
@@ -5583,7 +5583,7 @@ def audit_matches(pclass_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/matching/audit.html', pclass_id=pclass_id)
 
@@ -5602,7 +5602,7 @@ def audit_matches_ajax(pclass_id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     matches = config.published_matches.all()
 
@@ -5619,7 +5619,7 @@ def audit_schedules(pclass_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     return render_template('convenor/presentations/audit.html', pclass_id=pclass_id)
 
@@ -5638,7 +5638,7 @@ def audit_schedules_ajax(pclass_id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     matches = config.published_schedules.all()
 
@@ -5654,23 +5654,23 @@ def open_feedback(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = config.submitter_lifecycle
     if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and \
             state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
         flash('Feedback cannot be opened at this stage in the project lifecycle.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # get record for current submission period
     period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
     if period is None and config.submissions > 0:
         flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if period is not None and period.is_feedback_open:
         OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=True)
@@ -5712,7 +5712,7 @@ def open_feedback(id):
                       'Please contact a system administrator.', 'error')
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 db.session.rollback()
-                return redirect(request.referrer)
+                return redirect(redirect_url())
 
             task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
@@ -5729,7 +5729,7 @@ def open_feedback(id):
                         final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
             seq.apply_async(task_id=task_id)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/close_feedback/<int:id>', methods=['GET', 'POST'])
@@ -5740,16 +5740,16 @@ def close_feedback(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     state = config.submitter_lifecycle
     if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
         flash('Feedback cannot be closed at this stage in the project lifecycle.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.submission_period > config.submissions:
         flash('Feedback close request ignored because "{name}" is already in a rollover state.'.format(name=config.name),
@@ -5770,7 +5770,7 @@ def close_feedback(id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/edit_submission_record/<int:pid>', methods=['GET', 'POST'])
@@ -5782,21 +5782,21 @@ def edit_submission_record(pid):
 
     # reject is user is not a convenor for the associated project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject is project class is not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if this submission period is in the past
     if config.submission_period > record.submission_period:
         flash('It is no longer possible to edit this submission period because it has been closed.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if period is retired
     if record.retired:
         flash('It is no longer possible to edit this submission period because it has been retired.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if lifecycle stage is marking or later
 
@@ -5804,7 +5804,7 @@ def edit_submission_record(pid):
     if state >= ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
         flash('It is no longer possible to edit this submission period because it is being marked, '
               'or is ready to rollover.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     edit_form = EditSubmissionRecordForm(obj=record)
 
@@ -5835,20 +5835,20 @@ def publish_assignment(id):
 
     # reject if project class not published
     if not validate_project_class(sub.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if logged-in user is not a convenor for this SubmittingStudent
     if not validate_is_convenor(sub.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash('It is now too late to publish an assignment to students for this project class.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     sub.published = True
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/unpublish_assignment/<int:id>')
@@ -5860,20 +5860,20 @@ def unpublish_assignment(id):
 
     # reject if logged-in user is not a convenor for this SubmittingStudent
     if not validate_is_convenor(sub.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(sub.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash('It is now too late to unpublish an assignment for this project class.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     sub.published = False
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/publish_all_assignments/<int:id>')
@@ -5884,15 +5884,15 @@ def publish_all_assignments(id):
 
     # reject if logged-in user is not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash('It is now too late to publish assignments to students for this project class.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
@@ -5906,7 +5906,7 @@ def publish_all_assignments(id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/unpublish_all_assignments/<int:id>')
@@ -5917,15 +5917,15 @@ def unpublish_all_assignments(id):
 
     # reject if logged-in user is not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash('It is now too late to unpublish assignments for this project class.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
@@ -5939,7 +5939,7 @@ def unpublish_all_assignments(id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/mark_started/<int:id>')
@@ -5950,28 +5950,28 @@ def mark_started(id):
 
     # reject if logged-in user is not a convenor for the project class associated with this submission record
     if not validate_is_convenor(rec.owner.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(rec.owner.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash('It is now too late to mark a submission period as "started" for this project class.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.submission_period > rec.owner.config.submission_period:
         flash('Cannot mark this submission period as started because it is not yet open.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not rec.owner.published:
         flash('Cannot mark this submission period as started because it is not published to the submitter.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     rec.student_engaged = True
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/mark_all_started/<int:id>')
@@ -5982,15 +5982,15 @@ def mark_all_started(id):
 
     # reject if logged-in user is not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash('It is now too late to mark students as started.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
@@ -6006,7 +6006,7 @@ def mark_all_started(id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/mark_waiting/<int:id>')
@@ -6017,28 +6017,28 @@ def mark_waiting(id):
 
     # reject if logged-in user is not a convenor for the project class associated with this submission record
     if not validate_is_convenor(rec.owner.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(rec.owner.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash('It is now too late to mark a submission period as "waiting" for this project class.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.submission_period > rec.owner.config.submission_period:
         flash('Cannot mark this submission period as started because it is not yet open.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not rec.owner.published:
         flash('Cannot mark this submission period as started because it is not published to the submitter.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     rec.student_engaged = False
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/populate_markers/<int:configid>')
@@ -6049,7 +6049,7 @@ def populate_markers(configid):
 
     # reject if logged-in user is not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     uuid = register_task('Populate markers for "{proj}"'.format(proj=config.name),
                          owner=current_user,
@@ -6061,7 +6061,7 @@ def populate_markers(configid):
 
     populate.apply_async(args=(config.id, current_user.id, uuid), task_id=uuid)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/view_feedback/<int:id>')
@@ -6072,11 +6072,11 @@ def view_feedback(id):
 
     # reject if logged-in user is not a convenor for the project class associated with this submission record
     if not validate_is_convenor(rec.owner.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if project class not published
     if not validate_project_class(rec.owner.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)
@@ -6094,7 +6094,7 @@ def faculty_workload(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     enroll_filter = request.args.get('enroll_filter')
     state_filter = request.args.get('state_filter')
@@ -6121,7 +6121,7 @@ def faculty_workload(id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     data = get_convenor_dashboard_data(pclass, config)
 
@@ -6230,7 +6230,7 @@ def teaching_groups(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # get current academic year
     current_year = get_current_year()
@@ -6250,7 +6250,7 @@ def teaching_groups(id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # build list of allowed submission periods
     periods = set()
@@ -6265,7 +6265,7 @@ def teaching_groups(id):
     if len(periods) == 0:
         flash('Internal error: No submission periods have been set up for this ProjectClassConfig. '
               'Please contact a system administator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     show_period = request.args.get('show_period')
     if show_period is not None and not isinstance(show_period, int):
@@ -6360,10 +6360,10 @@ def manual_assign(id):
     config = rec.previous_config
     if config is None:
         flash('Can not reassign because the list of available Live Projects could not be found', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     AssignMarkerForm = AssignMarkerFormFactory(rec.project, rec.pclass_id, config.uses_marker)
     form = AssignMarkerForm(request.form)
@@ -6423,32 +6423,32 @@ def assign_revert(id):
     config = rec.previous_config
     if config is None:
         flash('Can not revert assignment because the list of available Live Projects could not be found', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.period.is_feedback_open:
         flash('Can not revert assignment for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.student_engaged:
         flash('Can not revert assignment for {name} '
               'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.matching_record is None:
         flash('Can not revert assignment for {name} '
               'because automatic data could not be found'.format(name=rec.period.display_name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     rec.project_id = rec.matching_record.project_id
     rec.marker_id = rec.matching_record.marker_id
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/assign_from_selection/<int:id>/<int:sel_id>')
@@ -6461,25 +6461,25 @@ def assign_from_selection(id, sel_id):
     config = rec.previous_config
     if config is None:
         flash('Can not reassign because the list of available Live Projects could not be found', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.period.is_feedback_open:
         flash('Can not reassign for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.student_engaged:
         flash('Can not reassign for {name} '
               'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.matching_record is None:
         flash('Can not revert assignment for {name} '
               'because automatic data could not be found'.format(name=rec.period.display_name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     sel = SelectionRecord.query.get_or_404(sel_id)
 
@@ -6492,7 +6492,7 @@ def assign_from_selection(id, sel_id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/assign_liveproject/<int:id>/<int:pid>')
@@ -6506,20 +6506,20 @@ def assign_liveproject(id, pid):
     config = rec.previous_config
     if config is None:
         flash('Can not reassign because the list of available Live Projects could not be found', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.period.is_feedback_open:
         flash('Can not reassign for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.student_engaged:
         flash('Can not reassign for {name} '
               'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     lp = LiveProject.query.get_or_404(pid)
 
@@ -6527,7 +6527,7 @@ def assign_liveproject(id, pid):
         flash('Can not assign LiveProject #{num} for {name} because '
               'their configuration data do not agree'.format(num=lp.number, name=rec.period.display_name),
               'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     rec.project_id = lp.id
 
@@ -6538,7 +6538,7 @@ def assign_liveproject(id, pid):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/deassign_project/<int:id>')
@@ -6551,20 +6551,20 @@ def deassign_project(id):
     config = rec.previous_config
     if config is None:
         flash('Can not reassign because the list of available Live Projects could not be found', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.period.is_feedback_open:
         flash('Can not de-assign project for {name} '
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if rec.student_engaged:
         flash('Can not de-assign project for {name} '
               'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # as long as we don't set both project and project_id (or marker and marker_id) simultaneously to zero,
     # the before-update listener for SubmissionRecord will invalidate the correct workload cache entries
@@ -6572,7 +6572,7 @@ def deassign_project(id):
     rec.marker = None
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/deassign_marker/<int:id>')
@@ -6585,17 +6585,17 @@ def deassign_marker(id):
     config = rec.previous_config
     if config is None:
         flash('Can not reassign because the list of available Live Projects could not be found', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # as long as we don't set both marker and marker_id simultaneously to zero, the before-update listener
     # for SubmissionRecord will invalidate the correct workload cache entries
     rec.marker = None
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/assign_presentation_feedback/<int:id>/', methods=['GET', 'POST'])
@@ -6605,10 +6605,10 @@ def assign_presentation_feedback(id):
     talk = SubmissionRecord.query.get_or_404(id)
 
     if not validate_is_convenor(talk.owner.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not validate_assign_feedback(talk):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     slot = talk.schedule_slot
     if slot is None:
@@ -6649,12 +6649,12 @@ def delete_presentation_feedback(id):
 
     talk = feedback.owner
     if not validate_is_convenor(talk.owner.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     db.session.delete(feedback)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/supervisor_edit_feedback/<int:id>', methods=['GET', 'POST'])
@@ -6665,11 +6665,11 @@ def supervisor_edit_feedback(id):
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
     form = SupervisorFeedbackForm(request.form)
@@ -6712,11 +6712,11 @@ def marker_edit_feedback(id):
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
     form = MarkerFeedbackForm(request.form)
@@ -6759,30 +6759,30 @@ def supervisor_submit_feedback(id):
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
 
     if not period.is_feedback_open:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.is_supervisor_valid:
         flash('Cannot submit feedback because it is still incomplete.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.supervisor_submitted:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.supervisor_submitted = True
     record.supervisor_timestamp = datetime.now()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/supervisor_unsubmit_feedback/<int:id>')
@@ -6793,26 +6793,26 @@ def supervisor_unsubmit_feedback(id):
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
 
     if period.closed:
         flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.supervisor_submitted:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.supervisor_submitted = False
     record.supervisor_timestamp = None
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/marker_submit_feedback/<int:id>')
@@ -6823,30 +6823,30 @@ def marker_submit_feedback(id):
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
 
     if not period.is_feedback_open:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.is_marker_valid:
         flash('Cannot submit feedback because it is still incomplete.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.marker_submitted:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.marker_submitted = True
     record.marker_timestamp = datetime.now()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/marker_unsubmit_feedback/<int:id>')
@@ -6857,26 +6857,26 @@ def marker_unsubmit_feedback(id):
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     period = record.period
 
     if period.closed:
         flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.marker_submitted:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.marker_submitted = False
     record.marker_timestamp = None
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/presentation_edit_feedback/<int:feedback_id>', methods=['GET', 'POST'])
@@ -6887,16 +6887,16 @@ def presentation_edit_feedback(feedback_id):
 
     talk = feedback.owner
     if not validate_is_convenor(talk.owner.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     slot = feedback.owner.schedule_slot
     if slot is None:
         flash('Could not edit feedback because the scheduled slot is unset.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not slot.owner.deployed:
         flash('Can not edit feedback because the schedule containing this slot has not been deployed.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = PresentationFeedbackForm(request.form)
 
@@ -6938,26 +6938,26 @@ def presentation_submit_feedback(feedback_id):
 
     talk = feedback.owner
     if not validate_is_convenor(talk.owner.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     slot = feedback.owner.schedule_slot
     if slot is None:
         flash('Could not edit feedback because the scheduled slot is unset.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not slot.owner.deployed:
         flash('Can not edit feedback because the schedule containing this slot has not been deployed.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not talk.is_presentation_assessor_valid(feedback.assessor_id):
         flash('Cannot submit feedback because it is still incomplete.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     feedback.submitted = True
     feedback.timestamp = datetime.now()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/presentation_unsubmit_feedback/<int:feedback_id>')
@@ -6968,26 +6968,26 @@ def presentation_unsubmit_feedback(feedback_id):
 
     talk = feedback.owner
     if not validate_is_convenor(talk.owner.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     slot = feedback.owner.schedule_slot
     if slot is None:
         flash('Could not edit feedback because the scheduled slot is unset.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not slot.owner.deployed:
         flash('Can not edit feedback because the schedule containing this slot has not been deployed.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not slot.owner.owner.is_feedback_open:
         flash('Cannot unsubmit feedback after an assessment has closed.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     feedback.submitted = False
     feedback.timestamp = None
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/edit_response/<int:id>', methods=['GET', 'POST'])
@@ -6998,16 +6998,16 @@ def edit_response(id):
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.student_feedback_submitted:
         flash('It is not possible to write a response to feedback from the student before '
               'they have submitted it.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = SupervisorResponseForm(request.form)
 
@@ -7037,29 +7037,29 @@ def submit_response(id):
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.student_feedback_submitted:
         flash('It is not possible to write a response to feedback from the student before '
               'they have submitted it.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if record.faculty_response_submitted:
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not record.is_response_valid:
         flash('Cannot submit your feedback because it is incomplete.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     record.faculty_response_submitted = True
     record.faculty_response_timestamp = datetime.now()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/push_feedback/<int:id>')
@@ -7070,18 +7070,18 @@ def push_feedback(id):
 
     config = period.config
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if not period.closed:
         flash('It is only possible to push feedback once the submission period is closed.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     celery = current_app.extensions['celery']
     email_task = celery.tasks['app.tasks.push_feedback.push_period']
 
     email_task.apply_async((id, current_user.id))
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/update_CATS/<int:config_id>')
@@ -7091,11 +7091,11 @@ def update_CATS(config_id):
     config = ProjectClassConfig.query.get_or_404(config_id)
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     config.CATS_supervision = config.project_class.CATS_supervision
     config.CATS_marking = config.project_class.CATS_marking
@@ -7103,7 +7103,7 @@ def update_CATS(config_id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/force_convert_bookmarks/<int:sel_id>')
@@ -7113,21 +7113,21 @@ def force_convert_bookmarks(sel_id):
     sel = SelectingStudent.query.get_or_404(sel_id)
 
     if not validate_is_convenor(sel.config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if sel.config.selector_lifecycle <= ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash('Forced conversion of bookmarks can only be performed after student selections are closed.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if sel.has_submitted:
         flash('Cannot force conversion of bookmarks for selector "{name}" because an existing submission '
               'exists.'.format(name=sel.student.user.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     if sel.number_bookmarks < sel.number_choices:
         flash('Cannot force conversion of bookmarks for selector "{name}" because too few bookmarks '
               'exist.'.format(name=sel.student.user.name), 'error')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     for item in sel.ordered_bookmarks.limit(sel.number_choices):
         data = SelectionRecord(owner_id=item.owner_id,
@@ -7148,7 +7148,7 @@ def force_convert_bookmarks(sel_id):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(request.referrer)
+    return redirect(redirect_url())
 
 
 @convenor.route('/custom_CATS_limits/<int:record_id>', methods=['GET', 'POST'])
@@ -7158,7 +7158,7 @@ def custom_CATS_limits(record_id):
     record = EnrollmentRecord.query.get_or_404(record_id)
 
     if not validate_is_convenor(record.pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     form = CustomCATSLimitForm(obj=record)
 
@@ -7193,17 +7193,17 @@ def submission_period_documents(pid):
 
     # reject is user is not a convenor for the associated project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if this submission period is in the past
     if config.submission_period > record.submission_period:
         flash('It is no longer possible to edit this submission period because it has been closed.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # reject if period is retired
     if record.retired:
         flash('It is no longer possible to edit this submission period because it has been retired.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -7225,17 +7225,17 @@ def delete_period_attachment(aid):
     if asset is None:
         flash('Could not delete attachment because of a database error. '
               'Please contact a system administrator.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check user is convenor the project class this attachment belongs to, or has admin/root privileges
     record: SubmissionPeriodRecord = attachment.parent
     if record is None:
         flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     config: ProjectClassConfig = record.config
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # admin or root users can always delete; otherwise, check that we are not marking
     if not (current_user.has_role('root') or current_user.has_role('admin')):
@@ -7243,14 +7243,14 @@ def delete_period_attachment(aid):
             flash('It is no longer possible to delete documents attached to this submission period, '
                   'because it has been closed. A user with admin '
                   'privileges can still remove attachments if this is necessary.', 'info')
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
         state = config.submitter_lifecycle
         if state >= config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
             flash('It is no longer possible to delete documents attached to this submission period, '
                   'because its marking and feedback phase is now underway. A user with admin privileges '
                   'can still remove attachments if this is necessary.', 'info')
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -7279,17 +7279,17 @@ def perform_delete_period_attachment(aid):
     if asset is None:
         flash('Could not delete attachment because of a database error. '
               'Please contact a system administrator.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # check user is convenor the project class this attachment belongs to, or has admin/root privileges
     record: SubmissionPeriodRecord = attachment.parent
     if record is None:
         flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     config: ProjectClassConfig = record.config
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # admin or root users can always delete; otherwise, check that we are not marking
     if not (current_user.has_role('root') or current_user.has_role('admin')):
@@ -7297,14 +7297,14 @@ def perform_delete_period_attachment(aid):
             flash('It is no longer possible to delete documents attached to this submission period, '
                   'because it has been closed. A user with admin '
                   'privileges can still remove attachments if this is necessary.', 'info')
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
         state = config.submitter_lifecycle
         if state >= config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
             flash('It is no longer possible to delete documents attached to this submission period, '
                   'because its marking and feedback phase is now underway. A user with admin privileges '
                   'can still remove attachments if this is necessary.', 'info')
-            return redirect(request.referrer)
+            return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -7338,7 +7338,7 @@ def upload_period_attachment(pid):
     config: ProjectClassConfig = record.config
     pclass: ProjectClass = config.project_class
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -7446,11 +7446,11 @@ def edit_period_attachment(aid):
     asset = record.attachment
     if asset is None:
         flash('Cannot edit this attachment due to a database error. Please contact a system administrator.', 'info')
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     # ensure logged-in user has edit privileges
     if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
+        return redirect(redirect_url())
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)

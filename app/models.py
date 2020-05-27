@@ -7704,6 +7704,30 @@ class SubmissionRecord(db.Model):
 
 
     @property
+    def maintenance(self):
+        """
+        Fix (some) issues with record configuration
+        :return:
+        """
+        modified = False
+
+        if self.report is not None:
+            rep: SubmittedAsset = self.report
+
+            if self.supervisor is not None:
+                if not rep.has_access(self.supervisor.user):
+                    rep.access_control_list.append(self.supervisor.user)
+                    modified = True
+
+            if self.marker is not None:
+                if not rep.has_access(self.marker.user):
+                    rep.access_control_list.append(self.marker.user)
+                    modified = True
+
+        return modified
+
+
+    @property
     def validate(self):
         """
         Return a list of possible issues with the current SubmissionRecord

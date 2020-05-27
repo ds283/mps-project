@@ -29,6 +29,8 @@ def register_maintenance_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def maintenance(self):
+        self.update_state(state='STARTED')
+
         projects_maintenance(self)
         liveprojects_maintenance(self)
 
@@ -39,6 +41,8 @@ def register_maintenance_tasks(celery):
 
         matching_enumeration_maintenance(self)
         schedule_enumeration_maintenance(self)
+
+        submission_record_maintenance(self)
 
         self.update_state(state='SUCCESS')
 
@@ -440,3 +444,36 @@ def register_maintenance_tasks(celery):
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
+
+
+    def submission_record_maintenance(self):
+        try:
+            records = db.session.query(SubmissionRecord).all()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        task = group(subrecord_maintenance.s(r.id) for r in records)
+        task.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def subrecord_maintenance(self, rec_id):
+        try:
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=rec_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if record is None:
+            raise Ignore()
+
+        if record.maintenance():
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+        self.update_state(state='SUCCESS')

@@ -7703,7 +7703,6 @@ class SubmissionRecord(db.Model):
                + (1 if self.report is not None else 0)
 
 
-    @property
     def maintenance(self):
         """
         Fix (some) issues with record configuration

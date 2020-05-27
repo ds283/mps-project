@@ -26,7 +26,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import MatchingAttempt, TaskRecord, LiveProject, SelectingStudent, \
     User, EnrollmentRecord, MatchingRecord, SelectionRecord, ProjectClass, GeneratedAsset, MatchingEnumeration, \
-    TemporaryAsset, FacultyData, ProjectClassConfig, SubmissionRecord
+    TemporaryAsset, FacultyData, ProjectClassConfig, SubmissionRecord, SubmissionPeriodRecord
 from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename, \
     canonical_generated_asset_filename
 from ..shared.sqlalchemy import get_count
@@ -1988,11 +1988,21 @@ def register_matching_tasks(celery):
         progress_update(task_id, TaskRecord.RUNNING, 20, "Sorting SubmittingStudent records...",
                         autocommit=True)
 
-        for period in config.periods:                     #type: SubmissionPeriodRecord
-            for sub in period.submissions:                #type: SubmissionRecord
+        for period in config.periods:
+            period: SubmissionPeriodRecord
+
+            # ignore periods that are retired, closed, or have open feedback; the markers for these
+            # cannot be changed
+            if period.retired or period.closed or period.feedback_open:
+                continue
+
+            for sub in period.submissions:
+                sub: SubmissionRecord
                 sub.marker = None
 
         try:
+            progress_update(task_id, TaskRecord.SUCCESS, 100, "Finishing remove markers task....",
+                            autocommit=False)
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()

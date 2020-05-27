@@ -17,7 +17,7 @@ from . import project_approver
 from .forms import EditCommentForm
 
 from ..database import db
-from ..models import ProjectDescription, DescriptionComment, ProjectClassConfig, EnrollmentRecord
+from ..models import ProjectDescription, DescriptionComment, EnrollmentRecord
 
 from ..shared.utils import build_project_approval_queues, home_dashboard_url, redirect_url
 
@@ -37,7 +37,7 @@ def validate():
     text = request.args.get('text', None)
 
     if url is None or text is None:
-        url = request.referrer
+        url = redirect_url()
         text = 'approvals dashboard'
 
     return render_template('project_approver/validate.html', url=url, text=text)
@@ -169,7 +169,7 @@ def edit_comment(id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     form = EditCommentForm(request.form)
 
@@ -208,7 +208,7 @@ def delete_comment(id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if comment.deleted:
         return redirect(url)
@@ -274,7 +274,7 @@ def rejected():
     text = request.args.get('text', None)
 
     if url is None or text is None:
-        url = request.referrer
+        url = redirect_url()
         text = 'approvals dashboard'
 
     return render_template('project_approver/review.html', url=url, text=text)

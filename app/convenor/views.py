@@ -1715,11 +1715,45 @@ def enroll_submitter(sid, configid):
 @roles_accepted('faculty', 'admin', 'root')
 def delete_submitter(sid):
     """
-    Manually delete a submitter
+    Manually delete a submitter -- confirmation step
     :param sid:
     :return:
     """
-    sub = SubmittingStudent.query.get_or_404(sid)
+    sub: SubmittingStudent = SubmittingStudent.query.get_or_404(sid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(sub.config.project_class):
+        return redirect(redirect_url())
+
+    if sub.config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
+        flash('Manual deletion of submitters is only possible during normal project activity', 'error')
+        return redirect(redirect_url())
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = redirect_url()
+
+    title = 'Delete submitter "{name}"'.format(name=sub.student.user.name)
+    panel_title = 'Delete submitter <i class="fa fa-user"></i> <strong>{name}</strong>'.format(name=sub.student.user.name)
+
+    action_url = url_for('convenor.do_delete_submitter', sid=sid, url=url)
+    message = '<p>Are you sure that you wish to delete submitter <i class="fa fa-user"></i> <strong>{name}</strong>?</p>' \
+              '<p>This action cannot be undone.</p>'.format(name=sub.student.user.name)
+    submit_label = 'Delete submitter'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@convenor.route('/do_delete_submitter/<int:sid>')
+@roles_accepted('faculty', 'admin', 'root')
+def do_delete_submitter(sid):
+    """
+    Manually delete a submitter -- action step
+    :param sid:
+    :return:
+    """
+    sub: SubmittingStudent = SubmittingStudent.query.get_or_404(sid)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sub.config.project_class):
@@ -6074,6 +6108,36 @@ def remove_markers(configid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
+    url = request.args.get('url', None)
+    if url is None:
+        url = redirect_url()
+
+    title = 'Remove all markers'
+    panel_title = 'Remove all markers'
+
+    action_url = url_for('convenor.do_remove_markers', configid=configid, url=url)
+    message = '<p>Are you sure that you wish to remove all marker assignments?</p>' \
+              '<p>This action cannot be undone.</p>'
+    submit_label = 'Remove markers'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@convenor.route('/do_remove_markers/<int:configid>')
+@roles_accepted('faculty', 'admin', 'root')
+def do_remove_markers(configid):
+    # configid is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(configid)
+
+    # reject if logged-in user is not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = redirect_url()
+
     uuid = register_task('Remove markers for "{proj}"'.format(proj=config.name),
                          owner=current_user,
                          description='Remove marker assignments for '
@@ -6084,8 +6148,7 @@ def remove_markers(configid):
 
     populate.apply_async(args=(config.id, current_user.id, uuid), task_id=uuid)
 
-    return redirect(redirect_url())
-
+    return redirect(url)
 
 
 @convenor.route('/view_feedback/<int:id>')
@@ -6105,7 +6168,7 @@ def view_feedback(id):
     text = request.args.get('text', None)
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     return render_template('convenor/dashboard/view_feedback.html', record=rec, text=text, url=url)
 
@@ -6410,7 +6473,7 @@ def manual_assign(id):
     text = request.args.get('text', None)
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     return render_template('convenor/dashboard/manual_assign.html', rec=rec, config=config, url=url, text=text,
                            form=form if config.uses_marker else None,
@@ -6644,7 +6707,7 @@ def assign_presentation_feedback(id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if form.validate_on_submit():
         feedback = PresentationFeedback(owner_id=talk.id,
@@ -6700,7 +6763,7 @@ def supervisor_edit_feedback(id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if form.validate_on_submit():
         record.supervisor_positive = form.positive.data
@@ -6747,7 +6810,7 @@ def marker_edit_feedback(id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if form.validate_on_submit():
         record.marker_positive = form.positive.data
@@ -6926,7 +6989,7 @@ def presentation_edit_feedback(feedback_id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if form.validate_on_submit():
         feedback.positive = form.positive.data
@@ -7037,7 +7100,7 @@ def edit_response(id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if form.validate_on_submit():
         record.faculty_response = form.feedback.data

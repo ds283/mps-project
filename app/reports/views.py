@@ -216,7 +216,7 @@ def liveproject_analytics(proj_id):
     text = request.args.get('text', None)
 
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if text is None and url is not None:
         text = 'previous page'

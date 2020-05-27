@@ -842,7 +842,7 @@ def view_feedback(id):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if not record.has_feedback:
         flash('It is only possible to view feedback after the convenor has made it available. '
@@ -888,7 +888,7 @@ def edit_feedback(id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if form.validate_on_submit():
         record.student_feedback = form.feedback.data

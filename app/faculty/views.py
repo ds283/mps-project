@@ -1603,7 +1603,7 @@ def live_project(pid):
     text = request.args.get('text', None)
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     return render_project(data, data, text=text, url=url)
 
@@ -1658,7 +1658,7 @@ def supervisor_edit_feedback(id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if form.validate_on_submit():
         record.supervisor_positive = form.positive.data
@@ -1710,7 +1710,7 @@ def marker_edit_feedback(id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if form.validate_on_submit():
         record.marker_positive = form.positive.data
@@ -1913,7 +1913,7 @@ def presentation_edit_feedback(slot_id, talk_id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if form.validate_on_submit():
         feedback.positive = form.positive.data
@@ -2021,7 +2021,7 @@ def view_feedback(id):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     preview = request.args.get('preview', None)
 
@@ -2060,7 +2060,7 @@ def edit_response(id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if form.validate_on_submit():
         record.faculty_response = form.feedback.data
@@ -2353,7 +2353,7 @@ def show_enrollments():
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
         # avoid circular references
         if url is not None and 'show_enrollments' in url:
@@ -2371,7 +2371,7 @@ def show_workload():
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
         # avoid circular references
         if 'show_workload' in url:

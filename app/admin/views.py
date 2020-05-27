@@ -3771,7 +3771,7 @@ def do_match_compare(id1, id2):
     url = request.args.get('url', None)
 
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if not validate_match_inspector(record1) or not validate_match_inspector(record2):
         return redirect(url)
@@ -4438,7 +4438,7 @@ def select_match(id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if not validate_match_inspector(record):
         return redirect(redirect_url())
@@ -6298,7 +6298,7 @@ def do_schedule_compare(id1, id2):
     text = request.args.get('text', None)
 
     if url is None:
-        url = request.referrer
+        url = redirect_url()
 
     if not validate_schedule_inspector(record1) or not validate_schedule_inspector(record2):
         return redirect(url)

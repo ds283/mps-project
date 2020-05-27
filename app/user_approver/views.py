@@ -39,7 +39,7 @@ def validate():
     text = request.args.get('text', None)
 
     if url is None or text is None:
-        url = request.referrer
+        url = redirect_url()
         text = 'approvals dashboard'
 
     prog_filter = request.args.get('prog_filter')
@@ -157,7 +157,7 @@ def correct():
     text = request.args.get('text', None)
 
     if url is None or text is None:
-        url = request.referrer
+        url = redirect_url()
         text = 'approvals dashboard'
 
     prog_filter = request.args.get('prog_filter')

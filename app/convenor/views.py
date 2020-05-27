@@ -6064,6 +6064,30 @@ def populate_markers(configid):
     return redirect(redirect_url())
 
 
+@convenor.route('/remove_markers/<int:configid>')
+@roles_accepted('faculty', 'admin', 'root')
+def remove_markers(configid):
+    # configid is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(configid)
+
+    # reject if logged-in user is not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    uuid = register_task('Remove markers for "{proj}"'.format(proj=config.name),
+                         owner=current_user,
+                         description='Remove marker assignments for '
+                                     '"{proj}"'.format(proj=config.name))
+
+    celery = current_app.extensions['celery']
+    populate = celery.tasks['app.tasks.matching.remove_markers']
+
+    populate.apply_async(args=(config.id, current_user.id, uuid), task_id=uuid)
+
+    return redirect(redirect_url())
+
+
+
 @convenor.route('/view_feedback/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def view_feedback(id):
@@ -7325,7 +7349,7 @@ def perform_delete_period_attachment(aid):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(url_for('convenor.submission_period_documents', pid=pid, url=url, text=text))
+    return redirect(url_for('convenor.submission_period_documents', pid=record.id, url=url, text=text))
 
 
 @convenor.route('/upload_period_attachment/<int:pid>', methods=['GET', 'POST'])

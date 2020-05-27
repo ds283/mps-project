@@ -196,6 +196,9 @@
                                 <i class="fa fa-wrench"></i> Populate markers
                             </a>
                         {% endif %}
+                        <a href="{{ url_for('convenor.remove_markers', configid=config.id) }}" class="btn btn-default top-row-button">
+                            <i class="fa fa-wrench"></i> Remove markers
+                        </a>
                         {% if pclass.publish %}
                             <a href="{{ url_for('convenor.mark_all_started', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}" class="btn btn-default top-row-button">
                                 Mark all started

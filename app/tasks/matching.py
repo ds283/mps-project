@@ -1966,6 +1966,43 @@ def register_matching_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
+    def remove_markers(self, config_id, user_id, task_id):
+        self.update_state(state='STARTED',
+                          meta='Looking up ProjectClassConfig record for id={id}'.format(id=config_id))
+
+        try:
+            config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+            user = db.session.query(User).filter_by(id=user_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if config is None:
+            self.update_state(state='FAILURE', meta='Could not load ProjectClassConfig record from database')
+            raise Ignore()
+
+        if user is None:
+            self.update_state(state='FAILURE', meta='Could not load User record from database')
+            raise Ignore()
+
+        progress_update(task_id, TaskRecord.RUNNING, 20, "Sorting SubmittingStudent records...",
+                        autocommit=True)
+
+        for period in config.periods:                     #type: SubmissionPeriodRecord
+            for sub in period.submissions:                #type: SubmissionRecord
+                sub.marker = None
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        return None
+
+
+    @celery.task(bind=True, default_retry_delay=30)
     def revert_record(self, id):
         self.update_state(state='STARTED',
                           meta='Looking up MatchingRecord record for id={id}'.format(id=id))

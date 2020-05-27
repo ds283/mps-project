@@ -138,7 +138,7 @@ def perform_delete_submitter_report(sid):
 @login_required
 def upload_submitter_report(sid):
     # sid is a SubmissionRecord id
-    record = SubmissionRecord.query.get_or_404(sid)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
 
     if record.report is not None:
         flash('Can not upload a report for this submitter because an existing report is already attached.', 'info')
@@ -202,21 +202,19 @@ def upload_submitter_report(sid):
                 asset.access_control_list.append(record.project.owner.user)
 
             # project examiner has access
-            if record.marker is not None and record.marker not in asset.access_control_list:
+            if record.marker is not None and record.marker.user not in asset.access_control_list:
                 asset.access_control_list.append(record.marker.user)
 
             # student can download their own report
             if record.owner.student.user not in asset.access_control_list:
                 asset.access_control_list.append(record.owner.student.user)
 
-            # office staff can download everything
-            office_role = db.session.query(Role).filter_by(name='office').first()
-            if office_role and office_role not in asset.access_control_roles:
-                asset.access_control_roles.append(office_role)
-
-            # TODO: in future, possible add 'moderator', 'exam_board' or 'external_examiner'
-            #  roles which should have access to all reports
-            #  (already done this for convenor)
+            # set up list of roles that should have access, if they exist
+            roles = ['office', 'convenor', 'moderator', 'exam_board', 'external_examiner']
+            for r in roles:
+                role: Role = db.session.query(Role).filter_by(name=r).first()
+                if role and role not in asset.access_control_roles:
+                    asset.access_control_roles.append(role)
 
             try:
                 db.session.commit()
@@ -473,18 +471,17 @@ def upload_submitter_attachment(sid):
                 asset.access_control_list.append(record.project.owner.user)
 
             # project examiner has access
-            if record.marker is not None and record.marker not in asset.access_control_list:
+            if record.marker is not None and record.marker.user not in asset.access_control_list:
                 asset.access_control_list.append(record.marker.user)
 
-            # students can't ordinarily download unless explicit permission is given
+            # students can't ordinarily download attachments unless explicit permission is given
 
-            # office staff can download everything
-            office_role = db.session.query(Role).filter_by(name='office').first()
-            if office_role and office_role not in asset.access_control_roles:
-                asset.access_control_roles.append(office_role)
-
-            # TODO: in future, possible add 'moderator', 'exam_board' or 'external_examiner'
-            #  roles which should have access to all attachments (eg. marking reports)
+            # set up list of roles that should have access, if they exist
+            roles = ['office', 'convenor', 'moderator', 'exam_board', 'external_examiner']
+            for r in roles:
+                role: Role = db.session.query(Role).filter_by(name=r).first()
+                if role and role not in asset.access_control_roles:
+                    asset.access_control_roles.append(role)
 
             try:
                 db.session.add(attachment)

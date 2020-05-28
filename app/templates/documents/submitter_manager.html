@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% macro asset_line(asset, attachment, download_url=none, delete_url=none, edit_url=none, acl_url=none, log_url=none,
-                    deletable=false, allow_student=false, is_editable=none, is_admin=false) %}
+                    deletable=false, allow_student=false, is_editable=none, admin_rights=false) %}
     {% set has_access = asset.has_access(current_user.id) %}
     <tr>
         <td style="word-wrap: break-word;">
@@ -41,7 +41,7 @@
                     <i class="fa fa-user"></i> {{ asset.uploaded_by.name }}
                 {% endif %}
             </div>
-            {% if is_admin %}
+            {% if admin_rights %}
                 <div>
                     <span class="label label-default">Downloads: {{ asset.number_downloads }}</span>
                 </div>
@@ -83,7 +83,7 @@
                                     <li class="disabled"><a><i class="fa fa-cloud-download"></i> Download</a></li>
                                 {% endif %}
                             {% endif %}
-                            {% if is_admin %}
+                            {% if admin_rights %}
                                 {% if acl_url is not none %}
                                     <li><a href="{{ acl_url }}"><i class="fa fa-check-square"></i> Access control...</a></li>
                                 {% else %}
@@ -113,6 +113,7 @@
 {% endmacro %}
 
 {% block bodyblock %}
+    {% set admin_rights = is_root or is_admin or is_convenor %}
     {% if url and text %}
         <div class="top-return-link">
             <a href="{{ url }}">
@@ -124,7 +125,7 @@
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Manage documents for <i class="fa fa-user"></i> <strong>{{ record.student_identifier }}</strong> {{ record.period.display_name }}</div>
         <div class="panel-body">
-            {% if is_admin or is_root or is_convenor %}
+            {% if admin_rights %}
                 <div class="row">
                     <div class="col-xs-1"></div>
                     <div class="col-xs-10">
@@ -176,10 +177,12 @@
                                     {{ asset_line(asset, attachment,
                                                   download_url=url_for('admin.download_submitted_asset',
                                                   asset_id=asset.id),
-                                                  delete_url=none, edit_url=none, acl_url=none,
+                                                  delete_url=url_for('convenor.delete_period_attachment', aid=attachment.id),
+                                                  edit_url=url_for('convenor.edit_period_attachment', aid=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
+                                                  acl_url=url_for('documents.attachment_acl', attach_type=0, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                                   log_url=url_for('documents.attachment_download_log', attach_type=0, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
-                                                  deletable=false, allow_student=false,
-                                                  is_editable=none, is_admin=is_admin) }}
+                                                  deletable=deletable, allow_student=false,
+                                                  is_editable=is_editable, admin_rights=admin_rights) }}
                                 {% endif %}
                             {% endfor %}
                         </tbody>
@@ -210,7 +213,7 @@
                                           acl_url=url_for('documents.attachment_acl', attach_type=2, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                           log_url=url_for('documents.attachment_download_log', attach_type=2, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                           deletable=deletable, allow_student=false, is_editable=is_editable,
-                                          is_admin=is_admin) }}
+                                          admin_rights=admin_rights) }}
                         </tbody>
                     </table>
                 {% else %}
@@ -254,7 +257,7 @@
                                                   acl_url=url_for('documents.attachment_acl', attach_type=1, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                                   log_url=url_for('documents.attachment_download_log', attach_type=1, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                                   deletable=deletable, allow_student=true, is_editable=is_editable,
-                                                  is_admin=is_admin) }}
+                                                  admin_rights=admin_rights) }}
                                 {% endif %}
                             {% endfor %}
                         </tbody>

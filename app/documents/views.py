@@ -56,12 +56,9 @@ def submitter_documents(sid):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
-    is_admin = current_user.has_role('admin') or current_user.has_role('root') \
-        or pclass.is_convenor(current_user.id)
-
     return render_template('documents/submitter_manager.html', record=record, period=period, url=url, text=text,
                            is_editable=partial(is_editable, record, period=period, config=config, message=False),
-                           deletable=is_deletable(record, period, config, message=False), is_admin=is_admin,
+                           deletable=is_deletable(record, period, config, message=False),
                            report_uploadable=is_uploadable(record, message=False, allow_student=False,
                                                            allow_faculty=False),
                            attachment_uploadable=is_uploadable(record, message=False, allow_student=True,

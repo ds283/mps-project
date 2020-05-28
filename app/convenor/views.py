@@ -7581,7 +7581,7 @@ def edit_period_attachment(aid):
                   'Please contact an administrator.', 'error')
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(url_for('convenor.submission_period_documents', pid=period.id, url=url, text=text))
+        return redirect(url)
 
     else:
         if request.method == 'GET':

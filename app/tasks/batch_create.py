@@ -343,9 +343,9 @@ def register_batch_create_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def students(self, record_id, asset_id, current_user_id, current_year):
         try:
-            record = db.session.query(StudentBatch).filter_by(id=record_id).first()
-            asset = db.session.query(TemporaryAsset).filter_by(id=asset_id).first()
-            user = db.session.query(User).filter_by(id=current_user_id).first()
+            record: StudentBatch = db.session.query(StudentBatch).filter_by(id=record_id).first()
+            asset: TemporaryAsset = db.session.query(TemporaryAsset).filter_by(id=asset_id).first()
+            user: User = db.session.query(User).filter_by(id=current_user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

@@ -1,0 +1,47 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    Tset catch-up of email notifications for {{ config.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            <div class="panel panel-danger">
+                <div class="panel-heading">
+                    Test catch-up of email notifications for <strong>{{ config.name }}</strong>
+                </div>
+                <div class="panel-body">
+                    <form action="{{ url_for('convenor.test_notifications', id=id, url=url,
+                            cc_me=cc_me, max_attachment=max_attachment) }}" methods="POST" name="test_notify_form">
+                        {{ form.hidden_tag() }}
+                        <div class="row vertical-bottom">
+                            <div class="col-xs-12">
+                                <p>Do you wish to <strong>test catch-up</strong> of email notifications for
+                                    <strong>{{ config.name }}</strong>?</p>
+                                <p>During catch-up, email notifications are issued to markers where
+                                    a project report is now available, but no notification email has previously
+                                    been issued.</p>
+                                <p>In the test-phase, notifications are not issued to their intended
+                                    recipients, but rather to a sink email address. This allows the
+                                    outgoing emails to be audited to ensure they are correct.</p>
+                                {{ wtf.form_field(form.target_email) }}
+                            </div>
+                        </div>
+                        <div class="row vertical-bottom">
+                            <div class="col-xs-12">
+                                <div class="pull-right">
+                                    {{ wtf.form_field(form.submit_button, button_map={'submit_button': 'danger'}) }}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{% endblock %}

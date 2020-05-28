@@ -10,7 +10,7 @@
 
 from flask_security.forms import Form
 from wtforms import SubmitField, DateField, IntegerField, StringField, BooleanField
-from wtforms.validators import InputRequired, Optional
+from wtforms.validators import InputRequired, Optional, Email
 from wtforms_alchemy import QuerySelectField
 
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
@@ -95,7 +95,8 @@ def IssueFacultyConfirmRequestFormFactory(submit_label='Issue confirmation reque
 
 def OpenFeedbackFormFactory(submit_label='Open feedback period',
                             datebox_label='Deadline',
-                            include_send_button=False):
+                            include_send_button=False,
+                            include_test_button=False):
 
     class OpenFeedbackForm(Form):
 
@@ -105,6 +106,13 @@ def OpenFeedbackFormFactory(submit_label='Open feedback period',
         # CC emails to convenor?
         cc_me = BooleanField('CC myself in notification emails')
 
+        # maximum size of attachments
+        max_attachment = IntegerField('Maximum total size of attachments, measured in Mb', validators=[InputRequired()])
+
+        # submit button: test
+        if include_test_button:
+            test_button = SubmitField('Test notifications')
+
         # submit button: open feedback
         submit_button = SubmitField(submit_label)
 
@@ -113,6 +121,17 @@ def OpenFeedbackFormFactory(submit_label='Open feedback period',
             send_notifications = SubmitField('Send notifications')
 
     return OpenFeedbackForm
+
+
+class TestOpenFeedbackForm(Form):
+
+    # capture destinations for test emails
+    target_email = StringField('Target email address', validators=[InputRequired(), Email()],
+                               description='Enter an email address to which the test notification emails '
+                                           'will be sent.')
+
+    # submit button
+    submit_button = SubmitField('Perform test')
 
 
 class CustomCATSLimitForm(Form, SaveChangesMixin):

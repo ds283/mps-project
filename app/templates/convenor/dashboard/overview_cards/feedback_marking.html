@@ -24,12 +24,18 @@
     <form action="{{ url_for('convenor.open_feedback', id=config.id) }}" method="POST" name="feedback-form">
         {{ feedback_form.hidden_tag() }}
         {{ date_field(feedback_form.feedback_deadline) }}
+        {{ wtf.form_field(feedback_form.max_attachment) }}
         {{ wtf.form_field(feedback_form.cc_me) }}
         <div class="row">
             <div class="col-xs-12">
                 <div class="pull-right">
                     <a class="btn btn-default" href="{{ url_for('convenor.submission_period_documents', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='overview') }}">Documents ({{ period.number_attachments }})...</a>
-                    {{ wtf.form_field(feedback_form.send_notifications, button_map={'send_notifications': 'default'}) }}
+                    {% if feedback_form.send_notifications is defined %}
+                        {{ wtf.form_field(feedback_form.send_notifications, button_map={'send_notifications': 'default'}) }}
+                    {% endif %}
+                    {% if feedback_form.test_button is defined  %}
+                        {{ wtf.form_field(feedback_form.test_button, button_map={'test_button': 'info'}) }}
+                    {% endif %}
                     {{ wtf.form_field(feedback_form.submit_button, button_map={'submit_button': 'default'}) }}
                 </div>
             </div>

@@ -27,7 +27,7 @@ from . import convenor
 from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
     EditSubmissionRecordForm, UploadPeriodAttachmentForm, \
-    EditPeriodAttachmentForm, ChangeDeadlineFormFactory
+    EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm
 from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
@@ -261,13 +261,17 @@ def overview(id):
         flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
         return redirect(redirect_url())
 
-    # build forms
+    # BUILD FORMS
+
+    # 1. Go Live
     GoLiveForm = GoLiveFormFactory()
     golive_form = GoLiveForm(request.form)
 
+    # 2. Change deadline for projec selection
     ChangeDeadlineForm = ChangeDeadlineFormFactory()
     change_form = ChangeDeadlineForm(request.form)
 
+    # 3. Issue faculty confirmation requests
     # change labels and text for issuing confirmation requests depending on current lifecycle state
     if config.requests_issued:
         IssueFacultyConfirmRequestForm = \
@@ -281,14 +285,17 @@ def overview(id):
 
     issue_form = IssueFacultyConfirmRequestForm(request.form)
 
+    # 4. Open feedback
     if period is not None and period.is_feedback_open:
         OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Change deadline',
                                                    datebox_label='The current deadline for feedback is',
-                                                   include_send_button=True)
+                                                   include_send_button=True,
+                                                   include_test_button=True)
     else:
-        OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Open feedback period',
+        OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Open feedback and email markers',
                                                    datebox_label='Deadline',
-                                                   include_send_button=False)
+                                                   include_send_button=False,
+                                                   include_test_button=True)
 
     feedback_form = OpenFeedbackForm(request.form)
 
@@ -316,6 +323,8 @@ def overview(id):
             feedback_form.feedback_deadline.data = period.feedback_deadline
         else:
             feedback_form.feedback_deadline.data = date.today() + timedelta(weeks=3)
+
+        feedback_form.max_attachment.data = 2
 
     data = get_convenor_dashboard_data(pclass, config)
     capacity_data = get_capacity_data(pclass)
@@ -3740,16 +3749,16 @@ def confirm_go_live(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(redirect_url())
+        redirect(url_for('convenor.overview', id=config.pclass_id))
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(redirect_url())
+        redirect(url_for('convenor.overview', id=config.pclass_id))
 
     if config.live:
         flash('A request to Go Live was ignored, because project "{name}" is already '
               'live.'.format(name=config.project_class.name), 'error')
-        return redirect(redirect_url())
+        redirect(url_for('convenor.overview', id=config.pclass_id))
 
     close = bool(int(request.args.get('close', 0)))
     deadline = request.args.get('deadline', None)
@@ -3763,7 +3772,9 @@ def confirm_go_live(id):
         full_CATS = int(full_CATS)
 
     if deadline is None:
-        flash('A request to Go Live was ignored because the deadline was not correctly received', 'error')
+        flash('A request to Go Live was ignored because the deadline was not correctly received. '
+              'Please report this issue to an administrator.', 'error')
+        redirect(url_for('convenor.overview', id=config.pclass_id))
 
     deadline = parser.parse(deadline).date()
 
@@ -5684,7 +5695,7 @@ def audit_schedules_ajax(pclass_id):
 @roles_accepted('faculty', 'admin', 'root')
 def open_feedback(id):
     # id is a ProjectClassConfig
-    config = ProjectClassConfig.query.get_or_404(id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
@@ -5707,63 +5718,271 @@ def open_feedback(id):
         return redirect(redirect_url())
 
     if period is not None and period.is_feedback_open:
-        OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=True)
+        OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=True, include_test_button=True)
     else:
-        OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=False)
+        OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=False, include_test_button=True)
 
     feedback_form = OpenFeedbackForm(request.form)
 
+    url = request.args.get('url', None)
+    if url is None:
+        url = redirect_url()
+
     if feedback_form.is_submitted():
-        celery = current_app.extensions['celery']
-        marking_email = celery.tasks['app.tasks.marking.send_marking_emails']
-
-        tk_name = 'Dispatch marking notifications'
-        tk_description = 'Dispatch emails with reports and marking instructions'
-
-        init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
-        final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
-        error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
-
         if feedback_form.submit_button.data:
-            # set feedback deadline and mark feedback open
-            period.is_feedback_open = True
-            period.feedback_deadline = feedback_form.feedback_deadline.data
 
-            if period.feedback_id is None:
-                period.feedback_id = current_user.id
+            deadline = feedback_form.feedback_deadline.data
 
-            if period.feedback_timestamp is None:
-                period.feedback_timestamp = datetime.now()
+            if period.feedback_open:
+                # if feedback is already open, nothing to do but change the deadline
+                period.feedback_deadline = deadline
 
-            try:
-                db.session.commit()
-                flash('The feedback deadline for "{proj}" has been successfully changed '
-                      'to {deadline}.'.format(proj=config.name,
-                                              deadline=period.feedback_deadline.strftime("%a %d %b %Y")),
-                      'success')
-            except SQLAlchemyError as e:
-                flash('Could not modify feedback status due to a database error. '
-                      'Please contact a system administrator.', 'error')
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                db.session.rollback()
-                return redirect(redirect_url())
+                try:
+                    db.session.commit()
+                    flash('The feedback deadline for "{proj}" has been successfully changed '
+                          'to {deadline}.'.format(proj=config.name, deadline=deadline.strftime("%a %d %b %Y")),
+                          'success')
+                except SQLAlchemyError as e:
+                    flash('Could not modify feedback status due to a database error. '
+                          'Please contact a system administrator.', 'error')
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    db.session.rollback()
+                    return redirect(redirect_url())
 
-            task_id = register_task(tk_name, owner=current_user, description=tk_description)
+            else:
+                # issue confirmation request
+                title = 'Open feedback for "{proj}"'.format(proj=config.name)
+                panel_title = 'Open feedback for <strong>{proj}</strong> and issue email ' \
+                              'notifications to markers'.format(proj=config.name)
+                message = '<p>Are you sure that you wish to open <strong>{proj}</strong> for feedback?</p>' \
+                          '<p>The marking deadline will be set to <strong>{deadline}</strong> and email ' \
+                          'notifications will be issued to markers where a project report has already been ' \
+                          'uploaded.</p>' \
+                          '<p>If no report has yet been uploaded, email notifications can be issued at a later date ' \
+                          'when the report is available.</p>' \
+                          '<p>These actions cannot be ' \
+                          'undone.</p>'.format(proj=config.name,
+                                               deadline=deadline.strftime("%a %d %b %Y"))
 
-            seq = chain(init.si(task_id, tk_name),
-                        marking_email.si(period.id, bool(feedback_form.cc_me.data), current_user.id),
-                        final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
-            seq.apply_async(task_id=task_id)
+                action_url = url_for('convenor.do_open_feedback', id=id, url=url,
+                                     deadline=deadline.isoformat(),
+                                     cc_me=int(feedback_form.cc_me.data),
+                                     max_attachment=int(feedback_form.max_attachment.data))
+                submit_label = 'Open feedback and issue notifications'
+
+                return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title,
+                                       action_url=action_url, message=message, submit_label=submit_label)
 
         elif hasattr(feedback_form, 'send_notifications') and feedback_form.send_notifications.data:
-            task_id = register_task(tk_name, owner=current_user, description=tk_description)
+            # issue confirmation request
+            title = 'Catch up email notifications for "{proj}"'.format(proj=config.name)
+            panel_title = 'Catch up email notifications for ' \
+                          '<strong>{proj}</strong>'.format(proj=config.name)
+            message = '<p>Are you sure that you wish to catch up email notifications for ' \
+                      '<strong>{proj}</strong>?</p>' \
+                      '<p>Email notifications will be issued to markers where a project report is now ' \
+                      'available, but no notification email has previously been issued.</p>' \
+                      '<p>If no report has yet been uploaded, further email notifications can be issued at a later ' \
+                      'date when the report is available.</p>'.format(proj=config.name)
 
-            seq = chain(init.si(task_id, tk_name),
-                        marking_email.si(period.id, bool(feedback_form.cc_me.data), current_user.id),
-                        final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
-            seq.apply_async(task_id=task_id)
+            action_url = url_for('convenor.do_send_notifications', id=id, url=url,
+                                 cc_me=int(feedback_form.cc_me.data),
+                                 max_attachment=int(feedback_form.max_attachment.data))
+            submit_label = 'Catch up email notifications'
+
+            return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title,
+                                   action_url=action_url, message=message, submit_label=submit_label)
+
+        elif hasattr(feedback_form, 'test_button') and feedback_form.test_button.data:
+            return redirect(url_for('convenor.test_notifications', id=id, url=url,
+                                    cc_me=int(feedback_form.cc_me.data),
+                                    max_attachment=int(feedback_form.max_attachment.data)))
 
     return redirect(redirect_url())
+
+
+@convenor.route('/test_notifications/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def test_notifications(id):
+    # id is a ProjectClassConfig
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(redirect_url())
+
+    state = config.submitter_lifecycle
+    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and \
+            state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+        flash('Feedback cannot be opened at this stage in the project lifecycle.', 'info')
+        return redirect(redirect_url())
+
+    # get record for current submission period
+    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
+    if period is None and config.submissions > 0:
+        flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
+        return redirect(redirect_url())
+
+    cc_me = bool(int(request.args.get('cc_me', 0)))
+    max_attachment = int(request.args.get('max_attachment', 2))
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('convenor.overview', id=config.pclass_id)
+
+    form = TestOpenFeedbackForm(request.form)
+
+    if form.validate_on_submit():
+        test_email = form.target_email.data
+
+        return url_for('convenor.do_send_notifications', id=id, url=url,
+                       cc_me=int(cc_me), max_attachment=int(max_attachment),
+                       test_email=str(test_email))
+
+    return render_template('convenor/dashboard/test_notifications.html', id=id, url=url,
+                           cc_me=int(cc_me), max_attachment=int(max_attachment),
+                           form=form, config=config)
+
+
+@convenor.route('/do_send_notifications/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def do_send_notifications(id):
+    # id is a ProjectClassConfig
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(redirect_url())
+
+    state = config.submitter_lifecycle
+    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and \
+            state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+        flash('Feedback cannot be opened at this stage in the project lifecycle.', 'info')
+        return redirect(redirect_url())
+
+    # get record for current submission period
+    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
+    if period is None and config.submissions > 0:
+        flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
+        return redirect(redirect_url())
+
+    cc_me = bool(int(request.args.get('cc_me', 0)))
+    max_attachment = int(request.args.get('max_attachment', 2))
+    test_email = request.args.get('test_email', None)
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('convenor.overview', id=config.pclass_id)
+
+    celery = current_app.extensions['celery']
+    marking_email = celery.tasks['app.tasks.marking.send_marking_emails']
+
+    tk_name = 'Dispatch marking notifications'
+    tk_description = 'Dispatch emails with reports and marking instructions'
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    seq = chain(init.si(task_id, tk_name),
+                marking_email.si(period.id, cc_me, max_attachment, test_email, current_user.id),
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
+
+    return redirect(url)
+
+
+@convenor.route('/do_open_feedback/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def do_open_feedback(id):
+    # id is a ProjectClassConfig
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(redirect_url())
+
+    state = config.submitter_lifecycle
+    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and \
+            state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+        flash('Feedback cannot be opened at this stage in the project lifecycle.', 'info')
+        return redirect(redirect_url())
+
+    # get record for current submission period
+    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
+    if period is None and config.submissions > 0:
+        flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
+        return redirect(redirect_url())
+
+    cc_me = bool(int(request.args.get('cc_me', 0)))
+    max_attachment = int(request.args.get('max_attachment', 2))
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('convenor.overview', id=config.pclass_id)
+
+    deadline = request.args.get('deadline', None)
+    if deadline is None:
+        flash('A request to open feedback was ignored because the deadline was not correctly received. '
+              'Please report this issue to an administrator.', 'error')
+        return redirect(url)
+
+    deadline = parser.parse(deadline).data()
+
+    # set feedback deadline and mark feedback open
+    period.is_feedback_open = True
+    period.feedback_deadline = deadline
+
+    # mark current user as the person who opened feedback, if it is currently unset
+    if period.feedback_id is None:
+        period.feedback_id = current_user.id
+
+    # set timestamp, if it is currrently unset
+    if period.feedback_timestamp is None:
+        period.feedback_timestamp = datetime.now()
+
+    try:
+        db.session.commit()
+        flash('Feedback for "{proj}" has been opened successfully, with deadline '
+              '{deadline}.'.format(proj=config.name,
+                                   deadline=period.feedback_deadline.strftime("%a %d %b %Y")),
+              'success')
+    except SQLAlchemyError as e:
+        flash('Could not open feedback due to a database error. '
+              'Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+        return redirect(url)
+
+    celery = current_app.extensions['celery']
+    marking_email = celery.tasks['app.tasks.marking.send_marking_emails']
+
+    tk_name = 'Dispatch marking notifications'
+    tk_description = 'Dispatch emails with reports and marking instructions'
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    seq = chain(init.si(task_id, tk_name),
+                marking_email.si(period.id, cc_me, max_attachment, None, current_user.id),
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
+
+    return redirect(url)
 
 
 @convenor.route('/close_feedback/<int:id>', methods=['GET', 'POST'])

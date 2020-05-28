@@ -26,7 +26,7 @@ from pathlib import Path
 def register_marking_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_marking_emails(self, record_id, cc_convenor, convenor_id):
+    def send_marking_emails(self, record_id, cc_convenor, max_attachment, test_email, convenor_id):
         try:
             record = db.session.query(SubmissionPeriodRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:

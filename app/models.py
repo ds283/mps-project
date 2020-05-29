@@ -624,6 +624,10 @@ def AssetMixinFactory(acl_name, acr_name):
 
 
         def _get_userid(self, user):
+            # dereference a Werkzeug LocalProxy if needed, eg. if current_user is passed to us
+            if hasattr(user, '_get_current_object'):
+                user = user._get_current_object()
+
             if isinstance(user, int):
                 user_id = user
             elif isinstance(user, User):
@@ -635,6 +639,10 @@ def AssetMixinFactory(acl_name, acr_name):
 
 
         def _get_user(self, user):
+            # dereference a Werkzeug LocalProxy if needed, eg. if current_user is passed to us
+            if hasattr(user, '_get_current_object'):
+                user = user._get_current_object()
+
             if isinstance(user, User):
                 user_obj = user
             elif isinstance(user, FacultyData):

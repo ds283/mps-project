@@ -125,9 +125,9 @@
                                 {{ asset_line(asset, attachment,
                                               download_url=url_for('admin.download_period_asset', asset_id=asset.id),
                                               delete_url=url_for('convenor.delete_period_attachment', aid=attachment.id),
-                                              edit_url=url_for('convenor.edit_period_attachment', aid=attachment.id, url=url_for('convenor.submission_period_documents', pid=period.id, url=url, text=text), text='submission period document manager'),
-                                              acl_url=url_for('documents.attachment_acl', attach_type=0, attach_id=attachment.id, url=url_for('convenor.submission_period_documents', pid=period.id, url=url, text=text), text='submission period document manager'),
-                                              log_url=url_for('documents.attachment_download_log', attach_type=0, attach_id=attachment.id, url=url_for('convenor.submission_period_documents', pid=period.id, url=url, text=text), text='submission period document manager'),
+                                              edit_url=url_for('convenor.edit_period_attachment', aid=attachment.id, url=url_for('convenor.submission_period_documents', pid=record.id, url=url, text=text), text='submission period document manager'),
+                                              acl_url=url_for('documents.attachment_acl', attach_type=0, attach_id=attachment.id, url=url_for('convenor.submission_period_documents', pid=record.id, url=url, text=text), text='submission period document manager'),
+                                              log_url=url_for('documents.attachment_download_log', attach_type=0, attach_id=attachment.id, url=url_for('convenor.submission_period_documents', pid=record.id, url=url, text=text), text='submission period document manager'),
                                               deletable=deletable) }}
                             {% endfor %}
                         </tbody>

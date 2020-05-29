@@ -10,6 +10,9 @@
 
 
 from flask import current_app
+from flask_mail import Message
+from smtplib import SMTPAuthenticationError, SMTPConnectError, SMTPDataError, SMTPException, SMTPNotSupportedError, \
+    SMTPHeloError, SMTPRecipientsRefused, SMTPResponseException, SMTPSenderRefused, SMTPServerDisconnected
 
 from ..database import db
 from ..models import User, EmailLog, TaskRecord
@@ -27,15 +30,25 @@ def register_send_log_email(celery, mail):
 
     # set up deferred email sender for Flask-Email; note that Flask-Email's Message object is not
     # JSON-serializable so we have to pickle instead
-    @celery.task(bind=True, serializer='pickle', default_retry_delay=10)
-    def send_email(self, task_id, msg):
+    @celery.task(bind=True, serializer='pickle', retry_backoff=True)
+    def send_email(self, task_id, msg: Message):
         if not current_app.config.get('EMAIL_IS_LIVE', False):
             raise Ignore()
 
         progress_update(task_id, TaskRecord.RUNNING, 40, "Sending email...", autocommit=True)
         try:
             mail.send(msg)
-        except TimeoutError:
+
+        except TimeoutError as e:
+            current_app.logger.info('-- send_mail() task reporting TimeoutError')
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        except (SMTPAuthenticationError, SMTPConnectError, SMTPDataError, SMTPException, SMTPNotSupportedError,
+                SMTPHeloError, SMTPRecipientsRefused, SMTPResponseException, SMTPSenderRefused,
+                SMTPServerDisconnected) as e:
+            current_app.logger.info('-- send_mail() task SMTP exception')
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -86,7 +99,7 @@ def register_send_log_email(celery, mail):
 
     @celery.task()
     def email_failure(task_id):
-        progress_update(task_id, TaskRecord.FAILURE, 0, "Task failed", autocommit=True)
+        progress_update(task_id, TaskRecord.FAILURE, 1000, "Task failed", autocommit=True)
 
 
     @celery.task(bind=True, serializer='pickle')

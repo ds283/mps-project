@@ -285,7 +285,9 @@ def register_marking_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def mark_supervisor_sent(self, result_data, test, record_id):
+    def mark_supervisor_sent(self, result_data, record_id, test):
+        # result_data is forwarded from previous task in the chain, and is not used in the current implementation
+
         try:
             record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
@@ -309,7 +311,9 @@ def register_marking_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def mark_marker_sent(self, result_data, test, record_id):
+    def mark_marker_sent(self, result_data, record_id, test):
+        # result_data is forwarded from previous task in the chain, and is not used in the current implementation
+
         try:
             record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:

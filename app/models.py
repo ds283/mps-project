@@ -29,6 +29,8 @@ from .shared.colours import get_text_colour
 from .shared.formatters import format_size, format_time, format_readable_time
 from .shared.sqlalchemy import get_count
 
+from collections.abc import Iterable
+
 # length of database string for typical fields, if used
 DEFAULT_STRING_LENGTH = 255
 
@@ -635,6 +637,10 @@ def AssetMixinFactory(acl_name, acr_name):
         def _get_user(self, user):
             if isinstance(user, User):
                 user_obj = user
+            elif isinstance(user, FacultyData):
+                user_obj = user.user
+            elif isinstance(user, StudentData):
+                user_obj = user.user
             elif isinstance(user, int):
                 user_obj = db.session.query(User).filter_by(id=user).first()
             else:
@@ -652,6 +658,19 @@ def AssetMixinFactory(acl_name, acr_name):
                 raise RuntimeError('Unreognized object "role" passed to AssetMixin._get_roleid()')
 
             return role_id
+
+
+        def _get_role(self, role):
+            if isinstance(role, Role):
+                role_obj = role
+            elif isinstance(role, str):
+                role_obj = db.session.query(Role).filter_by(name=role).first()
+            elif isinstance(role, int):
+                role_obj = db.session.query(Role).filter_by(id=role).first()
+            else:
+                raise RuntimeError('Unrecognized object "role" passed to AssetMixin._get_role()')
+
+            return role_obj
 
 
         def has_access(self, user):
@@ -704,6 +723,53 @@ def AssetMixinFactory(acl_name, acr_name):
             role_id = self._get_roleid(role)
 
             return get_count(self.access_control_roles.filter_by(id=role_id)) > 0
+
+
+        def grant_user(self, user):
+            user_obj = self._get_user(user)
+
+            if user_obj is not None and user_obj not in self.access_control_list:
+                self.access_control_list.append(user_obj)
+
+
+        def revoke_user(self, user):
+            user_obj = self._get_user(user)
+
+            if user_obj is not None:
+                while user_obj in self.access_control_list:
+                    self.access_control_list.remove(user_obj)
+
+
+        def grant_role(self, role):
+            role_obj = self._get_role(role)
+
+            if role_obj is not None and role_obj not in self.access_control_roles:
+                self.access_control_roles.append(role_obj)
+
+
+        def revoke_role(self, role):
+            role_obj = self._get_role(role)
+
+            if role_obj is not None:
+                while role_obj in self.access_control_roles:
+                    self.access_control_roles.remove(role_obj)
+
+
+        def grant_roles(self, roles):
+            if not isinstance(roles, Iterable):
+                return self.grant_role(roles)
+
+            for role in roles:
+                self.grant_role(role)
+
+
+        def revoke_roles(self, roles):
+            if not isinstance(roles, Iterable):
+                return self.revoke_role(roles)
+
+            for role in roles:
+                self.revoke_role(role)
+
 
     return AssetMixin
 
@@ -7725,12 +7791,12 @@ class SubmissionRecord(db.Model):
 
             if self.supervisor is not None:
                 if not rep.has_access(self.supervisor.user):
-                    rep.access_control_list.append(self.supervisor.user)
+                    rep.grant_user(self.supervisor.user)
                     modified = True
 
             if self.marker is not None:
                 if not rep.has_access(self.marker.user):
-                    rep.access_control_list.append(self.marker.user)
+                    rep.grant_user(self.marker.user)
                     modified = True
 
         return modified
@@ -7845,6 +7911,12 @@ class PeriodAttachment(db.Model):
 
     # include in marking emails
     include_marking_emails = db.Column(db.Boolean(), default=False)
+
+    # include in marking notification emails sent to examiners?
+    include_marker_emails = db.Column(db.Boolean(), default=False)
+
+    # include in marking notification emails sent to project supervisors?
+    include_supervisor_emails = db.Column(db.Boolean(), default=False)
 
     # textual description of attachment
     description = db.Column(db.Text())

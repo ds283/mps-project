@@ -8031,7 +8031,7 @@ def upload_schedule(schedule_id):
                     asset = TemporaryAsset(timestamp=now,
                                            expiry=now + timedelta(days=1),
                                            filename=str(filename))
-                    asset.access_control_list.append(current_user)
+                    asset.grant_user(current_user)
 
                     uuid = register_task('Process offline solution for "{name}"'.format(name=record.name),
                                          owner=current_user,
@@ -8098,7 +8098,7 @@ def upload_match(match_id):
                     asset = TemporaryAsset(timestamp=now,
                                            expiry=now + timedelta(days=1),
                                            filename=str(filename))
-                    asset.access_control_list.append(current_user)
+                    asset.grant_user(current_user)
 
                     uuid = register_task('Process offline solution for "{name}"'.format(name=record.name),
                                          owner=current_user,

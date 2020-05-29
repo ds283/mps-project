@@ -196,7 +196,9 @@ class PeriodAttachmentMixin():
 
     publish_to_students = BooleanField('Publish this document to students')
 
-    include_marking_emails = BooleanField('Attach this document to marking emails')
+    include_marker_emails = BooleanField('Attach this document to marking notifications sent to examiners')
+
+    include_supervisor_emails = BooleanField('Attach this document to marking notifications sent to supervisors')
 
     license = QuerySelectField('License', query_factory=GetActiveAssetLicenses, get_label='name',
                                allow_blank=True, blank_text='Unset (no license specified)')

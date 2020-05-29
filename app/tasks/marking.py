@@ -156,7 +156,7 @@ def register_marking_tasks(celery):
             if cc_convenor:
                 msg.cc([config.convenor_email])
 
-            attached_documents = _attach_documents(msg, record, filename, max_attachment)
+            attached_documents = _attach_documents(msg, record, filename, max_attachment, role='supervisor')
 
             msg.body = render_template('email/marking/supervisor.txt', config=config, pclass=pclass,
                                        period=period, marker=marker, supervisor=supervisor, submitter=submitter,
@@ -189,7 +189,7 @@ def register_marking_tasks(celery):
             if cc_convenor:
                 msg.cc([config.convenor_email])
 
-            attached_documents = _attach_documents(msg, record, filename, max_attachment)
+            attached_documents = _attach_documents(msg, record, filename, max_attachment, role='marker')
 
             msg.body = render_template('email/marking/marker.txt', config=config, pclass=pclass,
                                        period=period, marker=marker, supervisor=supervisor, submitter=submitter,
@@ -210,7 +210,8 @@ def register_marking_tasks(celery):
         return None
 
 
-    def _attach_documents(msg: Message, record: SubmissionRecord, report_filename: Path, max_attachment: int):
+    def _attach_documents(msg: Message, record: SubmissionRecord, report_filename: Path, max_attachment: int,
+                          role=None):
         # track cumulative size of added assets, packed on a 'first-come, first-served' system
         attached_size = 0
 
@@ -232,16 +233,19 @@ def register_marking_tasks(celery):
                                       description="student's submitted report")
 
         # attach any other documents provided by the project convenor
-        for attachment in record.period.attachments:
-            attachment: PeriodAttachment
-            if attachment.include_marking_emails:
-                asset: SubmittedAsset = attachment.attachment
+        if role is not None:
+            for attachment in record.period.attachments:
+                attachment: PeriodAttachment
 
-                # TODO: consider rationalizing how filenames work with assets. Currently it's a bit inconsistent.
-                attachment_abs_path = asset_folder / submitted_subfolder / asset.filename
-                attached_size = _attach_asset(msg, asset, attached_size, attached_documents, attachment_abs_path,
-                                              max_attachment=max_attachment,
-                                              description=attachment.description)
+                if (role in ['marker'] and attachment.include_marker_emails) or \
+                    (role in ['supervisor'] and attachment.include_supervisor_emails):
+                    asset: SubmittedAsset = attachment.attachment
+
+                    # TODO: consider rationalizing how filenames work with assets. Currently it's a bit inconsistent.
+                    attachment_abs_path = asset_folder / submitted_subfolder / asset.filename
+                    attached_size = _attach_asset(msg, asset, attached_size, attached_documents, attachment_abs_path,
+                                                  max_attachment=max_attachment,
+                                                  description=attachment.description)
 
         return attached_documents
 

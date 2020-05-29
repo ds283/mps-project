@@ -905,7 +905,7 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
                                filename=str(name),
                                mimetype='text/plain',
                                target_name=target)
-        asset.access_control_list.append(user)
+        asset.grant_user(user)
         db.session.add(asset)
 
         return asset
@@ -1320,6 +1320,7 @@ def register_scheduling_tasks(celery):
                                                filename=str(new_name),
                                                mimetype='text/plain',
                                                target_name=target)
+                    # TODO: find a way to perform a deep copy without exposing implementation details
                     new_asset.access_control_list = old_asset.access_control_list
                     new_asset.access_control_roles = old_asset.access_control_roles
                     db.session.add(new_asset)

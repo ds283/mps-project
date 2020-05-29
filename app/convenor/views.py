@@ -7712,32 +7712,23 @@ def upload_period_attachment(pid):
             attachment = PeriodAttachment(parent_id=record.id,
                                           attachment_id=asset.id,
                                           publish_to_students=form.publish_to_students.data,
-                                          include_marking_emails=form.include_marking_emails.data,
+                                          include_marker_emails=form.include_markier_emails.data,
+                                          include_supervisor_emails=form.inclue_supervisor_emails.data,
                                           description=form.description.data)
 
             # uploading user has access
-            asset.access_control_list.append(current_user)
+            asset.grant_user(current_user)
 
             # project convenor has access
-            if pclass.convenor is not None and pclass.convenor.user not in asset.access_control_list:
-                asset.access_control_list.append(pclass.convenor.user)
+            # 'office', 'convenor', 'moderator', 'exam_board' and 'external_examiner' roles all have access
+            asset.grant_roles(['office', 'convenor', 'moderator', 'exam_board', 'external_examiner'])
 
             # if available to students, any student can download
             if form.publish_to_students.data:
-                student_role = db.session.query(Role).filter_by(name='student').first()
-                if student_role and student_role not in asset.access_control_roles:
-                    asset.access_control_roles.append(student_role)
+                asset.grant_role('student')
 
-            if form.include_marking_emails:
-                faculty_role = db.session.query(Role).filter_by(name='faculty').first()
-                office_role = db.session.query(Role).filter_by(name='office').first()
-                if faculty_role and faculty_role not in asset.access_control_roles:
-                    asset.access_control_roles.append(faculty_role)
-                if office_role and office_role not in asset.access_control_roles:
-                    asset.access_control_roles.append(office_role)
-
-            # TODO: in future, possible add 'moderator', 'exam_board' or 'external_examiner'
-            #  roles which should have access to all attached documents
+            if form.include_marker_emails.data or form.include_supervisor_emails.data:
+                asset.grant_role('faculty')
 
             try:
                 db.session.add(attachment)
@@ -7786,33 +7777,22 @@ def edit_period_attachment(aid):
 
     if form.validate_on_submit():
         record.publish_to_students = form.publish_to_students.data
-        record.include_marking_emails = form.include_marking_emails.data
+        record.include_marker_emails = form.include_marker_emails.data
+        record.include_supervisor_emails = form.include_supervisor_emails.data
         record.description = form.description.data
-
-        student_role = db.session.query(Role).filter_by(name='student').first()
-        faculty_role = db.session.query(Role).filter_by(name='faculty').first()
-        office_role = db.session.query(Role).filter_by(name='office').first()
 
         if asset is not None:
             asset.license = form.license.data
 
             if form.publish_to_students.data:
-                if student_role not in asset.access_control_roles:
-                    asset.access_control_roles.append(student_role)
+                asset.grant_role('student')
             else:
-                if student_role in asset.access_control_roles:
-                    asset.access_control_roles.remove(student_role)
+                asset.revoke_role('student')
 
-            if form.include_marking_emails:
-                if faculty_role not in asset.access_control_roles:
-                    asset.access_control_roles.append(faculty_role)
-                if office_role not in asset.access_control_roles:
-                    asset.access_control_roles.append(office_role)
-            else:
-                if faculty_role in asset.access_control_roles:
-                    asset.access_control_roles.remove(faculty_role)
-                if office_role in asset.access_control_roles:
-                    asset.access_control_roles.remove(office_role)
+            if form.include_marker_emails.data or form.include_supervisor_emails.data:
+                asset.grant_roles(['faculty', 'office'])
+            # else:
+            #     asset.revoke_roles(['faculty', 'office'])
 
         try:
             db.session.commit()

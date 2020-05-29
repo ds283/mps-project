@@ -36,8 +36,11 @@
                 {% if attachment.publish_to_students %}
                     <span class="label label-success"><i class="fa fa-check"></i> Publish to students</span>
                 {% endif %}
-                {% if attachment.include_marking_emails %}
-                    <span class="label label-success"><i class="fa fa-check"></i> Include in marking emails</span>
+                {% if attachment.include_marker_emails %}
+                    <span class="label label-success"><i class="fa fa-check"></i> Include in notifications to marker</span>
+                {% endif %}
+                {% if attachment.include_supervisor_emails %}
+                    <span class="label label-success"><i class="fa fa-check"></i> Include in notifications to supervisor</span>
                 {% endif %}
             </div>
             <div>

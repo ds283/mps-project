@@ -530,7 +530,7 @@ def batch_create_users():
                 asset = TemporaryAsset(timestamp=now,
                                        expiry=now + timedelta(days=1),
                                        filename=str(filename))
-                asset.access_control_list.append(current_user)
+                asset.grant_user(current_user)
 
                 tk_name = "Process batch user list '{name}'".format(name=incoming_filename)
                 tk_description = 'Batch create students from a CSV file'

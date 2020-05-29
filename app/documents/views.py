@@ -191,27 +191,22 @@ def upload_submitter_report(sid):
             record.report_id = asset.id
 
             # uploading user has access
-            asset.access_control_list.append(current_user)
+            asset.grant_user(current_user)
 
             # project supervisor has access
-            if record.project is not None and record.project.owner is not None and \
-                    record.project.owner.user not in asset.access_control_list:
-                asset.access_control_list.append(record.project.owner.user)
+            if record.project is not None and record.project.owner is not None:
+                asset.grant_user(record.project.owner.user)
 
             # project examiner has access
-            if record.marker is not None and record.marker.user not in asset.access_control_list:
-                asset.access_control_list.append(record.marker.user)
+            if record.marker is not None:
+                asset.grant_user(record.marker.user)
 
             # student can download their own report
-            if record.owner.student.user not in asset.access_control_list:
-                asset.access_control_list.append(record.owner.student.user)
+            if record.owner is not None and record.owner.student is not None:
+                asset.grant_user(record.owner.student.user)
 
             # set up list of roles that should have access, if they exist
-            roles = ['office', 'convenor', 'moderator', 'exam_board', 'external_examiner']
-            for r in roles:
-                role: Role = db.session.query(Role).filter_by(name=r).first()
-                if role and role not in asset.access_control_roles:
-                    asset.access_control_roles.append(role)
+            asset.grant_roles(['office', 'convenor', 'moderator', 'exam_board', 'external_examiner'])
 
             try:
                 db.session.commit()
@@ -460,25 +455,20 @@ def upload_submitter_attachment(sid):
                                               description=form.description.data)
 
             # uploading user has access
-            asset.access_control_list.append(current_user)
+            asset.grant_user(current_user)
 
             # project supervisor has access
-            if record.project is not None and record.project.owner is not None and \
-                    record.project.owner.user not in asset.access_control_list:
-                asset.access_control_list.append(record.project.owner.user)
+            if record.project is not None and record.project.owner is not None:
+                asset.grant_user(record.project.owner.user)
 
             # project examiner has access
-            if record.marker is not None and record.marker.user not in asset.access_control_list:
-                asset.access_control_list.append(record.marker.user)
+            if record.marker is not None:
+                asset.grant_user(record.marker.user)
 
-            # students can't ordinarily download attachments unless explicit permission is given
+            # students can't ordinarily download attachments unless permission is given
 
             # set up list of roles that should have access, if they exist
-            roles = ['office', 'convenor', 'moderator', 'exam_board', 'external_examiner']
-            for r in roles:
-                role: Role = db.session.query(Role).filter_by(name=r).first()
-                if role and role not in asset.access_control_roles:
-                    asset.access_control_roles.append(role)
+            asset.grant_roles(['office', 'convenor', 'moderator', 'exam_board', 'external_examiner'])
 
             try:
                 db.session.add(attachment)
@@ -637,10 +627,8 @@ def add_user_acl(user_id, attach_type, attach_id):
         return redirect(redirect_url())
 
     try:
-        if user not in asset.access_control_list:
-            asset.access_control_list.append(user)
-
-            db.session.commit()
+        asset.grant_user(user)
+        db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -666,9 +654,7 @@ def remove_user_acl(user_id, attach_type, attach_id):
         return redirect(redirect_url())
 
     try:
-        while user in asset.access_control_list:
-            asset.access_control_list.remove(user)
-
+        asset.revoke_user(user)
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -695,10 +681,8 @@ def add_role_acl(role_id, attach_type, attach_id):
         return redirect(redirect_url())
 
     try:
-        if role not in asset.access_control_roles:
-            asset.access_control_roles.append(role)
-
-            db.session.commit()
+        asset.grant_role(role)
+        db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -724,9 +708,7 @@ def remove_role_acl(role_id, attach_type, attach_id):
         return redirect(redirect_url())
 
     try:
-        while role in asset.access_control_roles:
-            asset.access_control_roles.remove(role)
-
+        asset.revoke_role(role)
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()

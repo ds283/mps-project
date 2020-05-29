@@ -224,7 +224,6 @@ def register_marking_tasks(celery):
 
         asset_folder: Path = Path(current_app.config.get('ASSETS_FOLDER'))
         submitted_subfolder: Path = Path(current_app.config.get('ASSETS_SUBMITTED_SUBFOLDER'))
-        periods_subfolder: Path = Path(current_app.config.get('ASSETS_PERIODS_SUBFOLDER'))
 
         # attach report or generate link for download later
         report_abs_path = asset_folder / submitted_subfolder / report_asset.filename
@@ -238,7 +237,8 @@ def register_marking_tasks(celery):
             if attachment.include_marking_emails:
                 asset: SubmittedAsset = attachment.attachment
 
-                attachment_abs_path = asset_folder / periods_subfolder / asset.filename
+                # TODO: consider rationalizing how filenames work with assets. Currently it's a bit inconsistent.
+                attachment_abs_path = asset_folder / submitted_subfolder / asset.filename
                 attached_size = _attach_asset(msg, asset, attached_size, attached_documents, attachment_abs_path,
                                               max_attachment=max_attachment,
                                               description=attachment.description)

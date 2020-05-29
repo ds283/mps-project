@@ -65,7 +65,7 @@ This email is automated. Please do not reply to it directly, because
 email to the sending address is not monitored.
 
 ATTACHMENT MANIFEST
-{% for attached, manifest_entry, description in attached_documents -%}
+{% for attached, manifest_entry, description in attached_documents %}
 {{ loop.index }}. {{ manifest_entry|wordwrap(70) }}
 {%- if description and description|length > 0 %}
    {{ description|wordwrap(75) }}

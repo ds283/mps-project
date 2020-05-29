@@ -7712,7 +7712,7 @@ def upload_period_attachment(pid):
             attachment = PeriodAttachment(parent_id=record.id,
                                           attachment_id=asset.id,
                                           publish_to_students=form.publish_to_students.data,
-                                          include_marker_emails=form.include_markier_emails.data,
+                                          include_marker_emails=form.include_marker_emails.data,
                                           include_supervisor_emails=form.inclue_supervisor_emails.data,
                                           description=form.description.data)
 

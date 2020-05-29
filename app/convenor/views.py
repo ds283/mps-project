@@ -6045,8 +6045,8 @@ def close_feedback(id):
 @roles_accepted('faculty', 'admin', 'root')
 def edit_submission_record(pid):
     # pid is a SubmissionPeriodRecord
-    record = SubmissionPeriodRecord.query.get_or_404(pid)
-    config = record.config
+    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+    config: ProjectClassConfig = record.config
 
     # reject is user is not a convenor for the associated project class
     if not validate_is_convenor(config.project_class):
@@ -6077,11 +6077,17 @@ def edit_submission_record(pid):
     edit_form = EditSubmissionRecordForm(obj=record)
 
     if edit_form.validate_on_submit():
+        record.start_date = edit_form.start_date.data
+
         record.has_presentation = edit_form.has_presentation.data
+
+        record.collect_presentation_feedback = edit_form.collect_presentation_feedback.data
+        record.collect_project_feedback = edit_form.collect_project_feedback.data
 
         if record.has_presentation:
             record.lecture_capture = edit_form.lecture_capture.data
             record.collect_presentation_feedback = edit_form.collect_presentation_feedback.data
+            record.collect_project_feedback = edit_form.collect_project_feedback.data
             record.number_assessors = edit_form.number_assessors.data
             record.max_group_size = edit_form.max_group_size.data
             record.morning_session = edit_form.morning_session.data

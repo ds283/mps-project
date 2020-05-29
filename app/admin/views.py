@@ -1226,6 +1226,7 @@ def add_pclass():
                                             has_presentation=t.has_presentation,
                                             lecture_capture=t.lecture_capture,
                                             collect_presentation_feedback=t.collect_presentation_feedback,
+                                            collect_project_feedback=t.collect_project_feedback,
                                             number_assessors=t.number_assessors,
                                             max_group_size=t.max_group_size,
                                             morning_session=t.morning_session,
@@ -1484,6 +1485,7 @@ def regenerate_period_records(id):
         c.has_presentation = t.has_presentation
         c.lecture_capture = t.lecture_capture
         c.collect_presentation_feedback = t.collect_presentation_feedback
+        c.collect_project_feedback = t.collect_project_feedback
         c.number_assessors = t.number_assessors
         c.max_group_size = t.max_group_size
         c.morning_session = t.morning_session
@@ -1500,6 +1502,7 @@ def regenerate_period_records(id):
                                         has_presentation=t.has_presentation,
                                         lecture_capture=t.lecture_capture,
                                         collect_presentation_feedback=t.collect_presentation_feedback,
+                                        collect_project_feedback=t.collect_project_feedback,
                                         number_assessors=t.number_assessors,
                                         max_group_size=t.max_group_size,
                                         morning_session=t.morning_session,
@@ -1583,6 +1586,7 @@ def add_period(id):
                                               lecture_capture=form.lecture_capture.data,
                                               number_assessors=form.number_assessors.data,
                                               collect_presentation_feedback=form.collect_presentation_feedback.data,
+                                              collect_project_feedback=form.collect_project_feedback.data,
                                               max_group_size=form.max_group_size.data,
                                               morning_session=form.morning_session.data,
                                               afternoon_session=form.afternoon_session.data,
@@ -1599,6 +1603,7 @@ def add_period(id):
                                               lecture_capture=False,
                                               number_assessors=None,
                                               collect_presentation_feedback=False,
+                                              collect_project_feedback=True,
                                               max_group_size=None,
                                               morning_session=None,
                                               afternoon_session=None,
@@ -1637,6 +1642,7 @@ def edit_period(id):
         if data.has_presentation:
             data.lecture_capture = form.lecture_capture.data
             data.collect_presentation_feedback = form.collect_presentation_feedback.data
+            data.collect_project_feedback = form.collect_project_feedback.data
             data.number_assessors = form.number_assessors.data
             data.max_group_size = form.max_group_size.data
             data.morning_session = form.morning_session.data
@@ -1646,6 +1652,7 @@ def edit_period(id):
         else:
             data.lecture_capture = False
             data.collect_presentation_feedback = False
+            data.collect_project_feedback = True
             data.number_assessors = None
             data.max_group_size = None
             data.morning_session = None

@@ -147,3 +147,5 @@ class SubmissionPeriodCommonMixin():
                                           Length(max=DEFAULT_STRING_LENGTH)])
 
     collect_presentation_feedback = BooleanField('Collect presentation feedback online')
+
+    collect_project_feedback = BooleanField('Collect project feedback online')

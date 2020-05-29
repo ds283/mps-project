@@ -3399,6 +3399,7 @@ class ProjectClass(db.Model, ColouredLabelMixin):
                                                   start_date=None,
                                                   has_presentation=self.uses_presentations,
                                                   collect_presentation_feedback=True,
+                                                  collect_project_feedback=True,
                                                   creator_id=current_user.id,
                                                   creation_timestamp=datetime.now())
                 self.periods = [data]
@@ -3528,6 +3529,9 @@ class SubmissionPeriodDefinition(db.Model):
 
     # use platform to collect presentation feedback?
     collect_presentation_feedback = db.Column(db.Boolean(), default=True)
+
+    # use platform to collect project feedback online?
+    collect_project_feedback = db.Column(db.Boolean(), default=True)
 
 
     # EDITING METADATA
@@ -4109,6 +4113,7 @@ class ProjectClassConfig(db.Model):
                                             has_presentation=template.has_presentation,
                                             lecture_capture=template.lecture_capture,
                                             collect_presentation_feedback=template.collect_presentation_feedback,
+                                            collect_project_feedback=template.collect_project_feedback,
                                             number_assessors=template.number_assessors,
                                             max_group_size=template.max_group_size,
                                             morning_session=template.morning_session,
@@ -4385,8 +4390,14 @@ class SubmissionPeriodRecord(db.Model):
     # talk format
     talk_format = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
+
+    # FEEDBACK COLLECTION
+
     # use platform to collect presentation feedback?
     collect_presentation_feedback = db.Column(db.Boolean(), default=True)
+
+    # use platform to collect project feedback?
+    collect_project_feedback = db.Column(db.Boolean(), default=True)
 
 
     # LIFECYCLE DATA

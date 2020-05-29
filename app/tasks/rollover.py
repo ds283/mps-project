@@ -462,6 +462,7 @@ def register_rollover_tasks(celery):
                                                 has_presentation=t.has_presentation,
                                                 lecture_capture=t.lecture_capture,
                                                 collect_presentation_feedback=t.collect_presentation_feedback,
+                                                collect_project_feedback=t.collect_project_feedback,
                                                 number_assessors=t.number_assessors,
                                                 max_group_size=t.max_group_size,
                                                 morning_session=t.morning_session,

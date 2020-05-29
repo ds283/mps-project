@@ -53,7 +53,7 @@ def register_send_log_email(celery, mail):
 
 
     @celery.task(bind=True, serializer='pickle', default_retry_delay=10)
-    def log_email(self, task_id, msg):
+    def log_email(self, task_id, msg: Message):
         progress_update(task_id, TaskRecord.RUNNING, 80, "Logging email in database...", autocommit=True)
 
         # don't log if we are not on a live email platform
@@ -103,7 +103,7 @@ def register_send_log_email(celery, mail):
 
 
     @celery.task(bind=True, serializer='pickle')
-    def send_log_email(self, task_id, msg):
+    def send_log_email(self, task_id, msg: Message):
         progress_update(task_id, TaskRecord.RUNNING, 0, "Preparing to send email...", autocommit=True)
 
         # only send email if the EMAIL_IS_LIVE key is set in app configuration

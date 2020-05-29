@@ -169,7 +169,8 @@ def register_marking_tasks(celery):
                                                 '{r}'.format(r=', '.join(msg.recipients)))
 
             # set up a task to email the supervisor
-            taskchain = send_log_email.s(task_id, msg) | mark_supervisor_sent.s(record_id, test_email is None)
+            taskchain = chain(send_log_email.s(task_id, msg),
+                              mark_supervisor_sent.s(record_id, test_email is None)).set(serializer='pickle')
             tasks.append(taskchain)
 
         if not record.email_to_marker and marker is not None:
@@ -201,11 +202,12 @@ def register_marking_tasks(celery):
                                     description='Send examiner marking request to '
                                                 '{r}'.format(r=', '.join(msg.recipients)))
 
-            taskchain = send_log_email.s(task_id, msg) | mark_marker_sent.s(record_id, test_email is None)
+            taskchain = chain(send_log_email.s(task_id, msg),
+                              mark_marker_sent.s(record_id, test_email is None)).set(serializer='pickle')
             tasks.append(taskchain)
 
         if len(tasks) > 0:
-            return self.replace(group(tasks))
+            return self.replace(group(tasks).set(serializer='pickle'))
 
         return None
 

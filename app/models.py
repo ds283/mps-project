@@ -7909,9 +7909,6 @@ class PeriodAttachment(db.Model):
     # publish to students
     publish_to_students = db.Column(db.Boolean(), default=False)
 
-    # include in marking emails
-    include_marking_emails = db.Column(db.Boolean(), default=False)
-
     # include in marking notification emails sent to examiners?
     include_marker_emails = db.Column(db.Boolean(), default=False)
 

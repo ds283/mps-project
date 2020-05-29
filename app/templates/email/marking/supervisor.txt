@@ -29,7 +29,7 @@ other good report.
 The submitted report is attached to this email. Alternatively, you can
 download the report from your dashboard on https://mpsprojects.co.uk.
 The convenor has requested that marking and feedback be completed by
-{{ period.feedback_deadline.strftime("%a %d %b %Y") }}.
+{{ deadline.strftime("%a %d %b %Y") }}.
 
 When you have formed your opinion of the report, please complete
 the attached marksheet. Please do not forget that the exam board requires
@@ -62,17 +62,15 @@ This email is automated. Please do not reply to it directly, because
 email to the sending address is not monitored.
 
 ATTACHMENT MANIFEST
-1. {{ report_filename }}
-   submitted report
-{%- set ns = namespace(count=2) %}
-{% for attachment in period.attachments -%}
-{%- if attachment.include_marking_emails -%}
-{{ ns.count }}. {{ attachment.attachment.target_name if attachment.attachment.target_name else attachment.attachment.filename }}
-{%- if attachment.description and attachment.description|length > 0 %}
-   {{ attachment.description|wordwrap(75) }}
-{% endif -%}
-{%- set ns.count = ns.count + 1 -%}
+{% for attached, manifest_entry, description in attached_documents -%}
+{{ loop.index }}. {{ manifest_entry|wordwrap(70) }}
+{%- if description and description|length > 0 %}
+   {{ description|wordwrap(75) }}
+{%- endif -%}
+{%- if not attached %}
+   This document is too large to include as an attachment.
+   Please download it using the link provided.
 {%- endif %}
 {%- else -%}
-<No documents were supplied by the project convenor>
-{%- endfor %}
+<No documents attached>
+{% endfor -%}

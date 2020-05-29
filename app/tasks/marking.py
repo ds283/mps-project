@@ -16,19 +16,21 @@ from celery import group, chain
 from celery.exceptions import Ignore
 
 from ..database import db
-from ..models import SubmissionPeriodRecord, SubmissionRecord, User
+from ..models import SubmissionPeriodRecord, SubmissionRecord, User, SubmittedAsset, ProjectClassConfig, \
+    ProjectClass, FacultyData, SubmittingStudent, StudentData, PeriodAttachment
 
 from ..task_queue import register_task
 
 from pathlib import Path
+from dateutil import parser
 
 
 def register_marking_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_marking_emails(self, record_id, cc_convenor, max_attachment, test_email, convenor_id):
+    def send_marking_emails(self, record_id, cc_convenor, max_attachment, test_email, deadline, convenor_id):
         try:
-            record = db.session.query(SubmissionPeriodRecord).filter_by(id=record_id).first()
+            record: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -37,7 +39,16 @@ def register_marking_tasks(celery):
             self.update_state('FAILURE', meta='Could not load SubmissionPeriodRecord from database')
             raise Ignore()
 
-        email_group = group(dispatch_emails.s(s.id, cc_convenor) for s in record.submissions) | notify_dispatch.s(convenor_id)
+        print('-- Send marking emails for project class "{proj}", submission period '
+              '"{period}"'.format(proj=record.config.name, period=record.display_name))
+        print('-- configuration: CC convenor = {cc}, max attachment '
+              'total = {max} Mb'.format(cc=cc_convenor, max=max_attachment))
+        if test_email is not None:
+            print('-- working in test mode: emails being sent to sink={email}'.format(email=test_email))
+        print('-- supplied deadline is {deadline}'.format(deadline=parser.parse(deadline).date()))
+
+        email_group = group(dispatch_emails.s(s.id, cc_convenor, max_attachment, test_email, deadline)
+                            for s in record.submissions) | notify_dispatch.s(convenor_id)
 
         raise self.replace(email_group)
 
@@ -91,9 +102,9 @@ def register_marking_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def dispatch_emails(self, record_id, cc_convenor):
+    def dispatch_emails(self, record_id, cc_convenor, max_attachment, test_email, deadline):
         try:
-            record = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -108,83 +119,89 @@ def register_marking_tasks(celery):
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
 
-        asset_folder = Path(current_app.config.get('ASSETS_FOLDER'))
-        submitted_subfolder = Path(current_app.config.get('ASSETS_SUBMITTED_SUBFOLDER'))
-        periods_subfolder = Path(current_app.config.get('ASSETS_PERIODS_SUBFOLDER'))
+        asset: SubmittedAsset = record.report
+        period: SubmissionPeriodRecord = record.period
+        config: ProjectClassConfig = period.config
+        pclass: ProjectClass = config.project_class
+        supervisor: FacultyData = record.project.owner
+        marker: FacultyData = record.marker
+        submitter: SubmittingStudent = record.owner
+        student: StudentData = submitter.student
 
-        asset = record.report
-        period = record.period
-        config = period.config
-        pclass = config.project_class
-        supervisor = record.project.owner
-        marker = record.marker
-        submitter = record.owner
-        student = submitter.student
-
-        filename_path = Path(asset.filename)
-        extension = filename_path.suffix.lower()
-
-        supervisor_filename = \
-            Path('{year}_{abbv}_{last}{first}_candidate_{number}'.format(year=config.year, abbv=pclass.abbreviation,
-                                                                         last=student.user.last_name,
-                                                                         first=student.user.first_name,
-                                                                         number=student.exam_number)) \
-                .with_suffix(extension)
-
-        marker_filename = \
-            Path('{year}_{abbv}_candidate_{number}'.format(year=config.year, abbv=pclass.abbreviation,
-                                                           number=student.exam_number)).with_suffix(extension)
-
-        report_path = asset_folder / submitted_subfolder / asset.filename
+        filename_path: Path = Path(asset.filename)
+        extension: str = filename_path.suffix.lower()
 
         tasks = []
 
+        deadline = parser.parse(deadline).date()
+
+        # check whether we need to email the supervisor
         if not record.email_to_supervisor and supervisor is not None:
+            print('-- preparing email to supervisor')
+
+            filename: Path = \
+                Path('{year}_{abbv}_{last}{first}_candidate_{number}'.format(year=config.year, abbv=pclass.abbreviation,
+                                                                             last=student.user.last_name,
+                                                                             first=student.user.first_name,
+                                                                             number=student.exam_number)) \
+                    .with_suffix(extension)
+            print('-- attachment filename = "{path}"'.format(path=str(filename)))
+
             msg = Message(subject='IMPORTANT: {abbv} project marking: {stu}'.format(abbv=pclass.abbreviation,
                                                                                     stu=student.user.name),
                           sender=current_app.config['MAIL_DEFAULT_SENDER'],
                           reply_to=pclass.convenor_email,
-                          recipients=[supervisor.user.email])
+                          recipients=[test_email if test_email is not None else supervisor.user.email])
 
             if cc_convenor:
                 msg.cc([config.convenor_email])
 
+            attached_documents = _attach_documents(msg, record, filename, max_attachment)
+
             msg.body = render_template('email/marking/supervisor.txt', config=config, pclass=pclass,
                                        period=period, marker=marker, supervisor=supervisor, submitter=submitter,
                                        project=record.project, student=student, record=record,
-                                       report_filename=str(supervisor_filename))
-
-            _attach_document(msg, asset, asset_folder, record, report_path, periods_subfolder, supervisor_filename)
+                                       deadline=deadline, attached_documents=attached_documents)
 
             # register a new task in the database
             task_id = register_task(msg.subject,
                                     description='Send supervisor marking request to '
                                                 '{r}'.format(r=', '.join(msg.recipients)))
 
-            taskchain = chain(send_log_email.s(task_id, msg), mark_supervisor_sent.s(record_id))
+            # set up a task to email the supervisor
+            taskchain = send_log_email.s(task_id, msg) | mark_supervisor_sent.s(record_id, test_email is None)
             tasks.append(taskchain)
 
         if not record.email_to_marker and marker is not None:
+            print('-- preparing email to marker')
+
+            filename: Path = \
+                Path('{year}_{abbv}_candidate_{number}'.format(year=config.year, abbv=pclass.abbreviation,
+                                                               number=student.exam_number)).with_suffix(extension)
+            print('-- attachment filename = "{path}"'.format(path=str(filename)))
+
             msg = Message(subject='IMPORTANT: {abbv} project marking: '
                                   'candidate {number}'.format(abbv=pclass.abbreviation, number=student.exam_number),
                           sender=current_app.config['MAIL_DEFAULT_SENDER'],
                           reply_to=pclass.convenor_email,
-                          recipients=[marker.user.email],
-                          cc=[config.convenor_email])
+                          recipients=[test_email if test_email is not None else marker.user.email])
+
+            if cc_convenor:
+                msg.cc([config.convenor_email])
+
+            attached_documents = _attach_documents(msg, record, filename, max_attachment)
 
             msg.body = render_template('email/marking/marker.txt', config=config, pclass=pclass,
                                        period=period, marker=marker, supervisor=supervisor, submitter=submitter,
                                        project=record.project, student=student, record=record,
-                                       report_filename=str(marker_filename))
-
-            _attach_document(msg, asset, asset_folder, record, report_path, periods_subfolder, marker_filename)
+                                       deadline=deadline, attached_documents=attached_documents)
 
             # register a new task in the database
             task_id = register_task(msg.subject,
                                     description='Send examiner marking request to '
                                                 '{r}'.format(r=', '.join(msg.recipients)))
 
-            taskchain = chain(send_log_email.s(task_id, msg), mark_marker_sent.s(record_id))
+            taskchain = send_log_email.s(task_id, msg) | mark_marker_sent.s(record_id, test_email is None)
             tasks.append(taskchain)
 
         if len(tasks) > 0:
@@ -193,26 +210,80 @@ def register_marking_tasks(celery):
         return None
 
 
-    def _attach_document(msg, asset, asset_folder, record, report_path, periods_subfolder, report_filename):
-        # attach report
-        with open(report_path, 'rb') as fd:
-            msg.attach(filename=str(report_filename), content_type=asset.mimetype, data=fd.read())
+    def _attach_documents(msg: Message, record: SubmissionRecord, report_filename: Path, max_attachment: int):
+        # track cumulative size of added assets, packed on a 'first-come, first-served' system
+        attached_size = 0
 
-        # attach other documents provided by project convenor
-        for attachment in record.period.attachments:    # attachment: PeriodAttachment
+        # track attached documents
+        attached_documents = []
+
+        # extract location of report from SubmissionRecord; we can rely on record.report not being None
+        report_asset: SubmittedAsset = record.report
+        if report_asset is None:
+            raise RuntimeError('_attach_documents() called with a null report')
+
+        asset_folder: Path = Path(current_app.config.get('ASSETS_FOLDER'))
+        submitted_subfolder: Path = Path(current_app.config.get('ASSETS_SUBMITTED_SUBFOLDER'))
+        periods_subfolder: Path = Path(current_app.config.get('ASSETS_PERIODS_SUBFOLDER'))
+
+        # attach report or generate link for download later
+        report_abs_path = asset_folder / submitted_subfolder / report_asset.filename
+        attached_size = _attach_asset(msg, report_asset, attached_size, attached_documents, report_abs_path,
+                                      filename=report_filename, max_attachment=max_attachment,
+                                      description="student's submitted report")
+
+        # attach any other documents provided by the project convenor
+        for attachment in record.period.attachments:
+            attachment: PeriodAttachment
             if attachment.include_marking_emails:
-                asset_path = asset_folder / periods_subfolder / attachment.attachment.filename
-                with open(asset_path, 'rb') as fd:
-                    msg.attach(
-                        filename=attachment.attachment.target_name
-                        if attachment.attachment.target_name else attachment.attachment.filename,
-                        content_type=attachment.attachment.mimetype, data=fd.read())
+                asset: SubmittedAsset = attachment.attachment
+
+                attachment_abs_path = asset_folder / periods_subfolder / asset.filename
+                attached_size = _attach_asset(msg, asset, attached_size, attached_documents, attachment_abs_path,
+                                              max_attachment=max_attachment,
+                                              description=attachment.description)
+
+        return attached_documents
+
+
+    def _attach_asset(msg: Message, asset: SubmittedAsset, current_size: int, attached_documents,
+                      asset_abs_path: Path, filename=None, max_attachment=None, description=None):
+        if not asset_abs_path.exists():
+            raise RuntimeError('_attach_documents() could not find asset at absolute path '
+                               '"{path}"'.format(path=asset_abs_path))
+        if not asset_abs_path.is_file():
+            raise RuntimeError('_attach_documents() detected that asset at absolute path '
+                               '"{path}" is not an ordinary file'.format(path=asset_abs_path))
+
+        # get size of file to be attached, in bytes
+        asset_size = asset_abs_path.stat().st_size
+
+        # if attachment is too large, generate a link instead
+        if max_attachment is not None \
+                and float(current_size + asset_size)/(1024*1024) > max_attachment:
+            link = 'https://mpsprojects.co.uk/admin/download_submitted_asset/{asset_id}'.format(asset_id=asset.id)
+            attached_documents.append((False, link, description))
+
+        # otherwise, perform the attachment
+        else:
+            attached_name = str(filename) if filename is not None else \
+                str(asset.target_name) if asset.target_name is not None else \
+                    str(asset.filename)
+
+            with asset_abs_path.open(mode='rb') as f:
+                msg.attach(filename=attached_name, content_type=asset.mimetype, data=f.read())
+
+            attached_documents.append((True, attached_name, description))
+
+            current_size += asset_size
+
+        return current_size
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def mark_supervisor_sent(self, result_data, record_id):
+    def mark_supervisor_sent(self, result_data, test, record_id):
         try:
-            record = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -221,7 +292,7 @@ def register_marking_tasks(celery):
             self.update_state('FAILURE', meta='Could not load SubmissionRecord from database')
             raise Ignore()
 
-        if not record.email_to_supervisor:
+        if not test and not record.email_to_supervisor:
             record.email_to_supervisor = True
 
             try:
@@ -234,9 +305,9 @@ def register_marking_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def mark_marker_sent(self, result_data, record_id):
+    def mark_marker_sent(self, result_data, test, record_id):
         try:
-            record = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -245,7 +316,7 @@ def register_marking_tasks(celery):
             self.update_state('FAILURE', meta='Could not load SubmissionRecord from database')
             raise Ignore()
 
-        if not record.email_to_marker:
+        if not test and not record.email_to_marker:
             record.email_to_marker = True
 
             try:

@@ -100,4 +100,4 @@ def register_send_log_email(celery, mail):
             raise self.replace(seq)
 
         else:
-            print(msg)
+            print(msg.as_string())

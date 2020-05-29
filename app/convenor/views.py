@@ -5729,9 +5729,9 @@ def open_feedback(id):
         url = redirect_url()
 
     if feedback_form.is_submitted():
-        if feedback_form.submit_button.data:
+        deadline = feedback_form.feedback_deadline.data
 
-            deadline = feedback_form.feedback_deadline.data
+        if feedback_form.submit_button.data:
 
             if period.feedback_open:
                 # if feedback is already open, nothing to do but change the deadline
@@ -5786,6 +5786,7 @@ def open_feedback(id):
                       'date when the report is available.</p>'.format(proj=config.name)
 
             action_url = url_for('convenor.do_send_notifications', id=id, url=url,
+                                 deadline=deadline.isoformat(),
                                  cc_me=int(feedback_form.cc_me.data),
                                  max_attachment=int(feedback_form.max_attachment.data))
             submit_label = 'Catch up email notifications'
@@ -5795,6 +5796,7 @@ def open_feedback(id):
 
         elif hasattr(feedback_form, 'test_button') and feedback_form.test_button.data:
             return redirect(url_for('convenor.test_notifications', id=id, url=url,
+                                    deadline=deadline.isoformat(),
                                     cc_me=int(feedback_form.cc_me.data),
                                     max_attachment=int(feedback_form.max_attachment.data)))
 
@@ -5833,17 +5835,23 @@ def test_notifications(id):
     if url is None:
         url = url_for('convenor.overview', id=config.pclass_id)
 
+    deadline = request.args.get('deadline', None)
+    if deadline is None:
+        flash('A request to open feedback was ignored because the deadline was not correctly received. '
+              'Please report this issue to an administrator.', 'error')
+        return redirect(url)
+
     form = TestOpenFeedbackForm(request.form)
 
     if form.validate_on_submit():
         test_email = form.target_email.data
 
-        return url_for('convenor.do_send_notifications', id=id, url=url,
-                       cc_me=int(cc_me), max_attachment=int(max_attachment),
-                       test_email=str(test_email))
+        return redirect(url_for('convenor.do_send_notifications', id=id, url=url,
+                                deadline=deadline, cc_me=int(cc_me), max_attachment=int(max_attachment),
+                                test_email=str(test_email)))
 
-    return render_template('convenor/dashboard/test_notifications.html', id=id, url=url,
-                           cc_me=int(cc_me), max_attachment=int(max_attachment),
+    return render_template('convenor/dashboard/test_notifications.html', url=url,
+                           deadline=deadline, cc_me=int(cc_me), max_attachment=int(max_attachment),
                            form=form, config=config)
 
 
@@ -5880,6 +5888,12 @@ def do_send_notifications(id):
     if url is None:
         url = url_for('convenor.overview', id=config.pclass_id)
 
+    deadline = request.args.get('deadline', None)
+    if deadline is None:
+        flash('A request to open feedback was ignored because the deadline was not correctly received. '
+              'Please report this issue to an administrator.', 'error')
+        return redirect(url)
+
     celery = current_app.extensions['celery']
     marking_email = celery.tasks['app.tasks.marking.send_marking_emails']
 
@@ -5893,7 +5907,7 @@ def do_send_notifications(id):
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     seq = chain(init.si(task_id, tk_name),
-                marking_email.si(period.id, cc_me, max_attachment, test_email, current_user.id),
+                marking_email.si(period.id, cc_me, max_attachment, test_email, deadline, current_user.id),
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
@@ -5938,7 +5952,7 @@ def do_open_feedback(id):
               'Please report this issue to an administrator.', 'error')
         return redirect(url)
 
-    deadline = parser.parse(deadline).data()
+    deadline = parser.parse(deadline).date()
 
     # set feedback deadline and mark feedback open
     period.is_feedback_open = True
@@ -5978,7 +5992,8 @@ def do_open_feedback(id):
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     seq = chain(init.si(task_id, tk_name),
-                marking_email.si(period.id, cc_me, max_attachment, None, current_user.id),
+                marking_email.si(period.id, cc_me, max_attachment, None, deadline.isoformat(),
+                                 current_user.id),
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 

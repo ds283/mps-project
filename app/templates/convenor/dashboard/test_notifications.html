@@ -3,7 +3,7 @@
 {% extends "security/index.html" %}
 
 {% block title %}
-    Tset catch-up of email notifications for {{ config.name }}
+    Test catch-up of email notifications for {{ config.name }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -15,8 +15,8 @@
                     Test catch-up of email notifications for <strong>{{ config.name }}</strong>
                 </div>
                 <div class="panel-body">
-                    <form action="{{ url_for('convenor.test_notifications', id=id, url=url,
-                            cc_me=cc_me, max_attachment=max_attachment) }}" methods="POST" name="test_notify_form">
+                    <form action="{{ url_for('convenor.test_notifications', id=config.id, url=url, deadline=deadline,
+                            cc_me=cc_me, max_attachment=max_attachment) }}" method="POST" name="test_notify_form">
                         {{ form.hidden_tag() }}
                         <div class="row vertical-bottom">
                             <div class="col-xs-12">

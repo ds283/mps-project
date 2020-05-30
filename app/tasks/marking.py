@@ -11,6 +11,7 @@
 from flask import current_app, render_template
 from flask_mail import Message
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug import url_quote
 
 from celery import group, chain
 from celery.exceptions import Ignore
@@ -170,7 +171,7 @@ def register_marking_tasks(celery):
 
             # set up a task to email the supervisor
             taskchain = chain(send_log_email.s(task_id, msg),
-                              mark_supervisor_sent.s(record_id, test_email is None)).set(serializer='pickle')
+                              mark_supervisor_sent.s(record_id, test_email is not None)).set(serializer='pickle')
             tasks.append(taskchain)
 
         if not record.email_to_marker and marker is not None:
@@ -203,7 +204,7 @@ def register_marking_tasks(celery):
                                                 '{r}'.format(r=', '.join(msg.recipients)))
 
             taskchain = chain(send_log_email.s(task_id, msg),
-                              mark_marker_sent.s(record_id, test_email is None)).set(serializer='pickle')
+                              mark_marker_sent.s(record_id, test_email is not None)).set(serializer='pickle')
             tasks.append(taskchain)
 
         if len(tasks) > 0:
@@ -246,8 +247,7 @@ def register_marking_tasks(celery):
                     # TODO: consider rationalizing how filenames work with assets. Currently it's a bit inconsistent.
                     attachment_abs_path = asset_folder / submitted_subfolder / asset.filename
                     attached_size = _attach_asset(msg, asset, attached_size, attached_documents, attachment_abs_path,
-                                                  max_attachment=max_attachment, description=attachment.description,
-                                                  endpoint='download_period_asset')
+                                                  max_attachment=max_attachment, description=attachment.description)
 
         return attached_documents
 
@@ -271,7 +271,7 @@ def register_marking_tasks(celery):
             if filename is not None:
                 link = 'https://mpsprojects.co.uk/admin/{endpoint}/{asset_id}?filename={fnam}'.format(endpoint=endpoint,
                                                                                                       asset_id=asset.id,
-                                                                                                      fnam=filename)
+                                                                                                      fnam=url_quote(filename))
             else:
                 link = 'https://mpsprojects.co.uk/admin/{endpoint}/{asset_id}'.format(endpoint=endpoint,
                                                                                       asset_id=asset.id)

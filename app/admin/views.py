@@ -7967,7 +7967,7 @@ def download_submitted_asset(asset_id):
 
     filename = request.args.get('filename', None)
 
-    # store download details
+    # log this download
     record = DownloadRecord(asset_id=asset.id,
                             downloader_id=current_user.id,
                             timestamp=datetime.now())
@@ -7986,22 +7986,6 @@ def download_submitted_asset(asset_id):
     abs_path = canonical_submitted_asset_filename(asset.filename, root_folder='ASSETS_SUBMITTED_SUBFOLDER')
     return send_file(abs_path, as_attachment=True,
                      attachment_filename=filename if filename is not None else asset.target_name,
-                     mimetype=asset.mimetype)
-
-
-@admin.route('/download_period_asset/<int:asset_id>')
-@login_required
-def download_period_asset(asset_id):
-    # asset_is is a SubmittedAsset
-    asset = SubmittedAsset.query.get_or_404(asset_id)
-
-    if not asset.has_access(current_user.id):
-        flash('You do not have permissions to download this asset. If you think this is a mistake, please contact '
-              'a system administrator.', 'info')
-        return redirect(redirect_url())
-
-    abs_path = canonical_submitted_asset_filename(asset.filename, root_folder='ASSETS_PERIODS_SUBFOLDER')
-    return send_file(abs_path, as_attachment=True, attachment_filename=asset.target_name,
                      mimetype=asset.mimetype)
 
 

@@ -7687,8 +7687,7 @@ def upload_period_attachment(pid):
 
             subfolder = Path(root_subfolder) / Path(pclass_string) / Path(year_string)
 
-            filename, abs_path = make_submitted_asset_filename(ext=extension, subpath=subfolder,
-                                                               root_folder='ASSETS_PERIODS_SUBFOLDER')
+            filename, abs_path = make_submitted_asset_filename(ext=extension, subpath=subfolder)
             submitted_files.save(attachment_file, folder=str(subfolder), name=str(filename))
 
             # generate asset record

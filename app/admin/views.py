@@ -7965,6 +7965,8 @@ def download_submitted_asset(asset_id):
               'a system administrator.', 'info')
         return redirect(redirect_url())
 
+    filename = request.args.get('filename', None)
+
     # store download details
     record = DownloadRecord(asset_id=asset.id,
                             downloader_id=current_user.id,
@@ -7982,7 +7984,8 @@ def download_submitted_asset(asset_id):
         return redirect(redirect_url())
 
     abs_path = canonical_submitted_asset_filename(asset.filename, root_folder='ASSETS_SUBMITTED_SUBFOLDER')
-    return send_file(abs_path, as_attachment=True, attachment_filename=asset.target_name,
+    return send_file(abs_path, as_attachment=True,
+                     attachment_filename=filename if filename is not None else asset.target_name,
                      mimetype=asset.mimetype)
 
 

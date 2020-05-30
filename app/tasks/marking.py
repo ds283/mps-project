@@ -246,14 +246,15 @@ def register_marking_tasks(celery):
                     # TODO: consider rationalizing how filenames work with assets. Currently it's a bit inconsistent.
                     attachment_abs_path = asset_folder / submitted_subfolder / asset.filename
                     attached_size = _attach_asset(msg, asset, attached_size, attached_documents, attachment_abs_path,
-                                                  max_attachment=max_attachment,
-                                                  description=attachment.description)
+                                                  max_attachment=max_attachment, description=attachment.description,
+                                                  endpoint='download_period_asset')
 
         return attached_documents
 
 
     def _attach_asset(msg: Message, asset: SubmittedAsset, current_size: int, attached_documents,
-                      asset_abs_path: Path, filename=None, max_attachment=None, description=None):
+                      asset_abs_path: Path, filename=None, max_attachment=None, description=None,
+                      endpoint='download_submitted_asset'):
         if not asset_abs_path.exists():
             raise RuntimeError('_attach_documents() could not find asset at absolute path '
                                '"{path}"'.format(path=asset_abs_path))
@@ -267,7 +268,10 @@ def register_marking_tasks(celery):
         # if attachment is too large, generate a link instead
         if max_attachment is not None \
                 and float(current_size + asset_size)/(1024*1024) > max_attachment:
-            link = 'https://mpsprojects.co.uk/admin/download_submitted_asset/{asset_id}'.format(asset_id=asset.id)
+            if filename is not None:
+                link = 'https://mpsprojects.co.uk/admin/{endpoint}}/{asset_id}?filename={fnam}'.format(endpoint=endpoint, asset_id=asset.id, fname=filename)
+            else:
+                link = 'https://mpsprojects.co.uk/admin/{endpoint}/{asset_id}'.format(endpoint=endpoint, asset_id=asset.id)
             attached_documents.append((False, link, description))
 
         # otherwise, perform the attachment

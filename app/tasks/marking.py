@@ -11,7 +11,7 @@
 from flask import current_app, render_template
 from flask_mail import Message
 from sqlalchemy.exc import SQLAlchemyError
-from werkzeug import url_quote
+from werkzeug.urls import url_quote
 
 from celery import group, chain
 from celery.exceptions import Ignore

@@ -48,7 +48,7 @@ def register_send_log_email(celery, mail):
                 SMTPHeloError, SMTPRecipientsRefused, SMTPResponseException, SMTPSenderRefused,
                 SMTPServerDisconnected) as e:
             current_app.logger.info('-- send_mail() task SMTP exception')
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            current_app.logger.exception("SMTP exception", exc_info=e)
             raise self.retry()
 
 

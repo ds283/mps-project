@@ -1641,6 +1641,10 @@ def supervisor_edit_feedback(id):
     if not validate_submission_supervisor(record):
         return redirect(redirect_url())
 
+    if not record.period.collect_project_feedback:
+        flash('Feedback collection has been disabled for this submission period.', 'info')
+        return redirect(redirect_url())
+
     period = record.period
 
     if not period.is_feedback_open:
@@ -1691,6 +1695,10 @@ def marker_edit_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_marker(record):
+        return redirect(redirect_url())
+
+    if not record.period.collect_project_feedback:
+        flash('Feedback collection has been disabled for this submission period.', 'info')
         return redirect(redirect_url())
 
     period = record.period
@@ -1745,6 +1753,10 @@ def supervisor_submit_feedback(id):
     if not validate_submission_supervisor(record):
         return redirect(redirect_url())
 
+    if not record.period.collect_project_feedback:
+        flash('Feedback collection has been disabled for this submission period.', 'info')
+        return redirect(redirect_url())
+
     if record.supervisor_submitted:
         return redirect(redirect_url())
 
@@ -1774,6 +1786,10 @@ def supervisor_unsubmit_feedback(id):
     if not validate_submission_supervisor(record):
         return redirect(redirect_url())
 
+    if not record.period.collect_project_feedback:
+        flash('Feedback collection has been disabled for this submission period.', 'info')
+        return redirect(redirect_url())
+
     if not record.supervisor_submitted:
         return redirect(redirect_url())
 
@@ -1797,6 +1813,10 @@ def marker_submit_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_marker(record):
+        return redirect(redirect_url())
+
+    if not record.period.collect_project_feedback:
+        flash('Feedback collection has been disabled for this submission period.', 'info')
         return redirect(redirect_url())
 
     if record.marker_submitted:
@@ -1826,6 +1846,10 @@ def marker_unsubmit_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_marker(record):
+        return redirect(redirect_url())
+
+    if not record.period.collect_project_feedback:
+        flash('Feedback collection has been disabled for this submission period.', 'info')
         return redirect(redirect_url())
 
     if not record.marker_submitted:

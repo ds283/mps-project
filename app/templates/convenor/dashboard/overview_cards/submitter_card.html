@@ -50,9 +50,23 @@
                     {% elif period.is_feedback_open %}
                         {{ feedback_marking(config, period, feedback_form) }}
                     {% endif %}
+                    <hr class="intro-divider">
+                    <div>
+                        {% if period.collect_project_feedback %}
+                            <span class="label label-primary"><i class="fa fa-check"></i> Collect project feedback</span>
+                        {% else %}
+                            <span class="label label-danger"><i class="fa fa-times"></i> Project feedback disabled</span>
+                        {% endif %}
+                        {% if period.has_presentation %}
+                            <span class="label label-primary"><i class="fa fa-check"></i> Presentation assessment</span>
+                            {% if period.collect_presentation_feedback %}
+                                <span class="label label-primary"><i class="fa fa-check"></i> Collect presentation feedback</span>
+                            {% else %}
+                                <span class="label label-danger"><i class="fa fa-times"></i> Presentation feedback disabled</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
                     {% if period.has_presentation %}
-                        <hr class="intro-divider">
-                        <span class="label label-info">Presentation assessment</span>
                         {% if period.lecture_capture %}
                             <span class="label label-default">Requires lecture capture</span>
                         {% endif %}

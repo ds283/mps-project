@@ -49,17 +49,24 @@
                     <p>Activity for this submission period is now closed.</p>
                 {% else %}
                     {% if period.is_feedback_open %}
-                        {% if not is_sabbatical or not is_exempt %}
+                        {% if period.collect_project_feedback %}
+                            {% if not is_sabbatical or not is_exempt %}
+                                <div class="alert alert-warning">
+                                    Marking and feedback for this submission period is now underway.
+                                    Please enter feedback for each project you supervise or 2nd mark.
+                                </div>
+                                {% if period.feedback_deadline %}
+                                    <p>The project convenor has set a deadline of
+                                        <strong>{{ period.feedback_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
+                                        <strong>{{ period.time_to_feedback_deadline }}</strong> from now.
+                                    </p>
+                                {% endif %}
+                            {% endif %}
+                        {% else %}
                             <div class="alert alert-warning">
                                 Marking and feedback for this submission period is now underway.
-                                Please enter feedback for each project you supervise or 2nd mark.
+                                Please follow the convenor's instructions for each project you supervise or 2nd mark.
                             </div>
-                            {% if period.feedback_deadline %}
-                                <p>The project convenor has set a deadline of
-                                    <strong>{{ period.feedback_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
-                                    <strong>{{ period.time_to_feedback_deadline }}</strong> from now.
-                                </p>
-                            {% endif %}
                         {% endif %}
                     {% else %}
                         {% if period.submission_period > config.submission_period %}
@@ -90,7 +97,7 @@
                 {% endif %}
 
                 {% if period.has_presentation %}
-                    {{ presentation_assignments(period, current_user, pres_sabbatical, pres_exempt, record.presentations_reenroll) }}
+                    {{ presentation_assignments(period, current_user.id, pres_sabbatical, pres_exempt, record.presentations_reenroll) }}
                 {% endif %}
             </div>
         </div>

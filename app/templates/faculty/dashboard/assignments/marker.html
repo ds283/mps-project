@@ -47,14 +47,17 @@
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-right">
                                         <li><a href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ rec.number_attachments }})...</a></li>
-                                        {% if (period.is_feedback_open and not period.closed) or (period.closed and not rec.marker_submitted) %}
-                                            {% if valid %}
-                                                <li><a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> Preview feedback...</a></li>
-                                            {% else %}
-                                                <li><a href="{{ url_for('faculty.marker_edit_feedback', id=rec.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Edit feedback...</a></li>
+                                        {% set state = rec.marker_feedback_state %}
+                                        {% if state > rec.FEEDBACK_NOT_YET %}
+                                            {% if (period.is_feedback_open and not period.closed) or (period.closed and not rec.marker_submitted) %}
+                                                {% if valid %}
+                                                    <li><a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> Preview feedback...</a></li>
+                                                {% else %}
+                                                    <li><a href="{{ url_for('faculty.marker_edit_feedback', id=rec.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Edit feedback...</a></li>
+                                                {% endif %}
+                                            {% elif period.closed %}
+                                                <li><a href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> View feedback...</a></li>
                                             {% endif %}
-                                        {% elif period.closed %}
-                                            <li><a href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> View feedback...</a></li>
                                         {% endif %}
                                     </ul>
                                 </div>

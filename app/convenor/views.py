@@ -6995,6 +6995,10 @@ def supervisor_edit_feedback(id):
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
         return redirect(redirect_url())
 
+    if not record.period.collect_project_feedback:
+        flash('Feedback collection has been disabled for this submission period.', 'info')
+        return redirect(redirect_url())
+
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
         return redirect(redirect_url())
@@ -7036,10 +7040,14 @@ def supervisor_edit_feedback(id):
 @roles_accepted('faculty', 'admin', 'root')
 def marker_edit_feedback(id):
     # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
+        return redirect(redirect_url())
+
+    if not record.period.collect_project_feedback:
+        flash('Feedback collection has been disabled for this submission period.', 'info')
         return redirect(redirect_url())
 
     # check is convenor for the project's class
@@ -7089,6 +7097,10 @@ def supervisor_submit_feedback(id):
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
         return redirect(redirect_url())
 
+    if not record.period.collect_project_feedback:
+        flash('Feedback collection has been disabled for this submission period.', 'info')
+        return redirect(redirect_url())
+
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
         return redirect(redirect_url())
@@ -7123,6 +7135,10 @@ def supervisor_unsubmit_feedback(id):
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
         return redirect(redirect_url())
 
+    if not record.period.collect_project_feedback:
+        flash('Feedback collection has been disabled for this submission period.', 'info')
+        return redirect(redirect_url())
+
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
         return redirect(redirect_url())
@@ -7151,6 +7167,10 @@ def marker_submit_feedback(id):
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
+        return redirect(redirect_url())
+
+    if not record.period.collect_project_feedback:
+        flash('Feedback collection has been disabled for this submission period.', 'info')
         return redirect(redirect_url())
 
     # check is convenor for the project's class
@@ -7185,6 +7205,10 @@ def marker_unsubmit_feedback(id):
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
+        return redirect(redirect_url())
+
+    if not record.period.collect_project_feedback:
+        flash('Feedback collection has been disabled for this submission period.', 'info')
         return redirect(redirect_url())
 
     # check is convenor for the project's class

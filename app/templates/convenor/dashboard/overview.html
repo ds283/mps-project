@@ -40,7 +40,7 @@
                 <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
                 <hr class="intro-divider">
                 <div class="list-group">
-                    <div class="list-group-item">
+                    <div class="list-group-item list-group-item-success">
                         Submission periods:
                         {% for p in config.periods %}
                             <span class="label label-primary">{{ p.display_name|safe }}</span>
@@ -52,11 +52,11 @@
                 <div class="row vertical-align">
                     <div class="col-xs-4">
                         <div class="list-group">
-                            <div class="list-group-item">
+                            <div class="list-group-item list-group-item-info">
                                 Current supervision CATS <span class="badge">{{ config.CATS_supervision }}</span>
                             </div>
                             {% if pclass.CATS_supervision != config.CATS_supervision %}
-                                <div class="list-group-item">
+                                <div class="list-group-item list-group-item-danger">
                                     Updated value <span class="badge">{{ pclass.CATS_supervision }}</span>
                                 </div>
                             {% endif %}
@@ -64,11 +64,11 @@
                     </div>
                     <div class="col-xs-4">
                         <div class="list-group">
-                            <div class="list-group-item">
+                            <div class="list-group-item list-group-item-info">
                                 Current 2nd-marking CATS <span class="badge">{{ config.CATS_marking }}</span>
                             </div>
                             {% if pclass.CATS_marking != config.CATS_marking %}
-                                <div class="list-group-item">
+                                <div class="list-group-item list-group-item-danger">
                                     Updated value <span class="badge">{{ pclass.CATS_marking }}</span>
                                 </div>
                             {% endif %}
@@ -76,11 +76,11 @@
                     </div>
                     <div class="col-xs-4">
                         <div class="list-group">
-                            <div class="list-group-item">
+                            <div class="list-group-item list-group-item-info">
                                 Current presentation CATS <span class="badge">{{ config.CATS_presentation }}</span>
                             </div>
                             {% if pclass.CATS_presentation != config.CATS_presentation %}
-                                <div class="list-group-item">
+                                <div class="list-group-item list-group-item-danger">
                                     Updated value <span class="badge">{{ pclass.CATS_presentation }}</span>
                                 </div>
                             {% endif %}

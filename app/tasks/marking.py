@@ -141,11 +141,8 @@ def register_marking_tasks(celery):
             print('-- preparing email to supervisor')
 
             filename: Path = \
-                Path('{year}_{abbv}_{last}{first}_candidate_{number}'.format(year=config.year, abbv=pclass.abbreviation,
-                                                                             last=student.user.last_name,
-                                                                             first=student.user.first_name,
-                                                                             number=student.exam_number)) \
-                    .with_suffix(extension)
+                Path('{year}_{abbv}_candidate_{number}'.format(year=config.year, abbv=pclass.abbreviation,
+                                                               number=student.exam_number)).with_suffix(extension)
             print('-- attachment filename = "{path}"'.format(path=str(filename)))
 
             msg = Message(subject='IMPORTANT: {abbv} project marking: {stu}'.format(abbv=pclass.abbreviation,

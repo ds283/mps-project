@@ -4683,7 +4683,7 @@ def _demap_project(item_id):
 def update_student_bookmarks():
     data = request.get_json()
 
-    # discard is request is ill-formed
+    # discard if request is ill-formed
     if 'ranking' not in data or 'sid' not in data:
         return jsonify({'status': 'ill_formed'})
 
@@ -4716,6 +4716,7 @@ def update_student_bookmarks():
 
     # update ranking
     for bookmark in sel.bookmarks:
+        bookmark: Bookmark
         bookmark.rank = rmap[bookmark.liveproject.id]
 
     try:
@@ -7713,7 +7714,8 @@ def upload_period_attachment(pid):
                                           publish_to_students=form.publish_to_students.data,
                                           include_marker_emails=form.include_marker_emails.data,
                                           include_supervisor_emails=form.include_supervisor_emails.data,
-                                          description=form.description.data)
+                                          description=form.description.data,
+                                          rank_order=get_count(record.attachments))
 
             # uploading user has access
             asset.grant_user(current_user)
@@ -7808,3 +7810,53 @@ def edit_period_attachment(aid):
 
     return render_template('convenor/documents/edit_period_attachment.html', attachment=record, record=period,
                            asset=asset, form=form, url=url, text=text)
+
+
+def _demap_attachment(item_id):
+    result = parse.parse('PA-{attach_id}', item_id)
+
+    return int(result['attach_id'])
+
+
+@convenor.route('/update_period_attachments', methods=['POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def update_period_attachments():
+    data = request.get_json()
+
+    # discard if request is ill-formed
+    if 'ranking' not in data or 'period_id' not in data:
+        return jsonify({'status': 'ill_formed'})
+
+    ranking = data['ranking']
+    period_id = data['period_id']
+
+    # attach_id is a SubmissionPeriodRecord
+    record: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+
+    if record is None:
+        return jsonify({'status': 'data_missing'})
+
+    if not validate_is_convenor(record.config.project_class, message=False):
+        return jsonify({'status': 'insufficient_privileges'})
+
+    items = map(_demap_attachment, ranking)
+
+    rmap = {}
+    index = 1
+    for p in items:
+        rmap[p] = index
+        index += 1
+
+    # update ranking
+    for attach in record.attachments:
+        attach: PeriodAttachment
+        attach.rank_order = rmap[attach.id]
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        return jsonify({'status': 'database_failure'})
+
+    return jsonify({'status': 'success'})

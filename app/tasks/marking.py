@@ -234,7 +234,7 @@ def register_marking_tasks(celery):
 
         # attach any other documents provided by the project convenor
         if role is not None:
-            for attachment in record.period.attachments:
+            for attachment in record.period.ordered_attachments:
                 attachment: PeriodAttachment
 
                 if (role in ['marker'] and attachment.include_marker_emails) or \

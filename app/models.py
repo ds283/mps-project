@@ -4526,6 +4526,11 @@ class SubmissionPeriodRecord(db.Model):
 
 
     @property
+    def has_attachments(self):
+        return self.attachments.first() is not None
+
+
+    @property
     def number_attachments(self):
         return get_count(self.attachments)
 
@@ -4685,6 +4690,11 @@ class SubmissionPeriodRecord(db.Model):
     @property
     def all_supervisors_assigned(self):
         return self.submissions.filter_by(project_id=None).first() is None
+
+
+    @property
+    def ordered_attachments(self):
+        return self.attachments.order_by(PeriodAttachment.rank_order).all()
 
 
     @property
@@ -7925,6 +7935,9 @@ class PeriodAttachment(db.Model):
 
     # textual description of attachment
     description = db.Column(db.Text())
+
+    # rank order for inclusion in emails
+    rank_order = db.Column(db.Integer())
 
 
 class Bookmark(db.Model):

@@ -28,42 +28,49 @@
                 </div>
             {% endif %}
 
-            {% if record.period.config.uses_supervisor %}
-                {% if record.supervisor_submitted %}
-                    <div class="panel panel-default">
-                        <div class="panel-heading">Feedback from your supervisor on the project and marked report</div>
-                        <div class="panel-body">
-                            <span class="dashboard-subtitle">Positive aspects</span>
-                            {{ record.supervisor_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
-                            <hr class="intro-divider">
-                            <span class="dashboard-subtitle">Negative aspects</span>
-                            {{ record.supervisor_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+            {% if record.period.collect_project_feedback %}
+                {% if record.period.config.uses_supervisor %}
+                    {% if record.supervisor_submitted %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Feedback from your supervisor on the project and marked report</div>
+                            <div class="panel-body">
+                                <span class="dashboard-subtitle">Positive aspects</span>
+                                {{ record.supervisor_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                <hr class="intro-divider">
+                                <span class="dashboard-subtitle">Negative aspects</span>
+                                {{ record.supervisor_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            </div>
                         </div>
-                    </div>
-                {% else %}
-                    <div class="well">
-                        Feedback has not yet been recorded from the project supervisor.
-                    </div>
+                    {% else %}
+                        <div class="well">
+                            Feedback has not yet been recorded from the project supervisor.
+                        </div>
+                    {% endif %}
                 {% endif %}
-            {% endif %}
 
-            {% if record.period.config.uses_marker %}
-                {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
-                    <div class="panel panel-default">
-                        <div class="panel-heading">Feedback from the project marker on your report</div>
-                        <div class="panel-body">
-                            <span class="dashboard-subtitle">Positive aspects</span>
-                            {{ record.marker_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
-                            <hr class="intro-divider">
-                            <span class="dashboard-subtitle">Negative aspects</span>
-                            {{ record.marker_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                {% if record.period.config.uses_marker %}
+                    {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Feedback from the project marker on your report</div>
+                            <div class="panel-body">
+                                <span class="dashboard-subtitle">Positive aspects</span>
+                                {{ record.marker_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                <hr class="intro-divider">
+                                <span class="dashboard-subtitle">Negative aspects</span>
+                                {{ record.marker_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            </div>
                         </div>
-                    </div>
-                {% else %}
-                    <div class="well">
-                        Feedback has not yet been recorded from the project marker.
-                    </div>
+                    {% else %}
+                        <div class="well">
+                            Feedback has not yet been recorded from the project marker.
+                        </div>
+                    {% endif %}
                 {% endif %}
+            {% else %}
+                <div class="panel panel-default">
+                    <div class="panel-heading">Feedback collection was disabled for this submission period</div>
+                    <div class="panel-body">No feedback available.</div>
+                </div>
             {% endif %}
 
             {% if record.period.has_presentation and record.period.collect_presentation_feedback %}

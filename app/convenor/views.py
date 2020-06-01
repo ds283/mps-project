@@ -5956,7 +5956,7 @@ def do_open_feedback(id):
     deadline = parser.parse(deadline).date()
 
     # set feedback deadline and mark feedback open
-    period.is_feedback_open = True
+    period.feedback_open = True
     period.feedback_deadline = deadline
 
     # mark current user as the person who opened feedback, if it is currently unset

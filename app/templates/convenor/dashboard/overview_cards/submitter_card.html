@@ -29,7 +29,7 @@
                 {% endif %}
             </div>
             <div class="panel-body">
-                {% if not period.closed and (period.start_date is none or (period.start_date and period.start_date <= today)) %}
+                {% if not period.closed and not period.is_feedback_open and (period.start_date is none or (period.start_date and period.start_date <= today)) %}
                     {% set validation_messages = period.validate %}
                     {% if validation_messages is not none and validation_messages|length > 0 %}
                         <ul class="list-group">

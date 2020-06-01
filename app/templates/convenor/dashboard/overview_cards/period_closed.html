@@ -21,12 +21,18 @@
         </div>
         <div class="col-xs-5">
             <div class="list-group">
-                <div class="list-group-item">
-                    Supervisor feedback <span class="badge">{{ supv }}/{{ total }}</span>
-                </div>
-                <div class="list-group-item">
-                    Marker feedback <span class="badge">{{ mark }}/{{ total }}</span>
-                </div>
+                {% if period.collect_project_feedback %}
+                    <div class="list-group-item">
+                        Supervisor feedback <span class="badge">{{ supv }}/{{ total }}</span>
+                    </div>
+                    <div class="list-group-item">
+                        Marker feedback <span class="badge">{{ mark }}/{{ total }}</span>
+                    </div>
+                {% else %}
+                    <div class="list-group-item list-group-item-warning">
+                        Collection of feedback disabled for this submission period
+                    </div>
+                {% endif %}
                 {% if period.has_presentation and period.collect_presentation_feedback %}
                     {% set pres = period.number_submitters_presentation_feedback %}
                     <div class="list-group-item">

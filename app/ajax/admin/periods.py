@@ -72,6 +72,11 @@ _name = \
         <span class="label label-info">Start: {{ p.start_date.strftime("%a %d %b %Y") }}</span>
     </div>
 {% endif %}
+{% if p.collect_project_feedback %}
+    <div>
+        <span class="label label-info"><i class="fa fa-check"></i> Collect feedback</span>
+    </div>
+{% endif %}  
 """
 
 

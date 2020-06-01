@@ -7508,7 +7508,7 @@ class SubmissionRecord(db.Model):
     def _feedback_state(self, valid, submitted):
         period = self.period
 
-        if not period.config.project_class.publish:
+        if not period.collect_project_feedback or not period.config.project_class.publish:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
         if not period.is_feedback_open:
@@ -7528,7 +7528,7 @@ class SubmissionRecord(db.Model):
 
     @property
     def supervisor_feedback_state(self):
-        if not self.period.config.uses_supervisor:
+        if not self.period.collect_project_feedback or not self.period.config.uses_supervisor:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
         return self._feedback_state(self.is_supervisor_valid, self.supervisor_submitted)
@@ -7536,7 +7536,7 @@ class SubmissionRecord(db.Model):
 
     @property
     def marker_feedback_state(self):
-        if not self.period.config.uses_marker:
+        if not self.period.collect_project_feedback or not self.period.config.uses_marker:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
         return self._feedback_state(self.is_marker_valid, self.marker_submitted)
@@ -7589,7 +7589,7 @@ class SubmissionRecord(db.Model):
     def supervisor_response_state(self):
         period = self.period
 
-        if not self.period.config.project_class.publish:
+        if not period.collect_project_feedback or not period.config.project_class.publish:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
         if not period.is_feedback_open or not self.student_feedback_submitted:
@@ -7618,7 +7618,10 @@ class SubmissionRecord(db.Model):
                 if feedback.submitted:
                     return True
 
-        return self.supervisor_submitted or self.marker_submitted
+        if self.period.collect_project_feedback:
+            return self.supervisor_submitted or self.marker_submitted
+
+        return False
 
 
     @property
@@ -7645,7 +7648,8 @@ class SubmissionRecord(db.Model):
                     if feedback.submitted:
                         return True
 
-        return self.period.closed and (self.supervisor_submitted or self.marker_submitted)
+        return self.period.collect_project_feedback and self.period.closed \
+               and (self.supervisor_submitted or self.marker_submitted)
 
 
     @property

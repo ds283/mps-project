@@ -28,88 +28,95 @@
                 </div>
             {% endif %}
 
-            {% if record.period.config.uses_supervisor %}
-                {% if record.supervisor_submitted or (record.supervisor_positive or record.supervisor_negative) and preview %}
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <div class="row vertical-align">
-                                <div class="col-xs-6">
-                                    Supervisor feedback
-                                </div>
-                                <div class="col-xs-6">
-                                    <div class="pull-right">
-                                        {% if record.supervisor_timestamp %}
-                                            <span class="label label-default">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                                        {% endif %}
-                                        {% if current_user.id == record.supervisor.id %}
-                                            {% if (record.period.is_feedback_open and not record.period.closed) or (record.period.closed and not record.supervisor_submitted) %}
-                                                <a href="{{ url_for('faculty.supervisor_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
-                                                {% if not record.supervisor_submitted %}
-                                                    <a href="{{ url_for('faculty.supervisor_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
-                                                {% else %}
-                                                    <a href="{{ url_for('faculty.supervisor_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit</a>
+            {% if record.period.collect_project_feedback %}
+                {% if record.period.config.uses_supervisor %}
+                    {% if record.supervisor_submitted or (record.supervisor_positive or record.supervisor_negative) and preview %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <div class="row vertical-align">
+                                    <div class="col-xs-6">
+                                        Supervisor feedback
+                                    </div>
+                                    <div class="col-xs-6">
+                                        <div class="pull-right">
+                                            {% if record.supervisor_timestamp %}
+                                                <span class="label label-default">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            {% endif %}
+                                            {% if current_user.id == record.supervisor.id %}
+                                                {% if (record.period.is_feedback_open and not record.period.closed) or (record.period.closed and not record.supervisor_submitted) %}
+                                                    <a href="{{ url_for('faculty.supervisor_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
+                                                    {% if not record.supervisor_submitted %}
+                                                        <a href="{{ url_for('faculty.supervisor_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
+                                                    {% else %}
+                                                        <a href="{{ url_for('faculty.supervisor_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit</a>
+                                                    {% endif %}
                                                 {% endif %}
                                             {% endif %}
-                                        {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                            <div class="panel-body">
+                                <span class="dashboard-subtitle">Positive aspects</span>
+                                {{ record.supervisor_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                <hr class="intro-divider">
+                                <span class="dashboard-subtitle">Negative aspects</span>
+                                {{ record.supervisor_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            </div>
                         </div>
-                        <div class="panel-body">
-                            <span class="dashboard-subtitle">Positive aspects</span>
-                            {{ record.supervisor_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
-                            <hr class="intro-divider">
-                            <span class="dashboard-subtitle">Negative aspects</span>
-                            {{ record.supervisor_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                    {% else %}
+                        <div class="well">
+                            Feedback has not yet been recorded from the project supervisor.
                         </div>
-                    </div>
-                {% else %}
-                    <div class="well">
-                        Feedback has not yet been recorded from the project supervisor.
-                    </div>
+                    {% endif %}
                 {% endif %}
-            {% endif %}
 
-            {% if record.period.config.uses_marker %}
-                {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <div class="row vertical-align">
-                                <div class="col-xs-6">
-                                    Marker feedback
-                                </div>
-                                <div class="col-xs-6">
-                                    <div class="pull-right">
-                                        {% if record.marker_timestamp %}
-                                            <span class="label label-default">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                                        {% endif %}
-                                        {% if current_user.id == record.marker_id %}
-                                            {% if (record.period.is_feedback_open and not record.period.closed) or (record.period.closed and not record.marker_submitted) %}
-                                                <a href="{{ url_for('faculty.marker_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
-                                                {% if not record.marker_submitted %}
-                                                    <a href="{{ url_for('faculty.marker_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
-                                                {% else %}
-                                                    <a href="{{ url_for('faculty.marker_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit</a>
+                {% if record.period.config.uses_marker %}
+                    {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <div class="row vertical-align">
+                                    <div class="col-xs-6">
+                                        Marker feedback
+                                    </div>
+                                    <div class="col-xs-6">
+                                        <div class="pull-right">
+                                            {% if record.marker_timestamp %}
+                                                <span class="label label-default">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            {% endif %}
+                                            {% if current_user.id == record.marker_id %}
+                                                {% if (record.period.is_feedback_open and not record.period.closed) or (record.period.closed and not record.marker_submitted) %}
+                                                    <a href="{{ url_for('faculty.marker_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
+                                                    {% if not record.marker_submitted %}
+                                                        <a href="{{ url_for('faculty.marker_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
+                                                    {% else %}
+                                                        <a href="{{ url_for('faculty.marker_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit</a>
+                                                    {% endif %}
                                                 {% endif %}
                                             {% endif %}
-                                        {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                            <div class="panel-body">
+                                <span class="dashboard-subtitle">Positive aspects</span>
+                                {{ record.marker_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                <hr class="intro-divider">
+                                <span class="dashboard-subtitle">Negative aspects</span>
+                                {{ record.marker_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            </div>
                         </div>
-                        <div class="panel-body">
-                            <span class="dashboard-subtitle">Positive aspects</span>
-                            {{ record.marker_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
-                            <hr class="intro-divider">
-                            <span class="dashboard-subtitle">Negative aspects</span>
-                            {{ record.marker_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                    {% else %}
+                        <div class="well">
+                            Feedback has not yet been recorded from the project marker.
                         </div>
-                    </div>
-                {% else %}
-                    <div class="well">
-                        Feedback has not yet been recorded from the project marker.
-                    </div>
+                    {% endif %}
                 {% endif %}
+            {% else %}
+                <div class="panel panel-default">
+                    <div class="panel-heading">Feedback collection was disabled for this submission period</div>
+                    <div class="panel-body">No feedback available.</div>
+                </div>
             {% endif %}
 
             {% if record.period.has_presentation and record.period.collect_presentation_feedback %}

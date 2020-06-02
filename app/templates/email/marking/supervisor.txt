@@ -40,8 +40,8 @@ a short justification of the mark you assign in each category.
 When the sheet is complete you will need to agree a final mark with
 the second marker. This can be done by email, or in person if you prefer.
 Your mark schemes are different and there is no expectation that your
-marks will agree, or be simply related to each other. However, if your
-marks are more than 10% different, you should record a brief rationale
+marks will agree, or be related to each other in a simple way. However, if
+your marks are more than 10% different, you should record a brief rationale
 for the relative weighting you adopt in order to assist the exam board
 with their work.
 
@@ -66,7 +66,7 @@ email to the sending address is not monitored.
 
 ATTACHMENT MANIFEST
 {% for attached, manifest_entry, description in attached_documents %}
-{{ loop.index }}. {{ manifest_entry|wordwrap(70) }}
+{{ loop.index }}. {{ manifest_entry }}
 {%- if description and description|length > 0 %}
    {{ description|wordwrap(75) }}
 {%- endif -%}

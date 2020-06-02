@@ -117,38 +117,82 @@ _availability = \
 """
 
 
-def _element_base(faculty_id, enrollment_template, workload_template):
-    f = db.session.query(FacultyData).filter_by(id=faculty_id).one()
+_full_assignments = \
+"""
+{% for record in f.ordered_enrollments %}
+    {{ record.pclass.make_label(record.pclass.abbreviation + ' ' + data[record.pclass_id]|string)|safe }}
+{% else %}
+    <span class="label label-default">None</span>
+{% endfor %}
+<p></p>
+<span class="label label-primary">Total {{ total }}</span>
+"""
+
+
+_simple_assignments = \
+"""
+<span class="label label-primary">Total {{ total }}</span>
+"""
+
+
+def _element_base(faculty_id, enrollment_template, assignments_template, workload_template):
+    f: FacultyData = db.session.query(FacultyData).filter_by(id=faculty_id).one()
 
     workload = {}
+    supervising = {}
+    marking = {}
+    presentations = {}
+
     total_workload = 0
 
     for record in f.enrollments:
+        record: EnrollmentRecord
+
         CATS = sum(f.CATS_assignment(record.pclass))
         workload[record.pclass_id] = CATS
+
+        if record.pclass.uses_supervisor:
+            supervising[record.pclass_id] = get_count(f.supervisor_assignments(record.pclass_id))
+
+        if record.pclass.uses_marker:
+            marking[record.pclass_id] = get_count(f.marker_assignments(record.pclass_id))
+
+        if record.pclass.uses_presentations:
+            presentations[record.pclass_id] = get_count(f.presentation_assignments(record.pclass_id))
+
         total_workload += CATS
+
+    total_supervising = sum(supervising.values())
+    total_marking = sum(marking.values())
+    total_presentations = sum(presentations.values())
 
     total, unbounded = f.student_availability
 
     return {'name': {'display': render_template_string(_name, f=f),
-                              'sortstring': f.user.last_name + f.user.first_name},
-                     'groups': render_template_string(_groups, f=f),
-                     'enrollments': {'display': render_template_string(enrollment_template, f=f),
-                                     'sortvalue': get_count(f.enrollments)},
-                     'availability': {'display': render_template_string(_availability, t=total, u=unbounded),
-                                      'sortvalue': 999999 if unbounded else total},
-                     'workload': {'display': render_template_string(workload_template, f=f, wkld=workload, tot=total_workload),
-                                  'sortvalue': total_workload}}
+                     'sortstring': f.user.last_name + f.user.first_name},
+            'groups': render_template_string(_groups, f=f),
+            'enrollments': {'display': render_template_string(enrollment_template, f=f),
+                            'sortvalue': get_count(f.enrollments)},
+            'supervising': {'display': render_template_string(assignments_template, f=f, data=supervising, total=total_supervising),
+                            'sortvalue': total_supervising},
+            'marking': {'display': render_template_string(assignments_template, f=f, data=marking, total=total_marking),
+                        'sortvalue': total_marking},
+            'presentations': {'display': render_template_string(assignments_template, f=f, data=presentations, total=total_presentations),
+                              'sortvalue': total_presentations},
+            'availability': {'display': render_template_string(_availability, t=total, u=unbounded),
+                             'sortvalue': 999999 if unbounded else total},
+            'workload': {'display': render_template_string(workload_template, f=f, wkld=workload, tot=total_workload),
+                         'sortvalue': total_workload}}
 
 
 @cache.memoize()
 def _element_full(faculty_id):
-    return _element_base(faculty_id, _full_enrollments, _full_workload)
+    return _element_base(faculty_id, _full_enrollments, _full_assignments, _full_workload)
 
 
 @cache.memoize()
 def _element_simple(faculty_id):
-    return _element_base(faculty_id, _simple_enrollments, _simple_workload)
+    return _element_base(faculty_id, _simple_enrollments, _simple_assignments, _simple_workload)
 
 
 def _delete_cache_entry(fac_id):

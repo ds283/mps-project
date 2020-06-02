@@ -30,12 +30,13 @@ other good report.
 
 {% endif -%}
 The submitted report (or a link to download it) is attached to this email.
-If a link is provided then your download will begin immediately if you are
-logged in the mpsprojects.co.uk. If not, you will be redirected to a login
-page. The download will begin automatically once you log in successfully.
-Alternatively, you can download the report from your dashboard on
-https://mpsprojects.co.uk. The convenor has requested that marking and
-feedback be completed by midnight on {{ deadline.strftime("%a %d %b %Y") }}.
+If a link is provided then after following it your download will begin
+immediately if you are logged in to mpsprojects.co.uk. If not, you will be
+redirected to a login page. The download will begin automatically once you
+log in successfully. Alternatively, you can download the report from your
+dashboard on https://mpsprojects.co.uk. The convenor has requested that
+marking and feedback be completed by midnight
+on {{ deadline.strftime("%a %d %b %Y") }}.
 
 When you have formed your opinion of the report, please complete
 the attached marksheet. Please do not forget that the exam board requires

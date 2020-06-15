@@ -20,12 +20,13 @@
 
                         <label class="btn btn-default" for="file-selector">
                             <input id="file-selector" type="file" name="attachment" style="display: none;"
-                                   onchange="$('#filename-data').html(this.files[0].name)">
+                                   onchange="$('#filename-data').html(this.files[0].name); $('#target_name').val(this.files[0].name);">
                             Select file...
                         </label>
                         <span class="label label-info" id="filename-data"></span>
 
                         <hr class="intro-divider">
+                        {{ wtf.form_field(form.target_name) }}
                         {{ wtf.form_field(form.description) }}
                         {{ wtf.form_field(form.license) }}
                         {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}

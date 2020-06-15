@@ -23,15 +23,15 @@ class UploadMixin():
                                allow_blank=True, blank_text='Unset (no license specified)')
 
 
-class UploadReportForm(Form, UploadMixin):
-
-    submit = SubmitField('Upload report')
-
-
 class DownloadableAttachmentMixin():
 
     target_name = StringField('Filename', description='The externally-visible filename used for this attachment',
                               validators=[InputRequired()])
+
+
+class UploadReportForm(Form, UploadMixin, DownloadableAttachmentMixin):
+
+    submit = SubmitField('Upload report')
 
 
 class EditReportForm(Form, UploadMixin, DownloadableAttachmentMixin, SaveChangesMixin):
@@ -49,6 +49,6 @@ class UploadSubmitterAttachmentForm(Form, AttachmentMixin, DownloadableAttachmen
     submit = SubmitField('Upload attachment')
 
 
-class EditSubmitterAttachmentForm(Form, AttachmentMixin, SaveChangesMixin):
+class EditSubmitterAttachmentForm(Form, AttachmentMixin, DownloadableAttachmentMixin, SaveChangesMixin):
 
     pass

@@ -23,7 +23,7 @@ from .utils import is_editable, is_deletable, is_listable, is_uploadable
 
 from ..database import db
 from ..models import SubmissionRecord, SubmittedAsset, SubmissionAttachment, Role, SubmissionPeriodRecord, \
-    ProjectClassConfig, ProjectClass, PeriodAttachment, User, Role
+    ProjectClassConfig, ProjectClass, PeriodAttachment, User, AssetLicense
 
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.validators import validate_is_convenor
@@ -175,7 +175,7 @@ def upload_submitter_report(sid):
                                    uploaded_id=current_user.id,
                                    expiry=None,
                                    filename=str(subfolder/filename),
-                                   target_name=str(incoming_filename),
+                                   target_name=form.target_name.data,
                                    mimetype=str(report_file.content_type),
                                    license=form.license.data)
 
@@ -220,7 +220,12 @@ def upload_submitter_report(sid):
 
     else:
         if request.method == 'GET':
-            form.license.data = current_user.default_license
+            # default to 'Exam' license if one is available
+            default_report_license = db.session.query(AssetLicense).filter_by(abbreviation='Exam').first()
+            if default_report_license is None:
+                default_report_license = current_user.default_license
+
+            form.license.data = default_report_license
 
     return render_template('documents/upload_report.html', record=record, form=form, url=url, text=text)
 
@@ -437,7 +442,7 @@ def upload_submitter_attachment(sid):
                                    uploaded_id=current_user.id,
                                    expiry=None,
                                    filename=str(subfolder/filename),
-                                   target_name=str(incoming_filename),
+                                   target_name=form.target_name.data,
                                    mimetype=str(attachment_file.content_type),
                                    license=form.license.data)
 

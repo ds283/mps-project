@@ -1207,6 +1207,15 @@ class User(db.Model, UserMixin):
         return super().has_role(role)
 
 
+    # check whether user has one of a list of roles
+    def allow_roles(self, role_list):
+        if not isinstance(role_list, Iterable):
+            raise RuntimeError('Unknown role iterable passed to allow_roles()')
+
+        # apply any using generator comprehension
+        return any(self.has_role(r) for r in role_list)
+
+
     # allow user objects to get all project classes so that we can render
     # a 'Convenor' menu in the navbar for all admin users
     @property

@@ -221,29 +221,21 @@ def validate_submission_marker(record):
     return False
 
 
-def validate_submission_viewable(record, message=True):
+def validate_submission_viewable(record: SubmissionRecord, message: bool=True):
     """
     Validate that the logged-in user is entitled to view a SubmissionRecord instance
     :param record:
     :return:
     """
 
-    # find supervisors currently running active projects associated with this student
-    owner_query = db.session.query(SubmissionRecord) \
-        .filter(SubmissionRecord.retired == False) \
-        .join(LiveProject, LiveProject.id == SubmissionRecord.project_id) \
-        .filter(LiveProject.owner_id == current_user.id) \
-        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
-        .filter(SubmittingStudent.student_id == record.owner.student_id)
+    # check project is assigned
+    if record.period is not None:
+        # if project is assigned, supervisor can view feedback
+        if current_user.id == record.project.owner_id:
+            return True
 
-    # find markers associated with active projects associated with this student
-    marker_query = db.session.query(SubmissionRecord) \
-        .filter(SubmissionRecord.retired == False,
-                SubmissionRecord.marker_id == current_user.id) \
-        .join(SubmittingStudent, SubmittingStudent.student_id == SubmissionRecord.owner_id) \
-        .filter(SubmittingStudent.student_id == record.owner.student_id)
-
-    if get_count(owner_query) > 0 or get_count(marker_query) > 0:
+    # assigned marker van view feedback
+    if record.marker_id is not None and record.marker_id == current_user.id:
         return True
 
     # viewable if this submission period has a presentation, and the logged-in user is one of the assessors
@@ -253,6 +245,13 @@ def validate_submission_viewable(record, message=True):
             count = get_count(slot.assessors.filter_by(id=current_user.id))
             if count > 0:
                 return True
+
+    # TO DO: allow moderators to view, if set
+
+    # project convenors, and admin users, can view
+    if current_user.allow_roles(['convenor', 'admin', 'root', 'exam_board', 'external_examiner']):
+        return True
+
 
     if message:
         flash('Only current supervisors, 2nd markers and presentation assessors can perform this operation', 'error')

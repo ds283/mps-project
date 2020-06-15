@@ -82,7 +82,7 @@
                                 from IP address
                                 <strong>{{ sel.submission_IP }}</strong>
                             </div>
-                            {{ ranked_selection(sel, sel.ordered_selections, lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING, 'selector submission view', url_for('convenor.selector_choices', id=sel.id)) }}
+                            {{ ranked_selection(sel, sel.ordered_selections, 'selector submission view', url_for('convenor.selector_choices', id=sel.id), show_hint=(lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING), show_delete=true) }}
                             <hr class="intro-divider" role="separator">
                             <div class="row">
                                 <div class="col-xs-12">

@@ -7779,9 +7779,7 @@ class SubmissionRecord(db.Model):
         and any uploaded report
         :return:
         """
-        return get_count(self.attachments) \
-               + get_count(self.period.attachments) \
-               + (1 if self.report is not None else 0)
+        return get_count(self.attachments) + get_count(self.period.attachments) + (1 if self.report is not None else 0)
 
 
     @property

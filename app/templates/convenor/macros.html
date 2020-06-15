@@ -146,7 +146,7 @@
     </div>
 {% endmacro %}
 
-{% macro ranked_selection(sel, list, show_hint, nav_text, nav_url) %}
+{% macro ranked_selection(sel, list, nav_text, nav_url, show_hint=false, show_delete=false) %}
     {% set can_delete = sel.number_selections > sel.config.initial_choices %}
     <div class="container-fluid">
         <div class="row vertical-align final-selection-table">
@@ -202,7 +202,9 @@
                         {{ project.group.make_label(project.group.name)|safe }}
                     </div>
                     <div class="col-xs-1">
-                        <a {% if can_delete %}href="{{ url_for('convenor.delete_student_choice', sid=sel.id, cid=item.id) }}"{% endif %} class="btn btn-sm btn-danger {% if not can_delete %}disabled{% endif %}"><i class="fa fa-trash"></i> Delete</a>
+                        {% if show_delete %}
+                            <a {% if can_delete %}href="{{ url_for('convenor.delete_student_choice', sid=sel.id, cid=item.id) }}"{% endif %} class="btn btn-sm btn-danger {% if not can_delete %}disabled{% endif %}"><i class="fa fa-trash"></i> Delete</a>
+                        {% endif %}
                     </div>
                 </div>
             {% endfor %}

@@ -246,6 +246,17 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool=True):
             if count > 0:
                 return True
 
+    # allow this student's current supervisors to view feedback from previous projects
+    owner_query = db.session.query(SubmissionRecord) \
+        .filter(SubmissionRecord.retired == False) \
+        .join(LiveProject, LiveProject.id == SubmissionRecord.project_id) \
+        .filter(LiveProject.owner_id == current_user.id) \
+        .join(SubmittingStudent, SubmittingStudent.student_id == SubmissionRecord.owner_id) \
+        .filter(SubmittingStudent.student_id == record.owner.student_id)
+
+    if get_count(owner_query) > 0:
+        return True
+
     # TO DO: allow moderators to view, if set
 
     # project convenors, and admin users, can view

@@ -60,7 +60,7 @@ def home_dashboard():
 
 def redirect_url(default=None):
     return request.args.get('next') or \
-           (request.referrer if '/login' not in request.referrer else None) or \
+           (request.referrer if (request.referrer is not None and '/login' not in request.referrer) else None) or \
            (url_for(default) if default is not None else None) or \
            home_dashboard()
 

@@ -40,7 +40,7 @@
                 <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
                 <hr class="intro-divider">
                 <div class="list-group">
-                    <div class="list-group-item list-group-item-success">
+                    <div class="list-group-item">
                         Submission periods:
                         {% for p in config.periods %}
                             <span class="label label-primary">{{ p.display_name|safe }}</span>
@@ -52,7 +52,7 @@
                 <div class="row vertical-align">
                     <div class="col-xs-4">
                         <div class="list-group">
-                            <div class="list-group-item list-group-item-info">
+                            <div class="list-group-item">
                                 Current supervision CATS <span class="badge">{{ config.CATS_supervision }}</span>
                             </div>
                             {% if pclass.CATS_supervision != config.CATS_supervision %}
@@ -64,7 +64,7 @@
                     </div>
                     <div class="col-xs-4">
                         <div class="list-group">
-                            <div class="list-group-item list-group-item-info">
+                            <div class="list-group-item">
                                 Current 2nd-marking CATS <span class="badge">{{ config.CATS_marking }}</span>
                             </div>
                             {% if pclass.CATS_marking != config.CATS_marking %}
@@ -76,7 +76,7 @@
                     </div>
                     <div class="col-xs-4">
                         <div class="list-group">
-                            <div class="list-group-item list-group-item-info">
+                            <div class="list-group-item">
                                 Current presentation CATS <span class="badge">{{ config.CATS_presentation }}</span>
                             </div>
                             {% if pclass.CATS_presentation != config.CATS_presentation %}

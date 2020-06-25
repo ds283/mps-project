@@ -6001,7 +6001,7 @@ def do_open_feedback(id):
     return redirect(url)
 
 
-@convenor.route('/close_feedback/<int:id>', methods=['GET', 'POST'])
+@convenor.route('/close_feedback/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def close_feedback(id):
     # id is a ProjectClassConfig
@@ -6021,9 +6021,56 @@ def close_feedback(id):
         return redirect(redirect_url())
 
     if config.submission_period > config.submissions:
-        flash('Feedback close request ignored because "{name}" is already in a rollover state.'.format(name=config.name),
-              'info')
+        flash('Feedback close request ignored because "{name}" '
+              'is already in a rollover state.'.format(name=config.name), 'info')
         return request.referrer
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = redirect_url()
+
+    title = 'Close feedback for "{name}"'.format(name=config.name)
+    panel_title = 'Close feedback for <strong>{name}</strong>'.format(name=config.name)
+
+    action_url = url_for('convenor.do_close_feedback', id=id, url=url)
+    message = '<p>Are you sure that you wish to close feedback for project class ' \
+              '<strong>{name}</strong>?</p>' \
+              '<p>After closure, no immediate action is taken automatically by the platform. ' \
+              'Feedback becomes available to push to students when required.</p>' \
+              '<p>This action cannot be undone.</p>'.format(name=config.name)
+    submit_label = 'Close feedback'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@convenor.route('/do_close_feedback/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def do_close_feedback(id):
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(redirect_url())
+
+    state = config.submitter_lifecycle
+    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+        flash('Feedback cannot be closed at this stage in the project lifecycle.', 'info')
+        return redirect(redirect_url())
+
+    if config.submission_period > config.submissions:
+        flash('Feedback close request ignored because "{name}" '
+              'is already in a rollover state.'.format(name=config.name), 'info')
+        return request.referrer
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = redirect_url()
 
     period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
 
@@ -6039,7 +6086,7 @@ def close_feedback(id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
-    return redirect(redirect_url())
+    return redirect(url)
 
 
 @convenor.route('/edit_submission_record/<int:pid>', methods=['GET', 'POST'])
@@ -6053,7 +6100,7 @@ def edit_submission_record(pid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    # reject is project class is not published
+    # reject if project class is not published
     if not validate_project_class(config.project_class):
         return redirect(redirect_url())
 

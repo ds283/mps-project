@@ -5,9 +5,24 @@
     {% set not_pushed = period.number_submitters_not_pushed %}
     {% set supv = period.number_submitters_supervisor_feedback %}
     {% set mark = period.number_submitters_marker_feedback %}
-    <div class="row vertical-align">
+    {% if not period.collect_project_feedback %}
+        <div class="alert alert-warning">
+            Collection of project feedback was disabled for this submission period.
+        </div>
+    {% endif %}
+    {% if period.has_presentation and not period.collect_presentation_feedback %}
+        <div class="alert alert-warning">
+            Collection of presentation feedback was disabled for this submission period.
+        </div>
+    {% endif %}
+    {% set twocolumn = period.collect_project_feedback or (period.has_presentation and period.collect_presentation_feedback) %}
+    <div class="row vertical-top">
         <div class="col-xs-1"></div>
-        <div class="col-xs-5">
+        {% if twocolumn %}
+            <div class="col-xs-5">
+        {% else %}
+            <div class="col-xs-10">
+        {% endif %}
             <div class="list-group">
                 <div class="list-group-item">
                     <span class="{% if pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback pushed</span>
@@ -19,28 +34,26 @@
                 </div>
             </div>
         </div>
-        <div class="col-xs-5">
-            <div class="list-group">
-                {% if period.collect_project_feedback %}
-                    <div class="list-group-item">
-                        Supervisor feedback <span class="badge">{{ supv }}/{{ total }}</span>
-                    </div>
-                    <div class="list-group-item">
-                        Marker feedback <span class="badge">{{ mark }}/{{ total }}</span>
-                    </div>
-                {% else %}
-                    <div class="list-group-item list-group-item-warning">
-                        Collection of feedback disabled for this submission period
-                    </div>
-                {% endif %}
-                {% if period.has_presentation and period.collect_presentation_feedback %}
-                    {% set pres = period.number_submitters_presentation_feedback %}
-                    <div class="list-group-item">
-                        Presentation feedback <span class="badge">{{ pres }}/{{ total }}</span>
-                    </div>
-                {% endif %}
+        {% if twocolumn %}
+            <div class="col-xs-5">
+                <div class="list-group">
+                    {% if period.collect_project_feedback %}
+                        <div class="list-group-item">
+                            Supervisor feedback <span class="badge">{{ supv }}/{{ total }}</span>
+                        </div>
+                        <div class="list-group-item">
+                            Marker feedback <span class="badge">{{ mark }}/{{ total }}</span>
+                        </div>
+                    {% endif %}
+                    {% if period.has_presentation and period.collect_presentation_feedback %}
+                        {% set pres = period.number_submitters_presentation_feedback %}
+                        <div class="list-group-item">
+                            Presentation feedback <span class="badge">{{ pres }}/{{ total }}</span>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
-        </div>
+        {% endif %}
         <div class="col-xs-1"></div>
     </div>
     {% if not_pushed > 0 %}

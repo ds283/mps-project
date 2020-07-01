@@ -22,12 +22,15 @@ def SendEmailFormFactory(use_recipients=True):
         # recipients field if it is being used; if not, the form page will generate a
         # "clear recipients" button
         if use_recipients:
-            recipient = StringField("To", validators=[InputRequired()])
+            recipient = StringField("To", validators=[InputRequired()],
+                                    description='Enter a list of comma-separated email addresses for the recipients')
         else:
             clear_recipients = SubmitField('Clear recipients')
 
         # notify field
-        notify_addrs = StringField("Also notify", validators=[Optional()])
+        notify_addrs = StringField("Also notify", validators=[Optional()],
+                                   description='Enter a list of comma-separated email addresses who will be '
+                                               'sent coppies of the email.')
 
         # subject field
         subject = StringField("Subject", validators=[InputRequired()])

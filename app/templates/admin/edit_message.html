@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
 
 {% extends "security/index.html" %}
@@ -27,7 +27,7 @@
     {% endif %}
 
         {{ form.hidden_tag() }}
-    
+
         {{ wtf.form_field(form.show_students) }}
         {{ wtf.form_field(form.show_faculty) }}
 

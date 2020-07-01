@@ -8,7 +8,7 @@
 {% block scripts %}
     {{ super() }}
 
-    {% assets filters="cssmin", output="gen/bootstrap-datepicker3-min.css", "css/bootstrap-datepicker3.css" -%}
+    {% assets filters="cssmin", output="gen/bootstrap-datepicker-min.css", "css/bootstrap-datepicker.css" -%}
         <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
     {% endassets %}
 

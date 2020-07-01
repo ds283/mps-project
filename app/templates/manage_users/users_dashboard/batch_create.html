@@ -24,10 +24,10 @@
                         <span class="label label-info" id="filename-data"></span>
 
                         <hr class="intro-divider">
-                        {{ wtf.form_field(form.current_year) }}
-                        {{ wtf.form_field(form.trust_cohort) }}
-                        {{ wtf.form_field(form.trust_exams) }}
-                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+                        {{ wtf.render_field(form.current_year) }}
+                        {{ wtf.render_field(form.trust_cohort) }}
+                        {{ wtf.render_field(form.trust_exams) }}
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>
                 </div>
             </div>

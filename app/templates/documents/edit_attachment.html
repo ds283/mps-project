@@ -25,13 +25,13 @@
                         {{ form.hidden_tag() }}
 
                         {% if form.description is defined %}
-                            {{ wtf.form_field(form.description) }}
+                            {{ wtf.render_field(form.description) }}
                         {% endif %}
                         {% if form.target_name is defined %}
-                            {{ wtf.form_field(form.target_name) }}
+                            {{ wtf.render_field(form.target_name) }}
                         {% endif %}
-                        {{ wtf.form_field(form.license) }}
-                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+                        {{ wtf.render_field(form.license) }}
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>
                 </div>
             </div>

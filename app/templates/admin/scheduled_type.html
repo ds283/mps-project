@@ -15,8 +15,8 @@
 
         {{ form.hidden_tag() }}
 
-        {{ wtf.form_field(form.type) }}
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.type) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

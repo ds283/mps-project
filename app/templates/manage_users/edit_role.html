@@ -47,11 +47,11 @@
 
 {#        {{ wtf.form_errors(role_form) }}#}
 
-        {{ wtf.form_field(role_form.name) }}
-        {{ wtf.form_field(role_form.description) }}
+        {{ wtf.render_field(role_form.name) }}
+        {{ wtf.render_field(role_form.description) }}
         {{ colour_field(role_form.colour, 'colour-group') }}
 
-        {{ wtf.form_field(role_form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(role_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

@@ -28,13 +28,13 @@
                                 <p>In the test-phase, notifications are not issued to their intended
                                     recipients, but rather to a sink email address. This allows the
                                     outgoing emails to be audited to ensure they are correct.</p>
-                                {{ wtf.form_field(form.target_email) }}
+                                {{ wtf.render_field(form.target_email) }}
                             </div>
                         </div>
                         <div class="row vertical-bottom">
                             <div class="col-xs-12">
                                 <div class="pull-right">
-                                    {{ wtf.form_field(form.submit_button, button_map={'submit_button': 'danger'}) }}
+                                    {{ wtf.render_field(form.submit_button, button_map={'submit_button': 'danger'}) }}
                                 </div>
                             </div>
                         </div>

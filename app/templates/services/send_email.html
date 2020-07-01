@@ -18,7 +18,7 @@
 
         <div class="well">
             {% if form.recipient is defined %}
-                {{ wtf.form_field(form.recipient) }}
+                {{ wtf.render_field(form.recipient) }}
             {% else %}
                 <div style="margin-bottom: 5px;"><strong>Recipients ({{ length }})</strong></div>
                 {% if distribution_list is not none %}
@@ -32,23 +32,23 @@
                     <div class="row" style="margin-bottom: 5px;">
                         <div class="col-xs-12">
                             <div class="pull-right">
-                                {{ wtf.form_field(form.clear_recipients, button_map={'clear_recipients': 'default'}) }}
+                                {{ wtf.render_field(form.clear_recipients, button_map={'clear_recipients': 'default'}) }}
                             </div>
                         </div>
                     </div>
                 {% endif %}
             {% endif %}
 
-            {{ wtf.form_field(form.notify_addrs) }}
-            {{ wtf.form_field(form.subject) }}
+            {{ wtf.render_field(form.notify_addrs) }}
+            {{ wtf.render_field(form.subject) }}
 
             <strong>Reply to</strong>
             <span class="btn btn-sm btn-default btn-table-block">{{ current_user.name }} ({{ current_user.email }})</span>
         </div>
 
-        {{ wtf.form_field(form.body) }}
+        {{ wtf.render_field(form.body) }}
 
-        {{ wtf.form_field(form.send, button_map={'send': 'primary'}) }}
+        {{ wtf.render_field(form.send, button_map={'send': 'primary'}) }}
 
         <hr class="intro-divider" role="separator">
 

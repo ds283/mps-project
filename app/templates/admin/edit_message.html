@@ -28,8 +28,8 @@
 
         {{ form.hidden_tag() }}
 
-        {{ wtf.form_field(form.show_students) }}
-        {{ wtf.form_field(form.show_faculty) }}
+        {{ wtf.render_field(form.show_students) }}
+        {{ wtf.render_field(form.show_faculty) }}
 
         <div class="well {% if form.project_classes.errors %}has-error{% endif %}">
             <p>Select the project classes for which this message should be displayed.</p>
@@ -37,7 +37,7 @@
                 <p>Leave this selection <strong>blank</strong> to broadcast a message to everyone.</p>
             {% endif %}
             {% for widget in form.project_classes %}
-                {{ wtf.form_field(widget) }}
+                {{ wtf.render_field(widget) }}
             {% else %}
                 <span class="label label-danger">No project classes currently available</span>
             {% endfor %}
@@ -49,15 +49,15 @@
         </div>
 
         {% if form.show_login %}
-            {{ wtf.form_field(form.show_login) }}
+            {{ wtf.render_field(form.show_login) }}
         {% endif %}
 
-        {{ wtf.form_field(form.dismissible) }}
+        {{ wtf.render_field(form.dismissible) }}
 
-        {{ wtf.form_field(form.title) }}
-        {{ wtf.form_field(form.body) }}
+        {{ wtf.render_field(form.title) }}
+        {{ wtf.render_field(form.body) }}
 
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

@@ -16,9 +16,9 @@
 
 {#        {{ wtf.form_errors(login_user_form) }}#}
 
-        {{ wtf.form_field(login_user_form.email) }}
-        {{ wtf.form_field(login_user_form.password) }}
-        {{ wtf.form_field(login_user_form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(login_user_form.email) }}
+        {{ wtf.render_field(login_user_form.password) }}
+        {{ wtf.render_field(login_user_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

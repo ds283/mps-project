@@ -19,13 +19,13 @@
                     <form action="{{ url_for('convenor.edit_period_attachment', aid=attachment.id, url=url, text=text) }}" method="POST" enctype="multipart/form-data" name="attachment_form">
                         {{ form.hidden_tag() }}
 
-                        {{ wtf.form_field(form.description) }}
-                        {{ wtf.form_field(form.license) }}
+                        {{ wtf.render_field(form.description) }}
+                        {{ wtf.render_field(form.license) }}
                         <hr class="intro-divider" role="separator">
-                        {{ wtf.form_field(form.publish_to_students) }}
-                        {{ wtf.form_field(form.include_marker_emails) }}
-                        {{ wtf.form_field(form.include_supervisor_emails) }}
-                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+                        {{ wtf.render_field(form.publish_to_students) }}
+                        {{ wtf.render_field(form.include_marker_emails) }}
+                        {{ wtf.render_field(form.include_supervisor_emails) }}
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>
                 </div>
             </div>

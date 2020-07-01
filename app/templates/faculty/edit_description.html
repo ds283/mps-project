@@ -34,13 +34,13 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        {{ wtf.form_field(form.label) }}
-        {{ wtf.form_field(form.capacity) }}
+        {{ wtf.render_field(form.label) }}
+        {{ wtf.render_field(form.capacity) }}
 
         <div class="well {% if form.project_classes.errors %}has-error{% endif %}">
             <p>Select the project classes for which this description should be made available</p>
             {% for widget in form.project_classes %}
-                {{ wtf.form_field(widget) }}
+                {{ wtf.render_field(widget) }}
             {% else %}
                 <div class="has-error">
                     <p class="help-block">All available project classes have already been assigned</p>
@@ -56,7 +56,7 @@
         <div class="well {% if form.team.errors %}has-error{% endif %}">
             <p>Who will be part of the supervisory team?</p>
             {% for widget in form.team %}
-                {{ wtf.form_field(widget) }}
+                {{ wtf.render_field(widget) }}
             {% else %}
                 <span class="label label-danger">No supervisory roles currently available</span>
             {% endfor %}
@@ -68,11 +68,11 @@
         </div>
 
         <hr class="intro-divider">
-        {{ wtf.form_field(form.aims) }}
-        {{ wtf.form_field(form.description) }}
+        {{ wtf.render_field(form.aims) }}
+        {{ wtf.render_field(form.description) }}
 
         <hr class="intro-divider">
-        {{ wtf.form_field(form.review_only) }}
+        {{ wtf.render_field(form.review_only) }}
 <div class="help-block">
     <p>Projects marked as literature reviews are marked in the same way as conventional projects.
         An outstanding original literature review should attract the same credit as any other
@@ -86,9 +86,9 @@
 </div>
 
 <hr class="intro-divider">
-        {{ wtf.form_field(form.reading) }}
+        {{ wtf.render_field(form.reading) }}
 
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

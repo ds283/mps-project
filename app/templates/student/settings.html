@@ -18,16 +18,16 @@
 
 {#        {{ wtf.form_errors(settings_form) }}#}
 
-    {{ wtf.form_field(settings_form.theme) }}
-    {{ wtf.form_field(settings_form.default_license) }}
+    {{ wtf.render_field(settings_form.theme) }}
+    {{ wtf.render_field(settings_form.default_license) }}
 
     <div class="well">
         <p>Email notifications</p>
-        {{ wtf.form_field(settings_form.group_summaries) }}
-        {{ wtf.form_field(settings_form.summary_frequency) }}
+        {{ wtf.render_field(settings_form.group_summaries) }}
+        {{ wtf.render_field(settings_form.summary_frequency) }}
     </div>
 
-    {{ wtf.form_field(settings_form.submit, button_map={'submit': 'primary'}) }}
+    {{ wtf.render_field(settings_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

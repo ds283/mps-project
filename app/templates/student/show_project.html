@@ -453,9 +453,9 @@
                         {% endif %}
                     {% endfor %}
                     <div class="well" style="margin-top: 15px;">
-                        {{ wtf.form_field(form.comment) }}
+                        {{ wtf.render_field(form.comment) }}
                         {% if is_approver %}
-                            {{ wtf.form_field(form.limit_visibility) }}
+                            {{ wtf.render_field(form.limit_visibility) }}
                         {% endif %}
                         <div class="row vertical-align">
                             <div class="col-xs-12">
@@ -463,7 +463,7 @@
                                     {% if desc and current_user.has_role('admin') or current_user.has_role('root') %}
                                         <a href="{{ url_for('project_approver.clean_comments', id=desc.id) }}" class="btn btn-warning">Remove deleted comments</a>
                                     {% endif %}
-                                    {{ wtf.form_field(form.post_comment, button_map={'post_comment': 'primary'}) }}
+                                    {{ wtf.render_field(form.post_comment, button_map={'post_comment': 'primary'}) }}
                                 </div>
                             </div>
                         </div>

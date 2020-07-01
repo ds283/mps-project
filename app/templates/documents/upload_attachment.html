@@ -26,10 +26,10 @@
                         <span class="label label-info" id="filename-data"></span>
 
                         <hr class="intro-divider">
-                        {{ wtf.form_field(form.target_name) }}
-                        {{ wtf.form_field(form.description) }}
-                        {{ wtf.form_field(form.license) }}
-                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+                        {{ wtf.render_field(form.target_name) }}
+                        {{ wtf.render_field(form.description) }}
+                        {{ wtf.render_field(form.license) }}
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>
                 </div>
             </div>

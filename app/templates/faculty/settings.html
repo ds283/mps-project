@@ -19,44 +19,44 @@
 {#        {{ wtf.form_errors(settings_form) }}#}
 
     <div class="well">
-        {{ wtf.form_field(settings_form.username) }}
-        {{ wtf.form_field(settings_form.first_name) }}
-        {{ wtf.form_field(settings_form.last_name) }}
+        {{ wtf.render_field(settings_form.username) }}
+        {{ wtf.render_field(settings_form.first_name) }}
+        {{ wtf.render_field(settings_form.last_name) }}
 
-        {{ wtf.form_field(settings_form.office) }}
-        {{ wtf.form_field(settings_form.theme) }}
+        {{ wtf.render_field(settings_form.office) }}
+        {{ wtf.render_field(settings_form.theme) }}
     </div>
 
     <div class="well">
-        {{ wtf.form_field(settings_form.default_license) }}
+        {{ wtf.render_field(settings_form.default_license) }}
     </div>
 
     <div class="well">
         <p>Titles</p>
-        {{ wtf.form_field(settings_form.academic_title) }}
-        {{ wtf.form_field(settings_form.use_academic_title) }}
+        {{ wtf.render_field(settings_form.academic_title) }}
+        {{ wtf.render_field(settings_form.use_academic_title) }}
     </div>
 
     <div class="well">
         <p>Email notifications</p>
-        {{ wtf.form_field(settings_form.group_summaries) }}
-        {{ wtf.form_field(settings_form.summary_frequency) }}
+        {{ wtf.render_field(settings_form.group_summaries) }}
+        {{ wtf.render_field(settings_form.summary_frequency) }}
     </div>
 
     <div class="well">
         <p>Default settings for new projects</p>
-        {{ wtf.form_field(settings_form.sign_off_students) }}
-        {{ wtf.form_field(settings_form.project_capacity) }}
-        {{ wtf.form_field(settings_form.enforce_capacity) }}
-        {{ wtf.form_field(settings_form.show_popularity) }}
-        {{ wtf.form_field(settings_form.dont_clash_presentations) }}
+        {{ wtf.render_field(settings_form.sign_off_students) }}
+        {{ wtf.render_field(settings_form.project_capacity) }}
+        {{ wtf.render_field(settings_form.enforce_capacity) }}
+        {{ wtf.render_field(settings_form.show_popularity) }}
+        {{ wtf.render_field(settings_form.dont_clash_presentations) }}
     </div>
 
     {% if settings_form.mask_roles %}
         <div class="well">
             <p>Temporarily mask roles</p>
             {% for widget in settings_form.mask_roles %}
-                {{ wtf.form_field(widget) }}
+                {{ wtf.render_field(widget) }}
             {% else %}
                 <span class="label label-danger">No roles currently available</span>
             {% endfor %}
@@ -68,7 +68,7 @@
         </div>
     {% endif %}
 
-    {{ wtf.form_field(settings_form.submit, button_map={'submit': 'primary'}) }}
+    {{ wtf.render_field(settings_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

@@ -42,13 +42,13 @@
 
 {#        {{ wtf.form_errors(group_form) }}#}
 
-        {{ wtf.form_field(group_form.name) }}
+        {{ wtf.render_field(group_form.name) }}
 
         {{ colour_field(group_form.colour, 'colour-group') }}
 
-        {{ wtf.form_field(group_form.add_group) }}
+        {{ wtf.render_field(group_form.add_group) }}
 
-        {{ wtf.form_field(group_form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(group_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

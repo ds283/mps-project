@@ -63,14 +63,14 @@
                             </div>
                         {% endfor %}
                         <hr class="intro-divider">
-                        {{ wtf.form_field(form.comment) }}
+                        {{ wtf.render_field(form.comment) }}
                         {% if form.update %}
-                            {{ wtf.form_field(form.update, button_map={'update': 'default'}) }}
+                            {{ wtf.render_field(form.update, button_map={'update': 'default'}) }}
                         {% endif %}
                         {% if form.confirm %}
                             <hr class="intro-divider">
                             <p>Please confirm your responses when you are finished. It is still possible to make changes up to the deadline.</p>
-                            {{ wtf.form_field(form.confirm, button_map={'confirm': 'primary'}) }}
+                            {{ wtf.render_field(form.confirm, button_map={'confirm': 'primary'}) }}
                         {% endif %}
                     </form>
                 </div>

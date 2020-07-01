@@ -22,7 +22,7 @@
                     <form action="{{ url_for('admin.create_match', base_id=base_match.id if have_base else none) }}" method="POST" name="match_form">
                         {{ form.hidden_tag() }}
 
-                        {{ wtf.form_field(form.name) }}
+                        {{ wtf.render_field(form.name) }}
 
                         <div class="well">
                             <p>Workload guidance (does not account for constraints)</p>
@@ -52,11 +52,11 @@
 
                         <div class="well {% if form.pclasses_to_include.errors %}has-error{% endif %}">
                             {% if form.include_only_submitted is defined %}
-                                {{ wtf.form_field(form.include_only_submitted) }}
+                                {{ wtf.render_field(form.include_only_submitted) }}
                             {% endif %}
                             <p>Select project classes to include in this match</p>
                             {% for widget in form.pclasses_to_include %}
-                                {{ wtf.form_field(widget) }}
+                                {{ wtf.render_field(widget) }}
                             {% else %}
                                 <span class="label label-danger">No project classes currently available</span>
                             {% endfor %}
@@ -74,21 +74,21 @@
                                 </p>
                             {% endif %}
                             {% if form.base_bias is defined %}
-                                {{ wtf.form_field(form.base_bias) }}
+                                {{ wtf.render_field(form.base_bias) }}
                             {% endif %}
                             {% if form.force_base is defined %}
-                                {{ wtf.form_field(form.force_base) }}
+                                {{ wtf.render_field(form.force_base) }}
                             {% endif %}
                         </div>
 
                         <div class="well">
                             <p>Limits</p>
-                            {{ wtf.form_field(form.ignore_per_faculty_limits) }}
-                            {{ wtf.form_field(form.supervising_limit) }}
-                            {{ wtf.form_field(form.marking_limit) }}
-                            {{ wtf.form_field(form.max_marking_multiplicity) }}
-                            {{ wtf.form_field(form.years_memory) }}
-                            {{ wtf.form_field(form.include_matches) }}
+                            {{ wtf.render_field(form.ignore_per_faculty_limits) }}
+                            {{ wtf.render_field(form.supervising_limit) }}
+                            {{ wtf.render_field(form.marking_limit) }}
+                            {{ wtf.render_field(form.max_marking_multiplicity) }}
+                            {{ wtf.render_field(form.years_memory) }}
+                            {{ wtf.render_field(form.include_matches) }}
                             {% if have_base and base_match.include_matches.first() is not none %}
                                 <p>
                                     {% for match in base_match.include_matches -%}
@@ -101,40 +101,40 @@
 
                         <div class="well">
                             <p>Matching parameters</p>
-                            {{ wtf.form_field(form.ignore_programme_prefs) }}
-                            {{ wtf.form_field(form.programme_bias) }}
-                            {{ wtf.form_field(form.bookmark_bias) }}
+                            {{ wtf.render_field(form.ignore_programme_prefs) }}
+                            {{ wtf.render_field(form.programme_bias) }}
+                            {{ wtf.render_field(form.bookmark_bias) }}
                         </div>
 
                         <div class="well">
                             <p>Biasing parameters</p>
-                            {{ wtf.form_field(form.levelling_bias) }}
-                            {{ wtf.form_field(form.intra_group_tension) }}
-                            {{ wtf.form_field(form.supervising_pressure) }}
-                            {{ wtf.form_field(form.marking_pressure) }}
+                            {{ wtf.render_field(form.levelling_bias) }}
+                            {{ wtf.render_field(form.intra_group_tension) }}
+                            {{ wtf.render_field(form.supervising_pressure) }}
+                            {{ wtf.render_field(form.marking_pressure) }}
                         </div>
 
                         <div class="well">
                             <p>Violation penalties</p>
-                            {{ wtf.form_field(form.CATS_violation_penalty) }}
-                            {{ wtf.form_field(form.no_assignment_penalty) }}
+                            {{ wtf.render_field(form.CATS_violation_penalty) }}
+                            {{ wtf.render_field(form.no_assignment_penalty) }}
                         </div>
 
                         <div class="well">
                             <p>Convenor hints</p>
-                            {{ wtf.form_field(form.use_hints) }}
-                            {{ wtf.form_field(form.encourage_bias) }}
-                            {{ wtf.form_field(form.discourage_bias) }}
-                            {{ wtf.form_field(form.strong_encourage_bias) }}
-                            {{ wtf.form_field(form.strong_discourage_bias) }}
+                            {{ wtf.render_field(form.use_hints) }}
+                            {{ wtf.render_field(form.encourage_bias) }}
+                            {{ wtf.render_field(form.discourage_bias) }}
+                            {{ wtf.render_field(form.strong_encourage_bias) }}
+                            {{ wtf.render_field(form.strong_discourage_bias) }}
                         </div>
 
                         <div class="well">
-                            {{ wtf.form_field(form.solver) }}
+                            {{ wtf.render_field(form.solver) }}
                         </div>
 
-                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
-                        {{ wtf.form_field(form.offline, button_map={'offline': 'default'}) }}
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                        {{ wtf.render_field(form.offline, button_map={'offline': 'default'}) }}
                     </form>
                 </div>
             </div>

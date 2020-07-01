@@ -42,7 +42,7 @@
                             <a href="{{ url_for('convenor.confirmation_reminder', id=config.id) }}" class="btn btn-default">
                                 Send reminders
                             </a>
-                            {{ wtf.form_field(issue_form.submit_button, button_map={'submit_button': 'default'}) }}
+                            {{ wtf.render_field(issue_form.submit_button, button_map={'submit_button': 'default'}) }}
                         </div>
                     </div>
                 </div>

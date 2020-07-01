@@ -34,18 +34,18 @@
             <form action="{{ url_for('convenor.go_live', id=config.id) }}" method="POST" name="golive-form">
                 {{ golive_form.hidden_tag() }}
                 {{ date_field(golive_form.live_deadline) }}
-                {{ wtf.form_field(golive_form.notify_faculty) }}
-                {{ wtf.form_field(golive_form.notify_selectors) }}
-                {{ wtf.form_field(golive_form.accommodate_matching) }}
-                {{ wtf.form_field(golive_form.full_CATS) }}
+                {{ wtf.render_field(golive_form.notify_faculty) }}
+                {{ wtf.render_field(golive_form.notify_selectors) }}
+                {{ wtf.render_field(golive_form.accommodate_matching) }}
+                {{ wtf.render_field(golive_form.full_CATS) }}
                 <div class="row">
                     <div class="col-xs-12">
                         <div class="pull-right">
                             {% if total_projects > 0 %}
                                 {% if golive_form.live_and_close is defined %}
-                                    {{ wtf.form_field(golive_form.live_and_close, button_map={'live_and_close': 'warning'}) }}
+                                    {{ wtf.render_field(golive_form.live_and_close, button_map={'live_and_close': 'warning'}) }}
                                 {% endif %}
-                                {{ wtf.form_field(golive_form.live, button_map={'live': 'primary'}) }}
+                                {{ wtf.render_field(golive_form.live, button_map={'live': 'primary'}) }}
                             {% endif %}
                         </div>
                     </div>

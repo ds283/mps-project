@@ -56,10 +56,10 @@
             {{ form.hidden_tag() }}
             <div class="row vertical-bottom">
                 <div class="col-xs-2">
-                    {{ wtf.form_field(form.weeks) }}
+                    {{ wtf.render_field(form.weeks) }}
                 </div>
                 <div class="col-xs-2 grouped-button-pad">
-                    {{ wtf.form_field(form.delete_age, button_map={'delete_age': 'warning'}) }}
+                    {{ wtf.render_field(form.delete_age, button_map={'delete_age': 'warning'}) }}
                 </div>
                 <div class="col-xs-8 grouped-button-pad">
                     <div class="pull-right">

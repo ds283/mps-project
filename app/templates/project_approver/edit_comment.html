@@ -17,11 +17,11 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        {{ wtf.form_field(form.comment) }}
+        {{ wtf.render_field(form.comment) }}
         {% if current_user.has_role('project_approver') %}
-            {{ wtf.form_field(form.limit_visibility) }}
+            {{ wtf.render_field(form.limit_visibility) }}
         {% endif %}
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

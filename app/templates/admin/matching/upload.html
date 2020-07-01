@@ -18,7 +18,7 @@
                     <form action="{{ url_for('admin.upload_match', match_id=match.id) }}" method="POST" enctype="multipart/form-data" name="match_form">
                         {{ form.hidden_tag() }}
 
-                        {{ wtf.form_field(form.solver) }}
+                        {{ wtf.render_field(form.solver) }}
 
                         <label class="btn btn-default" for="file-selector">
                             <input id="file-selector" type="file" name="solution" style="display: none;"
@@ -28,7 +28,7 @@
                         <span class="label label-info" id="filename-data"></span>
 
                         <hr class="intro-divider">
-                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>
                 </div>
             </div>

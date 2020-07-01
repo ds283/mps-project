@@ -43,11 +43,11 @@
 
 {#        {{ wtf.form_errors(supervisor_form) }}#}
 
-        {{ wtf.form_field(supervisor_form.name) }}
-        {{ wtf.form_field(supervisor_form.abbreviation) }}
+        {{ wtf.render_field(supervisor_form.name) }}
+        {{ wtf.render_field(supervisor_form.abbreviation) }}
         {{ colour_field(supervisor_form.colour, 'colour-group') }}
 
-        {{ wtf.form_field(supervisor_form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(supervisor_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

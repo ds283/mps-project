@@ -22,14 +22,14 @@
 
 {#        {{ wtf.form_errors(programme_form) }}#}
 
-        {{ wtf.form_field(programme_form.degree_type) }}
-        {{ wtf.form_field(programme_form.show_type) }}
+        {{ wtf.render_field(programme_form.degree_type) }}
+        {{ wtf.render_field(programme_form.show_type) }}
         <hr class="intro-divider">
-        {{ wtf.form_field(programme_form.name) }}
-        {{ wtf.form_field(programme_form.abbreviation) }}
-        {{ wtf.form_field(programme_form.course_code) }}
+        {{ wtf.render_field(programme_form.name) }}
+        {{ wtf.render_field(programme_form.abbreviation) }}
+        {{ wtf.render_field(programme_form.course_code) }}
 
-        {{ wtf.form_field(programme_form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(programme_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

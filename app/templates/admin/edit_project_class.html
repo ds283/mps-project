@@ -47,49 +47,49 @@
 {#        {{ wtf.form_errors(pclass_form) }}#}
 
         <div class="well">
-            {{ wtf.form_field(pclass_form.name) }}
-            {{ wtf.form_field(pclass_form.abbreviation) }}
+            {{ wtf.render_field(pclass_form.name) }}
+            {{ wtf.render_field(pclass_form.abbreviation) }}
 
             {{ colour_field(pclass_form.colour, 'colour-group') }}
         </div>
 
         <div class="well">
             <p>Personnel</p>
-            {{ wtf.form_field(pclass_form.convenor) }}
-            {{ wtf.form_field(pclass_form.coconvenors) }}
-            {{ wtf.form_field(pclass_form.office_contacts) }}
+            {{ wtf.render_field(pclass_form.convenor) }}
+            {{ wtf.render_field(pclass_form.coconvenors) }}
+            {{ wtf.render_field(pclass_form.office_contacts) }}
         </div>
 
         <div class="well">
             <p>Configuration</p>
-            {{ wtf.form_field(pclass_form.start_level) }}
-            {{ wtf.form_field(pclass_form.extent) }}
+            {{ wtf.render_field(pclass_form.start_level) }}
+            {{ wtf.render_field(pclass_form.extent) }}
 
             <p>Staff requirements</p>
-            {{ wtf.form_field(pclass_form.uses_supervisor) }}
-            {{ wtf.form_field(pclass_form.uses_marker) }}
-            {{ wtf.form_field(pclass_form.uses_presentations) }}
+            {{ wtf.render_field(pclass_form.uses_supervisor) }}
+            {{ wtf.render_field(pclass_form.uses_marker) }}
+            {{ wtf.render_field(pclass_form.uses_presentations) }}
             <hr class="intro-divider">
-            {{ wtf.form_field(pclass_form.reenroll_supervisors_early) }}
+            {{ wtf.render_field(pclass_form.reenroll_supervisors_early) }}
         </div>
 
         <div class="well">
             <p>Options</p>
-            {{ wtf.form_field(pclass_form.require_confirm) }}
-            {{ wtf.form_field(pclass_form.supervisor_carryover) }}
-            {{ wtf.form_field(pclass_form.include_available) }}
+            {{ wtf.render_field(pclass_form.require_confirm) }}
+            {{ wtf.render_field(pclass_form.supervisor_carryover) }}
+            {{ wtf.render_field(pclass_form.include_available) }}
         </div>
 
         <div class="well">
             <p>Automated matching</p>
-            {{ wtf.form_field(pclass_form.do_matching) }}
-            {{ wtf.form_field(pclass_form.number_assessors) }}
+            {{ wtf.render_field(pclass_form.do_matching) }}
+            {{ wtf.render_field(pclass_form.number_assessors) }}
         </div>
 
         <div class="well {% if pclass_form.programmes.errors %}has-error{% endif %}">
             <p>Select degree programmes to which this project class applies</p>
             {% for widget in pclass_form.programmes %}
-                {{ wtf.form_field(widget) }}
+                {{ wtf.render_field(widget) }}
             {% endfor %}
             {% if pclass_form.programmes.errors %}
                 {% for error in pclass_form.programmes.errors %}
@@ -107,30 +107,30 @@
                 </label>
             </div>
             <p>Auto enroll students as selectors in which years?</p>
-            {{ wtf.form_field(pclass_form.auto_enroll_years) }}
+            {{ wtf.render_field(pclass_form.auto_enroll_years) }}
         </div>
 
         <div class="well">
             <p>Student selections</p>
-            {{ wtf.form_field(pclass_form.initial_choices) }}
-            {{ wtf.form_field(pclass_form.switch_choices) }}
-            {{ wtf.form_field(pclass_form.faculty_maximum) }}
+            {{ wtf.render_field(pclass_form.initial_choices) }}
+            {{ wtf.render_field(pclass_form.switch_choices) }}
+            {{ wtf.render_field(pclass_form.faculty_maximum) }}
         </div>
 
         <div class="well">
             <p>Workload model support</p>
-            {{ wtf.form_field(pclass_form.CATS_supervision) }}
-            {{ wtf.form_field(pclass_form.CATS_marking) }}
-            {{ wtf.form_field(pclass_form.CATS_presentation) }}
+            {{ wtf.render_field(pclass_form.CATS_supervision) }}
+            {{ wtf.render_field(pclass_form.CATS_marking) }}
+            {{ wtf.render_field(pclass_form.CATS_presentation) }}
         </div>
 
         <div class="well">
             <p>Popularity data</p>
-            {{ wtf.form_field(pclass_form.keep_hourly_popularity) }}
-            {{ wtf.form_field(pclass_form.keep_daily_popularity) }}
+            {{ wtf.render_field(pclass_form.keep_hourly_popularity) }}
+            {{ wtf.render_field(pclass_form.keep_daily_popularity) }}
         </div>
 
-        {{ wtf.form_field(pclass_form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(pclass_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

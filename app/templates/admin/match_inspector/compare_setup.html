@@ -20,6 +20,6 @@
 
         {{ on_click_selector_field(form.target, true) }}
 
-        {{ wtf.form_field(form.compare, button_map={'compare': 'primary'}) }}
+        {{ wtf.render_field(form.compare, button_map={'compare': 'primary'}) }}
     </form>
 {% endblock %}

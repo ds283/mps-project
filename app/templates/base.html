@@ -305,17 +305,8 @@
 {% endmacro %}
 
 {% block navbar %}
-    <nav class="navbar
-                {% if current_user.theme is defined %}
-                    {% if current_user.theme == current_user.THEME_FLAT or current_user.theme == current_user.THEME_DARK %}
-                        navbar-default
-                    {% else %}
-                        navbar-inverse
-                    {% endif %}
-                {% else %}
-                    navbar-inverse
-                {% endif %}
-                navbar-fixed-top topnav" role="navigation">
+    {% set theme = current_user.ui_theme %}
+    <nav class="navbar {% if theme == 'flat' or theme == 'dark' %}navbar-default{% else %}navbar-inverse{% endif %} navbar-fixed-top topnav" role="navigation">
         {% if not live_platform %}
             <div class="notify-bar hidden-sm container-fluid">
                 <div class="container">Platform not live &mdash; external email disabled</div>

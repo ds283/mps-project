@@ -1158,8 +1158,19 @@ class User(db.Model, UserMixin):
     THEME_FLAT = 1
     THEME_DARK = 2
 
+    THEME_KEYS = {THEME_DEFAULT: 'default',
+                  THEME_FLAT: 'flat',
+                  THEME_DARK: 'dark'}
+
     # theme options
     theme = db.Column(db.Integer(), default=THEME_DEFAULT, nullable=False)
+
+    @property
+    def ui_theme(self):
+        if self.theme in User.THEME_KEYS:
+            return User.THEME_KEYS[self.theme]
+
+        return User.THEME_KEYS[User.THEME_DEFAULT]
 
 
     # EMAIL PREFERENCES

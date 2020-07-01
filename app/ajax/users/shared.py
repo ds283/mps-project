@@ -38,11 +38,12 @@ name = \
             {% endif %}
         </div>
     {% endif %}
-    {% if u.theme == u.THEME_DEFAULT %}
+    {% set theme = u.ui_theme %}
+    {% if theme == 'default'' %}
         <span class="label label-primary">Default</span>
-    {% elif u.theme == u.THEME_FLAT %}
+    {% elif theme == 'flat'' %}
         <span class="label label-primary">Flat</span>
-    {% elif u.theme == u.THEME_DARK %}
+    {% elif theme == 'dark'' %}
         <span class="label label-primary">Dark</span>
     {% else %}
         <span class="label label-danger">Unknown theme</span>

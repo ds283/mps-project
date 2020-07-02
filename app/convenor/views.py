@@ -267,7 +267,7 @@ def overview(id):
     GoLiveForm = GoLiveFormFactory()
     golive_form = GoLiveForm(request.form)
 
-    # 2. Change deadline for projec selection
+    # 2. Change deadline for project selection
     ChangeDeadlineForm = ChangeDeadlineFormFactory()
     change_form = ChangeDeadlineForm(request.form)
 

@@ -65,9 +65,9 @@
 
         {{ wtf.render_field(project_form.submit, button_map={'submit': 'primary'}) }}
         {% if project_form.save_and_exit %}
-            {{ wtf.render_field(project_form.save_and_exit, button_map={'save_and_exit': 'default'}) }}
+            {{ wtf.render_field(project_form.save_and_exit, button_map={'save_and_exit': 'secondary'}) }}
         {% endif %}
-        {{ wtf.render_field(project_form.save_and_preview, button_map={'save_and_preview': 'default'}) }}
+        {{ wtf.render_field(project_form.save_and_preview, button_map={'save_and_preview': 'secondary'}) }}
 
     </form>
 {% endblock %}

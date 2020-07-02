@@ -31,12 +31,12 @@
                 <div class="float-right">
                     <a class="btn btn-secondary" href="{{ url_for('convenor.submission_period_documents', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='overview') }}">Documents ({{ period.number_attachments }})...</a>
                     {% if feedback_form.send_notifications is defined %}
-                        {{ wtf.render_field(feedback_form.send_notifications, button_map={'send_notifications': 'default'}) }}
+                        {{ wtf.render_field(feedback_form.send_notifications, button_map={'send_notifications': 'secondary'}) }}
                     {% endif %}
                     {% if feedback_form.test_button is defined  %}
                         {{ wtf.render_field(feedback_form.test_button, button_map={'test_button': 'info'}) }}
                     {% endif %}
-                    {{ wtf.render_field(feedback_form.submit_button, button_map={'submit_button': 'default'}) }}
+                    {{ wtf.render_field(feedback_form.submit_button, button_map={'submit_button': 'secondary'}) }}
                 </div>
             </div>
         </div>

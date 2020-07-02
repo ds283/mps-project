@@ -26,11 +26,11 @@
             <div class="list-group">
                 <div class="list-group-item">
                     <span class="{% if pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback pushed</span>
-                    <span class="badge badge-pill">{{ pushed }}/{{ total }}</span>
+                    <span class="badge badge-secondary badge-pill">{{ pushed }}/{{ total }}</span>
                 </div>
                 <div class="list-group-item">
                     <span class="{% if not_pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback available to push</span>
-                    <span class="badge badge-pill">{{ not_pushed }}/{{ total }}</span>
+                    <span class="badge badge-secondary badge-pill">{{ not_pushed }}/{{ total }}</span>
                 </div>
             </div>
         </div>
@@ -39,16 +39,16 @@
                 <div class="list-group">
                     {% if period.collect_project_feedback %}
                         <div class="list-group-item">
-                            Supervisor feedback <span class="badge badge-pill">{{ supv }}/{{ total }}</span>
+                            Supervisor feedback <span class="badge badge-secondary badge-pill">{{ supv }}/{{ total }}</span>
                         </div>
                         <div class="list-group-item">
-                            Marker feedback <span class="badge badge-pill">{{ mark }}/{{ total }}</span>
+                            Marker feedback <span class="badge badge-secondary badge-pill">{{ mark }}/{{ total }}</span>
                         </div>
                     {% endif %}
                     {% if period.has_presentation and period.collect_presentation_feedback %}
                         {% set pres = period.number_submitters_presentation_feedback %}
                         <div class="list-group-item">
-                            Presentation feedback <span class="badge badge-pill">{{ pres }}/{{ total }}</span>
+                            Presentation feedback <span class="badge badge-secondary badge-pill">{{ pres }}/{{ total }}</span>
                         </div>
                     {% endif %}
                 </div>

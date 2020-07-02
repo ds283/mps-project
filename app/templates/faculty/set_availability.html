@@ -65,7 +65,7 @@
                         <hr class="intro-divider">
                         {{ wtf.render_field(form.comment) }}
                         {% if form.update %}
-                            {{ wtf.render_field(form.update, button_map={'update': 'default'}) }}
+                            {{ wtf.render_field(form.update, button_map={'update': 'secondary'}) }}
                         {% endif %}
                         {% if form.confirm %}
                             <hr class="intro-divider">

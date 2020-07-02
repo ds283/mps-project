@@ -29,7 +29,7 @@
     {# based on https://stackoverflow.com/questions/32746598/bootstrap-dropdown-list-position-up-bottom-based-on-document-height #}
     <script>
         function determineDropDirection(){
-          $(".dropdown-menu").each( function(){
+          $(".dropdown-menu dropdown-menu-right").each( function(){
             $(this).css({
               visibility: "hidden",
               display: "block"
@@ -282,301 +282,280 @@
 
 {% macro convenor_menu(pclasses) %}
     <li class="nav-item dropdown">
-        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+        <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
             Convenor
             <span class="caret"></span>
         </a>
 
-        <div class="dropdown-menu">
-        <li class="dropdown-header">Convenorships</li>
-        {% for project_class in pclasses %}
-            <li><a href="{{ url_for('convenor.overview', id=project_class.id) }}">
-                <i class="fa fa-briefcase"></i> {{ project_class.name }}...
-            </a></li>
-        {% endfor %}
-        {% if current_user.has_role('admin') or current_user.has_role('root') %}
-            <li role="separator" class="divider"></li>
-            <li><a href="{{ url_for('convenor.show_unofferable', id=0) }}">
-                <i class="fa fa-exclamation-circle"></i> Unofferable projects...
-            </a></li>
-        {% endif %}
-        </ul>
+        <div class="dropdown-menu dropdown-menu-right">
+            <div class="dropdown-header">Convenorships</div>
+            {% for project_class in pclasses %}
+                <a class="dropdown-item"href="{{ url_for('convenor.overview', id=project_class.id) }}">
+                    <i class="fa fa-briefcase"></i> {{ project_class.name }}...
+                </a>
+            {% endfor %}
+            {% if current_user.has_role('admin') or current_user.has_role('root') %}
+                <div role="separator" class="divider"></div>
+                <a class="dropdown-item" href="{{ url_for('convenor.show_unofferable', id=0) }}">
+                    <i class="fa fa-exclamation-circle"></i> Unofferable projects...
+                </a>
+            {% endif %}
+        </div>
     </li>
 {% endmacro %}
 
 {% block navbar %}
     {% set theme = current_user.ui_theme if current_user.ui_theme is defined else 'default' %}
-    <nav class="navbar navbar-expand {% if theme == 'flat' or theme == 'dark' %}navbar-light bg-light{% else %}navbar-dark bg-dark{% endif %} navbar-fixed-top topnav" role="navigation">
-        {% if not live_platform %}
-            <div class="notify-bar hidden-sm container-fluid">
-                <div class="container">Platform not live &mdash; external email disabled</div>
-            </div>
-        {% endif %}
-        <div class="container topnav">
-            <div class="navbar-header">
-                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
-                        data-target="#mpsp-navbar-collapsed" aria-expanded="false">
-                    <span class="sr-only">Toggle navigation</span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                </button>
-                <a class="navbar-brand" href="{{ home_dashboard_url }}">Sussex Physics & Astronomy projects</a>
-            </div>
+    <nav class="navbar navbar-expand {% if theme == 'flat' or theme == 'dark' %}navbar-light bg-light{% else %}navbar-dark bg-dark{% endif %} fixed-top" role="navigation">
+{#        {% if not live_platform %}#}
+{#            <div class="container">#}
+{#                <div class="notify-bar">#}
+{#                    Platform not live &mdash; external email disabled#}
+{#                </div>#}
+{#            </div>#}
+{#        {% endif %}#}
+        <a class="navbar-brand" href="{{ home_dashboard_url }}">Sussex Physics & Astronomy projects</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
+                aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
-            <!-- Collect nav links and other content into a menu for mobile devices -->
-            <div class="collapse navbar-collapse" id="mpsp-navbar-collapsed">
-                <ul class="nav navbar-nav ml-auto">
+        <!-- Collect nav links and other content into a menu for mobile devices -->
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+            <div class="navbar-nav ml-auto">
 
-                    <!-- add faculty version of 'my projects' if user is a faculty member -->
-                    {% if is_faculty %}
-                        <li class="nav-item dropdown">
-                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                                My projects
-                                <span class="caret"></span>
+                <!-- add faculty version of 'my projects' if user is a faculty member -->
+                {% if is_faculty %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
+                            My projects
+                            <span class="caret"></span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <a class="dropdown-item" href="{{ url_for('faculty.edit_projects') }}">
+                                <i class="fa fa-pencil"></i> My project library...
                             </a>
-                            <div class="dropdown-menu">
-                                <li><a href="{{ url_for('faculty.edit_projects') }}">
-                                    <i class="fa fa-pencil"></i> My project library...
-                                </a></li>
-                                <li><a href="{{ url_for('faculty.assessor_for') }}">
-                                    <i class="fa fa-book"></i> My assessor projects...
-                                </a></li>
-                                <li role="separator" class="divider"></li>
-                                <li class="dropdown-header">Browse history</li>
-                                <li><a href="{{ url_for('faculty.past_projects') }}">
-                                    <i class="fa fa-archive"></i> Offered projects...
-                                </a></li>
-                                <li><a href="#">
-                                    <i class="fa fa-archive"></i> Students...
-                                </a></li>
-                            </ul>
-                        </li>
-                    {% endif %}
-
-                    <!-- add student version of 'my projects' if user is a student -->
-                    {% if is_student %}
-                        <li class="nav-item dropdown">
-                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                                My projects
-                                <span class="caret"></span>
+                            <a class="dropdown-item" href="{{ url_for('faculty.assessor_for') }}">
+                                <i class="fa fa-book"></i> My assessor projects...
                             </a>
-                            <div class="dropdown-menu">
-                                {% if current_user.student_data.has_timeline %}
-                                    <li><a href="{{ url_for('student.timeline', student_id=current_user.id) }}">
-                                        <i class="fa fa-clock-o"></i> Show history...
-                                    </a></li>
-                                {% else %}
-                                    <li class="disabled"><a>
-                                        <i class="fa fa-clock-o"></i> Show history...
-                                    </a></li>
-                                {% endif %}
-                            </ul>
-                        </li>
-                    {% endif %}
-
-                    {% if is_reports %}
-                        <li class="nav-item dropdown">
-                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                                Reports
-                                <span class="caret"></span>
+                            <div role="separator" class="dropdown-divider"></div>
+                            <div class="dropdown-header">Browse history</div>
+                            <a class="dropdown-item"href="{{ url_for('faculty.past_projects') }}">
+                                <i class="fa fa-archive"></i> Offered projects...
                             </a>
-                            <div class="dropdown-menu">
-                                <li><a href="{{ url_for('reports.all_projects') }}">
-                                    <i class="fa fa-binoculars"></i> All projects...
-                                </a></li>
-                                <li><a href="{{ url_for('reports.workload') }}">
-                                    <i class="fa fa-binoculars"></i> Workload...
-                                </a></li>
-                            </ul>
-                        </li>
-                    {% endif %}
-
-                    <!-- add convenor menu if user is a convenor, or an admin user -->
-                    {% if is_admin or is_root %}
-                        {{ convenor_menu(current_user.all_project_classes.all()) }}
-                    {% elif is_convenor %}
-                        {{ convenor_menu(current_user.faculty_data.convenor_list) }}
-                    {% endif %}
-
-                    <!-- add admin menu if user is an administrator or system administrator, or a convenor -->
-                    {% if is_admin or is_root or is_edit_tags or is_manage_users or is_convenor %}
-                        <li class="nav-item dropdown">
-                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                                Admin
-                                <span class="caret"></span>
+                            <a class="dropdown-item"href="#">
+                                <i class="fa fa-archive"></i> Students...
                             </a>
-                            <div class="dropdown-menu">
-                                {% if is_manage_users or is_root %}
-                                    <li><a href="{{ url_for('manage_users.edit_users') }}">
-                                        <i class="fa fa-users"></i> Manage users...
-                                    </a></li>
-                                    <li role="separator" class="divider"></li>
-                                {% endif %}
-                                {% if is_admin or is_root or is_convenor %}
-                                    <li class="dropdown-header">Tools</li>
-                                    <li><a href="{{ url_for('admin.edit_messages') }}">
-                                        <i class="fa fa-comment"></i> Messages...
-                                    </a></li>
-                                {% endif %}
-                                {% if is_admin or is_root or is_edit_tags %}
-                                    <li role="separator" class="divider"></li>
-                                    <li class="dropdown-header">Project components</li>
-                                    <li><a href="{{ url_for('admin.edit_skills') }}">
-                                        <i class="fa fa-cogs"></i> Transferable skills...
-                                    </a></li>
-                                    <li><a href="{{ url_for('admin.edit_supervisors') }}">
-                                        <i class="fa fa-cogs"></i> Supervisory team...
-                                    </a></li>
-                                {% endif %}
-                                {% if is_root %}
-                                    <li role="separator" class="divider"></li>
-                                    <li class="dropdown-header">Sysadmin only</li>
-                                    {% if matching_ready %}
-                                        <li><a href="{{ url_for('admin.manage_matching') }}">
-                                            <i class="fa fa-cogs"></i> Manage matching...
-                                        </a></li>
-                                    {% endif %}
-                                    {% if has_assessments %}
-                                        <li><a href="{{ url_for('admin.manage_assessments') }}">
-                                            <i class="fa fa-cogs"></i> Manage assessments...
-                                        </a></li>
-                                    {% endif %}
-                                    <li><a href="{{ url_for('admin.edit_project_classes') }}">
-                                        <i class="fa fa-cogs"></i> Project classes...
-                                    </a></li>
-                                    <li><a href="{{ url_for('admin.edit_groups') }}">
-                                        <i class="fa fa-cogs"></i> Research groups...
-                                    </a></li>
-                                    <li><a href="{{ url_for('admin.edit_degree_programmes') }}">
-                                        <i class="fa fa-cogs"></i> Degree programmes...
-                                    </a></li>
-                                    <li><a href="{{ url_for('admin.edit_rooms') }}">
-                                        <i class="fa fa-cogs"></i> Presentation venues...
-                                    </a></li>
-                                    <li><a href="{{ url_for('admin.edit_licenses') }}">
-                                        <i class="fa fa-cogs"></i> Asset licenses...
-                                    </a></li>
-                                {% endif %}
-                            </ul>
-                        </li>
-                    {% endif %}
+                        </div>
+                    </li>
+                {% endif %}
 
-                    <!-- add site menu if user is root -->
-                    {% if is_root or is_view_email %}
-                        <li class="nav-item dropdown">
-                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                                Site management
-                                <span class="caret"></span>
-                            </a>
-                            <div class="dropdown-menu">
-                                {% if is_root %}
-                                    <li><a href="{{ url_for('manage_users.edit_roles') }}">
-                                        <i class="fa fa-cogs"></i> Role editor...
-                                    </a></li>
-                                {% endif %}
-                                {% if is_root or is_view_email %}
-                                    <li><a href="{{ url_for('admin.email_log') }}">
-                                        <i class="fa fa-wrench"></i> Email log...
-                                    </a></li>
-                                {% endif %}
-                                {% if is_root %}
-                                    <li><a href="{{ url_for('admin.background_tasks') }}">
-                                        <i class="fa fa-wrench"></i> Background tasks...
-                                    </a></li>
-                                    <li><a href="{{ url_for('admin.scheduled_tasks') }}">
-                                        <i class="fa fa-wrench"></i> Scheduled tasks...
-                                    </a></li>
-                                    <li><a href="{{ url_for('admin.backups_overview') }}">
-                                        <i class="fa fa-wrench"></i> Manage backups...
-                                    </a></li>
-                                {% endif %}
-                            </ul>
-                        </li>
-                    {% endif %}
+                <!-- add student version of 'my projects' if user is a student -->
+                {% if is_student %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
+                            My projects
+                            <span class="caret"></span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            {% if current_user.student_data.has_timeline %}
+                                <a class="dropdown-item" href="{{ url_for('student.timeline', student_id=current_user.id) }}">
+                                    <i class="fa fa-clock-o"></i> Show history...
+                                </a>
+                            {% else %}
+                                <a class="dropdown-item disabled">
+                                    <i class="fa fa-clock-o"></i> Show history...
+                                </a>
+                            {% endif %}
+                        </div>
+                    </li>
+                {% endif %}
 
-                    <!-- add user account menu if user is logged in -->
-                    {% if current_user.is_authenticated %}
-                        <li class="nav-item dropdown">
-                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                                <i class="fa fa-user"></i>
-                                {{ current_user.username }}
-                                {% if current_user.has_role('office') %}
-                                    (School Office)
-                                {% elif current_user.has_role('faculty') %}
-                                    (faculty)
-                                {% elif current_user.has_role('student') %}
-                                    (student)
-                                {% endif %}
-                                <span class="caret"></span>
+                {% if is_reports %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
+                            Reports
+                            <span class="caret"></span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <a class="dropdown-item" href="{{ url_for('reports.all_projects') }}">
+                                <i class="fa fa-binoculars"></i> All projects...
                             </a>
-                            <div class="dropdown-menu">
-                                <li><a href="{{ url_for('home.homepage') }}">
-                                    <i class="fa fa-area-chart"></i> Dashboard...
-                                </a></li>
-                                {% if current_user.faculty_data.has_editable_availability_requests %}
-                                    <li role="separator" class="divider"></li>
-                                    <li class="dropdown-header">Assessment events</li>
-                                    <li>
-                                        <a href="{{ url_for('faculty.change_availability') }}">
-                                            <i class="fa fa-calendar"></i> Change availability...
-                                        </a>
-                                    </li>
-                                {% endif %}
-                                {% if is_faculty %}
-                                    <li role="separator" class="divider"></li>
-                                    <li class="dropdown-header">Faculty options</li>
-                                    <li>
-                                        <a href="{{ url_for('faculty.show_enrollments') }}">
-                                            <i class="fa fa-info-circle"></i> Show enrollments...
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ url_for('faculty.show_workload') }}">
-                                            <i class="fa fa-info-circle"></i> Show workload limits...
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ url_for('faculty.settings') }}">
-                                            <i class="fa fa-cogs"></i> Settings...
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ url_for('faculty.affiliations') }}">
-                                            <i class="fa fa-cogs"></i> Research affiliations...
-                                        </a>
-                                    </li>
-                                {% elif is_student %}
-                                    <li role="separator" class="divider"></li>
-                                    <li class="dropdown-header">Student options</li>
-                                    <li>
-                                        <a href="{{ url_for('student.settings') }}">
-                                            <i class="fa fa-cogs"></i> Settings...
-                                        </a>
-                                    </li>
-                                {% elif is_office %}
-                                    <li role="separator" class="divider"></li>
-                                    <li class="dropdown-header">Office options</li>
-                                    <li>
-                                        <a href="{{ url_for('office.settings') }}">
-                                            <i class="fa fa-cogs"></i> Settings...
-                                        </a>
-                                    </li>
-                                {% endif %}
-                                <li>
-                                    <a href="{{ url_for_security('change_password') }}">
-                                        <i class="fa fa-cogs"></i> Change password...
+                            <a class="dropdown-item" href="{{ url_for('reports.workload') }}">
+                                <i class="fa fa-binoculars"></i> Workload...
+                            </a>
+                        </div>
+                    </li>
+                {% endif %}
+
+                <!-- add convenor menu if user is a convenor, or an admin user -->
+                {% if is_admin or is_root %}
+                    {{ convenor_menu(current_user.all_project_classes.all()) }}
+                {% elif is_convenor %}
+                    {{ convenor_menu(current_user.faculty_data.convenor_list) }}
+                {% endif %}
+
+                <!-- add admin menu if user is an administrator or system administrator, or a convenor -->
+                {% if is_admin or is_root or is_edit_tags or is_manage_users or is_convenor %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
+                            Admin
+                            <span class="caret"></span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            {% if is_manage_users or is_root %}
+                                <a class="dropdown-item" href="{{ url_for('manage_users.edit_users') }}">
+                                    <i class="fa fa-users"></i> Manage users...
+                                </a>
+                                <div role="separator" class="dropdown-divider"></div>
+                            {% endif %}
+                            {% if is_admin or is_root or is_convenor %}
+                                <div class="dropdown-header">Tools</div>
+                                <a class="dropdown-item" href="{{ url_for('admin.edit_messages') }}">
+                                    <i class="fa fa-comment"></i> Messages...
+                                </a>
+                            {% endif %}
+                            {% if is_admin or is_root or is_edit_tags %}
+                                <div role="separator" class="dropdown-divider"></div>
+                                <div class="dropdown-header">Project components</div>
+                                <a class="dropdown-item" href="{{ url_for('admin.edit_skills') }}">
+                                    <i class="fa fa-cogs"></i> Transferable skills...
+                                </a>
+                                <a class="dropdown-item" href="{{ url_for('admin.edit_supervisors') }}">
+                                    <i class="fa fa-cogs"></i> Supervisory team...
+                                </a>
+                            {% endif %}
+                            {% if is_root %}
+                                <div role="separator" class="dropdown-divider"></div>
+                                <div class="dropdown-header">Sysadmin only</div>
+                                {% if matching_ready %}
+                                    <a class="dropdown-item" href="{{ url_for('admin.manage_matching') }}">
+                                        <i class="fa fa-cogs"></i> Manage matching...
                                     </a>
-                                </li>
-                                <li role="separator" class="divider"></li>
-                                <li><a href="{{ url_for('auth.logout') }}">
-                                    <i class="fa fa-times-circle"></i> Logout
-                                </a></li>
-                            </ul>
-                        </li>
-                    {% endif %}
-                </ul>
-            </div>
+                                {% endif %}
+                                {% if has_assessments %}
+                                    <a class="dropdown-item" href="{{ url_for('admin.manage_assessments') }}">
+                                        <i class="fa fa-cogs"></i> Manage assessments...
+                                    </a>
+                                {% endif %}
+                                <a class="dropdown-item" href="{{ url_for('admin.edit_project_classes') }}">
+                                    <i class="fa fa-cogs"></i> Project classes...
+                                </a>
+                                <a class="dropdown-item" href="{{ url_for('admin.edit_groups') }}">
+                                    <i class="fa fa-cogs"></i> Research groups...
+                                </a>
+                                <a class="dropdown-item" href="{{ url_for('admin.edit_degree_programmes') }}">
+                                    <i class="fa fa-cogs"></i> Degree programmes...
+                                </a>
+                                <a class="dropdown-item" href="{{ url_for('admin.edit_rooms') }}">
+                                    <i class="fa fa-cogs"></i> Presentation venues...
+                                </a>
+                                <a class="dropdown-item" href="{{ url_for('admin.edit_licenses') }}">
+                                    <i class="fa fa-cogs"></i> Asset licenses...
+                                </a>
+                            {% endif %}
+                        </div>
+                    </li>
+                {% endif %}
+
+                <!-- add site menu if user is root -->
+                {% if is_root or is_view_email %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
+                            Site management
+                            <span class="caret"></span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            {% if is_root %}
+                                <a class="dropdown-item" href="{{ url_for('manage_users.edit_roles') }}">
+                                    <i class="fa fa-cogs"></i> Role editor...
+                                </a>
+                            {% endif %}
+                            {% if is_root or is_view_email %}
+                                <a class="dropdown-item" href="{{ url_for('admin.email_log') }}">
+                                    <i class="fa fa-wrench"></i> Email log...
+                                </a>
+                            {% endif %}
+                            {% if is_root %}
+                                <a class="dropdown-item" href="{{ url_for('admin.background_tasks') }}">
+                                    <i class="fa fa-wrench"></i> Background tasks...
+                                </a>
+                                <a class="dropdown-item" href="{{ url_for('admin.scheduled_tasks') }}">
+                                    <i class="fa fa-wrench"></i> Scheduled tasks...
+                                </a>
+                                <a class="dropdown-item" href="{{ url_for('admin.backups_overview') }}">
+                                    <i class="fa fa-wrench"></i> Manage backups...
+                                </a>
+                            {% endif %}
+                        </div>
+                    </li>
+                {% endif %}
+
+                <!-- add user account menu if user is logged in -->
+                {% if current_user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
+                            <i class="fa fa-user"></i>
+                            {{ current_user.username }}
+                            {% if current_user.has_role('office') %}
+                                (School Office)
+                            {% elif current_user.has_role('faculty') %}
+                                (faculty)
+                            {% elif current_user.has_role('student') %}
+                                (student)
+                            {% endif %}
+                            <span class="caret"></span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <a class="dropdown-item" href="{{ url_for('home.homepage') }}">
+                                <i class="fa fa-area-chart"></i> Dashboard...
+                            </a>
+                            {% if current_user.faculty_data.has_editable_availability_requests %}
+                                <div role="separator" class="dropdown-divider"></div>
+                                <div class="dropdown-header">Assessment events</div>
+                                <a class="dropdown-item" href="{{ url_for('faculty.change_availability') }}">
+                                    <i class="fa fa-calendar"></i> Change availability...
+                                </a>
+                            {% endif %}
+                            {% if is_faculty %}
+                                <div role="separator" class="dropdown-divider"></div>
+                                <div class="dropdown-header">Faculty options</div>
+                                <a class="dropdown-item" href="{{ url_for('faculty.show_enrollments') }}">
+                                    <i class="fa fa-info-circle"></i> Show enrollments...
+                                </a>
+                                <a class="dropdown-item" href="{{ url_for('faculty.show_workload') }}">
+                                    <i class="fa fa-info-circle"></i> Show workload limits...
+                                </a>
+                                <a class="dropdown-item" href="{{ url_for('faculty.settings') }}">
+                                    <i class="fa fa-cogs"></i> Settings...
+                                </a>
+                                <a class="dropdown-item" href="{{ url_for('faculty.affiliations') }}">
+                                    <i class="fa fa-cogs"></i> Research affiliations...
+                                </a>
+                            {% elif is_student %}
+                                <div role="separator" class="dropdown-divider"></div>
+                                <div class="dropdown-header">Student options</div>
+                                <a class="dropdown-item" href="{{ url_for('student.settings') }}">
+                                    <i class="fa fa-cogs"></i> Settings...
+                                </a>
+                            {% elif is_office %}
+                                <div role="separator" class="dropdown-divider"></div>
+                                <div class="dropdown-header">Office options</div>
+                                <a class="dropdown-item" href="{{ url_for('office.settings') }}">
+                                    <i class="fa fa-cogs"></i> Settings...
+                                </a>
+                            {% endif %}
+                            <a class="dropdown-item" href="{{ url_for_security('change_password') }}">
+                                <i class="fa fa-cogs"></i> Change password...
+                            </a>
+                            <div role="separator" class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                                <i class="fa fa-times-circle"></i> Logout
+                            </a>
+                        </ul>
+                    </li>
+                {% endif %}
+            </ul>
         </div>
     </nav>
 {% endblock %}
@@ -626,16 +605,12 @@
         <br/>
         {% block bodyblock %}{% endblock %}
     </div>
-    <nav class="navbar navbar-expand {% if real_user %}navbar-dark bg-dark{% else %}navbar-light bg-light{% endif %} navbar-fixed-bottom" role="navigation">
-        <div class="navbar-header footer-bar">
-            <div class="container">
-                <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} University of Sussex</span>
-                {% if real_user %}
-                    <span class="navbar-text small" style="float: right;">You
-                        are viewing as <i class="fa fa-user"></i>
-                        {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if current_user.theme == current_user.THEME_FLAT or current_user.theme == current_user.THEME_DARK %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
-                {% endif %}
-            </div>
-        </div>
+    <nav class="navbar navbar-expand {% if real_user %}navbar-dark bg-dark{% else %}navbar-light bg-light{% endif %} fixed-bottom" role="navigation">
+        <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} University of Sussex</span>
+        {% if real_user %}
+            <span class="navbar-text small" style="float: right;">You
+                are viewing as <i class="fa fa-user"></i>
+                {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if current_user.theme == current_user.THEME_FLAT or current_user.theme == current_user.THEME_DARK %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
+        {% endif %}
     </nav>
 {% endblock %}

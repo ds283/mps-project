@@ -30,33 +30,33 @@
         <li {% if pane == 'attached' %}class="active"{% endif %}><a href="{{ url_for('convenor.attached', id=pclass.id) }}">
             Attached projects
             {% if proj_count is defined %}
-                <span class="badge badge-pill">{{ proj_count }}</span>
+                <span class="badge badge-secondary badge-pill">{{ proj_count }}</span>
             {% endif %}
         </a></li>
         <li {% if pane == 'faculty' %}class="active"{% endif %}><a href="{{ url_for('convenor.faculty', id=pclass.id) }}">
             Faculty
             {% if enrolled is defined and total is defined%}
-                <span class="badge badge-pill">{{ enrolled }}/{{ total }}</span>
+                <span class="badge badge-secondary badge-pill">{{ enrolled }}/{{ total }}</span>
             {% else %}
-                <span class="badge badge-pill">0</span>
+                <span class="badge badge-secondary badge-pill">0</span>
             {% endif %}
         </a></li>
         <li {% if pane == 'selectors' %}class="active"{% endif %}><a href="{{ url_for('convenor.selectors', id=pclass.id) }}">
             Students selecting for {{ config.year+1 }}&ndash;{{ config.year+2 }}
             {% if sel_count is defined %}
-                <span id="selector-count" class="badge badge-pill">{{ sel_count }}</span>
+                <span id="selector-count" class="badge badge-secondary badge-pill">{{ sel_count }}</span>
             {% endif %}
         </a></li>
         <li {% if pane == 'submitters' %}class="active"{% endif %}><a href="{{ url_for('convenor.submitters', id=pclass.id) }}">
             Students submitting in {{ config.year }}&ndash;{{ config.year+1 }}
             {% if sub_count is defined %}
-                <span id="submitter-count" class="badge badge-pill">{{ sub_count }}</span>
+                <span id="submitter-count" class="badge badge-secondary badge-pill">{{ sub_count }}</span>
             {% endif %}
         </a></li>
         {% if live_count is defined %}
             <li {% if pane == 'live' %}class="active"{% endif %}><a href="{{ url_for('convenor.liveprojects', id=pclass.id) }}">
                 Live projects for {{ config.year+1 }}&ndash;{{ config.year+2 }}
-                <span id="live-project-count" class="badge badge-pill">{{ live_count }}</span>
+                <span id="live-project-count" class="badge badge-secondary badge-pill">{{ live_count }}</span>
             </a></li>
         {% endif %}
     </ul>

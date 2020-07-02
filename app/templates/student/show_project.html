@@ -482,15 +482,11 @@
         {% endif %}
     </div>
     <nav class="navbar navbar-expand {% if real_user %}navbar-dark bg-dark{% else %}navbar-light bg-light{% endif %} navbar-fixed-bottom" role="navigation">
-        <div class="navbar-header footer-bar">
-            <div class="container">
-                <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} University of Sussex</span>
-                {% if real_user %}
-                    <span class="navbar-text small" style="float: right;">You
-                        are viewing as <i class="fa fa-user"></i>
-                        {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if current_user.theme == current_user.THEME_FLAT or current_user.theme == current_user.THEME_DARK %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
-                {% endif %}
-            </div>
-        </div>
+        <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} University of Sussex</span>
+        {% if real_user %}
+            <span class="navbar-text small" style="float: right;">You
+                are viewing as <i class="fa fa-user"></i>
+                {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if current_user.theme == current_user.THEME_FLAT or current_user.theme == current_user.THEME_DARK %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
+        {% endif %}
     </nav>
 {% endblock %}

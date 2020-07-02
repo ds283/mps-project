@@ -12,7 +12,7 @@
                         <div class="list-group-item {% if submitted == total %}list-group-item-success{% else %}list-group-item-secondary{% endif %}">
                             Selection data
                             <a href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='submitted') }}">(Show...)</a>
-                            <span class="badge badge-pill">{{ submitted }}/{{ total }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ submitted }}/{{ total }}</span>
                         </div>
                     </div>
                 </div>
@@ -21,7 +21,7 @@
                         <div class="list-group-item {% if missing > 0 %}list-group-item-danger{% else %}list-group-item-success{% endif %}">
                             Missing data
                             <a href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='none') }}">(Show...)</a>
-                            <span class="badge badge-pill">{{ missing }}/{{ total }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ missing }}/{{ total }}</span>
                         </div>
                     </div>
                 </div>

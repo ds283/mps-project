@@ -23,12 +23,12 @@
                         <div class="list-group-item {% if submitted == total %}list-group-item-success{% else %}list-group-item-secondary"{% endif %}>
                             Submitted
                             <a href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='submitted') }}">(Show...)</a>
-                            <span class="badge badge-pill">{{ submitted }}/{{ total }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ submitted }}/{{ total }}</span>
                         </div>
                         <div class="list-group-item {% if outstanding_confirm > 0 %}list-group-item-danger{% else %}list-group-item-success{% endif %}">
                             Confirmation requests
                             <a href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">(Show...)</a>
-                            <span class="badge badge-pill">{{ outstanding_confirm }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ outstanding_confirm }}</span>
                         </div>
                     </div>
                 </div>
@@ -37,7 +37,7 @@
                         <div class="list-group-item {% if bookmarks > 0 %}list-group-item-primary{% else %}list-group-item-secondary{% endif %}">
                             Has bookmarks
                             <a href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='bookmarks') }}">(Show...)</a>
-                            <span class="badge badge-pill">{{ bookmarks }}/{{ total }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ bookmarks }}/{{ total }}</span>
                         </div>
                     </div>
                 </div>
@@ -46,7 +46,7 @@
                         <div class="list-group-item {% if bookmarks > 0 %}list-group-item-primary{% else %}list-group-item-secondary{% endif %}">
                             No bookmarks
                             <a href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">(Show...)</a>
-                            <span class="badge badge-pill">{{ missing}}/{{ total }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ missing}}/{{ total }}</span>
                         </div>
                     </div>
                 </div>
@@ -114,7 +114,7 @@
                                class="btn btn-secondary grouped-button-margin">
                                 Reset popularity data
                             </a>
-                            {{ wtf.render_field(change_form.change, button_map={'change': 'default'}) }}
+                            {{ wtf.render_field(change_form.change, button_map={'change': 'secondary'}) }}
                             {{ wtf.render_field(change_form.close, button_map={'close': 'primary'}) }}
                         </div>
                     </div>

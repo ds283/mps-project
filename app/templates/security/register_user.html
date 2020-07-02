@@ -151,7 +151,7 @@
 
         {{ wtf.render_field(user_form.submit, button_map={'submit': 'primary'}) }}
         {% if user_form.save_and_exit is defined %}
-            {{ wtf.render_field(user_form.save_and_exit, button_map={'save_and_exit': 'default'}) }}
+            {{ wtf.render_field(user_form.save_and_exit, button_map={'save_and_exit': 'secondary'}) }}
         {% endif %}
 
     </form>

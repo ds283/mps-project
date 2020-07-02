@@ -134,7 +134,7 @@ _project_meetingreqd = \
 {% elif project.meeting_reqd == project.MEETING_NONE %}
     <span class="badge badge-success">Not required</span>
 {% else %}
-    <span class="badge badge-default">Unknown</span>
+    <span class="badge badge-secondary">Unknown</span>
 {% endif %}
 """
 
@@ -489,7 +489,7 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                 elif state == Project.SOME_DESCRIPTIONS_REJECTED:
                     repapprove = '<span class="badge badge-info">Approval: Some rejected</span>'
                 elif state == Project.SOME_DESCRIPTIONS_UNCONFIRMED:
-                    repapprove = '<span class="badge badge-default">Approval: Some unconfirmed</span>'
+                    repapprove = '<span class="badge badge-secondary">Approval: Some unconfirmed</span>'
                 elif state == Project.APPROVALS_NOT_ACTIVE:
                     repapprove = ''
                 elif state == Project.APPROVALS_NOT_OFFERABLE:
@@ -502,19 +502,19 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                 desc = p.get_description(config.pclass_id)
 
                 if desc is None:
-                    repapprove = '<span class="badge badge-default">Approval: No description</span>'
+                    repapprove = '<span class="badge badge-secondary">Approval: No description</span>'
                 else:
                     state = desc.workflow_state
                     if desc.requires_confirmation and not desc.confirmed:
                         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
                             repapprove = """<div class="dropdown" style="display: inline-block;">
-                                                <a class="badge badge-default dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
+                                                <a class="badge badge-secondary dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
                                                 <div class="dropdown-menu">
                                                     <li><a href="{url}"><i class="fa fa-check"></i> Confirm</a></li>
                                                 </ul>
                                             </div>""".format(url=url_for('convenor.confirm_description', config_id=config.id, did=desc.id))
                         else:
-                            repapprove = '<span class="badge badge-default">Approval: Not confirmed</span>'
+                            repapprove = '<span class="badge badge-secondary">Approval: Not confirmed</span>'
                     else:
                         if state == ProjectDescription.WORKFLOW_APPROVAL_VALIDATED:
                             repapprove = '<span class="badge badge-success"><i class="fa fa-check"></i> Approval: Approved</span>'
@@ -530,7 +530,7 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                             if desc.validated_timestamp:
                                 repapprove += ' <span class="badge badge-info">' + desc.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") + '</span>'
         else:
-            repapprove = '<span class="badge badge-default"><i class="fa fa-ban"></i> Can\'t approve</span>'
+            repapprove = '<span class="badge badge-secondary"><i class="fa fa-ban"></i> Can\'t approve</span>'
 
     status = status.replace('REPAPPROVAL', repapprove, 1)
     return status

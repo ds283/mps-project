@@ -4,8 +4,8 @@
 
     {# user_approver role needed to perform approval #}
     {% if current_user.has_role('user_approver') %}
-        <div class="card m-3 {% if to_approve > 0 %}bg-warning{% endif %}">
-            <div class="card-header">{{ to_approve }} student {% if to_approve != 1 %}records require{% else %}record requires{% endif %} validation</div>
+        <div class="card m-3">
+            <div class="card-header {% if to_approve > 0 %}bg-warning text-white{% endif %}">{{ to_approve }} student {% if to_approve != 1 %}records require{% else %}record requires{% endif %} validation</div>
             <div class="card-body">
                 {% if to_approve == 0 %}
                     <p>No student records currently require validation.</p>
@@ -29,8 +29,8 @@
 
     {# admin or root role needed to edit users #}
     {% if current_user.has_role('manage_users') or current_user.has_role('root') %}
-        <div class="card m-3 {% if to_correct > 0 %}bg-warning{% endif %}">
-            <div class="card-header">{{ to_correct }} student {% if to_correct != 1 %}records require{% else %}record requires{% endif %} correction</div>
+        <div class="card m-3">
+            <div class="card-header {% if to_correct > 0 %}bg-warning text-white{% endif %}">{{ to_correct }} student {% if to_correct != 1 %}records require{% else %}record requires{% endif %} correction</div>
             <div class="card-body">
                 {% if to_correct == 0 %}
                     <p>None of your student record edits have been flagged for corrections.</p>

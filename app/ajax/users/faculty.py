@@ -52,17 +52,17 @@ _settings = \
 {% if f.CATS_supervision is not none %}
     <span class="badge badge-warning">S: {{ f.CATS_supervision }} CATS</span>
 {% else %}
-    <span class="badge badge-default">S: Default CATS</span>
+    <span class="badge badge-secondary">S: Default CATS</span>
 {% endif %}
 {% if f.CATS_marking is not none %}
     <span class="badge badge-warning">M {{ f.CATS_marking }} CATS</span>
 {% else %}
-    <span class="badge badge-default">M: Default CATS</span>
+    <span class="badge badge-secondary">M: Default CATS</span>
 {% endif %}
 {% if f.CATS_presentation is not none %}
     <span class="badge badge-warning">P {{ f.CATS_marking }} CATS</span>
 {% else %}
-    <span class="badge badge-default">P: Default CATS</span>
+    <span class="badge badge-secondary">P: Default CATS</span>
 {% endif %}
 """
 

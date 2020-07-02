@@ -53,8 +53,8 @@
 
                     {% else %}
 
-                        <div class="card m-3 bg-danger">
-                            <div class="card-header">Error</div>
+                        <div class="card m-3">
+                            <div class="card-header bg-danger text-white">Error</div>
                             <div class="card-body">
                                 <strong>Error:</strong>
                                 Unknown availability lifecycle state {{ state }}
@@ -64,8 +64,8 @@
                     {% endif %}
                 </div>
             {% else %}
-                <div class="card m-3 bg-danger">
-                    <div class="card-header">Error</div>
+                <div class="card m-3">
+                    <div class="card-header bg-danger text-white">Error</div>
                     <div class="card-body">
                         <strong>Error:</strong>
                         Data for this assessment is missing

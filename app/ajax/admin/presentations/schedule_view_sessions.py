@@ -26,7 +26,7 @@ _assessors = \
 {% for assessor in s.assessors %}
     <div>
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
-            <a class="badge badge-default" type="button" data-toggle="dropdown">
+            <a class="badge badge-secondary" type="button" data-toggle="dropdown">
                 {{ assessor.user.name }}
                 <span class="caret"></span>
             </a>
@@ -55,7 +55,7 @@ _talks = \
     {% set ns.count = ns.count + 1 %}
     <div class="dropdown schedule-assign-button" style="display: inline-block;">
         {% set style = talk.pclass.make_CSS_style() %}
-        <a class="badge {% if style %}badge-default{% else %}badge-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
             {{ talk.owner.student.user.name }}
             <span class="caret"></span>
         </a>
@@ -119,7 +119,7 @@ _room = \
 """
 {% set style = s.room.building.make_CSS_style() %}
 <div class="dropdown schedule-assign-button">
-    <a class="badge {% if style is none %}badge-info{% else %}badge-default{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+    <a class="badge {% if style is none %}badge-info{% else %}badge-secondary{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
         {{ s.room.full_name }}
         <span class="caret"></span>
     </a>

@@ -138,7 +138,7 @@ _faculty = \
         <span class="badge badge-primary">All submitters available</span>
     {% endif %}
 {% else %}
-    <span class="badge badge-default">Not yet requested</span>
+    <span class="badge badge-secondary">Not yet requested</span>
 {% endif %}
 """
 

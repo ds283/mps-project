@@ -15,7 +15,7 @@ _projects = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="badge badge-default">{{ label }} not yet required</span> #}
+        {# <span class="badge badge-secondary">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
         <span class="badge badge-info">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
@@ -34,7 +34,7 @@ _projects = \
     {% set style = pclass.make_CSS_style() %}
     <div>
         <div class="dropdown assignment-label">
-            <a class="badge {% if style %}badge-default{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+            <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {{ r.owner.student.user.name }}
                 #{{ r.owner.student.exam_number }}
@@ -107,7 +107,7 @@ _marking = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="badge badge-default">{{ label }} not yet required</span> #}
+        {# <span class="badge badge-secondary">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
         <span class="badge badge-info">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
@@ -126,7 +126,7 @@ _marking = \
     {% set style = pclass.make_CSS_style() %}
     <div>
         <div class="dropdown assignment-label">
-            <a class="badge {% if style %}badge-default{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+            <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {{ r.owner.student.user.name }}
                 #{{ r.owner.student.exam_number }}

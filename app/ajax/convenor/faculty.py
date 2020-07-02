@@ -58,21 +58,21 @@ _golive = \
                 {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
                     <span class="badge badge-success"><i class="fa fa-check"></i> Confirmed</span>
                 {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                    <span class="badge badge-default"><i class="fa fa-check"></i> Sabbatical</span>
+                    <span class="badge badge-secondary"><i class="fa fa-check"></i> Sabbatical</span>
                 {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                    <span class="badge badge-default"><i class="fa fa-check"></i> Exempt</span>
+                    <span class="badge badge-secondary"><i class="fa fa-check"></i> Exempt</span>
                 {% else %}
                     <span class="badge badge-danger">Unknown</span>
                 {% endif %}
             {% else %}
-                <span class="badge badge-default">Not enrolled</span>
+                <span class="badge badge-secondary">Not enrolled</span>
             {% endif %}
         {% endif %}
     {% else %}
         <span class="badge badge-danger">Not yet issued</span>
     {% endif %}
 {% else %}
-    <span class="badge badge-default">Disabled</span>
+    <span class="badge badge-secondary">Disabled</span>
 {% endif %}
 """
 
@@ -97,21 +97,21 @@ _enrollments = \
         {% if f.CATS_supervision is not none %}
             <span class="badge badge-warning">S: {{ f.CATS_supervision }} CATS</span>
         {% else %}
-            <span class="badge badge-default">S: Default CATS</span>
+            <span class="badge badge-secondary">S: Default CATS</span>
         {% endif %}
         {% if f.CATS_marking is not none %}
             <span class="badge badge-warning">M {{ f.CATS_marking }} CATS</span>
         {% else %}
-            <span class="badge badge-default">M: Default CATS</span>
+            <span class="badge badge-secondary">M: Default CATS</span>
         {% endif %}
         {% if f.CATS_presentation is not none %}
             <span class="badge badge-warning">P {{ f.CATS_marking }} CATS</span>
         {% else %}
-            <span class="badge badge-default">P: Default CATS</span>
+            <span class="badge badge-secondary">P: Default CATS</span>
         {% endif %}
     </div>
 {% else %}
-    <span class="badge badge-default">Not enrolled</span>
+    <span class="badge badge-secondary">Not enrolled</span>
 {% endif %}
 """
 

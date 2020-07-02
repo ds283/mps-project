@@ -38,7 +38,7 @@ _records = \
     <span class="badge badge-success">PROJECT MATCH</span>
 {% endif %}
 {% if r.marker_id != c.marker_id %}
-    <span class="badge badge-default">#{{ r.submission_period }}:
+    <span class="badge badge-secondary">#{{ r.submission_period }}:
         {{ r.marker.user.name }}</span>
 {% else %}
     <span class="badge badge-success">MARKER MATCH</span>

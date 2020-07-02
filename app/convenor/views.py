@@ -96,13 +96,13 @@ _desc_label = \
     {% if not_confirmed %}
         {% if config is not none and config.selector_lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and desc_validator is not none and desc_validator(d) %}
             <div class="dropdown" style="display: inline-block;">
-                <a class="badge badge-default dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
+                <a class="badge badge-secondary dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
                 <div class="dropdown-menu">
                     <li><a href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm</a></li>
                 </ul>
             </div>
         {% else %}
-            <span class="badge badge-default">Approval: Not confirmed</span>
+            <span class="badge badge-secondary">Approval: Not confirmed</span>
         {% endif %}
     {% else %}
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}

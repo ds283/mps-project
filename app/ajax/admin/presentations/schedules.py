@@ -76,7 +76,7 @@ on
 {% if s.creation_timestamp is not none %}
     {{ s.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
 {% else %}
-    <span class="badge badge-default">Unknown</span>
+    <span class="badge badge-secondary">Unknown</span>
 {% endif %}
 {% if s.last_edited_by is not none %}
     <p></p>
@@ -94,7 +94,7 @@ _score = \
 {% if s.solution_usable %}
     <span class="badge badge-success">Score {{ s.score }}</span>
 {% else %}
-    <span class="badge badge-default">Invalid</span>
+    <span class="badge badge-secondary">Invalid</span>
 {% endif %}
 """
 
@@ -104,22 +104,22 @@ _name = \
 <div>
     {% if s.finished and s.solution_usable %}
         <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">{{ s.name }}</a>
-        <span class="badge badge-default">{{ s.tag }}</span>
+        <span class="badge badge-secondary">{{ s.tag }}</span>
         {% if not s.is_valid %}
             <i class="fa fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}
     {% else %}
         {{ s.name }}
-        <span class="badge badge-default">{{ s.tag }}</span>
+        <span class="badge badge-secondary">{{ s.tag }}</span>
     {% endif %}
 </div>
 {% if s.finished and s.solution_usable %}
     <p></p>
     {% if s.construct_time %}
-        <span class="badge badge-default"><i class="fa fa-clock-o"></i> Construct {{ s.formatted_construct_time }}</span>
+        <span class="badge badge-secondary"><i class="fa fa-clock-o"></i> Construct {{ s.formatted_construct_time }}</span>
     {% endif %}
     {% if s.compute_time %}
-        <span class="badge badge-default"><i class="fa fa-clock-o"></i> Compute {{ s.formatted_compute_time }}</span>
+        <span class="badge badge-secondary"><i class="fa fa-clock-o"></i> Compute {{ s.formatted_compute_time }}</span>
     {% endif %}
 {% endif %}
 """
@@ -133,7 +133,7 @@ _info = \
 {% if s.all_assessors_in_pool %}
     <span class="badge badge-info">All assessors in pool</span>
 {% else %}
-    <span class="badge badge-default">At least 1 assessor in pool</span>
+    <span class="badge badge-secondary">At least 1 assessor in pool</span>
 {% endif %}
 {% if s.finished and s.solution_usable %}
     <p></p>

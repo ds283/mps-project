@@ -2,10 +2,10 @@
     {% set queued = data['approval_project_queued'] %}
     {% set rejected = data['approval_project_rejected'] %}
 
-    <div class="card m-3 {% if queued > 0 %}bg-warning{% endif %}}">
+    <div class="card m-3">
         {% set pl = 's' %}{% if queued == 1 %}{% set pl = '' %}{% endif  %}
         {% set anti_pl = '' %}{% if queued == 1 %}{% set anti_pl = 's' %}{% endif %}
-        <div class="card-header">{{ queued }} project description{{ pl }} require{{ anti_pl }} validation</div>
+        <div class="card-header {% if queued > 0 %}bg-warning text-white{% endif %}}">{{ queued }} project description{{ pl }} require{{ anti_pl }} validation</div>
         <div class="card-body">
             {% if queued == 0 %}
                 <p>No project descriptions currently require validation.</p>
@@ -27,10 +27,10 @@
     </div>
 
     {% if rejected > 0 %}
-        <div class="card m-3 bg-danger">
+        <div class="card m-3">
             {% set pl = 's' %}{% if rejected == 1 %}{% set pl = '' %}{% endif  %}
             {% set have_has = 'have' %}{% if rejected == 1 %}{% set have_has = 'has' %}{% endif %}
-            <div class="card-header">{{ rejected }} project description{{ pl }} {{ have_has }} been rejected</div>
+            <div class="card-header bg-danger text-white">{{ rejected }} project description{{ pl }} {{ have_has }} been rejected</div>
             <div class="card-body">
                 {% if rejected == 0 %}
                     <p>No project descriptions have been rejected.</p>

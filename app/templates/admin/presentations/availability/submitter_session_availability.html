@@ -49,8 +49,8 @@
         </a>
     </div>
 
-    <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
-        <div class="card-header">Student availability for assessment event <strong>{{ assessment.name }}</strong>, session <strong>{{ sess.short_date_as_string }} {{ sess.session_type_string }}</strong></strong></div>
+    <div class="card m-3">
+        <div class="card-header bg-primary text-white">Student availability for assessment event <strong>{{ assessment.name }}</strong>, session <strong>{{ sess.short_date_as_string }} {{ sess.session_type_string }}</strong></strong></div>
         <div class="card-body">
             {% if pclasses is not none and pclasses|length > 0 %}
                 <div class="card m-3 card-body">

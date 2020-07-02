@@ -70,7 +70,7 @@ _selections = \
                     Force conversion...
                 </a>
             {% else %}
-                <span class="badge badge-default">None</span>
+                <span class="badge badge-secondary">None</span>
             {% endif %}
         </div>
     </div>

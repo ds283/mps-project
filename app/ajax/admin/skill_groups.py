@@ -56,7 +56,7 @@ _include_name = \
 {% if g.add_group %}
     <span class="badge badge-success"><i class="fa fa-check"></i> Yes</span>
 {% else %}
-    <span class="badge badge-default"><i class="fa fa-times"></i> No</span>
+    <span class="badge badge-secondary"><i class="fa fa-times"></i> No</span>
 {% endif %}
 """
 

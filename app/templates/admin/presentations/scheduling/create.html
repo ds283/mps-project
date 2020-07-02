@@ -8,8 +8,8 @@
     <div class="row">
         <div class="col-2"></div>
         <div class="col-8">
-            <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
-                <div class="card-header">Create new schedule for <strong>{{ assessment.name }}</strong></div>
+            <div class="card m-3">
+                <div class="card-header bg-primary text-white">Create new schedule for <strong>{{ assessment.name }}</strong></div>
                 <div class="card-body">
                     <form action="{{ url_for('admin.create_assessment_schedule', id=assessment.id) }}" method="POST" name="schedule_form">
                         {{ form.hidden_tag() }}

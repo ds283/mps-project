@@ -30,7 +30,7 @@ _name = \
     <span class="badge badge-success">Feedback closed</span>
 {% endif %}
 {% if state == a.AVAILABILITY_NOT_REQUESTED %}
-    <span class="badge badge-default">Availability not requested</span>
+    <span class="badge badge-secondary">Availability not requested</span>
 {% elif state == a.AVAILABILITY_REQUESTED %}
     <span class="badge badge-success">Availability requested</span>
     {% set num_outstanding = a.availability_outstanding_count %}

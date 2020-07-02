@@ -111,8 +111,8 @@
                     {# provide summary #}
 
                     {% if config.has_auditable_schedules %}
-                        <div class="card m-3 bg-danger">
-                            <div class="card-header">Proposed assessment schedules are available to view</div>
+                        <div class="card m-3 border-danger">
+                            <div class="card-header bg-danger text-white">Proposed assessment schedules are available to view</div>
                             <div class="card-body">
                                 <p>An administrator has published one or more proposed schedules for presentation assessments.</p>
                                 <a href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or edit proposed schedules...</a>
@@ -134,8 +134,8 @@
                     {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
                         {{ selection_closed(config, config.year < current_year) }}
                     {% else %}
-                        <div class="card m-3 bg-danger">
-                            <div class="card-header">Error</div>
+                        <div class="card m-3">
+                            <div class="card-header bg-danger text-white">Error</div>
                             <div class="card-body">
                                 <strong>Error:</strong>
                                 Unknown project lifecycle state {{ state }}

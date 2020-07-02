@@ -23,7 +23,7 @@ _status = \
     <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
     <span class="badge badge-info">First taught {{ m.first_taught }}</span>
 {% else %}
-    <span class="badge badge-default"><i class="fa fa-times"></i> Retired</span>
+    <span class="badge badge-secondary"><i class="fa fa-times"></i> Retired</span>
     <span class="badge badge-info">First taught {{ m.first_taught }}</span>
     <span class="badge badge-info">Last taught {{ m.last_taught }}</span>
 {% endif %}

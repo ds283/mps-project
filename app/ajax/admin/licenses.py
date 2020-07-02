@@ -35,7 +35,7 @@ _properties = \
 {% if l.allows_redistribution %}
     <span class="badge badge-success"><i class="fa fa-check"></i> Allows redistribution</span>
 {% else %}
-    <span class="badge badge-default"><i class="fa fa-times"></i> No redistribution</span>
+    <span class="badge badge-secondary"><i class="fa fa-times"></i> No redistribution</span>
 {% endif %}
 <div style="padding-top: 5px;">
     Created by
@@ -44,7 +44,7 @@ _properties = \
     {% if l.creation_timestamp is not none %}
         {{ l.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
     {% else %}
-        <span class="badge badge-default">Unknown</span>
+        <span class="badge badge-secondary">Unknown</span>
     {% endif %}
     {% if l.last_edited_by is not none %}
         <p></p>

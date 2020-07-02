@@ -26,7 +26,7 @@ _assessors = \
 {% for assessor in s.assessors %}
     <div>
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
-            <a class="badge badge-default" type="button" data-toggle="dropdown">
+            <a class="badge badge-secondary" type="button" data-toggle="dropdown">
                 {{ assessor.user.name }}
                 {% set count = rec.get_number_faculty_slots(assessor.id) %}
                 ({{ count }})
@@ -71,7 +71,7 @@ _talks = \
     {% set ns.count = ns.count + 1 %}
     <div class="dropdown schedule-assign-button" style="display: inline-block;">
         {% set style = talk.pclass.make_CSS_style() %}
-        <a class="badge {% if style %}badge-default{% else %}badge-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
             {{ talk.owner.student.user.last_name }}
             ({{ talk.project.owner.user.last_name }} &ndash; {{ truncate_name(talk.project.name) }})
             <span class="caret"></span>

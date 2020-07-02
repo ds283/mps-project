@@ -43,7 +43,7 @@ _source = \
     </div>
     {{ show_changes(s, t) }}
 {% elif op == 'add' %}
-    <span class="badge badge-default">No counterpart</span>
+    <span class="badge badge-secondary">No counterpart</span>
 {% elif op == 'delete' %}
     <div>
         <span class="badge badge-danger">DELETE</span>
@@ -103,7 +103,7 @@ _target = \
         <span class="badge badge-success"><i class="fa fa-plus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
     {% endfor %}
 {% elif op == 'delete' %}
-    <span class="badge badge-default">No counterpart</span>
+    <span class="badge badge-secondary">No counterpart</span>
 {% else %}
     <span class="badge badge-danger">UNKNOWN DIFF OPERATION</span>
 {% endif %}

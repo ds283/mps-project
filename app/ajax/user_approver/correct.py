@@ -34,7 +34,7 @@ _rejected = \
         <p>{{ s.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</p>
     {% endif %}
 {% else %}
-    <span class="badge badge-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endif %}
 """
 

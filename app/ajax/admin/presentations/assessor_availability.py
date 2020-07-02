@@ -106,7 +106,7 @@ _comment = \
 {% if rec.comment is not none and rec.comment|length > 0 %}
     {{ rec.comment }}
 {% else %}
-    <span class="badge badge-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endif %}
 """
 
@@ -134,13 +134,13 @@ _name = \
         {% if rec.request_email_sent %}
             <span class="badge badge-info"><i class="fa fa-envelope-o"></i> Invite sent</span>
             {% if rec.request_timestamp is not none %}
-                <span class="badge badge-default">{{ rec.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                <span class="badge badge-secondary">{{ rec.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
             {% endif %}
         {% endif %}
         {% if rec.reminder_email_sent %}
             <span class="badge badge-info"><i class="fa fa-envelope-o"></i> Reminder sent</span>
             {% if rec.last_reminder_timestamp is not none %}
-                <span class="badge badge-default">{{ rec.last_reminder_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                <span class="badge badge-secondary">{{ rec.last_reminder_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
             {% endif %}
         {% endif %}        
     </div>

@@ -28,8 +28,8 @@
                     {% if selectors is not none and selectors|length > 0 %}
                         {% for rec in selectors %}
                             {% set pclass = rec.config.project_class %}
-                            <div class="card m-3 {% if rec.has_submitted %}bg-primary text-white{% else %}bg-danger{% endif %}">
-                                <div class="card-header">Selecting for <strong>{{ pclass.name }}</strong></div>
+                            <div class="card m-3">
+                                <div class="card-header {% if rec.has_submitted %}bg-primary text-white{% else %}bg-danger text-white{% endif %}">Selecting for <strong>{{ pclass.name }}</strong></div>
                                 <div class="card-body">
                                     <div>
                                         Convenor for {{ year }}&ndash;{{ year+1 }}:
@@ -69,8 +69,8 @@
                     {% if submitters is not none and submitters|length > 0 %}
                         {% for rec in submitters %}
                             {% set pclass = rec.config.project_class %}
-                            <div class="card m-3 bg-primary text-white">
-                                <div class="card-header">Submitting for <strong>{{ pclass.name }}</strong></div>
+                            <div class="card m-3">
+                                <div class="card-header bg-primary text-white">Submitting for <strong>{{ pclass.name }}</strong></div>
                                 <div class="card-body">
                                     <div>
                                         Convenor for {{ year }}&ndash;{{ year+1 }}:

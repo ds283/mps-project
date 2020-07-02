@@ -49,7 +49,7 @@ pclasses = \
     {% endif %}
 {% endfor %}
 {% if ns.count == 0 %}
-    <span class="badge badge-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endif %}
 {% if r.has_modules %}
     <p></p>

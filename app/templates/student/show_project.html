@@ -104,8 +104,8 @@
                     </div>
                 {% endif %}
 
-                <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
-                    <div class="card-header">Project details</div>
+                <div class="card m-3">
+                    <div class="card-header bg-primary text-white">Project details</div>
                     <div class="card-body">
                         <div class="card m-3 ataglance-background">
                             <div class="card-header">
@@ -481,7 +481,7 @@
             </form>
         {% endif %}
     </div>
-    <nav class="navbar navbar-expand {% if real_user %}navbar-inverse{% else %}navbar-light{% endif %} navbar-fixed-bottom" role="navigation">
+    <nav class="navbar navbar-expand {% if real_user %}navbar-dark bg-dark{% else %}navbar-light bg-light{% endif %} navbar-fixed-bottom" role="navigation">
         <div class="navbar-header footer-bar">
             <div class="container">
                 <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} University of Sussex</span>

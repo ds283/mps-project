@@ -79,37 +79,37 @@ _info = \
 {% if m.ignore_per_faculty_limits %}
     <span class="badge badge-warning"><i class="fa fa-times"></i> Ignore per-faculty limits</span>
 {% else %}
-    <span class="badge badge-default"><i class="fa fa-check"></i> Apply per-faculty limits</span>
+    <span class="badge badge-secondary"><i class="fa fa-check"></i> Apply per-faculty limits</span>
 {% endif %}
 {% if m.ignore_programme_prefs %}
     <span class="badge badge-warning"><i class="fa fa-times"></i> Ignore programmes prefs/span>
 {% else %}
-    <span class="badge badge-default"><i class="fa fa-check"></i> Apply programme prefs</span>
+    <span class="badge badge-secondary"><i class="fa fa-check"></i> Apply programme prefs</span>
 {% endif %}
 {% if m.include_only_submitted %}
     <span class="badge badge-warning"><i class="fa fa-times"></i> Only submitted selectors</span>
 {% else %}
-    <span class="badge badge-default"><i class="fa fa-check"></i> All selectors</span>
+    <span class="badge badge-secondary"><i class="fa fa-check"></i> All selectors</span>
 {% endif %}
 <div>
     <span class="badge badge-success">Solver {{ m.solver_name }}</span>
 </div>
 <div>
     <div>Matching</div>
-    <span class="badge badge-default">Programme {{ m.programme_bias }}</span>
-    <span class="badge badge-default">Bookmarks {{ m.bookmark_bias }}</span>
+    <span class="badge badge-secondary">Programme {{ m.programme_bias }}</span>
+    <span class="badge badge-secondary">Bookmarks {{ m.bookmark_bias }}</span>
 </div>
 <div>
     <div>Biases</div>
-    <span class="badge badge-default">Levelling {{ m.levelling_bias }}</span>
-    <span class="badge badge-default">Group tension {{ m.intra_group_tension }}</span>
-    <span class="badge badge-default">S pressure {{ m.supervising_pressure }}</span>
-    <span class="badge badge-default">M pressure {{ m.marking_pressure }}</span>
+    <span class="badge badge-secondary">Levelling {{ m.levelling_bias }}</span>
+    <span class="badge badge-secondary">Group tension {{ m.intra_group_tension }}</span>
+    <span class="badge badge-secondary">S pressure {{ m.supervising_pressure }}</span>
+    <span class="badge badge-secondary">M pressure {{ m.marking_pressure }}</span>
 </div>
 <div>
     <div>Penalties</div>
-    <span class="badge badge-default">CATS violation {{ m.CATS_violation_penalty }}</span>
-    <span class="badge badge-default">No assignment {{ m.no_assignment_penalty }}</span>
+    <span class="badge badge-secondary">CATS violation {{ m.CATS_violation_penalty }}</span>
+    <span class="badge badge-secondary">No assignment {{ m.no_assignment_penalty }}</span>
 </div>
 <p></p>
 {% if m.use_hints %}
@@ -117,10 +117,10 @@ _info = \
 {% else %}
     <span class="badge badge-warning"><i class="fa fa-times"></i> Ignore hints</span>
 {% endif %}
-<span class="badge badge-default">Encourage <i class="fa fa-times"></i> {{ m.encourage_bias }}</span>
-<span class="badge badge-default">Discourage <i class="fa fa-times"></i> {{ m.discourage_bias }}</span>
-<span class="badge badge-default">Strong encourage <i class="fa fa-times"></i> {{ m.strong_encourage_bias }}</span>
-<span class="badge badge-default">Strong discourage <i class="fa fa-times"></i> {{ m.strong_discourage_bias }}</span>
+<span class="badge badge-secondary">Encourage <i class="fa fa-times"></i> {{ m.encourage_bias }}</span>
+<span class="badge badge-secondary">Discourage <i class="fa fa-times"></i> {{ m.discourage_bias }}</span>
+<span class="badge badge-secondary">Strong encourage <i class="fa fa-times"></i> {{ m.strong_encourage_bias }}</span>
+<span class="badge badge-secondary">Strong discourage <i class="fa fa-times"></i> {{ m.strong_discourage_bias }}</span>
 <p></p>
 {% if not m.ignore_programme_prefs %}
     {% set outcome = m.prefer_programme_status %}
@@ -129,8 +129,8 @@ _info = \
         {% set match_pl = 's' %}{% if match == 1 %}{% set match_pl = '' %}{% endif %}
         {% set fail_pl = 's' %}{% if fail == 1 %}{% set fail_pl = '' %}{% endif %}
         <div>
-            <span class="badge {% if match > 0 %}badge-success{% else %}badge-default{% endif %}">Matched {{ match }} programme pref{{ match_pl }}</span>
-            <span class="badge {% if fail > 0 %}badge-warning{% elif match > 0 %}badge-success{% else %}badge-default{% endif %}">Failed {{ fail }} programme pref{{ fail_pl }}</span>
+            <span class="badge {% if match > 0 %}badge-success{% else %}badge-secondary{% endif %}">Matched {{ match }} programme pref{{ match_pl }}</span>
+            <span class="badge {% if fail > 0 %}badge-warning{% elif match > 0 %}badge-success{% else %}badge-secondary{% endif %}">Failed {{ fail }} programme pref{{ fail_pl }}</span>
         </div>
     {% endif %}
 {% endif %}
@@ -141,8 +141,8 @@ _info = \
         {% set satisfied_pl = 's' %}{% if satisfied == 1 %}{% set satisfied_pl = '' %}{% endif %}
         {% set violated_pl = 's' %}{% if violated == 1 %}{% set violated_pl = '' %}{% endif %}
         <div>
-            <span class="badge {% if satisfied > 0 %}badge-success{% else %}badge-default{% endif %}">Satisfied {{ satisfied }} hint{{ satisfied_pl }}</span>
-            <span class="badge {% if violated > 0 %}badge-warning{% elif satisfied > 0 %}badge-success{% else %}badge-default{% endif %}">Violated {{ violated }} hint{{ violated_pl }}</span>
+            <span class="badge {% if satisfied > 0 %}badge-success{% else %}badge-secondary{% endif %}">Satisfied {{ satisfied }} hint{{ satisfied_pl }}</span>
+            <span class="badge {% if violated > 0 %}badge-warning{% elif satisfied > 0 %}badge-success{% else %}badge-secondary{% endif %}">Violated {{ violated }} hint{{ violated_pl }}</span>
         </div>
     {% endif %}
 {% endif %}
@@ -153,7 +153,7 @@ _info = \
     {% if m.creation_timestamp is not none %}
         {{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
     {% else %}
-        <span class="badge badge-default">Unknown</span>
+        <span class="badge badge-secondary">Unknown</span>
     {% endif %}
     {% if m.last_edited_by is not none %}
         <p></p>
@@ -222,7 +222,7 @@ _score = \
     <span class="badge badge-primary">CATS max {{ m.CATS_max }}</span>
     <span class="badge badge-primary">CATS min {{ m.CATS_min }}</span>
 {% else %}
-    <span class="badge badge-default">Invalid</span>
+    <span class="badge badge-secondary">Invalid</span>
 {% endif %}
 """
 
@@ -410,10 +410,10 @@ _name = \
 {% if m.finished and m.solution_usable %}
     <p></p>
     {% if m.construct_time %}
-        <span class="badge badge-default"><i class="fa fa-clock-o"></i> Construct {{ m.formatted_construct_time }}</span>
+        <span class="badge badge-secondary"><i class="fa fa-clock-o"></i> Construct {{ m.formatted_construct_time }}</span>
     {% endif %}
     {% if m.compute_time %}
-        <span class="badge badge-default"><i class="fa fa-clock-o"></i> Compute {{ m.formatted_compute_time }}</span>
+        <span class="badge badge-secondary"><i class="fa fa-clock-o"></i> Compute {{ m.formatted_compute_time }}</span>
     {% endif %}
 {% endif %}
 """

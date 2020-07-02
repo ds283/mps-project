@@ -16,7 +16,7 @@ _messages_pclasses = \
 {% for pclass in message.project_classes %}
     <span class="badge badge-info">{{ pclass.name }}</span>
 {% else %}
-    <span class="badge badge-default">Broadcast</span>
+    <span class="badge badge-secondary">Broadcast</span>
 {% endfor %}
 """
 
@@ -79,7 +79,7 @@ def messages_data(messages):
              'pclass': render_template_string(_messages_pclasses, message=m),
              'title': '<a href="{url}">{msg}</a>'.format(msg=m.title,
                                                          url=url_for('admin.edit_message', id=m.id))
-                 if m.title is not None and len(m.title) > 0 else '<span class="badge badge-default">No title</span>',
+                 if m.title is not None and len(m.title) > 0 else '<span class="badge badge-secondary">No title</span>',
              'menu': render_template_string(_messages_menu, message=m)} for m in messages]
 
     return jsonify(data)

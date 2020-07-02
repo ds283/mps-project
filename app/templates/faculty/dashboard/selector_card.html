@@ -18,25 +18,24 @@
     {% else %}
         {% set nproj_plural = 's' %}
     {% endif %}
-    <div class="card m-3
-        {% if is_sabbatical or is_exempt %}
-            {# no markup required; formerly panel-default #}
-        {% else %}
-            {% if nproj == 0 %}
-                bg-danger
-            {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                bg-success text-white
-            {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
+    <div class="card m-3">
+        <div class="card-header
+            {% if is_sabbatical or is_exempt %}
                 {# no markup required; formerly panel-default #}
-            {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
-                bg-warning
             {% else %}
-                bg-info text-white
+                {% if nproj == 0 %}
+                    bg-danger text-white
+                {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                    bg-success text-white
+                {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
+                    {# no markup required; formerly panel-default #}
+                {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
+                    bg-warning text-white
+                {% else %}
+                    bg-info text-white
+                {% endif %}
             {% endif %}
-        {% endif %}
         ">
-
-        <div class="card-header">
             {% if is_sabbatical %}
                 Student selections: on sabbatical
             {% elif is_exempt %}

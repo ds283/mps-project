@@ -161,7 +161,7 @@ _bookmarks = \
         Show...
     </a>
 {% else %}
-    <span class="badge badge-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endif %}
 """
 
@@ -184,14 +184,14 @@ _submitted = \
     {% endif %}
 {% else %}
     {% if state >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-        <span class="badge badge-default">No</span>
+        <span class="badge badge-secondary">No</span>
         {% if sel.is_valid_selection[0] %}
             <span class="badge badge-success">Valid selection</span>
         {% else %}
             <span class="badge badge-danger">Invalid selection</span>
         {% endif %}
     {% else %}
-        <span class="badge badge-default">Not yet open</span>
+        <span class="badge badge-secondary">Not yet open</span>
     {% endif %}
 {% endif %}
 """
@@ -207,7 +207,7 @@ _confirmations = \
         Show...
     </a>
 {% else %}
-    <span class="badge badge-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endif %}
 {% set offers = sel.number_offers_pending + sel.number_offers_declined %}
 {% if offers > 0 %}
@@ -216,7 +216,7 @@ _confirmations = \
             <span class="badge badge-primary">Offer: {{ offer.liveproject.name }}</span>
         {% endfor %}
         {% for offer in sel.custom_offers_declined %}
-            <span class="badge badge-default">Declined: {{ offer.liveproject.name }}</span>
+            <span class="badge badge-secondary">Declined: {{ offer.liveproject.name }}</span>
         {% endfor %}
     </div>
 {% endif %}

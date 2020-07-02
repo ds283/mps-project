@@ -18,26 +18,26 @@
     {% set is_sabbatical = supv_sabbatical and mark_sabbatical and pres_sabbatical %}
     {% set is_exempt = supv_exempt and mark_exempt and pres_exempt %}
     {% if period %}
-        <div class="card m-3
-            {% if is_sabbatical or is_exempt %}
-                {# no markup required; formerly panel-default #}
-            {% else %}
-                {% if n+1 == config.submission_period %}
-                    {% if period.closed %}
-                        {# no markup required; formerly panel-default #}
-                    {% elif period.is_feedback_open %}
-                        bg-danger
-                    {% elif period.start_date and period.start_date > today %}
-                        {# no markup required; formerly panel-default #}
-                    {% else %}
-                        bg-success text-white
-                    {% endif %}
-                {% else %}
+        <div class="card m-3">
+            <div class="card-header
+                {% if is_sabbatical or is_exempt %}
                     {# no markup required; formerly panel-default #}
+                {% else %}
+                    {% if n+1 == config.submission_period %}
+                        {% if period.closed %}
+                            {# no markup required; formerly panel-default #}
+                        {% elif period.is_feedback_open %}
+                            bg-danger text-white
+                        {% elif period.start_date and period.start_date > today %}
+                            {# no markup required; formerly panel-default #}
+                        {% else %}
+                            bg-success text-white
+                        {% endif %}
+                    {% else %}
+                        {# no markup required; formerly panel-default #}
+                    {% endif %}
                 {% endif %}
-            {% endif %}
-        ">
-            <div class="card-header">
+            ">
                 {% if period.submission_period == config.submission_period %}
                     <strong>{{ period.display_name|safe }}</strong>
                 {% else %}

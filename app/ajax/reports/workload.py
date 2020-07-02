@@ -32,7 +32,7 @@ _groups = \
 {% for g in f.affiliations %}
     {{ g.make_label()|safe }}
 {% else %}
-    <span class="badge badge-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endfor %}
 """
 
@@ -63,7 +63,7 @@ _full_enrollments = \
         {% endif %}
     </div>
 {% else %}
-    <span class="badge badge-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endfor %}
 """
 
@@ -84,7 +84,7 @@ _simple_enrollments = \
         {% endif %}
     </div>
 {% else %}
-    <span class="badge badge-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endfor %}
 """
 
@@ -94,7 +94,7 @@ _full_workload = \
 {% for record in f.ordered_enrollments %}
     {{ record.pclass.make_label(record.pclass.abbreviation + ' ' + wkld[record.pclass_id]|string)|safe }}
 {% else %}
-    <span class="badge badge-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endfor %}
 <p></p>
 <span class="badge badge-primary">Total {{ tot }}</span>
@@ -122,7 +122,7 @@ _full_assignments = \
 {% for record in f.ordered_enrollments %}
     {{ record.pclass.make_label(record.pclass.abbreviation + ' ' + data[record.pclass_id]|string)|safe }}
 {% else %}
-    <span class="badge badge-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endfor %}
 <p></p>
 <span class="badge badge-primary">Total {{ total }}</span>

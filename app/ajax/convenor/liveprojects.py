@@ -22,7 +22,7 @@ _bookmarks = \
        Show...
    </a>
 {% else %}
-    <span class="badge badge-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endif %}
 """
 
@@ -36,7 +36,7 @@ _selections = \
             Show...
         </a>
     {% else %}
-        <span class="badge badge-default">None</span>
+        <span class="badge badge-secondary">None</span>
     {% endif %}
 </div>
 {% set offers = project.number_offers_accepted %}
@@ -61,7 +61,7 @@ _confirmations = \
             Show...
         </a>
     {% else %}
-        <span class="badge badge-default">None</span>
+        <span class="badge badge-secondary">None</span>
     {% endif %}
 </div>
 {% set offers = project.number_offers_pending + project.number_offers_declined %}
@@ -71,7 +71,7 @@ _confirmations = \
             <span class="badge badge-primary">Offer: {{ offer.selector.student.user.name }}</span>
         {% endfor %}
         {% for offer in project.custom_offers_declined %}
-            <span class="badge badge-default">Declined: {{ offer.selector.student.user.name }}</span>
+            <span class="badge badge-secondary">Declined: {{ offer.selector.student.user.name }}</span>
         {% endfor %}
     </div>
 {% endif %}
@@ -84,14 +84,14 @@ _popularity = \
     {% set rank, total = R %}
     <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}" class="badge badge-primary">Popularity {{ rank }}/{{ total }}</a>
 {% else %}
-    <span class="badge badge-default">Popularity updating...</span>
+    <span class="badge badge-secondary">Popularity updating...</span>
 {% endif %}
 {% set R = project.views_rank(live=require_live) %}
 {% if R is not none %}
     {% set rank, total = R %}
-    <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="badge badge-default">Views {{ rank }}/{{ total }}</a>
+    <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="badge badge-secondary">Views {{ rank }}/{{ total }}</a>
 {% else %}
-    <span class="badge badge-default">Views updating...</span>
+    <span class="badge badge-secondary">Views updating...</span>
 {% endif %}
 """
 

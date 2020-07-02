@@ -76,7 +76,7 @@ _global_name = \
 _project_name = \
 """
 {% if p is none %}
-    <span class="badge badge-default">No project assigned</span>
+    <span class="badge badge-secondary">No project assigned</span>
 {% else %}
     <div>
         <a href="{{ dest_url }}">{{ p.name }}</a>

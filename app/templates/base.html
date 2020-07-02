@@ -281,7 +281,7 @@
 {% endblock %}
 
 {% macro convenor_menu(pclasses) %}
-    <li class="dropdown">
+    <li class="nav-item dropdown">
         <a class="dropdown-toggle" data-toggle="dropdown" href="#">
             Convenor
             <span class="caret"></span>
@@ -306,7 +306,7 @@
 
 {% block navbar %}
     {% set theme = current_user.ui_theme if current_user.ui_theme is defined else 'default' %}
-    <nav class="navbar navbar-expand {% if theme == 'flat' or theme == 'dark' %}navbar-light{% else %}navbar-inverse{% endif %} navbar-fixed-top topnav" role="navigation">
+    <nav class="navbar navbar-expand {% if theme == 'flat' or theme == 'dark' %}navbar-light bg-light{% else %}navbar-dark bg-dark{% endif %} navbar-fixed-top topnav" role="navigation">
         {% if not live_platform %}
             <div class="notify-bar hidden-sm container-fluid">
                 <div class="container">Platform not live &mdash; external email disabled</div>
@@ -326,11 +326,11 @@
 
             <!-- Collect nav links and other content into a menu for mobile devices -->
             <div class="collapse navbar-collapse" id="mpsp-navbar-collapsed">
-                <ul class="nav navbar-nav navbar-right">
+                <ul class="nav navbar-nav ml-auto">
 
                     <!-- add faculty version of 'my projects' if user is a faculty member -->
                     {% if is_faculty %}
-                        <li class="dropdown">
+                        <li class="nav-item dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 My projects
                                 <span class="caret"></span>
@@ -354,9 +354,9 @@
                         </li>
                     {% endif %}
 
-                    <!-- add student version of 'my projects' if user is a stident -->
+                    <!-- add student version of 'my projects' if user is a student -->
                     {% if is_student %}
-                        <li class="dropdown">
+                        <li class="nav-item dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 My projects
                                 <span class="caret"></span>
@@ -376,7 +376,7 @@
                     {% endif %}
 
                     {% if is_reports %}
-                        <li class="dropdown">
+                        <li class="nav-item dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 Reports
                                 <span class="caret"></span>
@@ -401,7 +401,7 @@
 
                     <!-- add admin menu if user is an administrator or system administrator, or a convenor -->
                     {% if is_admin or is_root or is_edit_tags or is_manage_users or is_convenor %}
-                        <li class="dropdown">
+                        <li class="nav-item dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 Admin
                                 <span class="caret"></span>
@@ -464,7 +464,7 @@
 
                     <!-- add site menu if user is root -->
                     {% if is_root or is_view_email %}
-                        <li class="dropdown">
+                        <li class="nav-item dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 Site management
                                 <span class="caret"></span>
@@ -497,7 +497,7 @@
 
                     <!-- add user account menu if user is logged in -->
                     {% if current_user.is_authenticated %}
-                        <li class="dropdown">
+                        <li class="nav-item dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 <i class="fa fa-user"></i>
                                 {{ current_user.username }}
@@ -626,7 +626,7 @@
         <br/>
         {% block bodyblock %}{% endblock %}
     </div>
-    <nav class="navbar navbar-expand {% if real_user %}navbar-inverse{% else %}navbar-light{% endif %} navbar-fixed-bottom" role="navigation">
+    <nav class="navbar navbar-expand {% if real_user %}navbar-dark bg-dark{% else %}navbar-light bg-light{% endif %} navbar-fixed-bottom" role="navigation">
         <div class="navbar-header footer-bar">
             <div class="container">
                 <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} University of Sussex</span>

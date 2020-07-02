@@ -2,8 +2,8 @@
 {% from "macros.html" import date_field %}
 
 {% macro selection_open(config, change_form) %}
-    <div class="card m-3 bg-success text-white">
-        <div class="card-header">
+    <div class="card m-3">
+        <div class="card-header bg-success text-white">
             <strong>Student selections are currently live</strong>
             {% if config.live_deadline %}
                 &ndash;

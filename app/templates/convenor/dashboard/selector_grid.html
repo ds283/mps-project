@@ -52,8 +52,8 @@
             <a href="{{ url_for('convenor.hints_list', id=pclass.id) }}">Show all convenor hints...</a>
         </div>
     </div>
-    <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
-        <div class="card-header">Selector grid for <strong>{{ pclass.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong></div>
+    <div class="card m-3">
+        <div class="card-header bg-primary text-white">Selector grid for <strong>{{ pclass.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong></div>
         <div class="card-body">
             <div class="card m-3 card-body">
                 {% set needs_rule = false %}

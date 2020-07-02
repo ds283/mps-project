@@ -53,7 +53,7 @@ _sessions = \
         <div class="col-3">
             {% set style = slot.session.get_label_type() %}
             <div class="dropdown schedule-assign-button" style="display: inline-block;">
-                <a class="badge {% if style is not none %}{{ style }}{% else %}badge-default{% endif %}" type="button" data-toggle="dropdown">
+                <a class="badge {% if style is not none %}{{ style }}{% else %}badge-secondary{% endif %}" type="button" data-toggle="dropdown">
                     {{ slot.session.short_date_as_string }} {{ slot.session.session_type_string }}
                     <span class="caret"></span>
                 </a>
@@ -91,7 +91,7 @@ _sessions = \
             {% for talk in slot.talks %}
                 {% set style = talk.pclass.make_CSS_style() %}
                 <div class="dropdown schedule-assign-button" style="display: inline-block;">
-                    <a class="badge {% if style %}badge-default{% else %}badge-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                    <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
                         {{ talk.owner.student.user.last_name }}
                         ({{ talk.project.owner.user.last_name }} &ndash; {{ truncate_name(talk.project.name) }})
                         <span class="caret"></span>
@@ -138,7 +138,7 @@ _sessions = \
         </div>
     </div>
 {% else %}
-    <span class="badge badge-default">No assignment</span>
+    <span class="badge badge-secondary">No assignment</span>
 {% endfor %}
 """
 

@@ -102,9 +102,9 @@
         </a>
     </div>
 
-    <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
+    <div class="card m-3">
         {% if pane == 'users' %}
-            <div class="card-header">Edit user access control list for <strong>{{ asset.target_name if asset.target_name is defined else asset.filename }}</strong></div>
+            <div class="card-header bg-primary text-white">Edit user access control list for <strong>{{ asset.target_name if asset.target_name is defined else asset.filename }}</strong></div>
             <div class="card-body">
                 <table id="user-acl-table" class="table table-striped table-bordered">
                     <thead>
@@ -118,7 +118,7 @@
                 </table>
             </div>
         {% elif pane == 'roles' %}
-            <div class="card-header">Edit role-based access control list for <strong>{{ asset.target_name if asset.target_name is defined else asset.filename }}</strong></div>
+            <div class="card-header bg-primary text-white">Edit role-based access control list for <strong>{{ asset.target_name if asset.target_name is defined else asset.filename }}</strong></div>
             <div class="card-body">
                 <table id="role-acl-table" class="table table-striped table-bordered">
                     <thead>

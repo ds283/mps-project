@@ -55,9 +55,9 @@ def groups_data(groups):
     data = [{'abbrv': g.abbreviation,
              'active': render_template_string(_active, g=g),
              'name': g.name,
-             'colour': '<span class="badge badge-default">None</span>' if g.colour is None else g.make_label(g.colour),
+             'colour': '<span class="badge badge-secondary">None</span>' if g.colour is None else g.make_label(g.colour),
              'website': '<a href="{web}">{web}</a>'.format(web=g.website) if g.website is not None
-                 else '<span class="badge badge-default">None</span>',
+                 else '<span class="badge badge-secondary">None</span>',
              'menu': render_template_string(_groups_menu, group=g)} for g in groups]
 
     return jsonify(data)

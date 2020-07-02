@@ -86,22 +86,22 @@ _options = \
 {% if p.colour and p.colour is not none %}
   {{ p.make_label(p.colour)|safe }}
 {% else %}
-  <span class="badge badge-default">None</span>'
+  <span class="badge badge-secondary">None</span>'
 {% endif %}
 {% if p.do_matching %}
-    <span class="badge badge-default">Auto-match</span>
+    <span class="badge badge-secondary">Auto-match</span>
 {% endif %}
 {% if p.require_confirm %}
-    <span class="badge badge-default">Confirm</span>
+    <span class="badge badge-secondary">Confirm</span>
 {% endif %}
 {% if p.supervisor_carryover %}
-    <span class="badge badge-default">Carryover</span>
+    <span class="badge badge-secondary">Carryover</span>
 {% endif %}
 {% if p.include_available %}
-    <span class="badge badge-default">Availability</span>
+    <span class="badge badge-secondary">Availability</span>
 {% endif %}
 {% if p.reenroll_supervisors_early %}
-    <span class="badge badge-default">Re-enroll early</span>
+    <span class="badge badge-secondary">Re-enroll early</span>
 {% endif %}
 """
 
@@ -124,8 +124,8 @@ _popularity = \
 {% if p.keep_hourly_popularity == 1 %}{% set hourly_pl = '' %}{% endif %}
 {% set daily_pl = 's' %}
 {% if p.keep_daily_popularity == 1 %}{% set daily_pl = '' %}{% endif %}
-<span class="badge badge-default">Hourly: {{ p.keep_hourly_popularity }} day{{ hourly_pl }}</span>
-<span class="badge badge-default">Daily: {{ p.keep_daily_popularity }} week{{ daily_pl }}</span>
+<span class="badge badge-secondary">Hourly: {{ p.keep_hourly_popularity }} day{{ hourly_pl }}</span>
+<span class="badge badge-secondary">Daily: {{ p.keep_daily_popularity }} week{{ daily_pl }}</span>
 """
 
 _personnel = \
@@ -141,7 +141,7 @@ _personnel = \
         {{ p.convenor_name }}
     </a>
     {% for fac in p.coconvenors %}
-        <a class="badge badge-default" href="mailto:{{ fac.user.email }}">
+        <a class="badge badge-secondary" href="mailto:{{ fac.user.email }}">
             {{ fac.user.name }}
         </a>
     {% endfor %}
@@ -181,16 +181,16 @@ _timing = \
 {% else %}
     <span class="badge badge-danger">Start level missing</span>
 {% endif %}
-<span class="badge badge-default">extent: {{ p.extent }} yr</span>
+<span class="badge badge-secondary">extent: {{ p.extent }} yr</span>
 {% if p.selection_open_to_all %}
-    <span class="badge badge-default">enroll: open</span>
+    <span class="badge badge-secondary">enroll: open</span>
 {% else %}
-    <span class="badge badge-default">enroll: degree</span>
+    <span class="badge badge-secondary">enroll: degree</span>
 {% endif %}
 {% if p.auto_enroll_years == p.AUTO_ENROLL_PREVIOUS_YEAR %}
-    <span class="badge badge-default">enroll: prev</span>
+    <span class="badge badge-secondary">enroll: prev</span>
 {% elif p.auto_enroll_years == p.AUTO_ENROLL_ANY_YEAR %}
-    <span class="badge badge-default">enroll: any</span>
+    <span class="badge badge-secondary">enroll: any</span>
 {% else %}
     <span class="badge badge-danger">enroll: unknown</span>
 {% endif %}

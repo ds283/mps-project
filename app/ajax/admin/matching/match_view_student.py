@@ -36,7 +36,7 @@ _pclass = \
 """
 {% set pclass = sel.config.project_class %}
 {% set style = pclass.make_CSS_style() %}
-<a class="badge {% if style %}badge-default{% else %}badge-info{% endif %} btn-table-block"
+<a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block"
    {% if style %}style="{{ style }}"{% endif %}
    href="mailto:{{ pclass.convenor_email }}">
     {{ pclass.abbreviation }} ({{ pclass.convenor_name }})
@@ -62,7 +62,7 @@ _project = \
     {% set proj_overassigned = r.is_project_overassigned %}
     <div>
         <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-            <a class="badge {% if proj_overassigned %}badge-danger{% elif style %}badge-default{% else %}badge-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
+            <a class="badge {% if proj_overassigned %}badge-danger{% elif style %}badge-secondary{% else %}badge-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
                     {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
                     {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }}
                 (No. {{ r.project.number }})
@@ -163,7 +163,7 @@ _marker = \
 {% macro marker_tag(r, show_period) %}
     {% if r.marker %}
         <div class="dropdown match-assign-button" style="display: inline-block;">
-            <a class="badge badge-default dropdown-toggle" type="button" data-toggle="dropdown">
+            <a class="badge badge-secondary dropdown-toggle" type="button" data-toggle="dropdown">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.marker.user.name }}
                 <span class="caret"></span>
             </a>
@@ -182,7 +182,7 @@ _marker = \
             </ul>
         </div>
     {% else %}
-        <span class="badge badge-default">None</span>
+        <span class="badge badge-secondary">None</span>
     {% endif %}
 {% endmacro %}
 {% if recs|length == 1 %}
@@ -217,7 +217,7 @@ _scores = \
     <span class="badge badge-primary">{{ r.current_score|round(precision=2) }}</span>
 {% elif recs|length > 1 %}
     {% for r in recs %}
-        <span class="badge badge-default">#{{ r.submission_period }}: {{ r.current_score|round(precision=2) }}</span>
+        <span class="badge badge-secondary">#{{ r.submission_period }}: {{ r.current_score|round(precision=2) }}</span>
     {% endfor %}
     <span class="badge badge-primary">Total {{ total_score|round(precision=2) }}</span>
 {% endif %}

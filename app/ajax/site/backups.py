@@ -36,10 +36,10 @@ def backups_data(backups):
             },
             'initiated': '<a href="mailto:{e}">{name}</a>'.format(e=b.owner.email,
                                                                   name=b.owner.name) if b.owner is not None
-            else '<span class="badge badge-default">Nobody</span>',
+            else '<span class="badge badge-secondary">Nobody</span>',
             'type': b.type_to_string(),
             'description': b.description if b.description is not None and len(b.description) > 0
-            else '<span class="badge badge-default">None</span>',
+            else '<span class="badge badge-secondary">None</span>',
             'filename': b.filename,
             'db_size': b.readable_db_size,
             'archive_size': b.readable_archive_size,

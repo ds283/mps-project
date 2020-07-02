@@ -18,7 +18,7 @@ _student = \
     {% if sel.has_submitted %}
         <span class="badge badge-success">Submitted</span>
     {% else %}
-        <span class="badge badge-default">Not submitted</span>
+        <span class="badge badge-secondary">Not submitted</span>
     {% endif %}
 </div>
 """

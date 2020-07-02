@@ -26,7 +26,7 @@ _name = \
             {% if rec is not none %}
                 {% set pcl = rec.pclass %}
                 {% set style = pcl.make_CSS_style() %}
-                <span class="badge {% if style is not none %}badge-default{% else %}badge-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
+                <span class="badge {% if style is not none %}badge-secondary{% else %}badge-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
                     {{ f.number_projects_offered(pcl.id) }}
                     {%- if rec.supervisor_state == rec.SUPERVISOR_ENROLLED %}
                         S <i class="fa fa-check"></i>
@@ -51,7 +51,7 @@ _name = \
                 {% set pcl = rec.pclass %}
                 {% if rec.CATS_supervision is not none or rec.CATS_marking is not none %}
                     {% set style = pcl.make_CSS_style() %}
-                    <span class="badge {% if style is not none %}badge-default{% else %}badge-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
+                    <span class="badge {% if style is not none %}badge-secondary{% else %}badge-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
                         {%- if rec.CATS_supervision is not none %}
                             S {{ rec.CATS_supervision }}
                         {%- endif -%}
@@ -86,7 +86,7 @@ _projects = \
     {% set style = pclass.make_CSS_style() %}
     {% set proj_overassigned = r.is_project_overassigned %}
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="badge {% if proj_overassigned %}badge-danger{% elif style %}badge-default{% else %}badge-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
+        <a class="badge {% if proj_overassigned %}badge-danger{% elif style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
                 {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
                 {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>#{{ r.submission_period }}:
             {{ r.selector.student.user.name }} (No. {{ r.project.number }})
@@ -135,7 +135,7 @@ _projects = \
     {% endif %}
 {% endfor %}
 {% if ns.count == 0 %}
-    <span class="badge badge-default btn-table-block">None</span>
+    <span class="badge badge-secondary btn-table-block">None</span>
 {% endif %}
 {% if err_msgs|length > 0 %}
     <div class="has-error">
@@ -153,7 +153,7 @@ _marking = \
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     <div class="dropdown match-assign-button" style="display: inline-block;">
-        <a class="badge {% if style %}badge-default{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
             #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})
             <span class="caret"></span>
         </a>
@@ -180,7 +180,7 @@ _marking = \
     {% endif %}
 {% endfor %}
 {% if ns.count == 0 %}
-    <span class="badge badge-default btn-table-block">None</span>
+    <span class="badge badge-secondary btn-table-block">None</span>
 {% endif %}
 {% if err_msgs|length > 0 %}
     <div class="has-error">
@@ -195,7 +195,7 @@ _marking = \
 _workload = \
 """
 <span class="badge {% if sup_overassigned %}badge-danger{% else %}badge-info{% endif %}">S {{ sup }}</span>
-<span class="badge {% if mark_overassigned %}badge-danger{% else %}badge-default{% endif %}">M {{ mark }}</span>
+<span class="badge {% if mark_overassigned %}badge-danger{% else %}badge-secondary{% endif %}">M {{ mark }}</span>
 <span class="badge {% if sup_overassigned or mark_overassigned %}badge-danger{% else %}badge-primary{% endif %}">T {{ tot }}</span>
 {% if included_sup is not none and included_mark is not none and included_workload is not none and included_workload|length > 0 %}
     <p></p>

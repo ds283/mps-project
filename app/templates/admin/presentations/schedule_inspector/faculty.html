@@ -56,8 +56,8 @@
         </div>
     {% endif %}
 
-    <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
-        <div class="card-header">Faculty view of schedule <strong>{{ record.name }}</strong> for assessment <strong>{{ record.owner.name }}</strong></div>
+    <div class="card m-3">
+        <div class="card-header bg-primary text-white">Faculty view of schedule <strong>{{ record.name }}</strong> for assessment <strong>{{ record.owner.name }}</strong></div>
         <div class="card-body">
             {% if pclasses and pclasses is not none and pclasses|length > 1 %}
                 <div class="card m-3 card-body">

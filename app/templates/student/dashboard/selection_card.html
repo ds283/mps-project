@@ -267,16 +267,16 @@
 
 
 {% macro selection_card(config, sel) %}
-   <div class="card
-        {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-            bg-primary text-white
-        {% elif config.selector_lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
-            bg-warning
-        {% else %}
-            {# no markup required; formerly panel-default #}
-        {% endif %}
+   <div class="card">
+        <div class="card-header
+            {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                bg-primary text-white
+            {% elif config.selector_lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
+                bg-warning text-white
+            {% else %}
+                {# no markup required; formerly panel-default #}
+            {% endif %}
         ">
-        <div class="card-header">
             {% if sub %}
                 <strong>Request to switch projects</strong>
             {% else %}

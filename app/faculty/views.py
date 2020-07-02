@@ -94,7 +94,7 @@ _desc_label = \
 <div>
     {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
     {% if not_confirmed %}
-        <span class="badge badge-default">Approval: Not confirmed</span>
+        <span class="badge badge-secondary">Approval: Not confirmed</span>
     {% else %}
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
             <span class="badge badge-success"><i class="fa fa-check"></i> Approved</span>

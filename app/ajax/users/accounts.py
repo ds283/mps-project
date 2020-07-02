@@ -24,7 +24,7 @@ _roles = \
 {% for r in user.roles %}
     {{ r.make_label()|safe }}
 {% else %}
-    <span class="badge badge-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endfor %}
 """
 
@@ -50,12 +50,12 @@ _status = \
 {% if u.last_login_ip is not none and u.last_login_ip|length > 0 %}
     <span class="badge badge-info">Last login IP {{ u.last_login_ip }}</span>
 {% else %}
-    <span class="badge badge-default">No last login IP</span>
+    <span class="badge badge-secondary">No last login IP</span>
 {% endif %}
 {% if u.last_precompute is not none %}
     <span class="badge badge-info">Last precompute at {{ u.last_precompute.strftime("%Y-%m-%d %H:%M:%S") }}</span>
 {% else %}
-    <span class="badge badge-default">No last precompute time</span>
+    <span class="badge badge-secondary">No last precompute time</span>
 {% endif %}
 """
 

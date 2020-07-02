@@ -28,7 +28,7 @@ _meeting = \
 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
     <span class="badge badge-warning">Optional</span>
 {% else %}
-    <span class="badge badge-default"><i class="fa fa-check"></i> Not required</span>
+    <span class="badge badge-secondary"><i class="fa fa-check"></i> Not required</span>
 {% endif %}
 """
 
@@ -59,7 +59,7 @@ _bookmarks = \
     </a>
 {% else %}
     <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}"
-       class="badge badge-default">
+       class="badge badge-secondary">
        <i class="fa fa-plus"></i> Add
     </a>
 {% endif %}
@@ -132,7 +132,7 @@ _project_skills = \
         {% if skill.group is none %}
             {{ skill.make_label()|safe }}
         {% else %}
-            <a href="{{ url_for('student.add_skill_filter', id=sel.id, skill_id=skill.id) }}" class="badge badge-default" style="{{ skill.group.make_CSS_style() }}">{%- if skill.group.add_group -%}{{ skill.group.name }}:{% endif %} {{ skill.name }}</a>
+            <a href="{{ url_for('student.add_skill_filter', id=sel.id, skill_id=skill.id) }}" class="badge badge-secondary" style="{{ skill.group.make_CSS_style() }}">{%- if skill.group.add_group -%}{{ skill.group.name }}:{% endif %} {{ skill.name }}</a>
         {% endif %}
     {% endif %}
 {% endfor %}
@@ -142,7 +142,7 @@ _project_skills = \
 _project_group = \
 """
 <a href="{{ url_for('student.add_group_filter', id=sel.id, gid=group.id) }}"
-   class="badge badge-default" style="{{ group.make_CSS_style() }}">
+   class="badge badge-secondary" style="{{ group.make_CSS_style() }}">
    {{ group.name }}
 </a>
 """
@@ -150,7 +150,7 @@ _project_group = \
 
 _not_live = \
 """
-<span class="badge badge-default">Not live</span>
+<span class="badge badge-secondary">Not live</span>
 """
 
 

@@ -25,14 +25,14 @@ _presentation = \
     {% if p.lecture_capture %}
         <span class="badge badge-info">Requires lecture capture</span>
     {% else %}
-        <span class="badge badge-default">Lecture capture not required</span>
+        <span class="badge badge-secondary">Lecture capture not required</span>
     {% endif %}
     <p></p>
     <span class="badge badge-info">Morning: {{ p.morning_session }}</span>
     <span class="badge badge-info">Afternoon: {{ p.afternoon_session }}</span>
     <span class="badge badge-info">Format: {{ p.talk_format }}</span>
 {% else %}
-    <span class="badge badge-default">Not required</span>
+    <span class="badge badge-secondary">Not required</span>
 {% endif %}
 """
 
@@ -65,7 +65,7 @@ _name = \
 {% if p.name %}
     {{ p.name }}
 {% else %}
-    <span class="badge badge-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endif %}
 {% if p.start_date %}
     <div>

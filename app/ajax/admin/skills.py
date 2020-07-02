@@ -62,7 +62,7 @@ _active = \
 def skills_data(skills):
 
     data = [{'name': s.name,
-             'group': s.group.make_label() if s.group is not None else '<span class="badge badge-default">None</span>',
+             'group': s.group.make_label() if s.group is not None else '<span class="badge badge-secondary">None</span>',
              'active': render_template_string(_active, a=s),
              'menu': render_template_string(_menu, skill=s)} for s in skills]
 

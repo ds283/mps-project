@@ -67,7 +67,7 @@ _name = \
     {% if t.queue == 'priority' %}
         <span class="badge badge-danger">PRIORITY</span>
     {% else %}
-        <span class="badge badge-default">{{ t.queue|upper }}</span>
+        <span class="badge badge-secondary">{{ t.queue|upper }}</span>
     {% endif %}
 </div>
 """
@@ -94,7 +94,7 @@ def scheduled_task_data(tasks):
              'schedule': _format_schedule(t),
              'owner': '<a href="mailto:{e}">{name}</a>'.format(e=t.owner.email,
                                                                name=t.owner.name) if t.owner is not None
-                else '<span class="badge badge-default">Nobody</span>',
+                else '<span class="badge badge-secondary">Nobody</span>',
              'active': render_template_string(_active, t=t),
              'last_run': {
                  'display': t.last_run_at.strftime("%a %d %b %Y %H:%M:%S"),
@@ -109,7 +109,7 @@ def scheduled_task_data(tasks):
                  'display': t.expires.strftime("%a %d %b %Y %H:%M:%S"),
                  'timestamp': t.expires.timestamp()
              } if t.expires is not None else {
-                 'display': '<span class="badge badge-default">No expiry</span>',
+                 'display': '<span class="badge badge-secondary">No expiry</span>',
                  'timestamp': None
              },
              'menu': render_template_string(_scheduled_menu_template, task=t)} for t in tasks]

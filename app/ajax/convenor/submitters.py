@@ -24,9 +24,9 @@ _projects = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="badge badge-default">{{ label }} not yet required</span> #}
+        {# <span class="badge badge-secondary">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="badge badge-default">{{ label }} to do</span>
+        <span class="badge badge-secondary">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
         <span class="badge badge-success">{{ label }} submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}
@@ -44,7 +44,7 @@ _projects = \
     <div>
         {% if r.project is not none %}
             <div class="dropdown assignment-label">
-                <a class="badge {% if style %}badge-default{% else %}badge-info{% endif %} btn-table-block dropdown-toggle"
+                <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle"
                         {% if style %}style="{{ style }}"{% endif %}
                         type="button" data-toggle="dropdown">{% if show_period %}#{{ r.submission_period }}: {% endif %}
                     {% if r.project.name|length < 35 %}
@@ -129,7 +129,7 @@ _projects = \
         <span class="badge badge-danger">None</span>
     {% endif %}
 {% else %}
-    <span class="badge badge-default">Not used</span>
+    <span class="badge badge-secondary">Not used</span>
 {% endif %}
 """
 
@@ -138,9 +138,9 @@ _markers = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="badge badge-default">{{ label }} not yet required</span> #}
+        {# <span class="badge badge-secondary">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="badge badge-default">{{ label }} to do</span>
+        <span class="badge badge-secondary">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
         <span class="badge badge-success">{{ label }} submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}
@@ -157,7 +157,7 @@ _markers = \
     <div>
         {% if r.marker is not none %}
             <div class="dropdown assignment-label">
-                <a class="badge {% if style %}badge-default{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
                     {% if show_period %}#{{ r.submission_period }}: {% endif %}
                     {{ r.marker.user.name }}
                     <span class="caret"></span>
@@ -197,7 +197,7 @@ _markers = \
         <span class="badge badge-danger">None</span>
     {% endif %}
 {% else %}
-    <span class="badge badge-default">Not used</span>
+    <span class="badge badge-secondary">Not used</span>
 {% endif %}
 """
 
@@ -208,7 +208,7 @@ _presentations = \
     {% if state == obj.FEEDBACK_NOT_YET or state == obj.FEEDBACK_NOT_REQUIRED %}
         {# empty #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="badge badge-default">{{ label }}: to do</span>
+        <span class="badge badge-secondary">{{ label }}: to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
         <span class="badge badge-success">{{ label }}: submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}
@@ -265,16 +265,16 @@ _presentations = \
                         {% endif %}
                     {% endif %}
                 {% else %}
-                    <span class="badge badge-default">Awaiting scheduling</span>
+                    <span class="badge badge-secondary">Awaiting scheduling</span>
                 {% endif %}
             </div>
         {% endif %}
     {% endfor %}
     {% if ns.count == 0 %}
-        <span class="badge badge-default">None</span>
+        <span class="badge badge-secondary">None</span>
     {% endif %}
 {% else %}
-    <span class="badge badge-default">Not used</span>
+    <span class="badge badge-secondary">Not used</span>
 {% endif %}
 """
 
@@ -396,11 +396,11 @@ _name = \
     {% endif %}
     {% if show_number %}
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
-            <a href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="badge badge-default">
+            <a href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="badge badge-secondary">
                 #{{ sub.student.exam_number }}
             </a>
         {% else %}
-            <span class="badge badge-default">#{{ sub.student.exam_number }}</span>
+            <span class="badge badge-secondary">#{{ sub.student.exam_number }}</span>
         {% endif %}
     {% endif %}
 </div>

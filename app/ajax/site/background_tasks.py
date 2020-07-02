@@ -56,7 +56,7 @@ def background_task_data(tasks):
     data = [{'id': t.id,
              'owner': '<a href="mailto:{em}">{nm}</a>'.format(nm=t.owner.name,
                                                               em=t.owner.email) if t.owner is not None
-                else '<span class="badge badge-default">Nobody</span>',
+                else '<span class="badge badge-secondary">Nobody</span>',
              'name': t.name,
              'description': t.description,
              'start_at': {

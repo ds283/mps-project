@@ -36,10 +36,10 @@ _supervisor = \
 _timestamps = \
 """
 {% if req.request_timestamp is not none %}
-    <span class="badge badge-default">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+    <span class="badge badge-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
 {% endif %}
 {% if req.response_timestamp is not none %}
-    <span class="badge badge-default">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+    <span class="badge badge-secondary">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
 {% endif %}
 {% if req.request_timestamp is not none and req.response_timestamp is not none %}
     {% set delta = req.response_timestamp - req.request_timestamp %}

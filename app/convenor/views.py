@@ -1190,10 +1190,10 @@ def selector_grid(id):
         matches = None
 
     if match_filter is None and session.get('convenor_sel_grid_match_filter'):
-        match_filter = session['convenor_selectors_match_filter']
+        match_filter = session['convenor_sel_grid_match_filter']
 
     if match_show is None and session.get('convenor_sel_grid_match_show'):
-        match_show = session['convenor_selectors_match_show']
+        match_show = session['convenor_sel_grid_match_show']
 
     if matches is None:
         match_filter = 'all'

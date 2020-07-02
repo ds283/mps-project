@@ -16,7 +16,7 @@
 
         {{ form.hidden_tag() }}
 
-        <div class="well">
+        <div class="card m-3 card-body">
             {% if form.recipient is defined %}
                 {{ wtf.render_field(form.recipient) }}
             {% else %}
@@ -24,14 +24,14 @@
                 {% if distribution_list is not none %}
                     <div>
                         {% for user in distribution_list %}
-                            <span class="btn btn-sm btn-default btn-table-block">{{ user.name }} ({{ user.email }})</span>
+                            <span class="btn btn-sm btn-secondary btn-table-block">{{ user.name }} ({{ user.email }})</span>
                         {% endfor %}
                     </div>
                 {% endif %}
                 {% if form.clear_recipients is defined %}
                     <div class="row" style="margin-bottom: 5px;">
-                        <div class="col-xs-12">
-                            <div class="pull-right">
+                        <div class="col-12">
+                            <div class="float-right">
                                 {{ wtf.render_field(form.clear_recipients, button_map={'clear_recipients': 'default'}) }}
                             </div>
                         </div>
@@ -43,7 +43,7 @@
             {{ wtf.render_field(form.subject) }}
 
             <strong>Reply to</strong>
-            <span class="btn btn-sm btn-default btn-table-block">{{ current_user.name }} ({{ current_user.email }})</span>
+            <span class="btn btn-sm btn-secondary btn-table-block">{{ current_user.name }} ({{ current_user.email }})</span>
         </div>
 
         {{ wtf.render_field(form.body) }}

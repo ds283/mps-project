@@ -16,32 +16,32 @@ _session_actions = \
 {% set available = s.faculty_available(f.id) %}
 {% set ifneeded = s.faculty_ifneeded(f.id) %}
 <div style="text-align: right;">
-    <div class="pull-right">
+    <div class="float-right">
         {% if available %}
             <a class="btn btn-sm btn-success {% if not editable %}disabled{% endif %}">
                 <i class="fa fa-check"></i> Available
             </a>
-            <a class="btn btn-sm btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}"{% endif %}>
+            <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 If needed
             </a>
-            <a class="btn btn-sm btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}"{% endif %}>
+            <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 <i class="fa fa-times"></i> Not available
             </a>
         {% elif ifneeded %}
-            <a class="btn btn-sm btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}"{% endif %}>
+            <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 <i class="fa fa-check"></i> Available
             </a>
             <a class="btn btn-sm btn-warning {% if not editable %}disabled{% endif %}">
                 If needed
             </a>
-            <a class="btn btn-sm btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}"{% endif %}>
+            <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 <i class="fa fa-times"></i> Not available
             </a>
         {% else %}
-            <a class="btn btn-sm btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}"{% endif %}>
+            <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 <i class="fa fa-check"></i> Available
             </a>
-            <a class="btn btn-sm btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}"{% endif %}>
+            <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 If needed
             </a>
             <a class="btn btn-sm btn-danger {% if not editable %}disabled{% endif %}">
@@ -56,12 +56,12 @@ _session_actions = \
 _confirmed = \
 """
 {% if rec.confirmed %}
-    <span class="label label-primary">Yes</span>
+    <span class="badge badge-primary">Yes</span>
     {% if rec.confirmed_timestamp is not none %}
-        <span class="label label-info">{{ rec.confirmed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        <span class="badge badge-info">{{ rec.confirmed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
     {% endif %}
 {% else %}
-    <span class="label label-warning">No</span>
+    <span class="badge badge-warning">No</span>
 {% endif %}
 """
 
@@ -69,11 +69,11 @@ _confirmed = \
 _assessor_actions = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('admin.assessment_assessor_availability', a_id=a.id, f_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}">
                 <i class="fa fa-calendar"></i> Sessions...
@@ -106,16 +106,16 @@ _comment = \
 {% if rec.comment is not none and rec.comment|length > 0 %}
     {{ rec.comment }}
 {% else %}
-    <span class="label label-default">None</span>
+    <span class="badge badge-default">None</span>
 {% endif %}
 """
 
 
 _availability = \
 """
-<span class="label label-success">{{ rec.number_available }}</span>
-<span class="label label-warning">{{ rec.number_ifneeded }}</span>
-<span class="label label-danger">{{ rec.number_unavailable }}</span>
+<span class="badge badge-success">{{ rec.number_available }}</span>
+<span class="badge badge-warning">{{ rec.number_ifneeded }}</span>
+<span class="badge badge-danger">{{ rec.number_unavailable }}</span>
 """
 
 
@@ -129,18 +129,18 @@ _name = \
 {% if has_block %}
     <div>
         {% if rec.assigned_limit is not none %}
-            <span class="label label-primary">Assignment limit {{ rec.assigned_limit }}</span>
+            <span class="badge badge-primary">Assignment limit {{ rec.assigned_limit }}</span>
         {% endif %}
         {% if rec.request_email_sent %}
-            <span class="label label-info"><i class="fa fa-envelope-o"></i> Invite sent</span>
+            <span class="badge badge-info"><i class="fa fa-envelope-o"></i> Invite sent</span>
             {% if rec.request_timestamp is not none %}
-                <span class="label label-default">{{ rec.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                <span class="badge badge-default">{{ rec.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
             {% endif %}
         {% endif %}
         {% if rec.reminder_email_sent %}
-            <span class="label label-info"><i class="fa fa-envelope-o"></i> Reminder sent</span>
+            <span class="badge badge-info"><i class="fa fa-envelope-o"></i> Reminder sent</span>
             {% if rec.last_reminder_timestamp is not none %}
-                <span class="label label-default">{{ rec.last_reminder_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                <span class="badge badge-default">{{ rec.last_reminder_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
             {% endif %}
         {% endif %}        
     </div>

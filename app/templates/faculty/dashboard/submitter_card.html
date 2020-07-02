@@ -18,33 +18,33 @@
     {% set is_sabbatical = supv_sabbatical and mark_sabbatical and pres_sabbatical %}
     {% set is_exempt = supv_exempt and mark_exempt and pres_exempt %}
     {% if period %}
-        <div class="panel
+        <div class="card m-3
             {% if is_sabbatical or is_exempt %}
-                panel-default
+                {# no markup required; formerly panel-default #}
             {% else %}
                 {% if n+1 == config.submission_period %}
                     {% if period.closed %}
-                        panel-default
+                        {# no markup required; formerly panel-default #}
                     {% elif period.is_feedback_open %}
-                        panel-danger
+                        bg-danger
                     {% elif period.start_date and period.start_date > today %}
-                        panel-default
+                        {# no markup required; formerly panel-default #}
                     {% else %}
-                        panel-success
+                        bg-success text-white
                     {% endif %}
                 {% else %}
-                    panel-default
+                    {# no markup required; formerly panel-default #}
                 {% endif %}
             {% endif %}
         ">
-            <div class="panel-heading">
+            <div class="card-header">
                 {% if period.submission_period == config.submission_period %}
                     <strong>{{ period.display_name|safe }}</strong>
                 {% else %}
                     {{ period.display_name|safe }}
                 {% endif %}
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 {% if period.closed %}
                     <p>Activity for this submission period is now closed.</p>
                 {% else %}
@@ -80,7 +80,7 @@
                                 <p>Normal project activity is underway.</p>
                             {% endif %}
                         {% else %}
-                            <span class="label label-danger">Error: Submission period lifecycle inconsistent</span>
+                            <span class="badge badge-danger">Error: Submission period lifecycle inconsistent</span>
                         {% endif %}
                     {% endif %}
                 {% endif %}
@@ -104,10 +104,10 @@
             </div>
         </div>
     {% else %}
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>Submission period #{{ n+1 }}</strong></div>
-            <div class="panel-body">
-                <span class="label label-danger">Error: Could not read period record</span>
+        <div class="card m-3">
+            <div class="card-header"><strong>Submission period #{{ n+1 }}</strong></div>
+            <div class="card-body">
+                <span class="badge badge-danger">Error: Could not read period record</span>
             </div>
         </div>
     {% endif %}

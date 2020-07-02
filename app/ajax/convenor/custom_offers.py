@@ -16,9 +16,9 @@ _student = \
 <a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 <div>
     {% if sel.has_submitted %}
-        <span class="label label-success">Submitted</span>
+        <span class="badge badge-success">Submitted</span>
     {% else %}
-        <span class="label label-default">Not submitted</span>
+        <span class="badge badge-default">Not submitted</span>
     {% endif %}
 </div>
 """
@@ -43,24 +43,24 @@ _status = \
 """
 {% set status = offer.status %}
 {% if status == offer.OFFERED %}
-    <span class="label label-primary">Offered</span>
+    <span class="badge badge-primary">Offered</span>
 {% elif status == offer.DECLINED %}
-    <span class="label label-danger">Declined</span>
+    <span class="badge badge-danger">Declined</span>
 {% elif status == offer.ACCEPTED %}
-    <span class="label label-success">Accepted</span>
+    <span class="badge badge-success">Accepted</span>
 {% else %}
-    <span class="label label-danger">Unknown status</span>
+    <span class="badge badge-danger">Unknown status</span>
 {% endif %}
 """
 
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle table-button" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle table-button" type="button" data-toggle="dropdown">
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
         {% set status = offer.status %}
         {% if status == offer.OFFERED and not offer.selector.has_submitted %}
             <li>
@@ -100,13 +100,13 @@ _menu = \
 _selector_offers = \
 """
 {% for offer in record.custom_offers_accepted %}
-    <span class="label label-success">Accepted: {{ offer.liveproject.name }} ({{offer.liveproject.owner.user.last_name }})</span>
+    <span class="badge badge-success">Accepted: {{ offer.liveproject.name }} ({{offer.liveproject.owner.user.last_name }})</span>
 {% endfor %}
 {% for offer in record.custom_offers_pending %}
-    <span class="label label-primary">Offer: {{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</span>
+    <span class="badge badge-primary">Offer: {{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</span>
 {% endfor %}
 {% for offer in record.custom_offers_declined %}
-    <span class="label label-danger">Declined: {{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</span>
+    <span class="badge badge-danger">Declined: {{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</span>
 {% endfor %}
 """
 
@@ -114,22 +114,22 @@ _selector_offers = \
 _project_offers = \
 """
 {% for offer in record.custom_offers_accepted %}
-    <span class="label label-success">Accepted: {{ offer.selector.student.user.name }}</span>
+    <span class="badge badge-success">Accepted: {{ offer.selector.student.user.name }}</span>
 {% endfor %}
 {% for offer in record.custom_offers_pending %}
-    <span class="label label-primary">Offer: {{ offer.selector.student.user.name }}</span>
+    <span class="badge badge-primary">Offer: {{ offer.selector.student.user.name }}</span>
 {% endfor %}
 {% for offer in record.custom_offers_declined %}
-    <span class="label label-danger">Declined: {{ offer.selector.student.user.name }}</span>
+    <span class="badge badge-danger">Declined: {{ offer.selector.student.user.name }}</span>
 {% endfor %}
 """
 
 
 _sel_actions = \
 """
-<div class="pull-right">
+<div class="float-right">
     <a href="{{ url_for('convenor.create_new_offer', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.selector_custom_offers', sel_id=sel.id)) }}"
-       class="btn btn-sm btn-default">
+       class="btn btn-sm btn-secondary">
        Make offer
     </a>
 </div>
@@ -138,9 +138,9 @@ _sel_actions = \
 
 _proj_actions = \
 """
-<div class="pull-right">
+<div class="float-right">
     <a href="{{ url_for('convenor.create_new_offer', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.project_custom_offers', proj_id=project.id)) }}"
-       class="btn btn-sm btn-default">
+       class="btn btn-sm btn-secondary">
        Make offer
     </a>
 </div>

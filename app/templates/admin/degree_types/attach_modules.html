@@ -12,8 +12,8 @@
 {% endblock %}
 
 {% block form_content %}
-    <div class="panel panel-default">
-        <div class="panel-body">
+    <div class="card m-3">
+        <div class="card-body">
             {% if prog and prog.modules and levels %}
                 <h4>
                     {% set ns = namespace(count=0) %}
@@ -24,7 +24,7 @@
                             </div>
                             {% set ns.count = ns.count + 1 %}
                             {% for module in prog.get_level_modules(level.id) %}
-                                <a class="btn btn-default selection-label"
+                                <a class="btn btn-secondary selection-label"
                                    {% if module.level is not none %}
                                      style="{{ module.level.make_CSS_style() }}"
                                    {% endif %}
@@ -39,7 +39,7 @@
                 <p>No modules currently attached</p>
             {% endif %}
         </div>
-        <div class="panel-footer">
+        <div class="card-footer">
             <form action="{{ url_for('admin.attach_modules', id=prog.id) }}" method="POST" name="module-selector-form">
                 {{ form.hidden_tag() }}
                 {{ on_click_selector_field(form.selector, false) }}
@@ -48,7 +48,7 @@
                 <h4>
                     {% for module in modules %}
                         {% if module not in prog.modules %}
-                            <a class="btn btn-default selection-label"
+                            <a class="btn btn-secondary selection-label"
                                href="{{ url_for('admin.attach_module', prog_id=prog.id, mod_id=module.id, level_id=level_id) }}">
                                 <i class="fa fa-plus"></i> {{ module.text_label }}
                             </a>

@@ -35,9 +35,9 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Outstanding confirmation requests for <strong>{{ pclass.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong></div>
-        <div class="panel-body">
+    <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
+        <div class="card-header">Outstanding confirmation requests for <strong>{{ pclass.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong></div>
+        <div class="card-body">
 
             <table id="confirm-requests-table" class="table table-striped table-bordered">
                 <thead>

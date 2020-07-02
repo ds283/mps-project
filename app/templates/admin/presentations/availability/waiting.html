@@ -2,12 +2,12 @@
 {% from "macros.html" import date_field %}
 
 {% macro waiting_responses(assessment, form) %}
-    <div class="panel panel-info">
-        <div class="panel-heading">Assessor availability for assessment <strong>{{ assessment.name }}</strong></div>
-        <div class="panel-body">
+    <div class="card m-3 bg-info text-white">
+        <div class="card-header">Assessor availability for assessment <strong>{{ assessment.name }}</strong></div>
+        <div class="card-body">
 
             <div class="row vertical-top">
-                <div class="col-xs-8">
+                <div class="col-8">
                     {% set count = assessment.availability_outstanding_count %}
                     {% if count > 0 %}
                         <p>Responses are outstanding from <strong>{{ count }} faculty</strong>.</p>
@@ -18,16 +18,16 @@
                         </p>
                     {% else %}
                         Responses have now been received from all faculty
-                        <span class="label label-success"><i class="fa fa-check"></i></span>
+                        <span class="badge badge-success"><i class="fa fa-check"></i></span>
                         <p>
                             <a href="{{ url_for('admin.availability_as_csv', id=assessment.id) }}">Download availability data</a>
                         </p>
                     {% endif %}
                 </div>
-                <div class="col-xs-4" style="text-align: right;">
-                    <div class="pull-right">
+                <div class="col-4" style="text-align: right;">
+                    <div class="float-right">
                         {% if count > 0 %}
-                            <a href="{{ url_for('admin.availability_reminder', id=assessment.id) }}" class="btn btn-default btn-table-block">
+                            <a href="{{ url_for('admin.availability_reminder', id=assessment.id) }}" class="btn btn-secondary btn-table-block">
                                 Send reminders
                             </a>
                         {% endif %}
@@ -42,8 +42,8 @@
                   method="POST" name="availability-fom">
                 {{ date_field(form.availability_deadline) }}
                 <div class="row">
-                    <div class="col-xs-12">
-                        <div class="pull-right">
+                    <div class="col-12">
+                        <div class="float-right">
                             {{ wtf.render_field(form.issue_requests, button_map={'issue_requests': 'default'}) }}
                         </div>
                     </div>

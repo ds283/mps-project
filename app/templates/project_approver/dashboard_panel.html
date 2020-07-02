@@ -2,21 +2,21 @@
     {% set queued = data['approval_project_queued'] %}
     {% set rejected = data['approval_project_rejected'] %}
 
-    <div class="panel {% if queued > 0 %}panel-warning{% else %}panel-default{% endif %}">
+    <div class="card m-3 {% if queued > 0 %}bg-warning{% endif %}}">
         {% set pl = 's' %}{% if queued == 1 %}{% set pl = '' %}{% endif  %}
         {% set anti_pl = '' %}{% if queued == 1 %}{% set anti_pl = 's' %}{% endif %}
-        <div class="panel-heading">{{ queued }} project description{{ pl }} require{{ anti_pl }} validation</div>
-        <div class="panel-body">
+        <div class="card-header">{{ queued }} project description{{ pl }} require{{ anti_pl }} validation</div>
+        <div class="card-body">
             {% if queued == 0 %}
                 <p>No project descriptions currently require validation.</p>
             {% else %}
                 <div class="row vertical-top">
-                    <div class="col-xs-8">
+                    <div class="col-8">
                         You have validation tasks to perform.
                     </div>
-                    <div class="col-xs-4">
-                        <div class="pull-right">
-                            <a href="{{ url_for('project_approver.validate') }}" class="btn btn-default">
+                    <div class="col-4">
+                        <div class="float-right">
+                            <a href="{{ url_for('project_approver.validate') }}" class="btn btn-secondary">
                                 Approve projects
                             </a>
                         </div>
@@ -27,21 +27,21 @@
     </div>
 
     {% if rejected > 0 %}
-        <div class="panel panel-danger">
+        <div class="card m-3 bg-danger">
             {% set pl = 's' %}{% if rejected == 1 %}{% set pl = '' %}{% endif  %}
             {% set have_has = 'have' %}{% if rejected == 1 %}{% set have_has = 'has' %}{% endif %}
-            <div class="panel-heading">{{ rejected }} project description{{ pl }} {{ have_has }} been rejected</div>
-            <div class="panel-body">
+            <div class="card-header">{{ rejected }} project description{{ pl }} {{ have_has }} been rejected</div>
+            <div class="card-body">
                 {% if rejected == 0 %}
                     <p>No project descriptions have been rejected.</p>
                 {% else %}
                     <div class="row vertical-top">
-                        <div class="col-xs-8">
+                        <div class="col-8">
                             You have rejected projects to review.
                         </div>
-                        <div class="col-xs-4">
-                            <div class="pull-right">
-                                <a href="{{ url_for('project_approver.rejected') }}" class="btn btn-default">
+                        <div class="col-4">
+                            <div class="float-right">
+                                <a href="{{ url_for('project_approver.rejected') }}" class="btn btn-secondary">
                                     Review projects
                                 </a>
                             </div>

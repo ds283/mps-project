@@ -25,7 +25,7 @@ from urllib import parse
 _actions = \
 """
 <a href="{{ url_for('project_approver.approve', id=r.id, url=url) }}" class="btn btn-sm btn-success btn-table-block">Approve</a>
-<a href="{{ url_for('project_approver.requeue', id=r.id, url=url) }}" class="btn btn-sm btn-default btn-table-block">Re-queue</a>
+<a href="{{ url_for('project_approver.requeue', id=r.id, url=url) }}" class="btn btn-sm btn-secondary btn-table-block">Re-queue</a>
 <a href="{{ url_for('project_approver.return_to_owner', id=r.id, url=url) }}" class="btn btn-sm btn-danger btn-table-block">Return to owner</a>
 """
 
@@ -38,7 +38,7 @@ _rejected = \
         at {{ r.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
     {% endif %}
 {% else %}
-    <span class="label label-default">Unknown</span>
+    <span class="badge badge-default">Unknown</span>
 {% endif %}
 """
 
@@ -70,7 +70,7 @@ def _process(r_id, current_user_id, text_enc, url_enc):
     if current_user_id is not None:
         u = db.session.query(User).filter_by(id=current_user_id).one()
         if project.has_new_comments(u):
-            name = name.replace('REPNEWCOMMENTS', '<span class="label label-warning">New comments</span>', 1)
+            name = name.replace('REPNEWCOMMENTS', '<span class="badge badge-warning">New comments</span>', 1)
         else:
             name = name.replace('REPNEWCOMMENTS', '', 1)
     else:

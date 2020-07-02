@@ -19,7 +19,7 @@ _name = \
 <div>
     {{ l.make_label(popover=false)|safe }}
     {% if l.version and l.version|length > 0 %}
-        <span class="label label-info">{{ l.version }}</span>
+        <span class="badge badge-info">{{ l.version }}</span>
     {% endif %}
 </div>
 """
@@ -33,9 +33,9 @@ _properties = \
     </div>
 {% endif %}
 {% if l.allows_redistribution %}
-    <span class="label label-success"><i class="fa fa-check"></i> Allows redistribution</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Allows redistribution</span>
 {% else %}
-    <span class="label label-default"><i class="fa fa-times"></i> No redistribution</span>
+    <span class="badge badge-default"><i class="fa fa-times"></i> No redistribution</span>
 {% endif %}
 <div style="padding-top: 5px;">
     Created by
@@ -44,7 +44,7 @@ _properties = \
     {% if l.creation_timestamp is not none %}
         {{ l.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
     {% else %}
-        <span class="label label-default">Unknown</span>
+        <span class="badge badge-default">Unknown</span>
     {% endif %}
     {% if l.last_edited_by is not none %}
         <p></p>
@@ -61,9 +61,9 @@ _properties = \
 _active = \
 """
 {% if l.active %}
-    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
 {% else %}
-    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+    <span class="badge badge-warning"><i class="fa fa-times"></i> Inactive</span>
 {% endif %}
 """
 
@@ -71,11 +71,11 @@ _active = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('admin.edit_license', lid=l.id) }}">
                 <i class="fa fa-pencil"></i> Edit details...

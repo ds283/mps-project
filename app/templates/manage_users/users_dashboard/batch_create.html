@@ -6,22 +6,22 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
-            <div class="panel panel-primary panel-primary-bg">
-                <div class="panel-heading">
+        <div class="col-2"></div>
+        <div class="col-8">
+            <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
+                <div class="card-header">
                     Upload student list for batch user creation
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     <form action="{{ url_for('manage_users.batch_create_users') }}" method="POST" enctype="multipart/form-data" name="batch_create_form">
                         {{ form.hidden_tag() }}
 
-                        <label class="btn btn-default" for="file-selector">
+                        <label class="btn btn-secondary" for="file-selector">
                             <input id="file-selector" type="file" name="batch_list" style="display: none;"
                                    onchange="$('#filename-data').html(this.files[0].name)">
                             Select file...
                         </label>
-                        <span class="label label-info" id="filename-data"></span>
+                        <span class="badge badge-info" id="filename-data"></span>
 
                         <hr class="intro-divider">
                         {{ wtf.render_field(form.current_year) }}
@@ -33,58 +33,58 @@
             </div>
 
             {% for batch in batches %}
-                <div class="well">
+                <div class="card m-3 card-body">
                     <div class="batch-name">{{ batch.name }}</div>
                     <div class="row vertical-top" style="margin-bottom: 10px;">
-                        <div class="col-xs-4">
+                        <div class="col-4">
                             <div>
                                 {% if not batch.celery_finished %}
-                                    <span class="label label-info">In progress</span>
+                                    <span class="badge badge-info">In progress</span>
                                 {% else %}
                                     {% if batch.success %}
-                                        <span class="label label-success"><i class="fa fa-check"></i> Read succeeded</span>
+                                        <span class="badge badge-success"><i class="fa fa-check"></i> Read succeeded</span>
                                     {% else %}
-                                        <span class="label label-danger"><i class="fa fa-times"></i> Read failed</span>
+                                        <span class="badge badge-danger"><i class="fa fa-times"></i> Read failed</span>
                                     {% endif %}
                                     {% if batch.converted %}
-                                        <span class="label label-success"><i class="fa fa-check"></i> Converted</span>
+                                        <span class="badge badge-success"><i class="fa fa-check"></i> Converted</span>
                                     {% else %}
-                                        <span class="label label-default">Not converted</span>
+                                        <span class="badge badge-secondary">Not converted</span>
                                     {% endif %}
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="col-xs-4">
+                        <div class="col-4">
                             <div>
                                 {% if batch.timestamp %}
-                                    <span class="label label-primary">Timestamp {{ batch.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                    <span class="badge badge-primary">Timestamp {{ batch.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                 {% endif %}
                                 {% if batch.success %}
-                                    <span class="label label-primary">Total lines: {{ batch.total_lines }}</span>
+                                    <span class="badge badge-primary">Total lines: {{ batch.total_lines }}</span>
                                     {% if batch.interpreted_lines < batch.total_lines %}
-                                        <span class="label label-warning">Ignored lines: {{ batch.total_lines - batch.interpreted_lines }}</span>
+                                        <span class="badge badge-warning">Ignored lines: {{ batch.total_lines - batch.interpreted_lines }}</span>
                                     {% else %}
-                                        <span class="label label-default">No ignored lines</span>
+                                        <span class="badge badge-secondary">No ignored lines</span>
                                     {% endif %}
                                 {% endif %}
-                                <span class="label label-info">{{ batch.number_items }} items</span>
+                                <span class="badge badge-info">{{ batch.number_items }} items</span>
                             </div>
                             <div>
-                                <span class="label label-info">Reference academic year {{ batch.academic_year }}</span>
+                                <span class="badge badge-info">Reference academic year {{ batch.academic_year }}</span>
                                 {% if batch.trust_cohort %}
-                                    <span class="label label-success"><i class="fa fa-check"></i> Trust cohort data</span>
+                                    <span class="badge badge-success"><i class="fa fa-check"></i> Trust cohort data</span>
                                 {% else %}
-                                    <span class="label label-default"><i class="fa fa-times"></i> Do not trust cohort data</span>
+                                    <span class="badge badge-secondary"><i class="fa fa-times"></i> Do not trust cohort data</span>
                                 {% endif %}
                                 {% if batch.trust_exams %}
-                                    <span class="label label-success"><i class="fa fa-check"></i> Trust exam numbers</span>
+                                    <span class="badge badge-success"><i class="fa fa-check"></i> Trust exam numbers</span>
                                 {% else %}
-                                    <span class="label label-default"><i class="fa fa-times"></i> Do not trust exam numbers </span>
+                                    <span class="badge badge-secondary"><i class="fa fa-times"></i> Do not trust exam numbers </span>
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="col-xs-4">
-                            <div class="pull-right">
+                        <div class="col-4">
+                            <div class="float-right">
                                 {% if not batch.celery_finished %}
                                     <a href="{{ url_for('manage_users.terminate_batch', batch_id=batch.id) }}" class="btn btn-sm btn-danger btn-table-block">
                                         Terminate
@@ -98,7 +98,7 @@
                                             Delete
                                         </a>
                                     {% elif batch.success %}
-                                        <a href="{{ url_for('manage_users.view_batch_data', batch_id=batch.id) }}" class="btn btn-sm btn-default btn-table-block">
+                                        <a href="{{ url_for('manage_users.view_batch_data', batch_id=batch.id) }}" class="btn btn-sm btn-secondary btn-table-block">
                                             View records
                                         </a>
                                         <a href="{{ url_for('manage_users.import_batch', batch_id=batch.id) }}" class="btn btn-sm btn-primary btn-table-block">
@@ -121,15 +121,15 @@
                     </div>
                 </div>
             {% else %}
-                <div class="well">
+                <div class="card m-3 card-body">
                     <div class="row vertical-top">
-                        <div class="col-xs-12">
+                        <div class="col-12">
                             No batches currently being processed.
                         </div>
                     </div>
                 </div>
             {% endfor %}
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-2"></div>
     </div>
 {% endblock %}

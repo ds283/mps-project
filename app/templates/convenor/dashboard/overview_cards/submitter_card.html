@@ -6,29 +6,29 @@
     {% set period = config.get_period(n+1) %}
 
     {% if period %}
-        <div class="panel
+        <div class="card
             {% if n+1 == config.submission_period %}
                 {% if period.closed %}
-                    panel-default
+                    {# no markup required; formerly panel-default #}
                 {% elif period.is_feedback_open %}
-                    panel-danger
+                    bg-danger
                 {% elif period.start_date and period.start_date > today %}
-                    panel-default
+                    {# no markup required; formerly panel-default #}
                 {% else %}
-                    panel-success
+                    bg-success text-white
                 {% endif %}
             {% else %}
-                panel-default
+                {# no markup required; formerly panel-default #}
             {% endif %}
         ">
-            <div class="panel-heading">
+            <div class="card-header">
                 {% if period.submission_period == config.submission_period %}
                     <strong>{{ period.display_name|safe }}</strong>
                 {% else %}
                     {{ period.display_name|safe }}
                 {% endif %}
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 {% if not period.closed and not period.is_feedback_open and (period.start_date is none or (period.start_date and period.start_date <= today)) %}
                     {% set validation_messages = period.validate %}
                     {% if validation_messages is not none and validation_messages|length > 0 %}
@@ -44,46 +44,46 @@
                 {% elif period.submission_period > config.submission_period %}
                     <p>Activity for this period has not yet commenced.</p>
                 {% else %}
-                    <div class="well">
+                    <div class="card m-3 card-body">
                         <div>
                             {% if period.collect_project_feedback %}
-                                <span class="label label-primary"><i class="fa fa-check"></i> Collect project feedback</span>
+                                <span class="badge badge-primary"><i class="fa fa-check"></i> Collect project feedback</span>
                             {% else %}
-                                <span class="label label-danger"><i class="fa fa-times"></i> Project feedback disabled</span>
+                                <span class="badge badge-danger"><i class="fa fa-times"></i> Project feedback disabled</span>
                             {% endif %}
                             {% if period.has_presentation %}
-                                <span class="label label-primary"><i class="fa fa-check"></i> Presentation assessment</span>
+                                <span class="badge badge-primary"><i class="fa fa-check"></i> Presentation assessment</span>
                                 {% if period.collect_presentation_feedback %}
-                                    <span class="label label-primary"><i class="fa fa-check"></i> Collect presentation feedback</span>
+                                    <span class="badge badge-primary"><i class="fa fa-check"></i> Collect presentation feedback</span>
                                 {% else %}
-                                    <span class="label label-danger"><i class="fa fa-times"></i> Presentation feedback disabled</span>
+                                    <span class="badge badge-danger"><i class="fa fa-times"></i> Presentation feedback disabled</span>
                                 {% endif %}
                             {% endif %}
                         </div>
                         {% if period.has_presentation %}
                             {% if period.lecture_capture %}
-                                <span class="label label-default">Requires lecture capture</span>
+                                <span class="badge badge-secondary">Requires lecture capture</span>
                             {% endif %}
                             {% if period.number_assessors %}
-                                <span class="label label-default">{{ period.number_assessors }} assessors</span>
+                                <span class="badge badge-secondary">{{ period.number_assessors }} assessors</span>
                             {% endif %}
                             {% if period.max_group_size %}
-                                <span class="label label-default">Max group {{ period.max_group_size }}</span>
+                                <span class="badge badge-secondary">Max group {{ period.max_group_size }}</span>
                             {% endif %}
                             {% if period.collect_presentation_feedback %}
-                                <span class="label label-default">Collect feedback</span>
+                                <span class="badge badge-secondary">Collect feedback</span>
                             {% endif %}
                             <div>
-                                <span class="label label-info">Morning session</span>
-                                <span class="label label-default">{% if period.morning_session and period.morning_session|length > 0 %}{{ period.morning_session }}{% else %}Not set{% endif %}</span>
+                                <span class="badge badge-info">Morning session</span>
+                                <span class="badge badge-secondary">{% if period.morning_session and period.morning_session|length > 0 %}{{ period.morning_session }}{% else %}Not set{% endif %}</span>
                             </div>
                             <div>
-                                <span class="label label-info">Afternoon session</span>
-                                <span class="label label-default">{% if period.afternoon_session and period.afternoon_session|length > 0 %}{{ period.afternoon_session }}{% else %}Not set{% endif %}</span>
+                                <span class="badge badge-info">Afternoon session</span>
+                                <span class="badge badge-secondary">{% if period.afternoon_session and period.afternoon_session|length > 0 %}{{ period.afternoon_session }}{% else %}Not set{% endif %}</span>
                             </div>
                             <div>
-                                <span class="label label-info">Format</span>
-                                <span class="label label-default">{% if period.talk_format and period.talk_format|length > 0 %}{{ period.talk_format }}{% else %}Not set{% endif %}</span>
+                                <span class="badge badge-info">Format</span>
+                                <span class="badge badge-secondary">{% if period.talk_format and period.talk_format|length > 0 %}{{ period.talk_format }}{% else %}Not set{% endif %}</span>
                             </div>
                         {% endif %}
                     </div>
@@ -97,10 +97,10 @@
             </div>
         </div>
     {% else %}
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>Submission period #{{ n+1 }}</strong></div>
-            <div class="panel-body">
-                <span class="label label-danger">Error: Could not read period record</span>
+        <div class="card m-3">
+            <div class="card-header"><strong>Submission period #{{ n+1 }}</strong></div>
+            <div class="card-body">
+                <span class="badge badge-danger">Error: Could not read period record</span>
             </div>
         </div>
     {% endif %}

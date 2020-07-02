@@ -1,13 +1,13 @@
 {% macro rollover_card(current_year, pclass, config) %}
-    <div id="rollover-panel" class="panel panel-danger collapse in" aria-expanded="true">
-        <div class="panel-heading"><strong>Rollover of academic year available</strong></div>
-        <div class="panel-body">
+    <div id="rollover-panel" class="card m-3 bg-danger collapse in" aria-expanded="true">
+        <div class="card-header"><strong>Rollover of academic year available</strong></div>
+        <div class="card-body">
             <div class="row vertical-align">
-                <div class="col-xs-6">
+                <div class="col-6">
                     Rollover of the academic year to {{ current_year }} is now available.
                 </div>
-                <div class="col-xs-6">
-                    <div class="pull-right">
+                <div class="col-6">
+                    <div class="float-right">
                         <a href="{{ url_for('convenor.confirm_rollover', id=config.id, markers=0) }}"
                            class="btn btn-danger">Drop markers</a>
                         <a href="{{ url_for('convenor.confirm_rollover', id=config.id, markers=1) }}"

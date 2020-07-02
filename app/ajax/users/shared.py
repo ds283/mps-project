@@ -16,17 +16,17 @@ name = \
     {{ 'REPACTIVE'|safe }}
     {% if u.student_data and u.student_data is not none %}
         {% if u.student_data.intermitting %}
-            <span class="label label-warning">INTERMITTING</span>
+            <span class="badge badge-warning">INTERMITTING</span>
         {% endif %}
         {% set state = u.student_data.workflow_state %}
         {% if state == u.student_data.WORKFLOW_APPROVAL_QUEUED %}
-            <span class="label label-warning">Approval: Queued</span>
+            <span class="badge badge-warning">Approval: Queued</span>
         {% elif state == u.student_data.WORKFLOW_APPROVAL_REJECTED %}
-            <span class="label label-danger">Approval: Rejected</span>
+            <span class="badge badge-danger">Approval: Rejected</span>
         {% elif state == u.student_data.WORKFLOW_APPROVAL_VALIDATED %}
-            <span class="label label-success"><i class="fa fa-check"></i> Approved</span>
+            <span class="badge badge-success"><i class="fa fa-check"></i> Approved</span>
         {% else %}
-            <span class="label label-danger">Unknown validation</span>
+            <span class="badge badge-danger">Unknown validation</span>
         {% endif %}
     {% endif %}
     {% if f %}
@@ -38,18 +38,18 @@ name = \
             {% endif %}
         </div>
     {% endif %}
-    {% set theme = u.ui_theme %}
+    {% set theme = u.ui_theme if u.ui_theme is defined else 'default' %}
     {% if theme == 'default'' %}
-        <span class="label label-primary">Default</span>
+        <span class="badge badge-primary">Default</span>
     {% elif theme == 'flat'' %}
-        <span class="label label-primary">Flat</span>
+        <span class="badge badge-primary">Flat</span>
     {% elif theme == 'dark'' %}
-        <span class="label label-primary">Dark</span>
+        <span class="badge badge-primary">Dark</span>
     {% else %}
-        <span class="label label-danger">Unknown theme</span>
+        <span class="badge badge-danger">Unknown theme</span>
     {% endif %}
     {% if u.last_email %}
-        <span class="label label-info">Last notify {{ u.last_email.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        <span class="badge badge-info">Last notify {{ u.last_email.strftime("%a %d %b %Y %H:%M:%S") }}</span>
     {% endif %}
 </div>
 """
@@ -58,11 +58,11 @@ name = \
 menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
         <li class="dropdown-header">Edit</li>
         <li>
             <a href="{{ url_for('manage_users.edit_user', id=user.id, pane=pane) }}">

@@ -8,22 +8,22 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
-            <div class="panel panel-primary panel-primary-bg">
-                <div class="panel-heading">
+        <div class="col-2"></div>
+        <div class="col-8">
+            <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
+                <div class="card-header">
                     Upload report for <i class="fa fa-user"></i> <strong>{{ record.student_identifier }}</strong> {{ record.period.display_name }}
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     <form action="{{ url_for('documents.upload_submitter_report', sid=record.id, url=url, text=text) }}" method="POST" enctype="multipart/form-data" name="report_form">
                         {{ form.hidden_tag() }}
 
-                        <label class="btn btn-default" for="file-selector">
+                        <label class="btn btn-secondary" for="file-selector">
                             <input id="file-selector" type="file" name="report" style="display: none;"
                                    onchange="$('#filename-data').html(this.files[0].name); $('#target_name').val(this.files[0].name);">
                             Select file...
                         </label>
-                        <span class="label label-info" id="filename-data" style="height: 24px;"></span>
+                        <span class="badge badge-info" id="filename-data" style="height: 24px;"></span>
 
                         <hr class="intro-divider">
                         {{ wtf.render_field(form.license) }}
@@ -39,6 +39,6 @@
                 </a>
             </div>
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-2"></div>
     </div>
 {% endblock %}

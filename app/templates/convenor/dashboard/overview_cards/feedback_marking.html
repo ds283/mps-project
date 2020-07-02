@@ -3,12 +3,12 @@
 
 {% macro feedback_marking(config, period, feedback_form) %}
     <div class="row vertical-top">
-        <div class="col-xs-9">
+        <div class="col-9">
             Feedback and marking are currently underway.
             These are available to release to students when the feedback period closes.
         </div>
-        <div class="col-xs-3">
-            <div class="pull-right">
+        <div class="col-3">
+            <div class="float-right">
                 <a href="{{ url_for('convenor.close_feedback', id=config.id) }}"
                    class="btn btn-danger">
                     {% if config.submission_period == config.submissions %}
@@ -27,9 +27,9 @@
         {{ wtf.render_field(feedback_form.max_attachment) }}
         {{ wtf.render_field(feedback_form.cc_me) }}
         <div class="row">
-            <div class="col-xs-12">
-                <div class="pull-right">
-                    <a class="btn btn-default" href="{{ url_for('convenor.submission_period_documents', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='overview') }}">Documents ({{ period.number_attachments }})...</a>
+            <div class="col-12">
+                <div class="float-right">
+                    <a class="btn btn-secondary" href="{{ url_for('convenor.submission_period_documents', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='overview') }}">Documents ({{ period.number_attachments }})...</a>
                     {% if feedback_form.send_notifications is defined %}
                         {{ wtf.render_field(feedback_form.send_notifications, button_map={'send_notifications': 'default'}) }}
                     {% endif %}

@@ -16,15 +16,15 @@ _name = \
 <a href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
 <div>
     {% if a.confirmed %}
-        <span class="label label-success">Confirmed</span>
+        <span class="badge badge-success">Confirmed</span>
     {% else %}
-        <span class="label label-danger">Not confirmed</span>
+        <span class="badge badge-danger">Not confirmed</span>
     {% endif %}
     {% if a.assigned_limit is not none %}
-        <span class="label label-primary">Assignment limit {{ a.assigned_limit }}</span>
+        <span class="badge badge-primary">Assignment limit {{ a.assigned_limit }}</span>
     {% endif %}
     {% if a.comment is not none and a.comment|length > 0 %}
-        <span class="label label-info" data-toggle="tooltip" title="{{ a.comment }}">Comment</button>
+        <span class="badge badge-info" data-toggle="tooltip" title="{{ a.comment }}">Comment</button>
     {% endif %}
 </div>
 """
@@ -36,11 +36,11 @@ _sessions = \
     <div style="display: inline-block; margin-bottom:2px; margin-right:2px;">
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
             {% set style = slot.session.get_label_type() %}
-            <a class="label {% if style is not none %}{{ style }}{% else %}label-default{% endif %} dropdown-toggle" type="button" data-toggle="dropdown">
+            <a class="badge {% if style is not none %}{{ style }}{% else %}badge-default{% endif %} dropdown-toggle" type="button" data-toggle="dropdown">
                 {{ slot.session.short_date_as_string }} {{ slot.session.session_type_string }}
                 <span class="caret"></span>
             </a>
-            <ul class="dropdown-menu">
+            <div class="dropdown-menu">
                 <li>
                     <a href="{{ url_for('admin.schedule_adjust_assessors', id=slot.id, url=url_for('admin.schedule_view_faculty', id=rec.id, url=back_url, text=back_text), text='schedule inspector faculty view') }}">
                         Reassign assessors...
@@ -56,11 +56,11 @@ _sessions = \
         {% for talk in slot.talks %}
             <div class="dropdown schedule-assign-button" style="display: inline-block;">
                 {% set style = talk.pclass.make_CSS_style() %}
-                <a class="label {% if style %}label-default{% else %}label-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                <a class="badge {% if style %}badge-default{% else %}badge-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
                     {{ talk.owner.student.user.name }}
                     <span class="caret"></span>
                 </a>
-                <ul class="dropdown-menu">
+                <div class="dropdown-menu">
                     <li>
                         <a href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url_for('admin.schedule_view_faculty', id=rec.id, url=back_url, text=back_text), text='schedule inspector faculty view') }}">
                             Reassign presentation...
@@ -74,16 +74,16 @@ _sessions = \
         {% endfor %}
     </div>
 {% else %}
-    <span class="label label-default">No assignment</span>
+    <span class="badge badge-default">No assignment</span>
 {% endfor %}
 """
 
 
 _availability = \
 """
-<span class="label label-success">{{ a.number_available }}</span>
-<span class="label label-warning">{{ a.number_ifneeded }}</span>
-<span class="label label-danger">{{ a.number_unavailable }}</span>
+<span class="badge badge-success">{{ a.number_available }}</span>
+<span class="badge badge-warning">{{ a.number_ifneeded }}</span>
+<span class="badge badge-danger">{{ a.number_unavailable }}</span>
 """
 
 

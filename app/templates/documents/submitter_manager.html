@@ -43,26 +43,26 @@
             </div>
             {% if admin_rights %}
                 <div>
-                    <span class="label label-default">Downloads: {{ asset.number_downloads }}</span>
+                    <span class="badge badge-secondary">Downloads: {{ asset.number_downloads }}</span>
                 </div>
             {% endif %}
         </td>
         <td>
             {% if asset.license %}
                 {{ asset.license.make_label()|safe }}
-                <span class="label label-info">{{ asset.license.version }}</span>
+                <span class="badge badge-info">{{ asset.license.version }}</span>
             {% else %}
                 <strong>Unset</strong>
             {% endif %}
         </td>
         <td>
-            <div style="text-align: right;" class="pull-right">
+            <div style="text-align: right;" class="float-right">
                 <div class="dropdown">
-                    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                         Actions
                         <span class="caret"></span>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-right">
+                    <div class="dropdown-menu dropdown-menu-right">
                         {% if is_editable is none %}
                             {% set editable = false %}
                         {% else %}
@@ -122,13 +122,13 @@
         </div>
     {% endif %}
 
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Manage documents for <i class="fa fa-user"></i> <strong>{{ record.student_identifier }}</strong> {{ record.period.display_name }}</div>
-        <div class="panel-body">
+    <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
+        <div class="card-header">Manage documents for <i class="fa fa-user"></i> <strong>{{ record.student_identifier }}</strong> {{ record.period.display_name }}</div>
+        <div class="card-body">
             {% if admin_rights %}
                 <div class="row">
-                    <div class="col-xs-1"></div>
-                    <div class="col-xs-10">
+                    <div class="col-1"></div>
+                    <div class="col-10">
                         {% if period.closed %}
                             <div class="alert alert-danger">
                                 You are viewing documents for the submission period "{{ record.period.display_name }}",
@@ -147,13 +147,13 @@
                             </ul>
                         {% endif %}
                     </div>
-                    <div class="col-xs-1"></div>
+                    <div class="col-1"></div>
                 </div>
             {% endif %}
 
             {# PERIOD ATTACHMENTS #}
             {% if period.attachments.first() %}
-                <div class="well">
+                <div class="card m-3 card-body">
                     <div><span class="document-group-title">Documents provided by the convenor</span></div>
                     {% if is_student %}
                         <div>The following documents have been provided by the convenor and may include mark schemes
@@ -190,7 +190,7 @@
             {% endif %}
 
             {# REPORT #}
-            <div class="well">
+            <div class="card m-3 card-body">
                 <span class="document-group-title">Report</span>
                 <hr class="intro-divider">
                 {% if record.report %}
@@ -220,7 +220,7 @@
                     {% if report_uploadable %}
                         <hr class="into-divider">
                         <div style="text-align: center;">
-                            <a href="{{ url_for('documents.upload_submitter_report', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
+                            <a href="{{ url_for('documents.upload_submitter_report', sid=record.id, url=url, text=text) }}" class="btn btn-secondary btn-lg">
                                 <i class="fa fa-plus"></i>
                                 Upload report
                             </a>
@@ -230,7 +230,7 @@
             </div>
 
             {# SUBMISSION ATTACHMENTS #}
-            <div class="well">
+            <div class="card m-3 card-body">
                 <span class="document-group-title">Attachments</span>
                 <hr class="intro-divider">
                 {% if record.attachments.first() %}
@@ -267,7 +267,7 @@
                 {% if attachment_uploadable %}
                     <hr class="into-divider">
                     <div style="text-align: center;">
-                        <a href="{{ url_for('documents.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
+                        <a href="{{ url_for('documents.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" class="btn btn-secondary btn-lg">
                             <i class="fa fa-plus"></i>
                             Upload new attachment
                         </a>

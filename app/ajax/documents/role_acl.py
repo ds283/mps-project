@@ -14,9 +14,9 @@ from flask import render_template_string, jsonify
 _access = \
 """
 {% if asset.in_role_acl(role) %}
-    <span class="label label-success"><i class="fa fa-check"></i> Role grants access</a>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Role grants access</a>
 {% else %}
-    <span class="label label-danger"><i class="fa fa-times"></i> No access</a>
+    <span class="badge badge-danger"><i class="fa fa-times"></i> No access</a>
 {% endif %}
 """
 
@@ -24,9 +24,9 @@ _access = \
 _actions = \
 """
 <div style="text-align: right;">
-    <div class="pull-right">
+    <div class="float-right">
         {% if asset.in_role_acl(role) %}
-            <a class="btn btn-sm btn-default" href="{{ url_for('documents.remove_role_acl', role_id=role.id, attach_type=type, attach_id=attachment.id) }}">
+            <a class="btn btn-sm btn-secondary" href="{{ url_for('documents.remove_role_acl', role_id=role.id, attach_type=type, attach_id=attachment.id) }}">
                 <i class="fa fa-times"></i> Remove access
             </a>
         {% else %}

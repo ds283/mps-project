@@ -8,22 +8,22 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
-            <div class="panel panel-primary panel-primary-bg">
-                <div class="panel-heading">
+        <div class="col-2"></div>
+        <div class="col-8">
+            <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
+                <div class="card-header">
                     Upload new attachment for <strong>{{ record.display_name }}</strong>
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     <form action="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}" method="POST" enctype="multipart/form-data" name="attachment_form">
                         {{ form.hidden_tag() }}
 
-                        <label class="btn btn-default" for="file-selector">
+                        <label class="btn btn-secondary" for="file-selector">
                             <input id="file-selector" type="file" name="attachment" style="display: none;"
                                    onchange="$('#filename-data').html(this.files[0].name)">
                             Select file...
                         </label>
-                        <span class="label label-info" id="filename-data"></span>
+                        <span class="badge badge-info" id="filename-data"></span>
 
                         <hr class="intro-divider" role="separator">
                         {{ wtf.render_field(form.description) }}
@@ -43,6 +43,6 @@
                 </a>
             </div>
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-2"></div>
     </div>
 {% endblock %}

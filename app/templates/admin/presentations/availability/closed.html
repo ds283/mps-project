@@ -1,7 +1,7 @@
 {% macro availability_closed(assessment) %}
-    <div class="panel panel-default">
-        <div class="panel-heading">Assessor availability for assessment <strong>{{ assessment.name }}</strong></div>
-        <div class="panel-body">
+    <div class="card m-3">
+        <div class="card-header">Assessor availability for assessment <strong>{{ assessment.name }}</strong></div>
+        <div class="card-body">
             <p>Collection of availability data for this assessment is now closed.</p>
             {% set count = assessment.availability_outstanding_count %}
             {% if count > 0 %}
@@ -13,16 +13,16 @@
                 </p>
             {% else %}
                 Responses have now been received from all faculty
-                <span class="label label-success"><i class="fa fa-check"></i></span>
+                <span class="badge badge-success"><i class="fa fa-check"></i></span>
                 <p>
                     <a href="{{ url_for('admin.availability_as_csv', id=assessment.id) }}">Download availability data</a>
                 </p>
             {% endif %}
             {% if not assessment.is_deployed %}
                 <div class="row">
-                    <div class="col-xs-12">
-                        <div class="pull-right">
-                            <a class="btn btn-default" href="{{ url_for('admin.reopen_availability', id=assessment.id) }}">
+                    <div class="col-12">
+                        <div class="float-right">
+                            <a class="btn btn-secondary" href="{{ url_for('admin.reopen_availability', id=assessment.id) }}">
                                 Reopen collection
                             </a>
                         </div>

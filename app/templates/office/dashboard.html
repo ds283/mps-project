@@ -32,7 +32,7 @@
                     {% endif %}
                     Approvals
                     {% if approve_total > 0 %}
-                        <span class="badge badge-info">{{ approve_total }}</span>
+                        <span class="badge badge-pill badge badge-pill-info">{{ approve_total }}</span>
                     {% endif %}
                 </a>
             </li>
@@ -46,10 +46,10 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
+        <div class="col-1"></div>
+        <div class="col-10">
             {% if pane == 'overview' %}
-                <div class="well">
+                <div class="card m-3 card-body">
                     {{ admin_dashboard_card(root_data) }}
                 </div>
             {% endif %}
@@ -63,6 +63,6 @@
                 {% endif %}
             {% endif %}
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

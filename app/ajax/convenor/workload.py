@@ -15,18 +15,18 @@ _projects = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="label label-default">{{ label }} not yet required</span> #}
+        {# <span class="badge badge-default">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="label label-info">{{ label }} to do</span>
+        <span class="badge badge-info">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <span class="label label-success">{{ label }} submitted</span>        
+        <span class="badge badge-success">{{ label }} submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}
-        <span class="label label-warning">{{ label }} in progress</span>        
+        <span class="badge badge-warning">{{ label }} in progress</span>        
     {% elif state == obj.FEEDBACK_LATE %}
-        <span class="label label-danger">{{ label }} late</span>
+        <span class="badge badge-danger">{{ label }} late</span>
     {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
     {% else %}
-        <span class="label label-danger">{{ label }} error &ndash; unknown state</span>
+        <span class="badge badge-danger">{{ label }} error &ndash; unknown state</span>
     {% endif %}        
 {% endmacro %}
 {% macro project_tag(r, show_period) %}
@@ -34,13 +34,13 @@ _projects = \
     {% set style = pclass.make_CSS_style() %}
     <div>
         <div class="dropdown assignment-label">
-            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+            <a class="badge {% if style %}badge-default{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {{ r.owner.student.user.name }}
                 #{{ r.owner.student.exam_number }}
                 <span class="caret"></span>
             </a>
-            <ul class="dropdown-menu">
+            <div class="dropdown-menu">
                 {% set disabled = not pclass.publish %}
                 <li {% if disabled %}class="disabled"{% endif %}>
                     <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Show feedback</a>
@@ -63,10 +63,10 @@ _projects = \
         </div>
         {% if r.owner.published %}
             <div class="dropdown assignment-label">
-                <a class="label {% if r.student_engaged %}label-success{% else %}label-warning{% endif %} btn-table-block dropdown-toggle"
+                <a class="badge {% if r.student_engaged %}badge-success{% else %}badge-warning{% endif %} btn-table-block dropdown-toggle"
                         type="button" data-toggle="dropdown">{% if r.student_engaged %}<i class="fa fa-check"></i> Started{% else %}<i class="fa fa-times"></i> Waiting{% endif %}
                 <span class="caret"></span></a>
-                <ul class="dropdown-menu">
+                <div class="dropdown-menu">
                     {% if r.submission_period > r.owner.config.submission_period %}
                         <li class="disabled">
                             <a>Submission period not yet open</a>
@@ -98,7 +98,7 @@ _projects = \
         {{ project_tag(rec, config.submissions > 1) }}
     {% endfor %}
 {% else %}
-    <span class="label label-info">None</span>
+    <span class="badge badge-info">None</span>
 {% endif %}
 """
 
@@ -107,18 +107,18 @@ _marking = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="label label-default">{{ label }} not yet required</span> #}
+        {# <span class="badge badge-default">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="label label-info">{{ label }} to do</span>
+        <span class="badge badge-info">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <span class="label label-success">{{ label }} submitted</span>        
+        <span class="badge badge-success">{{ label }} submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}
-        <span class="label label-warning">{{ label }} in progress</span>        
+        <span class="badge badge-warning">{{ label }} in progress</span>        
     {% elif state == obj.FEEDBACK_LATE %}
-        <span class="label label-danger">{{ label }} late</span>
+        <span class="badge badge-danger">{{ label }} late</span>
     {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
     {% else %}
-        <span class="label label-danger">{{ label }} error &ndash; unknown state</span>
+        <span class="badge badge-danger">{{ label }} error &ndash; unknown state</span>
     {% endif %}        
 {% endmacro %}
 {% macro marker_tag(r, show_period) %}
@@ -126,13 +126,13 @@ _marking = \
     {% set style = pclass.make_CSS_style() %}
     <div>
         <div class="dropdown assignment-label">
-            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+            <a class="badge {% if style %}badge-default{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {{ r.owner.student.user.name }}
                 #{{ r.owner.student.exam_number }}
                 <span class="caret"></span>
             </a>
-            <ul class="dropdown-menu">
+            <div class="dropdown-menu">
                 {% set disabled = not pclass.publish %}
                 <li {% if disabled %}class="disabled"{% endif %}>
                     <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Show feedback</a>
@@ -162,7 +162,7 @@ _marking = \
         {{ marker_tag(rec, config.submissions > 1) }}
     {% endfor %}
 {% else %}
-    <span class="label label-info">None</span>
+    <span class="badge badge-info">None</span>
 {% endif %}
 """
 
@@ -173,28 +173,28 @@ _presentations = \
     {% if state == obj.FEEDBACK_NOT_REQUIRED or state == obj.FEEDBACK_NOT_YET %}
         {# empty #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="label label-info">{{ label }} to do</span>
+        <span class="badge badge-info">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <span class="label label-success">{{ label }} submitted</span>        
+        <span class="badge badge-success">{{ label }} submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}
-        <span class="label label-warning">{{ label }} in progress</span>        
+        <span class="badge badge-warning">{{ label }} in progress</span>        
     {% elif state == obj.FEEDBACK_LATE %}
-        <span class="label label-danger">{{ label }} late</span>
+        <span class="badge badge-danger">{{ label }} late</span>
     {% else %}
-        <span class="label label-danger">{{ label }} error &ndash; unknown state</span>
+        <span class="badge badge-danger">{{ label }} error &ndash; unknown state</span>
     {% endif %}        
 {% endmacro %}
 {% if slots|length >= 1 %}
     {% for slot in slots %}
         <div {% if loop.index < loop.length %}style="padding-bottom: 10px;"{% endif %}>
             <div class="dropdown assignment-label">
-                <a class="label label-info btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
+                <a class="badge badge-info btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
                     {{ slot.short_date_as_string }}
                     {{ slot.session_type_string }}
                     {{ slot.room_full_name }}
                     <span class="caret"></span>
                 </a>
-                <ul class="dropdown-menu">
+                <div class="dropdown-menu">
                     {% for rec in slot.talks %}
                         {% set pclass = rec.owner.config.project_class %}
                         {% set disabled = not pclass.publish %}
@@ -212,13 +212,13 @@ _presentations = \
                 {% set numbers = slot.feedback_number(f.id) %}
                 {% if numbers is not none %}
                     {% set submitted, total = numbers %}
-                    <span class="label label-warning">{{ submitted }}/{{ total }} submitted</span>
+                    <span class="badge badge-warning">{{ submitted }}/{{ total }} submitted</span>
                 {% endif %}
             {% endif %}
         </div>
     {% endfor %}
 {% else %}
-    <span class="label label-info">None</span>
+    <span class="badge badge-info">None</span>
 {% endif %}
 """
 
@@ -226,15 +226,15 @@ _presentations = \
 _workload = \
 """
 {% if config.uses_supervisor %}
-    <span class="label label-info">S {{ CATS_sup }}</span>
+    <span class="badge badge-info">S {{ CATS_sup }}</span>
 {% endif %}
 {% if config.uses_marker %}
-    <span class="label label-info">M {{ CATS_mark }}</span>
+    <span class="badge badge-info">M {{ CATS_mark }}</span>
 {% endif %}
 {% if config.uses_presentations %}
-    <span class="label label-info">P {{ CATS_pres }}</span>
+    <span class="badge badge-info">P {{ CATS_pres }}</span>
 {% endif %}
-<span class="label label-primary">Total {{ CATS_sup+CATS_mark+CATS_pres }}</span>
+<span class="badge badge-primary">Total {{ CATS_sup+CATS_mark+CATS_pres }}</span>
 """
 
 

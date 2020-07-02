@@ -45,17 +45,17 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Teaching groups for <strong>{{ pclass.name }}</strong></div>
-        <div class="panel-body">
-            <div class="well">
+    <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
+        <div class="card-header">Teaching groups for <strong>{{ pclass.name }}</strong></div>
+        <div class="card-body">
+            <div class="card m-3 card-body">
                 <p>Organize by</p>
                 <a href="{{ url_for('convenor.teaching_groups', id=pclass.id, organize_by='faculty', show_period=show_period) }}"
-                   class="btn btn-sm filter-btn {% if organize_by == 'faculty' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if organize_by == 'faculty' %}btn-primary{% else %}btn-secondary{% endif %}">
                     Faculty
                 </a>
                 <a href="{{ url_for('convenor.teaching_groups', id=pclass.id, organize_by='student', show_period=show_period) }}"
-                   class="btn btn-sm filter-btn {% if organize_by == 'student' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if organize_by == 'student' %}btn-primary{% else %}btn-secondary{% endif %}">
                     Submitter
                 </a>
 
@@ -63,7 +63,7 @@
                 <p>Show teaching groups for submission period</p>
                 {% for p_id, p_name in period_names %}
                     <a href="{{ url_for('convenor.teaching_groups', id=pclass.id, organize_by=organize_by, show_period=p_id) }}"
-                       class="btn btn-sm filter-btn {% if show_period == p_id %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if show_period == p_id %}btn-primary{% else %}btn-secondary{% endif %}">
                         {{ p_name }}
                     </a>
                 {% endfor %}

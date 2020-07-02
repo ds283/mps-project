@@ -23,7 +23,7 @@
                                 {{ rec.owner.student.cohort_label|safe }}
                                 {{ rec.owner.student.programme.short_label|safe }}
                                 {% if not rec.owner.published %}
-                                    <span class="label label-warning">Not published</span>
+                                    <span class="badge badge-warning">Not published</span>
                                 {% endif %}
                             </div>
                             {% if rec.owner.student.has_previous_submissions %}
@@ -37,10 +37,10 @@
                                 {% if rec.marker is not none %}
                                     <a href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
                                 {% else %}
-                                    <span class="label label-warning">Marker not yet assigned</span>
+                                    <span class="badge badge-warning">Marker not yet assigned</span>
                                 {% endif %}
                             {% else %}
-                                <span class="label label-default">Not used</span>
+                                <span class="badge badge-secondary">Not used</span>
                             {% endif %}
                         </td>
                         <td>
@@ -48,35 +48,35 @@
                                 {{ rec.project.name }} (No. {{ rec.project.number }})
                             </a>
                             {% if rec.report %}
-                                <span class="label label-success"><i class="fa fa-check"></i> Report uploaded</span>
+                                <span class="badge badge-success"><i class="fa fa-check"></i> Report uploaded</span>
                             {% endif %}
                             <div>
                                 {% if rec.supervisor_submitted %}
-                                    <span class="label label-success"><i class="fa fa-check"></i> Feedback submitted</span>
+                                    <span class="badge badge-success"><i class="fa fa-check"></i> Feedback submitted</span>
                                 {% elif period.closed and not rec.supervisor_submitted %}
-                                    <span class="label label-warning"><i class="fa fa-times"></i> Feedback missing</span>
+                                    <span class="badge badge-warning"><i class="fa fa-times"></i> Feedback missing</span>
                                 {% endif %}
                                 {% if rec.student_feedback_submitted %}
-                                    <span class="label label-success"><i class="fa fa-check"></i> Student feedback</span>
+                                    <span class="badge badge-success"><i class="fa fa-check"></i> Student feedback</span>
                                     {% if not rec.acknowledge_feedback %}
-                                        <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Acknowledgment required</span>
+                                        <span class="badge badge-warning"><i class="fa fa-exclamation-triangle"></i> Acknowledgment required</span>
                                     {% endif %}
                                     {% if not rec.faculty_response_submitted %}
-                                        <span class="label label-warning"><i class="fa fa-times"></i> Response not submitted</span>
+                                        <span class="badge badge-warning"><i class="fa fa-times"></i> Response not submitted</span>
                                     {% else %}
-                                        <span class="label label-success"><i class="fa fa-check"></i> Response submitted</span>
+                                        <span class="badge badge-success"><i class="fa fa-check"></i> Response submitted</span>
                                     {% endif %}
                                 {% endif %}
                             </div>
                         </td>
                         <td>
-                            <div style="text-align: right;" class="pull-right">
+                            <div style="text-align: right;" class="float-right">
                                 <div class="dropdown">
-                                    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                                         Actions
                                         <span class="caret"></span>
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-right">
+                                    <div class="dropdown-menu dropdown-menu-right">
                                         <li><a href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ rec.number_attachments }})...</a></li>
                                         {% set state = rec.supervisor_feedback_state %}
                                         {% if state > rec.FEEDBACK_NOT_YET %}

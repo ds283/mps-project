@@ -14,7 +14,7 @@
         <li {% if pane == 'view' %}class="active"{% endif %}><a href="{{ url_for('admin.manage_backups') }}">
             View backups
             {% if backup_count is defined %}
-                <span class="badge">{{ backup_count }}</span>
+                <span class="badge badge-pill">{{ backup_count }}</span>
             {% endif %}
         </a></li>
     </ul>

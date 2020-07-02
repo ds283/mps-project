@@ -6,18 +6,18 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
-            <div class="panel panel-primary panel-primary-bg">
-                <div class="panel-heading">Create new schedule for <strong>{{ assessment.name }}</strong></div>
-                <div class="panel-body">
+        <div class="col-2"></div>
+        <div class="col-8">
+            <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
+                <div class="card-header">Create new schedule for <strong>{{ assessment.name }}</strong></div>
+                <div class="card-body">
                     <form action="{{ url_for('admin.create_assessment_schedule', id=assessment.id) }}" method="POST" name="schedule_form">
                         {{ form.hidden_tag() }}
 
                         {{ wtf.render_field(form.name) }}
                         {{ wtf.render_field(form.tag) }}
 
-                        <div class="well">
+                        <div class="card m-3 card-body">
                             <p>Scheduling parameters</p>
                             {{ wtf.render_field(form.assessor_assigned_limit) }}
                             {{ wtf.render_field(form.if_needed_cost) }}
@@ -25,7 +25,7 @@
                             {{ wtf.render_field(form.all_assessors_in_pool) }}
                         </div>
 
-                        <div class="well">
+                        <div class="card m-3 card-body">
                             <p>Optimization settings</p>
                             {{ wtf.render_field(form.solver) }}
                         </div>
@@ -36,6 +36,6 @@
                 </div>
             </div>
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-2"></div>
     </div>
 {% endblock %}

@@ -5,9 +5,9 @@
 {% from "convenor/dashboard/overview_cards/approvals_state.html" import approvals_state %}
 
 {% macro golive(config, golive_form, capacity_data, sel_count) %}
-    <div class="panel panel-danger">
-        <div class="panel-heading"><strong>Student selections are not yet live</strong></div>
-        <div class="panel-body">
+    <div class="card m-3 bg-danger">
+        <div class="card-header"><strong>Student selections are not yet live</strong></div>
+        <div class="card-body">
             {% set total_projects = capacity_data['projects'] %}
             <strong>{{ total_projects }}</strong> projects are currently available to go live.
             {% set pending = capacity_data['pending'] %}
@@ -24,11 +24,11 @@
                 <p><strong>All projects have passed approvals.</strong></p>
             {% endif %}
             <div class="row" style="margin-top: 20px;">
-                <div class="col-xs-2"></div>
-                <div class="col-xs-8">
+                <div class="col-2"></div>
+                <div class="col-8">
                     {{ approvals_state(capacity_data) }}
                 </div>
-                <div class="col-xs-2"></div>
+                <div class="col-2"></div>
             </div>
             <hr class="intro-divider">
             <form action="{{ url_for('convenor.go_live', id=config.id) }}" method="POST" name="golive-form">
@@ -39,8 +39,8 @@
                 {{ wtf.render_field(golive_form.accommodate_matching) }}
                 {{ wtf.render_field(golive_form.full_CATS) }}
                 <div class="row">
-                    <div class="col-xs-12">
-                        <div class="pull-right">
+                    <div class="col-12">
+                        <div class="float-right">
                             {% if total_projects > 0 %}
                                 {% if golive_form.live_and_close is defined %}
                                     {{ wtf.render_field(golive_form.live_and_close, button_map={'live_and_close': 'warning'}) }}

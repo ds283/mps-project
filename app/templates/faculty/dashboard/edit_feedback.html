@@ -31,15 +31,15 @@
         {% endif %}
 
         {% if form.assessor %}
-            <div class="well">
+            <div class="card m-3 card-body">
                 {{ wtf.render_field(form.assessor) }}
             </div>
         {% endif %}
 
-        <div class="well">
+        <div class="card m-3 card-body">
             {{ wtf.render_field(form.positive) }}
         </div>
-        <div class="well">
+        <div class="card m-3 card-body">
             {{ wtf.render_field(form.negative) }}
         </div>
 

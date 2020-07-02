@@ -14,12 +14,12 @@ from flask import render_template_string, jsonify
 _faculty_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button"
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
         <li>
             {% if userdata.is_enrolled(pclass) %}
                 <a href="{{ url_for('convenor.unenroll', userid=user.id, pclassid=pclass.id) }}">
@@ -51,28 +51,28 @@ _golive = \
 {% if config.require_confirm %}
     {% if config.requests_issued %}
         {% if config.is_confirmation_required(userdata) %}
-            <span class="label label-warning"><i class="fa fa-times"></i> Outstanding</span>
+            <span class="badge badge-warning"><i class="fa fa-times"></i> Outstanding</span>
         {% else %}
             {% if userdata.is_enrolled(pclass) %}
                 {% set record = userdata.get_enrollment_record(pclass.id) %}
                 {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
-                    <span class="label label-success"><i class="fa fa-check"></i> Confirmed</span>
+                    <span class="badge badge-success"><i class="fa fa-check"></i> Confirmed</span>
                 {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                    <span class="label label-default"><i class="fa fa-check"></i> Sabbatical</span>
+                    <span class="badge badge-default"><i class="fa fa-check"></i> Sabbatical</span>
                 {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                    <span class="label label-default"><i class="fa fa-check"></i> Exempt</span>
+                    <span class="badge badge-default"><i class="fa fa-check"></i> Exempt</span>
                 {% else %}
-                    <span class="label label-danger">Unknown</span>
+                    <span class="badge badge-danger">Unknown</span>
                 {% endif %}
             {% else %}
-                <span class="label label-default">Not enrolled</span>
+                <span class="badge badge-default">Not enrolled</span>
             {% endif %}
         {% endif %}
     {% else %}
-        <span class="label label-danger">Not yet issued</span>
+        <span class="badge badge-danger">Not yet issued</span>
     {% endif %}
 {% else %}
-    <span class="label label-default">Disabled</span>
+    <span class="badge badge-default">Disabled</span>
 {% endif %}
 """
 
@@ -95,23 +95,23 @@ _enrollments = \
     {{ f.enrolled_labels|safe }}
     <div>
         {% if f.CATS_supervision is not none %}
-            <span class="label label-warning">S: {{ f.CATS_supervision }} CATS</span>
+            <span class="badge badge-warning">S: {{ f.CATS_supervision }} CATS</span>
         {% else %}
-            <span class="label label-default">S: Default CATS</span>
+            <span class="badge badge-default">S: Default CATS</span>
         {% endif %}
         {% if f.CATS_marking is not none %}
-            <span class="label label-warning">M {{ f.CATS_marking }} CATS</span>
+            <span class="badge badge-warning">M {{ f.CATS_marking }} CATS</span>
         {% else %}
-            <span class="label label-default">M: Default CATS</span>
+            <span class="badge badge-default">M: Default CATS</span>
         {% endif %}
         {% if f.CATS_presentation is not none %}
-            <span class="label label-warning">P {{ f.CATS_marking }} CATS</span>
+            <span class="badge badge-warning">P {{ f.CATS_marking }} CATS</span>
         {% else %}
-            <span class="label label-default">P: Default CATS</span>
+            <span class="badge badge-default">P: Default CATS</span>
         {% endif %}
     </div>
 {% else %}
-    <span class="label label-default">Not enrolled</span>
+    <span class="badge badge-default">Not enrolled</span>
 {% endif %}
 """
 

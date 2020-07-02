@@ -21,7 +21,7 @@
     {{ wtf.render_field(settings_form.theme) }}
     {{ wtf.render_field(settings_form.default_license) }}
 
-    <div class="well">
+    <div class="card m-3 card-body">
         <p>Email notifications</p>
         {{ wtf.render_field(settings_form.group_summaries) }}
         {{ wtf.render_field(settings_form.summary_frequency) }}

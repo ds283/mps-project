@@ -39,30 +39,30 @@ _enrolled = \
 _settings = \
 """
 {% if f.sign_off_students %}
-    <span class="label label-info">Require meetings</span>
+    <span class="badge badge-info">Require meetings</span>
 {% endif %}
-<span class="label label-primary">Default capacity {{ f.project_capacity }}</span>
+<span class="badge badge-primary">Default capacity {{ f.project_capacity }}</span>
 {% if f.enforce_capacity %}
-    <span class="label label-info">Enforce capacity</span>
+    <span class="badge badge-info">Enforce capacity</span>
 {% endif %}
 {% if f.show_popularity %}
-    <span class="label label-info">Show popularity</span>
+    <span class="badge badge-info">Show popularity</span>
 {% endif %}
 <p>
 {% if f.CATS_supervision is not none %}
-    <span class="label label-warning">S: {{ f.CATS_supervision }} CATS</span>
+    <span class="badge badge-warning">S: {{ f.CATS_supervision }} CATS</span>
 {% else %}
-    <span class="label label-default">S: Default CATS</span>
+    <span class="badge badge-default">S: Default CATS</span>
 {% endif %}
 {% if f.CATS_marking is not none %}
-    <span class="label label-warning">M {{ f.CATS_marking }} CATS</span>
+    <span class="badge badge-warning">M {{ f.CATS_marking }} CATS</span>
 {% else %}
-    <span class="label label-default">M: Default CATS</span>
+    <span class="badge badge-default">M: Default CATS</span>
 {% endif %}
 {% if f.CATS_presentation is not none %}
-    <span class="label label-warning">P {{ f.CATS_marking }} CATS</span>
+    <span class="badge badge-warning">P {{ f.CATS_marking }} CATS</span>
 {% else %}
-    <span class="label label-default">P: Default CATS</span>
+    <span class="badge badge-default">P: Default CATS</span>
 {% endif %}
 """
 
@@ -92,7 +92,7 @@ def _process(user_id, current_user_id):
     name = record['name']
     display = name['display']
     if u.currently_active:
-        display = display.replace('REPACTIVE', '<span class="label label-success">ACTIVE</span>', 1)
+        display = display.replace('REPACTIVE', '<span class="badge badge-success">ACTIVE</span>', 1)
     else:
         display = display.replace('REPACTIVE', '', 1)
 

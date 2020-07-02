@@ -14,51 +14,51 @@ from flask import jsonify, render_template_string
 _status = \
 """
 {% if m.finished %}
-    <span class="label label-primary">Finished</span>
+    <span class="badge badge-primary">Finished</span>
     {% if m.solution_usable %}
-        <span class="label label-success">Optimal solution</span>
+        <span class="badge badge-success">Optimal solution</span>
     {% elif m.outcome == m.OUTCOME_NOT_SOLVED %}
-        <span class="label label-warning">Not solved</span>
+        <span class="badge badge-warning">Not solved</span>
     {% elif m.outcome == m.OUTCOME_INFEASIBLE %}
-        <span class="label label-danger">Infeasible</span>
+        <span class="badge badge-danger">Infeasible</span>
     {% elif m.outcome == m.OUTCOME_UNBOUNDED %}
-        <span class="label label-danger">Unbounded</span>
+        <span class="badge badge-danger">Unbounded</span>
     {% elif m.outcome == m.OUTCOME_UNDEFINED %}
-        <span class="label label-danger">Undefined</span>
+        <span class="badge badge-danger">Undefined</span>
     {% else %}
-        <span class="label label-danger">Unknown outcome</span>
+        <span class="badge badge-danger">Unknown outcome</span>
     {% endif %}
     <p></p>
     {% if m.is_modified %}
-        <span class="label label-warning">Modified</span>
+        <span class="badge badge-warning">Modified</span>
     {% else %}
-        <span class="label label-success">Original</span>
+        <span class="badge badge-success">Original</span>
     {% endif %}
     <p></p>
     {% if m.solution_usable %}
         {% if m.draft_to_selectors is not none %}
-            <span class="label label-info">Draft to selectors: {{ m.draft_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            <span class="badge badge-info">Draft to selectors: {{ m.draft_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
         {% endif %}
         {% if m.draft_to_supervisors is not none %}
-            <span class="label label-info">Draft to supervisors: {{ m.draft_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            <span class="badge badge-info">Draft to supervisors: {{ m.draft_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
         {% endif %}
         {% if m.final_to_selectors is not none %}
-            <span class="label label-primary">Final to selectors: {{ m.final_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            <span class="badge badge-primary">Final to selectors: {{ m.final_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
         {% endif %}
         {% if m.final_to_supervisors is not none %}
-            <span class="label label-primary">Final to supervisors: {{ m.final_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            <span class="badge badge-primary">Final to supervisors: {{ m.final_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
         {% endif %}
     {% endif %}
     <p></p>
     {% if m.published and current_user.has_role('root') %}
-        <span class="label label-primary">Published</span>
+        <span class="badge badge-primary">Published</span>
     {% endif %}
     {% if m.selected %}
-        <span class="label label-success">Selected</span>
+        <span class="badge badge-success">Selected</span>
     {% endif %}
 {% else %}
     {% if m.awaiting_upload %}
-        <span class="label label-success">Awaiting upload</span>
+        <span class="badge badge-success">Awaiting upload</span>
         {% if m.lp_file is not none %}
             <a href="{{ url_for('admin.download_generated_asset', asset_id=m.lp_file.id) }}">LP</a>
         {% endif %}
@@ -66,61 +66,61 @@ _status = \
             <a href="{{ url_for('admin.download_generated_asset', asset_id=m.mps_file.id) }}">MPS</a>
         {% endif %}
     {% else %}
-        <span class="label label-success">In progress</span>
+        <span class="badge badge-success">In progress</span>
     {% endif %}
 {% endif %}
 """
 
 _info = \
 """
-<span class="label label-primary">Supervisor <i class="fa fa-chevron-circle-down"></i> {{ m.supervising_limit }} CATS</span>
-<span class="label label-info">2nd mark <i class="fa fa-chevron-circle-down"></i> {{ m.marking_limit }} CATS</span>
-<span class="label label-info">Marker multiplicity <i class="fa fa-chevron-circle-down"></i> {{ m.max_marking_multiplicity }}</span>
+<span class="badge badge-primary">Supervisor <i class="fa fa-chevron-circle-down"></i> {{ m.supervising_limit }} CATS</span>
+<span class="badge badge-info">2nd mark <i class="fa fa-chevron-circle-down"></i> {{ m.marking_limit }} CATS</span>
+<span class="badge badge-info">Marker multiplicity <i class="fa fa-chevron-circle-down"></i> {{ m.max_marking_multiplicity }}</span>
 {% if m.ignore_per_faculty_limits %}
-    <span class="label label-warning"><i class="fa fa-times"></i> Ignore per-faculty limits</span>
+    <span class="badge badge-warning"><i class="fa fa-times"></i> Ignore per-faculty limits</span>
 {% else %}
-    <span class="label label-default"><i class="fa fa-check"></i> Apply per-faculty limits</span>
+    <span class="badge badge-default"><i class="fa fa-check"></i> Apply per-faculty limits</span>
 {% endif %}
 {% if m.ignore_programme_prefs %}
-    <span class="label label-warning"><i class="fa fa-times"></i> Ignore programmes prefs/span>
+    <span class="badge badge-warning"><i class="fa fa-times"></i> Ignore programmes prefs/span>
 {% else %}
-    <span class="label label-default"><i class="fa fa-check"></i> Apply programme prefs</span>
+    <span class="badge badge-default"><i class="fa fa-check"></i> Apply programme prefs</span>
 {% endif %}
 {% if m.include_only_submitted %}
-    <span class="label label-warning"><i class="fa fa-times"></i> Only submitted selectors</span>
+    <span class="badge badge-warning"><i class="fa fa-times"></i> Only submitted selectors</span>
 {% else %}
-    <span class="label label-default"><i class="fa fa-check"></i> All selectors</span>
+    <span class="badge badge-default"><i class="fa fa-check"></i> All selectors</span>
 {% endif %}
 <div>
-    <span class="label label-success">Solver {{ m.solver_name }}</span>
+    <span class="badge badge-success">Solver {{ m.solver_name }}</span>
 </div>
 <div>
     <div>Matching</div>
-    <span class="label label-default">Programme {{ m.programme_bias }}</span>
-    <span class="label label-default">Bookmarks {{ m.bookmark_bias }}</span>
+    <span class="badge badge-default">Programme {{ m.programme_bias }}</span>
+    <span class="badge badge-default">Bookmarks {{ m.bookmark_bias }}</span>
 </div>
 <div>
     <div>Biases</div>
-    <span class="label label-default">Levelling {{ m.levelling_bias }}</span>
-    <span class="label label-default">Group tension {{ m.intra_group_tension }}</span>
-    <span class="label label-default">S pressure {{ m.supervising_pressure }}</span>
-    <span class="label label-default">M pressure {{ m.marking_pressure }}</span>
+    <span class="badge badge-default">Levelling {{ m.levelling_bias }}</span>
+    <span class="badge badge-default">Group tension {{ m.intra_group_tension }}</span>
+    <span class="badge badge-default">S pressure {{ m.supervising_pressure }}</span>
+    <span class="badge badge-default">M pressure {{ m.marking_pressure }}</span>
 </div>
 <div>
     <div>Penalties</div>
-    <span class="label label-default">CATS violation {{ m.CATS_violation_penalty }}</span>
-    <span class="label label-default">No assignment {{ m.no_assignment_penalty }}</span>
+    <span class="badge badge-default">CATS violation {{ m.CATS_violation_penalty }}</span>
+    <span class="badge badge-default">No assignment {{ m.no_assignment_penalty }}</span>
 </div>
 <p></p>
 {% if m.use_hints %}
-    <span class="label label-success"><i class="fa fa-check"></i> Use hints</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Use hints</span>
 {% else %}
-    <span class="label label-warning"><i class="fa fa-times"></i> Ignore hints</span>
+    <span class="badge badge-warning"><i class="fa fa-times"></i> Ignore hints</span>
 {% endif %}
-<span class="label label-default">Encourage <i class="fa fa-times"></i> {{ m.encourage_bias }}</span>
-<span class="label label-default">Discourage <i class="fa fa-times"></i> {{ m.discourage_bias }}</span>
-<span class="label label-default">Strong encourage <i class="fa fa-times"></i> {{ m.strong_encourage_bias }}</span>
-<span class="label label-default">Strong discourage <i class="fa fa-times"></i> {{ m.strong_discourage_bias }}</span>
+<span class="badge badge-default">Encourage <i class="fa fa-times"></i> {{ m.encourage_bias }}</span>
+<span class="badge badge-default">Discourage <i class="fa fa-times"></i> {{ m.discourage_bias }}</span>
+<span class="badge badge-default">Strong encourage <i class="fa fa-times"></i> {{ m.strong_encourage_bias }}</span>
+<span class="badge badge-default">Strong discourage <i class="fa fa-times"></i> {{ m.strong_discourage_bias }}</span>
 <p></p>
 {% if not m.ignore_programme_prefs %}
     {% set outcome = m.prefer_programme_status %}
@@ -129,8 +129,8 @@ _info = \
         {% set match_pl = 's' %}{% if match == 1 %}{% set match_pl = '' %}{% endif %}
         {% set fail_pl = 's' %}{% if fail == 1 %}{% set fail_pl = '' %}{% endif %}
         <div>
-            <span class="label {% if match > 0 %}label-success{% else %}label-default{% endif %}">Matched {{ match }} programme pref{{ match_pl }}</span>
-            <span class="label {% if fail > 0 %}label-warning{% elif match > 0 %}label-success{% else %}label-default{% endif %}">Failed {{ fail }} programme pref{{ fail_pl }}</span>
+            <span class="badge {% if match > 0 %}badge-success{% else %}badge-default{% endif %}">Matched {{ match }} programme pref{{ match_pl }}</span>
+            <span class="badge {% if fail > 0 %}badge-warning{% elif match > 0 %}badge-success{% else %}badge-default{% endif %}">Failed {{ fail }} programme pref{{ fail_pl }}</span>
         </div>
     {% endif %}
 {% endif %}
@@ -141,8 +141,8 @@ _info = \
         {% set satisfied_pl = 's' %}{% if satisfied == 1 %}{% set satisfied_pl = '' %}{% endif %}
         {% set violated_pl = 's' %}{% if violated == 1 %}{% set violated_pl = '' %}{% endif %}
         <div>
-            <span class="label {% if satisfied > 0 %}label-success{% else %}label-default{% endif %}">Satisfied {{ satisfied }} hint{{ satisfied_pl }}</span>
-            <span class="label {% if violated > 0 %}label-warning{% elif satisfied > 0 %}label-success{% else %}label-default{% endif %}">Violated {{ violated }} hint{{ violated_pl }}</span>
+            <span class="badge {% if satisfied > 0 %}badge-success{% else %}badge-default{% endif %}">Satisfied {{ satisfied }} hint{{ satisfied_pl }}</span>
+            <span class="badge {% if violated > 0 %}badge-warning{% elif satisfied > 0 %}badge-success{% else %}badge-default{% endif %}">Violated {{ violated }} hint{{ violated_pl }}</span>
         </div>
     {% endif %}
 {% endif %}
@@ -153,7 +153,7 @@ _info = \
     {% if m.creation_timestamp is not none %}
         {{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
     {% else %}
-        <span class="label label-default">Unknown</span>
+        <span class="badge badge-default">Unknown</span>
     {% endif %}
     {% if m.last_edited_by is not none %}
         <p></p>
@@ -168,18 +168,18 @@ _info = \
 {% set errors = m.errors %}
 {% set warnings = m.warnings %}
 {% if errors|length == 1 %}
-    <span class="label label-danger">1 error</span>
+    <span class="badge badge-danger">1 error</span>
 {% elif errors|length > 1 %}
-    <span class="label label-danger">{{ errors|length }} errors</span>
+    <span class="badge badge-danger">{{ errors|length }} errors</span>
 {% else %}
-    <span class="label label-success">0 errors</span>
+    <span class="badge badge-success">0 errors</span>
 {% endif %}
 {% if warnings|length == 1 %}
-    <span class="label label-warning">1 warning</span>
+    <span class="badge badge-warning">1 warning</span>
 {% elif warnings|length > 1 %}
-    <span class="label label-warning">{{ warnings|length }} warnings</span>
+    <span class="badge badge-warning">{{ warnings|length }} warnings</span>
 {% else %}
-    <span class="label label-success">0 warnings</span>
+    <span class="badge badge-success">0 warnings</span>
 {% endif %}
 {% if errors|length > 0 %}
     <div class="has-error">
@@ -209,20 +209,20 @@ _info = \
 _score = \
 """
 {% if m.solution_usable %}
-    <span class="label label-success">Score {{ m.score }} original</span>
+    <span class="badge badge-success">Score {{ m.score }} original</span>
     {% set score = m.current_score %}
     {% if score %}
-        <span class="label label-primary">Score {{ score|round(precision=2) }} now</span>
+        <span class="badge badge-primary">Score {{ score|round(precision=2) }} now</span>
     {% else %}
-        <span class="label label-warning">Current score undefined</span>
+        <span class="badge badge-warning">Current score undefined</span>
     {% endif %}
     <p></p>
-    <span class="label label-info">&delta; max {{ m.delta_max }}</span>
-    <span class="label label-info">&delta; min {{ m.delta_min }}</span>
-    <span class="label label-primary">CATS max {{ m.CATS_max }}</span>
-    <span class="label label-primary">CATS min {{ m.CATS_min }}</span>
+    <span class="badge badge-info">&delta; max {{ m.delta_max }}</span>
+    <span class="badge badge-info">&delta; min {{ m.delta_min }}</span>
+    <span class="badge badge-primary">CATS max {{ m.CATS_max }}</span>
+    <span class="badge badge-primary">CATS min {{ m.CATS_min }}</span>
 {% else %}
-    <span class="label label-default">Invalid</span>
+    <span class="badge badge-default">Invalid</span>
 {% endif %}
 """
 
@@ -230,12 +230,12 @@ _score = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button"
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
         {% if m.finished and m.solution_usable %}
             <li>
                 <a href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">
@@ -387,33 +387,33 @@ _name = \
 {% endfor %}
 {% if m.finished %}
     <p></p>
-    <span class="label label-info">{{ m.records.count() }} selectors</span>
-    <span class="label label-info">{{ m.supervisors.count() }} supervisors</span>
-    <span class="label label-info">{{ m.markers.count() }} markers</span>
-    <span class="label label-info">{{ m.projects.count() }} projects</span>
+    <span class="badge badge-info">{{ m.records.count() }} selectors</span>
+    <span class="badge badge-info">{{ m.supervisors.count() }} supervisors</span>
+    <span class="badge badge-info">{{ m.markers.count() }} markers</span>
+    <span class="badge badge-info">{{ m.projects.count() }} projects</span>
 {% endif %}
 {% set has_extra_matches = m.include_matches.first() is not none or m.base is not none %}
 {% if has_extra_matches %}
     <p></p>
     {% if m.base is not none %}
-        <span class="label label-success"><i class="fa fa-plus-circle"></i> Base: {{ m.base.name }}</span>
+        <span class="badge badge-success"><i class="fa fa-plus-circle"></i> Base: {{ m.base.name }}</span>
         {% if m.force_base %}
-            <span class="label label-info">Force match</span>
+            <span class="badge badge-info">Force match</span>
         {% else %}
-            <span class="label label-info">Bias {{ m.base_bias }}</span>
+            <span class="badge badge-info">Bias {{ m.base_bias }}</span>
         {% endif %}
     {% endif %}
     {% for match in m.include_matches %}
-        <span class="label label-primary"><i class="fa fa-arrow-right"></i> Inc: {{ match.name }}</span>
+        <span class="badge badge-primary"><i class="fa fa-arrow-right"></i> Inc: {{ match.name }}</span>
     {% endfor %}
 {% endif %}
 {% if m.finished and m.solution_usable %}
     <p></p>
     {% if m.construct_time %}
-        <span class="label label-default"><i class="fa fa-clock-o"></i> Construct {{ m.formatted_construct_time }}</span>
+        <span class="badge badge-default"><i class="fa fa-clock-o"></i> Construct {{ m.formatted_construct_time }}</span>
     {% endif %}
     {% if m.compute_time %}
-        <span class="label label-default"><i class="fa fa-clock-o"></i> Compute {{ m.formatted_compute_time }}</span>
+        <span class="badge badge-default"><i class="fa fa-clock-o"></i> Compute {{ m.formatted_compute_time }}</span>
     {% endif %}
 {% endif %}
 """

@@ -82,11 +82,11 @@
                             rspan = $(items[i]).find('#ranking');
                             rspan.html("#" + (i+1));
                             if (i < {{ sel.number_choices }}) {
-                                rspan.addClass('label-success');
-                                rspan.removeClass('label-danger');
+                                rspan.addClass('badge-success');
+                                rspan.removeClass('badge-danger');
                             } else {
-                                rspan.addClass('label-danger');
-                                rspan.removeClass('label-success');
+                                rspan.addClass('badge-danger');
+                                rspan.removeClass('badge-success');
                             }
                         }
                         sendAjax(result, {{ config.id }}, {{ sel.id }});
@@ -118,26 +118,26 @@
 
 {% macro project_card(pclass, sdata) %}
     <div class="row vertical-top">
-        <div class="col-xs-12">
+        <div class="col-12">
             <span class="dashboard-project-title">{{ pclass.name }}</span>
         </div>
     </div>
     <div class="row vertical-top">
-        <div class="col-xs-6">
+        <div class="col-6">
             Convenor:
             <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
                 {{ pclass.convenor_name }}
             </a>
         </div>
-        <div class="col-xs-6">
-            <div class="pull-right">
+        <div class="col-6">
+            <div class="float-right">
                 Commences
-                <span class="label label-info">Y{{ pclass.start_level.academic_year }}</span>
+                <span class="badge badge-info">Y{{ pclass.start_level.academic_year }}</span>
             </div>
         </div>
     </div>
     <div class="row vertical-top">
-        <div class="col-xs-7">
+        <div class="col-7">
             {% if sdata %}
                 Your details:
                 {{ sdata.student.cohort_label|safe }}
@@ -145,18 +145,18 @@
                 {{ sdata.academic_year_label(show_details=False)|safe }}
             {% endif %}
         </div>
-        <div class="col-xs-5">
+        <div class="col-5">
             {% if sdata and sdata.live_deadline is defined %}
                 {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                    <div class="pull-right">
-                        <span class="label label-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
+                    <div class="float-right">
+                        <span class="badge badge-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
                         {% if config.live_deadline %}
-                            <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                            <span class="badge badge-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                         {% endif %}
                     </div>
                 {% else %}
-                    <div class="pull-right">
-                        <span class="label label-default">Student selections not open</span>
+                    <div class="float-right">
+                        <span class="badge badge-secondary">Student selections not open</span>
                     </div>
                 {% endif %}
             {% endif %}
@@ -169,8 +169,8 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
+        <div class="col-1"></div>
+        <div class="col-10">
 
             {% if messages %}
                 {% for message in messages %}
@@ -184,7 +184,7 @@
                 {% for config, sel, sub in enrollments %}
                     {% set pclass = config.project_class %}
                         {% if pane=='select' and sel %}
-                            <div class="well">
+                            <div class="card m-3 card-body">
                                 {{ project_card(pclass, sel) }}
                                 {{ selection_card(config, sel) }}
                             </div>
@@ -192,7 +192,7 @@
                         {% endif %}
 
                         {% if pane=='submit' and sub %}
-                            <div class="well">
+                            <div class="card m-3 card-body">
                             {{ project_card(pclass, sub) }}
                                 {% for n in range(config.submissions) %}
                                     {{ submission_card(config, sub, n, today) }}
@@ -205,13 +205,13 @@
                 {% endfor %}
 
                 {% if pane=='select' and ns.display==0 %}
-                    <div class="well">
+                    <div class="card m-3 card-body">
                         <p>You do not currently need to make any project selections.</p>
                     </div>
                 {% endif %}
 
                 {% if pane=='submit' and ns.display==0 %}
-                    <div class="well">
+                    <div class="card m-3 card-body">
                         <p>You are not making submissions for any project this year.</p>
                     </div>
                 {% endif %}
@@ -227,9 +227,9 @@
 
                 {% if pclasses and pclasses.first() %}
                     <div class="row">
-                        <div class="col-xs-3"></div>
-                        <div class="col-xs-6">
-                            <table class="table table-condensed table-hover">
+                        <div class="col-3"></div>
+                        <div class="col-6">
+                            <table class="table table-sm table-hover">
                                 <thead>
                                 <tr>
                                     <th>Project</th>
@@ -250,14 +250,14 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="col-xs-3"></div>
+                        <div class="col-3"></div>
                     </div>
                 {% endif %}
 
             {% endif %}
 
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
 
     </div>
 {% endblock %}

@@ -85,12 +85,14 @@ class Bootstrap(object):
         css_filename = 'bootstrap.min.css'
         serve_local = current_app.config['BOOTSTRAP_SERVE_LOCAL']
 
+        theme = current_user.ui_theme if hasattr(current_user, 'ui_theme') else 'default'
+
         if serve_local:
             href = url_for('bootstrap.static',
-                           filename='css/%s/%s' % (theme_subfolders[current_user.ui_theme], css_filename))
+                           filename='css/%s/%s' % (theme_subfolders[theme], css_filename))
             css = '<link rel="stylesheet" href="%s" type="text/css">' % href
         else:
-            href = theme_CDNs[current_user.ui_theme] % (version, css_filename)
+            href = theme_CDNs[theme] % (version, css_filename)
             css = '<link rel="stylesheet" href="%s" type="text/css">' % href
         return Markup(css)
 

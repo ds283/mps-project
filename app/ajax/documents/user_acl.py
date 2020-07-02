@@ -32,15 +32,15 @@ _access = \
 {% set in_user_acl = asset.in_user_acl(user) %}
 {% set has_role_access = asset.has_role_access(user) %}
 {% if in_user_acl %}
-    <span class="label label-success"><i class="fa fa-check"></i> Has individual access</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Has individual access</span>
 {% elif has_role_access %}
     {% set eligible_roles = asset.get_eligible_roles(user) %}
-    <span class="label label-primary"><i class="fa fa-check"></i> Has role-based access</span>
+    <span class="badge badge-primary"><i class="fa fa-check"></i> Has role-based access</span>
     {% for role in eligible_roles %}
         {{ role.make_label()|safe }}
     {% endfor %}
 {% else %}
-    <span class="label label-danger"><i class="fa fa-times"></i> No access</span>
+    <span class="badge badge-danger"><i class="fa fa-times"></i> No access</span>
 {% endif %}
 """
 
@@ -49,9 +49,9 @@ _actions = \
 """
 {% set in_user_acl = asset.in_user_acl(user) %}
 <div style="text-align: right;">
-    <div class="pull-right">
+    <div class="float-right">
         {% if in_user_acl %}
-            <a class="btn btn-sm btn-default" href="{{ url_for('documents.remove_user_acl', user_id=user.id, attach_type=type, attach_id=attachment.id) }}">
+            <a class="btn btn-sm btn-secondary" href="{{ url_for('documents.remove_user_acl', user_id=user.id, attach_type=type, attach_id=attachment.id) }}">
                 <i class="fa fa-times"></i> Remove access
             </a>
         {% else %}

@@ -14,11 +14,11 @@ from flask import render_template_string, jsonify
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
         <li class="dropdown-header">Edit</li>
         <li>
             <a href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
@@ -57,9 +57,9 @@ _menu = \
 _active = \
 """
 {% if p.active %}
-    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
 {% else %}
-    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+    <span class="badge badge-warning"><i class="fa fa-times"></i> Inactive</span>
 {% endif %}
 """
 
@@ -67,9 +67,9 @@ _active = \
 _show_type = \
 """
 {% if p.show_type %}
-    <span class="label label-success"><i class="fa fa-check"></i> Yes</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Yes</span>
 {% else %}
-    <span class="label label-default"><i class="fa fa-times"></i> No</span>
+    <span class="badge badge-default"><i class="fa fa-times"></i> No</span>
 {% endif %}
 """
 

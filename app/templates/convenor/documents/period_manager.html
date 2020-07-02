@@ -46,7 +46,7 @@
     <tr id="PA-{{ attachment.id }}">
         <td>
             <i class="fa fa-bars drag-handle"></i>
-            <span id="ranking" class="label label-primary">#{{ attachment.rank_order }}</span>
+            <span id="ranking" class="badge badge-primary">#{{ attachment.rank_order }}</span>
         </td>
         <td>
             <div>
@@ -73,35 +73,35 @@
             </div>
             <div>
                 {% if attachment.publish_to_students %}
-                    <span class="label label-success"><i class="fa fa-check"></i> Publish to students</span>
+                    <span class="badge badge-success"><i class="fa fa-check"></i> Publish to students</span>
                 {% endif %}
                 {% if attachment.include_marker_emails %}
-                    <span class="label label-success"><i class="fa fa-check"></i> Include in notifications to marker</span>
+                    <span class="badge badge-success"><i class="fa fa-check"></i> Include in notifications to marker</span>
                 {% endif %}
                 {% if attachment.include_supervisor_emails %}
-                    <span class="label label-success"><i class="fa fa-check"></i> Include in notifications to supervisor</span>
+                    <span class="badge badge-success"><i class="fa fa-check"></i> Include in notifications to supervisor</span>
                 {% endif %}
             </div>
             <div>
-                <span class="label label-default">Downloads: {{ asset.number_downloads }}</span>
+                <span class="badge badge-secondary">Downloads: {{ asset.number_downloads }}</span>
             </div>
         </td>
         <td>
             {% if asset.license %}
                 {{ asset.license.make_label()|safe }}
-                <span class="label label-info">{{ asset.license.version }}</span>
+                <span class="badge badge-info">{{ asset.license.version }}</span>
             {% else %}
                 <strong>Unset</strong>
             {% endif %}
         </td>
         <td>
-            <div style="text-align: right;" class="pull-right">
+            <div style="text-align: right;" class="float-right">
                 <div class="dropdown">
-                    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                         Actions
                         <span class="caret"></span>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-right">
+                    <div class="dropdown-menu dropdown-menu-right">
                         {% set has_access = asset.has_access(current_user.id) %}
                         {# no need to check whether user is admin, because anyone accessing this view must be an admin user #}
                         {% if edit_url is not none %}
@@ -145,10 +145,10 @@
         </div>
     {% endif %}
 
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Manage documents for <strong>{{ record.display_name }}</strong></div>
-        <div class="panel-body">
-            <div class="well">
+    <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
+        <div class="card-header">Manage documents for <strong>{{ record.display_name }}</strong></div>
+        <div class="card-body">
+            <div class="card m-3 card-body">
                 {% if record.has_attachments %}
                     <span class="document-group-title">Attachments</span>
                     <hr class="intro-divider">
@@ -180,7 +180,7 @@
                 {% endif %}
                 <hr class="into-divider">
                 <div style="text-align: center;">
-                    <a href="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
+                    <a href="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}" class="btn btn-secondary btn-lg">
                         <i class="fa fa-plus"></i>
                         Upload new attachment
                     </a>

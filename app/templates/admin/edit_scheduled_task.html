@@ -43,13 +43,13 @@
         {{ wtf.render_field(form.expires) }}
 
         {% if form.every %}
-            <div class="well">
+            <div class="card m-3 card-body">
                 <p>Frequency</p>
                 {{ wtf.render_field(form.every) }}
                 {{ wtf.render_field(form.period) }}
             </div>
         {% else %}
-            <div class="well">
+            <div class="card m-3 card-body">
                 <p>Crontab specification</p>
                 {{ wtf.render_field(form.minute) }}
                 {{ wtf.render_field(form.hour) }}

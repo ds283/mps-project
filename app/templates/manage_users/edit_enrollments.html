@@ -11,8 +11,8 @@
 {% endblock %}
 
 {% block form_content %}
-    <div class="panel panel-default">
-        <div class="panel-body">
+    <div class="card m-3">
+        <div class="card-body">
             {% if data and data.enrollments and project_classes %}
                 <h4>
                 <div style="display: flex; flex-wrap: wrap;">
@@ -21,12 +21,12 @@
                             {% set record = data.get_enrollment_record(pclass) %}
                             {% set style = pclass.make_CSS_style() %}
                             <div class="dropdown">
-                                <button class="btn {% if style %}btn-default{% else %}btn-success{% endif %} selection-label dropdown-toggle"
+                                <button class="btn {% if style %}btn-secondary{% else %}btn-success{% endif %} selection-label dropdown-toggle"
                                         {% if style %}style="{{ style }}"{% endif %}
                                         type="button" data-toggle="dropdown">
                                     {{ pclass.name }} <span class="caret"></span>
                                 </button>
-                                <ul class="dropdown-menu">
+                                <div class="dropdown-menu">
                                     <li class="dropdown-header">Admin</li>
                                     <li>
                                         <a href="{{ url_for('manage_users.remove_enrollment', userid=user.id, pclassid=pclass.id) }}">
@@ -61,12 +61,12 @@
                 <p>No current enrollments</p>
             {% endif %}
         </div>
-        <div class="panel-footer">
+        <div class="card-footer">
             {% if data and project_classes %}
                 <h4>
                 {% for pclass in project_classes %}
                     {% if not data.is_enrolled(pclass) %}
-                        <a class="btn btn-default selection-label"
+                        <a class="btn btn-secondary selection-label"
                            href="{{ url_for('manage_users.add_enrollment', userid=user.id, pclassid=pclass.id) }}">
                             <i class="fa fa-plus"></i> {{ pclass.name }}
                         </a>
@@ -93,7 +93,7 @@
                 Finish and save
             </a>
         {% else %}
-            <span class="label label-danger">Unknown user dashboard pane '{{ pane }}'</span>
+            <span class="badge badge-danger">Unknown user dashboard pane '{{ pane }}'</span>
         {% endif %}
     {% else %}
         {% if pane is none or pane == 'accounts' %}
@@ -109,7 +109,7 @@
                 <i class="fa fa-backward"></i> Return to student accounts
             </a>
         {% else  %}
-            <span class="label label-danger">Unknown user dashboard pane '{{ pane }}'</span>
+            <span class="badge badge-danger">Unknown user dashboard pane '{{ pane }}'</span>
         {% endif %}
     {% endif %}
 {% endblock %}

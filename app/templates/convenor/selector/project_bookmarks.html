@@ -8,13 +8,13 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
-            <div class="panel panel-default">
-                <div class="panel-heading">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card m-3">
+                <div class="card-header">
                     Viewing bookmarking students for <strong>{{ project.name }}</strong>
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     {{ bookmark_students(project, project.bookmarks) }}
                 </div>
             </div>
@@ -25,6 +25,6 @@
                 </a>
             </div>
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

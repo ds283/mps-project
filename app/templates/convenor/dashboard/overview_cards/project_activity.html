@@ -14,10 +14,10 @@
         {{ wtf.render_field(feedback_form.max_attachment) }}
         {{ wtf.render_field(feedback_form.cc_me) }}
         <div class="row vertical-top">
-            <div class="col-xs-12">
-                <div class="pull-right">
-                    <a class="btn btn-default" href="{{ url_for('convenor.submission_period_documents', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='overview') }}">Manage documents ({{ period.number_attachments }})...</a>
-                    <a class="btn btn-default" href="{{ url_for('convenor.edit_submission_record', pid=period.id) }}">Configure period...</a>
+            <div class="col-12">
+                <div class="float-right">
+                    <a class="btn btn-secondary" href="{{ url_for('convenor.submission_period_documents', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='overview') }}">Manage documents ({{ period.number_attachments }})...</a>
+                    <a class="btn btn-secondary" href="{{ url_for('convenor.edit_submission_record', pid=period.id) }}">Configure period...</a>
                     {% if feedback_form.send_notifications is defined %}
                         {{ wtf.render_field(feedback_form.send_notifications, button_map={'send_notifications': 'default'}) }}
                     {% endif %}

@@ -8,19 +8,19 @@
     {% set config = project.config %}
     {% set lifecycle = config.selector_lifecycle %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
-            <div class="panel panel-success">
-                <div class="panel-heading">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card m-3 bg-success text-white">
+                <div class="card-header">
                     Student confirmations for <strong>{{ project.name }}</strong>
                 </div>
 
-                <div class="panel-body">
+                <div class="card-body">
                     <div class="container-fluid">
                         <div class="row vertical-align confirmation-table">
-                            <div class="col-xs-4"><strong>Student</strong></div>
-                            <div class="col-xs-4"><strong>Timestamps</strong></div>
-                            <div class="col-xs-4"></div>
+                            <div class="col-4"><strong>Student</strong></div>
+                            <div class="col-4"><strong>Timestamps</strong></div>
+                            <div class="col-4"></div>
                         </div>
 
                         <hr class="intro-divider">
@@ -28,35 +28,35 @@
                         {% for req in project.requests_confirmed %}
                             {% set sel = req.owner %}
                             <div class="row vertical-align confirmation-table">
-                                <div class="col-xs-4">
+                                <div class="col-4">
                                     {{ sel.student.user.name }}
                                     {% if not sel.satisfies_recommended(project) %}
                                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                     {% endif %}
                                 </div>
-                                <div class="col-xs-4">
+                                <div class="col-4">
                                     {% if req.request_timestamp is not none %}
-                                        <span class="label label-default">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        <span class="badge badge-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                     {% endif %}
                                     {% if req.response_timestamp is not none %}
-                                        <span class="label label-default">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        <span class="badge badge-secondary">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                     {% endif %}
                                     {% if req.request_timestamp is not none and req.response_timestamp is not none %}
                                         {% set delta = req.response_timestamp - req.request_timestamp %}
                                         {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                        <span class="label label-primary"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+                                        <span class="badge badge-primary"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
                                     {% elif req.request_timestamp is not none %}
                                         {% set delta = now - req.request_timestamp %}
                                         {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                        <span class="label label-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+                                        <span class="badge badge-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
                                     {% endif %}
                                 </div>
-                                <div class="col-xs-4">
+                                <div class="col-4">
                                     <div class="dropdown">
                                         <a class="btn btn-warning dropdown-toggle " data-toggle="dropdown">
                                             Deconfirm <span class="caret"></span>
                                         </a>
-                                        <ul class="dropdown-menu">
+                                        <div class="dropdown-menu">
                                             {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                 <li>
                                                     <a href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
@@ -91,35 +91,35 @@
                         {% for req in project.requests_waiting %}
                             {% set sel = req.owner %}
                             <div class="row vertical-align confirmation-table">
-                                <div class="col-xs-4">
+                                <div class="col-4">
                                     {{ sel.student.user.name }}
                                     {% if not sel.satisfies_recommended(project) %}
                                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                     {% endif %}
                                 </div>
-                                <div class="col-xs-4">
+                                <div class="col-4">
                                     {% if req.request_timestamp is not none %}
-                                        <span class="label label-default">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        <span class="badge badge-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                     {% endif %}
                                     {% if req.response_timestamp is not none %}
-                                        <span class="label label-default">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        <span class="badge badge-secondary">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                     {% endif %}
                                     {% if req.request_timestamp is not none and req.response_timestamp is not none %}
                                         {% set delta = req.response_timestamp - req.request_timestamp %}
                                         {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                        <span class="label label-primary"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+                                        <span class="badge badge-primary"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
                                     {% elif req.request_timestamp is not none %}
                                         {% set delta = now - req.request_timestamp %}
                                         {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                        <span class="label label-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+                                        <span class="badge badge-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
                                     {% endif %}
                                 </div>
-                                <div class="col-xs-4">
+                                <div class="col-4">
                                     <div class="dropdown">
                                         <a class="btn btn-success dropdown-toggle" data-toggle="dropdown">
                                             Confirm <span class="caret"></span>
                                         </a>
-                                        <ul class="dropdown-menu">
+                                        <div class="dropdown-menu">
                                             {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                 <li>
                                                     <a href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
@@ -158,6 +158,6 @@
                 </a>
             </div>
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

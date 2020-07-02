@@ -5,11 +5,11 @@
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css""/>
 
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
 {% endblock %}
 
 {% block title %}
@@ -30,33 +30,33 @@
         <li {% if pane == 'attached' %}class="active"{% endif %}><a href="{{ url_for('convenor.attached', id=pclass.id) }}">
             Attached projects
             {% if proj_count is defined %}
-                <span class="badge">{{ proj_count }}</span>
+                <span class="badge badge-pill">{{ proj_count }}</span>
             {% endif %}
         </a></li>
         <li {% if pane == 'faculty' %}class="active"{% endif %}><a href="{{ url_for('convenor.faculty', id=pclass.id) }}">
             Faculty
             {% if enrolled is defined and total is defined%}
-                <span class="badge">{{ enrolled }}/{{ total }}</span>
+                <span class="badge badge-pill">{{ enrolled }}/{{ total }}</span>
             {% else %}
-                <span class="badge">0</span>
+                <span class="badge badge-pill">0</span>
             {% endif %}
         </a></li>
         <li {% if pane == 'selectors' %}class="active"{% endif %}><a href="{{ url_for('convenor.selectors', id=pclass.id) }}">
             Students selecting for {{ config.year+1 }}&ndash;{{ config.year+2 }}
             {% if sel_count is defined %}
-                <span id="selector-count" class="badge">{{ sel_count }}</span>
+                <span id="selector-count" class="badge badge-pill">{{ sel_count }}</span>
             {% endif %}
         </a></li>
         <li {% if pane == 'submitters' %}class="active"{% endif %}><a href="{{ url_for('convenor.submitters', id=pclass.id) }}">
             Students submitting in {{ config.year }}&ndash;{{ config.year+1 }}
             {% if sub_count is defined %}
-                <span id="submitter-count" class="badge">{{ sub_count }}</span>
+                <span id="submitter-count" class="badge badge-pill">{{ sub_count }}</span>
             {% endif %}
         </a></li>
         {% if live_count is defined %}
             <li {% if pane == 'live' %}class="active"{% endif %}><a href="{{ url_for('convenor.liveprojects', id=pclass.id) }}">
                 Live projects for {{ config.year+1 }}&ndash;{{ config.year+2 }}
-                <span id="live-project-count" class="badge">{{ live_count }}</span>
+                <span id="live-project-count" class="badge badge-pill">{{ live_count }}</span>
             </a></li>
         {% endif %}
     </ul>

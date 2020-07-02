@@ -22,17 +22,17 @@ _workload = \
 """
 {% set s, m, p = data %}
 <div>
-    <span class="label label-info">S {{ s }}</span>
-    <span class="label label-info">M {{ m }}</span>
-    <span class="label label-info">P {{ p }}</span>
-    <span class="label label-primary">Total {{ s+m+p }}</span>
+    <span class="badge badge-info">S {{ s }}</span>
+    <span class="badge badge-info">M {{ m }}</span>
+    <span class="badge badge-info">P {{ p }}</span>
+    <span class="badge badge-primary">Total {{ s+m+p }}</span>
 </div>
 """
 
 _action = \
 """
-<div class="pull-right">
-    <a href="{{ url_for('convenor.assign_liveproject', id=rec.id, pid=p.id) }}" class="btn btn-default btn-sm">
+<div class="float-right">
+    <a href="{{ url_for('convenor.assign_liveproject', id=rec.id, pid=p.id) }}" class="btn btn-secondary btn-sm">
         Assign
     </a>
 </div>

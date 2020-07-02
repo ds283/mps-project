@@ -55,7 +55,7 @@ def _process(r_id, current_user_id, text_enc, url_enc):
     if current_user_id is not None:
         u = db.session.query(User).filter_by(id=current_user_id).one()
         if project.has_new_comments(u):
-            name = name.replace('REPNEWCOMMENTS', '<span class="label label-warning">New comments</span>', 1)
+            name = name.replace('REPNEWCOMMENTS', '<span class="badge badge-warning">New comments</span>', 1)
         else:
             name = name.replace('REPNEWCOMMENTS', '', 1)
     else:

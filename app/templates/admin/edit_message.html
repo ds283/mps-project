@@ -31,7 +31,7 @@
         {{ wtf.render_field(form.show_students) }}
         {{ wtf.render_field(form.show_faculty) }}
 
-        <div class="well {% if form.project_classes.errors %}has-error{% endif %}">
+        <div class="card m-3 card-body {% if form.project_classes.errors %}has-error{% endif %}">
             <p>Select the project classes for which this message should be displayed.</p>
             {% if current_user.has_role('admin') or current_user.has_role('root') %}
                 <p>Leave this selection <strong>blank</strong> to broadcast a message to everyone.</p>
@@ -39,7 +39,7 @@
             {% for widget in form.project_classes %}
                 {{ wtf.render_field(widget) }}
             {% else %}
-                <span class="label label-danger">No project classes currently available</span>
+                <span class="badge badge-danger">No project classes currently available</span>
             {% endfor %}
             {% if form.project_classes.errors %}
                 {% for error in form.project_classes.errors %}

@@ -14,20 +14,20 @@ from flask import render_template_string, jsonify, url_for
 _messages_pclasses = \
 """
 {% for pclass in message.project_classes %}
-    <span class="label label-info">{{ pclass.name }}</span>
+    <span class="badge badge-info">{{ pclass.name }}</span>
 {% else %}
-    <span class="label label-default">Broadcast</span>
+    <span class="badge badge-default">Broadcast</span>
 {% endfor %}
 """
 
 _messages_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('admin.edit_message', id=message.id) }}">
                 <i class="fa fa-pencil"></i> Edit message
@@ -79,7 +79,7 @@ def messages_data(messages):
              'pclass': render_template_string(_messages_pclasses, message=m),
              'title': '<a href="{url}">{msg}</a>'.format(msg=m.title,
                                                          url=url_for('admin.edit_message', id=m.id))
-                 if m.title is not None and len(m.title) > 0 else '<span class="label label-default">No title</span>',
+                 if m.title is not None and len(m.title) > 0 else '<span class="badge badge-default">No title</span>',
              'menu': render_template_string(_messages_menu, message=m)} for m in messages]
 
     return jsonify(data)

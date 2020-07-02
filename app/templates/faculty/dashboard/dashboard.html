@@ -38,7 +38,7 @@
                     {% endif %}
                     Approvals
                     {% if approve_total > 0 %}
-                        <span class="badge badge-info">{{ approve_total }}</span>
+                        <span class="badge badge-pill badge badge-pill-info">{{ approve_total }}</span>
                     {% endif %}
                 </a>
             </li>
@@ -70,8 +70,8 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
+        <div class="col-1"></div>
+        <div class="col-10">
 
             {% if messages %}
                 {% for message in messages %}
@@ -97,7 +97,7 @@
             {% endif %}
 
             {% if is_root and pane == 'system' %}
-                <div class="well">
+                <div class="card m-3 card-body">
                     {{ admin_dashboard_card(root_dash_data) }}
                     {{ root_functions(root_dash_data, matching_ready, has_assessments) }}
                 </div>
@@ -115,7 +115,7 @@
 
                 {% else %}
 
-                    <div class="well">
+                    <div class="card m-3 card-body">
                         <h3 class="dashboard-subtitle"> You have no active project enrollments</h3>
                         <p>
                             Project classes for which you are enrolled, but are not active because of
@@ -136,6 +136,6 @@
             {% endif %}
 
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

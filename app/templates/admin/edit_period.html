@@ -53,12 +53,12 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        <div class="well">
+        <div class="card m-3 card-body">
             {{ wtf.render_field(form.name) }}
             {{ date_field(form.start_date) }}
         </div>
 
-        <div class="well">
+        <div class="card m-3 card-body">
             {{ wtf.render_field(form.has_presentation) }}
             {{ wtf.render_field(form.collect_presentation_feedback) }}
             {{ wtf.render_field(form.collect_project_feedback) }}

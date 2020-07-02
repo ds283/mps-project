@@ -18,7 +18,7 @@
 
 {#        {{ wtf.form_errors(settings_form) }}#}
 
-    <div class="well">
+    <div class="card m-3 card-body">
         {{ wtf.render_field(settings_form.username) }}
         {{ wtf.render_field(settings_form.first_name) }}
         {{ wtf.render_field(settings_form.last_name) }}
@@ -27,23 +27,23 @@
         {{ wtf.render_field(settings_form.theme) }}
     </div>
 
-    <div class="well">
+    <div class="card m-3 card-body">
         {{ wtf.render_field(settings_form.default_license) }}
     </div>
 
-    <div class="well">
+    <div class="card m-3 card-body">
         <p>Titles</p>
         {{ wtf.render_field(settings_form.academic_title) }}
         {{ wtf.render_field(settings_form.use_academic_title) }}
     </div>
 
-    <div class="well">
+    <div class="card m-3 card-body">
         <p>Email notifications</p>
         {{ wtf.render_field(settings_form.group_summaries) }}
         {{ wtf.render_field(settings_form.summary_frequency) }}
     </div>
 
-    <div class="well">
+    <div class="card m-3 card-body">
         <p>Default settings for new projects</p>
         {{ wtf.render_field(settings_form.sign_off_students) }}
         {{ wtf.render_field(settings_form.project_capacity) }}
@@ -53,12 +53,12 @@
     </div>
 
     {% if settings_form.mask_roles %}
-        <div class="well">
+        <div class="card m-3 card-body">
             <p>Temporarily mask roles</p>
             {% for widget in settings_form.mask_roles %}
                 {{ wtf.render_field(widget) }}
             {% else %}
-                <span class="label label-danger">No roles currently available</span>
+                <span class="badge badge-danger">No roles currently available</span>
             {% endfor %}
             {% if settings_form.mask_roles.errors %}
                 {% for error in settings_form.mask_roles.errors %}

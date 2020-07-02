@@ -8,15 +8,15 @@
 
 {% macro plot_div(script, div) %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
+        <div class="col-2"></div>
+        <div class="col-8">
             {% if div and script %}
                 {{ div|safe }}
             {% else %}
-                <span class="label label-warning">Insufficient data to generate plot</span>
+                <span class="badge badge-warning">Insufficient data to generate plot</span>
             {% endif %}
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-2"></div>
     </div>
 {% endmacro %}
 
@@ -28,7 +28,7 @@
 {% endblock %}
 
 {% block graphblock %}
-    <div class="well">
+    <div class="card m-3 card-body">
         {{ plot_div(rank_script, rank_div) }}
         {{ plot_div(score_script, score_div) }}
     </div>

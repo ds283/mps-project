@@ -34,54 +34,54 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
-            <div class="well well-lg">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card m-3 card-body">
                 <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
                 <hr class="intro-divider">
                 <div class="list-group">
                     <div class="list-group-item">
                         Submission periods:
                         {% for p in config.periods %}
-                            <span class="label label-primary">{{ p.display_name|safe }}</span>
+                            <span class="badge badge-primary">{{ p.display_name|safe }}</span>
                         {% else %}
-                            <span class="label label-default">None</span>
+                            <span class="badge badge-secondary">None</span>
                         {% endfor %}
                     </div>
                 </div>
                 <div class="row vertical-align">
-                    <div class="col-xs-4">
+                    <div class="col-4">
                         <div class="list-group">
                             <div class="list-group-item">
-                                Current supervision CATS <span class="badge">{{ config.CATS_supervision }}</span>
+                                Current supervision CATS <span class="badge badge-pill">{{ config.CATS_supervision }}</span>
                             </div>
                             {% if pclass.CATS_supervision != config.CATS_supervision %}
                                 <div class="list-group-item list-group-item-danger">
-                                    Updated value <span class="badge">{{ pclass.CATS_supervision }}</span>
+                                    Updated value <span class="badge badge-pill">{{ pclass.CATS_supervision }}</span>
                                 </div>
                             {% endif %}
                         </div>
                     </div>
-                    <div class="col-xs-4">
+                    <div class="col-4">
                         <div class="list-group">
                             <div class="list-group-item">
-                                Current 2nd-marking CATS <span class="badge">{{ config.CATS_marking }}</span>
+                                Current 2nd-marking CATS <span class="badge badge-pill">{{ config.CATS_marking }}</span>
                             </div>
                             {% if pclass.CATS_marking != config.CATS_marking %}
                                 <div class="list-group-item list-group-item-danger">
-                                    Updated value <span class="badge">{{ pclass.CATS_marking }}</span>
+                                    Updated value <span class="badge badge-pill">{{ pclass.CATS_marking }}</span>
                                 </div>
                             {% endif %}
                         </div>
                     </div>
-                    <div class="col-xs-4">
+                    <div class="col-4">
                         <div class="list-group">
                             <div class="list-group-item">
-                                Current presentation CATS <span class="badge">{{ config.CATS_presentation }}</span>
+                                Current presentation CATS <span class="badge badge-pill">{{ config.CATS_presentation }}</span>
                             </div>
                             {% if pclass.CATS_presentation != config.CATS_presentation %}
                                 <div class="list-group-item list-group-item-danger">
-                                    Updated value <span class="badge">{{ pclass.CATS_presentation }}</span>
+                                    Updated value <span class="badge badge-pill">{{ pclass.CATS_presentation }}</span>
                                 </div>
                             {% endif %}
                         </div>
@@ -89,9 +89,9 @@
                 </div>
                 {% if config.CATS_supervision != pclass.CATS_supervision or config.CATS_marking != pclass.CATS_marking or config.CATS_presentation != pclass.CATS_presentation %}
                     <div class="row vertical-top">
-                        <div class="col-xs-12">
-                            <div class="pull-right">
-                                <a href="{{ url_for('convenor.update_CATS', config_id=config.id) }}" class="btn btn-default">
+                        <div class="col-12">
+                            <div class="float-right">
+                                <a href="{{ url_for('convenor.update_CATS', config_id=config.id) }}" class="btn btn-secondary">
                                     Update CATS values
                                 </a>
                             </div>
@@ -107,13 +107,13 @@
 
             {% if pclass.publish %}
                 {# SELECTING #}
-                <div class="well">
+                <div class="card m-3 card-body">
                     {# provide summary #}
 
                     {% if config.has_auditable_schedules %}
-                        <div class="panel panel-danger">
-                            <div class="panel-heading">Proposed assessment schedules are available to view</div>
-                            <div class="panel-body">
+                        <div class="card m-3 bg-danger">
+                            <div class="card-header">Proposed assessment schedules are available to view</div>
+                            <div class="card-body">
                                 <p>An administrator has published one or more proposed schedules for presentation assessments.</p>
                                 <a href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or edit proposed schedules...</a>
                             </div>
@@ -134,9 +134,9 @@
                     {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
                         {{ selection_closed(config, config.year < current_year) }}
                     {% else %}
-                        <div class="panel panel-danger">
-                            <div class="panel-heading">Error</div>
-                            <div class="panel-body">
+                        <div class="card m-3 bg-danger">
+                            <div class="card-header">Error</div>
+                            <div class="card-body">
                                 <strong>Error:</strong>
                                 Unknown project lifecycle state {{ state }}
                             </div>
@@ -145,13 +145,13 @@
                 </div>
 
                 {# SUBMITTING #}
-                <div class="well">
+                <div class="card m-3 card-body">
                     {% for n in range(config.submissions) %}
                         {{ submitter_card(config, n, today, feedback_form)  }}
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="well">
+                <div class="card m-3 card-body">
                     <p>
                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                         This project class is not published, so its administration options are limited.
@@ -159,6 +159,6 @@
                 </div>
             {% endif %}
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

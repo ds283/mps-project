@@ -23,7 +23,7 @@ from urllib import parse
 
 _actions = \
 """
-<a href="{{ url_for('manage_users.edit_student', id=s.id, url=url_for('user_approver.correct', url=url, text=text)) }}" class="btn btn-sm btn-default">Edit record...</a>
+<a href="{{ url_for('manage_users.edit_student', id=s.id, url=url_for('user_approver.correct', url=url, text=text)) }}" class="btn btn-sm btn-secondary">Edit record...</a>
 """
 
 _rejected = \
@@ -34,7 +34,7 @@ _rejected = \
         <p>{{ s.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</p>
     {% endif %}
 {% else %}
-    <span class="label label-default">None</span>
+    <span class="badge badge-default">None</span>
 {% endif %}
 """
 

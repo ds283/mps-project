@@ -7,11 +7,11 @@
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css""/>
 
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -56,21 +56,21 @@
         </a>
     </div>
 
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Assessor attendance for assessment event <strong>{{ assessment.name }}</strong></div>
-        <div class="panel-body">
-            <div class="well">
+    <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
+        <div class="card-header">Assessor attendance for assessment event <strong>{{ assessment.name }}</strong></div>
+        <div class="card-body">
+            <div class="card m-3 card-body">
                 <p>Filter by state</p>
                 <a href="{{ url_for('admin.assessment_manage_assessors', id=assessment.id, state_filter='all') }}"
-                   class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
                     All
                 </a>
                 <a href="{{ url_for('admin.assessment_manage_assessors', id=assessment.id, state_filter='confirm') }}"
-                   class="btn btn-sm filter-btn {% if state_filter == 'confirm' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if state_filter == 'confirm' %}btn-primary{% else %}btn-secondary{% endif %}">
                     Confirmed
                 </a>
                 <a href="{{ url_for('admin.assessment_manage_assessors', id=assessment.id, state_filter='not-confirm') }}"
-                   class="btn btn-sm filter-btn {% if state_filter == 'not-confirm' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if state_filter == 'not-confirm' %}btn-primary{% else %}btn-secondary{% endif %}">
                     Not confirmed
                 </a>
             </div>

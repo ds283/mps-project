@@ -8,8 +8,8 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
+        <div class="col-1"></div>
+        <div class="col-10">
 
             {% if messages %}
                 {% for message in messages %}
@@ -17,15 +17,15 @@
                 {% endfor %}
             {% endif %}
 
-            <div class="panel panel-success">
-                <div class="panel-heading">{% block formtitle %}{% endblock %}</div>
-                <div class="panel-body">
+            <div class="card m-3 border-success">
+                <div class="card-header bg-success text-white">{% block formtitle %}{% endblock %}</div>
+                <div class="card-body">
                     {% block form_content %}{% endblock %}
                 </div>
             </div>
             {% block footer %}
             {% endblock %}
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

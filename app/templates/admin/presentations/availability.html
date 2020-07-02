@@ -34,10 +34,10 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
+        <div class="col-2"></div>
+        <div class="col-8">
             {% if assessment %}
-                <div class="well">
+                <div class="card m-3 card-body">
                     {% set state = assessment.availability_lifecycle %}
                     {% if state == assessment.AVAILABILITY_NOT_REQUESTED %}
 
@@ -53,9 +53,9 @@
 
                     {% else %}
 
-                        <div class="panel panel-danger">
-                            <div class="panel-heading">Error</div>
-                            <div class="panel-body">
+                        <div class="card m-3 bg-danger">
+                            <div class="card-header">Error</div>
+                            <div class="card-body">
                                 <strong>Error:</strong>
                                 Unknown availability lifecycle state {{ state }}
                             </div>
@@ -64,9 +64,9 @@
                     {% endif %}
                 </div>
             {% else %}
-                <div class="panel panel-danger">
-                    <div class="panel-heading">Error</div>
-                    <div class="panel-body">
+                <div class="card m-3 bg-danger">
+                    <div class="card-header">Error</div>
+                    <div class="card-body">
                         <strong>Error:</strong>
                         Data for this assessment is missing
                     </div>
@@ -79,6 +79,6 @@
                 </a>
             </div>
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-2"></div>
     </div>
 {%  endblock %}

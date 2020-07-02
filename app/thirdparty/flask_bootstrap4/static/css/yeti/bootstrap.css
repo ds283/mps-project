@@ -2312,14 +2312,14 @@ select.form-control:focus::-ms-value {
   line-height: 1.5;
 }
 
-.col-form-label-lg {
+.col-form-badge-lg {
   padding-top: calc(0.5rem + 1px);
   padding-bottom: calc(0.5rem + 1px);
   font-size: 1.171875rem;
   line-height: 1.5;
 }
 
-.col-form-label-sm {
+.col-form-badge-sm {
   padding-top: calc(0.25rem + 1px);
   padding-bottom: calc(0.25rem + 1px);
   font-size: 0.8203125rem;
@@ -8888,7 +8888,7 @@ button.bg-dark:focus {
   padding-left: 0.5rem !important;
 }
 
-.p-3 {
+.m-3 {
   padding: 1rem !important;
 }
 

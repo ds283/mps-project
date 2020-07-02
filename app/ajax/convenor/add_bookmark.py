@@ -28,9 +28,9 @@ _owner = \
 
 _actions = \
 """
-<div class="pull-right">
+<div class="float-right">
     <a href="{{ url_for('convenor.create_student_bookmark', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.selector_bookmarks', id=sel.id)) }}"
-       class="btn btn-sm btn-default">
+       class="btn btn-sm btn-secondary">
        Add bookmark
     </a>
 </div>

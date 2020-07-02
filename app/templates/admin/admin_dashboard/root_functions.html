@@ -13,16 +13,16 @@
     {% set number_sessions = data['number_sessions'] %}
 
     {% if has_assessments %}
-        <div class="panel panel-info">
-            <div class="panel-heading">Presentation assessments</div>
-            <div class="panel-body">
+        <div class="card m-3 border-info">
+            <div class="card-header bg-info text-white">Presentation assessments</div>
+            <div class="card-body">
                 <div class="row vertical-align">
-                    <div class="col-xs-8">
+                    <div class="col-8">
                         Some active project classes use presentations.
                     </div>
-                    <div class="col-xs-4">
-                        <div class="pull-right">
-                            <a href="{{ url_for('admin.manage_assessments') }}" class="btn btn-default">
+                    <div class="col-4">
+                        <div class="float-right">
+                            <a href="{{ url_for('admin.manage_assessments') }}" class="btn btn-secondary">
                                 Manage assessments
                             </a>
                         </div>
@@ -33,17 +33,17 @@
     {% endif %}
 
     {% if matching_ready and not rollover_in_progress %}
-        <div class="panel panel-warning">
-            <div class="panel-heading">Perform automatic matching</div>
-            <div class="panel-body">
+        <div class="card m-3 border-info">
+            <div class="card-header bg-info text-white">Perform automatic matching</div>
+            <div class="card-body">
                 <div class="row vertical-align">
-                    <div class="col-xs-8">
+                    <div class="col-8">
                         Automatic matching can now be carried out for one or more project classes.
                     </div>
-                    <div class="col-xs-4">
-                        <div class="pull-right">
+                    <div class="col-4">
+                        <div class="float-right">
                             {% if not rollover_ready %}
-                                <a href="{{ url_for('admin.skip_matching') }}" class="btn btn-default">
+                                <a href="{{ url_for('admin.skip_matching') }}" class="btn btn-secondary">
                                     Skip matching
                                 </a>
                             {% endif %}
@@ -58,15 +58,15 @@
     {% endif %}
 
     {% if rollover_ready and not rollover_in_progress %}
-        <div class="panel panel-danger">
-            <div class="panel-heading">Rollover academic year</div>
-            <div class="panel-body">
+        <div class="card m-3 border-danger">
+            <div class="card-header bg-danger text-white">Rollover academic year</div>
+            <div class="card-body">
                 <div class="row vertical-align">
-                    <div class="col-xs-8">
+                    <div class="col-8">
                         All projects are now in a rollover state.
                     </div>
-                    <div class="col-xs-4">
-                        <div class="pull-right">
+                    <div class="col-4">
+                        <div class="float-right">
                             <a href="{{ url_for('admin.confirm_global_rollover') }}" class="btn btn-danger">
                                 Rollover academic year
                             </a>
@@ -77,33 +77,33 @@
         </div>
     {% endif %}
 
-    <div class="panel panel-default">
-        <div class="panel-heading">Manage website services</div>
-        <div class="panel-body">
+    <div class="card m-3 border-info">
+        <div class="card-header">Manage website services</div>
+        <div class="card-body">
             <div class="container-fluid">
                 <div class="row vertical-top" style="height: 54px;">
-                    <div class="col-xs-6">
+                    <div class="col-6">
                         <div class="container-fluid">
                             <div class="row vertical-align">
-                                <div class="col-xs-9">
+                                <div class="col-9">
                                     Clear contents of Redis cache.
                                 </div>
-                                <div class="col-xs-3">
-                                    <div class="pull-right">
+                                <div class="col-3">
+                                    <div class="float-right">
                                         <a href="{{ url_for('admin.clear_redis_cache') }}" class="btn btn-sm btn-danger services-btn">Clear</a>
                                     </div>
                                 </div>
                             </div>
                         </div>
                      </div>
-                    <div class="col-xs-6">
+                    <div class="col-6">
                         <div class="container-fluid">
                             <div class="row vertical-align">
-                                <div class="col-xs-9">
+                                <div class="col-9">
                                     Reset stored precompute time for all users.
                                 </div>
-                                <div class="col-xs-3">
-                                    <div class="pull-right">
+                                <div class="col-3">
+                                    <div class="float-right">
                                         <a href="{{ url_for('admin.reset_precompute') }}" class="btn btn-sm btn-warning services-btn">Reset</a>
                                     </div>
                                 </div>
@@ -112,13 +112,13 @@
                     </div>
                 </div>
                 <div class="row vertical-top" style="height: 54px;">
-                    <div class="col-xs-6">
+                    <div class="col-6">
                         <div class="container-fluid">
                             {% set pl = 's' %}{% if number_sessions == 1 %}{% set pl = '' %}{% endif %}
                             {{ number_sessions }} session document{{ pl }} in MongoDB backend
                         </div>
                     </div>
-                    <div class="col-xs-6">
+                    <div class="col-6">
                         <div class="container-fluid">
                         </div>
                     </div>

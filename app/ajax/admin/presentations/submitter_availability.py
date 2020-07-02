@@ -14,16 +14,16 @@ from flask import render_template_string, jsonify, url_for
 _pclass = \
 """
 {% set style = pclass.make_CSS_style() %}
-<a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
+<a class="badge badge-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
 """
 
 
 _submitter_actions = \
 """
 <div style="text-align: right;">
-    <div class="pull-right">
+    <div class="float-right">
         {% if a.not_attending(s.id) %}
-            <a {% if editable %}href="{{ url_for('admin.assessment_attending', a_id=a.id, s_id=s.id) }}"{% endif %} class="btn btn-sm btn-default btn-table-block {% if not editable %}disabled{% endif %}">
+            <a {% if editable %}href="{{ url_for('admin.assessment_attending', a_id=a.id, s_id=s.id) }}"{% endif %} class="btn btn-sm btn-secondary btn-table-block {% if not editable %}disabled{% endif %}">
                 Attending
             </a>
             <a class="btn btn-sm btn-danger btn-table-block {% if not editable %}disabled{% endif %}">
@@ -33,7 +33,7 @@ _submitter_actions = \
             <a class="btn btn-sm btn-success btn-table-block {% if not editable %}disabled{% endif %}">
                 Attending
             </a>
-            <a {% if editable %}href="{{ url_for('admin.assessment_not_attending', a_id=a.id, s_id=s.id) }}"{% endif %} class="btn btn-sm btn-default btn-table-block {% if not editable %}disabled{% endif %}">
+            <a {% if editable %}href="{{ url_for('admin.assessment_not_attending', a_id=a.id, s_id=s.id) }}"{% endif %} class="btn btn-sm btn-secondary btn-table-block {% if not editable %}disabled{% endif %}">
                 Not attending
             </a>
         {% endif %}
@@ -49,12 +49,12 @@ _submitter_actions = \
 _session_actions = \
 """
 <div style="text-align: right;">
-    <div class="pull-right">
+    <div class="float-right">
         {% if sess.submitter_available(s.id) %}
             <a class="btn btn-success btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
-            <a {% if editable %}href="{{ url_for('admin.submitter_unavailable', sess_id=sess.id, s_id=s.id) }}"{% endif %} class="btn btn-default btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-times"></i> Not available</a>
+            <a {% if editable %}href="{{ url_for('admin.submitter_unavailable', sess_id=sess.id, s_id=s.id) }}"{% endif %} class="btn btn-secondary btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-times"></i> Not available</a>
         {% else %}
-            <a {% if editable %}href="{{ url_for('admin.submitter_available', sess_id=sess.id, s_id=s.id) }}"{% endif %} class="btn btn-default btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
+            <a {% if editable %}href="{{ url_for('admin.submitter_available', sess_id=sess.id, s_id=s.id) }}"{% endif %} class="btn btn-secondary btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
             <a class="btn btn-danger btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-times"></i> Not available</a>
         {% endif %}
     </div>
@@ -68,7 +68,7 @@ _global_name = \
 {% set constraints = s.number_unavailable %}
 {% if constraints > 0 %}
     &emsp;
-    <span class="label label-warning">{{ constraints }} session constraints</span>
+    <span class="badge badge-warning">{{ constraints }} session constraints</span>
 {% endif %}
 """
 
@@ -76,13 +76,13 @@ _global_name = \
 _project_name = \
 """
 {% if p is none %}
-    <span class="label label-default">No project assigned</span>
+    <span class="badge badge-default">No project assigned</span>
 {% else %}
     <div>
         <a href="{{ dest_url }}">{{ p.name }}</a>
     </div>
     <div>
-        <a class="label label-info" href="{{ url_for('convenor.attach_assessors', id=p.parent_id, pclass_id=p.config.pclass_id, url=url, text=text) }}">
+        <a class="badge badge-info" href="{{ url_for('convenor.attach_assessors', id=p.parent_id, pclass_id=p.config.pclass_id, url=url, text=text) }}">
             {{ p.number_assessors }} assessors
         </a>
     </div>

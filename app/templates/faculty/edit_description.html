@@ -37,7 +37,7 @@
         {{ wtf.render_field(form.label) }}
         {{ wtf.render_field(form.capacity) }}
 
-        <div class="well {% if form.project_classes.errors %}has-error{% endif %}">
+        <div class="card m-3 card-body {% if form.project_classes.errors %}has-error{% endif %}">
             <p>Select the project classes for which this description should be made available</p>
             {% for widget in form.project_classes %}
                 {{ wtf.render_field(widget) }}
@@ -53,12 +53,12 @@
             {% endif %}
         </div>
 
-        <div class="well {% if form.team.errors %}has-error{% endif %}">
+        <div class="card m-3 card-body {% if form.team.errors %}has-error{% endif %}">
             <p>Who will be part of the supervisory team?</p>
             {% for widget in form.team %}
                 {{ wtf.render_field(widget) }}
             {% else %}
-                <span class="label label-danger">No supervisory roles currently available</span>
+                <span class="badge badge-danger">No supervisory roles currently available</span>
             {% endfor %}
             {% if form.team.errors %}
                 {% for error in form.team.errors %}

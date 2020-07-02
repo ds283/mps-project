@@ -2,7 +2,7 @@
 
 {% block styles %}
     {{ super() }}
-    {% set theme = current_user.ui_theme %}
+    {% set theme = current_user.ui_theme if current_user.ui_theme is defined else 'default' %}
     {% if theme == 'flat' %}
         {% assets filters="cssmin", output="gen/project-flat-min.css", "css/common.css", "css/project.css", "css/flat.css", "css/project-flat.css" -%}
             <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>

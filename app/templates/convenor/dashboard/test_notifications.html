@@ -8,18 +8,18 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
-            <div class="panel panel-danger">
-                <div class="panel-heading">
+        <div class="col-2"></div>
+        <div class="col-8">
+            <div class="card m-3 bg-danger">
+                <div class="card-header">
                     Test catch-up of email notifications for <strong>{{ config.name }}</strong>
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     <form action="{{ url_for('convenor.test_notifications', id=config.id, url=url, deadline=deadline,
                             cc_me=cc_me, max_attachment=max_attachment) }}" method="POST" name="test_notify_form">
                         {{ form.hidden_tag() }}
                         <div class="row vertical-bottom">
-                            <div class="col-xs-12">
+                            <div class="col-12">
                                 <p>Do you wish to <strong>test catch-up</strong> of email notifications for
                                     <strong>{{ config.name }}</strong>?</p>
                                 <p>During catch-up, email notifications are issued to markers where
@@ -32,8 +32,8 @@
                             </div>
                         </div>
                         <div class="row vertical-bottom">
-                            <div class="col-xs-12">
-                                <div class="pull-right">
+                            <div class="col-12">
+                                <div class="float-right">
                                     {{ wtf.render_field(form.submit_button, button_map={'submit_button': 'danger'}) }}
                                 </div>
                             </div>
@@ -42,6 +42,6 @@
                 </div>
             </div>
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-2"></div>
     </div>
 {% endblock %}

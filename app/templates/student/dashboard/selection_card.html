@@ -75,7 +75,7 @@
 {% macro show_submission_status(config, sel) %}
     {% set is_valid, messages = sel.is_valid_selection %}
     <div class="row vertical-top">
-        <div class="col-xs-12">
+        <div class="col-12">
             <ul class="list-group" id="P{{ config.id }}-status-list">
                 {% for message in messages %}
                     <li class="list-group-item {% if is_valid %}list-group-item-success{% else %}list-group-item-danger{% endif %}">{{ message }}</li>
@@ -84,7 +84,7 @@
         </div>
     </div>
     <div class="row vertical-top">
-        <div class="col-xs-12">
+        <div class="col-12">
             <ul class="list-group">
                 <li class="list-group-item">
                     {% if sel.has_submitted %}
@@ -97,7 +97,7 @@
                                 supervised by
                                 <i class="fa fa-user"></i> {{ project.owner.user.name }}
                             {% else %}
-                                <span class="label label-danger">MISSING ACCEPTED PROJECT</span>
+                                <span class="badge badge-danger">MISSING ACCEPTED PROJECT</span>
                                 <p>This is an internal error. Please contact a system administrator.</p>
                             {% endif %}
                         {% else %}
@@ -116,11 +116,11 @@
         </div>
     </div>
     <div class="row vertical-top">
-        <div class="col-xs-12" style="text-align: right;">
-            <div class="pull-right">
+        <div class="col-12" style="text-align: right;">
+            <div class="float-right">
                 <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-success student-dashboard-button">Show available projects...</a>
                 {% if sel.has_submission_list %}
-                    <a class="btn btn-default student-dashboard-button" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
+                    <a class="btn btn-secondary student-dashboard-button" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
                         Clear submission
                     </a>
                 {% endif %}
@@ -157,7 +157,7 @@
                 {% if sel.submission_time %}
                     <p>Your preferences were received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.</p>
                 {% endif %}
-                <span class="label label-success"><i class="fa fa-check"></i> Preferences received</span>
+                <span class="badge badge-success"><i class="fa fa-check"></i> Preferences received</span>
             {% endif %}
             <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
         </div>
@@ -178,8 +178,8 @@
     {% endif %}
 
     <div class="row" style="padding-top: 8px;">
-        <div class="col-xs-12">
-            <div class="pull-right">
+        <div class="col-12">
+            <div class="float-right">
                 <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-success student-dashboard-button">View the project list...</a>
             </div>
         </div>
@@ -193,11 +193,11 @@
         {% set project = bookmark.liveproject %}
             <div id="P{{ config.id }}-{{ project.id }}"
                  class="row vertical-top list-group-item {% if loop.index <= sel.number_choices %}selected-project{% else %}deselected-project{% endif %}">
-                <div class="col-xs-1">
+                <div class="col-1">
                     <i class="fa fa-bars drag-handle"></i>
-                    <span id="ranking" class="label {% if loop.index <= sel.number_choices %}label-success{% else %}label-danger{% endif %}">#{{ loop.index }}</span>
+                    <span id="ranking" class="badge {% if loop.index <= sel.number_choices %}badge-success{% else %}badge-danger{% endif %}">#{{ loop.index }}</span>
                 </div>
-                <div class="col-xs-3">
+                <div class="col-3">
                     <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
                         <strong>{{ project.name }}</strong>
                     </a>
@@ -206,21 +206,21 @@
                         <p>This project has recommended modules that are not available on your programme</p>
                     {% endif %}
                 </div>
-                <div class="col-xs-2">
+                <div class="col-2">
                     <a href="mailto:{{ project.owner.user.email }}">
                         {{ project.owner.user.name }}
                     </a>
                 </div>
-                <div class="col-xs-4">
+                <div class="col-4">
                     {% if not project.is_available(sel) %}
                         {% if project.is_waiting(sel) %}
                             <div class="dropdown student-confirm-button" style="display: inline-block;">
-                                <a class="label label-info dropdown-toggle" type="button" data-toggle="dropdown">
+                                <a class="badge badge-info dropdown-toggle" type="button" data-toggle="dropdown">
                                     <i class="fa fa-clock-o"></i>
                                     Meeting confirmation requested
                                     <span class="caret"></span>
                                 </a>
-                                <ul class="dropdown-menu">
+                                <div class="dropdown-menu">
                                     <li>
                                         <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
                                             Cancel request
@@ -230,12 +230,12 @@
                             </div>
                         {% else %}
                             <div class="dropdown student-confirm-button" style="display: inline-block;">
-                                <a class="label label-danger dropdown-toggle" type="button" data-toggle="dropdown">
+                                <a class="badge badge-danger dropdown-toggle" type="button" data-toggle="dropdown">
                                     <i class="fa fa-exclamation-triangle"></i>
                                     Requires meeting confirmation
                                     <span class="caret"></span>
                                 </a>
-                                <ul class="dropdown-menu">
+                                <div class="dropdown-menu">
                                     <li>
                                         <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}">
                                             Request confirmation
@@ -246,16 +246,16 @@
                         {% endif %}
                     {% else %}
                         {% if project.is_confirmed(sel) %}
-                            <span class="label label-success"><i class="fa fa-check"></i> Available for selection</span>
-                            <span class="label label-primary"><i class="fa fa-check"></i> Meeting confirmed</span>
+                            <span class="badge badge-success"><i class="fa fa-check"></i> Available for selection</span>
+                            <span class="badge badge-primary"><i class="fa fa-check"></i> Meeting confirmed</span>
                         {% else %}
-                            <span class="label label-success"><i class="fa fa-check"></i> Available for selection</span>
+                            <span class="badge badge-success"><i class="fa fa-check"></i> Available for selection</span>
                         {% endif %}
                     {% endif %}
                 </div>
-                <div class="col-xs-2">
-                    <div class="pull-right">
-                        <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="label label-default">
+                <div class="col-2">
+                    <div class="float-right">
+                        <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="badge badge-secondary">
                             <i class="fa fa-times"></i> Remove bookmark
                         </a>
                     </div>
@@ -267,30 +267,30 @@
 
 
 {% macro selection_card(config, sel) %}
-   <div class="panel
+   <div class="card
         {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-            panel-primary
+            bg-primary text-white
         {% elif config.selector_lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
-            panel-warning
+            bg-warning
         {% else %}
-            panel-default
+            {# no markup required; formerly panel-default #}
         {% endif %}
         ">
-        <div class="panel-heading">
+        <div class="card-header">
             {% if sub %}
                 <strong>Request to switch projects</strong>
             {% else %}
                 <strong>Project selection</strong>
             {% endif %}
         </div>
-        <div class="panel-body">
+        <div class="card-body">
             {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
 
                 {{ open_card(config, sel) }}
 
                 <hr class="intro-divider">
                 <div class="row vertical-top">
-                    <div class="col-xs-12">
+                    <div class="col-12">
                         {% set num_choices = sel.number_choices %}
                         {% set numpl = 's' %}
                         {% if num_choices == 1 %}{% set numpl = '' %}{% endif %}
@@ -318,12 +318,12 @@
                 {% endif %}
                 {% if sel.number_custom_offers > 0 %}
                     <div class="row vertical-align">
-                        <div class="col-xs-8">
+                        <div class="col-8">
                             <strong>You have custom offers available.</strong>
                         </div>
-                        <div class="col-xs-4">
-                            <div class="pull-right">
-                                <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}" class="btn btn-default">Manage offers</a>
+                        <div class="col-4">
+                            <div class="float-right">
+                                <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}" class="btn btn-secondary">Manage offers</a>
                             </div>
                         </div>
                     </div>

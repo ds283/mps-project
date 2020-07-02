@@ -26,7 +26,7 @@ _name = \
             {% if rec is not none %}
                 {% set pcl = rec.pclass %}
                 {% set style = pcl.make_CSS_style() %}
-                <span class="label {% if style is not none %}label-default{% else %}label-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
+                <span class="badge {% if style is not none %}badge-default{% else %}badge-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
                     {{ f.number_projects_offered(pcl.id) }}
                     {%- if rec.supervisor_state == rec.SUPERVISOR_ENROLLED %}
                         S <i class="fa fa-check"></i>
@@ -51,7 +51,7 @@ _name = \
                 {% set pcl = rec.pclass %}
                 {% if rec.CATS_supervision is not none or rec.CATS_marking is not none %}
                     {% set style = pcl.make_CSS_style() %}
-                    <span class="label {% if style is not none %}label-default{% else %}label-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
+                    <span class="badge {% if style is not none %}badge-default{% else %}badge-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
                         {%- if rec.CATS_supervision is not none %}
                             S {{ rec.CATS_supervision }}
                         {%- endif -%}
@@ -64,7 +64,7 @@ _name = \
         {% endif %}
     {% endfor %}
     {% if f.CATS_supervision is not none or f.CATS_marking is not none %}
-        <span class="label label-primary">Global
+        <span class="badge badge-primary">Global
             {%- if f.CATS_supervision is not none %}
                 S {{ f.CATS_supervision }}
             {%- endif -%}
@@ -86,14 +86,14 @@ _projects = \
     {% set style = pclass.make_CSS_style() %}
     {% set proj_overassigned = r.is_project_overassigned %}
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="label {% if proj_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
+        <a class="badge {% if proj_overassigned %}badge-danger{% elif style %}badge-default{% else %}badge-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
                 {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
                 {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>#{{ r.submission_period }}:
             {{ r.selector.student.user.name }} (No. {{ r.project.number }})
         {% if adjustable %}<span class="caret"></span>{% endif %}</a>
         {% if adjustable %}
             {% set list = r.selector.ordered_selections %}
-            <ul class="dropdown-menu">
+            <div class="dropdown-menu">
                 <li class="dropdown-header">Submitted choices</li>
                 {% for item in list %}
                     {% set disabled = false %}
@@ -112,18 +112,18 @@ _projects = \
     {% if outcome is not none %}
         {% set satisfied, violated = outcome %}
         {% if satisfied|length > 0 %}
-            <span class="label label-success">{%- for i in range(satisfied|length) -%}<i class="fa fa-check"></i>{%- endfor %} HINT</span>
+            <span class="badge badge-success">{%- for i in range(satisfied|length) -%}<i class="fa fa-check"></i>{%- endfor %} HINT</span>
         {% endif %}
         {% if violated|length > 0 %}
-            <span class="label label-warning">{%- for i in range(violated|length) -%}<i class="fa fa-times"></i>{%- endfor %} HINT</span>
+            <span class="badge badge-warning">{%- for i in range(violated|length) -%}<i class="fa fa-times"></i>{%- endfor %} HINT</span>
         {% endif %}
     {% endif %}
     {% set prog_status = r.project.satisfies_preferences(r.selector) %}
     {% if prog_status is not none %}
         {% if prog_status %}
-            <span class="label label-success"><i class="fa fa-check"></i> PROG</span>
+            <span class="badge badge-success"><i class="fa fa-check"></i> PROG</span>
         {% else %}
-            <span class="label label-warning"><i class="fa fa-times"></i> PROG</span>
+            <span class="badge badge-warning"><i class="fa fa-times"></i> PROG</span>
         {% endif %}
     {% endif %}
 {% endmacro %}
@@ -135,7 +135,7 @@ _projects = \
     {% endif %}
 {% endfor %}
 {% if ns.count == 0 %}
-    <span class="label label-default btn-table-block">None</span>
+    <span class="badge badge-default btn-table-block">None</span>
 {% endif %}
 {% if err_msgs|length > 0 %}
     <div class="has-error">
@@ -153,11 +153,11 @@ _marking = \
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     <div class="dropdown match-assign-button" style="display: inline-block;">
-        <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+        <a class="badge {% if style %}badge-default{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
             #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})
             <span class="caret"></span>
         </a>
-        <ul class="dropdown-menu">
+        <div class="dropdown-menu">
             <li class="dropdown-header">Reassign 2nd marker</li>
             {% set assessor_list = r.project.assessor_list %}
             {% for marker in assessor_list %}
@@ -180,7 +180,7 @@ _marking = \
     {% endif %}
 {% endfor %}
 {% if ns.count == 0 %}
-    <span class="label label-default btn-table-block">None</span>
+    <span class="badge badge-default btn-table-block">None</span>
 {% endif %}
 {% if err_msgs|length > 0 %}
     <div class="has-error">
@@ -194,16 +194,16 @@ _marking = \
 
 _workload = \
 """
-<span class="label {% if sup_overassigned %}label-danger{% else %}label-info{% endif %}">S {{ sup }}</span>
-<span class="label {% if mark_overassigned %}label-danger{% else %}label-default{% endif %}">M {{ mark }}</span>
-<span class="label {% if sup_overassigned or mark_overassigned %}label-danger{% else %}label-primary{% endif %}">T {{ tot }}</span>
+<span class="badge {% if sup_overassigned %}badge-danger{% else %}badge-info{% endif %}">S {{ sup }}</span>
+<span class="badge {% if mark_overassigned %}badge-danger{% else %}badge-default{% endif %}">M {{ mark }}</span>
+<span class="badge {% if sup_overassigned or mark_overassigned %}badge-danger{% else %}badge-primary{% endif %}">T {{ tot }}</span>
 {% if included_sup is not none and included_mark is not none and included_workload is not none and included_workload|length > 0 %}
     <p></p>
     {% for match in m.include_matches %}
-        <span class="label label-info">{{ match.name }} S {{ included_sup[match.id] }} M {{ included_mark[match.id] }} T {{ included_workload[match.id] }}</span>
+        <span class="badge badge-info">{{ match.name }} S {{ included_sup[match.id] }} M {{ included_mark[match.id] }} T {{ included_workload[match.id] }}</span>
     {% endfor %}
     <p></p>
-    <span class="label {% if sup_overassigned or mark_overassigned %}label-danger{% else %}label-primary{% endif %}">Total {{ total_CATS_value }}</span>
+    <span class="badge {% if sup_overassigned or mark_overassigned %}badge-danger{% else %}badge-primary{% endif %}">Total {{ total_CATS_value }}</span>
 {% endif %}
 """
 

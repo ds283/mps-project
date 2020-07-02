@@ -53,16 +53,16 @@ _marker_menu = \
 """
 {% if proj.is_assessor(f.id) %}
     <a href="{{ url_for('faculty.remove_assessor', proj_id=proj.id, mid=f.id) }}"
-       class="btn btn-sm btn-block btn-default">
+       class="btn btn-sm btn-block btn-secondary">
         <i class="fa fa-trash"></i> Remove
     </a>
 {% elif proj.can_enroll_assessor(f) %}
     <a href="{{ url_for('faculty.add_assessor', proj_id=proj.id, mid=f.id) }}"
-       class="btn btn-sm btn-block btn-default">
+       class="btn btn-sm btn-block btn-secondary">
         <i class="fa fa-plus"></i> Attach
     </a>
 {% else %}
-    <a class="btn btn-default btn-block btn-sm disabled">
+    <a class="btn btn-secondary btn-block btn-sm disabled">
         <i class="fa fa-ban"></i> Can't attach
     </a>
 {% endif %}
@@ -82,41 +82,41 @@ _desc_label = \
 {% endif %}
 <div>
     {% if d.review_only %}
-        <span class="label label-info">REVIEW</span>
+        <span class="badge badge-info">REVIEW</span>
     {% endif %}
     {% if d.aims is not none and d.aims|length > 0 %}
-        <span class="label label-success"><i class="fa fa-check"></i> Aims specified</span>
+        <span class="badge badge-success"><i class="fa fa-check"></i> Aims specified</span>
     {% else %}
-        <span class="label label-warning"><i class="fa fa-times"></i> Aims not specified</span>
+        <span class="badge badge-warning"><i class="fa fa-times"></i> Aims not specified</span>
     {% endif %}
 </div>
 {% set state = d.workflow_state %}
 <div>
     {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
     {% if not_confirmed %}
-        <span class="label label-default">Approval: Not confirmed</span>
+        <span class="badge badge-default">Approval: Not confirmed</span>
     {% else %}
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
-            <span class="label label-success"><i class="fa fa-check"></i> Approved</span>
+            <span class="badge badge-success"><i class="fa fa-check"></i> Approved</span>
         {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
-            <span class="label label-warning">Approval: Queued</span>
+            <span class="badge badge-warning">Approval: Queued</span>
         {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
-            <span class="label label-info">Approval: In progress</span>
+            <span class="badge badge-info">Approval: In progress</span>
         {% else %}
-            <span class="label label-danger">Unknown approval state</span>
+            <span class="badge badge-danger">Unknown approval state</span>
         {% endif %}
         {% if current_user.has_role('project_approver') and d.validated_by %}
             <div>
-                <span class="label label-info">Signed-off: {{ d.validated_by.name }}</span>
+                <span class="badge badge-info">Signed-off: {{ d.validated_by.name }}</span>
                 {% if d.validated_timestamp %}
-                    <span class="label label-info">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                    <span class="badge badge-info">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                 {% endif %}
             </div>
         {% endif %}
     {% endif %}
     {% if d.has_new_comments(current_user) %}
         <div>
-            <span class="label label-warning">New comments</span>
+            <span class="badge badge-warning">New comments</span>
         </div>
     {% endif %}
 </div>
@@ -125,18 +125,18 @@ _desc_label = \
     {% set errors = d.errors %}
     {% set warnings = d.warnings %}
     {% if errors|length == 1 %}
-        <span class="label label-danger">1 error</span>
+        <span class="badge badge-danger">1 error</span>
     {% elif errors|length > 1 %}
-        <span class="label label-danger">{{ errors|length }} errors</span>
+        <span class="badge badge-danger">{{ errors|length }} errors</span>
     {% else %}
-        <span class="label label-success">0 errors</span>
+        <span class="badge badge-success">0 errors</span>
     {% endif %}
     {% if warnings|length == 1 %}
-        <span class="label label-warning">1 warning</span>
+        <span class="badge badge-warning">1 warning</span>
     {% elif warnings|length > 1 %}
-        <span class="label label-warning">{{ warnings|length }} warnings</span>
+        <span class="badge badge-warning">{{ warnings|length }} warnings</span>
     {% else %}
-        <span class="label label-success">0 warnings</span>
+        <span class="badge badge-success">0 warnings</span>
     {% endif %}
     {% if errors|length > 0 %}
         <div class="has-error">
@@ -167,11 +167,11 @@ _desc_label = \
 _desc_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
                                 url=url_for('faculty.edit_descriptions', id=d.parent.id, create=create),

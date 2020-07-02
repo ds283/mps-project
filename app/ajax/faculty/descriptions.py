@@ -15,22 +15,22 @@ _pclasses = \
 """
 {% set ns = namespace(count=0) %}
 {% if d.default is not none %}
-    <span class="label label-success">Default</span>
+    <span class="badge badge-success">Default</span>
     {% set ns.count = ns.count + 1 %}
 {% endif %}
 {% for pclass in d.project_classes %}
     {% if pclass.active %}
         {% set style = pclass.make_CSS_style() %}
-        <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
+        <a class="badge badge-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
         {% set ns.count = ns.count + 1 %}
     {% endif %}
 {% endfor %}
 {% if ns.count == 0 %}
-    <span class="label label-default">None</span>
+    <span class="badge badge-default">None</span>
 {% endif %}
 {% if d.has_modules %}
     <div>
-        <span class="label label-primary"><i class="fa fa-exclamation-circle"></i> Has recommended modules</span>
+        <span class="badge badge-primary"><i class="fa fa-exclamation-circle"></i> Has recommended modules</span>
     </div>
 {% endif %}
 """
@@ -41,7 +41,7 @@ _team = \
 {% for sup in d.team %}
     {{ sup.make_label(sup.name)|safe }}
 {% else %}
-    <span class="label label-danger">No staff selected</span>
+    <span class="badge badge-danger">No staff selected</span>
 {% endfor %}
 """
 

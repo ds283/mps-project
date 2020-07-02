@@ -17,11 +17,11 @@
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css""/>
 
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -61,66 +61,66 @@
         </a>
     </div>
 
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Attach assessors for project <strong>{{ data.name }}</strong></div>
-        <div class="panel-body">
+    <div class="card m-3 bg-primary text-white bg-primary text-white-bg">
+        <div class="card-header">Attach assessors for project <strong>{{ data.name }}</strong></div>
+        <div class="card-body">
 
             {% if pclasses is not none and pclasses|length > 0 %}
-                <div class="well">
+                <div class="card m-3 card-body">
                     <div class="row vertical-top marker-table">
-                        <div class="col-xs-4"><strong>Project type</strong></div>
-                        <div class="col-xs-2"><strong>Assessors required</strong></div>
-                        <div class="col-xs-2"><strong>Assessors attached</strong></div>
-                        <div class="col-xs-4"></div>
+                        <div class="col-4"><strong>Project type</strong></div>
+                        <div class="col-2"><strong>Assessors required</strong></div>
+                        <div class="col-2"><strong>Assessors attached</strong></div>
+                        <div class="col-4"></div>
                     </div>
 
                     {% for pclass in pclasses %}
                         <div class="row vertical-top marker-table">
-                            <div class="col-xs-4">{{ pclass.name }}</div>
-                            <div class="col-xs-2">
+                            <div class="col-4">{{ pclass.name }}</div>
+                            <div class="col-2">
                                 {% if pclass.uses_marker or pclass.uses_presentations %}
-                                    <span class="label label-info">{{ pclass.number_assessors }}</span>
+                                    <span class="badge badge-info">{{ pclass.number_assessors }}</span>
                                 {% else %}
-                                    <span class="label label-default">Not required</span>
+                                    <span class="badge badge-secondary">Not required</span>
                                 {% endif %}
                             </div>
-                            <div class="col-xs-6">
+                            <div class="col-6">
                                 {% set num = data.number_assessors(pclass) %}
                                 {% if pclass.uses_marker or pclass.uses_presentations %}
                                     {% if num >= pclass.number_assessors %}
-                                        <span class="label label-success">{{ num }}</span>
+                                        <span class="badge badge-success">{{ num }}</span>
                                     {% else %}
-                                        <span class="label label-warning">{{ num }}</span>
+                                        <span class="badge badge-warning">{{ num }}</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="label label-default">{{ num }}</span>
+                                    <span class="badge badge-secondary">{{ num }}</span>
                                 {% endif %}
                                 <p></p>
                                 {% for marker in data.get_assessor_list(pclass) %}
-                                    <span class="label label-default">{{ marker.user.name }}</span>
+                                    <span class="badge badge-secondary">{{ marker.user.name }}</span>
                                 {% endfor %}
                             </div>
                         </div>
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="well">
+                <div class="card m-3 card-body">
                     This project is not currently attached to any project types that require assessors
                 </div>
             {% endif %}
 
-            <div class="well">
+            <div class="card m-3 card-body">
                 <p>Filter by attachment status</p>
                 <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter='all', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                   class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
                     All
                 </a>
                 <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter='attached', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                   class="btn btn-sm filter-btn {% if state_filter == 'attached' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if state_filter == 'attached' %}btn-primary{% else %}btn-secondary{% endif %}">
                     Attached
                 </a>
                 <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter='not-attached', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                   class="btn btn-sm filter-btn {% if state_filter == 'not-attached' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if state_filter == 'not-attached' %}btn-primary{% else %}btn-secondary{% endif %}">
                     Not attached
                 </a>
 
@@ -129,12 +129,12 @@
 
                     <p>Filter by enrollment for project type</p>
                     <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter=state_filter, pclass_filter='all', group_filter=group_filter, create=create) }}"
-                       class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
                         All
                     </a>
                     {% for pclass in pclasses %}
                         <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter=state_filter, pclass_filter=pclass.id, group_filter=group_filter, create=create) }}"
-                           class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
+                           class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-secondary{% endif %}">
                             {{ pclass.name }}
                         </a>
                     {% endfor %}
@@ -145,12 +145,12 @@
 
                     <p>Filter by research group affiliation</p>
                     <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter='all', create=create) }}"
-                       class="btn btn-sm filter-btn {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
                         All
                     </a>
                     {% for group in groups %}
                         <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group.id, create=create) }}"
-                           class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-default{% endif %}">
+                           class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-secondary{% endif %}">
                             {{ group.name }}
                         </a>
                     {% endfor %}
@@ -159,14 +159,14 @@
                 <hr class="intro-divider">
 
                 <div class="row vertical-align">
-                    <div class="col-xs-12">
-                        <div class="pull-right">
+                    <div class="col-12">
+                        <div class="float-right">
                             <a href="{{ url_for('faculty.remove_all_assessors', proj_id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                               class="btn btn-default">
+                               class="btn btn-secondary">
                                 <i class="fa fa-trash"></i> Remove all
                             </a>
                             <a href="{{ url_for('faculty.attach_all_assessors', proj_id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                               class="btn btn-default">
+                               class="btn btn-secondary">
                                 <i class="fa fa-check"></i> Attach all
                             </a>
                         </div>
@@ -193,10 +193,10 @@
         <a href="{{ url_for('faculty.attach_skills', id=data.id, create=1) }}" class="btn btn-primary">
             Next: Attach transferable skills
         </a>
-        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-default">
+        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-secondary">
             Save and exit
         </a>
-        <a href="{{ url_for('faculty.project_preview', id=data.id, text='project list', url=url_for('faculty.edit_projects')) }}" class="btn btn-default">
+        <a href="{{ url_for('faculty.project_preview', id=data.id, text='project list', url=url_for('faculty.edit_projects')) }}" class="btn btn-secondary">
             Save and preview
         </a>
     {% else %}

@@ -36,22 +36,22 @@ _supervisor = \
 _timestamps = \
 """
 {% if req.request_timestamp is not none %}
-    <span class="label label-default">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+    <span class="badge badge-default">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
 {% endif %}
 {% if req.response_timestamp is not none %}
-    <span class="label label-default">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+    <span class="badge badge-default">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
 {% endif %}
 {% if req.request_timestamp is not none and req.response_timestamp is not none %}
     {% set delta = req.response_timestamp - req.request_timestamp %}
     {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-    <span class="label label-primary"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+    <span class="badge badge-primary"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
 {% elif req.request_timestamp is not none %}
     {% set delta = now - req.request_timestamp %}
     {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-    <span class="label label-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+    <span class="badge badge-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
 {% endif %}
 {% if not req.viewed %}
-    <span class="label label-danger">NOT VIEWED</span>
+    <span class="badge badge-danger">NOT VIEWED</span>
 {% endif %}
 """
 
@@ -59,11 +59,11 @@ _timestamps = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
     {% set sel = req.owner %}
     {% set project = req.project %}
     {% set config = sel.config %}

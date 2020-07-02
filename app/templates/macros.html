@@ -34,9 +34,9 @@
 {% macro edit_data(item) %}
     {% if item and (item.created_by or item.last_edited_by) %}
         <hr class="intro-divider">
-        <div class="panel panel-default">
-            <div class="panel-heading">History</div>
-            <div class="panel-body">
+        <div class="card m-3">
+            <div class="card-header">History</div>
+            <div class="card-body">
                 {% if item.created_by %}
                     <p>
                         Created by {{ item.created_by.name_and_username }}
@@ -59,42 +59,44 @@
 {% endmacro %}
 
 {% macro message_card(message, fac_data) %}
-    <div class="well">
-        <div class="row vertical-top" style="margin-bottom: 1%;">
-            <div class="col-xs-5">
-                {% if message.title|length > 0 %}
-                    <strong>{{ message.title }}</strong>
-                {% endif %}
+    <div class="card m-3 border-secondary">
+        {% if message.title is defined and message.title|length > 0 %}
+            <div class="card-header bg-secondary text-white">
+                <strong>{{ message.title }}</strong>
             </div>
-            <div class="col-xs-7">
-                <div class="pull-right">
-                    {% if fac_data is defined and fac_data is not none %}
-                        {% for pclass in message.project_classes %}
-                            {% if fac_data.is_enrolled(pclass) %}
-                                <span class="label label-info">{{ pclass.name }}</span>
-                            {% endif %}
-                        {% endfor %}
-                    {% endif %}
+        {% endif %}
+        <div class="card-body">
+            <div class="row vertical-top m-1">
+                <div class="col-12">
+                    <div class="float-right">
+                        {% if fac_data is defined and fac_data is not none %}
+                            {% for pclass in message.project_classes %}
+                                {% if fac_data.is_enrolled(pclass) %}
+                                    <span class="badge badge-info">{{ pclass.name }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="row">
-            <div class="col-xs-12">
-                {{ message.body|markdown|bclean|blinkify|safe }}
+            <div class="row">
+                <div class="col-12">
+                    {{ message.body|markdown|bclean|blinkify|safe }}
+                </div>
             </div>
-        </div>
-        <hr class="intro-divider">
-        <div class="row">
-            <div class="col-xs-9">
-                Posted by <a href="mailto:{{ message.user.email }}">{{ message.user.name }}</a>
-                on {{ message.issue_date.strftime("%a %d %b %Y %H:%M:%S") }}
-            </div>
-            <div class="col-xs-3">
-                {% if message.dismissible %}
-                    <div class="pull-right">
-                        <a href="{{ url_for('admin.dismiss_message', id=message.id) }}" class="btn btn-default">Don't show again</a>
-                    </div>
-                {% endif %}
+            <hr class="intro-divider">
+            <div class="row">
+                <div class="col-9">
+                    Posted by <a href="mailto:{{ message.user.email }}">{{ message.user.name }}</a>
+                    on {{ message.issue_date.strftime("%a %d %b %Y %H:%M:%S") }}
+                </div>
+                <div class="col-3">
+                    {% if message.dismissible %}
+                        <div class="float-right">
+                            <a href="{{ url_for('admin.dismiss_message', id=message.id) }}" class="btn btn-secondary">Don't show again</a>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -154,54 +156,54 @@
 {% endmacro %}
 
 {% macro research_groups_key(groups) %}
-    <div class="well">
+    <div class="card m-3 card-body">
         <p>Research groups colour key</p>
         <hr class="intro-divider">
         <h4>
             {% for group in groups %}
-                <span class="label label-default" style="{{ group.make_CSS_style() }} display:inline-block; font-size: 80%; margin-bottom: 4px;">{{ group.name }}</span>
+                <span class="badge badge-secondary" style="{{ group.make_CSS_style() }} display:inline-block; font-size: 80%; margin-bottom: 4px;">{{ group.name }}</span>
             {% endfor %}
         </h4>
     </div>
 {% endmacro %}
 
 {% macro skill_groups_key(groups) %}
-    <div class="well">
+    <div class="card m-3 card-body">
         <p>Transferable skill groups colour key</p>
         <hr class="intro-divider">
         <h4>
             {% for group in groups %}
-                <span class="label label-default" style="{{ group.make_CSS_style() }} display:inline-block; font-size: 80%; margin-bottom: 4px;">{{ group.name }}</span>
+                <span class="badge badge-secondary" style="{{ group.make_CSS_style() }} display:inline-block; font-size: 80%; margin-bottom: 4px;">{{ group.name }}</span>
             {% endfor %}
         </h4>
     </div>
 {% endmacro %}
 
 {% macro filter_block(config, groups, skill_groups, skill_list, clear_group, add_group, remove_group, clear_skill, add_skill, remove_skill) %}
-    <div class="panel-group" id="accordion">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <h4 class="panel-title">
+    <div id="accordion">
+        <div class="card m-3">
+            <div class="card-header">
+                <h4 class="card-title">
                     <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseFilter">
                         Filters
                         {% if config.group_filters.first() or config.skill_filters.first() %}
                             [active]
                         {% endif %}
-                        <i class="indicator glyphicon glyphicon-chevron-up pull-right"></i>
+                        <i class="indicator glyphicon glyphicon-chevron-up float-right"></i>
                     </a>
                 </h4>
             </div>
-            <div id="collapseFilter" class="panel-collapse collapse in">
-                <div class="panel-body">
-                    <div class="panel panel-default">
-                        <div class="panel-body">
+            <div id="collapseFilter" class="collapse in">
+                <div class="card-body">
+                    <div class="card m-3">
+                        <div class="card-body">
                             <div class="row">
-                                <div class="col-xs-9"><span class="filter-title">Research group filters</span></div>
-                                <div class="col-xs-3">
+                                <div class="col-9"><span class="filter-title">Research group filters</span></div>
+                                <div class="col-3">
                                     {% set enabled = true %}
                                     {% if not config.group_filters.first() %}{% set enabled = false %}{% endif %}
-                                    <div class="pull-right">
-                                        <a class="btn btn-sm btn-default {% if not enabled %}disabled{% endif %}"
+                                    <div class="float-right">
+                                        <a class="btn btn-sm btn-secondary {% if not enabled %}disabled{% endif %}"
                                            {% if enabled %}href="{{ url_for(clear_group, id=config.id) }}"{% endif %}>
                                             Clear all
                                         </a>
@@ -212,7 +214,7 @@
                                 {% for group in groups %}
                                     {% if group in config.group_filters %}
                                         <a href="{{ url_for(remove_group, id=config.id, gid=group.id) }}"
-                                           class="label label-default selection-label" style="{{ group.make_CSS_style()|safe }}">
+                                           class="badge badge-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
                                             <i class="fa fa-times"></i>
                                             {{ group.name }}
                                         </a>
@@ -220,12 +222,12 @@
                                 {% endfor %}
                             </h4>
                         </div>
-                        <div class="panel-footer">
+                        <div class="card-footer">
                             <h4>
                                 {% for group in groups %}
                                     {% if group not in config.group_filters %}
                                         <a href="{{ url_for(add_group, id=config.id, gid=group.id) }}"
-                                           class="label label-default selection-label" style="{{ group.make_CSS_style()|safe }}">
+                                           class="badge badge-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
                                             <i class="fa fa-plus"></i>
                                             {{ group.name }}
                                         </a>
@@ -234,15 +236,15 @@
                             </h4>
                         </div>
                     </div>
-                    <div class="panel panel-default">
-                        <div class="panel-body">
+                    <div class="card m-3">
+                        <div class="card-body">
                             <div class="row">
-                                <div class="col-xs-9"><span class="filter-title">Transferable skill filters</span></div>
-                                <div class="col-xs-3">
+                                <div class="col-9"><span class="filter-title">Transferable skill filters</span></div>
+                                <div class="col-3">
                                     {% set enabled = true %}
                                     {% if not config.skill_filters.first() %}{% set enabled = false %}{% endif %}
-                                    <div class="pull-right">
-                                        <a class="btn btn-sm btn-default {% if not enabled %}disabled{% endif %}"
+                                    <div class="float-right">
+                                        <a class="btn btn-sm btn-secondary {% if not enabled %}disabled{% endif %}"
                                            {% if enabled %}href="{{ url_for(clear_skill, id=config.id) }}"{% endif %}>
                                             Clear all
                                         </a>
@@ -256,7 +258,7 @@
                                         {% for skill in skills  %}
                                             {% if skill in config.skill_filters %}
                                                 <a href="{{ url_for(remove_skill, id=config.id, skill_id=skill.id) }}"
-                                                   class="label label-default selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
+                                                   class="badge badge-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
                                                     <i class="fa fa-times"></i>
                                                     {{ skill.name }}
                                                 </a>
@@ -266,7 +268,7 @@
                                 {% endfor %}
                             </h4>
                         </div>
-                        <div class="panel-footer">
+                        <div class="card-footer">
                             <h4>
                                 {% for sgroup in skill_groups %}
                                     {% set skills = skill_list[sgroup] %}
@@ -277,7 +279,7 @@
                                         {% for skill in skills %}
                                             {% if skill not in config.skill_filters %}
                                                 <a href="{{ url_for(add_skill, id=config.id, skill_id=skill.id) }}"
-                                                   class="label label-default selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
+                                                   class="badge badge-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
                                                     <i class="fa fa-plus"></i>
                                                     {{ skill.name }}
                                                 </a>

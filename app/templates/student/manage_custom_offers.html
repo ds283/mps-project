@@ -10,13 +10,13 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
-            <div class="panel panel-success">
-                <div class="panel-heading">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card m-3 bg-success text-white">
+                <div class="card-header">
                     Manage custom offers for <strong>{{ config.project_class.name }}</strong>
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     {{ custom_offers_table(sel, sel.ordered_custom_offers, true) }}
                 </div>
             </div>
@@ -27,6 +27,6 @@
                 </a>
             </div>
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

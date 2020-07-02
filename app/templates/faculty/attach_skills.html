@@ -12,12 +12,12 @@
 {% endblock %}
 
 {% block form_content %}
-    <div class="panel panel-default">
-        <div class="panel-body">
+    <div class="card m-3">
+        <div class="card-body">
             {% if data and data.skills %}
                 <h4>
                 {% for skill in data.ordered_skills %}
-                    <a class="btn btn-default selection-label"
+                    <a class="btn btn-secondary selection-label"
                        {% if skill.group is not none %}
                             style="{{ skill.group.make_CSS_style() }}"
                        {% endif %}
@@ -34,7 +34,7 @@
                 <p>No skills currently defined</p>
             {% endif %}
         </div>
-        <div class="panel-footer">
+        <div class="card-footer">
             <form action="{{ url_for('faculty.attach_skills', id=data.id, create=create) }}" method="POST" name="skill-selector-form">
                 {{ form.hidden_tag() }}
                 {{ on_click_selector_field(form.selector, false) }}
@@ -43,7 +43,7 @@
                 <h4>
                     {% for skill in skills %}
                         {% if skill not in data.skills %}
-                            <a class="btn btn-default selection-label"
+                            <a class="btn btn-secondary selection-label"
                                href="{{ url_for('faculty.add_skill', projectid=data.id, skillid=skill.id, sel_id=sel_id, create=create) }}">
                                 <i class="fa fa-plus"></i> {{ skill.name }}
                             </a>
@@ -60,10 +60,10 @@
         <a href="{{ url_for('faculty.attach_programmes', id=data.id, create=1) }}" class="btn btn-primary">
             Next: Attach preferred degree programmes
         </a>
-        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-default">
+        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-secondary">
             Save and exit
         </a>
-        <a href="{{ url_for('faculty.project_preview', id=data.id, text='project list', url=url_for('faculty.edit_projects')) }}" class="btn btn-default">
+        <a href="{{ url_for('faculty.project_preview', id=data.id, text='project list', url=url_for('faculty.edit_projects')) }}" class="btn btn-secondary">
             Save and preview
         </a>
     {% else %}

@@ -287,7 +287,7 @@
             <span class="caret"></span>
         </a>
 
-        <ul class="dropdown-menu">
+        <div class="dropdown-menu">
         <li class="dropdown-header">Convenorships</li>
         {% for project_class in pclasses %}
             <li><a href="{{ url_for('convenor.overview', id=project_class.id) }}">
@@ -305,8 +305,8 @@
 {% endmacro %}
 
 {% block navbar %}
-    {% set theme = current_user.ui_theme %}
-    <nav class="navbar {% if theme == 'flat' or theme == 'dark' %}navbar-default{% else %}navbar-inverse{% endif %} navbar-fixed-top topnav" role="navigation">
+    {% set theme = current_user.ui_theme if current_user.ui_theme is defined else 'default' %}
+    <nav class="navbar navbar-expand {% if theme == 'flat' or theme == 'dark' %}navbar-light{% else %}navbar-inverse{% endif %} navbar-fixed-top topnav" role="navigation">
         {% if not live_platform %}
             <div class="notify-bar hidden-sm container-fluid">
                 <div class="container">Platform not live &mdash; external email disabled</div>
@@ -335,7 +335,7 @@
                                 My projects
                                 <span class="caret"></span>
                             </a>
-                            <ul class="dropdown-menu">
+                            <div class="dropdown-menu">
                                 <li><a href="{{ url_for('faculty.edit_projects') }}">
                                     <i class="fa fa-pencil"></i> My project library...
                                 </a></li>
@@ -361,7 +361,7 @@
                                 My projects
                                 <span class="caret"></span>
                             </a>
-                            <ul class="dropdown-menu">
+                            <div class="dropdown-menu">
                                 {% if current_user.student_data.has_timeline %}
                                     <li><a href="{{ url_for('student.timeline', student_id=current_user.id) }}">
                                         <i class="fa fa-clock-o"></i> Show history...
@@ -381,7 +381,7 @@
                                 Reports
                                 <span class="caret"></span>
                             </a>
-                            <ul class="dropdown-menu">
+                            <div class="dropdown-menu">
                                 <li><a href="{{ url_for('reports.all_projects') }}">
                                     <i class="fa fa-binoculars"></i> All projects...
                                 </a></li>
@@ -406,7 +406,7 @@
                                 Admin
                                 <span class="caret"></span>
                             </a>
-                            <ul class="dropdown-menu">
+                            <div class="dropdown-menu">
                                 {% if is_manage_users or is_root %}
                                     <li><a href="{{ url_for('manage_users.edit_users') }}">
                                         <i class="fa fa-users"></i> Manage users...
@@ -469,7 +469,7 @@
                                 Site management
                                 <span class="caret"></span>
                             </a>
-                            <ul class="dropdown-menu">
+                            <div class="dropdown-menu">
                                 {% if is_root %}
                                     <li><a href="{{ url_for('manage_users.edit_roles') }}">
                                         <i class="fa fa-cogs"></i> Role editor...
@@ -510,7 +510,7 @@
                                 {% endif %}
                                 <span class="caret"></span>
                             </a>
-                            <ul class="dropdown-menu">
+                            <div class="dropdown-menu">
                                 <li><a href="{{ url_for('home.homepage') }}">
                                     <i class="fa fa-area-chart"></i> Dashboard...
                                 </a></li>
@@ -588,45 +588,45 @@
         {% block pillblock %}
         {% endblock %}
         <div class="row">
-            <div class="col-xs-1"></div>
-            <div class="col-xs-10">
-                <div id="tasks-area" class="well collapse" aria-expanded="false">
+            <div class="col-1"></div>
+            <div class="col-10">
+                <div id="tasks-area" class="card m-3 card-body collapse" aria-expanded="false">
                     <div class="row">
-                        <div class="col-xs-2"></div>
-                        <div class="col-xs-8">
-                            <div style="text-align: center;"><strong>Tasks in progress</strong></div>
+                        <div class="col-2"></div>
+                        <div class="col-8 text-center">
+                            <strong>Tasks in progress</strong>
                         </div>
-                        <div class="col-xs-2">
-                            <div class="pull-right">
+                        <div class="col-2">
+                            <div class="float-right">
                                 <div id="close-tasks-area"><i class="fa fa-times"></i></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-xs-1"></div>
+            <div class="col-1"></div>
         </div>
         <div class="row">
-            <div class="col-xs-1"></div>
-            <div class="col-xs-10">
+            <div class="col-1"></div>
+            <div class="col-10">
                 <div id="flashed-messages" class="collapse in" aria-expanded="true">
                     {{ flashed_messages(dismissible=True) }}
                 </div>
             </div>
-            <div class="col-xs-1"></div>
+            <div class="col-1"></div>
         </div>
         <div class="row">
-            <div class="col-xs-1"></div>
-            <div class="col-xs-10">
+            <div class="col-1"></div>
+            <div class="col-10">
                 <div id="messages-area" class="collapse" aria-expanded="false">
                 </div>
             </div>
-            <div class="col-xs-1"></div>
+            <div class="col-1"></div>
         </div>
         <br/>
         {% block bodyblock %}{% endblock %}
     </div>
-    <nav class="navbar {% if real_user %}navbar-inverse{% else %}navbar-default{% endif %} navbar-fixed-bottom" role="navigation">
+    <nav class="navbar navbar-expand {% if real_user %}navbar-inverse{% else %}navbar-light{% endif %} navbar-fixed-bottom" role="navigation">
         <div class="navbar-header footer-bar">
             <div class="container">
                 <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} University of Sussex</span>

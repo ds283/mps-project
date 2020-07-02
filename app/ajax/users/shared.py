@@ -39,11 +39,11 @@ name = \
         </div>
     {% endif %}
     {% set theme = u.ui_theme if u.ui_theme is defined else 'default' %}
-    {% if theme == 'default'' %}
+    {% if theme == 'default' %}
         <span class="badge badge-primary">Default</span>
-    {% elif theme == 'flat'' %}
+    {% elif theme == 'flat' %}
         <span class="badge badge-primary">Flat</span>
-    {% elif theme == 'dark'' %}
+    {% elif theme == 'dark' %}
         <span class="badge badge-primary">Dark</span>
     {% else %}
         <span class="badge badge-danger">Unknown theme</span>

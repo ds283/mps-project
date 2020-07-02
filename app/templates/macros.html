@@ -127,7 +127,7 @@
         <div class="input-group date" data-provide="datepicker">
             {{ field(class="form-control")|safe }}
             <div class="input-group-addon">
-                <span class="glyphicon glyphicon-th"></span>
+                <i class="fa fa-calendar"></i>
             </div>
         </div>
         {% if field.errors %}
@@ -157,25 +157,29 @@
 
 {% macro research_groups_key(groups) %}
     <div class="card m-3 card-body">
-        <p>Research groups colour key</p>
-        <hr class="intro-divider">
-        <h4>
-            {% for group in groups %}
-                <span class="badge badge-secondary" style="{{ group.make_CSS_style() }} display:inline-block; font-size: 80%; margin-bottom: 4px;">{{ group.name }}</span>
-            {% endfor %}
-        </h4>
+        <div class="row">
+            <div class="col-12">
+                <p>Research groups colour key</p>
+                <hr class="intro-divider">
+                {% for group in groups %}
+                    <span class="badge badge-secondary" style="{{ group.make_CSS_style() }} display:inline-block; font-size: 80%; margin-bottom: 4px;">{{ group.name }}</span>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 {% endmacro %}
 
 {% macro skill_groups_key(groups) %}
     <div class="card m-3 card-body">
-        <p>Transferable skill groups colour key</p>
-        <hr class="intro-divider">
-        <h4>
-            {% for group in groups %}
-                <span class="badge badge-secondary" style="{{ group.make_CSS_style() }} display:inline-block; font-size: 80%; margin-bottom: 4px;">{{ group.name }}</span>
-            {% endfor %}
-        </h4>
+        <div class="row">
+            <div class="col-12">
+                <p>Transferable skill groups colour key</p>
+                <hr class="intro-divider">
+                {% for group in groups %}
+                    <span class="badge badge-secondary" style="{{ group.make_CSS_style() }} display:inline-block; font-size: 80%; margin-bottom: 4px;">{{ group.name }}</span>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 {% endmacro %}
 
@@ -183,17 +187,15 @@
     <div id="accordion">
         <div class="card m-3">
             <div class="card-header">
-                <h4 class="card-title">
-                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseFilter">
-                        Filters
-                        {% if config.group_filters.first() or config.skill_filters.first() %}
-                            [active]
-                        {% endif %}
-                        <i class="indicator glyphicon glyphicon-chevron-up float-right"></i>
-                    </a>
-                </h4>
+                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseFilter">
+                    Filters
+                    {% if config.group_filters.first() or config.skill_filters.first() %}
+                        [active]
+                    {% endif %}
+                    <i class="indicator fa fa-chevron-up float-right"></i>
+                </a>
             </div>
-            <div id="collapseFilter" class="collapse in">
+            <div id="collapseFilter" class="collapse show">
                 <div class="card-body">
                     <div class="card m-3">
                         <div class="card-body">
@@ -210,30 +212,26 @@
                                     </div>
                                 </div>
                             </div>
-                            <h4>
-                                {% for group in groups %}
-                                    {% if group in config.group_filters %}
-                                        <a href="{{ url_for(remove_group, id=config.id, gid=group.id) }}"
-                                           class="badge badge-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
-                                            <i class="fa fa-times"></i>
-                                            {{ group.name }}
-                                        </a>
-                                    {% endif %}
-                                {% endfor %}
-                            </h4>
+                            {% for group in groups %}
+                                {% if group in config.group_filters %}
+                                    <a href="{{ url_for(remove_group, id=config.id, gid=group.id) }}"
+                                       class="badge badge-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
+                                        <i class="fa fa-times"></i>
+                                        {{ group.name }}
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
                         </div>
                         <div class="card-footer">
-                            <h4>
-                                {% for group in groups %}
-                                    {% if group not in config.group_filters %}
-                                        <a href="{{ url_for(add_group, id=config.id, gid=group.id) }}"
-                                           class="badge badge-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
-                                            <i class="fa fa-plus"></i>
-                                            {{ group.name }}
-                                        </a>
-                                    {% endif %}
-                                {% endfor %}
-                            </h4>
+                            {% for group in groups %}
+                                {% if group not in config.group_filters %}
+                                    <a href="{{ url_for(add_group, id=config.id, gid=group.id) }}"
+                                       class="badge badge-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
+                                        <i class="fa fa-plus"></i>
+                                        {{ group.name }}
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
                         </div>
                     </div>
                     <div class="card m-3">
@@ -251,43 +249,39 @@
                                     </div>
                                 </div>
                             </div>
-                            <h4>
-                                {% for sgroup in skill_groups %}
-                                    {% set skills = skill_list[sgroup] %}
-                                    <div class="skills-filter-container">
-                                        {% for skill in skills  %}
-                                            {% if skill in config.skill_filters %}
-                                                <a href="{{ url_for(remove_skill, id=config.id, skill_id=skill.id) }}"
-                                                   class="badge badge-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
-                                                    <i class="fa fa-times"></i>
-                                                    {{ skill.name }}
-                                                </a>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                {% endfor %}
-                            </h4>
+                            {% for sgroup in skill_groups %}
+                                {% set skills = skill_list[sgroup] %}
+                                <div class="skills-filter-container">
+                                    {% for skill in skills  %}
+                                        {% if skill in config.skill_filters %}
+                                            <a href="{{ url_for(remove_skill, id=config.id, skill_id=skill.id) }}"
+                                               class="badge badge-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
+                                                <i class="fa fa-times"></i>
+                                                {{ skill.name }}
+                                            </a>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
                         </div>
                         <div class="card-footer">
-                            <h4>
-                                {% for sgroup in skill_groups %}
-                                    {% set skills = skill_list[sgroup] %}
-                                    <div class="skills-filter-container">
-                                        <div class="skill-group-heading">
-                                            {{ sgroup }}
-                                        </div>
-                                        {% for skill in skills %}
-                                            {% if skill not in config.skill_filters %}
-                                                <a href="{{ url_for(add_skill, id=config.id, skill_id=skill.id) }}"
-                                                   class="badge badge-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
-                                                    <i class="fa fa-plus"></i>
-                                                    {{ skill.name }}
-                                                </a>
-                                            {% endif %}
-                                        {% endfor %}
+                            {% for sgroup in skill_groups %}
+                                {% set skills = skill_list[sgroup] %}
+                                <div class="skills-filter-container">
+                                    <div class="skill-group-heading">
+                                        {{ sgroup }}
                                     </div>
-                                {% endfor %}
-                            </h4>
+                                    {% for skill in skills %}
+                                        {% if skill not in config.skill_filters %}
+                                            <a href="{{ url_for(add_skill, id=config.id, skill_id=skill.id) }}"
+                                               class="badge badge-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
+                                                <i class="fa fa-plus"></i>
+                                                {{ skill.name }}
+                                            </a>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>

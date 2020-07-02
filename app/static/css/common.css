@@ -1,3 +1,7 @@
+html {
+    padding-bottom: 4rem;
+}
+
 p.copyright {
     margin: 15px 0 0;
 }
@@ -92,7 +96,7 @@ p.copyright {
 .skill-group-heading {
     font-size: 15px;
     font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-weight: lighter;
+    font-weight: bold;
     margin-bottom: 6px;
 }
 

@@ -8,14 +8,18 @@
 
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
-        <li {% if pane == 'overview' %}class="active"{% endif %}><a href="{{ url_for('admin.backups_overview') }}">
-            Overview
-        </a></li>
-        <li {% if pane == 'view' %}class="active"{% endif %}><a href="{{ url_for('admin.manage_backups') }}">
-            View backups
-            {% if backup_count is defined %}
-                <span class="badge badge-secondary badge-pill">{{ backup_count }}</span>
-            {% endif %}
-        </a></li>
+        <li class="nav-item">
+            <a class="nav-link {% if pane == 'overview' %}active{% endif %}" href="{{ url_for('admin.backups_overview') }}">
+                Overview
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if pane == 'view' %}active{% endif %}" href="{{ url_for('admin.manage_backups') }}">
+                View backups
+                {% if backup_count is defined %}
+                    <span class="badge badge-dark badge-pill">{{ backup_count }}</span>
+                {% endif %}
+            </a>
+        </li>
     </ul>
 {% endblock %}

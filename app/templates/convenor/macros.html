@@ -3,8 +3,8 @@
         <div class="row vertical-top bookmark-table">
             <div class="col-1"><strong>Rank</strong></div>
             <div class="col-5"><strong>Project title</strong></div>
-            <div class="col-5"><strong>Supervisor/Research group</strong></div>
-            <div class="col-1"></div>
+            <div class="col-4"><strong>Supervisor/Research group</strong></div>
+            <div class="col-2"></div>
         </div>
         <div class="list-group" id="project-bookmarks">
             {% for item in list %}
@@ -24,14 +24,16 @@
                             <span class="badge badge-danger"><i class="fa fa-times"></i> Not available</span>
                         {% endif %}
                     </div>
-                    <div class="col-5">
+                    <div class="col-4">
                         <a href="mailto:{{ project.owner.user.email }}">
                             {{ project.owner.user.name }}
                         </a>
                         {{ project.group.make_label(project.group.name)|safe }}
                     </div>
-                   <div class="col-1">
-                        <a href="{{ url_for('convenor.delete_student_bookmark', sid=sel.id, bid=item.id) }}" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                   <div class="col-2">
+                       <div class="float-right">
+                           <a href="{{ url_for('convenor.delete_student_bookmark', sid=sel.id, bid=item.id) }}" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                       </div>
                     </div>
                 </div>
             {% endfor %}
@@ -42,16 +44,16 @@
 {% macro bookmark_students(proj, list) %}
     <div class="container-fluid">
         <div class="row vertical-align bookmark-table">
-            <div class="col-4"><strong>Student</strong></div>
+            <div class="col-3"><strong>Student</strong></div>
             <div class="col-1"><strong>Rank</strong></div>
             <div class="col-3"><strong>Choices submitted</strong></div>
             <div class="col-3"><strong>In submission</strong></div>
-            <div class="col-1"></div>
+            <div class="col-2"></div>
         </div>
         <div class="list-group" id="student-bookmarks">
             {% for item in list %}
                 <div class="row vertical-top bookmark-table">
-                    <div class="col-4">
+                    <div class="col-3">
                         {{ item.format_name|safe }}
                     </div>
                     <div class="col-1">
@@ -80,8 +82,10 @@
                             <span class="badge badge-secondary">n/a</span>
                         {% endif %}
                     </div>
-                    <div class="col-1">
-                        <a href="#" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                    <div class="col-2">
+                        <div class="float-right">
+                            <a href="#" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                        </div>
                     </div>
                 </div>
             {% endfor %}
@@ -94,8 +98,8 @@
         <div class="row vertical-align bookmark-table">
             <div {% if show_hint %}class="col-4"{% else %}class="col-5"{% endif %}><strong>Student</strong></div>
             <div {% if show_hint %}class="col-3"{% else %}class="col-2"{% endif %}><strong>Rank</strong></div>
-            <div class="col-4"><strong>Timestamp and IP</strong></div>
-            <div class="col-1"></div>
+            <div class="col-3"><strong>Timestamp and IP</strong></div>
+            <div class="col-2"></div>
         </div>
         <div class="list-group" id="student-selections">
             {% for item in list %}
@@ -112,33 +116,33 @@
                             <div class="rank-hint-button">
                                 <a class="badge badge-info dropdown-toggle" type="button" data-toggle="dropdown">
                                     Hint
-                                    <span class="caret"></span>
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-right">
                                     {% set menu_items = item.menu_order %}
                                     {% for mi in menu_items %}
                                         {% if mi is string %}
-                                            <li role="separator" class="divider"></li>
-                                            <li class="dropdown-header">{{ mi }}</li>
+                                            <div role="separator" class="divider"></div>
+                                            <div class="dropdown-header">{{ mi }}</div>
                                         {% elif mi is number %}
                                             {% set disabled = (mi == item.hint) %}
-                                            <li {% if disabled %}class="disabled"{% endif %}>
-                                                <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
-                                                    {{ item.menu_item(mi)|safe }}
-                                                </a>
-                                            </li>
+                                            <a class="dropdown-item {% if disabled %}disabled{% endif %}"
+                                               {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                                                {{ item.menu_item(mi)|safe }}
+                                            </a>
                                         {% endif %}
                                     {% endfor %}
-                                </ul>
+                                </div>
                             </div>
                         {% endif %}
                     </div>
-                    <div class="col-4">
+                    <div class="col-3">
                         {{ item.owner.submission_time.strftime("%a %d %b %Y %H:%M:%S") }} /
                         {{ item.owner.submission_IP }}
                     </div>
-                    <div class="col-1">
-                        <a href="#" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                    <div class="col-2">
+                        <div class="float-right">
+                            <a href="#" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                        </div>
                     </div>
                 </div>
             {% endfor %}
@@ -152,8 +156,8 @@
         <div class="row vertical-align final-selection-table">
             <div {% if show_hint %}class="col-2"{% else %}class="col-1"{% endif %}><strong>Rank</strong></div>
             <div {% if show_hint %}class="col-4"{% else %}class="col-5"{% endif %}><strong>Project title</strong></div>
-            <div class="col-5"><strong>Supervisor/Research group</strong></div>
-            <div class="col-1"></div>
+            <div class="col-4"><strong>Supervisor/Research group</strong></div>
+            <div class="col-2"></div>
         </div>
         <div class="list-group" id="project-selections">
             {% for item in list %}
@@ -169,24 +173,22 @@
                             <div class="rank-hint-button">
                                 <a class="badge badge-info dropdown-toggle" type="button" data-toggle="dropdown">
                                     Hint
-                                    <span class="caret"></span>
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-right">
                                     {% set menu_items = item.menu_order %}
                                     {% for mi in menu_items %}
                                         {% if mi is string %}
-                                            <li role="separator" class="divider"></li>
-                                            <li class="dropdown-header">{{ mi }}</li>
+                                            <div role="separator" class="dropdown-divider"></div>
+                                            <div class="dropdown-header">{{ mi }}</div>
                                         {% elif mi is number %}
                                             {% set disabled = (mi == item.hint) %}
-                                            <li {% if disabled %}class="disabled"{% endif %}>
-                                                <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
-                                                    {{ item.menu_item(mi)|safe }}
-                                                </a>
-                                            </li>
+                                            <a class="dropdown-item {% if disabled %}disabled{% endif %}"
+                                               {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                                                {{ item.menu_item(mi)|safe }}
+                                            </a>
                                         {% endif %}
                                     {% endfor %}
-                                </ul>
+                                </div>
                             </div>
                         {% endif %}
                     </div>
@@ -195,15 +197,17 @@
                             {{ item.format_project(show_hint=show_hint)|safe }}
                         </a>
                     </div>
-                    <div class="col-5">
+                    <div class="col-4">
                         <a href="mailto:{{ project.owner.user.email }}">
                             {{ project.owner.user.name }}
                         </a>
                         {{ project.group.make_label(project.group.name)|safe }}
                     </div>
-                    <div class="col-1">
+                    <div class="col-2">
                         {% if show_delete %}
-                            <a {% if can_delete %}href="{{ url_for('convenor.delete_student_choice', sid=sel.id, cid=item.id) }}"{% endif %} class="btn btn-sm btn-danger {% if not can_delete %}disabled{% endif %}"><i class="fa fa-trash"></i> Delete</a>
+                            <div class="float-right">
+                                <a {% if can_delete %}href="{{ url_for('convenor.delete_student_choice', sid=sel.id, cid=item.id) }}"{% endif %} class="btn btn-sm btn-danger {% if not can_delete %}disabled{% endif %}"><i class="fa fa-trash"></i> Delete</a>
+                            </div>
                         {% endif %}
                     </div>
                 </div>

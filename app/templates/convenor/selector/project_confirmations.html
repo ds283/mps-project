@@ -18,9 +18,9 @@
                 <div class="card-body">
                     <div class="container-fluid">
                         <div class="row vertical-align confirmation-table">
-                            <div class="col-4"><strong>Student</strong></div>
-                            <div class="col-4"><strong>Timestamps</strong></div>
-                            <div class="col-4"></div>
+                            <div class="col-5"><strong>Student</strong></div>
+                            <div class="col-5"><strong>Timestamps</strong></div>
+                            <div class="col-2"></div>
                         </div>
 
                         <hr class="intro-divider">
@@ -28,13 +28,13 @@
                         {% for req in project.requests_confirmed %}
                             {% set sel = req.owner %}
                             <div class="row vertical-align confirmation-table">
-                                <div class="col-4">
+                                <div class="col-5">
                                     {{ sel.student.user.name }}
                                     {% if not sel.satisfies_recommended(project) %}
                                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                     {% endif %}
                                 </div>
-                                <div class="col-4">
+                                <div class="col-5">
                                     {% if req.request_timestamp is not none %}
                                         <span class="badge badge-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                     {% endif %}
@@ -51,36 +51,30 @@
                                         <span class="badge badge-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
                                     {% endif %}
                                 </div>
-                                <div class="col-4">
-                                    <div class="dropdown">
-                                        <a class="btn btn-warning dropdown-toggle " data-toggle="dropdown">
-                                            Deconfirm <span class="caret"></span>
-                                        </a>
-                                        <div class="dropdown-menu">
-                                            {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                                <li>
-                                                    <a href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
+                                <div class="col-2">
+                                    <div class="float-right">
+                                        <div class="dropdown">
+                                            <a class="btn btn-warning dropdown-toggle " data-toggle="dropdown">
+                                                Deconfirm
+                                            </a>
+                                            <div class="dropdown-menu">
+                                                {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                                    <a class="dropdown-item" href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-clock-o"></i> Make pending
                                                     </a>
-                                                </li>
-                                                <li>
-                                                    <a href="{{ url_for('convenor.deconfirm', sid=sel.id, pid=project.id) }}">
+                                                    <a class="dropdown-item" href="{{ url_for('convenor.deconfirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-trash"></i> Delete
                                                     </a>
-                                                </li>
-                                            {% else %}
-                                                <li class="disabled">
-                                                    <a>
+                                                {% else %}
+                                                    <a class="dropdown-item disabled">
                                                         <i class="fa fa-clock-o"></i> Make pending
                                                     </a>
-                                                </li>
-                                                <li class="disabled">
-                                                    <a>
+                                                    <a class="dropdown-item disabled">
                                                         <i class="fa fa-trash"></i> Delete
                                                     </a>
-                                                </li>
-                                            {% endif %}
-                                        </ul>
+                                                {% endif %}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -91,13 +85,13 @@
                         {% for req in project.requests_waiting %}
                             {% set sel = req.owner %}
                             <div class="row vertical-align confirmation-table">
-                                <div class="col-4">
+                                <div class="col-5">
                                     {{ sel.student.user.name }}
                                     {% if not sel.satisfies_recommended(project) %}
                                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                     {% endif %}
                                 </div>
-                                <div class="col-4">
+                                <div class="col-5">
                                     {% if req.request_timestamp is not none %}
                                         <span class="badge badge-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                     {% endif %}
@@ -114,36 +108,30 @@
                                         <span class="badge badge-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
                                     {% endif %}
                                 </div>
-                                <div class="col-4">
-                                    <div class="dropdown">
-                                        <a class="btn btn-success dropdown-toggle" data-toggle="dropdown">
-                                            Confirm <span class="caret"></span>
-                                        </a>
-                                        <div class="dropdown-menu">
-                                            {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                                <li>
-                                                    <a href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
+                                <div class="col-2">
+                                    <div class="float-right">
+                                        <div class="dropdown">
+                                            <a class="btn btn-success dropdown-toggle" data-toggle="dropdown">
+                                                Confirm
+                                            </a>
+                                            <div class="dropdown-menu">
+                                                {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                                    <a class="dropdown-item" href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-check"></i> Confirm
                                                     </a>
-                                                </li>
-                                                <li>
-                                                    <a href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
+                                                    <a class="dropdown-item" href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-trash"></i> Delete
                                                     </a>
-                                                </li>
-                                            {% else %}
-                                                <li class="disabled">
-                                                    <a>
+                                                {% else %}
+                                                    <a class="dropdown-item disabled">
                                                         <i class="fa fa-check"></i> Confirm
                                                     </a>
-                                                </li>
-                                                <li class="disabled">
-                                                    <a>
+                                                    <a class="dropdown-item disabled">
                                                         <i class="fa fa-trash"></i> Delete
                                                     </a>
-                                                </li>
-                                            {% endif %}
-                                        </ul>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

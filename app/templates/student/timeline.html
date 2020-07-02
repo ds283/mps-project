@@ -28,7 +28,7 @@
                     {% if selectors is not none and selectors|length > 0 %}
                         {% for rec in selectors %}
                             {% set pclass = rec.config.project_class %}
-                            <div class="card m-3">
+                            <div class="card m-3 {% if not rec.has_submitted %}border-danger{% endif %}">
                                 <div class="card-header {% if rec.has_submitted %}bg-primary text-white{% else %}bg-danger text-white{% endif %}">Selecting for <strong>{{ pclass.name }}</strong></div>
                                 <div class="card-body">
                                     <div>

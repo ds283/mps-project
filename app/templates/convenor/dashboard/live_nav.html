@@ -2,13 +2,14 @@
 
 {% block tabblock %}
     <ul class="nav nav-tabs dashboard-nav">
-        <li {% if subpane=='list' %}class="active"{% endif %}>
-            <a href="{{ url_for('convenor.liveprojects', id=pclass.id) }}">
+        <li class="nav-item">
+            <a class="nav-link {% if subpane=='list' %}active{% endif %}" href="{{ url_for('convenor.liveprojects', id=pclass.id) }}">
                 Currently live projects
             </a>
         </li>
-        <li {% if config.live and not config.selection_closed %}{% if subpane=='attach' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>
-            <a {% if config.live and not config.selection_closed %}href="{{ url_for('convenor.attach_liveproject', id=pclass.id) }}"{% endif %}>
+        <li class="nav-item">
+            <a class="nav-link {% if config.live and not config.selection_closed %}{% if subpane=='attach' %}active{% endif %}{% else %}disabled{% endif %}"
+               {% if config.live and not config.selection_closed %}href="{{ url_for('convenor.attach_liveproject', id=pclass.id) }}"{% endif %}>
                 Manually attach a project
             </a>
         </li>

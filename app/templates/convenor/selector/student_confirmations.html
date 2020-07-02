@@ -60,40 +60,32 @@
                                     </a>
                                 </div>
                                 <div class="col-2">
-                                    <div class="dropdown">
-                                        <a class="btn btn-warning dropdown-toggle"
-                                                type="button" data-toggle="dropdown">
-                                            Deconfirm
-                                            {% if not sel.satisfies_recommended(project) %}
-                                                <i class="fa fa-exclamation-triangle" style="color:red;"></i>
-                                            {% endif %}
-                                            <span class="caret"></span>
-                                        </a>
-                                        <div class="dropdown-menu">
-                                            {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                                <li>
-                                                    <a href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
+                                    <div class="float-right">
+                                        <div class="dropdown">
+                                            <a class="btn btn-warning dropdown-toggle" type="button" data-toggle="dropdown">
+                                                Deconfirm
+                                                {% if not sel.satisfies_recommended(project) %}
+                                                    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                                                {% endif %}
+                                            </a>
+                                            <div class="dropdown-menu">
+                                                {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                                    <a class="dropdown-item" href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-clock-o"></i> Make pending
                                                     </a>
-                                                </li>
-                                                <li>
-                                                    <a href="{{ url_for('convenor.deconfirm', sid=sel.id, pid=project.id) }}">
+                                                    <a class="dropdown-item" href="{{ url_for('convenor.deconfirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-trash"></i> Delete
                                                     </a>
-                                                </li>
-                                            {% else %}
-                                                <li class="disabled">
-                                                    <a>
+                                                {% else %}
+                                                    <a class="dropdown-item disabled">
                                                         <i class="fa fa-clock-o"></i> Make pending
                                                     </a>
-                                                </li>
-                                                <li class="disabled">
-                                                    <a>
+                                                    <a class="dropdown-item disabled">
                                                         <i class="fa fa-trash"></i> Delete
                                                     </a>
-                                                </li>
-                                            {% endif %}
-                                        </ul>
+                                                {% endif %}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -135,40 +127,32 @@
                                     </a>
                                 </div>
                                 <div class="col-2">
-                                    <div class="dropdown">
-                                        <a class="btn btn-success dropdown-toggle"
-                                                type="button" data-toggle="dropdown">
-                                            Confirm
-                                            {% if not sel.satisfies_recommended(project) %}
-                                                <i class="fa fa-exclamation-triangle" style="color:white;"></i>
-                                            {% endif %}
-                                            <span class="caret"></span>
-                                        </a>
-                                        <div class="dropdown-menu">
-                                            {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                                <li>
-                                                    <a href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
+                                    <div class="float-right">
+                                        <div class="dropdown">
+                                            <a class="btn btn-success dropdown-toggle" type="button" data-toggle="dropdown">
+                                                Confirm
+                                                {% if not sel.satisfies_recommended(project) %}
+                                                    <i class="fa fa-exclamation-triangle" style="color:white;"></i>
+                                                {% endif %}
+                                            </a>
+                                            <div class="dropdown-menu">
+                                                {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                                    <a class="dropdown-item" href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-check"></i> Confirm
                                                     </a>
-                                                </li>
-                                                <li>
-                                                    <a href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
+                                                    <a class="dropdown-item" href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-trash"></i> Delete
                                                     </a>
-                                                </li>
-                                            {% else %}
-                                                <li class="disabled">
-                                                    <a>
+                                                {% else %}
+                                                    <a class="dropdown-item disabled">
                                                         <i class="fa fa-check"></i> Confirm
                                                     </a>
-                                                </li>
-                                                <li class="disabled">
-                                                    <a>
+                                                    <a class="dropdown-item disabled">
                                                         <i class="fa fa-trash"></i> Delete
                                                     </a>
-                                                </li>
-                                            {% endif %}
-                                        </ul>
+                                                {% endif %}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

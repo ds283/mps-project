@@ -110,66 +110,74 @@
             {% endif %}
 
             <div class="card m-3 card-body">
-                <p>Filter by attachment status</p>
-                <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter='all', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                   class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
-                    All
-                </a>
-                <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter='attached', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                   class="btn btn-sm filter-btn {% if state_filter == 'attached' %}btn-primary{% else %}btn-secondary{% endif %}">
-                    Attached
-                </a>
-                <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter='not-attached', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                   class="btn btn-sm filter-btn {% if state_filter == 'not-attached' %}btn-primary{% else %}btn-secondary{% endif %}">
-                    Not attached
-                </a>
+                <div class="row">
+                    <div class="col-12">
+                        <p>Filter by attachment status</p>
+                        <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter='all', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
+                           class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            All
+                        </a>
+                        <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter='attached', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
+                           class="btn btn-sm filter-btn {% if state_filter == 'attached' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Attached
+                        </a>
+                        <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter='not-attached', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
+                           class="btn btn-sm filter-btn {% if state_filter == 'not-attached' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Not attached
+                        </a>
+                    </div>
+                </div>
 
                 {% if pclasses is not none and pclasses|length > 0 %}
                     <hr class="intro-divider">
-
-                    <p>Filter by enrollment for project type</p>
-                    <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter=state_filter, pclass_filter='all', group_filter=group_filter, create=create) }}"
-                       class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
-                        All
-                    </a>
-                    {% for pclass in pclasses %}
-                        <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter=state_filter, pclass_filter=pclass.id, group_filter=group_filter, create=create) }}"
-                           class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-secondary{% endif %}">
-                            {{ pclass.name }}
-                        </a>
-                    {% endfor %}
+                    <div class="row">
+                        <div class="col-12">
+                            <p>Filter by enrollment for project type</p>
+                            <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter=state_filter, pclass_filter='all', group_filter=group_filter, create=create) }}"
+                               class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                All
+                            </a>
+                            {% for pclass in pclasses %}
+                                <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter=state_filter, pclass_filter=pclass.id, group_filter=group_filter, create=create) }}"
+                                   class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    {{ pclass.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
                 {% endif %}
 
                 {% if groups is not none and groups|length > 0 %}
                     <hr class="intro-divider">
-
-                    <p>Filter by research group affiliation</p>
-                    <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter='all', create=create) }}"
-                       class="btn btn-sm filter-btn {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
-                        All
-                    </a>
-                    {% for group in groups %}
-                        <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group.id, create=create) }}"
-                           class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-secondary{% endif %}">
-                            {{ group.name }}
-                        </a>
-                    {% endfor %}
-                {% endif %}
-
-                <hr class="intro-divider">
-
-                <div class="row vertical-align">
-                    <div class="col-12">
-                        <div class="float-right">
-                            <a href="{{ url_for('faculty.remove_all_assessors', proj_id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                               class="btn btn-secondary">
-                                <i class="fa fa-trash"></i> Remove all
+                    <div class="row">
+                        <div class="col-12">
+                            <p>Filter by research group affiliation</p>
+                            <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter='all', create=create) }}"
+                               class="btn btn-sm filter-btn {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                All
                             </a>
-                            <a href="{{ url_for('faculty.attach_all_assessors', proj_id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                               class="btn btn-secondary">
-                                <i class="fa fa-check"></i> Attach all
-                            </a>
+                            {% for group in groups %}
+                                <a href="{{ url_for('faculty.attach_assessors', id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group.id, create=create) }}"
+                                   class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    {{ group.name }}
+                                </a>
+                            {% endfor %}
                         </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="row vertical-align">
+                <div class="col-12">
+                    <div class="float-right">
+                        <a href="{{ url_for('faculty.remove_all_assessors', proj_id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
+                           class="btn btn-secondary">
+                            <i class="fa fa-trash"></i> Remove all
+                        </a>
+                        <a href="{{ url_for('faculty.attach_all_assessors', proj_id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
+                           class="btn btn-secondary">
+                            <i class="fa fa-check"></i> Attach all
+                        </a>
                     </div>
                 </div>
             </div>

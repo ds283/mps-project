@@ -21,9 +21,9 @@
             let elt = $(e.target)
                 .prev('.card-header')
                 .find("i.indicator");
-            elt.toggleClass('glyphicon-chevron-down glyphicon-chevron-up');
+            elt.toggleClass('fa-chevron-down fa-chevron-up');
 
-            if (elt.hasClass('glyphicon-chevron-up')) {
+            if (elt.hasClass('fa-chevron-up')) {
                 localStorage.setItem('mps-project-filter-open', 'true')
             }
             else {
@@ -60,9 +60,9 @@
             let filter_state = localStorage.getItem('mps-project-filter-open');
             if (filter_state === 'false') {
                 let icon = $('#accordion').find("i.indicator");
-                icon.toggleClass('glyphicon-chevron-down glyphicon-chevron-up');    // switch state; it's open by default
+                icon.toggleClass('fa-chevron-down fa-chevron-up');    // switch state; it's open by default
 
-                $('#collapseFilter').removeClass('in');
+                $('#collapseFilter').removeClass('show');
             }
 
             $('#accordion').on('hidden.bs.collapse', toggleFilterState);

@@ -103,13 +103,15 @@
 
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
-        <li {% if pane=='select' %}class="active"{% elif not has_selections %}class="disabled"{% endif %}>
-            <a {% if has_selections %}href="{{ url_for('student.dashboard', pane='select') }}"{% endif %}>
+        <li class="nav-item">
+            <a class="nav-link {% if pane=='select' %}active{% elif not has_selections %}disabled{% endif %}"
+               {% if has_selections %}href="{{ url_for('student.dashboard', pane='select') }}"{% endif %}>
                 Project selections for next year
             </a>
         </li>
-        <li {% if pane=='submit' %}class="active"{% elif not has_submissions %}class="disabled"{% endif %}>
-            <a {% if has_submissions %}href="{{ url_for('student.dashboard', pane='submit') }}"{% endif %}>
+        <li class="nav-item">
+            <a class="nav-link {% if pane=='submit' %}active{% elif not has_submissions %}disabled{% endif %}"
+               {% if has_submissions %}href="{{ url_for('student.dashboard', pane='submit') }}"{% endif %}>
                 Projects running this year
             </a>
         </li>

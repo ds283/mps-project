@@ -61,8 +61,8 @@
                 {% endif %}
         {% endif %}
         <div class="row">
-            <div class="col-2"></div>
-            <div class="col-8">
+            <div class="col-1"></div>
+            <div class="col-10">
                 <div class="row sm-gap-below">
                     <div class="col-12 project-title">
                         {{ title }}
@@ -310,26 +310,30 @@
                 {% if allow_approval %}
                     <hr class="intro-divider">
                     <div class="card m-3 card-body" style="margin-top: 15px;">
-                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int, all_workflow=0) }}"
-                           class="btn btn-sm {% if all_workflow %}btn-secondary{% else %}btn-primary{% endif %}">
-                            Show workflow events only from this year
-                       </a>
-                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int, all_workflow=1) }}"
-                           class="btn btn-sm {% if all_workflow %}btn-primary{% else %}btn-secondary{% endif %}">
-                            Show workflow events from all years
-                       </a>
-                    </div>
-                        <div class="list-group">
-                            {% for item in workflow_history %}
-                                <div class="list-group-item">
-                                    {{ item.text_description|safe }}
-                                </div>
-                            {% else %}
-                                <div class="list-group-item">
-                                    No workflow events
-                                </div>
-                            {% endfor %}
+                        <div class="row">
+                            <div class="col-12">
+                                <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int, all_workflow=0) }}"
+                                   class="btn btn-sm {% if all_workflow %}btn-outline-secondary{% else %}btn-primary{% endif %}">
+                                    Show workflow events only from this year
+                               </a>
+                                <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int, all_workflow=1) }}"
+                                   class="btn btn-sm {% if all_workflow %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    Show workflow events from all years
+                               </a>
+                            </div>
                         </div>
+                    </div>
+                    <div class="list-group">
+                        {% for item in workflow_history %}
+                            <div class="list-group-item">
+                                {{ item.text_description|safe }}
+                            </div>
+                        {% else %}
+                            <div class="list-group-item">
+                                No workflow events
+                            </div>
+                        {% endfor %}
+                    </div>
                     {% if desc.workflow_state == desc.WORKFLOW_APPROVAL_QUEUED %}
                         <div class="row">
                             <div class="col-12">
@@ -362,14 +366,18 @@
                 {% endif %}
                 {% if show_comments %}
                     <div class="card m-3 card-body" style="margin-top: 15px;">
-                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=0, all_workflow=all_workflow|int) }}"
-                           class="btn btn-sm {% if all_comments %}btn-secondary{% else %}btn-primary{% endif %}">
-                            Show comments only from this year
-                       </a>
-                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=1, all_workflow=all_workflow|int) }}"
-                           class="btn btn-sm {% if all_comments %}btn-primary{% else %}btn-secondary{% endif %}">
-                            Show comments from all years
-                       </a>
+                        <div class="row">
+                            <div class="col-12">
+                                <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=0, all_workflow=all_workflow|int) }}"
+                                   class="btn btn-sm {% if all_comments %}btn-outline-secondary{% else %}btn-primary{% endif %}">
+                                    Show comments only from this year
+                               </a>
+                                <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=1, all_workflow=all_workflow|int) }}"
+                                   class="btn btn-sm {% if all_comments %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    Show comments from all years
+                               </a>
+                            </div>
+                        </div>
                     </div>
                     {% for comment in comments %}
                         {% if comment.is_visible(current_user) %}
@@ -475,7 +483,7 @@
                     </a>
                 {% endif %}
             </div>
-            <div class="col-2"></div>
+            <div class="col-1"></div>
         </div>
         {% if form %}
             </form>

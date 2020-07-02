@@ -4,13 +4,15 @@
 
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
-        <li {% if pane == 'sessions' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.schedule_view_sessions', id=record.id, text=text, url=url) }}">
+        <li class="nav-item">
+            <a class="nav-link {% if pane == 'sessions' %}active{% endif %}"
+               href="{{ url_for('admin.schedule_view_sessions', id=record.id, text=text, url=url) }}">
                 Sessions view
             </a>
         </li>
-        <li {% if pane == 'faculty' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.schedule_view_faculty', id=record.id, text=text, url=url) }}">
+        <li class="nav-item">
+            <a class="nav-link {% if pane == 'faculty' %}active{% endif %}"
+               href="{{ url_for('admin.schedule_view_faculty', id=record.id, text=text, url=url) }}">
                 Faculty view
             </a>
         </li>

@@ -51,7 +51,7 @@
         <div class="col-10">
             <div class="card m-3">
                 <div class="card-header">
-                    View submitted choices for student <strong>{{ sel.student.user.name }}</strong>
+                    View submitted choices for student <i class="fa fa-user"></i> <strong>{{ sel.student.user.name }}</strong>
                 </div>
                 <div class="card-body">
                     {% if lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING %}
@@ -77,10 +77,12 @@
                             {% endif %}
                         {% else %}
                             <div class="card m-3 card-body">
-                                Last submission received at
-                                <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
-                                from IP address
-                                <strong>{{ sel.submission_IP }}</strong>
+                                <div>
+                                    Last submission received at
+                                    <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
+                                    from IP address
+                                    <strong>{{ sel.submission_IP }}</strong>
+                                </div>
                             </div>
                             {{ ranked_selection(sel, sel.ordered_selections, 'selector submission view', url_for('convenor.selector_choices', id=sel.id), show_hint=(lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING), show_delete=true) }}
                             <hr class="intro-divider" role="separator">

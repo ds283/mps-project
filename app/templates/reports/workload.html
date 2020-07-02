@@ -78,29 +78,37 @@
         <div class="card-header bg-primary text-white">Workload report</div>
         <div class="card-body">
             <div class="card m-3 card-body">
-                <p>Level of detail</p>
-                <a href="{{ url_for('reports.workload', group_filter=group_filter, detail='full') }}"
-                   class="btn btn-sm filter-btn {% if detail is none or detail == 'full' %}btn-primary{% else %}btn-secondary{% endif %}">
-                    Full information
-                </a>
-                <a href="{{ url_for('reports.workload', group_filter=group_filter, detail='simple') }}"
-                   class="btn btn-sm filter-btn {% if detail == 'simple' %}btn-primary{% else %}btn-secondary{% endif %}">
-                    Simplified display
-                </a>
+                <div class="row">
+                    <div class="col-12">
+                        <p>Level of detail</p>
+                        <a href="{{ url_for('reports.workload', group_filter=group_filter, detail='full') }}"
+                           class="btn btn-sm filter-btn {% if detail is none or detail == 'full' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Full information
+                        </a>
+                        <a href="{{ url_for('reports.workload', group_filter=group_filter, detail='simple') }}"
+                           class="btn btn-sm filter-btn {% if detail == 'simple' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Simplified display
+                        </a>
+                    </div>
+                </div>
+
                 {% if groups is not none and groups|length > 0 %}
                     <hr class="intro-divider">
-
-                    <p>Filter by research group affiliation</p>
-                    <a href="{{ url_for('reports.workload', group_filter='all', detail=detail) }}"
-                       class="btn btn-sm filter-btn {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
-                        All
-                    </a>
-                    {% for group in groups %}
-                        <a href="{{ url_for('reports.workload', group_filter=group.id, detail=detail) }}"
-                           class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-secondary{% endif %}">
-                            {{ group.name }}
-                        </a>
-                    {% endfor %}
+                    <div class="row">
+                        <div class="col-12">
+                            <p>Filter by research group affiliation</p>
+                            <a href="{{ url_for('reports.workload', group_filter='all', detail=detail) }}"
+                               class="btn btn-sm filter-btn {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                All
+                            </a>
+                            {% for group in groups %}
+                                <a href="{{ url_for('reports.workload', group_filter=group.id, detail=detail) }}"
+                                   class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    {{ group.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
                 {% endif %}
             </div>
 

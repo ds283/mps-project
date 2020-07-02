@@ -20,6 +20,7 @@
 {% set has_assessments = base_context_data['has_assessments'] %}
 
 {% set live_platform = get_live_platform() %}
+{% set theme = current_user.ui_theme if current_user.ui_theme is defined else 'default' %}
 
 {% block scripts %}
     {{ super() }}
@@ -305,7 +306,6 @@
 {% endmacro %}
 
 {% block navbar %}
-    {% set theme = current_user.ui_theme if current_user.ui_theme is defined else 'default' %}
     <nav class="navbar navbar-expand {% if theme == 'flat' or theme == 'dark' %}navbar-light bg-light{% else %}navbar-dark bg-dark{% endif %} sticky-top" role="navigation">
 {#        {% if not live_platform %}#}
 {#            <div class="container">#}
@@ -610,7 +610,7 @@
         {% if real_user %}
             <span class="navbar-text small" style="float: right;">You
                 are viewing as <i class="fa fa-user"></i>
-                {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if current_user.theme == current_user.THEME_FLAT or current_user.theme == current_user.THEME_DARK %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
+                {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if theme == 'flat' or theme == 'dark' %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
         {% endif %}
     </nav>
 {% endblock %}

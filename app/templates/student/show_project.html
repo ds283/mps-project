@@ -323,19 +323,17 @@
                             </div>
                         </div>
                     </div>
-                    <div class="list-group">
-                        {% for item in workflow_history %}
-                            <div class="list-group-item">
-                                {{ item.text_description|safe }}
-                            </div>
-                        {% else %}
-                            <div class="list-group-item">
-                                No workflow events
-                            </div>
-                        {% endfor %}
-                    </div>
+                    {% for item in workflow_history %}
+                        <div class="card m-3 card-body text-left">
+                            {{ item.text_description|safe }}
+                        </div>
+                    {% else %}
+                        <div class="card m-3 card-body text-left">
+                            No workflow events
+                        </div>
+                    {% endfor %}
                     {% if desc.workflow_state == desc.WORKFLOW_APPROVAL_QUEUED %}
-                        <div class="row">
+                        <div class="row m-3">
                             <div class="col-12">
                                 <div class="float-right">
                                     <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}" class="btn btn-success">
@@ -348,7 +346,7 @@
                             </div>
                         </div>
                     {% elif desc.workflow_state == desc.WORKFLOW_APPROVAL_REJECTED %}
-                        <div class="row">
+                        <div class="row m-3">
                             <div class="col-12">
                                 <div class="float-right">
                                     <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}" class="btn btn-success">
@@ -489,12 +487,12 @@
             </form>
         {% endif %}
     </div>
-    <nav class="navbar navbar-expand {% if real_user %}navbar-dark bg-dark{% else %}navbar-light bg-light{% endif %} navbar-fixed-bottom" role="navigation">
+    <nav class="navbar navbar-expand {% if real_user %}navbar-dark bg-dark{% else %}navbar-light bg-light{% endif %} fixed-bottom" role="navigation">
         <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} University of Sussex</span>
         {% if real_user %}
             <span class="navbar-text small" style="float: right;">You
                 are viewing as <i class="fa fa-user"></i>
-                {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if current_user.theme == current_user.THEME_FLAT or current_user.theme == current_user.THEME_DARK %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
+                {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if theme == 'flat' or theme == 'dark' %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
         {% endif %}
     </nav>
 {% endblock %}

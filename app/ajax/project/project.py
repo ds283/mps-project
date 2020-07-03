@@ -226,9 +226,9 @@ _faculty_menu = \
                 </a>
             </li>
         {% else %}
-            <li class="disabled"><a>
+            <a class="dropdown-item disabled">
                 <i class="fa fa-trash"></i> Delete disabled
-            </a></li>
+            </a>
         {% endif %}
     </ul>
 </div>
@@ -510,7 +510,7 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                             repapprove = """<div class="dropdown" style="display: inline-block;">
                                                 <a class="badge badge-secondary dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
                                                 <div class="dropdown-menu">
-                                                    <li><a href="{url}"><i class="fa fa-check"></i> Confirm</a></li>
+                                                    <a class="dropdown-item" href="{url}"><i class="fa fa-check"></i> Confirm</a>
                                                 </ul>
                                             </div>""".format(url=url_for('convenor.confirm_description', config_id=config.id, did=desc.id))
                         else:

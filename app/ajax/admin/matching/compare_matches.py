@@ -59,20 +59,15 @@ _menu = \
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.merge_replace_records', src_id=l.id, dest_id=r.id) }}">
-                <i class="fa fa-chevron-circle-right"></i> Replace left to right
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.merge_replace_records', src_id=r.id, dest_id=l.id) }}">
-                <i class="fa fa-chevron-circle-left"></i> Replace right to left
-            </a>
-        </li>
-    </ul>
+        <a class="dropdown-item" href="{{ url_for('admin.merge_replace_records', src_id=l.id, dest_id=r.id) }}">
+            <i class="fa fa-chevron-circle-right"></i> Replace left to right
+        </a>
+        <a class="dropdown-item" href="{{ url_for('admin.merge_replace_records', src_id=r.id, dest_id=l.id) }}">
+            <i class="fa fa-chevron-circle-left"></i> Replace right to left
+        </a>
+    </div>
 </div>
 """
 

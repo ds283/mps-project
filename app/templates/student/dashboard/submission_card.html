@@ -73,9 +73,9 @@
                                             <span class="caret"></span>
                                         </button>
                                         <div class="dropdown-menu dropdown-menu-right">
-                                            <li><a href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ record.number_attachments_student }})...</a></li>
+                                            <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ record.number_attachments_student }})...</a>
                                             {% if record.has_feedback %}
-                                                <li><a href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}"><i class="fa fa-search"></i> View feedback...</a></li>
+                                                <a class="dropdown-item" href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}"><i class="fa fa-search"></i> View feedback...</a>
                                             {% endif %}
                                         </ul>
                                     </div>

@@ -46,9 +46,9 @@ _menu = \
         </li>
 
         {% if m.active %}
-            <li><a href="{{ url_for('admin.retire_module', id=m.id) }}">
+            <a class="dropdown-item" href="{{ url_for('admin.retire_module', id=m.id) }}">
                 <i class="fa fa-wrench"></i> Retire
-            </a></li>
+            </a>
         {% else %}
             {% set disabled = m.available %}
             <li {% if disabled %}class="disabled"{% endif %}>

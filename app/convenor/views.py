@@ -98,7 +98,7 @@ _desc_label = \
             <div class="dropdown" style="display: inline-block;">
                 <a class="badge badge-secondary dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
                 <div class="dropdown-menu">
-                    <li><a href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm</a></li>
+                    <a class="dropdown-item" href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm</a>
                 </ul>
             </div>
         {% else %}

@@ -88,24 +88,22 @@ _projects = \
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
         <a class="badge {% if proj_overassigned %}badge-danger{% elif style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
                 {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
-                {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>#{{ r.submission_period }}:
+                {% if adjustable %}data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"{% endif %}>#{{ r.submission_period }}:
             {{ r.selector.student.user.name }} (No. {{ r.project.number }})
         {% if adjustable %}<span class="caret"></span>{% endif %}</a>
         {% if adjustable %}
             {% set list = r.selector.ordered_selections %}
             <div class="dropdown-menu">
-                <li class="dropdown-header">Submitted choices</li>
+                <div class="dropdown-header">Submitted choices</div>
                 {% for item in list %}
                     {% set disabled = false %}
                     {% if item.liveproject_id == r.project_id or not item.is_selectable %}{% set disabled = true %}{% endif %}
-                    <li {% if disabled %}class="disabled"{% endif %}>
-                        <a {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
-                           #{{ item.rank }}:
-                           {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.format_project()|safe }} 
-                        </a>
-                    </li> 
+                    <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
+                       #{{ item.rank }}:
+                       {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.format_project()|safe }} 
+                    </a>
                 {% endfor %}
-            </ul>
+            </div>
         {% endif %}
     </div>
     {% set outcome = r.hint_status %}
@@ -153,23 +151,21 @@ _marking = \
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     <div class="dropdown match-assign-button" style="display: inline-block;">
-        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown"
+            role="button" aria-haspopup="true" aria-expanded="false">
             #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})
-            <span class="caret"></span>
         </a>
         <div class="dropdown-menu">
-            <li class="dropdown-header">Reassign 2nd marker</li>
+            <div class="dropdown-header">Reassign 2nd marker</div>
             {% set assessor_list = r.project.assessor_list %}
             {% for marker in assessor_list %}
                 {% set disabled = false %}
                 {% if marker.id == r.marker_id %}{% set disabled = true %}{% endif %}
-                <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=marker.id) }}"{% endif %}>
-                        {{ marker.user.name }}
-                    </a>
-                </li>
+                <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=marker.id) }}"{% endif %}>
+                    {{ marker.user.name }}
+                </a>
             {% endfor %}
-        </ul>
+        </div>
     </div>
 {% endmacro %}
 {% set ns = namespace(count=0) %}

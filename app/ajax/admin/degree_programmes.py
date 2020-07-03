@@ -16,40 +16,35 @@ _menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li class="dropdown-header">Edit</li>
-        <li>
-            <a href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
-                <i class="fa fa-cogs"></i> Edit details...
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.attach_modules', id=programme.id) }}">
-                <i class="fa fa-cogs"></i> Attach modules...
-            </a>
-        </li>
+        <div class="dropdown-header">Edit</div>
+        <a class="dropdown-item" href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
+            <i class="fa fa-cogs"></i> Edit details...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('admin.attach_modules', id=programme.id) }}">
+            <i class="fa fa-cogs"></i> Attach modules...
+        </a>
         
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Administration</li>
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">Administration</div>
 
         {% if programme.active %}
-            <li><a href="{{ url_for('admin.deactivate_degree_programme', id=programme.id) }}">
+            <a class="dropdown-item" href="{{ url_for('admin.deactivate_degree_programme', id=programme.id) }}">
                 <i class="fa fa-wrench"></i> Make inactive
-            </a></li>
+            </a>
         {% else %}
             {% if programme.available %}
-                <li><a href="{{ url_for('admin.activate_degree_programme', id=programme.id) }}">
+                <a class="dropdown-item" href="{{ url_for('admin.activate_degree_programme', id=programme.id) }}">
                     <i class="fa fa-wrench"></i> Make active
-                </a></li>
+                </a>
             {% else %}
-                <li class="disabled"><a>
+                <a class="dropdown-item disabled">
                     <i class="fa fa-ban"></i> Degree type inactive
-                </a></li>
+                </a>
             {% endif %}
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

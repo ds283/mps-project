@@ -25,43 +25,31 @@ _messages_menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.edit_message', id=message.id) }}">
-                <i class="fa fa-pencil"></i> Edit message
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.delete_message', id=message.id) }}">
-                <i class="fa fa-trash"></i> Delete message
-            </a>
-        </li>
-        <li role="separator" class="divider"></li>
+        <a class="dropdown-item" href="{{ url_for('admin.edit_message', id=message.id) }}">
+            <i class="fa fa-pencil"></i> Edit message
+        </a>
+        <a class="dropdown-item" href="{{ url_for('admin.delete_message', id=message.id) }}">
+            <i class="fa fa-trash"></i> Delete message
+        </a>
+
+        <div role="separator" class="dropdown-divider"></div>
         {% if message.dismissible %}
             {% set dismiss_count = message.dismissed_by.count() %}
             {% set dpl = 's' %}
-            {% if dismiss_count == 1 %}
-                {% set dpl = '' %}
-            {% endif %}
+            {% if dismiss_count == 1 %}{% set dpl = '' %}{% endif %}
             {% if dismiss_count > 0 %}
-                <li>
-                    <a href="{{ url_for('admin.reset_dismissals', id=message.id) }}">
-                        Reset {{ dismiss_count }} dismissal{{ dpl }}
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('admin.reset_dismissals', id=message.id) }}">
+                    Reset {{ dismiss_count }} dismissal{{ dpl }}
+                </a>
             {% else %}
-                <li class="disabled">
-                    <a>No dismissals</a>
-                </li>
+                <a class="dropdown-item disabled">No dismissals</a>
             {% endif %}
         {% else %}
-            <li class="disabled">
-                <a>Not dismissible</a>
-            </li>
+            <a class="dropdown-item disabled">Not dismissible</a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

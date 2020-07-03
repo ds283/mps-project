@@ -233,137 +233,100 @@ _menu = \
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         {% if m.finished and m.solution_usable %}
-            <li>
-                <a href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">
-                    <i class="fa fa-search"></i> Inspect match...
-                </a>
-            </li>
-            <li role="separator" class="divider">
+            <a class="dropdown-item" href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">
+                <i class="fa fa-search"></i> Inspect match...
+            </a>
+            <div role="separator" class="dropdown-divider"></div>
         {% endif %}    
         
         {% if not m.finished %}
             {% set disabled = not current_user.has_role('root') %}
             {% if m.awaiting_upload %}
-                <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('admin.upload_match', match_id=m.id) }}"{% endif %}>
-                        <i class="fa fa-cloud-upload"></i> Upload solution...
-                    </a>
-                </li>
+                <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.upload_match', match_id=m.id) }}"{% endif %}>
+                    <i class="fa fa-cloud-upload"></i> Upload solution...
+                </a>
             {% endif %}
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('admin.duplicate_match', id=m.id) }}"{% endif %}>
-                    <i class="fa fa-clone"></i> Duplicate
-                </a>
-            </li>
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('admin.terminate_match', id=m.id) }}"{% endif %}>
-                    <i class="fa fa-hand-paper-o"></i> Terminate
-                </a>
-            </li>
+            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.duplicate_match', id=m.id) }}"{% endif %}>
+                <i class="fa fa-clone"></i> Duplicate
+            </a>
+            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.terminate_match', id=m.id) }}"{% endif %}>
+                <i class="fa fa-hand-paper-o"></i> Terminate
+            </a>
         {% else %}
             {% if m.solution_usable %}
-                <li>
-                    <a href="{{ url_for('admin.rename_match', id=m.id, url=url) }}">
-                        <i class="fa fa-exchange"></i> Rename...
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('admin.rename_match', id=m.id, url=url) }}">
+                    <i class="fa fa-exchange"></i> Rename...
+                </a>
                 {% if m.is_modified %}
-                    <li>
-                        <a href="{{ url_for('admin.revert_match', id=m.id) }}">
-                            <i class="fa fa-undo"></i> Revert to original
-                        </a>
-                    </li>
+                    <a class="dropdown-item" href="{{ url_for('admin.revert_match', id=m.id) }}">
+                        <i class="fa fa-undo"></i> Revert to original
+                    </a>
                 {% endif %}
-                <li>
-                    <a href="{{ url_for('admin.duplicate_match', id=m.id) }}">
-                        <i class="fa fa-clone"></i> Duplicate
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin.compare_match', id=m.id, text=text, url=url) }}">
-                        <i class="fa fa-balance-scale"></i> Compare to...
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('admin.duplicate_match', id=m.id) }}">
+                    <i class="fa fa-clone"></i> Duplicate
+                </a>
+                <a class="dropdown-item" href="{{ url_for('admin.compare_match', id=m.id, text=text, url=url) }}">
+                    <i class="fa fa-balance-scale"></i> Compare to...
+                </a>
                 {% if is_root %}
-                    <li>
-                        <a href="{{ url_for('admin.create_match', base_id=m.id) }}">
-                            <i class="fa fa-plus-circle"></i> Use as base...
-                        </a>
-                    </li>
+                    <a class="dropdown-item" href="{{ url_for('admin.create_match', base_id=m.id) }}">
+                        <i class="fa fa-plus-circle"></i> Use as base...
+                    </a>
                 {% endif %}
             {% else %}
-                <li class="disabled">
-                    <a><i class="fa fa-times"></i> Solution is not usable</a>
-                </li>
+                <a class="dropdown-item disabled"><i class="fa fa-times"></i> Solution is not usable</a>
             {% endif %}
 
             {% if current_user.has_role('root') or current_user.id == m.creator_id %}
-                <li>
-                    <a href="{{ url_for('admin.delete_match', id=m.id) }}">
-                        <i class="fa fa-trash"></i> Delete
+                <a class="dropdown-item" href="{{ url_for('admin.delete_match', id=m.id) }}">
+                    <i class="fa fa-trash"></i> Delete
+                </a>
+                {% if m.can_clean_up %}
+                    <a class="dropdown-item" href="{{ url_for('admin.clean_up_match', id=m.id) }}">
+                        <i class="fa fa-scissors"></i> Clean up
                     </a>
-                </li>
-                <li>
-                    {% if m.can_clean_up %}
-                        <a href="{{ url_for('admin.clean_up_match', id=m.id) }}">
-                            <i class="fa fa-scissors"></i> Clean up
-                        </a>
-                    {% endif %}
-                </li>
+                {% endif %}
             {% endif %}
             
             {% if current_user.has_role('root') %}
-                <li role="separator" class="divider">
-                <li class="dropdown-header">Superuser functions</li>
+                <div role="separator" class="dropdown-divider"></div>
+                <div class="dropdown-header">Superuser functions</div>
                 
                 {% if m.published %}
-                    <li>
-                        <a href="{{ url_for('admin.unpublish_match', id=m.id) }}">
-                            <i class="fa fa-stop-circle"></i> Unpublish
-                        </a>
-                    </li>
+                    <a class="dropdown-item" href="{{ url_for('admin.unpublish_match', id=m.id) }}">
+                        <i class="fa fa-stop-circle"></i> Unpublish
+                    </a>
                 {% else %}
-                    <li>
-                        <a href="{{ url_for('admin.publish_match', id=m.id) }}">
-                            <i class="fa fa-share"></i> Publish to convenors
-                        </a>
-                    </li>
+                    <a class="dropdown-item" href="{{ url_for('admin.publish_match', id=m.id) }}">
+                        <i class="fa fa-share"></i> Publish to convenors
+                    </a>
                 {% endif %}
                 
                 {% if m.selected %}
-                    <li>
-                        <a href="{{ url_for('admin.deselect_match', id=m.id) }}">
-                            <i class="fa fa-times"></i> Deselect
-                        </a>
-                    </li>
+                    <a class="dropdown-item" href="{{ url_for('admin.deselect_match', id=m.id) }}">
+                        <i class="fa fa-times"></i> Deselect
+                    </a>
                 {% else %}
-                    <li>
-                        <a href="{{ url_for('admin.select_match', id=m.id, force=0) }}">
-                            <i class="fa fa-check"></i> Select
-                        </a>
-                    </li>
+                    <a class="dropdown-item" href="{{ url_for('admin.select_match', id=m.id, force=0) }}">
+                        <i class="fa fa-check"></i> Select
+                    </a>
                 {% endif %}
                 
                 {% if m.selected or m.published %}
-                    <li role="separator" class="divider">
-                    <li>
-                        <a href="{{ url_for('admin.publish_matching_selectors', id=m.id) }}">
-                            <i class="fa fa-envelope-o"></i> Email to selectors
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('admin.publish_matching_supervisors', id=m.id) }}">
-                            <i class="fa fa-envelope-o"></i> Email to supervisors
-                        </a>
-                    </li>
+                    <div role="separator" class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="{{ url_for('admin.publish_matching_selectors', id=m.id) }}">
+                        <i class="fa fa-envelope-o"></i> Email to selectors
+                    </a>
+                    <a class="dropdown-item" href="{{ url_for('admin.publish_matching_supervisors', id=m.id) }}">
+                        <i class="fa fa-envelope-o"></i> Email to supervisors
+                    </a>
                 {% endif %}
             {% endif %}            
         {% endif %}        
-    </ul>
+    </div>
 </div>
 """
 

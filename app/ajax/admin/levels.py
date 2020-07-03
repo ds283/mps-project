@@ -16,25 +16,22 @@ _types_menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.edit_level', id=l.id) }}">
-                <i class="fa fa-pencil"></i> Edit details...
-            </a>
-        </li>
+        <a class="dropdown-item" href="{{ url_for('admin.edit_level', id=l.id) }}">
+            <i class="fa fa-pencil"></i> Edit details...
+        </a>
 
         {% if l.active %}
-            <li><a href="{{ url_for('admin.deactivate_level', id=l.id) }}">
+            <a class="dropdown-item" href="{{ url_for('admin.deactivate_level', id=l.id) }}">
                 <i class="fa fa-wrench"></i> Make inactive
-            </a></li>
+            </a>
         {% else %}
-            <li><a href="{{ url_for('admin.activate_level', id=l.id) }}">
+            <a class="dropdown-item" href="{{ url_for('admin.activate_level', id=l.id) }}">
                 <i class="fa fa-wrench"></i> Make active
-            </a></li>
+            </a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

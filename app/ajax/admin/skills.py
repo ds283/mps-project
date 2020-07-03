@@ -16,33 +16,24 @@ _menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.edit_skill', id=skill.id) }}">
-                <i class="fa fa-pencil"></i> Edit details...
-            </a>
-        </li>
+        <a class="dropdown-item" href="{{ url_for('admin.edit_skill', id=skill.id) }}">
+            <i class="fa fa-pencil"></i> Edit details...
+        </a>
 
         {% if skill.group is not none and skill.group.active %}
             {% if skill.active %}
-                <li>
-                    <a href="{{ url_for('admin.deactivate_skill', id=skill.id) }}">
-                        <i class="fa fa-wrench"></i> Make inactive
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('admin.deactivate_skill', id=skill.id) }}">
+                    <i class="fa fa-wrench"></i> Make inactive
+                </a>
             {% else %}
-                <li>
-                    <a href="{{ url_for('admin.activate_skill', id=skill.id) }}">
-                        <i class="fa fa-wrench"></i> Make active
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('admin.activate_skill', id=skill.id) }}">
+                    <i class="fa fa-wrench"></i> Make active
+                </a>
             {% endif %}
         {% else %}
-            <li class="disabled">
-                <a>Parent disabled</a>
-            </li>
+            <a class="dropdown-item disabled">Parent disabled</a>
         {% endif %}
     </ul>
 </div>

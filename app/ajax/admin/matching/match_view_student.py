@@ -64,24 +64,21 @@ _project = \
         <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
             <a class="badge {% if proj_overassigned %}badge-danger{% elif style %}badge-secondary{% else %}badge-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
                     {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
-                    {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }}
-                (No. {{ r.project.number }})
-                {% if adjustable %}<span class="caret"></span>{% endif %}</a>
+                    {% if adjustable %}data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }}
+                (No. {{ r.project.number }})</a>
             {% if adjustable %}
                 {% set list = r.selector.ordered_selections %}
                 <div class="dropdown-menu">
-                    <li class="dropdown-header">Submitted choices</li>
+                    <div class="dropdown-header">Submitted choices</div>
                     {% for item in list %}
                         {% set disabled = false %}
                         {% if item.liveproject_id == r.project_id or not item.is_selectable %}{% set disabled = true %}{% endif %}
-                        <li {% if disabled %}class="disabled"{% endif %}>
-                            <a {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
-                               #{{ item.rank }}:
-                               {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.format_project()|safe }} 
-                            </a>
-                        </li> 
+                        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
+                           #{{ item.rank }}:
+                           {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.format_project()|safe }} 
+                        </a>
                     {% endfor %}
-                </ul>
+                </div>
             {% endif %}
         </div>
         {% set outcome = r.hint_status %}
@@ -163,26 +160,23 @@ _marker = \
 {% macro marker_tag(r, show_period) %}
     {% if r.marker %}
         <div class="dropdown match-assign-button" style="display: inline-block;">
-            <a class="badge badge-secondary dropdown-toggle" type="button" data-toggle="dropdown">
+            <a class="badge badge-light dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.marker.user.name }}
-                <span class="caret"></span>
             </a>
             <div class="dropdown-menu">
-                <li class="dropdown-header">Reassign 2nd marker</li>
+                <div class="dropdown-header">Reassign 2nd marker</div>
                 {% set assessor_list = r.project.assessor_list %}
                 {% for marker in assessor_list %}
                     {% set disabled = false %}
                     {% if marker.id == r.marker_id %}{% set disabled = true %}{% endif %}
-                    <li {% if disabled %}class="disabled"{% endif %}>
-                        <a {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=marker.id) }}"{% endif %}>
-                            {{ marker.user.name }}
-                        </a>
-                    </li>
+                    <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=marker.id) }}"{% endif %}>
+                        {{ marker.user.name }}
+                    </a>
                 {% endfor %}
-            </ul>
+            </div>
         </div>
     {% else %}
-        <span class="badge badge-secondary">None</span>
+        <span class="badge badge-light">None</span>
     {% endif %}
 {% endmacro %}
 {% if recs|length == 1 %}

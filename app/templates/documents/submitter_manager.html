@@ -71,39 +71,39 @@
                         {% if has_access or editable or deletable %}
                             {% if editable %}
                                 {% if edit_url is not none %}
-                                    <li><a href="{{ edit_url }}"><i class="fa fa-pencil"></i> Edit</a></li>
+                                    <a class="dropdown-item" href="{{ edit_url }}"><i class="fa fa-pencil"></i> Edit</a>
                                 {% else %}
-                                    <li class="disabled"><a><i class="fa fa-pencil"></i> Edit</a></li>
+                                    <a class="dropdown-item disabled"><i class="fa fa-pencil"></i> Edit</a>
                                 {% endif %}
                             {% endif %}
                             {% if has_access %}
                                 {% if download_url is not none %}
-                                    <li><a href="{{ download_url }}"><i class="fa fa-cloud-download"></i> Download</a></li>
+                                    <a class="dropdown-item" href="{{ download_url }}"><i class="fa fa-cloud-download"></i> Download</a>
                                 {% else %}
-                                    <li class="disabled"><a><i class="fa fa-cloud-download"></i> Download</a></li>
+                                    <a class="dropdown-item disabled"><i class="fa fa-cloud-download"></i> Download</a>
                                 {% endif %}
                             {% endif %}
                             {% if admin_rights %}
                                 {% if acl_url is not none %}
-                                    <li><a href="{{ acl_url }}"><i class="fa fa-check-square"></i> Access control...</a></li>
+                                    <a class="dropdown-item" href="{{ acl_url }}"><i class="fa fa-check-square"></i> Access control...</a>
                                 {% else %}
-                                    <li class="disabled"><a><i class="fa fa-check-square"></i> Access control...</a></li>
+                                    <a class="dropdown-item disabled"><i class="fa fa-check-square"></i> Access control...</a>
                                 {% endif %}
                                 {% if log_url is not none %}
-                                    <li><a href="{{ log_url }}"><i class="fa fa-address-book"></i> Download log...</a></li>
+                                    <a class="dropdown-item" href="{{ log_url }}"><i class="fa fa-address-book"></i> Download log...</a>
                                 {% else %}
-                                    <li class="disabled"><a><i class="fa fa-address-book"></i> Download log...</a></li>
+                                    <a class="dropdown-item disabled"><i class="fa fa-address-book"></i> Download log...</a>
                                 {% endif %}
                             {% endif %}
                             {% if deletable %}
                                 {% if delete_url is not none %}
-                                    <li><a href="{{ delete_url }}"><i class="fa fa-trash"></i> Remove</a></li>
+                                    <a class="dropdown-item" href="{{ delete_url }}"><i class="fa fa-trash"></i> Remove</a>
                                 {% else %}
-                                    <li class="disabled"><a><i class="fa fa-trash"></i> Remove</a></li>
+                                    <a class="dropdown-item disabled"><i class="fa fa-trash"></i> Remove</a>
                                 {% endif %}
                             {% endif %}
                         {% else %}
-                            <li><a class="disabled"><i class="fa fa-times"></i> No access</a></li>
+                            <li><a class="disabled"><i class="fa fa-times"></i> No access</a>
                         {% endif %}
                     </ul>
                 </div>

@@ -16,31 +16,28 @@ _menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.edit_room', id=r.id) }}">
-                <i class="fa fa-pencil"></i> Edit details...
-            </a>
-        </li>
+        <a class="dropdown-item" href="{{ url_for('admin.edit_room', id=r.id) }}">
+            <i class="fa fa-pencil"></i> Edit details...
+        </a>
 
         {% if r.active %}
-            <li><a href="{{ url_for('admin.deactivate_room', id=r.id) }}">
+            <a class="dropdown-item" href="{{ url_for('admin.deactivate_room', id=r.id) }}">
                 <i class="fa fa-wrench"></i> Make inactive
-            </a></li>
+            </a>
         {% else %}
             {% if r.available %}
-                <li><a href="{{ url_for('admin.activate_room', id=r.id) }}">
+                <a class="dropdown-item" href="{{ url_for('admin.activate_room', id=r.id) }}">
                     <i class="fa fa-wrench"></i> Make active
-                </a></li>
+                </a>
             {% else %}
-                <li class="disabled"><a>
+                <a class="dropdown-item disabled">
                     <i class="fa fa-ban"></i> Building inactive
-                </a></li>
+                </a>
             {% endif %}
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

@@ -23,61 +23,54 @@ _menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li class="dropdown-header">Edit</li>
+        <div class="dropdown-header">Edit</div>
         
-        <li>
-            <a href="{{ url_for('admin.edit_pclass', id=pcl.id) }}">
-                <i class="fa fa-cogs"></i> Settings...
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.edit_pclass_text', id=pcl.id) }}">
-                <i class="fa fa-pencil"></i> Customize messages...
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.edit_submission_periods', id=pcl.id) }}">
-                <i class="fa fa-cogs"></i> Submission periods...
-            </a>
-        </li>
+        <a class="dropown-item" href="{{ url_for('admin.edit_pclass', id=pcl.id) }}">
+            <i class="fa fa-cogs"></i> Settings...
+        </a>
+        <a class="dropown-item" href="{{ url_for('admin.edit_pclass_text', id=pcl.id) }}">
+            <i class="fa fa-pencil"></i> Customize messages...
+        </a>
+        <a class="dropown-item" href="{{ url_for('admin.edit_submission_periods', id=pcl.id) }}">
+            <i class="fa fa-cogs"></i> Submission periods...
+        </a>
         
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Admin</a>
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">Admin</div>
 
         {% if pcl.active %}
-            <li><a href="{{ url_for('admin.deactivate_pclass', id=pcl.id) }}">
+            <a class="dropdown-item" href="{{ url_for('admin.deactivate_pclass', id=pcl.id) }}">
                 <i class="fa fa-wrench"></i> Make inactive
-            </a></li>
+            </a>
         {% else %}
             {% if pcl.available %}
-                <li><a href="{{ url_for('admin.activate_pclass', id=pcl.id) }}">
+                <a class="dropdown-item" href="{{ url_for('admin.activate_pclass', id=pcl.id) }}">
                     <i class="fa fa-wrench"></i> Make active
-                </a></li>
+                </a>
             {% else %}
-                <li class="disabled"><a>
+                <a class="dropdown-item disabled">
                     <i class="fa fa-ban"></i> Can't make active
-                </a></li>
+                </a>
             {% endif %}
         {% endif %}
         {% if pcl.publish %}
-            <li><a href="{{ url_for('admin.unpublish_pclass', id=pcl.id) }}">
+            <a class="dropdown-item" href="{{ url_for('admin.unpublish_pclass', id=pcl.id) }}">
                 <i class="fa fa-wrench"></i> Unpublish
-            </a></li>
+            </a>
         {% else %}
             {% if pcl.available %}
-                <li><a href="{{ url_for('admin.publish_pclass', id=pcl.id) }}">
+                <a class="dropdown-item" href="{{ url_for('admin.publish_pclass', id=pcl.id) }}">
                     <i class="fa fa-wrench"></i> Publish
-                </a></li>
+                </a>
             {% else %}
-                <li class="disabled"><a>
+                <a class="dropdown-item disabled">
                     <i class="fa fa-ban"></i> Can't publish
-                </a></li>
+                </a>
             {% endif %}
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

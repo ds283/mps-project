@@ -37,15 +37,13 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <div class="row vertical-align">
-        <div class="col-6">
-            <div class="top-return-link">
-                <a href="{{ url_for('admin.edit_project_classes') }}">
-                    <i class="fa fa-backward"></i> Return to project class list
-                </a>
-            </div>
-        </div>
-        <div class="col-6">
+    <div class="top-return-link">
+        <a href="{{ url_for('admin.edit_project_classes') }}">
+            <i class="fa fa-backward"></i> Return to project class list
+        </a>
+    </div>
+    <div class="row vertical-align m-3">
+        <div class="col-12">
             <div class="float-right">
                 <a href="{{ url_for('admin.regenerate_period_records', id=pclass.id) }}"
                    class="btn btn-secondary" style="margin-bottom: 10px;">

@@ -51,24 +51,26 @@
 {% endblock %}
 
 {% block bodyblock %}
-    {% if current_user.has_role('root') %}
-        <form action="{{ url_for('admin.email_log') }}" method="POST">
-            {{ form.hidden_tag() }}
-            <div class="row vertical-bottom">
-                <div class="col-2">
-                    {{ wtf.render_field(form.weeks) }}
-                </div>
-                <div class="col-2 grouped-button-pad">
-                    {{ wtf.render_field(form.delete_age, button_map={'delete_age': 'warning'}) }}
-                </div>
-                <div class="col-8 grouped-button-pad">
-                    <div class="float-right">
-                        <a href="{{ url_for('admin.confirm_delete_all_emails') }}" class="btn btn-danger">Delete all</a>
+    <div class="m-3">
+        {% if current_user.has_role('root') %}
+            <form action="{{ url_for('admin.email_log') }}" method="POST">
+                {{ form.hidden_tag() }}
+                <div class="row vertical-bottom">
+                    <div class="col-2">
+                        {{ wtf.render_field(form.weeks) }}
+                    </div>
+                    <div class="col-2 grouped-button-pad">
+                        {{ wtf.render_field(form.delete_age, button_map={'delete_age': 'warning'}) }}
+                    </div>
+                    <div class="col-8 grouped-button-pad">
+                        <div class="float-right">
+                            <a href="{{ url_for('admin.confirm_delete_all_emails') }}" class="btn btn-danger">Delete all</a>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </form>
-    {% endif %}
+            </form>
+        {% endif %}
+    </div>
     <div class="card m-3">
         <div class="card-header bg-primary text-white">Email log</div>
         <div class="card-body">

@@ -75,11 +75,11 @@ class Bootstrap(object):
         """
 
         theme_CDNs = {'default': 'https://cdn.jsdelivr.net/npm/bootstrap@%s/dist/css/%s',
-                      'flat': 'https://stackpath.bootstrapcdn.com/bootswatch/%s/yeti/%s',
+                      'flat': 'https://stackpath.bootstrapcdn.com/bootswatch/%s/pulse/%s',
                       'dark': 'https://stackpath.bootstrapcdn.com/bootswatch/%s/slate/%s'}
 
         theme_subfolders = {'default': 'default',
-                            'flat': 'yeti',
+                            'flat': 'pulse',
                             'dark': 'slate'}
 
         css_filename = 'bootstrap.min.css'

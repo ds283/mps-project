@@ -34,8 +34,8 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-2"></div>
-        <div class="col-8">
+        <div class="col-1"></div>
+        <div class="col-10">
             {% if assessment %}
                 <div class="card m-3 card-body">
                     {% set state = assessment.availability_lifecycle %}
@@ -79,6 +79,6 @@
                 </a>
             </div>
         </div>
-        <div class="col-2"></div>
+        <div class="col-1"></div>
     </div>
 {%  endblock %}

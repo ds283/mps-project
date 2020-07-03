@@ -6,7 +6,7 @@
             {% set submitted = selector_data['have_submitted'] %}
             {% set missing = selector_data['missing'] %}
             {% set total = selector_data['total'] %}
-            <div class="row vertical-top">
+            <div class="row vertical-top mb-2">
                 <div class="col-6">
                     <div class="list-group">
                         <div class="list-group-item {% if submitted == total %}list-group-item-success{% else %}list-group-item-secondary{% endif %}">
@@ -26,7 +26,7 @@
                     </div>
                 </div>
             </div>
-            <div class="row vertical-top">
+            <div class="row vertical-top mb-2">
                 <div class="col-12">
                     {% if submitted == total %}
                         <p>All students submitted validated choices before selection closed.</p>

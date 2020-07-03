@@ -38,8 +38,7 @@
         <div class="col-10">
             <div class="card m-3 card-body">
                 <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
-                <hr class="intro-divider">
-                <div class="list-group">
+                <div class="list-group mb-2">
                     <div class="list-group-item">
                         Submission periods:
                         {% for p in config.periods %}
@@ -49,7 +48,7 @@
                         {% endfor %}
                     </div>
                 </div>
-                <div class="row vertical-align">
+                <div class="row vertical-align mb-2">
                     <div class="col-4">
                         <div class="list-group">
                             <div class="list-group-item">
@@ -88,7 +87,7 @@
                     </div>
                 </div>
                 {% if config.CATS_supervision != pclass.CATS_supervision or config.CATS_marking != pclass.CATS_marking or config.CATS_presentation != pclass.CATS_presentation %}
-                    <div class="row vertical-top">
+                    <div class="row vertical-top mb-2">
                         <div class="col-12">
                             <div class="float-right">
                                 <a href="{{ url_for('convenor.update_CATS', config_id=config.id) }}" class="btn btn-secondary">

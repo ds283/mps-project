@@ -25,8 +25,8 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-2"></div>
-        <div class="col-8">
+        <div class="col-1"></div>
+        <div class="col-10">
             <div class="card m-3 card-body">
                 <form action="{{ url_for('admin.backups_overview') }}" method="POST" name="backup_options_form">
                     {{ form.hidden_tag() }}
@@ -40,7 +40,7 @@
                 </form>
             </div>
         </div>
-        <div class="col-2"></div>
+        <div class="col-1"></div>
     </div>
 
     <div class="row">
@@ -89,8 +89,8 @@
                     </div>
                     <div class="col-4">
                         <div class="row">
-                            <div class="col-2"></div>
-                            <div class="col-8">
+                            <div class="col-1"></div>
+                            <div class="col-10">
                                 {% if gauge_div is defined and gauge_div is not none and gauge_script is defined and gauge_script is not none %}
                                     <div style="text-align: center;">
                                         <strong>Space used {{ capacity }}</strong>
@@ -100,7 +100,7 @@
                                     <span class="badge badge-warning">Capacity gauge could not be generated</span>
                                 {% endif %}
                             </div>
-                            <div class="col-2"></div>
+                            <div class="col-1"></div>
                         </div>
                     </div>
                 </div>

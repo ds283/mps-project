@@ -41,22 +41,24 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <form action="{{ url_for('admin.manage_backups') }}" method="POST">
-        {{ form.hidden_tag() }}
-        <div class="row vertical-bottom">
-            <div class="col-2">
-                {{ wtf.render_field(form.weeks) }}
-            </div>
-            <div class="col-2 grouped-button-pad">
-                {{ wtf.render_field(form.delete_age, button_map={'delete_age': 'warning'}) }}
-            </div>
-            <div class="col-8 grouped-button-pad">
-                <div class="float-right">
-                    <a href="{{ url_for('admin.confirm_delete_all_backups') }}" class="btn btn-danger">Delete all</a>
+    <div class="m-3">
+        <form action="{{ url_for('admin.manage_backups') }}" method="POST">
+            {{ form.hidden_tag() }}
+            <div class="row vertical-bottom">
+                <div class="col-2">
+                    {{ wtf.render_field(form.weeks) }}
+                </div>
+                <div class="col-2 grouped-button-pad">
+                    {{ wtf.render_field(form.delete_age, button_map={'delete_age': 'warning'}) }}
+                </div>
+                <div class="col-8 grouped-button-pad">
+                    <div class="float-right">
+                        <a href="{{ url_for('admin.confirm_delete_all_backups') }}" class="btn btn-danger">Delete all</a>
+                    </div>
                 </div>
             </div>
-        </div>
-    </form>
+        </form>
+    </div>
     <div class="card m-3">
         <div class="card-header bg-primary text-white">Manage backups</div>
         <div class="card-body">

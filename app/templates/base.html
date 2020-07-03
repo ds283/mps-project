@@ -306,7 +306,7 @@
 {% endmacro %}
 
 {% block navbar %}
-    <nav class="navbar navbar-expand {% if theme == 'flat' or theme == 'dark' %}navbar-light bg-light{% else %}navbar-dark bg-dark{% endif %} sticky-top" role="navigation">
+    <nav class="navbar navbar-expand-lg {% if theme == 'flat' or theme == 'dark' %}navbar-light bg-light{% else %}navbar-dark bg-dark{% endif %} sticky-top" role="navigation">
 {#        {% if not live_platform %}#}
 {#            <div class="container">#}
 {#                <div class="notify-bar">#}
@@ -571,11 +571,11 @@
             <div class="col-10">
                 <div id="tasks-area" class="card m-3 card-body collapse" aria-expanded="false">
                     <div class="row">
-                        <div class="col-2"></div>
-                        <div class="col-8 text-center">
+                        <div class="col-1"></div>
+                        <div class="col-10 text-center">
                             <strong>Tasks in progress</strong>
                         </div>
-                        <div class="col-2">
+                        <div class="col-1">
                             <div class="float-right">
                                 <div id="close-tasks-area"><i class="fa fa-times"></i></div>
                             </div>

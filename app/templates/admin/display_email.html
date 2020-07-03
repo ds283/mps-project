@@ -8,8 +8,8 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-2"></div>
-        <div class="col-8">
+        <div class="col-1"></div>
+        <div class="col-10">
             <div class="card m-3">
                 <div class="card-header bg-primary text-white">{{ email.subject }}</div>
                 <div class="card-body email-display">
@@ -32,11 +32,11 @@
                 </div>
             </div>
         </div>
-        <div class="col-2"></div>
+        <div class="col-1"></div>
     </div>
     <div class="row">
-        <div class="col-2"></div>
-        <div class="col-8">
+        <div class="col-1"></div>
+        <div class="col-10">
             <div class="row vertical-align">
                 <div class="col-6">
                     <a href="{{ url_for('admin.email_log') }}">
@@ -50,6 +50,6 @@
                 </div>
             </div>
         </div>
-        <div class="col-2"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

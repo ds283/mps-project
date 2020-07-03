@@ -87,19 +87,23 @@
     {% endif %}
 
     <div class="card m-3 card-body">
-        <p>Filter by state</p>
-        <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='all') }}"
-           class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
-            All
-        </a>
-        <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='access') }}"
-           class="btn btn-sm filter-btn {% if state_filter == 'access' %}btn-primary{% else %}btn-secondary{% endif %}">
-            Has access
-        </a>
-        <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='no-access') }}"
-           class="btn btn-sm filter-btn {% if state_filter == 'no-access' %}btn-primary{% else %}btn-secondary{% endif %}">
-            No access
-        </a>
+        <div class="row">
+            <div class="col-12">
+                <p>Filter by state</p>
+                <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='all') }}"
+                   class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    All
+                </a>
+                <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='access') }}"
+                   class="btn btn-sm filter-btn {% if state_filter == 'access' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    Has access
+                </a>
+                <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='no-access') }}"
+                   class="btn btn-sm filter-btn {% if state_filter == 'no-access' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    No access
+                </a>
+            </div>
+        </div>
     </div>
 
     <div class="card m-3">

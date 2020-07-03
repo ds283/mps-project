@@ -47,9 +47,13 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <div class="row top-return-link">
-        <div class="col-12">
-            <a href="{{ url_for('convenor.hints_list', id=pclass.id) }}">Show all convenor hints...</a>
+    <div class="m-3">
+        <div class="row">
+            <div class="col-12">
+                <div class="float-right">
+                    <a class="btn btn-outline-info" href="{{ url_for('convenor.hints_list', id=pclass.id) }}">Show all convenor hints...</a>
+                </div>
+            </div>
         </div>
     </div>
     <div class="card m-3">
@@ -106,7 +110,7 @@
                         {% endif %}
                     </div>
                 </div>
-                    
+
                 {% if progs and progs is not none and progs|length > 1 %}
                     {% if needs_rule %}<hr class="intro-divider">{% endif %}
                     <div class="row">

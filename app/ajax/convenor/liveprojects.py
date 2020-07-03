@@ -100,118 +100,85 @@ _menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle table-button" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('faculty.live_project', pid=project.id, text='live projects list', url=url_for('convenor.liveprojects', id=config.pclass_id)) }}">
-                <i class="fa fa-eye"></i> View web page
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}">
-                <i class="fa fa-wrench"></i> View analytics
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('convenor.delete_live_project', pid=project.id) }}">
-                <i class="fa fa-trash"></i> Delete
-            </a>
-        </li>
+        <a class="dropdown-item" href="{{ url_for('faculty.live_project', pid=project.id, text='live projects list', url=url_for('convenor.liveprojects', id=config.pclass_id)) }}">
+            <i class="fa fa-eye"></i> View web page
+        </a>
+        <a class="dropdown-item" href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}">
+            <i class="fa fa-wrench"></i> View analytics
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.delete_live_project', pid=project.id) }}">
+            <i class="fa fa-trash"></i> Delete
+        </a>
         
-        <li role="separator" class="divider">
+        <div role="separator" class="dropdown-divider">
 
         {% if project.number_bookmarks > 0 %}
-            <li>
-                <a href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
-                    <i class="fa fa-cogs"></i> Bookmarking students
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
+                <i class="fa fa-cogs"></i> Bookmarking students
+            </a>
         {% else %}
-            <li class="disabled">
-                <a><i class="fa fa-cogs"></i> Bookmarking students</a>
-            </li>
+            <a class="dropdown-item disabled">><i class="fa fa-cogs"></i> Bookmarking students</a>
         {% endif %}
         
         {% if project.number_selections > 0 %}
-            <li>
-                <a href="{{ url_for('convenor.project_choices', id=project.id) }}">
-                    <i class="fa fa-cogs"></i> Selecting students
-                </a>
-            </li>
-        {% else %}
-            <li class="disabled">
-                <a><i class="fa fa-cogs"></i> Selecting students</a>
-            </li>
-        {% endif %}
-        <li>
-            <a href="{{ url_for('convenor.project_custom_offers', proj_id=project.id) }}">
-                <i class="fa fa-cogs"></i> Custom offers...
+            <a class="dropdown-item" href="{{ url_for('convenor.project_choices', id=project.id) }}">
+                <i class="fa fa-cogs"></i> Selecting students
             </a>
-        </li>
-
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Meeting requests</li>
-        {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and project.number_pending > 0 %}
-            <li>
-                <a href="{{ url_for('convenor.project_confirm_all', pid=project.id) }}">
-                    <i class="fa fa-check"></i> Confirm all requests
-                </a>
-                <a href="{{ url_for('convenor.project_clear_requests', pid=project.id) }}">
-                    <i class="fa fa-trash"></i> Delete all requests
-                </a>
-            </li>
         {% else %}
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-check"></i> Confirm all requests
-                </a>
-            </li>
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-trash"></i> Delete all requests
-                </a>
-            </li>
+            <a class="dropdown-item disabled"><i class="fa fa-cogs"></i> Selecting students</a>
+        {% endif %}
+        <a class="dropdown-item" href="{{ url_for('convenor.project_custom_offers', proj_id=project.id) }}">
+            <i class="fa fa-cogs"></i> Custom offers...
+        </a>
+
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">Meeting requests</div>
+        {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and project.number_pending > 0 %}
+            <a class="dropdown-item" href="{{ url_for('convenor.project_confirm_all', pid=project.id) }}">
+                <i class="fa fa-check"></i> Confirm all requests
+            </a>
+            <a class="dropdown-item" href="{{ url_for('convenor.project_clear_requests', pid=project.id) }}">
+                <i class="fa fa-trash"></i> Delete all requests
+            </a>
+        {% else %}
+            <a class="dropdown-item disabled">
+                <i class="fa fa-check"></i> Confirm all requests
+            </a>
+            <a class="dropdown-item disabled">
+                <i class="fa fa-trash"></i> Delete all requests
+            </a>
         {% endif %}
 
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Meeting confirmations</li>
+        <div role="separator" class="dropdown-divider"></div>
+        div class="dropdown-header">Meeting confirmations</div>
         {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and project.number_confirmed > 0 %}
-            <li>
-                <a href="{{ url_for('convenor.project_remove_confirms', pid=project.id) }}">
-                    <i class="fa fa-trash"></i> Delete confirmations
-                </a>
-                <a href="{{ url_for('convenor.project_make_all_confirms_pending', pid=project.id) }}">
-                    <i class="fa fa-clock-o"></i> Make all pending
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('convenor.project_remove_confirms', pid=project.id) }}">
+                <i class="fa fa-trash"></i> Delete confirmations
+            </a>
+            <a class="dropdown-item" href="{{ url_for('convenor.project_make_all_confirms_pending', pid=project.id) }}">
+                <i class="fa fa-clock-o"></i> Make all pending
+            </a>
         {% else %}
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-trash"></i> Delete confirmations
-                </a>
-            </li>
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-clock-o"></i> Make all pending
-                </a>
-            </li>
+            <a class="dropdown-item disabled">
+                <i class="fa fa-trash"></i> Delete confirmations
+            </a>
+            <a class="dropdown-item disabled">
+                <i class="fa fa-clock-o"></i> Make all pending
+            </a>
         {% endif %}
         
         {% if project.number_pending > 0 or project.number_confirmed > 0 %}
-            <li>
-                <a href="{{ url_for('convenor.project_confirmations', id=project.id) }}">
-                    <i class="fa fa-cogs"></i> Show confirmations
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('convenor.project_confirmations', id=project.id) }}">
+                <i class="fa fa-cogs"></i> Show confirmations
+            </a>
         {% else %}
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-cogs"></i> Show confirmations
-                </a>
-            </li>
+            <a class="dropdown-item disabled">
+                <i class="fa fa-cogs"></i> Show confirmations
+            </a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

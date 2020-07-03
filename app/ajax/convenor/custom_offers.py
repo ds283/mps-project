@@ -58,41 +58,30 @@ _menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle table-button" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         {% set status = offer.status %}
         {% if status == offer.OFFERED and not offer.selector.has_submitted %}
-            <li>
-                <a href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">
-                    <i class="fa fa-check"></i> Accept
-                </a>
-            <li>
-            <li>
-                <a href="{{ url_for('convenor.decline_custom_offer', offer_id=offer.id) }}">
-                    <i class="fa fa-times"></i> Decline
-                </a>
-            <li>
+            <a class="dropdown-item" href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">
+                <i class="fa fa-check"></i> Accept
+            </a>
+            <a class="dropdown-item" href="{{ url_for('convenor.decline_custom_offer', offer_id=offer.id) }}">
+                <i class="fa fa-times"></i> Decline
+            </a>
         {% elif status == offer.DECLINED and not offer.selector.has_submitted %}
-            <li>
-                <a href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">
-                    <i class="fa fa-check"></i> Accept
-                </a>
-            <li>
+            <a class="dropdown-item" href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">
+                <i class="fa fa-check"></i> Accept
+            </a>
         {% elif status == offer.ACCEPTED %}
-            <li>
-                <a href="{{ url_for('convenor.decline_custom_offer', offer_id=offer.id) }}">
-                    <i class="fa fa-check"></i> Decline
-                </a>
-            <li>
+            <a class="dropdown-item" href="{{ url_for('convenor.decline_custom_offer', offer_id=offer.id) }}">
+                <i class="fa fa-check"></i> Decline
+            </a>
         {% endif %}        
     
-        <li>
-            <a href="{{ url_for('convenor.delete_custom_offer', offer_id=offer.id) }}">
-                <i class="fa fa-trash"></i> Delete
-            </a>
-        </li>
-    </ul>
+        <a class="dropdown-item" href="{{ url_for('convenor.delete_custom_offer', offer_id=offer.id) }}">
+            <i class="fa fa-trash"></i> Delete
+        </a>
+    </div>
 </dic>
 """
 

@@ -17,32 +17,25 @@ _faculty_menu = \
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            {% if userdata.is_enrolled(pclass) %}
-                <a href="{{ url_for('convenor.unenroll', userid=user.id, pclassid=pclass.id) }}">
-                    <i class="fa fa-trash"></i> Remove enrollment
-                </a>
-            {% else %}
-                <a href="{{ url_for('convenor.enroll', userid=user.id, pclassid=pclass.id) }}">
-                    <i class="fa fa-plus"></i> Enroll
-                </a>
-            {% endif %}
-        </li>
+        {% if userdata.is_enrolled(pclass) %}
+            <a class="dropdown-item" href="{{ url_for('convenor.unenroll', userid=user.id, pclassid=pclass.id) }}">
+                <i class="fa fa-trash"></i> Remove enrollment
+            </a>
+        {% else %}
+            <a class="dropdown-item" href="{{ url_for('convenor.enroll', userid=user.id, pclassid=pclass.id) }}">
+                <i class="fa fa-plus"></i> Enroll
+            </a>
+        {% endif %}
         {% set record = userdata.get_enrollment_record(pclass) %}
-        <li {% if record is none %}class="disabled"{% endif %}>
-            <a {% if record is not none %}href="{{ url_for('manage_users.edit_enrollment', id=record.id, url=url_for('convenor.faculty', id=pclass.id)) }}"{% endif %}>
-                <i class="fa fa-cogs"></i> Edit enrollment...
-            </a>
-        </li>
-        <li {% if record is none %}class="disabled"{% endif %}>
-            <a {% if record is not none %}href="{{ url_for('convenor.custom_CATS_limits', record_id=record.id) }}"{% endif %}>
-                <i class="fa fa-cogs"></i> Custom CATS limits...
-            </a>
-        </li>
-    </ul>
+        <a class="dropdown-item {% if record is none %}disabled{% endif %}" {% if record is not none %}href="{{ url_for('manage_users.edit_enrollment', id=record.id, url=url_for('convenor.faculty', id=pclass.id)) }}"{% endif %}>
+            <i class="fa fa-cogs"></i> Edit enrollment...
+        </a>
+        <a class="dropdown-item {% if record is none %}disabled{% endif %}" {% if record is not none %}href="{{ url_for('convenor.custom_CATS_limits', record_id=record.id) }}"{% endif %}>
+            <i class="fa fa-cogs"></i> Custom CATS limits...
+        </a>
+    </div>
 </div>
 """
 

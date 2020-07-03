@@ -52,10 +52,10 @@ _projects = \
                 {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
                 {% if not_confirmed %}
                     <div class="dropdown" style="display: inline-block;">
-                        <a class="badge badge-secondary dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
+                        <a class="badge badge-secondary dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
                         <div class="dropdown-menu">
-                            <li><a href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm</a></li>
-                        </ul>
+                            <a class="dropdown-item" href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm</a>
+                        </div>
                     </div>
                 {% else %}
                     {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
@@ -88,20 +88,15 @@ _menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('convenor.force_confirm', id=config.id, uid=f.id) }}">
-                <i class="fa fa-check"></i> Force confirm all
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('convenor.confirmation_reminder_individual', fac_id=f.id, config_id=config.id) }}">
-                <i class="fa fa-envelope-o"></i> Send reminder
-            </a>
-        </li>
-    </ul>
+        <a class="dropdown-item" href="{{ url_for('convenor.force_confirm', id=config.id, uid=f.id) }}">
+            <i class="fa fa-check"></i> Force confirm all
+        </a>
+        <a hclass="dropdown-item" ref="{{ url_for('convenor.confirmation_reminder_individual', fac_id=f.id, config_id=config.id) }}">
+            <i class="fa fa-envelope-o"></i> Send reminder
+        </a>
+    </div>
 </div>
 """
 

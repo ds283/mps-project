@@ -33,25 +33,22 @@ _selections = \
             {% set project = item.liveproject %}
             <div class="dropdown">
                 {% set style = project.group.make_CSS_style() %}
-                <a class="badge badge-info dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">#{{ item.rank }}
-                    {{ item.format_project()|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}
-                <span class="caret"></span></a>
+                <a class="badge badge-info dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">#{{ item.rank }}
+                    {{ item.format_project()|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}</a>
                 <div class="dropdown-menu">
                     {% set menu_items = item.menu_order %}
                     {% for mi in menu_items %}
                         {% if mi is string %}
-                            <li role="separator" class="divider"></li>
-                            <li class="dropdown-header">{{ mi }}</li>
+                            <div role="separator" class="dropdown-divider"></div>
+                            <div class="dropdown-header">{{ mi }}</div>
                         {% elif mi is number %}
                             {% set disabled = (mi == item.hint) %}
-                            <li {% if disabled %}class="disabled"{% endif %}>
-                                <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
-                                    {{ item.menu_item(mi)|safe }}
-                                </a>
-                            </li>
+                            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                                {{ item.menu_item(mi)|safe }}
+                            </a>
                         {% endif %}
                     {% endfor %}
-                </ul>
+                </div>
                 {% if item.converted_from_bookmark %}
                     <span class="badge badge-warning"><i class="fa fa-exclamation-triangle"></i> Bookmark</span>
                 {% endif %}

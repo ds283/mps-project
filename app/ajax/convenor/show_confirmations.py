@@ -61,7 +61,6 @@ _menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
     {% set sel = req.owner %}
@@ -69,29 +68,21 @@ _menu = \
     {% set config = sel.config %}
     {% set lifecycle = config.selector_lifecycle %}
     {% if lifecycle >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING%}
-        <li>
-            <a href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
-                <i class="fa fa-check"></i> Confirm
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
-                <i class="fa fa-trash"></i> Delete
-            </a>
-        </li>
+        <a class="dropdown-item" href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
+            <i class="fa fa-check"></i> Confirm
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
+            <i class="fa fa-trash"></i> Delete
+        </a>
     {% else %}
-        <li class="disabled">
-            <a>
-                <i class="fa fa-check"></i> Confirm
-            </a>
-        </li>
-        <li class="disabled">
-            <a>
-                <i class="fa fa-trash"></i> Delete
-            </a>
-        </li>
+        <a class="dropdown-item disabled">
+            <i class="fa fa-check"></i> Confirm
+        </a>
+        <a class="dropdown-item disabled">
+            <i class="fa fa-trash"></i> Delete
+        </a>
     {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

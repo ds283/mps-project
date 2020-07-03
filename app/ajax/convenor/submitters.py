@@ -46,55 +46,43 @@ _projects = \
             <div class="dropdown assignment-label">
                 <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle"
                         {% if style %}style="{{ style }}"{% endif %}
-                        type="button" data-toggle="dropdown">{% if show_period %}#{{ r.submission_period }}: {% endif %}
+                        role="button" aria-haspopup="true" aria-expanded="false"
+                        data-toggle="dropdown">{% if show_period %}#{{ r.submission_period }}: {% endif %}
                     {% if r.project.name|length < 35 %}
                         {{ r.project.name }}
                     {% else %}
                         {{ r.project.name[0:35] }}...
                     {% endif %}
-                    ({{ r.supervisor.user.last_name }})
-                <span class="caret"></span></a>
+                    ({{ r.supervisor.user.last_name }})</a>
                 <div class="dropdown-menu">
                     {% set disabled = r.period.is_feedback_open or r.student_engaged %}
                     {% if disabled %}
-                        <li class="disabled">
-                            <a>Can't reassign: Feedback open or student engaged</a>
-                        </li>
+                        <a class="dropdown-item disabled">Can't reassign: Feedback open or student engaged</a>
                     {% else %}
-                        <li>
-                            <a href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Manually reassign</a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for('convenor.deassign_project', id=r.id) }}">Remove assignment</a>
-                        </li>
+                        <a class="dropdown-item" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Manually reassign</a>
+                        <a class="dropdown-item" href="{{ url_for('convenor.deassign_project', id=r.id) }}">Remove assignment</a>
                     {% endif %}
-                </ul>
+                </div>
             </div>
             {% if sub.published %}
                 <div class="dropdown assignment-label">
                     <a class="badge {% if r.student_engaged %}badge-success{% else %}badge-warning{% endif %} btn-table-block dropdown-toggle"
-                            type="button" data-toggle="dropdown">{% if r.student_engaged %}<i class="fa fa-check"></i> Started{% else %}<i class="fa fa-times"></i> Waiting{% endif %}
-                    <span class="caret"></span></a>
+                        role="button" aria-haspopup="true" aria-expanded="false"
+                        data-toggle="dropdown">{% if r.student_engaged %}<i class="fa fa-check"></i> Started{% else %}<i class="fa fa-times"></i> Waiting{% endif %}</a>
                     <div class="dropdown-menu">
                         {% if r.submission_period > r.owner.config.submission_period %}
-                            <li class="disabled">
-                                <a>Submission period not yet open</a>
-                            </li>
+                            <a class="dropdown-item disabled">Submission period not yet open</a>
                         {% elif not r.student_engaged %}
-                            <li>
-                                <a href="{{ url_for('convenor.mark_started', id=r.id) }}">
-                                    <i class="fa fa-check"></i> Mark as started
-                                </a>
-                            </li>
+                            <a class="dropdown-item" href="{{ url_for('convenor.mark_started', id=r.id) }}">
+                                <i class="fa fa-check"></i> Mark as started
+                            </a>
                         {% else %}
                             {% set disabled = (r.owner.config.submitter_lifecycle >= r.owner.config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
-                            <li {% if disabled %}class="disabled"{% endif %}>
-                                <a {% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
-                                    <i class="fa fa-times"></i> Mark as waiting
-                                </a>
-                            </li>
+                            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
+                                <i class="fa fa-times"></i> Mark as waiting
+                            </a>
                         {% endif %}
-                    </ul>
+                    </div>
                 </div>
                 {% if r.report is not none %}
                     <span class="badge badge-success"><i class="fa fa-check"></i> Report</span>
@@ -157,26 +145,19 @@ _markers = \
     <div>
         {% if r.marker is not none %}
             <div class="dropdown assignment-label">
-                <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                     {% if show_period %}#{{ r.submission_period }}: {% endif %}
                     {{ r.marker.user.name }}
-                    <span class="caret"></span>
                 </a>
                 <div class="dropdown-menu">
                     {% set disabled = r.period.is_feedback_open %}
                     {% if disabled %}
-                        <li class="disabled">
-                            <a>Can't reassign: Feedback open or student engaged</a>
-                        </li>
+                        <a class="dropdown-item disabled">Can't reassign: Feedback open or student engaged</a>
                     {% else %}
-                        <li>
-                            <a href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Manually reassign</a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for('convenor.deassign_marker', id=r.id) }}">Remove assignment</a>
-                        </li>
+                        <a class="dropdown-item" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Manually reassign</a>
+                        <a class="dropdown-item" href="{{ url_for('convenor.deassign_marker', id=r.id) }}">Remove assignment</a>
                     {% endif %}
-                </ul>
+                </div>
             </div>
         {% else %}
             <a class="badge badge-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">{% if r.project is none %}No project allocated{% else %}No marker allocated{% endif %}</a>
@@ -232,25 +213,21 @@ _presentations = \
                     {% set slot = rec.schedule_slot %}
                     <div class="dropdown assignment-label">
                         {% if slot is not none %}
-                            <a class="badge badge-info btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
+                            <a class="badge badge-info btn-table-block dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                 {{ slot.short_date_as_string }}
                                 {{ slot.session_type_string }}
-                                <span class="caret"></span>
                             </a>
                         {% else %}
-                            <a class="badge badge-warning btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
+                            <a class="badge badge-warning btn-table-block dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                 Not attending
-                                <span class="caret"></span>
                             </a>
                         {% endif %}
                         <div class="dropdown-menu">
                             {% set disabled = not rec.can_assign_feedback %}
-                            <li {% if disabled %}class="disabled"{% endif %}>
-                                <a {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=rec.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                                    Add new feedback
-                                </a>
-                            </li>
-                        </ul>
+                            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=rec.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                                Add new feedback
+                            </a>
+                        </div>
                     </div>
                     {% if slot is not none %}
                         {% set fns = namespace(flag=false) %}
@@ -285,104 +262,77 @@ _menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
-            <li>
-                <a href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
-                    <i class="fa fa-pencil"></i> Edit student...
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
+                <i class="fa fa-pencil"></i> Edit student...
+            </a>
         {% endif %}
         {% if sub.student.has_timeline %}
-            <li>
-                <a href="{{ url_for('student.timeline', student_id=sub.student.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
-                    <i class="fa fa-clock-o"></i> Show history... 
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('student.timeline', student_id=sub.student.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
+                <i class="fa fa-clock-o"></i> Show history... 
+            </a>
         {% endif %}
         {% if allow_delete %}
-            <li>
-                <a href="{{ url_for('convenor.delete_submitter', sid=sub.id) }}">
-                    <i class="fa fa-trash"></i> Delete
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('convenor.delete_submitter', sid=sub.id) }}">
+                <i class="fa fa-trash"></i> Delete
+            </a>
         {% else %}
-            <li class="disabled">
-                <a><i class="fa fa-trash"></i> Delete disabled</a>
-            </li>
+            <a class="dropdown-item disabled"><i class="fa fa-trash"></i> Delete is disabled</a>
         {% endif %}
         
         {% if sub.published and pclass.publish %}
-            <li>
-                <a href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">
-                    <i class="fa fa-eye-slash"></i> Unpublish
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">
+                <i class="fa fa-eye-slash"></i> Unpublish
+            </a>
         {% else %}
             {% if pclass.publish %}
-                <li>
-                    <a href="{{ url_for('convenor.publish_assignment', id=sub.id) }}">
-                        <i class="fa fa-eye"></i> Publish to student
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('convenor.publish_assignment', id=sub.id) }}">
+                    <i class="fa fa-eye"></i> Publish to student
+                </a>
             {% else %}
-                <li class="disabled">
-                    <a>
-                        <i class="fa fa-eye-slash"></i> Cannot publish
-                    </a>
-                </li>
+                <a class="dropdown-item disabled">
+                    <i class="fa fa-eye-slash"></i> Cannot publish
+                </a>
             {% endif %}
         {% endif %}
 
         {% set recs = sub.ordered_assignments.all() %}
         
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Manage documents</li>
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">Manage documents</div>
         {% for r in recs %}
             {% set disabled = not pclass.publish %}
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('documents.submitter_documents', sid=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                    <i class="fa fa-file-text"></i> Period #{{ r.submission_period }}
-                </a>
-            </li>
+            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('documents.submitter_documents', sid=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                <i class="fa fa-file-text"></i> Period #{{ r.submission_period }}
+            </a>
         {% else %}
-            <li class="disabled">
-                <a>No periods</a>
-            </li>
+            <a class="dropdown-item disabled">No periods</a>
         {% endfor %}
         
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">View feedback</li>
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">View feedback</div>
         {% for r in recs %}
             {% set disabled = not pclass.publish %}
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                    <i class="fa fa-comments-o"></i> Period #{{ r.submission_period }}
-                </a>
-            </li>
+            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                <i class="fa fa-comments-o"></i> Period #{{ r.submission_period }}
+            </a>
         {% else %}
-            <li class="disabled">
-                <a>No periods</a>
-            </li>
+            <a class="dropdown-item disabled">No periods</a>
         {% endfor %}
 
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Manual reassignment</li>
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">Manual reassignment</div>
         {% for r in recs %}
             {% set disabled = r.period.is_feedback_open %}
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                    <i class="fa fa-wrench"></i> Period #{{ r.submission_period }}
-                </a>
-            </li>
+            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                <i class="fa fa-wrench"></i> Period #{{ r.submission_period }}
+            </a>
         {% else %}
-            <li class="disabled">
-                <a>No periods</a>
-            </li>
+            <a class="dropdown-item disabled">No periods</a>
         {% endfor %}
-    </ul>
+    </div>
 </div>
 """
 

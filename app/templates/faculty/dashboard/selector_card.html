@@ -211,7 +211,7 @@
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">
                                         {% set has_recommended = sel.satisfies_recommended(project) %}
-                                        <a class="badge {% if has_recommended %}badge-primary{% else %}badge-warning{% endif %} dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fa fa-exclamation-triangle" style="color:red;"></i> {% endif %}<span class="caret"></span></a>
+                                        <a class="badge {% if has_recommended %}badge-primary{% else %}badge-warning{% endif %} dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fa fa-exclamation-triangle" style="color:red;"></i> {% endif %}</a>
                                         {% if req.viewed is not none and not req.viewed %}
                                             <span class="badge badge-info">NEW</span>
                                         {% endif %}

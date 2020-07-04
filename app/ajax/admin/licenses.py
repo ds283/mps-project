@@ -88,7 +88,7 @@ _menu = \
                 <i class="fa fa-wrench"></i> Make active
             </a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

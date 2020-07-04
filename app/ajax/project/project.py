@@ -267,7 +267,7 @@ _unofferable_menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
+        <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
             <i class="fa fa-search"></i> Preview web page
         </a>
 
@@ -449,7 +449,7 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                     if desc.requires_confirmation and not desc.confirmed:
                         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
                             repapprove = """<div class="dropdown" style="display: inline-block;">
-                                                <a class="badge badge-light dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed <span class="caret"></span></a>
+                                                <a class="badge badge-light dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
                                                 <div class="dropdown-menu">
                                                     <a class="dropdown-item" href="{url}"><i class="fa fa-check"></i> Confirm</a>
                                                 </div>

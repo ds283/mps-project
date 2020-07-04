@@ -285,7 +285,6 @@
     <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
             Convenor
-            <span class="caret"></span>
         </a>
 
         <div class="dropdown-menu dropdown-menu-right">
@@ -329,7 +328,6 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
                             My projects
-                            <span class="caret"></span>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             <a class="dropdown-item" href="{{ url_for('faculty.edit_projects') }}">
@@ -355,7 +353,6 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
                             My projects
-                            <span class="caret"></span>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             {% if current_user.student_data.has_timeline %}
@@ -375,7 +372,6 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
                             Reports
-                            <span class="caret"></span>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             <a class="dropdown-item" href="{{ url_for('reports.all_projects') }}">
@@ -400,7 +396,6 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
                             Admin
-                            <span class="caret"></span>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             {% if is_manage_users or is_root %}
@@ -463,7 +458,6 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
                             Site management
-                            <span class="caret"></span>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             {% if is_root %}
@@ -504,7 +498,6 @@
                             {% elif current_user.has_role('student') %}
                                 (student)
                             {% endif %}
-                            <span class="caret"></span>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             <a class="dropdown-item" href="{{ url_for('home.homepage') }}">
@@ -552,10 +545,10 @@
                             <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
                                 <i class="fa fa-times-circle"></i> Logout
                             </a>
-                        </ul>
+                        </div>
                     </li>
                 {% endif %}
-            </ul>
+            </div>
         </div>
     </nav>
 {% endblock %}

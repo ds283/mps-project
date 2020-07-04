@@ -35,15 +35,12 @@ _menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         {% set disabled = not m.active %}
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.edit_module', id=m.id) }}"{% endif %}>
-                <i class="fa fa-pencil"></i> Edit details...
-            </a>
-        </li>
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_module', id=m.id) }}"{% endif %}>
+            <i class="fa fa-pencil"></i> Edit details...
+        </a>
 
         {% if m.active %}
             <a class="dropdown-item" href="{{ url_for('admin.retire_module', id=m.id) }}">
@@ -51,13 +48,11 @@ _menu = \
             </a>
         {% else %}
             {% set disabled = m.available %}
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('admin.unretire_module', id=m.id) }}"{% endif %}>
-                    <i class="fa fa-wrench"></i> Unretire
-                </a>
-            </li>
+            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.unretire_module', id=m.id) }}"{% endif %}>
+                <i class="fa fa-wrench"></i> Unretire
+            </a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

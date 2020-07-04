@@ -89,8 +89,7 @@ _projects = \
         <a class="badge {% if proj_overassigned %}badge-danger{% elif style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
                 {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
                 {% if adjustable %}data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"{% endif %}>#{{ r.submission_period }}:
-            {{ r.selector.student.user.name }} (No. {{ r.project.number }})
-        {% if adjustable %}<span class="caret"></span>{% endif %}</a>
+            {{ r.selector.student.user.name }} (No. {{ r.project.number }})</a>
         {% if adjustable %}
             {% set list = r.selector.ordered_selections %}
             <div class="dropdown-menu">

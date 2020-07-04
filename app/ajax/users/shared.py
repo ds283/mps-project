@@ -128,7 +128,7 @@ menu = \
         {% if cuser.has_role('root') and not cuser.has_role('student') %}
             <div role="separator" class="dropdown-divider"></div>
             <div class="dropdown-header">Superuser functions</div>
-            <a href="{{ url_for('admin.login_as', id=user.id) }}">
+            <a class="dropdown-item" href="{{ url_for('admin.login_as', id=user.id) }}">
                 <i class="fa fa-user"></i> Login as user
             </a>
         {% endif %}

@@ -71,48 +71,40 @@ _menu = \
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
-                View project...
-            </a>
-        </li>
+        <a class="dropdown-item" href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
+            View project...
+        </a>
         {% if is_live %}
-            <li>
-                {% if sel.is_project_bookmarked(project) %}
-                    <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}">
-                        Remove bookmark
+            {% if sel.is_project_bookmarked(project) %}
+                <a class="dropdown-item" href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}">
+                    Remove bookmark
+                </a>
+            {% else %}
+                <a class="dropdown-item" href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}">
+                    Add bookmark
+                </a>
+            {% endif %}
+            {% set disabled = project.is_available(sel) %}
+            {% if not disabled %}
+                {% if project.is_waiting(sel) %}
+                    <a class="dropdown-item" href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
+                        Cancel confirmation
                     </a>
                 {% else %}
-                    <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}">
-                        Add bookmark
+                    <a class="dropdown-item" href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}">
+                        Request confirmation
                     </a>
                 {% endif %}
-            </li>
-            <li {% if project.is_available(sel) %}class="disabled"{% endif %}>
-                {% if not project.is_available(sel) %}
-                    {% if project.is_waiting(sel) %}
-                        <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
-                            Cancel confirmation
-                        </a>
-                    {% else %}
-                        <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}">
-                            Request confirmation
-                        </a>
-                    {% endif %}
-                {% else %}
-                    <a>Project available</a>
-                {% endif %}
-            </li>
+            {% else %}
+                <a class="dropdown-item disabled">Project unavailable</a>
+            {% endif %}
         {% else %}
-            <li role="separator" class="divider">
-            <li class="disabled">
-                <a>Project selection not live</a>
-            </li>
+            <div role="separator" class="dropdown-divider"></div>
+            <a class="dropdown-item disabled">Project selection not live</a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

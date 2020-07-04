@@ -26,7 +26,7 @@ _assessors = \
 {% for assessor in s.assessors %}
     <div>
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
-            <a class="badge badge-secondary" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+            <a class="badge badge-light" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                 {{ assessor.user.name }}
             </a>
             <div class="dropdown-menu">

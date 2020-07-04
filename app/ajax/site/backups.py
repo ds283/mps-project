@@ -16,15 +16,12 @@ _manage_backups_menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.confirm_delete_backup', id=backup.id) }}">
-                <i class="fa fa-trash"></i> Delete
-            </a>
-        </li>
-    </ul>
+        <a class="dropdown-item" href="{{ url_for('admin.confirm_delete_backup', id=backup.id) }}">
+            <i class="fa fa-trash"></i> Delete
+        </a>
+    </div>
 </div>
 """
 

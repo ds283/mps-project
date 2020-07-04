@@ -60,7 +60,6 @@
                 <div class="dropdown">
                     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                         Actions
-                        <span class="caret"></span>
                     </button>
                     <div class="dropdown-menu dropdown-menu-right">
                         {% if is_editable is none %}
@@ -103,7 +102,7 @@
                                 {% endif %}
                             {% endif %}
                         {% else %}
-                            <li><a class="disabled"><i class="fa fa-times"></i> No access</a>
+                            <a class="dropdown-item disabled"><i class="fa fa-times"></i> No access</a>
                         {% endif %}
                     </ul>
                 </div>

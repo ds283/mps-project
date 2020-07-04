@@ -296,7 +296,7 @@
                 </a>
             {% endfor %}
             {% if current_user.has_role('admin') or current_user.has_role('root') %}
-                <div role="separator" class="divider"></div>
+                <div role="separator" class="dropdown-divider"></div>
                 <a class="dropdown-item" href="{{ url_for('convenor.show_unofferable', id=0) }}">
                     <i class="fa fa-exclamation-circle"></i> Unofferable projects...
                 </a>

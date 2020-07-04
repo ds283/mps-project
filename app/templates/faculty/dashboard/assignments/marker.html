@@ -43,7 +43,6 @@
                                 <div class="dropdown">
                                     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                                         Actions
-                                        <span class="caret"></span>
                                     </button>
                                     <div class="dropdown-menu dropdown-menu-right">
                                         <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ rec.number_attachments }})...</a>
@@ -59,7 +58,7 @@
                                                 <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> View feedback...</a>
                                             {% endif %}
                                         {% endif %}
-                                    </ul>
+                                    </div>
                                 </div>
                             </div>
                         </td>

@@ -90,31 +90,24 @@ _menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('manage_users.edit_batch_item', item_id=item.id) }}">
-                <i class="fa fa-pencil"></i> Edit...
-            </a>
-        </li>
+        <a class="dropdown-item" href="{{ url_for('manage_users.edit_batch_item', item_id=item.id) }}">
+            <i class="fa fa-pencil"></i> Edit...
+        </a>
         
-        <li role="separator" class="divider"></li>
+        <div role="separator" class="dropdown-divider"></div>
 
         {% if item.dont_convert %}
-            <li>
-                <a href="{{ url_for('manage_users.mark_batch_item_convert', item_id=item.id) }}">
-                    <i class="fa fa-wrench"></i> Allow import
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('manage_users.mark_batch_item_convert', item_id=item.id) }}">
+                <i class="fa fa-wrench"></i> Allow import
+            </a>
         {% else %}
-            <li>
-                <a href="{{ url_for('manage_users.mark_batch_item_dont_convert', item_id=item.id) }}">
-                    <i class="fa fa-wrench"></i> Disallow import
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('manage_users.mark_batch_item_dont_convert', item_id=item.id) }}">
+                <i class="fa fa-wrench"></i> Disallow import
+            </a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

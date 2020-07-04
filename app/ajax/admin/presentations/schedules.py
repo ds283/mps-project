@@ -296,7 +296,7 @@ _menu = \
                 {% endif %}
                 
                 {% if s.published or s.deployed %}
-                    <div role="separator" class="divider"></div>
+                    <div role="separator" class="dropdown-divider"></div>
                     <a class="dropdown-item" href="{{ url_for('admin.publish_schedule_submitters', id=s.id) }}">
                         <i class="fa fa-envelope-o"></i> Email to submitters
                     </a>

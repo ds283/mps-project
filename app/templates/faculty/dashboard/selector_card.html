@@ -211,41 +211,31 @@
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">
                                         {% set has_recommended = sel.satisfies_recommended(project) %}
-                                        <a class="badge {% if has_recommended %}badge-primary{% else %}badge-warning{% endif %} dropdown-toggle" type="button" data-toggle="dropdown">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fa fa-exclamation-triangle" style="color:red;"></i> {% endif %}<span class="caret"></span></a>
+                                        <a class="badge {% if has_recommended %}badge-primary{% else %}badge-warning{% endif %} dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fa fa-exclamation-triangle" style="color:red;"></i> {% endif %}<span class="caret"></span></a>
                                         {% if req.viewed is not none and not req.viewed %}
                                             <span class="badge badge-info">NEW</span>
                                         {% endif %}
                                         <div class="dropdown-menu">
                                             {% if not has_recommended %}
-                                                <li class="disabled">
-                                                    <a>Programme does not include recommended modules</a>
-                                                </li>
-                                                <li role="separator" class="divider"></li>
+                                                <a class="dropdown-item disabled">Programme does not include recommended modules</a>
+                                                <div role="separator" class="dropdown-divider"></div>
                                             {% endif %}
                                             {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                                <li>
-                                                    <a href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
-                                                        <i class="fa fa-check"></i> Confirm
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a href="{{ url_for('faculty.cancel_confirm', sid=sel.id, pid=project.id) }}">
-                                                        <i class="fa fa-trash"></i> Delete
-                                                    </a>
-                                                </li>
+                                                <a class="dropdown-item" href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
+                                                    <i class="fa fa-check"></i> Confirm
+                                                </a>
+                                                <a class="dropdown-item" href="{{ url_for('faculty.cancel_confirm', sid=sel.id, pid=project.id) }}">
+                                                    <i class="fa fa-trash"></i> Delete
+                                                </a>
                                             {% else %}
-                                                <li class="disabled">
-                                                    <a>
-                                                        <i class="fa fa-check"></i> Confirm
-                                                    </a>
-                                                </li>
-                                                <li class="disabled">
-                                                    <a>
-                                                        <i class="fa fa-trash"></i> Delete
-                                                    </a>
-                                                </li>
+                                                <a class=""dropdown-item disabled">
+                                                    <i class="fa fa-check"></i> Confirm
+                                                </a>
+                                                <a class=""dropdown-item disabled">
+                                                    <i class="fa fa-trash"></i> Delete
+                                                </a>
                                             {% endif %}
-                                        </ul>
+                                        </div>
                                     </div>
                                 {% endfor %}
                             </div>
@@ -255,22 +245,17 @@
                                     {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">
-                                        <a class="badge badge-success dropdown-toggle"
-                                                type="button" data-toggle="dropdown">
-                                            {{ sel.student.user.name }} <span class="caret"></span>
+                                        <a class="badge badge-success dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                            {{ sel.student.user.name }}
                                         </a>
                                         <div class="dropdown-menu">
-                                            <li>
-                                                <a href="{{ url_for('faculty.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
-                                                    <i class="fa fa-clock-o"></i> Make pending
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="{{ url_for('faculty.deconfirm', sid=sel.id, pid=project.id) }}">
-                                                    <i class="fa fa-trash"></i> Delete
-                                                </a>
-                                            </li>
-                                        </ul>
+                                            <a class="dropdown-item" href="{{ url_for('faculty.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
+                                                <i class="fa fa-clock-o"></i> Make pending
+                                            </a>
+                                            <a class="dropdown-item" href="{{ url_for('faculty.deconfirm', sid=sel.id, pid=project.id) }}">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </a>
+                                        </div>
                                     </div>
                                 {% endfor %}
                             </div>

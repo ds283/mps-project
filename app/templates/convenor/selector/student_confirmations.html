@@ -62,7 +62,7 @@
                                 <div class="col-2">
                                     <div class="float-right">
                                         <div class="dropdown">
-                                            <a class="btn btn-warning dropdown-toggle" type="button" data-toggle="dropdown">
+                                            <a class="btn btn-warning dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                                 Deconfirm
                                                 {% if not sel.satisfies_recommended(project) %}
                                                     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
@@ -129,7 +129,7 @@
                                 <div class="col-2">
                                     <div class="float-right">
                                         <div class="dropdown">
-                                            <a class="btn btn-success dropdown-toggle" type="button" data-toggle="dropdown">
+                                            <a class="btn btn-success dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                                 Confirm
                                                 {% if not sel.satisfies_recommended(project) %}
                                                     <i class="fa fa-exclamation-triangle" style="color:white;"></i>

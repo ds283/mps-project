@@ -96,10 +96,10 @@ _desc_label = \
     {% if not_confirmed %}
         {% if config is not none and config.selector_lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and desc_validator is not none and desc_validator(d) %}
             <div class="dropdown" style="display: inline-block;">
-                <a class="badge badge-secondary dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
+                <a class="badge badge-secondary dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
                 <div class="dropdown-menu">
-                    <a class="dropdown-item" href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm</a>
-                </ul>
+                    <a class="dropdown-item" class="dropdown-item" href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm</a>
+                </div>
             </div>
         {% else %}
             <span class="badge badge-secondary">Approval: Not confirmed</span>
@@ -176,62 +176,47 @@ _desc_menu = \
     <div class="dropdown">
         <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
             Actions
-            <span class="caret"></span>
         </button>
         <div class="dropdown-menu dropdown-menu-right">
-            <li>
-                <a href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
-                                    url=url_for('convenor.edit_descriptions', id=d.parent.id, pclass_id=pclass_id, create=create),
-                                    text='description list view') }}">
-                    <i class="fa fa-search"></i> Preview web page
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
+                                url=url_for('convenor.edit_descriptions', id=d.parent.id, pclass_id=pclass_id, create=create),
+                                text='description list view') }}">
+                <i class="fa fa-search"></i> Preview web page
+            </a>
 
             {% if desc_validator and desc_validator(d) %}
-                <li role="separator" class="divider"></li>
-                <li class="dropdown-header">Edit description</li>
+                <div role="separator" class="dropdown-divider"></div>
+                <div class="dropdown-header">Edit description</div>
     
-                <li>
-                    <a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
-                        <i class="fa fa-pencil"></i> Edit content...
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('convenor.description_modules', did=d.id, pclass_id=pclass_id, create=create) }}">
-                        <i class="fa fa-cogs"></i> Recommended modules...
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('convenor.duplicate_description', did=d.id, pclass_id=pclass_id) }}">
-                        <i class="fa fa-clone"></i> Duplicate
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('convenor.move_description', did=d.id, pclass_id=pclass_id, create=create) }}">
-                        <i class="fa fa-arrows"></i> Move to project...
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('convenor.delete_description', did=d.id, pclass_id=pclass_id) }}">
-                        <i class="fa fa-trash"></i> Delete
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
+                    <i class="fa fa-pencil"></i> Edit content...
+                </a>
+                <a class="dropdown-item" href="{{ url_for('convenor.description_modules', did=d.id, pclass_id=pclass_id, create=create) }}">
+                    <i class="fa fa-cogs"></i> Recommended modules...
+                </a>
+                <a class="dropdown-item" href="{{ url_for('convenor.duplicate_description', did=d.id, pclass_id=pclass_id) }}">
+                    <i class="fa fa-clone"></i> Duplicate
+                </a>
+                <a class="dropdown-item" href="{{ url_for('convenor.move_description', did=d.id, pclass_id=pclass_id, create=create) }}">
+                    <i class="fa fa-arrows"></i> Move to project...
+                </a>
+                <a class="dropdown-item" href="{{ url_for('convenor.delete_description', did=d.id, pclass_id=pclass_id) }}">
+                    <i class="fa fa-trash"></i> Delete
+                </a>
             {% endif %}
     
-            <li role="separator" class="divider"></li>
+            <div role="separator" class="dropdown-divider"></div>
 
-            <li>
-                {% if d.default is none %}
-                    <a href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id, did=d.id) }}">
-                        <i class="fa fa-wrench"></i> Make default
-                    </a>
-                {% else %}
-                    <a href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id) }}">
-                        <i class="fa fa-wrench"></i> Remove default
-                    </a>
-                {% endif %}
-            </li>
-        </ul>
+            {% if d.default is none %}
+                <a class="dropdown-item" href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id, did=d.id) }}">
+                    <i class="fa fa-wrench"></i> Make default
+                </a>
+            {% else %}
+                <a class="dropdown-item" href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id) }}">
+                    <i class="fa fa-wrench"></i> Remove default
+                </a>
+            {% endif %}
+        </div>
     </div>
  """
 

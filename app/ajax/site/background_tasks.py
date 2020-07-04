@@ -30,23 +30,18 @@ _menu = \
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         {% if t.status == t.PENDING or t.status == t.RUNNING %}
-            <li>
-                <a href="{{ url_for('admin.terminate_background_task', id=t.id) }}">
-                    <i class="fa fa-hand-paper-o"></i> Terminate
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('admin.terminate_background_task', id=t.id) }}">
+                <i class="fa fa-hand-paper-o"></i> Terminate
+            </a>
         {% else %}
-            <li>
-                <a href="{{ url_for('admin.delete_background_task', id=t.id) }}">
-                    <i class="fa fa-trash"></i> Delete
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('admin.delete_background_task', id=t.id) }}">
+                <i class="fa fa-trash"></i> Delete
+            </a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

@@ -164,73 +164,52 @@ _faculty_menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
-                <i class="fa fa-search"></i> Preview web page
+        <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
+            <i class="fa fa-search"></i> Preview web page
+        </a>
+
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">Edit project</div>
+
+        <a class="dropdown-item" href="{{ url_for('faculty.edit_project', id=project.id) }}">
+            <i class="fa fa-cogs"></i> Settings...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('faculty.edit_descriptions', id=project.id) }}">
+            <i class="fa fa-pencil"></i> Descriptions...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('faculty.attach_assessors', id=project.id) }}">
+            <i class="fa fa-cogs"></i> Assessors...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('faculty.attach_skills', id=project.id) }}">
+            <i class="fa fa-cogs"></i> Transferable skills...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('faculty.attach_programmes', id=project.id) }}">
+            <i class="fa fa-cogs"></i> Degree programmes...
+        </a>
+
+        <div role="separator" class="dropdown-divider"></div>
+
+        {% if project.active %}
+            <a class="dropdown-item" href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
+                <i class="fa fa-wrench"></i> Make inactive
             </a>
-        </li>
-
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Edit project</li>
-
-        <li>
-            <a href="{{ url_for('faculty.edit_project', id=project.id) }}">
-                <i class="fa fa-cogs"></i> Settings...
+        {% else %}
+            <a class="dropdown-item" href="{{ url_for('faculty.activate_project', id=project.id) }}">
+                <i class="fa fa-wrench"></i> Make active
             </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('faculty.edit_descriptions', id=project.id) }}">
-                <i class="fa fa-pencil"></i> Descriptions...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('faculty.attach_assessors', id=project.id) }}">
-                <i class="fa fa-cogs"></i> Assessors...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('faculty.attach_skills', id=project.id) }}">
-                <i class="fa fa-cogs"></i> Transferable skills...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('faculty.attach_programmes', id=project.id) }}">
-                <i class="fa fa-cogs"></i> Degree programmes...
-            </a>
-        </li>
-
-        <li role="separator" class="divider"></li>
-
-        <li>
-            {% if project.active %}
-                <a href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
-                    <i class="fa fa-wrench"></i> Make inactive
-                </a>
-            {% else %}
-                <a href="{{ url_for('faculty.activate_project', id=project.id) }}">
-                    <i class="fa fa-wrench"></i> Make active
-                </a>
-            {% endif %}
-        </li>
+        {% endif %}
         {% if project.is_deletable %}
-            <li>
-                <a href="{{ url_for('faculty.delete_project', id=project.id) }}">
-                    <i class="fa fa-trash"></i> Delete
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('faculty.delete_project', id=project.id) }}">
+                <i class="fa fa-trash"></i> Delete
+            </a>
         {% else %}
             <a class="dropdown-item disabled">
                 <i class="fa fa-trash"></i> Delete disabled
             </a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 
@@ -240,62 +219,43 @@ _convenor_menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
-                <i class="fa fa-search"></i> Preview web page
-            </a>
-        </li>
+        <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
+            <i class="fa fa-search"></i> Preview web page
+        </a>
 
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Edit project</li>
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">Edit project</div>
 
-        <li>
-            <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=pclass_id) }}">
-                <i class="fa fa-cogs"></i> Settings...
-            </a>
-        </li>
+        <a class="dropdown-item" href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=pclass_id) }}">
+            <i class="fa fa-cogs"></i> Settings...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=pclass_id) }}">
+            <i class="fa fa-pencil"></i> Descriptions...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=pclass_id, url=url_for('convenor.attached', id=pclass_id), text='convenor dashboard') }}">
+            <i class="fa fa-cogs"></i> Assessors...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=pclass_id) }}">
+            <i class="fa fa-cogs"></i> Transferable skills...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=pclass_id) }}">
+            <i class="fa fa-cogs"></i> Degree programmes...
+        </a>
 
-        <li>
-            <a href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=pclass_id) }}">
-                <i class="fa fa-pencil"></i> Descriptions...
-            </a>
-        </li>
+        <div role="separator" class="dropdown-divider"></div>
 
-        <li>
-            <a href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=pclass_id, url=url_for('convenor.attached', id=pclass_id), text='convenor dashboard') }}">
-                <i class="fa fa-cogs"></i> Assessors...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=pclass_id) }}">
-                <i class="fa fa-cogs"></i> Transferable skills...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=pclass_id) }}">
-                <i class="fa fa-cogs"></i> Degree programmes...
-            </a>
-        </li>
-
-        <li role="separator" class="divider"></li>
-
-        <li>
         {% if project.active %}
-            <a href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=pclass_id) }}">
+            <a class="dropdown-item" href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=pclass_id) }}">
                 <i class="fa fa-wrench"></i> Make inactive
             </a>
         {% else %}
-            <a href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=pclass_id) }}">
+            <a class="dropdown-item" href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=pclass_id) }}">
                 <i class="fa fa-wrench"></i> Make active
             </a>
         {% endif %}
-        </li>
-    </ul>
+    </div>
 </div>
 """
 
@@ -305,62 +265,43 @@ _unofferable_menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
-                <i class="fa fa-search"></i> Preview web page
-            </a>
-        </li>
+        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
+            <i class="fa fa-search"></i> Preview web page
+        </a>
 
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Edit project</li>
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">Edit project</div>
 
-        <li>
-            <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-cogs"></i> Settings...
-            </a>
-        </li>
+        <a class="dropdown-item" href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0) }}">
+            <i class="fa fa-cogs"></i> Settings...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=0) }}">
+            <i class="fa fa-pencil"></i> Descriptions...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=0, url=url_for('convenor.attached', id=0), text='convenor dashboard') }}">
+            <i class="fa fa-cogs"></i> Assessors...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=0) }}">
+            <i class="fa fa-cogs"></i> Transferable skills...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=0) }}">
+            <i class="fa fa-cogs"></i> Degree programmes...
+        </a>
 
-        <li>
-            <a href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-pencil"></i> Descriptions...
-            </a>
-        </li>
+        <div role="separator" class="dropdown-divider"></div>
 
-        <li>
-            <a href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=0, url=url_for('convenor.attached', id=0), text='convenor dashboard') }}">
-                <i class="fa fa-cogs"></i> Assessors...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-cogs"></i> Transferable skills...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-cogs"></i> Degree programmes...
-            </a>
-        </li>
-
-        <li role="separator" class="divider"></li>
-
-        <li>
         {% if project.active %}
-            <a href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=0) }}">
+            <a class="dropdown-item" href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=0) }}">
                 <i class="fa fa-wrench"></i> Make inactive
             </a>
         {% else %}
-            <a href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=0) }}">
+            <a class="dropdown-item" href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=0) }}">
                 <i class="fa fa-wrench"></i> Make active
             </a>
         {% endif %}
-        </li>
-    </ul>
+    </div>
 </div>
 """
 
@@ -508,10 +449,10 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                     if desc.requires_confirmation and not desc.confirmed:
                         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
                             repapprove = """<div class="dropdown" style="display: inline-block;">
-                                                <a class="badge badge-secondary dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
+                                                <a class="badge badge-light dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed <span class="caret"></span></a>
                                                 <div class="dropdown-menu">
                                                     <a class="dropdown-item" href="{url}"><i class="fa fa-check"></i> Confirm</a>
-                                                </ul>
+                                                </div>
                                             </div>""".format(url=url_for('convenor.confirm_description', config_id=config.id, did=desc.id))
                         else:
                             repapprove = '<span class="badge badge-secondary">Approval: Not confirmed</span>'

@@ -169,60 +169,45 @@ _desc_menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
-                                url=url_for('faculty.edit_descriptions', id=d.parent.id, create=create),
-                                text='description list view') }}">
-                <i class="fa fa-search"></i> Preview web page
-            </a>
-        </li>
+        <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
+           url=url_for('faculty.edit_descriptions', id=d.parent.id, create=create),
+           text='description list view') }}">
+            <i class="fa fa-search"></i> Preview web page
+        </a>
 
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Edit description</li>
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">Edit description</div>
 
-        <li>
-            <a href="{{ url_for('faculty.edit_description', did=d.id, create=create) }}">
-                <i class="fa fa-pencil"></i> Edit content...
-            </a>
-        </li>
-            <li>
-                <a href="{{ url_for('faculty.description_modules', did=d.id, create=create) }}">
-                    <i class="fa fa-cogs"></i> Recommended modules...
-                </a>
-            </li>
-        <li>
-            <a href="{{ url_for('faculty.duplicate_description', did=d.id) }}">
-                <i class="fa fa-clone"></i> Duplicate
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('faculty.move_description', did=d.id, create=create) }}">
-                <i class="fa fa-arrows"></i> Move to project...
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('faculty.delete_description', did=d.id) }}">
-                <i class="fa fa-trash"></i> Delete
-            </a>
-        </li>
+        <a class="dropdown-item" href="{{ url_for('faculty.edit_description', did=d.id, create=create) }}">
+            <i class="fa fa-pencil"></i> Edit content...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('faculty.description_modules', did=d.id, create=create) }}">
+            <i class="fa fa-cogs"></i> Recommended modules...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('faculty.duplicate_description', did=d.id) }}">
+            <i class="fa fa-clone"></i> Duplicate
+        </a>
+        <a class="dropdown-item" href="{{ url_for('faculty.move_description', did=d.id, create=create) }}">
+            <i class="fa fa-arrows"></i> Move to project...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('faculty.delete_description', did=d.id) }}">
+            <i class="fa fa-trash"></i> Delete
+        </a>
         
-        <li role="separator" class="divider"></li>
+        <div role="separator" class="dropdown-divider"></div>
         
-        <li>
-            {% if d.default is none %}
-                <a href="{{ url_for('faculty.make_default_description', pid=d.parent_id, did=d.id) }}">
-                    <i class="fa fa-wrench"></i> Make default
-                </a>
-            {% else %}
-                <a href="{{ url_for('faculty.make_default_description', pid=d.parent_id) }}">
-                    <i class="fa fa-wrench"></i> Remove default
-                </a>
-            {% endif %}
-        </li>
-    </ul>
+        {% if d.default is none %}
+            <a class="dropdown-item" href="{{ url_for('faculty.make_default_description', pid=d.parent_id, did=d.id) }}">
+                <i class="fa fa-wrench"></i> Make default
+            </a>
+        {% else %}
+            <a class="dropdown-item" href="{{ url_for('faculty.make_default_description', pid=d.parent_id) }}">
+                <i class="fa fa-wrench"></i> Remove default
+            </a>
+        {% endif %}
+    </div>
 </div>
 """
 

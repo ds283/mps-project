@@ -24,34 +24,26 @@
                                 <button class="btn {% if style %}btn-secondary{% else %}btn-success{% endif %} selection-label dropdown-toggle"
                                         {% if style %}style="{{ style }}"{% endif %}
                                         type="button" data-toggle="dropdown">
-                                    {{ pclass.name }} <span class="caret"></span>
+                                    {{ pclass.name }}
                                 </button>
                                 <div class="dropdown-menu">
-                                    <li class="dropdown-header">Admin</li>
-                                    <li>
-                                        <a href="{{ url_for('manage_users.remove_enrollment', userid=user.id, pclassid=pclass.id) }}">
-                                            <i class="fa fa-trash"></i> Remove enrollment
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ url_for('manage_users.edit_enrollment', id=record.id, url=url_for('manage_users.edit_enrollments', id=record.owner_id, pane=pane), pane=pane) }}">
-                                            <i class="fa fa-cogs"></i> Edit enrollment
-                                        </a>
-                                    </li>
-                                    <li role="separator" class="divider"></li>
-                                    <li class="dropdown-header">Operations</li>
+                                    <div class="dropdown-header">Admin</div>
+                                    <a class="dropdown-item" href="{{ url_for('manage_users.remove_enrollment', userid=user.id, pclassid=pclass.id) }}">
+                                        <i class="fa fa-trash"></i> Remove enrollment
+                                    </a>
+                                    <a class="dropdown-item" href="{{ url_for('manage_users.edit_enrollment', id=record.id, url=url_for('manage_users.edit_enrollments', id=record.owner_id, pane=pane), pane=pane) }}">
+                                        <i class="fa fa-cogs"></i> Edit enrollment
+                                    </a>
+                                    <div role="separator" class="dropdown-divider"></div>
+                                    <div class="dropdown-header">Operations</div>
                                     {% set disable = record.marker_state != record.MARKER_ENROLLED and record.presentations_state != record.PRESENTATIONS_ENROLLED %}
-                                    <li {% if disable %}class="disable"{% endif %}>
-                                        <a {% if not disable %}href="{{  url_for('manage_users.enroll_projects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
-                                            <i class="fa fa-cogs"></i> Make assessor for all projects
-                                        </a>
-                                    </li>
-                                    <li {% if disable %}class="disable"{% endif %}>
-                                        <a {% if not disable %}href="{{  url_for('manage_users.enroll_liveprojects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
-                                            <i class="fa fa-cogs"></i> Make assessor for this year's live projects
-                                        </a>
-                                    </li>
-                                </ul>
+                                    <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disable %}href="{{  url_for('manage_users.enroll_projects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
+                                        <i class="fa fa-cogs"></i> Make assessor for all projects
+                                    </a>
+                                    <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disable %}href="{{  url_for('manage_users.enroll_liveprojects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
+                                        <i class="fa fa-cogs"></i> Make assessor for this year's live projects
+                                    </a>
+                                </div>
                             </div>
                         {% endif %}
                     {% endfor %}

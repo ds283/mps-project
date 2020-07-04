@@ -34,26 +34,23 @@
                                 <div class="col-2">
                                     <span class="badge badge-success rank-hint-button">#{{ item.rank }}</span>
                                     <div class="rank-hint-button">
-                                        <a class="badge badge-info dropdown-toggle" type="button" data-toggle="dropdown">
+                                        <a class="badge badge-info dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                             Hint
-                                            <span class="caret"></span>
                                         </a>
                                         <div class="dropdown-menu">
                                             {% set menu_items = item.menu_order %}
                                             {% for mi in menu_items %}
                                                 {% if mi is string %}
-                                                    <li role="separator" class="divider"></li>
-                                                    <li class="dropdown-header">{{ mi }}</li>
+                                                    <div role="separator" class="dropdown-divider"></div>
+                                                    <div class="dropdown-header">{{ mi }}</div>
                                                 {% elif mi is number %}
                                                     {% set disabled = (mi == item.hint) %}
-                                                    <li {% if disabled %}class="disabled"{% endif %}>
-                                                        <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
-                                                            {{ item.menu_item(mi)|safe }}
-                                                        </a>
-                                                    </li>
+                                                    <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                                                        {{ item.menu_item(mi)|safe }}
+                                                    </a>
                                                 {% endif %}
                                             {% endfor %}
-                                        </ul>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-7">

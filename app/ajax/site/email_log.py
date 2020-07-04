@@ -16,20 +16,15 @@ _email_log_menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.delete_email', id=e.id) }}">
-                <i class="fa fa-trash"></i> Delete
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.display_email', id=e.id) }}">
-                <i class="fa fa-eye"></i> View email
-            </a>
-        </li>
-    </ul>
+        <a class="dropdown-item" href="{{ url_for('admin.delete_email', id=e.id) }}">
+            <i class="fa fa-trash"></i> Delete
+        </a>
+        <a class="dropdown-item" href="{{ url_for('admin.display_email', id=e.id) }}">
+            <i class="fa fa-eye"></i> View email
+        </a>
+    </div>
 </div>
 """
 

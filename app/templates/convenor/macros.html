@@ -114,14 +114,14 @@
                         {% endif %}
                         {% if show_hint %}
                             <div class="rank-hint-button">
-                                <a class="badge badge-info dropdown-toggle" type="button" data-toggle="dropdown">
+                                <a class="badge badge-info dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                     Hint
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-right">
                                     {% set menu_items = item.menu_order %}
                                     {% for mi in menu_items %}
                                         {% if mi is string %}
-                                            <div role="separator" class="divider"></div>
+                                            <div role="separator" class="dropdown-divider"></div>
                                             <div class="dropdown-header">{{ mi }}</div>
                                         {% elif mi is number %}
                                             {% set disabled = (mi == item.hint) %}
@@ -171,7 +171,7 @@
                         {% endif %}
                         {% if show_hint %}
                             <div class="rank-hint-button">
-                                <a class="badge badge-info dropdown-toggle" type="button" data-toggle="dropdown">
+                                <a class="badge badge-info dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                     Hint
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-right">

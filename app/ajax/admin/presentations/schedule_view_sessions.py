@@ -26,17 +26,14 @@ _assessors = \
 {% for assessor in s.assessors %}
     <div>
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
-            <a class="badge badge-secondary" type="button" data-toggle="dropdown">
+            <a class="badge badge-secondary" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                 {{ assessor.user.name }}
-                <span class="caret"></span>
             </a>
             <div class="dropdown-menu">
-                <li>
-                    <a href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
-                        Reassign assessors...
-                    </a>
-                </li>
-            </ul>
+                <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
+                    Reassign assessors...
+                </a>
+            </div>
         </div>
         {% if s.session.faculty_ifneeded(assessor.id) %}
             <span class="badge badge-warning">if-needed</span>
@@ -55,17 +52,14 @@ _talks = \
     {% set ns.count = ns.count + 1 %}
     <div class="dropdown schedule-assign-button" style="display: inline-block;">
         {% set style = talk.pclass.make_CSS_style() %}
-        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
             {{ talk.owner.student.user.name }}
-            <span class="caret"></span>
         </a>
         <div class="dropdown-menu">
-            <li>
-                <a href="{{ url_for('admin.schedule_adjust_submitter', slot_id=s.id, talk_id=talk.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
-                    Reassign presentation...
-                </a>
-            </li>
-        </ul>
+            <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=s.id, talk_id=talk.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
+                Reassign presentation...
+            </a>
+        </div>
     </div>
     {% if s.session.submitter_unavailable(talk.id) %}
         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
@@ -119,23 +113,18 @@ _room = \
 """
 {% set style = s.room.building.make_CSS_style() %}
 <div class="dropdown schedule-assign-button">
-    <a class="badge {% if style is none %}badge-info{% else %}badge-secondary{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+    <a class="badge {% if style is none %}badge-info{% else %}badge-secondary{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
         {{ s.room.full_name }}
-        <span class="caret"></span>
     </a>
     <div class="dropdown-menu">
-        <li class="dropdown-header">Alternative venues</li>
+        <div class="dropdown-header">Alternative venues</div>
         {% set rooms = s.alternative_rooms %}
         {% for room in rooms %}
-            <li>
-                <a href="{{ url_for('admin.schedule_move_room', slot_id=s.id, room_id=room.id) }}">
-                    {{ room.full_name }}
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('admin.schedule_move_room', slot_id=s.id, room_id=room.id) }}">
+                {{ room.full_name }}
+            </a>
         {% else %}
-            <li class="disabled">
-                <a><i class="fa fa-bar"></i> None available</a>
-            </li>
+            <a class="dropdown-item disabled"><i class="fa fa-bar"></i> None available</a>
         {% endfor %}
     </ul>
 </div>

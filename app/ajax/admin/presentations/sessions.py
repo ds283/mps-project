@@ -76,35 +76,26 @@ _menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         {% set a = s.owner %}
         {% set disabled = not s.owner.is_feedback_open %}
-        <li class="dropdown-header">Edit session</li>
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.edit_session', id=s.id) }}"{% endif %}>
-                <i class="fa fa-cogs"></i> Settings...
-            </a>
-        </li>
+        <div class="dropdown-header">Edit session</div>
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_session', id=s.id) }}"{% endif %}>
+            <i class="fa fa-cogs"></i> Settings...
+        </a>
         {% set disabled = not a.requested_availability or a.is_deployed %}
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.submitter_session_availability', id=s.id) }}"{% endif %}>
-                <i class="fa fa-cogs"></i> Submitters...
-            </a>
-        </li>
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.assessor_session_availability', id=s.id) }}"{% endif %}>
-                <i class="fa fa-cogs"></i> Assessors...
-            </a>
-        </li>
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.submitter_session_availability', id=s.id) }}"{% endif %}>
+            <i class="fa fa-cogs"></i> Submitters...
+        </a>
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.assessor_session_availability', id=s.id) }}"{% endif %}>
+            <i class="fa fa-cogs"></i> Assessors...
+        </a>
         {% set disabled = not a.is_feedback_open %}
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.delete_session', id=s.id) }}"{% endif %}>
-                <i class="fa fa-trash"></i> Delete
-            </a>
-        </li>
-    </ul>
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.delete_session', id=s.id) }}"{% endif %}>
+            <i class="fa fa-trash"></i> Delete
+        </a>
+    </div>
 </div>
 """
 

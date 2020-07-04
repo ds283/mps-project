@@ -116,20 +116,15 @@ _menu = \
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.merge_change_schedule', source_id=t.id if t is not none else -1, target_id=s.id if s is not none else -1, source_sched=tid, target_sched=sid) }}">
-                <i class="fa fa-chevron-circle-left"></i> Apply change to source
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.merge_change_schedule', source_id=s.id if s is not none else -1, target_id=t.id if t is not none else -1, source_sched=sid, target_sched=tid) }}">
-                <i class="fa fa-chevron-circle-right"></i> Revert change in target
-            </a>
-        </li>
-    </ul>
+        <a class="dropdown-item" href="{{ url_for('admin.merge_change_schedule', source_id=t.id if t is not none else -1, target_id=s.id if s is not none else -1, source_sched=tid, target_sched=sid) }}">
+            <i class="fa fa-chevron-circle-left"></i> Apply change to source
+        </a>
+        <a class="dropdown-item" href="{{ url_for('admin.merge_change_schedule', source_id=s.id if s is not none else -1, target_id=t.id if t is not none else -1, source_sched=sid, target_sched=tid) }}">
+            <i class="fa fa-chevron-circle-right"></i> Revert change in target
+        </a>
+    </div>
 </div>
 """
 

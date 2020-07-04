@@ -204,152 +204,109 @@ _menu = \
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         {% if s.finished and s.solution_usable %}
-            <li>
-                <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">
-                    <i class="fa fa-search"></i> Inspect schedule...
-                </a>
-            </li>
-            <li role="separator" class="divider">
+            <a class="dropdown-item" href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">
+                <i class="fa fa-search"></i> Inspect schedule...
+            </a>
+            <div role="separator" class="dropdown-divider"></div>
         {% endif %}    
 
         {% if not s.finished %}
             {% set disabled = not current_user.has_role('root') %}
             {% if s.awaiting_upload %}
-                <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('admin.upload_schedule', schedule_id=s.id) }}"{% endif %}>
-                        <i class="fa fa-cloud-upload"></i> Upload solution...
-                    </a>
-                </li>
-                <li role="separator" class="divider">
+                <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.upload_schedule', schedule_id=s.id) }}"{% endif %}>
+                    <i class="fa fa-cloud-upload"></i> Upload solution...
+                </a>
+                <div role="separator" class="dropdown-divider"></div>
             {% endif %}
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('admin.duplicate_schedule', id=s.id) }}"{% endif %}>
-                    <i class="fa fa-clone"></i> Duplicate
-                </a>
-            </li>
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('admin.terminate_schedule', id=s.id) }}"{% endif %}>
-                    <i class="fa fa-hand-paper-o"></i> Terminate
-                </a>
-            </li>
+            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.duplicate_schedule', id=s.id) }}"{% endif %}>
+                <i class="fa fa-clone"></i> Duplicate
+            </a>
+            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.terminate_schedule', id=s.id) }}"{% endif %}>
+                <i class="fa fa-hand-paper-o"></i> Terminate
+            </a>
         {% else %}
             {% if s.solution_usable %}
-                <li>
-                    <a href="{{ url_for('admin.rename_schedule', id=s.id, url=url) }}">
-                        <i class="fa fa-exchange"></i> Rename...
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('admin.rename_schedule', id=s.id, url=url) }}">
+                    <i class="fa fa-exchange"></i> Rename...
+                </a>
                 {% if s.is_modified %}
-                    <li>
-                        <a href="{{ url_for('admin.revert_schedule', id=s.id) }}">
-                            <i class="fa fa-undo"></i> Revert to original
-                        </a>
-                    </li>
+                    <a class="dropdown-item" href="{{ url_for('admin.revert_schedule', id=s.id) }}">
+                        <i class="fa fa-undo"></i> Revert to original
+                    </a>
                 {% endif %}
-                <li>
-                    <a href="{{ url_for('admin.duplicate_schedule', id=s.id) }}">
-                        <i class="fa fa-clone"></i> Duplicate
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin.compare_schedule', id=s.id, url=url, text=text) }}">
-                        <i class="fa fa-balance-scale"></i> Compare to...
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('admin.duplicate_schedule', id=s.id) }}">
+                    <i class="fa fa-clone"></i> Duplicate
+                </a>
+                <a class="dropdown-item" href="{{ url_for('admin.compare_schedule', id=s.id, url=url, text=text) }}">
+                    <i class="fa fa-balance-scale"></i> Compare to...
+                </a>
                 {% set disabled = valid %}
-                <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('admin.adjust_assessment_schedule', id=s.id) }}"{% endif %}>
-                        <i class="fa fa-wrench"></i> Impose constraints...
-                    </a>
-                </li>                
+                <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.adjust_assessment_schedule', id=s.id) }}"{% endif %}>
+                    <i class="fa fa-wrench"></i> Impose constraints...
+                </a>
             {% else %}
-                <li class="disabled">
-                    <a><i class="fa fa-times"></i> Solution is not usable</a>
-                </li>
+                <a class="dropdown-item disabled"><i class="fa fa-times"></i> Solution is not usable</a>
             {% endif %}
 
             {% if current_user.has_role('root') or current_user.id == s.creator_id %}
-                <li>
-                    <a href="{{ url_for('admin.delete_schedule', id=s.id) }}">
-                        <i class="fa fa-trash"></i> Delete
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('admin.delete_schedule', id=s.id) }}">
+                    <i class="fa fa-trash"></i> Delete
+                </a>
             {% else %}
-                <li class="disabled">
-                    <a><i class="fa fa-trash"></i> Delete</a>
-                </li>
+                <a class="dropdown-item disabled"><i class="fa fa-trash"></i> Delete</a>
             {% endif %}
 
             {% if current_user.has_role('root') %}
-                <li role="separator" class="divider">
-                <li class="dropdown-header">Superuser functions</li>
+                <div role="separator" class="dropdown-divider"></div>
+                <div class="dropdown-header">Superuser functions</div>
 
                 {% if s.published %}
-                    <li>
-                        <a href="{{ url_for('admin.unpublish_schedule', id=s.id) }}">
-                            <i class="fa fa-eject"></i> Unpublish
-                        </a>
-                    </li>
+                    <a class="dropdown-item" href="{{ url_for('admin.unpublish_schedule', id=s.id) }}">
+                        <i class="fa fa-eject"></i> Unpublish
+                    </a>
                 {% else %}
                     {% if not s.deployed %}
-                        <li>
-                            <a href="{{ url_for('admin.publish_schedule', id=s.id) }}">
-                                <i class="fa fa-share-square-o"></i> Publish to convenors
-                            </a>
-                        </li>
+                        <a class="dropdown-item" href="{{ url_for('admin.publish_schedule', id=s.id) }}">
+                            <i class="fa fa-share-square-o"></i> Publish to convenors
+                        </a>
                     {% else %}
-                        <li class="disabled">
-                            <a><i class="fa fa-ban"></i> Can't publish</a>
-                        </li>
+                        <a class="dropdown-item disabled"><i class="fa fa-ban"></i> Can't publish</a>
                     {% endif %}
                 {% endif %}
                 
                 {% if s.deployed %}
                     {% if s.is_revokable %}
-                        <li>
-                            <a href="{{ url_for('admin.undeploy_schedule', id=s.id) }}">
-                                <i class="fa fa-eject"></i> Revoke deployment
-                            </a>
-                        </li>
+                        <a class="dropdown-item" href="{{ url_for('admin.undeploy_schedule', id=s.id) }}">
+                            <i class="fa fa-eject"></i> Revoke deployment
+                        </a>
                     {% else %}
-                        <li class="disabled">
-                            <a><i class="fa fa-ban"></i> Can't revoke</a>
-                        </li>
+                        <a class="dropdown-item disabled"><i class="fa fa-ban"></i> Can't revoke</a>
                     {% endif %}
                 {% else %}
                     {% if s.owner.is_deployed %}
-                        <li class="disabled">
-                            <a><i class="fa fa-ban"></i> Can't deploy</a>
-                        </li>
+                        <a class="dropdown-item disabled"><i class="fa fa-ban"></i> Can't deploy</a>
                     {% else %}
-                        <li>
-                            <a href="{{ url_for('admin.deploy_schedule', id=s.id) }}">
-                                <i class="fa fa-play"></i> Deploy
-                            </a>
-                        </li>
+                        <a class="dropdown-item" href="{{ url_for('admin.deploy_schedule', id=s.id) }}">
+                            <i class="fa fa-play"></i> Deploy
+                        </a>
                     {% endif %}
                 {% endif %}
                 
                 {% if s.published or s.deployed %}
-                    <li role="separator" class="divider">
-                    <li>
-                        <a href="{{ url_for('admin.publish_schedule_submitters', id=s.id) }}">
-                            <i class="fa fa-envelope-o"></i> Email to submitters
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('admin.publish_schedule_assessors', id=s.id) }}">
-                            <i class="fa fa-envelope-o"></i> Email to assessors
-                        </a>
-                    </li>
+                    <div role="separator" class="divider"></div>
+                    <a class="dropdown-item" href="{{ url_for('admin.publish_schedule_submitters', id=s.id) }}">
+                        <i class="fa fa-envelope-o"></i> Email to submitters
+                    </a>
+                    <a class="dropdown-item" href="{{ url_for('admin.publish_schedule_assessors', id=s.id) }}">
+                        <i class="fa fa-envelope-o"></i> Email to assessors
+                    </a>
                 {% endif %}
             {% endif %}            
         {% endif %}        
-    </ul>
+    </div>
 </div>
 """
 

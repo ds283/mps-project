@@ -144,67 +144,50 @@ _menu = \
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <li class="dropdown-header">Scheduling</li>
+        <div class="dropdown-header">Scheduling</div>
         {% set valid = a.is_valid %}
         {% set disabled = not valid and a.availability_lifecycle < a.AVAILABILITY_REQUESTED %}
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.assessment_availability', id=a.id) }}"{% endif %}>
-                <i class="fa fa-calendar"></i> Assessor availability...
-            </a>
-        </li>
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.assessment_availability', id=a.id) }}"{% endif %}>
+            <i class="fa fa-calendar"></i> Assessor availability...
+        </a>
         {% set disabled = not a.availability_closed %}
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.assessment_schedules', id=a.id) }}"{% endif %}>
-                <i class="fa fa-wrench"></i> Edit schedules...
-            </a>
-        </li>
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.assessment_schedules', id=a.id) }}"{% endif %}>
+            <i class="fa fa-wrench"></i> Edit schedules...
+        </a>
         
-        <li role="separator" class="divider">
-        <li class="dropdown-header">Edit assessment</li>
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">Edit assessment</div>
         {% set requested_availability = a.requested_availability %}
         {% set deployed = a.is_deployed %}
         {% set disable_settings = requested_availability %}
         {% set disable_submitters = not requested_availability %}
         {% set disable_assessors = not requested_availability %}
         {% set disable_delete = deployed %}
-        <li {% if disable_settings %}class="disabled"{% endif %}>
-            <a {% if not disable_settings %}href="{{ url_for('admin.edit_assessment', id=a.id) }}"{% endif %}>
-                <i class="fa fa-cogs"></i> Settings...
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.assessment_manage_sessions', id=a.id) }}">
-                <i class="fa fa-calendar"></i> Sessions...
-            </a>
-        </li>
-        <li {% if disable_submitters %}class="disabled"{% endif %}>
-            <a {% if not disable_submitters %}href="{{ url_for('admin.assessment_manage_attendees', id=a.id) }}"{% endif %}>
-                <i class="fa fa-user"></i> Submitters...
-            </a>
-        </li>
-        <li {% if disable_assessors %}class="disabled"{% endif %}>
-            <a {% if not disable_assessors %}href="{{ url_for('admin.assessment_manage_assessors', id=a.id) }}"{% endif %}>
-                <i class="fa fa-user"></i> Assessors...
-            </a>
-        </li>
-        <li {% if disable_delete %}class="disabled"{% endif %}>
-            <a {% if not disable_delete %}href="{{ url_for('admin.delete_assessment', id=a.id) }}"{% endif %}>
-                <i class="fa fa-trash"></i> Delete
-            </a>
-        </li>
+        <a class="dropdown-item {% if disable_settings %}disabled{% endif %}" {% if not disable_settings %}href="{{ url_for('admin.edit_assessment', id=a.id) }}"{% endif %}>
+            <i class="fa fa-cogs"></i> Settings...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('admin.assessment_manage_sessions', id=a.id) }}">
+            <i class="fa fa-calendar"></i> Sessions...
+        </a>
+        <a class="dropdown-item {% if disable_submitters %}disabled{% endif %}"{% if not disable_submitters %}href="{{ url_for('admin.assessment_manage_attendees', id=a.id) }}"{% endif %}>
+            <i class="fa fa-user"></i> Submitters...
+        </a>
+        <a class="dropdown-item {% if disable_assessors %}disabled{% endif %}"{% if not disable_assessors %}href="{{ url_for('admin.assessment_manage_assessors', id=a.id) }}"{% endif %}>
+            <i class="fa fa-user"></i> Assessors...
+        </a>
+        <a class="dropdown-item {% if disable_delete %}disabled{% endif %}"{% if not disable_delete %}href="{{ url_for('admin.delete_assessment', id=a.id) }}"{% endif %}>
+            <i class="fa fa-trash"></i> Delete
+        </a>
         
-        <li role="separator" class="divider">
-        <li class="dropdown-header">Administration</li>
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">Administration</div>
         {% set disabled = not a.is_closable %}
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.close_assessment', id=a.id) }}"{% endif %}>
-                <i class="fa fa-times-circle"></i> Close feedback
-            </a>
-        </li> 
-    </ul>
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.close_assessment', id=a.id) }}"{% endif %}>
+            <i class="fa fa-times-circle"></i> Close feedback
+        </a>
+    </div>
 </div>
 """
 

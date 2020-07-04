@@ -26,19 +26,16 @@ _assessors = \
 {% for assessor in s.assessors %}
     <div>
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
-            <a class="badge badge-secondary" type="button" data-toggle="dropdown">
+            <a class="badge badge-secondary" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                 {{ assessor.user.name }}
                 {% set count = rec.get_number_faculty_slots(assessor.id) %}
                 ({{ count }})
-                <span class="caret"></span>
             </a>
             <div class="dropdown-menu">
-                <li>
-                    <a href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url, text=text) }}">
-                        Reassign assessors...
-                    </a>
-                </li>
-            </ul>
+                <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url, text=text) }}">
+                    Reassign assessors...
+                </a>
+            </div>
         </div>
         {% if s.session.faculty_ifneeded(assessor.id) %}
             <span class="badge badge-warning">if-needed</span>
@@ -71,18 +68,15 @@ _talks = \
     {% set ns.count = ns.count + 1 %}
     <div class="dropdown schedule-assign-button" style="display: inline-block;">
         {% set style = talk.pclass.make_CSS_style() %}
-        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
             {{ talk.owner.student.user.last_name }}
             ({{ talk.project.owner.user.last_name }} &ndash; {{ truncate_name(talk.project.name) }})
-            <span class="caret"></span>
         </a>
         <div class="dropdown-menu">
-            <li>
-                <a href="{{ url_for('admin.schedule_adjust_submitter', slot_id=s.id, talk_id=talk.id, url=url, text=text) }}">
-                    Reassign presentation...
-                </a>
-            </li>
-        </ul>
+            <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=s.id, talk_id=talk.id, url=url, text=text) }}">
+                Reassign presentation...
+            </a>
+        </div>
     </div>
     {% if s.session.submitter_unavailable(talk.id) %}
         <i class="fa fa-exclamation-triangle" style="color:red;"></i>

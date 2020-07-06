@@ -69,7 +69,7 @@
         <div class="card-body">
 
             {% if pclasses is not none and pclasses|length > 0 %}
-                <div class="card m-3 card-body">
+                <div class="card m-3 card-body bg-light">
                     <div class="row vertical-top marker-table">
                         <div class="col-4"><strong>Project type</strong></div>
                         <div class="col-2"><strong>Assessors required</strong></div>
@@ -225,12 +225,12 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="card m-3 card-body">
+                <div class="card m-3 card-body bg-light">
                     This project is not currently attached to any project types that require assessors
                 </div>
             {% endif %}
 
-            <div class="card m-3 card-body">
+            <div class="card m-3 card-body bg-light">
                 <div class="row">
                     <div class="col-12">
                         <p>Filter by attachment status</p>

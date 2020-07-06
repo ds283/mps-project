@@ -48,7 +48,7 @@
     <div class="card m-3">
         <div class="card-header bg-primary text-white">Teaching groups for <strong>{{ pclass.name }}</strong></div>
         <div class="card-body">
-            <div class="card m-3 card-body">
+            <div class="card m-3 card-body bg-light">
                 <div class="row">
                     <div class="col-12">
                         <p>Organize by</p>
@@ -60,7 +60,7 @@
                            class="btn btn-sm filter-btn {% if organize_by == 'student' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Submitter
                         </a>
-        
+
                         <hr class="intro-divider">
                         <p>Show teaching groups for submission period</p>
                         {% for p_id, p_name in period_names %}

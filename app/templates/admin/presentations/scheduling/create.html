@@ -17,7 +17,7 @@
                         {{ wtf.render_field(form.name) }}
                         {{ wtf.render_field(form.tag) }}
 
-                        <div class="card m-3 card-body">
+                        <div class="card m-3 card-body bg-light">
                             <p>Scheduling parameters</p>
                             {{ wtf.render_field(form.assessor_assigned_limit) }}
                             {{ wtf.render_field(form.if_needed_cost) }}
@@ -25,7 +25,7 @@
                             {{ wtf.render_field(form.all_assessors_in_pool) }}
                         </div>
 
-                        <div class="card m-3 card-body">
+                        <div class="card m-3 card-body bg-light">
                             <p>Optimization settings</p>
                             {{ wtf.render_field(form.solver) }}
                         </div>

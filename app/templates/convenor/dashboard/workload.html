@@ -57,7 +57,7 @@
     <div class="card m-3">
         <div class="card-header bg-primary text-white">Workload data for <strong>{{ pclass.name }}</strong></div>
         <div class="card-body">
-            <div class="card m-3 card-body">
+            <div class="card m-3 card-body bg-light">
                 <div class="row">
                     <div class="col-12">
                         <p>Filter by enrollment status</p>
@@ -114,7 +114,7 @@
                                class="btn btn-sm filter-btn {% if enroll_filter == 'pres-exempt' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                 Presentations exempt
                             </a>
-                        {% endif %}                     
+                        {% endif %}
                     </div>
                 </div>
                 <hr class="intro-divider">

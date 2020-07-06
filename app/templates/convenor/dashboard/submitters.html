@@ -46,7 +46,7 @@
     <div class="card m-3">
         <div class="card-header bg-primary text-white">Students enrolled as <strong>submitters</strong> for <strong>{{ pclass.name }}</strong></div>
         <div class="card-body">
-            <div class="card m-3 card-body">
+            <div class="card m-3 card-body bg-light">
                 {% set needs_rule = false %}
                 {% set has_cohorts = (cohorts and cohorts is not none and cohorts|length > 1) %}
                 {% set has_years = (years and years is not none and years|length > 1) %}

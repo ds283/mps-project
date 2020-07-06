@@ -42,7 +42,7 @@
                             </div>
                         </div>
                     {% else %}
-                        <div class="card m-3 card-body">
+                        <div class="card m-3 card-body bg-light">
                             Feedback has not yet been recorded from the project supervisor.
                         </div>
                     {% endif %}
@@ -61,7 +61,7 @@
                             </div>
                         </div>
                     {% else %}
-                        <div class="card m-3 card-body">
+                        <div class="card m-3 card-body bg-light">
                             Feedback has not yet been recorded from the project marker.
                         </div>
                     {% endif %}
@@ -93,7 +93,7 @@
                     {% endif %}
                 {% endfor %}
                 {% if ns.count == 0 %}
-                    <div class="card m-3 card-body">
+                    <div class="card m-3 card-body bg-light">
                         Feedback has not yet been recorded from the assessed presentation.
                     </div>
                 {% endif %}

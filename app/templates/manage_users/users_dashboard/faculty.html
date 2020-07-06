@@ -56,7 +56,7 @@
             {% set has_pclasses = (pclasses is not none and pclasses|length > 0) %}
             {% set has_groups = (groups is not none and groups|length > 0) %}
             {% if has_pclasses or has_groups %}
-                <div class="card m-3 card-body">
+                <div class="card m-3 card-body bg-light">
                     {% set needs_hrule = false %}
                     {% if has_pclasses %}
                         {% set needs_hrule = true %}

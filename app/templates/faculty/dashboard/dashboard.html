@@ -97,7 +97,7 @@
             {% endif %}
 
             {% if is_root and pane == 'system' %}
-                <div class="card m-3 card-body">
+                <div class="card m-3 card-body bg-light">
                     {{ admin_dashboard_card(root_dash_data) }}
                     {{ root_functions(root_dash_data, matching_ready, has_assessments) }}
                 </div>
@@ -115,7 +115,7 @@
 
                 {% else %}
 
-                    <div class="card m-3 card-body">
+                    <div class="card m-3 card-body bg-light">
                         <h3 class="dashboard-subtitle"> You have no active project enrollments</h3>
                         <p>
                             Project classes for which you are enrolled, but are not active because of

@@ -5,7 +5,7 @@
             <div class="card-header
                 {% if n+1 == config.submission_period %}
                     {% if period.closed %}
-                        {# no markup required; formerly panel-default #}
+                        bg-secondary text-white
                     {% elif period.is_feedback_open %}
                         bg-info text-white
                     {% elif period.start_date and period.start_date > today %}

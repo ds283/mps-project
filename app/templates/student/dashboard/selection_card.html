@@ -74,7 +74,7 @@
 
 {% macro show_submission_status(config, sel) %}
     {% set is_valid, messages = sel.is_valid_selection %}
-    <div class="row vertical-top">
+    <div class="row vertical-top mt-3 mb-3">
         <div class="col-12">
             <ul class="list-group" id="P{{ config.id }}-status-list">
                 {% for message in messages %}
@@ -83,7 +83,7 @@
             </ul>
         </div>
     </div>
-    <div class="row vertical-top">
+    <div class="row vertical-top mt-3 mb-3">
         <div class="col-12">
             <ul class="list-group">
                 <li class="list-group-item">
@@ -125,12 +125,12 @@
                     </a>
                 {% endif %}
                 <a id="P{{ config.id }}-valid-button"
-                   class="btn btn-primary {% if not is_valid %}hidden{% endif %} student-dashboard-button"
+                   class="btn btn-primary {% if not is_valid %}d-none{% endif %} student-dashboard-button"
                    href="{{ url_for('student.submit', sid=sel.id) }}">
                     {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
                 </a>
                 <a id="P{{ config.id }}-invalid-button"
-                   class="btn btn-primary disabled {% if is_valid %}hidden{% endif %} student-dashboard-button">
+                   class="btn btn-primary disabled {% if is_valid %}d-none{% endif %} student-dashboard-button">
                     {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
                 </a>
             </div>
@@ -180,7 +180,7 @@
     <div class="row" style="padding-top: 8px;">
         <div class="col-12">
             <div class="float-right">
-                <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-success student-dashboard-button">View the project list...</a>
+                <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-outline-success student-dashboard-button">View the project list...</a>
             </div>
         </div>
     </div>
@@ -266,7 +266,7 @@
             {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                 bg-primary text-white
             {% elif config.selector_lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
-                bg-warning text-white
+                bg-secondary text-white
             {% else %}
                 {# no markup required; formerly panel-default #}
             {% endif %}

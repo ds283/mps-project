@@ -58,7 +58,7 @@
             (assessment <strong>{{ record1.owner.name }}</strong>)
         </div>
         <div class="card-body">
-            <div class="card m-3 card-body">
+            <div class="card m-3 card-body bg-light">
                 <p>Filter by project class</p>
                 <a class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}"
                     href="{{ url_for('admin.do_schedule_compare', id1=record1.id, id2=record2.id, pclass_filter='all', text=text, url=url) }}">

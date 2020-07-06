@@ -18,14 +18,14 @@
                 <div class="event-title">{{ event.name }}</div>
                 <hr class="intro-divider">
                 <div class="event-subheader">{{ event.earliest_date }}&mdash;{{ event.latest_date }}</div>
-                <div class="card m-3 card-body" style="margin-top: 18px;">
+                <div class="card m-3 card-body bg-light" style="margin-top: 18px;">
                     <form action="{{ url_for('admin.view_schedule', tag=schedule.tag) }}" method="POST" name="display_form">
                         {{ form.hidden_tag() }}
                         {{ on_click_selector_field(form.selector, true) }}
                     </form>
                 </div>
                 {% for slot in slots %}
-                    <div class="card m-3 card-body">
+                    <div class="card m-3 card-body bg-light">
                         <div>
                             <div class="row vertical-top">
                                 <div class="col-7">

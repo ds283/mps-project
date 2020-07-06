@@ -34,7 +34,7 @@
                   name="selector_form">
                 {{ form.hidden_tag() }}
                 {% if show_selector %}
-                    <div class="card m-3 card-body">
+                    <div class="card m-3 card-body bg-light">
                         {{ on_click_selector_field(form.selector, true) }}
                     </div>
                 {% else %}
@@ -309,7 +309,7 @@
 
                 {% if allow_approval %}
                     <hr class="intro-divider">
-                    <div class="card m-3 card-body" style="margin-top: 15px;">
+                    <div class="card m-3 card-body bg-light" style="margin-top: 15px;">
                         <div class="row">
                             <div class="col-12">
                                 <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int, all_workflow=0) }}"
@@ -363,7 +363,7 @@
                     {% endif %}
                 {% endif %}
                 {% if show_comments %}
-                    <div class="card m-3 card-body" style="margin-top: 15px;">
+                    <div class="card m-3 card-body bg-light" style="margin-top: 15px;">
                         <div class="row">
                             <div class="col-12">
                                 <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=0, all_workflow=all_workflow|int) }}"
@@ -458,7 +458,7 @@
                             </div>
                         {% endif %}
                     {% endfor %}
-                    <div class="card m-3 card-body" style="margin-top: 15px;">
+                    <div class="card m-3 card-body bg-light" style="margin-top: 15px;">
                         {{ wtf.render_field(form.comment) }}
                         {% if is_approver %}
                             {{ wtf.render_field(form.limit_visibility) }}

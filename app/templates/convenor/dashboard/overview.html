@@ -36,7 +36,7 @@
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
-            <div class="card m-3 card-body">
+            <div class="card m-3 card-body bg-light">
                 <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
                 <div class="list-group mb-2">
                     <div class="list-group-item">
@@ -106,7 +106,7 @@
 
             {% if pclass.publish %}
                 {# SELECTING #}
-                <div class="card m-3 card-body">
+                <div class="card m-3 card-body bg-light">
                     {# provide summary #}
 
                     {% if config.has_auditable_schedules %}
@@ -144,13 +144,13 @@
                 </div>
 
                 {# SUBMITTING #}
-                <div class="card m-3 card-body">
+                <div class="card m-3 card-body bg-light">
                     {% for n in range(config.submissions) %}
                         {{ submitter_card(config, n, today, feedback_form)  }}
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="card m-3 card-body">
+                <div class="card m-3 card-body bg-light">
                     <p>
                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                         This project class is not published, so its administration options are limited.

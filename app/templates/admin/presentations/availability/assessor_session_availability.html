@@ -52,7 +52,7 @@
     <div class="card m-3">
         <div class="card-header bg-primary text-white">Assessor availability for assessment event <strong>{{ assessment.name }}</strong>, session <strong>{{ sess.short_date_as_string }} {{ sess.session_type_string }}</strong></div>
         <div class="card-body">
-            <div class="card m-3 card-body">
+            <div class="card m-3 card-body bg-light">
                 <p>Filter by state</p>
                 <a href="{{ url_for('admin.assessor_session_availability', id=sess.id, state_filter='all') }}"
                    class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">

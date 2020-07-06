@@ -64,7 +64,7 @@
             {% set has_rooms = (rooms and rooms is not none and rooms|length > 1) %}
             {% set has_sessions = (sessions and sessions is not none and sessions|length > 1) %}
             {% if has_pclsses or has_buildings or has_rooms or has_sessions %}
-                <div class="card m-3 card-body">
+                <div class="card m-3 card-body bg-light">
                     {% set needs_hrule = false %}
                     {% if has_pclasses %}
                         {% set needs_hrule = true %}

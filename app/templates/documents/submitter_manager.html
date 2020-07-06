@@ -152,7 +152,7 @@
 
             {# PERIOD ATTACHMENTS #}
             {% if period.attachments.first() %}
-                <div class="card m-3 card-body">
+                <div class="card m-3 card-body bg-light">
                     <div><span class="document-group-title">Documents provided by the convenor</span></div>
                     {% if is_student %}
                         <div>The following documents have been provided by the convenor and may include mark schemes
@@ -189,7 +189,7 @@
             {% endif %}
 
             {# REPORT #}
-            <div class="card m-3 card-body">
+            <div class="card m-3 card-body bg-light">
                 <span class="document-group-title">Report</span>
                 <hr class="intro-divider">
                 {% if record.report %}
@@ -229,7 +229,7 @@
             </div>
 
             {# SUBMISSION ATTACHMENTS #}
-            <div class="card m-3 card-body">
+            <div class="card m-3 card-body bg-light">
                 <span class="document-group-title">Attachments</span>
                 <hr class="intro-divider">
                 {% if record.attachments.first() %}

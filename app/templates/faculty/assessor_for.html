@@ -55,7 +55,7 @@
         <div class="card-header bg-primary text-white">Projects for which I am in the assessor pool</div>
         <div class="card-body">
             {% if pclasses is not none and pclasses|length > 0 %}
-                <div class="card m-3 card-body">
+                <div class="card m-3 card-body bg-light">
                     <p>Filter by project type</p>
                     <a href="{{ url_for('faculty.assessor_for', pclass_filter='all') }}"
                        class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">

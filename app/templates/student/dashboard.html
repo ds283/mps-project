@@ -30,12 +30,12 @@
                     // sort through list of DOM elements that need to be hidden/revealed
                     let hide_list = dat['hide'];
                     for (let i=0; i < hide_list.length; i++) {
-                        $("#" + hide_list[i]).addClass('hidden');
+                        $("#" + hide_list[i]).addClass('d-none');
                     }
 
                     let reveal_list = dat['reveal'];
                     for (let i=0; i < reveal_list.length; i++) {
-                        $("#" + reveal_list[i]).removeClass('hidden')
+                        $("#" + reveal_list[i]).removeClass('d-none')
                     }
 
                     // destroy existing contents
@@ -186,7 +186,7 @@
                 {% for config, sel, sub in enrollments %}
                     {% set pclass = config.project_class %}
                         {% if pane=='select' and sel %}
-                            <div class="card m-3 card-body">
+                            <div class="card m-3 card-body bg-light">
                                 {{ project_card(pclass, sel) }}
                                 {{ selection_card(config, sel) }}
                             </div>
@@ -194,7 +194,7 @@
                         {% endif %}
 
                         {% if pane=='submit' and sub %}
-                            <div class="card m-3 card-body">
+                            <div class="card m-3 card-body bg-light">
                             {{ project_card(pclass, sub) }}
                                 {% for n in range(config.submissions) %}
                                     {{ submission_card(config, sub, n, today) }}
@@ -207,20 +207,20 @@
                 {% endfor %}
 
                 {% if pane=='select' and ns.display==0 %}
-                    <div class="card m-3 card-body">
+                    <div class="card m-3 card-body bg-light">
                         <p>You do not currently need to make any project selections.</p>
                     </div>
                 {% endif %}
 
                 {% if pane=='submit' and ns.display==0 %}
-                    <div class="card m-3 card-body">
+                    <div class="card m-3 card-body bg-light">
                         <p>You are not making submissions for any project this year.</p>
                     </div>
                 {% endif %}
 
             {% else %}
 
-                <div class="alert alert-info" style="text-align: center;">
+                <div class="alert alert-info mt-3 mb-3" style="text-align: center;">
                     <h3> You are not currently participating in any projects. </h3>
                     <p>If you believe this is a mistake, please contact the appropriate
                         project convenor.</p>
@@ -228,7 +228,7 @@
                 </div>
 
                 {% if pclasses and pclasses.first() %}
-                    <div class="row">
+                    <div class="row mt-3 mb-3">
                         <div class="col-3"></div>
                         <div class="col-6">
                             <table class="table table-sm table-hover">

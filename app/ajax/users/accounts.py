@@ -24,7 +24,7 @@ _roles = \
 {% for r in user.roles %}
     {{ r.make_label()|safe }}
 {% else %}
-    <span class="label label-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endfor %}
 """
 
@@ -33,29 +33,29 @@ _status = \
 """
 {% if u.login_count is not none %}
     {% set pl = 's' %}{% if u.login_count == 1 %}{% set pl = '' %}{% endif %}
-    <span class="label label-primary">{{ u.login_count }} login{{ pl }}</span>
+    <span class="badge badge-primary">{{ u.login_count }} login{{ pl }}</span>
 {% else %}
-    <span class="label label-danger">No logins</span>
+    <span class="badge badge-danger">No logins</span>
 {% endif %}
 {% if u.last_active is not none %}
-    <span class="label label-info">Last seen at {{ u.last_active.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+    <span class="badge badge-info">Last seen at {{ u.last_active.strftime("%Y-%m-%d %H:%M:%S") }}</span>
 {% else %}
-    <span class="label label-warning">No last seen time</span>
+    <span class="badge badge-warning">No last seen time</span>
 {% endif %}
 {% if u.last_login_at is not none %}
-    <span class="label label-info">Last login at {{ u.last_login_at.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+    <span class="badge badge-info">Last login at {{ u.last_login_at.strftime("%Y-%m-%d %H:%M:%S") }}</span>
 {% else %}
-    <span class="label label-warning">No last login time</span>
+    <span class="badge badge-warning">No last login time</span>
 {% endif %}
 {% if u.last_login_ip is not none and u.last_login_ip|length > 0 %}
-    <span class="label label-info">Last login IP {{ u.last_login_ip }}</span>
+    <span class="badge badge-info">Last login IP {{ u.last_login_ip }}</span>
 {% else %}
-    <span class="label label-default">No last login IP</span>
+    <span class="badge badge-secondary">No last login IP</span>
 {% endif %}
 {% if u.last_precompute is not none %}
-    <span class="label label-info">Last precompute at {{ u.last_precompute.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+    <span class="badge badge-info">Last precompute at {{ u.last_precompute.strftime("%Y-%m-%d %H:%M:%S") }}</span>
 {% else %}
-    <span class="label label-default">No last precompute time</span>
+    <span class="badge badge-secondary">No last precompute time</span>
 {% endif %}
 """
 
@@ -75,7 +75,7 @@ def _element(user_id, current_user_id):
                  'display': u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S"),
                  'timestamp': u.confirmed_at.timestamp()
              } if u.confirmed_at is not None else {
-                 'display': '<span class="label label-warning">Not confirmed</span>',
+                 'display': '<span class="badge badge-warning">Not confirmed</span>',
                  'timestamp': 0
              },
              'active': u.active_label,
@@ -96,7 +96,7 @@ def _process(user_id, current_user_id):
     name = record['name']
     display = name['display']
     if u.currently_active:
-        display = display.replace('REPACTIVE', '<span class="label label-success">ACTIVE</span>', 1)
+        display = display.replace('REPACTIVE', '<span class="badge badge-success">ACTIVE</span>', 1)
     else:
         display = display.replace('REPACTIVE', '', 1)
 

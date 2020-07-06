@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% extends "base_app.html" %}
 
@@ -13,11 +13,11 @@
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css""/>
 
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -59,19 +59,19 @@
         </div>
     {% endif %}
 
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Correct student records</strong></div>
-        <div class="panel-body">
-            <div class="well">
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-primary text-white">Correct student records</strong></div>
+        <div class="card-body">
+            <div class="card mt-3 mb-3 card-body bg-well">
                 {% if programmes is not none and programmes|length > 0 %}
                     <p>Filter by programme</p>
                     <a href="{{ url_for('user_approver.correct', prog_filter='all', year_filter=year_filter, url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
                         All
                     </a>
                     {% for prog in programmes %}
                         <a href="{{ url_for('user_approver.correct', prog_filter=prog.id, year_filter=year_filter, url=url, text=text) }}"
-                           class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-default{% endif %}">
+                           class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-secondary{% endif %}">
                             {{ prog.full_name }}
                         </a>
                     {% endfor %}
@@ -81,27 +81,27 @@
 
                 <p>Filter by academic year</p>
                     <a href="{{ url_for('user_approver.correct', prog_filter=prog_filter, year_filter='all', url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if year_filter is none or year_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if year_filter is none or year_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
                         All
                     </a>
                     <a href="{{ url_for('user_approver.correct', prog_filter=prog_filter, year_filter='1', url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if year_filter == '1' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if year_filter == '1' %}btn-primary{% else %}btn-secondary{% endif %}">
                         Y1
                     </a>
                     <a href="{{ url_for('user_approver.correct', prog_filter=prog_filter, year_filter='2', url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if year_filter == '2' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if year_filter == '2' %}btn-primary{% else %}btn-secondary{% endif %}">
                         Y2
                     </a>
                     <a href="{{ url_for('user_approver.correct', prog_filter=prog_filter, year_filter='3', url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if year_filter == '3' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if year_filter == '3' %}btn-primary{% else %}btn-secondary{% endif %}">
                         Y3
                     </a>
                     <a href="{{ url_for('user_approver.correct', prog_filter=prog_filter, year_filter='4', url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if year_filter == '4' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if year_filter == '4' %}btn-primary{% else %}btn-secondary{% endif %}">
                         Y4
                     </a>
                     <a href="{{ url_for('user_approver.correct', prog_filter=prog_filter, year_filter='grad', url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if year_filter == 'grad' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if year_filter == 'grad' %}btn-primary{% else %}btn-secondary{% endif %}">
                         Graduated
                     </a>
             </div>

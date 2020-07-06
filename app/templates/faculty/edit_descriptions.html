@@ -1,15 +1,15 @@
 {% extends "base_app.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css""/>
 
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -44,9 +44,9 @@
         </a>
     </div>
 
-   <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Edit descriptions for <strong>{{ project.name }}</strong></div>
-        <div class="panel-body">
+   <div class="card mt-3 mb-3">
+        <div class="card-header bg-primary text-white">Edit descriptions for <strong>{{ project.name }}</strong></div>
+        <div class="card-body">
             <table id="descriptions-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
@@ -59,7 +59,7 @@
                 </thead>
             </table>
             <div style="text-align: center;">
-                <a href="{{ url_for('faculty.add_description', pid=project.id, create=create) }}" class="btn btn-default btn-lg">
+                <a href="{{ url_for('faculty.add_description', pid=project.id, create=create) }}" class="btn btn-secondary btn-lg">
                     <i class="fa fa-plus"></i>
                     Add new description
                 </a>
@@ -71,10 +71,10 @@
         <a href="{{ url_for('faculty.attach_assessors', id=project.id, create=1) }}" class="btn btn-primary">
             Next: Attach assessors
         </a>
-        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-default">
+        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-secondary">
             Save and exit
         </a>
-        <a href="{{ url_for('faculty.project_preview', id=project.id, text='project list', url=url_for('faculty.edit_projects')) }}" class="btn btn-default">
+        <a href="{{ url_for('faculty.project_preview', id=project.id, text='project list', url=url_for('faculty.edit_projects')) }}" class="btn btn-secondary">
             Save and preview
         </a>
     {% else %}

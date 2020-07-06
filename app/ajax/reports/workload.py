@@ -32,7 +32,7 @@ _groups = \
 {% for g in f.affiliations %}
     {{ g.make_label()|safe }}
 {% else %}
-    <span class="label label-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endfor %}
 """
 
@@ -47,9 +47,9 @@ _full_enrollments = \
             {% set offered = f.number_projects_offered(record.pclass) %}
             {% if offered > 0 %}
                 {% set projects = f.projects_offered(record.pclass) %}
-                <span class="label label-info" data-toggle="tooltip" data-html="true" title="{% for p in projects %}<p>{{ loop.index }}. {{ p.name }}</p>{% endfor %}">Offered={{ offered }}</span>
+                <span class="badge badge-info" data-toggle="tooltip" data-html="true" title="{% for p in projects %}<p>{{ loop.index }}. {{ p.name }}</p>{% endfor %}">Offered={{ offered }}</span>
             {% else %}
-                <span class="label label-danger">Offered=0</span>
+                <span class="badge badge-danger">Offered=0</span>
             {% endif %}
             {{ record.short_supervisor_label|safe }}
         {% endif %}
@@ -63,7 +63,7 @@ _full_enrollments = \
         {% endif %}
     </div>
 {% else %}
-    <span class="label label-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endfor %}
 """
 
@@ -77,14 +77,14 @@ _simple_enrollments = \
         {% if record.pclass.uses_supervisor %}
             {% set offered = f.number_projects_offered(record.pclass) %}
             {% if offered > 0 %}
-                <span class="label label-info" data-toggle="tooltip" data-html="true" title="{% for p in projects %}<p>{{ loop.index }}. {{ p.name }}</p>{% endfor %}">Offered={{ offered }}</span>
+                <span class="badge badge-info" data-toggle="tooltip" data-html="true" title="{% for p in projects %}<p>{{ loop.index }}. {{ p.name }}</p>{% endfor %}">Offered={{ offered }}</span>
             {% else %}
-                <span class="label label-danger">Offered=0</span>
+                <span class="badge badge-danger">Offered=0</span>
             {% endif %}
         {% endif %}
     </div>
 {% else %}
-    <span class="label label-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endfor %}
 """
 
@@ -94,23 +94,23 @@ _full_workload = \
 {% for record in f.ordered_enrollments %}
     {{ record.pclass.make_label(record.pclass.abbreviation + ' ' + wkld[record.pclass_id]|string)|safe }}
 {% else %}
-    <span class="label label-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endfor %}
 <p></p>
-<span class="label label-primary">Total {{ tot }}</span>
+<span class="badge badge-primary">Total {{ tot }}</span>
 """
 
 
 _simple_workload = \
 """
-<span class="label label-primary">{{ tot }}</span>
+<span class="badge badge-primary">{{ tot }}</span>
 """
 
 
 _availability = \
 """
 {% if u %}
-    <span class="label label-info" data-toggle="tooltip" title="One or more projects do not have a limit on the number of students">Unbounded</span>
+    <span class="badge badge-info" data-toggle="tooltip" title="One or more projects do not have a limit on the number of students">Unbounded</span>
 {% else %}
     <span data-toggle="tooltip" data-html="true" title="<i>Availability</i> is the maximum CATS-weighted number of students who could be assigned to this supervisor">{{ t|round(2) }}</span>
 {% endif %}
@@ -122,16 +122,16 @@ _full_assignments = \
 {% for record in f.ordered_enrollments %}
     {{ record.pclass.make_label(record.pclass.abbreviation + ' ' + data[record.pclass_id]|string)|safe }}
 {% else %}
-    <span class="label label-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endfor %}
 <p></p>
-<span class="label label-primary">Total {{ total }}</span>
+<span class="badge badge-primary">Total {{ total }}</span>
 """
 
 
 _simple_assignments = \
 """
-<span class="label label-primary">Total {{ total }}</span>
+<span class="badge badge-primary">Total {{ total }}</span>
 """
 
 

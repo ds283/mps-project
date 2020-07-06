@@ -46,97 +46,103 @@
 {% block bodyblock %}
     {% if config.selection_closed %}
         <div class="row">
-            <div class="col-xs-1"></div>
-            <div class="col-xs-10">
+            <div class="col-1"></div>
+            <div class="col-10">
                 <div class="alert alert-danger">
                     <p>Student selections have already closed for the current academic year.</p>
                     <p>It is no longer possible to manually enroll selectors for this project class</p>
                 </div>
             </div>
-            <div class="col-xs-1"></div>
+            <div class="col-1"></div>
         </div>
     {% endif %}
 
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Students available to be enrolled as <strong>submitters</strong> for <strong>{{ pclass.name }}</strong></div>
-        <div class="panel-body">
-            <div class="well">
-                {% set needs_rule = false %}
-                {% set has_cohorts = (cohorts and cohorts is not none and cohorts|length > 1) %}
-                {% set has_years = (years and years is not none and years|length > 1) %}
-                {% if has_cohorts or has_years %}
-                    {% set needs_rule = true %}
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-primary text-white">Students available to be enrolled as <strong>submitters</strong> for <strong>{{ pclass.name }}</strong></div>
+        <div class="card-body">
+            {% set has_cohorts = (cohorts and cohorts is not none and cohorts|length > 1) %}
+            {% set has_years = (years and years is not none and years|length > 1) %}
+            {% set has_progs = (progs and progs is not none and progs|length > 1) %}
+            {% if has_cohorts or has_years or has_progs %}
+                <div class="card mt-3 mb-3 card-body bg-well">
+                    {% set needs_rule = false %}
                     <div class="row">
-                        {% if has_cohorts %}
-                            {% if has_years %}
-                                <div class="col-xs-6">
-                            {% else %}
-                                <div class="col-xs-12">
+                        <div class="col-12">
+                            {% if has_cohorts or has_years %}
+                                {% set needs_rule = true %}
+                                <div class="row">
+                                    {% if has_cohorts %}
+                                        {% if has_years %}
+                                            <div class="col-6">
+                                        {% else %}
+                                            <div class="col-12">
+                                        {% endif %}
+                                            <p>Filter by cohort</p>
+                                            <a class="btn btn-sm filter-btn {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                                href="{{ url_for('convenor.enroll_submitters', id=pclass.id, cohort_filter='all', year_filter=year_filter, prog_filter=prog_filter) }}">
+                                                All
+                                            </a>
+                                            {% for cohort in cohorts %}
+                                                <a class="btn btn-sm filter-btn {% if cohort_filter == cohort|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                                    href="{{ url_for('convenor.enroll_submitters', id=pclass.id, cohort_filter=cohort, year_filter=year_filter, prog_filter=prog_filter) }}">
+                                                    {{ cohort }}
+                                                </a>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    {% if has_years %}
+                                        {% if has_cohorts %}
+                                            <div class="col-6">
+                                        {% else %}
+                                            <div class="col-12">
+                                        {% endif %}
+                                            <p>Filter by academic year</p>
+                                            <a class="btn btn-sm filter-btn {% if year_filter is none or year_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                                href="{{ url_for('convenor.enroll_submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter='all', prog_filter=prog_filter) }}">
+                                                All
+                                            </a>
+                                            {% for year in years %}
+                                                <a class="btn btn-sm filter-btn {% if year_filter == year|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                                    href="{{ url_for('convenor.enroll_submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year, prog_filter=prog_filter) }}">
+                                                    Y{{ year }}
+                                                </a>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
                             {% endif %}
-                                <p>Filter by cohort</p>
-                                <a class="btn btn-sm filter-btn {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                                    href="{{ url_for('convenor.enroll_submitters', id=pclass.id, cohort_filter='all', year_filter=year_filter, prog_filter=prog_filter) }}">
-                                    All
-                                </a>
-                                {% for cohort in cohorts %}
-                                    <a class="btn btn-sm filter-btn {% if cohort_filter == cohort|string %}btn-primary{% else %}btn-default{% endif %}"
-                                        href="{{ url_for('convenor.enroll_submitters', id=pclass.id, cohort_filter=cohort, year_filter=year_filter, prog_filter=prog_filter) }}">
-                                        {{ cohort }}
-                                    </a>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                        {% if has_years %}
-                            {% if has_cohorts %}
-                                <div class="col-xs-6">
-                            {% else %}
-                                <div class="col-xs-12">
-                            {% endif %}
-                                <p>Filter by academic year</p>
-                                <a class="btn btn-sm filter-btn {% if year_filter is none or year_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                                    href="{{ url_for('convenor.enroll_submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter='all', prog_filter=prog_filter) }}">
-                                    All
-                                </a>
-                                {% for year in years %}
-                                    <a class="btn btn-sm filter-btn {% if year_filter == year|string %}btn-primary{% else %}btn-default{% endif %}"
-                                        href="{{ url_for('convenor.enroll_submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year, prog_filter=prog_filter) }}">
-                                        Y{{ year }}
-                                    </a>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                {% endif %}
-
-                {% if progs and progs is not none and progs|length > 1 %}
-                    {% if needs_rule %}
-                        <hr class="intro-divider">
-                    {% endif %}
-                    {% set needs_rule = true %}
-                    <p>Filter by degree programme</p>
-                    <a class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('convenor.enroll_submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='all') }}">
-                        All
-                    </a>
-                    {% for prog in progs %}
-                        <a class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('convenor.enroll_submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog.id) }}">
-                            {{ prog.full_name }}
-                        </a>
-                    {% endfor %}
-                {% endif %}
-
-                {% if needs_rule %}
-                    <hr class="intro-divider">
-                {% endif %}
-                <div class="row vertical-align">
-                    <div class="col-xs-12">
-                        <div class="pull-right">
-                            <a href="{{ url_for('convenor.enroll_all_submitters', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter) }}"
-                               class="btn btn-warning">
-                                <i class="fa fa-check"></i> Manually enroll all
-                            </a>
                         </div>
+                    </div>
+
+                    {% if has_progs %}
+                        {% if needs_rule %}<hr class="intro-divider">{% endif %}
+                        <div class="row">
+                            <div class="col-12">
+                                {% set needs_rule = true %}
+                                <p>Filter by degree programme</p>
+                                <a class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                    href="{{ url_for('convenor.enroll_submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='all') }}">
+                                    All
+                                </a>
+                                {% for prog in progs %}
+                                    <a class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                        href="{{ url_for('convenor.enroll_submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog.id) }}">
+                                        {{ prog.full_name }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <div class="row vertical-align">
+                <div class="col-12">
+                    <div class="float-right">
+                        <a href="{{ url_for('convenor.enroll_all_submitters', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter) }}"
+                           class="btn btn-warning">
+                            <i class="fa fa-check"></i> Manually enroll all
+                        </a>
                     </div>
                 </div>
             </div>

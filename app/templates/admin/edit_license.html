@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, colour_field %}
 
 {% extends "security/index.html" %}
@@ -49,23 +49,23 @@
 
         {{ form.hidden_tag() }}
 
-        <div class="well">
-            {{ wtf.form_field(form.name) }}
-            {{ wtf.form_field(form.abbreviation) }}
-            {{ wtf.form_field(form.version) }}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.name) }}
+            {{ wtf.render_field(form.abbreviation) }}
+            {{ wtf.render_field(form.version) }}
             {{ colour_field(form.colour, 'colour-group') }}
         </div>
 
-        <div class="well">
-            {{ wtf.form_field(form.description) }}
-            {{ wtf.form_field(form.url) }}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.description) }}
+            {{ wtf.render_field(form.url) }}
         </div>
 
-        <div class="well">
-            {{ wtf.form_field(form.allows_redistribution) }}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.allows_redistribution) }}
         </div>
 
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

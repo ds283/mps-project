@@ -14,22 +14,17 @@ from flask import render_template_string, jsonify, url_for
 _email_log_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.delete_email', id=e.id) }}">
-                <i class="fa fa-trash"></i> Delete
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.display_email', id=e.id) }}">
-                <i class="fa fa-eye"></i> View email
-            </a>
-        </li>
-    </ul>
+    <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item" href="{{ url_for('admin.delete_email', id=e.id) }}">
+            <i class="fa fa-trash"></i> Delete
+        </a>
+        <a class="dropdown-item" href="{{ url_for('admin.display_email', id=e.id) }}">
+            <i class="fa fa-eye"></i> View email
+        </a>
+    </div>
 </div>
 """
 
@@ -39,7 +34,7 @@ _name = \
 {% if e.user is not none %}
     <a href="mailto:{{ e.user.email }}" {% if e.user.last_email %}data-toggle="tooltip" title="Last notification at {{ e.user.last_email.strftime("%a %d %b %Y %H:%M:%S") }}"{% endif %}>{{ e.user.name }}</a>
 {% else %}
-    <span class="label label-warning">Not logged</span>
+    <span class="badge badge-warning">Not logged</span>
 {% endif %}
 """
 
@@ -51,7 +46,7 @@ _address = \
 {% elif e.recipient %}
     {{ e.recipient }}
 {% else %}
-    <span class="label label-danger">Invalid address or recipient</span>
+    <span class="badge badge-danger">Invalid address or recipient</span>
 {% endif %}
 """
 

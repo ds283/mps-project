@@ -11,11 +11,11 @@
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css""/>
 
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -53,19 +53,19 @@
         </a>
     </div>
 
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Student attendance for assessment event <strong>{{ assessment.name }}</strong></div>
-        <div class="panel-body">
-            <div class="well">
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-primary text-white">Student attendance for assessment event <strong>{{ assessment.name }}</strong></div>
+        <div class="card-body">
+            <div class="card mt-3 mb-3 card-body bg-well">
                 {% if pclasses is not none and pclasses|length > 0 %}
                     <p>Filter by project type</p>
                     <a href="{{ url_for('admin.assessment_manage_attendees', id=assessment.id, pclass_filter='all', attend_filter=attend_filter) }}"
-                       class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
                         All
                     </a>
                     {% for pclass in pclasses %}
                         <a href="{{ url_for('admin.assessment_manage_attendees', id=assessment.id, pclass_filter=pclass.id, attend_filter=attend_filter) }}"
-                           class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
+                           class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-secondary{% endif %}">
                             {{ pclass.name }}
                         </a>
                     {% endfor %}
@@ -74,15 +74,15 @@
 
                 <p>Filter by attending status</p>
                 <a href="{{ url_for('admin.assessment_manage_attendees', id=assessment.id, pclass_filter=pclass_filter, attend_filter='all') }}"
-                   class="btn btn-sm filter-btn {% if attend_filter is none or attend_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if attend_filter is none or attend_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
                     All
                 </a>
                 <a href="{{ url_for('admin.assessment_manage_attendees', id=assessment.id, pclass_filter=pclass_filter, attend_filter='attending') }}"
-                   class="btn btn-sm filter-btn {% if attend_filter is none or attend_filter == 'attending' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if attend_filter is none or attend_filter == 'attending' %}btn-primary{% else %}btn-secondary{% endif %}">
                     Attending
                 </a>
                 <a href="{{ url_for('admin.assessment_manage_attendees', id=assessment.id, pclass_filter=pclass_filter, attend_filter='not-attending') }}"
-                   class="btn btn-sm filter-btn {% if attend_filter is none or attend_filter == 'not-attending' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if attend_filter is none or attend_filter == 'not-attending' %}btn-primary{% else %}btn-secondary{% endif %}">
                     Not attending
                 </a>
             </div>

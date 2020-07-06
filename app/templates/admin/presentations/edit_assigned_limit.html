@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% extends "security/index.html" %}
 
@@ -21,9 +21,9 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        {{ wtf.form_field(form.assigned_limit) }}
+        {{ wtf.render_field(form.assigned_limit) }}
 
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

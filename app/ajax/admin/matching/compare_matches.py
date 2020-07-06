@@ -32,47 +32,42 @@ _records = \
 {% if r.project_id != c.project_id %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style()|safe %}
-    <span class="label label-info" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}:
+    <span class="badge badge-info" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}:
         {{ r.supervisor.user.name }} (No. {{ r.project.number }})</span>
 {% else %}
-    <span class="label label-success">PROJECT MATCH</span>
+    <span class="badge badge-success">PROJECT MATCH</span>
 {% endif %}
 {% if r.marker_id != c.marker_id %}
-    <span class="label label-default">#{{ r.submission_period }}:
+    <span class="badge badge-secondary">#{{ r.submission_period }}:
         {{ r.marker.user.name }}</span>
 {% else %}
-    <span class="label label-success">MARKER MATCH</span>
+    <span class="badge badge-success">MARKER MATCH</span>
 {% endif %}
 """
 
 
 _delta = \
 """
-<span class="label {% if r.hi_ranked %}label-success{% elif r.lo_ranked %}label-warning{% else %}label-info{% endif %}">{{ r.rank }}</span>
-<span class="label label-primary">&delta; = {{ r.delta }}</span>
+<span class="badge {% if r.hi_ranked %}badge-success{% elif r.lo_ranked %}badge-warning{% else %}badge-info{% endif %}">{{ r.rank }}</span>
+<span class="badge badge-primary">&delta; = {{ r.delta }}</span>
 """
 
 
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button"
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.merge_replace_records', src_id=l.id, dest_id=r.id) }}">
-                <i class="fa fa-chevron-circle-right"></i> Replace left to right
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.merge_replace_records', src_id=r.id, dest_id=l.id) }}">
-                <i class="fa fa-chevron-circle-left"></i> Replace right to left
-            </a>
-        </li>
-    </ul>
+    <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item" href="{{ url_for('admin.merge_replace_records', src_id=l.id, dest_id=r.id) }}">
+            <i class="fa fa-chevron-circle-right"></i> Replace left to right
+        </a>
+        <a class="dropdown-item" href="{{ url_for('admin.merge_replace_records', src_id=r.id, dest_id=l.id) }}">
+            <i class="fa fa-chevron-circle-left"></i> Replace right to left
+        </a>
+    </div>
 </div>
 """
 

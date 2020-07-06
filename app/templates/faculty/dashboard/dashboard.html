@@ -16,8 +16,8 @@
         {% if is_root %}
             {% set warning = root_dash_data['warning'] %}
             {% set messages = root_dash_data['messages'] %}
-            <li {% if pane == 'system' %}class="active"{% endif %}>
-                <a href="{{ url_for('faculty.dashboard', pane='system') }}">
+            <li class="nav-item">
+                <a class="nav-link {% if pane == 'system' %}active{% endif %}" href="{{ url_for('faculty.dashboard', pane='system') }}">
                     {% if warning or (messages is not none and messages|length > 0) %}
                         <i class="fa fa-exclamation-triangle"></i>
                     {% endif %}
@@ -31,14 +31,14 @@
         {%- set user_warning = (user_num_rejected > 0) if user_num_rejected is not none else false -%}
         {%- set project_warning = (project_num_rejected > 0) if project_num_rejected is not none else false -%}
         {% if is_user_approver or is_project_approver or (user_warning and (is_manage_users or is_root)) %}
-            <li {% if pane == 'approve' %}class="active"{% endif %}>
-                <a href="{{ url_for('faculty.dashboard', pane='approve') }}">
+            <li class="nav-item">
+                <a class="nav-link {% if pane == 'approve' %}active{% endif %}" href="{{ url_for('faculty.dashboard', pane='approve') }}">
                     {% if user_warning or project_warning %}
                         <i class="fa fa-exclamation-triangle"></i>
                     {% endif %}
                     Approvals
                     {% if approve_total > 0 %}
-                        <span class="badge badge-info">{{ approve_total }}</span>
+                        <span class="badge badge-pill badge-light">{{ approve_total }}</span>
                     {% endif %}
                 </a>
             </li>
@@ -46,8 +46,8 @@
         {% if enrollments %}
             {% for item in enrollments %}
                 {% set config = item['config'] %}
-                <li {% if pane == config.id|string %}class="active"{% endif %}>
-                    <a href="{{ url_for('faculty.dashboard', pane=config.id) }}">
+                <li class="nav-item endif %}">
+                    <a class="nav-link {% if pane == config.id|string %}active{% endif %}" href="{{ url_for('faculty.dashboard', pane=config.id) }}">
                         {% set selector_state = config.selector_lifecycle %}
                         {% set submitter_state = config.submitter_lifecycle %}
                         {% set nproj = current_user.faculty_data.number_projects_offered(config.project_class) %}
@@ -70,8 +70,8 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
+        <div class="col-1"></div>
+        <div class="col-10">
 
             {% if messages %}
                 {% for message in messages %}
@@ -97,13 +97,12 @@
             {% endif %}
 
             {% if is_root and pane == 'system' %}
-                <div class="well">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     {{ admin_dashboard_card(root_dash_data) }}
                     {{ root_functions(root_dash_data, matching_ready, has_assessments) }}
                 </div>
             {% else %}
                 {% if enrollments and enrollments|length > 0 %}
-
                     {% for item in enrollments %}
                         {% set config = item['config'] %}
                         {% if pane == config.id|string %}
@@ -112,10 +111,9 @@
                             {{ pclass_card(item, today) }}
                         {% endif %}
                     {% endfor %}
-
                 {% else %}
 
-                    <div class="well">
+                    <div class="card mt-3 mb-3 card-body bg-well">
                         <h3 class="dashboard-subtitle"> You have no active project enrollments</h3>
                         <p>
                             Project classes for which you are enrolled, but are not active because of
@@ -136,6 +134,6 @@
             {% endif %}
 
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

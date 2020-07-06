@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% extends "security/index.html" %}
 
@@ -20,26 +20,26 @@
 
 {#        {{ wtf.form_errors(record) }}#}
 
-        <div class="well">
-            {{ wtf.form_field(form.email) }}
-            {{ wtf.form_field(form.user_id) }}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.email) }}
+            {{ wtf.render_field(form.user_id) }}
         </div>
 
-        <div class="well">
-            {{ wtf.form_field(form.first_name) }}
-            {{ wtf.form_field(form.last_name) }}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.first_name) }}
+            {{ wtf.render_field(form.last_name) }}
         </div>
 
-        <div class="well">
-            {{ wtf.form_field(form.exam_number) }}
-            {{ wtf.form_field(form.cohort) }}
-            {{ wtf.form_field(form.repeated_years) }}
-            {{ wtf.form_field(form.foundation_year) }}
-            {{ wtf.form_field(form.intermitting) }}
-            {{ wtf.form_field(form.programme) }}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.exam_number) }}
+            {{ wtf.render_field(form.cohort) }}
+            {{ wtf.render_field(form.repeated_years) }}
+            {{ wtf.render_field(form.foundation_year) }}
+            {{ wtf.render_field(form.intermitting) }}
+            {{ wtf.render_field(form.programme) }}
         </div>
 
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

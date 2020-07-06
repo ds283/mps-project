@@ -1,6 +1,6 @@
 {% extends "security/index.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% block title %}
     Edit response to student feedback
@@ -14,15 +14,15 @@
     <form action="{{ submit_url }}" method="POST" name="feedback_form">
         {{ form.hidden_tag() }}
 
-        <div class="panel panel-default">
-            <div class="panel-heading">Student feedback</div>
-            <div class="panel-body">
+        <div class="card mt-3 mb-3">
+            <div class="card-header">Student feedback</div>
+            <div class="card-body">
                 {{ record.student_feedback|dealingwithdollars|markdown|bclean|blinkify|safe }}
             </div>
         </div>
 
-        {{ wtf.form_field(form.feedback) }}
+        {{ wtf.render_field(form.feedback) }}
 
-        {{ wtf.form_field(form.save_changes, button_map={'save_changes': 'primary'}) }}
+        {{ wtf.render_field(form.save_changes, button_map={'save_changes': 'primary'}) }}
     </form>
 {% endblock %}

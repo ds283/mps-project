@@ -1,13 +1,13 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import date_field %}
 
 {% from "convenor/dashboard/overview_cards/prelive_capacity.html" import prelive_capacity %}
 {% from "convenor/dashboard/overview_cards/approvals_state.html" import approvals_state %}
 
 {% macro golive(config, golive_form, capacity_data, sel_count) %}
-    <div class="panel panel-danger">
-        <div class="panel-heading"><strong>Student selections are not yet live</strong></div>
-        <div class="panel-body">
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-danger text-white"><strong>Student selections are not yet live</strong></div>
+        <div class="card-body">
             {% set total_projects = capacity_data['projects'] %}
             <strong>{{ total_projects }}</strong> projects are currently available to go live.
             {% set pending = capacity_data['pending'] %}
@@ -24,28 +24,28 @@
                 <p><strong>All projects have passed approvals.</strong></p>
             {% endif %}
             <div class="row" style="margin-top: 20px;">
-                <div class="col-xs-2"></div>
-                <div class="col-xs-8">
+                <div class="col-1"></div>
+                <div class="col-10">
                     {{ approvals_state(capacity_data) }}
                 </div>
-                <div class="col-xs-2"></div>
+                <div class="col-1"></div>
             </div>
             <hr class="intro-divider">
             <form action="{{ url_for('convenor.go_live', id=config.id) }}" method="POST" name="golive-form">
                 {{ golive_form.hidden_tag() }}
                 {{ date_field(golive_form.live_deadline) }}
-                {{ wtf.form_field(golive_form.notify_faculty) }}
-                {{ wtf.form_field(golive_form.notify_selectors) }}
-                {{ wtf.form_field(golive_form.accommodate_matching) }}
-                {{ wtf.form_field(golive_form.full_CATS) }}
+                {{ wtf.render_field(golive_form.notify_faculty) }}
+                {{ wtf.render_field(golive_form.notify_selectors) }}
+                {{ wtf.render_field(golive_form.accommodate_matching) }}
+                {{ wtf.render_field(golive_form.full_CATS) }}
                 <div class="row">
-                    <div class="col-xs-12">
-                        <div class="pull-right">
+                    <div class="col-12">
+                        <div class="float-right">
                             {% if total_projects > 0 %}
                                 {% if golive_form.live_and_close is defined %}
-                                    {{ wtf.form_field(golive_form.live_and_close, button_map={'live_and_close': 'warning'}) }}
+                                    {{ wtf.render_field(golive_form.live_and_close, button_map={'live_and_close': 'warning'}) }}
                                 {% endif %}
-                                {{ wtf.form_field(golive_form.live, button_map={'live': 'primary'}) }}
+                                {{ wtf.render_field(golive_form.live, button_map={'live': 'primary'}) }}
                             {% endif %}
                         </div>
                     </div>

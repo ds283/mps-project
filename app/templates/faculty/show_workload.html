@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
 
 {% extends "security/index.html" %}
@@ -15,36 +15,36 @@
     <strong>CATS limits</strong>
 
     <div class="row vertical-top" style="margin-bottom: 5px;">
-        <div class="col-xs-4">
+        <div class="col-4">
             Supervising
         </div>
-        <div class="col-xs-4">
+        <div class="col-4">
             2nd-marking
         </div>
-        <div class="col-xs-4">
+        <div class="col-4">
             Presentation assessment
         </div>
     </div>
     <div class="row vertical-top">
-        <div class="col-xs-4">
+        <div class="col-4">
             {% if data.CATS_supervision is none or data.CATS_supervision == 0 %}
-                <span class="label label-default">Default</span>
+                <span class="badge badge-secondary">Default</span>
             {% else %}
-                <span class="label label-info">{{ data.CATS_supervision }} CATS</span>
+                <span class="badge badge-info">{{ data.CATS_supervision }} CATS</span>
             {% endif %}
         </div>
-        <div class="col-xs-4">
+        <div class="col-4">
             {% if data.CATS_marking is none or data.CATS_marking == 0 %}
-                <span class="label label-default">Default</span>
+                <span class="badge badge-secondary">Default</span>
             {% else %}
-                <span class="label label-info">{{ data.CATS_marking }} CATS</span>
+                <span class="badge badge-info">{{ data.CATS_marking }} CATS</span>
             {% endif %}
         </div>
-        <div class="col-xs-4">
+        <div class="col-4">
             {% if data.CATS_presentation is none or data.CATS_presentation == 0 %}
-                <span class="label label-default">Default</span>
+                <span class="badge badge-secondary">Default</span>
             {% else %}
-                <span class="label label-info">{{ data.CATS_presentation }} CATS</span>
+                <span class="badge badge-info">{{ data.CATS_presentation }} CATS</span>
             {% endif %}
         </div>
     </div>

@@ -56,16 +56,16 @@ _marker_menu = \
 """
 {% if proj.is_assessor(f.id) %}
  <a href="{{ url_for('convenor.remove_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
-    class="btn btn-sm btn-block btn-default">
+    class="btn btn-sm btn-block btn-secondary">
      <i class="fa fa-trash"></i> Remove
  </a>
 {% elif proj.can_enroll_assessor(f) %}
  <a href="{{ url_for('convenor.add_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
-    class="btn btn-sm btn-block btn-default">
+    class="btn btn-sm btn-block btn-secondary">
      <i class="fa fa-plus"></i> Attach
  </a>
 {% else %}
- <a class="btn btn-default btn-block btn-sm disabled">
+ <a class="btn btn-secondary btn-block btn-sm disabled">
      <i class="fa fa-ban"></i> Can't attach
  </a>
 {% endif %}
@@ -84,47 +84,47 @@ _desc_label = \
 {% endif %}
 <div>
     {% if d.review_only %}
-        <span class="label label-info">REVIEW</span>
+        <span class="badge badge-info">REVIEW</span>
     {% endif %}
     {% if d.aims is not none and d.aims|length > 0 %}
-        <span class="label label-success"><i class="fa fa-check"></i> Includes aims</span>
+        <span class="badge badge-success"><i class="fa fa-check"></i> Includes aims</span>
     {% else %}
-        <span class="label label-warning"><i class="fa fa-times"></i> Aims not specified</span>
+        <span class="badge badge-warning"><i class="fa fa-times"></i> Aims not specified</span>
     {% endif %}
     {% set state = d.workflow_state %}
     {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
     {% if not_confirmed %}
         {% if config is not none and config.selector_lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and desc_validator is not none and desc_validator(d) %}
             <div class="dropdown" style="display: inline-block;">
-                <a class="label label-default dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
-                <ul class="dropdown-menu">
-                    <li><a href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm</a></li>
-                </ul>
+                <a class="badge badge-secondary dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" class="dropdown-item" href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm</a>
+                </div>
             </div>
         {% else %}
-            <span class="label label-default">Approval: Not confirmed</span>
+            <span class="badge badge-secondary">Approval: Not confirmed</span>
         {% endif %}
     {% else %}
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
-            <span class="label label-success"><i class="fa fa-check"></i> Approved</span>
+            <span class="badge badge-success"><i class="fa fa-check"></i> Approved</span>
         {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
-            <span class="label label-warning">Approval: Queued</span>
+            <span class="badge badge-warning">Approval: Queued</span>
         {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
-            <span class="label label-info">Approval: In progress</span>
+            <span class="badge badge-info">Approval: In progress</span>
         {% else %}
-            <span class="label label-danger">Unknown approval state</span>
+            <span class="badge badge-danger">Unknown approval state</span>
         {% endif %}
         {% if current_user.has_role('project_approver') and d.validated_by %}
             <div>
-                <span class="label label-info">Signed-off: {{ d.validated_by.name }}</span>
+                <span class="badge badge-info">Signed-off: {{ d.validated_by.name }}</span>
                 {% if d.validated_timestamp %}
-                    <span class="label label-info">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                    <span class="badge badge-info">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                 {% endif %}
             </div>
         {% endif %}
     {% endif %}
     {% if d.has_new_comments(current_user) %}
-        <span class="label label-warning">New comments</span>
+        <span class="badge badge-warning">New comments</span>
     {% endif %}
 </div>
 {% if not d.is_valid %}
@@ -132,18 +132,18 @@ _desc_label = \
     {% set errors = d.errors %}
     {% set warnings = d.warnings %}
     {% if errors|length == 1 %}
-        <span class="label label-danger">1 error</span>
+        <span class="badge badge-danger">1 error</span>
     {% elif errors|length > 1 %}
-        <span class="label label-danger">{{ errors|length }} errors</span>
+        <span class="badge badge-danger">{{ errors|length }} errors</span>
     {% else %}
-        <span class="label label-success">0 errors</span>
+        <span class="badge badge-success">0 errors</span>
     {% endif %}
     {% if warnings|length == 1 %}
-        <span class="label label-warning">1 warning</span>
+        <span class="badge badge-warning">1 warning</span>
     {% elif warnings|length > 1 %}
-        <span class="label label-warning">{{ warnings|length }} warnings</span>
+        <span class="badge badge-warning">{{ warnings|length }} warnings</span>
     {% else %}
-        <span class="label label-success">0 warnings</span>
+        <span class="badge badge-success">0 warnings</span>
     {% endif %}
     {% if errors|length > 0 %}
         <div class="has-error">
@@ -174,64 +174,49 @@ _desc_label = \
 _desc_menu = \
 """
     <div class="dropdown">
-        <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
             Actions
-            <span class="caret"></span>
         </button>
-        <ul class="dropdown-menu dropdown-menu-right">
-            <li>
-                <a href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
-                                    url=url_for('convenor.edit_descriptions', id=d.parent.id, pclass_id=pclass_id, create=create),
-                                    text='description list view') }}">
-                    <i class="fa fa-search"></i> Preview web page
-                </a>
-            </li>
+        <div class="dropdown-menu dropdown-menu-right">
+            <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
+                                url=url_for('convenor.edit_descriptions', id=d.parent.id, pclass_id=pclass_id, create=create),
+                                text='description list view') }}">
+                <i class="fa fa-search"></i> Preview web page
+            </a>
 
             {% if desc_validator and desc_validator(d) %}
-                <li role="separator" class="divider"></li>
-                <li class="dropdown-header">Edit description</li>
+                <div role="separator" class="dropdown-divider"></div>
+                <div class="dropdown-header">Edit description</div>
     
-                <li>
-                    <a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
-                        <i class="fa fa-pencil"></i> Edit content...
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('convenor.description_modules', did=d.id, pclass_id=pclass_id, create=create) }}">
-                        <i class="fa fa-cogs"></i> Recommended modules...
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('convenor.duplicate_description', did=d.id, pclass_id=pclass_id) }}">
-                        <i class="fa fa-clone"></i> Duplicate
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('convenor.move_description', did=d.id, pclass_id=pclass_id, create=create) }}">
-                        <i class="fa fa-arrows"></i> Move to project...
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('convenor.delete_description', did=d.id, pclass_id=pclass_id) }}">
-                        <i class="fa fa-trash"></i> Delete
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
+                    <i class="fa fa-pencil"></i> Edit content...
+                </a>
+                <a class="dropdown-item" href="{{ url_for('convenor.description_modules', did=d.id, pclass_id=pclass_id, create=create) }}">
+                    <i class="fa fa-cogs"></i> Recommended modules...
+                </a>
+                <a class="dropdown-item" href="{{ url_for('convenor.duplicate_description', did=d.id, pclass_id=pclass_id) }}">
+                    <i class="fa fa-clone"></i> Duplicate
+                </a>
+                <a class="dropdown-item" href="{{ url_for('convenor.move_description', did=d.id, pclass_id=pclass_id, create=create) }}">
+                    <i class="fa fa-arrows"></i> Move to project...
+                </a>
+                <a class="dropdown-item" href="{{ url_for('convenor.delete_description', did=d.id, pclass_id=pclass_id) }}">
+                    <i class="fa fa-trash"></i> Delete
+                </a>
             {% endif %}
     
-            <li role="separator" class="divider"></li>
+            <div role="separator" class="dropdown-divider"></div>
 
-            <li>
-                {% if d.default is none %}
-                    <a href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id, did=d.id) }}">
-                        <i class="fa fa-wrench"></i> Make default
-                    </a>
-                {% else %}
-                    <a href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id) }}">
-                        <i class="fa fa-wrench"></i> Remove default
-                    </a>
-                {% endif %}
-            </li>
-        </ul>
+            {% if d.default is none %}
+                <a class="dropdown-item" href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id, did=d.id) }}">
+                    <i class="fa fa-wrench"></i> Make default
+                </a>
+            {% else %}
+                <a class="dropdown-item" href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id) }}">
+                    <i class="fa fa-wrench"></i> Remove default
+                </a>
+            {% endif %}
+        </div>
     </div>
  """
 
@@ -267,7 +252,7 @@ def overview(id):
     GoLiveForm = GoLiveFormFactory()
     golive_form = GoLiveForm(request.form)
 
-    # 2. Change deadline for projec selection
+    # 2. Change deadline for project selection
     ChangeDeadlineForm = ChangeDeadlineFormFactory()
     change_form = ChangeDeadlineForm(request.form)
 
@@ -1190,10 +1175,10 @@ def selector_grid(id):
         matches = None
 
     if match_filter is None and session.get('convenor_sel_grid_match_filter'):
-        match_filter = session['convenor_selectors_match_filter']
+        match_filter = session['convenor_sel_grid_match_filter']
 
     if match_show is None and session.get('convenor_sel_grid_match_show'):
-        match_show = session['convenor_selectors_match_show']
+        match_show = session['convenor_sel_grid_match_show']
 
     if matches is None:
         match_filter = 'all'

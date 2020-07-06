@@ -1,6 +1,6 @@
 {% extends "security/index.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
 
 {% block scripts %}
@@ -33,30 +33,30 @@
 
 {#        {{ wtf.form_errors(pclass_form) }}#}
 
-        <div class="well">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <strong>Text displayed on student selector cards</strong>
             <p>
                 You can optionally override the text that is displayed on the student dashboard during
                 project selection. If you do not provide an override, a default wording will be used.
             </p>
             <hr class="intro-divider">
-            {{ wtf.form_field(form.card_text_normal) }}
-            {{ wtf.form_field(form.card_text_optional) }}
-            {{ wtf.form_field(form.card_text_noninitial) }}
+            {{ wtf.render_field(form.card_text_normal) }}
+            {{ wtf.render_field(form.card_text_optional) }}
+            {{ wtf.render_field(form.card_text_noninitial) }}
         </div>
 
-        <div class="well">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <strong>Preamble for email notification of project matching</strong>
             <p>
                 You can optionally override the text used in the email preamble.
                 If you do not provide an override, default wording will be used.
             </p>
             <hr class="intro-divider">
-            {{ wtf.form_field(form.email_text_draft_match_preamble) }}
-            {{ wtf.form_field(form.email_text_final_match_preamble) }}
+            {{ wtf.render_field(form.email_text_draft_match_preamble) }}
+            {{ wtf.render_field(form.email_text_final_match_preamble) }}
         </div>
 
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

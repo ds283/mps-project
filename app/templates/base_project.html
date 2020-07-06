@@ -2,11 +2,12 @@
 
 {% block styles %}
     {{ super() }}
-    {% if current_user.theme == current_user.THEME_FLAT %}
+    {% set theme = current_user.ui_theme if current_user.ui_theme is defined else 'default' %}
+    {% if theme == 'flat' %}
         {% assets filters="cssmin", output="gen/project-flat-min.css", "css/common.css", "css/project.css", "css/flat.css", "css/project-flat.css" -%}
             <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
         {% endassets %}
-    {% elif current_user.theme == current_user.THEME_DARK %}
+    {% elif theme == 'dark' %}
         {% assets filters="cssmin", output="gen/project-dark-min.css", "css/common.css", "css/project.css", "css/dark.css", "css/project-dark.css" -%}
             <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
         {% endassets %}

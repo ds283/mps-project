@@ -45,19 +45,19 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
-            <div class="panel panel-default">
-                <div class="panel-heading">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card mt-3 mb-3">
+                <div class="card-header">
                     View bookmarks for <strong>{{ sel.student.user.name }}</strong>
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     {{ bookmark_projects(sel, sel.ordered_bookmarks, 'selector bookmarks view', url_for('convenor.selector_bookmarks', id=sel.id)) }}
                     <hr class="intro-divider" role="separator">
                     <div class="row">
-                        <div class="col-xs-12">
-                            <div class="pull-right">
-                                <a href="{{ url_for('convenor.add_student_bookmark', sid=sel.id) }}" class="btn btn-default">Add bookmark</a>
+                        <div class="col-12">
+                            <div class="float-right">
+                                <a href="{{ url_for('convenor.add_student_bookmark', sid=sel.id) }}" class="btn btn-secondary">Add bookmark</a>
                             </div>
                         </div>
                     </div>
@@ -70,6 +70,6 @@
                 </a>
             </div>
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

@@ -14,35 +14,26 @@ from flask import render_template_string, jsonify
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.edit_skill', id=skill.id) }}">
-                <i class="fa fa-pencil"></i> Edit details...
-            </a>
-        </li>
+    <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item" href="{{ url_for('admin.edit_skill', id=skill.id) }}">
+            <i class="fa fa-pencil"></i> Edit details...
+        </a>
 
         {% if skill.group is not none and skill.group.active %}
             {% if skill.active %}
-                <li>
-                    <a href="{{ url_for('admin.deactivate_skill', id=skill.id) }}">
-                        <i class="fa fa-wrench"></i> Make inactive
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('admin.deactivate_skill', id=skill.id) }}">
+                    <i class="fa fa-wrench"></i> Make inactive
+                </a>
             {% else %}
-                <li>
-                    <a href="{{ url_for('admin.activate_skill', id=skill.id) }}">
-                        <i class="fa fa-wrench"></i> Make active
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('admin.activate_skill', id=skill.id) }}">
+                    <i class="fa fa-wrench"></i> Make active
+                </a>
             {% endif %}
         {% else %}
-            <li class="disabled">
-                <a>Parent disabled</a>
-            </li>
+            <a class="dropdown-item disabled">Parent disabled</a>
         {% endif %}
     </ul>
 </div>
@@ -52,9 +43,9 @@ _menu = \
 _active = \
 """
 {% if a.active %}
-    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
 {% else %}
-    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+    <span class="badge badge-warning"><i class="fa fa-times"></i> Inactive</span>
 {% endif %}
 """
 
@@ -62,7 +53,7 @@ _active = \
 def skills_data(skills):
 
     data = [{'name': s.name,
-             'group': s.group.make_label() if s.group is not None else '<span class="label label-default">None</span>',
+             'group': s.group.make_label() if s.group is not None else '<span class="badge badge-secondary">None</span>',
              'active': render_template_string(_active, a=s),
              'menu': render_template_string(_menu, skill=s)} for s in skills]
 

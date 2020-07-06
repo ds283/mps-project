@@ -6,36 +6,36 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
-            <div class="panel panel-primary panel-primary-bg">
-                <div class="panel-heading">Create new schedule for <strong>{{ assessment.name }}</strong></div>
-                <div class="panel-body">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card mt-3 mb-3">
+                <div class="card-header bg-primary text-white">Create new schedule for <strong>{{ assessment.name }}</strong></div>
+                <div class="card-body">
                     <form action="{{ url_for('admin.create_assessment_schedule', id=assessment.id) }}" method="POST" name="schedule_form">
                         {{ form.hidden_tag() }}
 
-                        {{ wtf.form_field(form.name) }}
-                        {{ wtf.form_field(form.tag) }}
+                        {{ wtf.render_field(form.name) }}
+                        {{ wtf.render_field(form.tag) }}
 
-                        <div class="well">
+                        <div class="card mt-3 mb-3 card-body bg-well">
                             <p>Scheduling parameters</p>
-                            {{ wtf.form_field(form.assessor_assigned_limit) }}
-                            {{ wtf.form_field(form.if_needed_cost) }}
-                            {{ wtf.form_field(form.levelling_tension) }}
-                            {{ wtf.form_field(form.all_assessors_in_pool) }}
+                            {{ wtf.render_field(form.assessor_assigned_limit) }}
+                            {{ wtf.render_field(form.if_needed_cost) }}
+                            {{ wtf.render_field(form.levelling_tension) }}
+                            {{ wtf.render_field(form.all_assessors_in_pool) }}
                         </div>
 
-                        <div class="well">
+                        <div class="card mt-3 mb-3 card-body bg-well">
                             <p>Optimization settings</p>
-                            {{ wtf.form_field(form.solver) }}
+                            {{ wtf.render_field(form.solver) }}
                         </div>
 
-                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
-                        {{ wtf.form_field(form.offline, button_map={'offline': 'default'}) }}
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                        {{ wtf.render_field(form.offline, button_map={'offline': 'secondary'}) }}
                     </form>
                 </div>
             </div>
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

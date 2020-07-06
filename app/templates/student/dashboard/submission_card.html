@@ -1,29 +1,29 @@
 {% macro submission_card(config, sub, n, today) %}
     {% set period = config.get_period(n+1) %}
     {% if period %}
-        <div class="panel
-            {% if n+1 == config.submission_period %}
-                {% if period.closed %}
-                    panel-default
-                {% elif period.is_feedback_open %}
-                    panel-info
-                {% elif period.start_date and period.start_date > today %}
-                    panel-default
+        <div class="card">
+            <div class="card-header
+                {% if n+1 == config.submission_period %}
+                    {% if period.closed %}
+                        bg-secondary text-white
+                    {% elif period.is_feedback_open %}
+                        bg-info text-white
+                    {% elif period.start_date and period.start_date > today %}
+                        {# no markup required; formerly panel-default #}
+                    {% else %}
+                        bg-success text-white
+                    {% endif %}
                 {% else %}
-                    panel-success
+                    {# no markup required; formerly panel-default #}
                 {% endif %}
-            {% else %}
-                panel-default
-            {% endif %}
-        ">
-            <div class="panel-heading">
+            ">
                 {% if period.submission_period == config.submission_period %}
                     <strong>{{ period.display_name|safe }}</strong>
                 {% else %}
                     {{ period.display_name|safe }}
                 {% endif %}
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 {% if period.closed %}
                     <p>Activity for this submission period is now closed.</p>
                 {% else %}
@@ -39,7 +39,7 @@
                                 <p>Normal project activity is underway.</p>
                             {% endif %}
                         {% else %}
-                            <span class="label label-danger">Error: Submission period lifecycle inconsistent</span>
+                            <span class="badge badge-danger">Error: Submission period lifecycle inconsistent</span>
                         {% endif %}
                     {% endif %}
                 {% endif %}
@@ -51,33 +51,32 @@
                     {% if sub.published and record.project is not none %}
                         <div class="dashboard-subtitle" style="padding-bottom: 8px;">Project assignment</div>
                         <div class="row vertical-top">
-                            <div class="col-xs-3">
+                            <div class="col-3">
                                 <a href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }}</a>
                             </div>
-                            <div class="col-xs-5">
+                            <div class="col-5">
                                 {{ record.project.name }} (No. {{ record.project.number }})
                                 <div>
                                     {% if record.student_feedback_submitted and record.acknowledge_feedback %}
-                                        <span class="label label-success"><i class="fa fa-check"></i> Your feedback acknowledged</span>
+                                        <span class="badge badge-success"><i class="fa fa-check"></i> Your feedback acknowledged</span>
                                     {% endif %}
                                     {% if record.faculty_response_submitted %}
-                                        <span class="label label-success"><i class="fa fa-check"></i> Supervisor response</span>
+                                        <span class="badge badge-success"><i class="fa fa-check"></i> Supervisor response</span>
                                     {% endif %}
                                 </div>
                             </div>
-                            <div class="col-xs-4">
-                                <div style="text-align: right;" class="pull-right">
+                            <div class="col-4">
+                                <div style="text-align: right;" class="float-right">
                                     <div class="dropdown">
-                                        <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                        <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                                             Actions
-                                            <span class="caret"></span>
                                         </button>
-                                        <ul class="dropdown-menu dropdown-menu-right">
-                                            <li><a href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ record.number_attachments_student }})...</a></li>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ record.number_attachments_student }})...</a>
                                             {% if record.has_feedback %}
-                                                <li><a href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}"><i class="fa fa-search"></i> View feedback...</a></li>
+                                                <a class="dropdown-item" href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}"><i class="fa fa-search"></i> View feedback...</a>
                                             {% endif %}
-                                        </ul>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -90,16 +89,16 @@
                                 {% set slot = period.get_student_presentation_slot(sub.id) %}
                                 <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</div>
                                 {% if slot is not none %}
-                                    <span class="label label-primary">{{ slot.date_as_string }}</span>
-                                    <span class="label label-info">{{ slot.session_type_string }}</span>
-                                    <span class="label label-info">{{ slot.room_full_name }}</span>
+                                    <span class="badge badge-primary">{{ slot.date_as_string }}</span>
+                                    <span class="badge badge-info">{{ slot.session_type_string }}</span>
+                                    <span class="badge badge-info">{{ slot.room_full_name }}</span>
                                     {% for assessor in slot.assessors %}
-                                        <span class="label label-default">{{ assessor.user.name }}</span>
+                                        <span class="badge badge-secondary">{{ assessor.user.name }}</span>
                                     {% else %}
-                                        <span class="label label-danger">Assessor information missing</span>
+                                        <span class="badge badge-danger">Assessor information missing</span>
                                     {% endfor %}
                                 {% else %}
-                                    <span class="label label-warning">Not attending</span>
+                                    <span class="badge badge-warning">Not attending</span>
                                 {% endif %}
                             {% else %}
                                 <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">Presentation assessment</div>
@@ -108,7 +107,7 @@
                         {% endif %}
                     {% else %}
                         <div class="row vertical-top">
-                            <div class="col-xs-12">
+                            <div class="col-12">
                                 <div class="dashboard-notification-panel">
                                     <p><strong>To be announced.</strong></p>
                                 </div>
@@ -121,10 +120,10 @@
             </div>
         </div>
     {% else %}
-        <div class="panel panel-default">
-            <div class="panel-heading"><strong>Submission period #{{ n+1 }}</strong></div>
-            <div class="panel-body">
-                <span class="label label-danger">Error: Could not read period record</span>
+        <div class="card mt-3 mb-3">
+            <div class="card-header"><strong>Submission period #{{ n+1 }}</strong></div>
+            <div class="card-body">
+                <span class="badge badge-danger">Error: Could not read period record</span>
             </div>
         </div>
     {% endif %}

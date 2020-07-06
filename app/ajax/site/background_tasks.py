@@ -13,13 +13,13 @@ from flask import render_template_string, jsonify
 _state = \
 """
 {% if state == 0 %}
-    <span class="label label-info">PENDING</span>
+    <span class="badge badge-info">PENDING</span>
 {% elif state == 1 %}
-    <span class="label label-info">RUNNING</span>
+    <span class="badge badge-info">RUNNING</span>
 {% elif state == 2 %}
-    <span class="label label-success">SUCCESS</span>
+    <span class="badge badge-success">SUCCESS</span>
 {% else %}
-    <span class="label label-danger">FAILED</span>
+    <span class="badge badge-danger">FAILED</span>
 {% endif %}
 """
 
@@ -27,26 +27,21 @@ _state = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button"
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
         {% if t.status == t.PENDING or t.status == t.RUNNING %}
-            <li>
-                <a href="{{ url_for('admin.terminate_background_task', id=t.id) }}">
-                    <i class="fa fa-hand-paper-o"></i> Terminate
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('admin.terminate_background_task', id=t.id) }}">
+                <i class="fa fa-hand-paper-o"></i> Terminate
+            </a>
         {% else %}
-            <li>
-                <a href="{{ url_for('admin.delete_background_task', id=t.id) }}">
-                    <i class="fa fa-trash"></i> Delete
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('admin.delete_background_task', id=t.id) }}">
+                <i class="fa fa-trash"></i> Delete
+            </a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 
@@ -56,7 +51,7 @@ def background_task_data(tasks):
     data = [{'id': t.id,
              'owner': '<a href="mailto:{em}">{nm}</a>'.format(nm=t.owner.name,
                                                               em=t.owner.email) if t.owner is not None
-                else '<span class="label label-default">Nobody</span>',
+                else '<span class="badge badge-secondary">Nobody</span>',
              'name': t.name,
              'description': t.description,
              'start_at': {

@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, date_field %}
 
 {% extends "security/index.html" %}
@@ -6,7 +6,7 @@
 {% block scripts %}
     {{ super() }}
 
-    {% assets filters="cssmin", output="gen/bootstrap-datepicker3-min.css", "css/bootstrap-datepicker3.css" -%}
+    {% assets filters="cssmin", output="gen/bootstrap-datepicker-min.css", "css/bootstrap-datepicker.css" -%}
         <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
     {% endassets %}
 
@@ -55,12 +55,12 @@
 {#        {{ wtf.form_errors(form) }}#}
 
         {{ date_field(form.date) }}
-        {{ wtf.form_field(form.session_type) }}
+        {{ wtf.render_field(form.session_type) }}
 
-        <div class="well {% if form.rooms.errors %}has-error{% endif %}">
+        <div class="card mt-3 mb-3 card-body {% if form.rooms.errors %}has-error{% endif %}">
             <p>Select the rooms that are available for this session</p>
             {% for widget in form.rooms %}
-                {{ wtf.form_field(widget) }}
+                {{ wtf.render_field(widget) }}
             {% else %}
                 <div class="has-error">
                     <p class="help-block">No rooms are available</p>
@@ -73,7 +73,7 @@
             {% endif %}
         </div>
 
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

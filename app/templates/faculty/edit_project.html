@@ -1,6 +1,6 @@
 {% extends "security/index.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
 
 {% block title %}
@@ -30,20 +30,20 @@
 
 {#        {{ wtf.form_errors(project_form) }}#}
 
-        {{ wtf.form_field(project_form.name) }}
-        {{ wtf.form_field(project_form.keywords) }}
-        {{ wtf.form_field(project_form.group) }}
+        {{ wtf.render_field(project_form.name) }}
+        {{ wtf.render_field(project_form.keywords) }}
+        {{ wtf.render_field(project_form.group) }}
 
         {% if project_form.owner %}
-            {{ wtf.form_field(project_form.owner) }}
+            {{ wtf.render_field(project_form.owner) }}
         {% endif %}
 
-        <div class="well {% if project_form.project_classes.errors %}has-error{% endif %}">
+        <div class="card mt-3 mb-3 card-body bg-well {% if project_form.project_classes.errors %}has-error{% endif %}">
             <p>Select the project classes for which this project should be made available</p>
             {% for widget in project_form.project_classes %}
-                {{ wtf.form_field(widget) }}
+                {{ wtf.render_field(widget) }}
             {% else %}
-                <span class="label label-danger">No project classes currently available</span>
+                <span class="badge badge-danger">No project classes currently available</span>
             {% endfor %}
             {% if project_form.project_classes.errors %}
                 {% for error in project_form.project_classes.errors %}
@@ -52,22 +52,22 @@
             {% endif %}
         </div>
 
-        <div class="well">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p>Options</p>
-            {{ wtf.form_field(project_form.meeting_reqd) }}
-            {{ wtf.form_field(project_form.enforce_capacity) }}
-            {{ wtf.form_field(project_form.dont_clash_presentations) }}
+            {{ wtf.render_field(project_form.meeting_reqd) }}
+            {{ wtf.render_field(project_form.enforce_capacity) }}
+            {{ wtf.render_field(project_form.dont_clash_presentations) }}
             <p>Should the project page include popularity information?</p>
-            {{ wtf.form_field(project_form.show_popularity) }}
-            {{ wtf.form_field(project_form.show_bookmarks) }}
-            {{ wtf.form_field(project_form.show_selections) }}
+            {{ wtf.render_field(project_form.show_popularity) }}
+            {{ wtf.render_field(project_form.show_bookmarks) }}
+            {{ wtf.render_field(project_form.show_selections) }}
         </div>
 
-        {{ wtf.form_field(project_form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(project_form.submit, button_map={'submit': 'primary'}) }}
         {% if project_form.save_and_exit %}
-            {{ wtf.form_field(project_form.save_and_exit, button_map={'save_and_exit': 'default'}) }}
+            {{ wtf.render_field(project_form.save_and_exit, button_map={'save_and_exit': 'secondary'}) }}
         {% endif %}
-        {{ wtf.form_field(project_form.save_and_preview, button_map={'save_and_preview': 'default'}) }}
+        {{ wtf.render_field(project_form.save_and_preview, button_map={'save_and_preview': 'secondary'}) }}
 
     </form>
 {% endblock %}

@@ -22,31 +22,31 @@ _name = \
 <div>
     {{ item.first_name }} {{ item.last_name }}
     {% if item.exam_number is not none %}
-        <span class="label label-primary">{{ item.exam_number }}</span>
+        <span class="badge badge-primary">{{ item.exam_number }}</span>
     {% endif %}
     {% set warnings = item.warnings %}
     {% set w_length = warnings|length %}
     {% if w_length == 1 %}
-        <span class="label label-warning">1 warning</span>
+        <span class="badge badge-warning">1 warning</span>
     {% elif w_length > 1 %}
-        <span class="label label-warning">{{ w_length }} warnings</span>
+        <span class="badge badge-warning">{{ w_length }} warnings</span>
     {% else %}
         {% if item.existing_record is none %}
-            <span class="label label-success"><i class="fa fa-plus-circle"></i> New</span>
+            <span class="badge badge-success"><i class="fa fa-plus-circle"></i> New</span>
         {% else %}
-            <span class="label label-success"><i class="fa fa-check"></i> Safe to import</span>
+            <span class="badge badge-success"><i class="fa fa-check"></i> Safe to import</span>
         {% endif %}
     {% endif %}
 </div>
 <div>
     {% if item.existing_record is not none %}
-        <span class="label label-success"><i class="fa fa-check"></i> Matches {{ item.existing_record.user.name }} {{ item.existing_record.cohort }}</span>
+        <span class="badge badge-success"><i class="fa fa-check"></i> Matches {{ item.existing_record.user.name }} {{ item.existing_record.cohort }}</span>
     {% endif %}
     {% if item.intermitting %}
-        <span class="label label-danger">INTERMITTING</span>
+        <span class="badge badge-danger">INTERMITTING</span>
     {% endif %}
     {% if item.dont_convert %}
-        <span class="label label-warning"><i class="fa fa-times"></i> Import disabled</span>
+        <span class="badge badge-warning"><i class="fa fa-times"></i> Import disabled</span>
     {% endif %}
 </div>
 {% if w_length > 0 %}
@@ -64,7 +64,7 @@ _programme = \
 {% if p is not none %}
     {{ p.make_label()|safe }}
 {% else %}
-    <span class="label label-danger">Unknown</span>
+    <span class="badge badge-danger">Unknown</span>
 {% endif %}
 """
 
@@ -76,11 +76,11 @@ _cohort = \
     {{ item.academic_year_label()|safe }}
 </div>
 {% if item.foundation_year %}
-    <span class="label label-info">Foundation year</span>
+    <span class="badge badge-info">Foundation year</span>
 {% endif %}
 {% if item.repeated_years is not none and item.repeated_years > 0 %}
     {% set pl = 's' %}{% if item.repeated_years == 1 %}{% set pl = '' %}{% endif %}
-    <span class="label label-primary">{{ item.repeated_years }} repeated year{{ pl }}</span>
+    <span class="badge badge-primary">{{ item.repeated_years }} repeated year{{ pl }}</span>
 {% endif %}
 """
 
@@ -88,33 +88,26 @@ _cohort = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('manage_users.edit_batch_item', item_id=item.id) }}">
-                <i class="fa fa-pencil"></i> Edit...
-            </a>
-        </li>
+    <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item" href="{{ url_for('manage_users.edit_batch_item', item_id=item.id) }}">
+            <i class="fa fa-pencil"></i> Edit...
+        </a>
         
-        <li role="separator" class="divider"></li>
+        <div role="separator" class="dropdown-divider"></div>
 
         {% if item.dont_convert %}
-            <li>
-                <a href="{{ url_for('manage_users.mark_batch_item_convert', item_id=item.id) }}">
-                    <i class="fa fa-wrench"></i> Allow import
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('manage_users.mark_batch_item_convert', item_id=item.id) }}">
+                <i class="fa fa-wrench"></i> Allow import
+            </a>
         {% else %}
-            <li>
-                <a href="{{ url_for('manage_users.mark_batch_item_dont_convert', item_id=item.id) }}">
-                    <i class="fa fa-wrench"></i> Disallow import
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('manage_users.mark_batch_item_dont_convert', item_id=item.id) }}">
+                <i class="fa fa-wrench"></i> Disallow import
+            </a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

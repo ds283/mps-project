@@ -1,33 +1,33 @@
 {% macro selection_closed(config, rollover_in_progress) %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Student selections are now closed</strong></div>
-        <div class="panel-body">
+    <div class="card mt-3 mb-3">
+        <div class="card-header"><strong>Student selections are now closed</strong></div>
+        <div class="card-body">
             {% set selector_data = config.selector_data %}
             {% set submitted = selector_data['have_submitted'] %}
             {% set missing = selector_data['missing'] %}
             {% set total = selector_data['total'] %}
-            <div class="row vertical-top">
-                <div class="col-xs-6">
+            <div class="row vertical-top mb-2">
+                <div class="col-6">
                     <div class="list-group">
                         <div class="list-group-item {% if submitted == total %}list-group-item-success{% else %}list-group-item-secondary{% endif %}">
                             Selection data
                             <a href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='submitted') }}">(Show...)</a>
-                            <span class="badge">{{ submitted }}/{{ total }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ submitted }}/{{ total }}</span>
                         </div>
                     </div>
                 </div>
-                <div class="col-xs-6">
+                <div class="col-6">
                     <div class="list-group">
                         <div class="list-group-item {% if missing > 0 %}list-group-item-danger{% else %}list-group-item-success{% endif %}">
                             Missing data
                             <a href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='none') }}">(Show...)</a>
-                            <span class="badge">{{ missing }}/{{ total }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ missing }}/{{ total }}</span>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="row vertical-top">
-                <div class="col-xs-12">
+            <div class="row vertical-top mb-2">
+                <div class="col-12">
                     {% if submitted == total %}
                         <p>All students submitted validated choices before selection closed.</p>
                     {% elif missing == 0 %}
@@ -74,7 +74,7 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-xs-12">
+                <div class="col-12">
                     <a href="{{ url_for('convenor.selector_grid', id=config.pclass_id) }}">
                         Show selector grid ...
                     </a>
@@ -83,9 +83,9 @@
         </div>
     </div>
     {% if config.has_published_matches and not rollover_in_progress %}
-        <div class="panel panel-danger">
-            <div class="panel-heading">Proposed matches are available to view</div>
-            <div class="panel-body">
+        <div class="card mt-3 mb-3 border-danger">
+            <div class="card-header bg-danger text-white">Proposed matches are available to view</div>
+            <div class="card-body">
                 <p>An administrator has published one or more proposals for selector/project matches.</p>
                 <a href="{{ url_for('convenor.audit_matches', pclass_id=config.pclass_id) }}">View or edit proposed matches...</a>
             </div>

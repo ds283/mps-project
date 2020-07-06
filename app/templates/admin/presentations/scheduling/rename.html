@@ -1,6 +1,6 @@
 {% extends "security/index.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% block title %}
     Rename schedule
@@ -17,10 +17,10 @@
 
 {#        {{ wtf.form_errors(role_form) }}#}
 
-        {{ wtf.form_field(form.name) }}
-        {{ wtf.form_field(form.tag) }}
+        {{ wtf.render_field(form.name) }}
+        {{ wtf.render_field(form.tag) }}
 
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

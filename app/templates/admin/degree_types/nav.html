@@ -2,23 +2,23 @@
 
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
-        <li {% if subpane=='programmes' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.edit_degree_programmes') }}">
+        <li class="nav-item">
+            <a class="nav-link {% if subpane=='programmes' %}active{% endif %}" href="{{ url_for('admin.edit_degree_programmes') }}">
                 Degree programmes
             </a>
         </li>
-        <li {% if subpane=='modules' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.edit_modules') }}">
+        <li class="nav-item">
+            <a class="nav-link {% if subpane=='modules' %}active{% endif %}" href="{{ url_for('admin.edit_modules') }}">
                 Modules
             </a>
         </li>
-        <li {% if subpane=='levels' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.edit_levels') }}">
+        <li class="nav-item">
+            <a class="nav-link {% if subpane=='levels' %}active{% endif %}" href="{{ url_for('admin.edit_levels') }}">
                 FHEQ Levels
             </a>
         </li>
-        <li {% if subpane=='degrees' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.edit_degree_types') }}">
+        <li class="nav-item">
+            <a class="nav-link {% if subpane=='degrees' %}active{% endif %}" href="{{ url_for('admin.edit_degree_types') }}">
                 Degree types
             </a>
         </li>

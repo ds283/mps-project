@@ -15,133 +15,102 @@ _menu = \
 """
 {% set pclass = student.config.project_class %}
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button"
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
-            <li>
-                <a href="{{ url_for('manage_users.edit_student', id=student.student.id, url=url_for('convenor.selectors', id=pclass.id)) }}">
-                    <i class="fa fa-pencil"></i> Edit student...
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('manage_users.edit_student', id=student.student.id, url=url_for('convenor.selectors', id=pclass.id)) }}">
+                <i class="fa fa-pencil"></i> Edit student...
+            </a>
         {% endif %}
         {% if student.student.has_timeline %}
-            <li>
-                <a href="{{ url_for('student.timeline', student_id=student.student.id, text='selectors view', url=url_for('convenor.selectors', id=pclass.id)) }}">
-                    <i class="fa fa-clock-o"></i> Show history... 
-                </a>
-            </li>
-        {% endif %}
-        <li>
-            <a href="{{ url_for('convenor.selector_custom_offers', sel_id=student.id) }}">
-                <i class="fa fa-cogs"></i> Custom offers...
+            <a class="dropdown-item" href="{{ url_for('student.timeline', student_id=student.student.id, text='selectors view', url=url_for('convenor.selectors', id=pclass.id)) }}">
+                <i class="fa fa-clock-o"></i> Show history... 
             </a>
-        </li>
+        {% endif %}
+        <a class="dropdown-item" href="{{ url_for('convenor.selector_custom_offers', sel_id=student.id) }}">
+            <i class="fa fa-cogs"></i> Custom offers...
+        </a>
 
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Selections</li>
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">Selections</div>
         {% if student.is_valid_selection[0] %}
-            <li>
-                <a href="{{ url_for('convenor.submit_student_selection', sel_id=student.id) }}">
-                    <i class="fa fa-paper-plane"></i> Submit selection
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('convenor.submit_student_selection', sel_id=student.id) }}">
+                <i class="fa fa-paper-plane"></i> Submit selection
+            </a>
         {% endif %}
         
         {% if student.has_submitted %}
-            <li>
-                <a href="{{ url_for('convenor.selector_choices', id=student.id) }}">
-                    <i class="fa fa-eye"></i> Show selection
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('convenor.selector_choices', id=student.id) }}">
+                <i class="fa fa-eye"></i> Show selection
+            </a>
         {% endif %}
         
         {% if student.convert_to_submitter %}
-            <li>
-                <a href="{{ url_for('convenor.disable_conversion', sid=student.id) }}">
-                    <i class="fa fa-times"></i> Disable conversion
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('convenor.disable_conversion', sid=student.id) }}">
+                <i class="fa fa-times"></i> Disable conversion
+            </a>
         {% else %}
-            <li>
-                <a href="{{ url_for('convenor.enable_conversion', sid=student.id) }}">
-                    <i class="fa fa-check"></i> Enable conversion
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('convenor.enable_conversion', sid=student.id) }}">
+                <i class="fa fa-check"></i> Enable conversion
+            </a>
         {% endif %}
 
         {% if student.has_bookmarks %}
-            <li role="separator" class="divider"></li>
-            <li class="dropdown-header">Bookmarks</li>    
-            <li>
-                <a href="{{ url_for('convenor.selector_bookmarks', id=student.id) }}">
-                    <i class="fa fa-eye"></i> Show bookmarks
-                </a>
-            </li>
+            <div role="separator" class="dropdown-divider"></div>
+            <div class="dropdown-header">Bookmarks</div>    
+            <a class="dropdown-item" href="{{ url_for('convenor.selector_bookmarks', id=student.id) }}">
+                <i class="fa fa-eye"></i> Show bookmarks
+            </a>
 
             {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                <li>
-                    <a href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
-                        <i class="fa fa-trash"></i> Delete bookmarks
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
+                    <i class="fa fa-trash"></i> Delete bookmarks
+                </a>
             {% endif %}
         {% endif %}
 
         {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.number_pending > 0 %}
-            <li role="separator" class="divider"></li>
-            <li class="dropdown-header">Meeting requests</li>
-            <li>
-                <a href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
-                    <i class="fa fa-check"></i> Confirm all
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('convenor.student_clear_requests', sid=student.id) }}">
-                    <i class="fa fa-trash"></i> Delete all
-                </a>
-            </li>
+            <div role="separator" class="dropdown-divider"></div>
+            <div class="dropdown-header">Meeting requests</div>
+            <a class="dropdown-item" href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
+                <i class="fa fa-check"></i> Confirm all
+            </a>
+            <a class="dropdown-item" href="{{ url_for('convenor.student_clear_requests', sid=student.id) }}">
+                <i class="fa fa-trash"></i> Delete all
+            </a>
         {% endif %}
 
         {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.number_confirmed > 0 %}
-            <li role="separator" class="divider"></li>
-            <li class="dropdown-header">Meeting confirmations</li>
-            <li>
-                <a href="{{ url_for('convenor.student_make_all_confirms_pending', sid=student.id) }}">
-                    <i class="fa fa-clock-o"></i> Make all pending
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
-                    <i class="fa fa-trash"></i> Delete all
-                </a>
-            </li>
+            <div role="separator" class="dropdown-divider"></div>
+            <div class="dropdown-header">Meeting confirmations</div>
+            <a class="dropdown-item" href="{{ url_for('convenor.student_make_all_confirms_pending', sid=student.id) }}">
+                <i class="fa fa-clock-o"></i> Make all pending
+            </a>
+            <a class="dropdown-item" href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
+                <i class="fa fa-trash"></i> Delete all
+            </a>
         {% endif %}
                 
         {% if student.number_pending > 0 or student.number_confirmed > 0 %}
-            <li>
-                <a href="{{ url_for('convenor.selector_confirmations', id=student.id) }}">
-                    <i class="fa fa-cogs"></i> Show confirmations
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('convenor.selector_confirmations', id=student.id) }}">
+                <i class="fa fa-cogs"></i> Show confirmations
+            </a>
         {% endif %}
         
-        <li role="separator" class="divider"></li>
+        <div role="separator" class="dropdown-divider"></div>
         {% if config.selection_closed %}
-            <li class="disabled"><a>
-                <i class="fa fa-trash"></i> Delete disabled
-            </a></li>
+            <a class="dropdown-item disabled">
+                <i class="fa fa-trash"></i> Delete is disabled
+            </a>
         {% else %}
-            <li>
-                <a href="{{ url_for('convenor.delete_selector', sid=student.id) }}">
-                    <i class="fa fa-trash"></i> Delete
-                </a>
-            </li>
+            <a class="dropdown-item" href="{{ url_for('convenor.delete_selector', sid=student.id) }}">
+                <i class="fa fa-trash"></i> Delete
+            </a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 
@@ -156,12 +125,12 @@ _bookmarks = \
 """
 {% set count = sel.number_bookmarks %}
 {% if count > 0 %}
-    <span class="label label-primary">{{ count }}</span>
+    <span class="badge badge-primary">{{ count }}</span>
     <a href="{{ url_for('convenor.selector_bookmarks', id=sel.id) }}">
         Show...
     </a>
 {% else %}
-    <span class="label label-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endif %}
 """
 
@@ -169,7 +138,7 @@ _submitted = \
 """
 {% if sel.has_submitted %}
     {% if sel.has_submission_list %}
-        <span class="label label-success">Yes</span>
+        <span class="badge badge-success">Yes</span>
         <a href="{{ url_for('convenor.selector_choices', id=sel.id) }}">
             Show...
         </a>
@@ -178,20 +147,20 @@ _submitted = \
     {% if offers > 0 %}
         <div>
             {% for offer in sel.custom_offers_accepted %}
-                <span class="label label-success">Accepted: {{ offer.liveproject.name }}</span>
+                <span class="badge badge-success">Accepted: {{ offer.liveproject.name }}</span>
             {% endfor %}
         </div>
     {% endif %}
 {% else %}
     {% if state >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-        <span class="label label-default">No</span>
+        <span class="badge badge-secondary">No</span>
         {% if sel.is_valid_selection[0] %}
-            <span class="label label-success">Valid selection</span>
+            <span class="badge badge-success">Valid selection</span>
         {% else %}
-            <span class="label label-danger">Invalid selection</span>
+            <span class="badge badge-danger">Invalid selection</span>
         {% endif %}
     {% else %}
-        <span class="label label-default">Not yet open</span>
+        <span class="badge badge-secondary">Not yet open</span>
     {% endif %}
 {% endif %}
 """
@@ -200,23 +169,23 @@ _confirmations = \
 """
 {% set pending = sel.number_pending %}
 {% set confirmed = sel.number_confirmed %}
-{% if confirmed > 0 %}<span class="label label-success"><i class="fa fa-check"></i> Confirmed {{ confirmed }}</span>{% endif %}
-{% if pending > 0 %}<span class="label label-warning"><i class="fa fa-clock-o"></i> Pending {{ pending }}</span>{% endif %}
+{% if confirmed > 0 %}<span class="badge badge-success"><i class="fa fa-check"></i> Confirmed {{ confirmed }}</span>{% endif %}
+{% if pending > 0 %}<span class="badge badge-warning"><i class="fa fa-clock-o"></i> Pending {{ pending }}</span>{% endif %}
 {% if pending > 0 or confirmed > 0 %}
     <a href="{{ url_for('convenor.selector_confirmations', id=sel.id) }}">
         Show...
     </a>
 {% else %}
-    <span class="label label-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endif %}
 {% set offers = sel.number_offers_pending + sel.number_offers_declined %}
 {% if offers > 0 %}
     <div>
         {% for offer in sel.custom_offers_pending %}
-            <span class="label label-primary">Offer: {{ offer.liveproject.name }}</span>
+            <span class="badge badge-primary">Offer: {{ offer.liveproject.name }}</span>
         {% endfor %}
         {% for offer in sel.custom_offers_declined %}
-            <span class="label label-default">Declined: {{ offer.liveproject.name }}</span>
+            <span class="badge badge-secondary">Declined: {{ offer.liveproject.name }}</span>
         {% endfor %}
     </div>
 {% endif %}
@@ -228,9 +197,9 @@ _name = \
 <a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 <div>
 {% if sel.convert_to_submitter %}
-    <span class="label label-success"><i class="fa fa-check"></i> Convert</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Convert</span>
 {% else %}
-    <span class="label label-danger"><i class="fa fa-times"></i> Disable convert</span>
+    <span class="badge badge-danger"><i class="fa fa-times"></i> Disable convert</span>
 {% endif %}
 </div>
 """

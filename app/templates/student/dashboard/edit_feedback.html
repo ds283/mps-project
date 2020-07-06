@@ -1,6 +1,6 @@
 {% extends "security/index.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% block title %}
     Edit my feedback
@@ -14,13 +14,13 @@
     <form action="{{ submit_url }}" method="POST" name="feedback_form">
         {{ form.hidden_tag() }}
 
-        <div class="well">
+        <div class="card mt-3 mb-3 card-body bg-well">
             You may edit your feedback as many times as you wish, up to the point where it is submitted.
             After submission no further edits are possible.
         </div>
 
-        {{ wtf.form_field(form.feedback) }}
+        {{ wtf.render_field(form.feedback) }}
 
-        {{ wtf.form_field(form.save_changes, button_map={'save_changes': 'primary'}) }}
+        {{ wtf.render_field(form.save_changes, button_map={'save_changes': 'primary'}) }}
     </form>
 {% endblock %}

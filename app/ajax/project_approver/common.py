@@ -38,21 +38,21 @@ pclasses = \
 """
 {% set ns = namespace(count=0) %}
 {% if r.default is not none %}
-    <span class="label label-success">Default</span>
+    <span class="badge badge-success">Default</span>
     {% set ns.count = ns.count + 1 %}
 {% endif %}
 {% for pclass in r.project_classes %}
     {% if pclass.active %}
         {% set style = pclass.make_CSS_style() %}
-        <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
+        <a class="badge badge-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
         {% set ns.count = ns.count + 1 %}
     {% endif %}
 {% endfor %}
 {% if ns.count == 0 %}
-    <span class="label label-default">None</span>
+    <span class="badge badge-secondary">None</span>
 {% endif %}
 {% if r.has_modules %}
     <p></p>
-    <span class="label label-primary"><i class="fa fa-exclamation-circle"></i> Has recommended modules</span>
+    <span class="badge badge-primary"><i class="fa fa-exclamation-circle"></i> Has recommended modules</span>
 {% endif %}
 """

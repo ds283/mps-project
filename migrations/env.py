@@ -1,6 +1,5 @@
 from __future__ import with_statement
 from alembic import context
-from alembic.ddl.impl import _type_comparators
 from sqlalchemy import engine_from_config, pool
 from sqlalchemy.sql import sqltypes
 from logging.config import fileConfig
@@ -57,11 +56,10 @@ def db_compare_type(context, inspected_column,
                 return True
         return False
 
-    # fall back to limited alembic type comparison
-    comparator = _type_comparators.get(type_affinity, None)
-    if comparator is not None:
-        return comparator(expected, migrated)
-    raise AssertionError('Unsupported DB type comparison.')
+    return None
+    #
+    # # fall back to limited alembic type comparison
+    # return context.impl.compare_type(expected, migrated)
 
 
 def run_migrations_offline():

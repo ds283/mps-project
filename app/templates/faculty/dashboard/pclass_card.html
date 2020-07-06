@@ -9,46 +9,46 @@
     {% set sub_state = config.submitter_lifecycle %}
     {% set record = data['record'] %}
 
-    <div class="well">
+    <div class="card mt-3 mb-3 card-body bg-well">
         <div class="row vertical-align">
-            <div class="col-xs-12">
+            <div class="col-12">
                 <span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span>
             </div>
         </div>
         <div class="row vertical-align">
-            <div class="col-xs-6">
+            <div class="col-6">
                 <span>Convenor:
                 <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
                     {{ pclass.convenor_name }}
                 </a></span>
             </div>
-            <div class="col-xs-6">
+            <div class="col-6">
                 {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
                     {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                        <div class="pull-right">
-                            <span class="label label-success">Student selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
+                        <div class="float-right">
+                            <span class="badge badge-success">Student selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
                             {% if config.live_deadline %}
-                                <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                                <span class="badge badge-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                             {% endif %}
                         </div>
                     {% else %}
-                        <div class="pull-right">
-                            <span class="label label-default">Student selection closed</span>
+                        <div class="float-right">
+                            <span class="badge badge-secondary">Student selection closed</span>
                         </div>
                     {% endif %}
                 {% else %}
-                    <div class="pull-right">
+                    <div class="float-right">
                         {% if record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                            <span class="label label-default">On sabbatical</span>
+                            <span class="badge badge-secondary">On sabbatical</span>
                             {% if record.supervisor_reenroll is not none %}
                                 {% if pclass.reenroll_supervisors_early %}
-                                    <span class="label label-default">Re-enroll {{ record.supervisor_reenroll-1 }}</span>
+                                    <span class="badge badge-secondary">Re-enroll {{ record.supervisor_reenroll-1 }}</span>
                                 {% else %}
-                                    <span class="label label-default">Re-enroll {{ record.supervisor_reenroll }}</span>
+                                    <span class="badge badge-secondary">Re-enroll {{ record.supervisor_reenroll }}</span>
                                 {% endif %}
                             {% endif %}
                         {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                            <span class="label label-default">Exempt from supervision</span>
+                            <span class="badge badge-secondary">Exempt from supervision</span>
                         {% endif %}
                     </div>
                 {% endif %}
@@ -56,7 +56,7 @@
         </div>
         {% if pclass.coconvenors.first() %}
             <div class="row vertical-align">
-                <div class="col-xs-12">
+                <div class="col-12">
                     <span>Co-convenors:</span>
                     {% for fac in pclass.coconvenors %}
                         <span><a class="btn btn-link" href="mailto:{{ fac.user.email }}">

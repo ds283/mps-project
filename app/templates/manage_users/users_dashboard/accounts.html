@@ -3,11 +3,11 @@
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css""/>
 
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -53,47 +53,51 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Edit users</div>
-        <div class="panel-body">
-            <div class="well">
-                <p>Filter by role</p>
-                <a href="{{ url_for('manage_users.edit_users', filter='all') }}"
-                   class="btn btn-sm filter-btn {% if filter is none or filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
-                    All
-                </a>
-                <a href="{{ url_for('manage_users.edit_users', filter='active') }}"
-                   class="btn btn-sm filter-btn {% if filter == 'active' %}btn-primary{% else %}btn-default{% endif %}">
-                    Active
-                </a>
-                <a href="{{ url_for('manage_users.edit_users', filter='inactive') }}"
-                   class="btn btn-sm filter-btn {% if filter == 'inactive' %}btn-primary{% else %}btn-default{% endif %}">
-                    Inactive
-                </a>
-                <a href="{{ url_for('manage_users.edit_users', filter='student') }}"
-                   class="btn btn-sm filter-btn {% if filter == 'student' %}btn-primary{% else %}btn-default{% endif %}">
-                    Students
-                </a>
-                <a href="{{ url_for('manage_users.edit_users', filter='faculty') }}"
-                   class="btn btn-sm filter-btn {% if filter == 'faculty' %}btn-primary{% else %}btn-default{% endif %}">
-                    Faculty
-                </a>
-                <a href="{{ url_for('manage_users.edit_users', filter='office') }}"
-                   class="btn btn-sm filter-btn {% if filter == 'office' %}btn-primary{% else %}btn-default{% endif %}">
-                    Office
-                </a>
-                <a href="{{ url_for('manage_users.edit_users', filter='reports') }}"
-                   class="btn btn-sm filter-btn {% if filter == 'reports' %}btn-primary{% else %}btn-default{% endif %}">
-                    Reporting
-                </a>
-                <a href="{{ url_for('manage_users.edit_users', filter='admin') }}"
-                   class="btn btn-sm filter-btn {% if filter == 'admin' %}btn-primary{% else %}btn-default{% endif %}">
-                    Admin
-                </a>
-                <a href="{{ url_for('manage_users.edit_users', filter='root') }}"
-                   class="btn btn-sm filter-btn {% if filter == 'root' %}btn-primary{% else %}btn-default{% endif %}">
-                    Sysadmin
-                </a>
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-primary text-white">Edit users</div>
+        <div class="card-body">
+            <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="row">
+                    <div class="col-12">
+                        <p>Filter by role</p>
+                        <a href="{{ url_for('manage_users.edit_users', filter='all') }}"
+                           class="btn btn-sm filter-btn {% if filter is none or filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            All
+                        </a>
+                        <a href="{{ url_for('manage_users.edit_users', filter='active') }}"
+                           class="btn btn-sm filter-btn {% if filter == 'active' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Active
+                        </a>
+                        <a href="{{ url_for('manage_users.edit_users', filter='inactive') }}"
+                           class="btn btn-sm filter-btn {% if filter == 'inactive' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Inactive
+                        </a>
+                        <a href="{{ url_for('manage_users.edit_users', filter='student') }}"
+                           class="btn btn-sm filter-btn {% if filter == 'student' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Students
+                        </a>
+                        <a href="{{ url_for('manage_users.edit_users', filter='faculty') }}"
+                           class="btn btn-sm filter-btn {% if filter == 'faculty' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Faculty
+                        </a>
+                        <a href="{{ url_for('manage_users.edit_users', filter='office') }}"
+                           class="btn btn-sm filter-btn {% if filter == 'office' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Office
+                        </a>
+                        <a href="{{ url_for('manage_users.edit_users', filter='reports') }}"
+                           class="btn btn-sm filter-btn {% if filter == 'reports' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Reporting
+                        </a>
+                        <a href="{{ url_for('manage_users.edit_users', filter='admin') }}"
+                           class="btn btn-sm filter-btn {% if filter == 'admin' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Admin
+                        </a>
+                        <a href="{{ url_for('manage_users.edit_users', filter='root') }}"
+                           class="btn btn-sm filter-btn {% if filter == 'root' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Sysadmin
+                        </a>
+                    </div>
+                </div>
             </div>
 
             <table id="edit-accounts" class="table table-striped table-bordered">
@@ -111,7 +115,7 @@
                 </thead>
             </table>
             <div style="text-align: center;">
-            <a href="{{ url_for('manage_users.create_user') }}" class="btn btn-default btn-lg">
+            <a href="{{ url_for('manage_users.create_user') }}" class="btn btn-secondary btn-lg">
                 <i class="fa fa-plus"></i>
                 Add new user
             </a>

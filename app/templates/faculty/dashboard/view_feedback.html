@@ -18,8 +18,8 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
+        <div class="col-1"></div>
+        <div class="col-10">
             {% if text and url %}
                 <div class="top-return-link">
                     <a href="{{ url }}">
@@ -31,24 +31,24 @@
             {% if record.period.collect_project_feedback %}
                 {% if record.period.config.uses_supervisor %}
                     {% if record.supervisor_submitted or (record.supervisor_positive or record.supervisor_negative) and preview %}
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
+                        <div class="card mt-3 mb-3">
+                            <div class="card-header">
                                 <div class="row vertical-align">
-                                    <div class="col-xs-6">
+                                    <div class="col-6">
                                         Supervisor feedback
                                     </div>
-                                    <div class="col-xs-6">
-                                        <div class="pull-right">
+                                    <div class="col-6">
+                                        <div class="float-right">
                                             {% if record.supervisor_timestamp %}
-                                                <span class="label label-default">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                                <span class="badge badge-secondary">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                             {% endif %}
                                             {% if current_user.id == record.supervisor.id %}
                                                 {% if (record.period.is_feedback_open and not record.period.closed) or (record.period.closed and not record.supervisor_submitted) %}
-                                                    <a href="{{ url_for('faculty.supervisor_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
+                                                    <a href="{{ url_for('faculty.supervisor_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-secondary">Edit</a>
                                                     {% if not record.supervisor_submitted %}
                                                         <a href="{{ url_for('faculty.supervisor_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
                                                     {% else %}
-                                                        <a href="{{ url_for('faculty.supervisor_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit</a>
+                                                        <a href="{{ url_for('faculty.supervisor_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-secondary">Unsubmit</a>
                                                     {% endif %}
                                                 {% endif %}
                                             {% endif %}
@@ -56,7 +56,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="panel-body">
+                            <div class="card-body">
                                 <span class="dashboard-subtitle">Positive aspects</span>
                                 {{ record.supervisor_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
                                 <hr class="intro-divider">
@@ -65,7 +65,7 @@
                             </div>
                         </div>
                     {% else %}
-                        <div class="well">
+                        <div class="card mt-3 mb-3 card-body bg-well">
                             Feedback has not yet been recorded from the project supervisor.
                         </div>
                     {% endif %}
@@ -73,24 +73,24 @@
 
                 {% if record.period.config.uses_marker %}
                     {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
+                        <div class="card mt-3 mb-3">
+                            <div class="card-header">
                                 <div class="row vertical-align">
-                                    <div class="col-xs-6">
+                                    <div class="col-6">
                                         Marker feedback
                                     </div>
-                                    <div class="col-xs-6">
-                                        <div class="pull-right">
+                                    <div class="col-6">
+                                        <div class="float-right">
                                             {% if record.marker_timestamp %}
-                                                <span class="label label-default">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                                <span class="badge badge-secondary">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                             {% endif %}
                                             {% if current_user.id == record.marker_id %}
                                                 {% if (record.period.is_feedback_open and not record.period.closed) or (record.period.closed and not record.marker_submitted) %}
-                                                    <a href="{{ url_for('faculty.marker_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
+                                                    <a href="{{ url_for('faculty.marker_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-secondary">Edit</a>
                                                     {% if not record.marker_submitted %}
                                                         <a href="{{ url_for('faculty.marker_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
                                                     {% else %}
-                                                        <a href="{{ url_for('faculty.marker_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit</a>
+                                                        <a href="{{ url_for('faculty.marker_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-secondary">Unsubmit</a>
                                                     {% endif %}
                                                 {% endif %}
                                             {% endif %}
@@ -98,7 +98,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="panel-body">
+                            <div class="card-body">
                                 <span class="dashboard-subtitle">Positive aspects</span>
                                 {{ record.marker_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
                                 <hr class="intro-divider">
@@ -107,15 +107,15 @@
                             </div>
                         </div>
                     {% else %}
-                        <div class="well">
+                        <div class="card mt-3 mb-3 card-body bg-well">
                             Feedback has not yet been recorded from the project marker.
                         </div>
                     {% endif %}
                 {% endif %}
             {% else %}
-                <div class="panel panel-default">
-                    <div class="panel-heading">Feedback collection was disabled for this submission period</div>
-                    <div class="panel-body">No feedback available.</div>
+                <div class="card mt-3 mb-3">
+                    <div class="card-header">Feedback collection was disabled for this submission period</div>
+                    <div class="card-body">No feedback available.</div>
                 </div>
             {% endif %}
 
@@ -125,27 +125,27 @@
                 {% for feedback in record.presentation_feedback %}
                     {% if feedback.submitted or (feedback.positive or feedback.negative) and preview %}
                         {% set ns.count = ns.count + 1 %}
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
+                        <div class="card mt-3 mb-3">
+                            <div class="card-header">
                                 <div class="row vertical-align">
-                                    <div class="col-xs-7">
+                                    <div class="col-7">
                                         Presentation feedback from <strong>{{ feedback.assessor.user.name }}</strong>
                                     </div>
-                                    <div class="col-xs-5">
-                                        <div class="pull-right">
+                                    <div class="col-5">
+                                        <div class="float-right">
                                             {% if feedback.timestamp %}
-                                                <span class="label label-default">Submitted at {{ feedback.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                                <span class="badge badge-secondary">Submitted at {{ feedback.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                             {% endif %}
                                             {% set valid = record.is_presentation_assessor_valid(feedback.assessor_id) %}
                                             {% set submitted = record.presentation_assessor_submitted(feedback.assessor_id) %}
                                             {% if slot.feedback_state(current_user.id) > slot.FEEDBACK_NOT_YET %}
                                                 {% if slot.owner.owner.is_feedback_open or (not slot.owner.owner.is_feedback_open and not submitted) %}
                                                     {% if current_user.id == feedback.assessor_id %}
-                                                        <a href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
+                                                        <a href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-secondary">Edit</a>
                                                         {% if not submitted %}
                                                             <a href="{{ url_for('faculty.presentation_submit_feedback', slot_id=slot.id, talk_id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
                                                         {% else %}
-                                                            <a href="{{ url_for('faculty.presentation_unsubmit_feedback', slot_id=slot.id, talk_id=record.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit</a>
+                                                            <a href="{{ url_for('faculty.presentation_unsubmit_feedback', slot_id=slot.id, talk_id=record.id) }}" class="btn btn-sm btn-table-block btn-secondary">Unsubmit</a>
                                                         {% endif %}
                                                     {% endif %}
                                                 {% endif %}
@@ -154,7 +154,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="panel-body">
+                            <div class="card-body">
                                 <span class="dashboard-subtitle">Positive aspects</span>
                                 {{ feedback.positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
                                 <hr class="intro-divider">
@@ -165,27 +165,27 @@
                     {% endif %}
                 {% endfor %}
                 {% if ns.count == 0 %}
-                    <div class="well">
+                    <div class="card mt-3 mb-3 card-body bg-well">
                         Feedback has not yet been recorded from the assessed presentation.
                     </div>
                 {% endif %}
             {% endif %}
 
             {% if record.student_feedback_submitted %}
-                <div class="panel panel-success">
-                    <div class="panel-heading">
+                <div class="card mt-3 mb-3">
+                    <div class="card-header bg-success text-white">
                         <div class="row vertical-align">
-                            <div class="col-xs-6">
+                            <div class="col-6">
                                 Student feedback to supervisor
                             </div>
-                            <div class="col-xs-6">
-                                <div class="pull-right">
+                            <div class="col-6">
+                                <div class="float-right">
                                     {% if record.acknowledge_feedback %}
-                                        <span class="label label-success">Acknowledged</span>
+                                        <span class="badge badge-success">Acknowledged</span>
                                     {% endif %}
-                                    <span class="label label-default">Submitted at {{ record.student_feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                    <span class="badge badge-secondary">Submitted at {{ record.student_feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                     {% if record.acknowledge_feedback and not record.faculty_response_submitted %}
-                                        <a href="{{ url_for('faculty.edit_response', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
+                                        <a href="{{ url_for('faculty.edit_response', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-secondary">Edit</a>
                                         {% if record.is_response_valid %}
                                             <a href="{{ url_for('faculty.submit_response', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
                                         {% endif %}
@@ -193,18 +193,18 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pull-right">
+                        <div class="float-right">
                         </div>
                     </div>
-                    <div class="panel-body">
+                    <div class="card-body">
                         {{ record.student_feedback|dealingwithdollars|markdown|bclean|blinkify|safe }}
                     </div>
                     {% if not record.acknowledge_feedback %}
-                        <div class="panel-footer">
+                        <div class="card-footer">
                             <a href="{{ url_for('faculty.supervisor_acknowledge_feedback', id=record.id) }}" class="btn btn-sm btn-primary">Acknowledge</a>
                         </div>
                     {% elif record.faculty_response_submitted or (record.faculty_response and preview) %}
-                        <div class="panel-footer">
+                        <div class="card-footer">
                             {{ record.faculty_response|dealingwithdollars|markdown|bclean|blinkify|safe }}
                         </div>
                     {% endif %}
@@ -219,6 +219,6 @@
                 </div>
             {% endif %}
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

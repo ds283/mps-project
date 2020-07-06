@@ -24,53 +24,50 @@ _selections = \
         {% set offer = sel.accepted_offer %}
         {% set project = offer.liveproject %}
         {% if project %}
-            <span class="label label-success"><i class="fa fa-check"></i> {{ project.name }} ({{ project.owner.user.last_name }})</span>
+            <span class="badge badge-success"><i class="fa fa-check"></i> {{ project.name }} ({{ project.owner.user.last_name }})</span>
         {% else %}
-            <span class="label label-danger">MISSING ACCEPTED PROJECT</span>
+            <span class="badge badge-danger">MISSING ACCEPTED PROJECT</span>
         {% endif %}
     {% else %}
         {% for item in sel.ordered_selections %}
             {% set project = item.liveproject %}
             <div class="dropdown">
                 {% set style = project.group.make_CSS_style() %}
-                <a class="label label-info dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">#{{ item.rank }}
-                    {{ item.format_project()|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}
-                <span class="caret"></span></a>
-                <ul class="dropdown-menu">
+                <a class="badge badge-info dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">#{{ item.rank }}
+                    {{ item.format_project()|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}</a>
+                <div class="dropdown-menu">
                     {% set menu_items = item.menu_order %}
                     {% for mi in menu_items %}
                         {% if mi is string %}
-                            <li role="separator" class="divider"></li>
-                            <li class="dropdown-header">{{ mi }}</li>
+                            <div role="separator" class="dropdown-divider"></div>
+                            <div class="dropdown-header">{{ mi }}</div>
                         {% elif mi is number %}
                             {% set disabled = (mi == item.hint) %}
-                            <li {% if disabled %}class="disabled"{% endif %}>
-                                <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
-                                    {{ item.menu_item(mi)|safe }}
-                                </a>
-                            </li>
+                            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                                {{ item.menu_item(mi)|safe }}
+                            </a>
                         {% endif %}
                     {% endfor %}
-                </ul>
+                </div>
                 {% if item.converted_from_bookmark %}
-                    <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Bookmark</span>
+                    <span class="badge badge-warning"><i class="fa fa-exclamation-triangle"></i> Bookmark</span>
                 {% endif %}
                 {% if item.hint != item.SELECTION_HINT_NEUTRAL %}
-                    <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Hint</span>
+                    <span class="badge badge-warning"><i class="fa fa-exclamation-triangle"></i> Hint</span>
                 {% endif %}
             </div>
         {% endfor %}
     {% endif %}
 {% else %}
     <div class="row vertical-align">
-        <div class="col-xs-12">
+        <div class="col-12">
             {% if sel.number_bookmarks >= sel.number_choices %}
-                <span class="label label-info">Bookmarks available</span>
+                <span class="badge badge-info">Bookmarks available</span>
                 <a href="{{ url_for('convenor.force_convert_bookmarks', sel_id=sel.id) }}">
                     Force conversion...
                 </a>
             {% else %}
-                <span class="label label-default">None</span>
+                <span class="badge badge-secondary">None</span>
             {% endif %}
         </div>
     </div>
@@ -82,9 +79,9 @@ _name = \
 <a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 <div>
 {% if sel.convert_to_submitter %}
-    <span class="label label-success"><i class="fa fa-check"></i> Convert</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Convert</span>
 {% else %}
-    <span class="label label-danger"><i class="fa fa-times"></i> Disable convert</span>
+    <span class="badge badge-danger"><i class="fa fa-times"></i> Disable convert</span>
 {% endif %}
 </div>
 """

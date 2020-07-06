@@ -14,38 +14,33 @@ from flask import render_template_string, jsonify
 _groups_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.edit_group', id=group.id) }}">
-                <i class="fa fa-pencil"></i> Edit details...
-            </a>
-        </li>
+    <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item" href="{{ url_for('admin.edit_group', id=group.id) }}">
+            <i class="fa fa-pencil"></i> Edit details...
+        </a>
 
-        <li>
-            {% if group.active %}
-                <a href="{{ url_for('admin.deactivate_group', id=group.id) }}">
-                    <i class="fa fa-wrench"></i> Make inactive
-                </a>
-            {% else %}
-                <a href="{{ url_for('admin.activate_group', id=group.id) }}">
-                    <i class="fa fa-wrench"></i> Make active
-                </a>
-            {% endif %}
-        </li>
-    </ul>
+        {% if group.active %}
+            <a class="dropdown-item" href="{{ url_for('admin.deactivate_group', id=group.id) }}">
+                <i class="fa fa-wrench"></i> Make inactive
+            </a>
+        {% else %}
+            <a class="dropdown-item" href="{{ url_for('admin.activate_group', id=group.id) }}">
+                <i class="fa fa-wrench"></i> Make active
+            </a>
+        {% endif %}
+    </div>
 </div>
 """
 
 _active = \
 """
 {% if g.active %}
-    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
 {% else %}
-    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+    <span class="badge badge-warning"><i class="fa fa-times"></i> Inactive</span>
 {% endif %}
 """
 
@@ -55,9 +50,9 @@ def groups_data(groups):
     data = [{'abbrv': g.abbreviation,
              'active': render_template_string(_active, g=g),
              'name': g.name,
-             'colour': '<span class="label label-default">None</span>' if g.colour is None else g.make_label(g.colour),
+             'colour': '<span class="badge badge-secondary">None</span>' if g.colour is None else g.make_label(g.colour),
              'website': '<a href="{web}">{web}</a>'.format(web=g.website) if g.website is not None
-                 else '<span class="label label-default">None</span>',
+                 else '<span class="badge badge-secondary">None</span>',
              'menu': render_template_string(_groups_menu, group=g)} for g in groups]
 
     return jsonify(data)

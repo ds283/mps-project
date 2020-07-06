@@ -4,11 +4,11 @@
 
 {% block scripts %}
     {{ super() }}
-    <link href="https://cdn.pydata.org/bokeh/release/bokeh-2.0.2.min.css" rel="stylesheet" type="text/css">
+    <link href="https://cdn.pydata.org/bokeh/release/bokeh-2.1.1.min.css" rel="stylesheet" type="text/css">
     {#    <link href="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.css" rel="stylesheet" type="text/css">#}
     {#    <link href="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.css" rel="stylesheet" type="text/css">#}
 
-    <script src="https://cdn.pydata.org/bokeh/release/bokeh-2.0.2.min.js"></script>
+    <script src="https://cdn.pydata.org/bokeh/release/bokeh-2.1.1.min.js"></script>
     {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>#}
     {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.js"></script>#}
 
@@ -25,13 +25,13 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
-            <div class="well">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card mt-3 mb-3 card-body bg-well">
                 <form action="{{ url_for('admin.backups_overview') }}" method="POST" name="backup_options_form">
                     {{ form.hidden_tag() }}
-                    <span class="label label-primary" style="font-size: 95%;">Current backup size {{ backup_size }}</span>
-                    <span class="label label-info" style="font-size: 95%;">Settings last changed: {{ last_change.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                    <span class="badge badge-primary" style="font-size: 95%;">Current backup size {{ backup_size }}</span>
+                    <span class="badge badge-info" style="font-size: 95%;">Settings last changed: {{ last_change.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                     <hr class="intro-divider">
                     {{ on_click_selector_field(form.backup_limit, true) }}
                     {{ on_click_selector_field(form.limit_units, true) }}
@@ -40,22 +40,22 @@
                 </form>
             </div>
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-1"></div>
     </div>
 
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
-            <div class="well">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card mt-3 mb-3 card-body bg-well">
                 <div class="row">
-                    <div class="col-xs-8">
+                    <div class="col-8">
                         {% if archive_div is defined and archive_div is not none and archive_script is defined and archive_script is not none %}
                             {{ archive_div|safe }}
                         {% else %}
-                            <span class="label label-warning">Too few data points to generate plot for archive file size vs. time</span>
+                            <span class="badge badge-warning">Too few data points to generate plot for archive file size vs. time</span>
                         {% endif %}
                     </div>
-                    <div class="col-xs-4">
+                    <div class="col-4">
                         <div style="text-align: center; margin-bottom: 3%;">
                             <strong>Recent backups</strong>
                         </div>
@@ -80,32 +80,32 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-xs-8">
+                    <div class="col-8">
                         {% if backup_div is defined and backup_div is not none and backup_script is defined and backup_script is not none %}
                             {{ backup_div|safe }}
                         {% else %}
-                            <span class="label label-warning">Too few data points to generate plot for backup size vs. time</span>
+                            <span class="badge badge-warning">Too few data points to generate plot for backup size vs. time</span>
                         {% endif %}
                     </div>
-                    <div class="col-xs-4">
+                    <div class="col-4">
                         <div class="row">
-                            <div class="col-xs-2"></div>
-                            <div class="col-xs-8">
+                            <div class="col-1"></div>
+                            <div class="col-10">
                                 {% if gauge_div is defined and gauge_div is not none and gauge_script is defined and gauge_script is not none %}
                                     <div style="text-align: center;">
                                         <strong>Space used {{ capacity }}</strong>
                                     </div>
                                     {{ gauge_div|safe }}
                                 {% else %}
-                                    <span class="label label-warning">Capacity gauge could not be generated</span>
+                                    <span class="badge badge-warning">Capacity gauge could not be generated</span>
                                 {% endif %}
                             </div>
-                            <div class="col-xs-2"></div>
+                            <div class="col-1"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

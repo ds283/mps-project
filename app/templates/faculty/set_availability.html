@@ -1,5 +1,5 @@
 {% extends "base_app.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% block title %}
     Set availability for {{ assessment.name }}
@@ -7,8 +7,8 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
+        <div class="col-1"></div>
+        <div class="col-10">
             {% if url and text %}
                 <div class="top-return-link">
                     <a href="{{ url }}">
@@ -17,45 +17,45 @@
                 </div>
             {% endif %}
 
-            <div class="panel panel-primary">
-                <div class="panel-heading">
+            <div class="card mt-3 mb-3">
+                <div class="card-header bg-primary text-white">
                     Set availability for assessment event <strong>{{ assessment.name }}</strong>
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     <div class="row">
-                        <div class="col-xs-12">
-                            <div class="pull-right">
-                                <a class="btn btn-default" href="{{ url_for('faculty.session_all_available', id=assessment.id) }}"><i class="fa fa-check"></i> Available for all</a>
-                                <a class="btn btn-default" href="{{ url_for('faculty.session_all_unavailable', id=assessment.id) }}"><i class="fa fa-times"></i> Not available for all</a>
+                        <div class="col-12">
+                            <div class="float-right">
+                                <a class="btn btn-secondary" href="{{ url_for('faculty.session_all_available', id=assessment.id) }}"><i class="fa fa-check"></i> Available for all</a>
+                                <a class="btn btn-secondary" href="{{ url_for('faculty.session_all_unavailable', id=assessment.id) }}"><i class="fa fa-times"></i> Not available for all</a>
                             </div>
                         </div>
                     </div>
                     <hr class="intro-divider">
                     <div class="row vertical-top event-table">
-                        <div class="col-xs-4"><strong>Date</strong></div>
-                        <div class="col-xs-1"><strong>Session</strong></div>
-                        <div class="col-xs-7"></div>
+                        <div class="col-4"><strong>Date</strong></div>
+                        <div class="col-1"><strong>Session</strong></div>
+                        <div class="col-7"></div>
                     </div>
 
                     <form action="{{ url_for('faculty.set_availability', id=assessment.id, url=url, text=text) }}" method="POST" name="availability_form">
                         {{ form.hidden_tag() }}
                         {% for session in assessment.ordered_sessions %}
                             <div class="row vertical-align event-table">
-                                <div class="col-xs-4">{{ session.date.strftime("%a %d %b %Y") }}</div>
-                                <div class="col-xs-1">{{ session.session_type_label|safe }}</div>
-                                <div class="col-xs-7">
-                                    <div class="pull-right">
+                                <div class="col-4">{{ session.date.strftime("%a %d %b %Y") }}</div>
+                                <div class="col-1">{{ session.session_type_label|safe }}</div>
+                                <div class="col-7">
+                                    <div class="float-right">
                                     {% if session.faculty_available(current_user.id) %}
                                         <a class="btn btn-success btn-sm btn-table-block"><i class="fa fa-check"></i> Available</a>
-                                        <a href="{{ url_for('faculty.session_ifneeded', id=session.id) }}" class="btn btn-default btn-sm btn-table-block">If needed</a>
-                                        <a href="{{ url_for('faculty.session_unavailable', id=session.id) }}" class="btn btn-default btn-sm btn-table-block"><i class="fa fa-times"></i> Not available</a>
+                                        <a href="{{ url_for('faculty.session_ifneeded', id=session.id) }}" class="btn btn-secondary btn-sm btn-table-block">If needed</a>
+                                        <a href="{{ url_for('faculty.session_unavailable', id=session.id) }}" class="btn btn-secondary btn-sm btn-table-block"><i class="fa fa-times"></i> Not available</a>
                                     {% elif session.faculty_ifneeded(current_user.id) %}
-                                        <a href="{{ url_for('faculty.session_available', id=session.id) }}" class="btn btn-default btn-sm btn-table-block"><i class="fa fa-check"></i> Available</a>
+                                        <a href="{{ url_for('faculty.session_available', id=session.id) }}" class="btn btn-secondary btn-sm btn-table-block"><i class="fa fa-check"></i> Available</a>
                                         <a class="btn btn-warning btn-sm btn-table-block">If needed</a>
-                                        <a href="{{ url_for('faculty.session_unavailable', id=session.id) }}" class="btn btn-default btn-sm btn-table-block"><i class="fa fa-times"></i> Not available</a>
+                                        <a href="{{ url_for('faculty.session_unavailable', id=session.id) }}" class="btn btn-secondary btn-sm btn-table-block"><i class="fa fa-times"></i> Not available</a>
                                     {% else %}
-                                        <a href="{{ url_for('faculty.session_available', id=session.id) }}" class="btn btn-default btn-sm btn-table-block"><i class="fa fa-check"></i> Available</a>
-                                        <a href="{{ url_for('faculty.session_ifneeded', id=session.id) }}" class="btn btn-default btn-sm btn-table-block">If needed</a>
+                                        <a href="{{ url_for('faculty.session_available', id=session.id) }}" class="btn btn-secondary btn-sm btn-table-block"><i class="fa fa-check"></i> Available</a>
+                                        <a href="{{ url_for('faculty.session_ifneeded', id=session.id) }}" class="btn btn-secondary btn-sm btn-table-block">If needed</a>
                                         <a class="btn btn-danger btn-sm btn-table-block"><i class="fa fa-times"></i> Not available</a>
                                     {% endif %}
                                     </div>
@@ -63,14 +63,14 @@
                             </div>
                         {% endfor %}
                         <hr class="intro-divider">
-                        {{ wtf.form_field(form.comment) }}
+                        {{ wtf.render_field(form.comment) }}
                         {% if form.update %}
-                            {{ wtf.form_field(form.update, button_map={'update': 'default'}) }}
+                            {{ wtf.render_field(form.update, button_map={'update': 'secondary'}) }}
                         {% endif %}
                         {% if form.confirm %}
                             <hr class="intro-divider">
                             <p>Please confirm your responses when you are finished. It is still possible to make changes up to the deadline.</p>
-                            {{ wtf.form_field(form.confirm, button_map={'confirm': 'primary'}) }}
+                            {{ wtf.render_field(form.confirm, button_map={'confirm': 'primary'}) }}
                         {% endif %}
                     </form>
                 </div>
@@ -84,6 +84,6 @@
                 </div>
             {% endif %}
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

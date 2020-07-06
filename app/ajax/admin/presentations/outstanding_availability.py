@@ -14,28 +14,21 @@ from flask import render_template_string, jsonify, url_for
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
         {% set disabled = a.availability_closed %} 
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=assessor.faculty.id) }}"{% endif %}>
-                <i class="fa fa-check"></i> Force confirm
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=assessor.faculty.id) }}">
-                <i class="fa fa-trash"></i> Remove
-            </a>
-        </li>
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.availability_reminder_individual', id=assessor.id) }}"{% endif %}>
-                <i class="fa fa-envelope-o"></i> Send reminder
-            </a>
-        </li>
-    </ul>
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=assessor.faculty.id) }}"{% endif %}>
+            <i class="fa fa-check"></i> Force confirm
+        </a>
+        <a class="dropdown-item" href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=assessor.faculty.id) }}">
+            <i class="fa fa-trash"></i> Remove
+        </a>
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.availability_reminder_individual', id=assessor.id) }}"{% endif %}>
+            <i class="fa fa-envelope-o"></i> Send reminder
+        </a>
+    </div>
 </div>
 """
 

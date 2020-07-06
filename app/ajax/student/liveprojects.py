@@ -21,14 +21,14 @@ _meeting = \
 """
 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
     {% if project.is_confirmed(sel) %}
-        <span class="label label-primary"><i class="fa fa-check"></i> Confirmed</span>
+        <span class="badge badge-primary"><i class="fa fa-check"></i> Confirmed</span>
     {% else %}
-        <span class="label label-danger"><i class="fa fa-times"></i> Required</span>
+        <span class="badge badge-danger"><i class="fa fa-times"></i> Required</span>
     {% endif %}
 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-    <span class="label label-warning">Optional</span>
+    <span class="badge badge-warning">Optional</span>
 {% else %}
-    <span class="label label-default"><i class="fa fa-check"></i> Not required</span>
+    <span class="badge badge-secondary"><i class="fa fa-check"></i> Not required</span>
 {% endif %}
 """
 
@@ -36,14 +36,14 @@ _meeting = \
 _status = \
 """
 {% if project.is_available(sel) %}
-    <span class="label label-success"><i class="fa fa-check"></i> Available for selection</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Available for selection</span>
 {% else %}
     {% if project.is_waiting(sel) %}
-        <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="label label-warning">
+        <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="badge badge-warning">
             <i class="fa fa-times"></i> Cancel request
         </a>
     {% else %}
-        <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="label label-primary">
+        <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="badge badge-primary">
             <i class="fa fa-plus"></i> Request confirmation
         </a>
     {% endif %}
@@ -54,12 +54,12 @@ _bookmarks = \
 """
 {% if sel.is_project_bookmarked(project) %}
     <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
-       class="label label-primary">
+       class="badge badge-primary">
        <i class="fa fa-times"></i> Remove
     </a>
 {% else %}
     <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}"
-       class="label label-default">
+       class="badge badge-secondary">
        <i class="fa fa-plus"></i> Add
     </a>
 {% endif %}
@@ -68,51 +68,43 @@ _bookmarks = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button"
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
-                View project...
-            </a>
-        </li>
+    <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item" href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
+            View project...
+        </a>
         {% if is_live %}
-            <li>
-                {% if sel.is_project_bookmarked(project) %}
-                    <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}">
-                        Remove bookmark
+            {% if sel.is_project_bookmarked(project) %}
+                <a class="dropdown-item" href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}">
+                    Remove bookmark
+                </a>
+            {% else %}
+                <a class="dropdown-item" href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}">
+                    Add bookmark
+                </a>
+            {% endif %}
+            {% set disabled = project.is_available(sel) %}
+            {% if not disabled %}
+                {% if project.is_waiting(sel) %}
+                    <a class="dropdown-item" href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
+                        Cancel confirmation
                     </a>
                 {% else %}
-                    <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}">
-                        Add bookmark
+                    <a class="dropdown-item" href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}">
+                        Request confirmation
                     </a>
                 {% endif %}
-            </li>
-            <li {% if project.is_available(sel) %}class="disabled"{% endif %}>
-                {% if not project.is_available(sel) %}
-                    {% if project.is_waiting(sel) %}
-                        <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
-                            Cancel confirmation
-                        </a>
-                    {% else %}
-                        <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}">
-                            Request confirmation
-                        </a>
-                    {% endif %}
-                {% else %}
-                    <a>Project available</a>
-                {% endif %}
-            </li>
+            {% else %}
+                <a class="dropdown-item disabled">Project unavailable</a>
+            {% endif %}
         {% else %}
-            <li role="separator" class="divider">
-            <li class="disabled">
-                <a>Project selection not live</a>
-            </li>
+            <div role="separator" class="dropdown-divider"></div>
+            <a class="dropdown-item disabled">Project selection not live</a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 
@@ -132,7 +124,7 @@ _project_skills = \
         {% if skill.group is none %}
             {{ skill.make_label()|safe }}
         {% else %}
-            <a href="{{ url_for('student.add_skill_filter', id=sel.id, skill_id=skill.id) }}" class="label label-default" style="{{ skill.group.make_CSS_style() }}">{%- if skill.group.add_group -%}{{ skill.group.name }}:{% endif %} {{ skill.name }}</a>
+            <a href="{{ url_for('student.add_skill_filter', id=sel.id, skill_id=skill.id) }}" class="badge badge-secondary" style="{{ skill.group.make_CSS_style() }}">{%- if skill.group.add_group -%}{{ skill.group.name }}:{% endif %} {{ skill.name }}</a>
         {% endif %}
     {% endif %}
 {% endfor %}
@@ -142,7 +134,7 @@ _project_skills = \
 _project_group = \
 """
 <a href="{{ url_for('student.add_group_filter', id=sel.id, gid=group.id) }}"
-   class="label label-default" style="{{ group.make_CSS_style() }}">
+   class="badge badge-secondary" style="{{ group.make_CSS_style() }}">
    {{ group.name }}
 </a>
 """
@@ -150,7 +142,7 @@ _project_group = \
 
 _not_live = \
 """
-<span class="label label-default">Not live</span>
+<span class="badge badge-secondary">Not live</span>
 """
 
 

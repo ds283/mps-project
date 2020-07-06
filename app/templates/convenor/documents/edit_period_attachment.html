@@ -1,6 +1,6 @@
 {% extends "security/index.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% block title %}
     Edit attachment for {{ record.display_name }}
@@ -8,28 +8,28 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
-            <div class="panel panel-primary panel-primary-bg">
-                <div class="panel-heading">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card mt-3 mb-3">
+                <div class="card-header bg-primary text-white">
                     Edit attachment <strong>{{ asset.target_name if asset.target_name else asset.filename }}</strong>
                     for <strong>{{ record.display_name }}</strong>
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     <form action="{{ url_for('convenor.edit_period_attachment', aid=attachment.id, url=url, text=text) }}" method="POST" enctype="multipart/form-data" name="attachment_form">
                         {{ form.hidden_tag() }}
 
-                        {{ wtf.form_field(form.description) }}
-                        {{ wtf.form_field(form.license) }}
+                        {{ wtf.render_field(form.description) }}
+                        {{ wtf.render_field(form.license) }}
                         <hr class="intro-divider" role="separator">
-                        {{ wtf.form_field(form.publish_to_students) }}
-                        {{ wtf.form_field(form.include_marker_emails) }}
-                        {{ wtf.form_field(form.include_supervisor_emails) }}
-                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+                        {{ wtf.render_field(form.publish_to_students) }}
+                        {{ wtf.render_field(form.include_marker_emails) }}
+                        {{ wtf.render_field(form.include_supervisor_emails) }}
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>
                 </div>
             </div>
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

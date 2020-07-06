@@ -1,10 +1,10 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import date_field %}
 
 {% macro issue_requests(assessment, form) %}
-    <div class="panel panel-danger">
-        <div class="panel-heading">Assessor availability for assessment <strong>{{ assessment.name }}</strong></div>
-        <div class="panel-body">
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-danger text-white">Assessor availability for assessment <strong>{{ assessment.name }}</strong></div>
+        <div class="card-body">
             <p>Availability requests have not yet been issued to faculty.</p>
             <p>
                 <strong>Please note</strong> that after issuing availability requests
@@ -16,9 +16,9 @@
                   method="POST" name="availability-fom">
                 {{ date_field(form.availability_deadline) }}
                 <div class="row">
-                    <div class="col-xs-12">
-                        <div class="pull-right">
-                            {{ wtf.form_field(form.issue_requests, button_map={'issue_requests': 'warning'}) }}
+                    <div class="col-12">
+                        <div class="float-right">
+                            {{ wtf.render_field(form.issue_requests, button_map={'issue_requests': 'warning'}) }}
                         </div>
                     </div>
                 </div>

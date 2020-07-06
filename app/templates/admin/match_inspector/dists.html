@@ -5,7 +5,7 @@
 {% block scripts %}
     {{ super() }}
     <link
-            href="https://cdn.pydata.org/bokeh/release/bokeh-2.0.2.min.css"
+            href="https://cdn.pydata.org/bokeh/release/bokeh-2.1.1.min.css"
             rel="stylesheet" type="text/css">
     {#    <link#}
     {#        href="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.css"#}
@@ -14,7 +14,7 @@
     {#        href="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.css"#}
     {#        rel="stylesheet" type="text/css">#}
 
-    <script src="https://cdn.pydata.org/bokeh/release/bokeh-2.0.2.min.js"></script>
+    <script src="https://cdn.pydata.org/bokeh/release/bokeh-2.1.1.min.js"></script>
     {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>#}
     {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.js"></script>#}
 
@@ -41,44 +41,48 @@
         </div>
     {% endif %}
 
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Diagnostic distributions for matching <strong>{{ record.name }}</strong></div>
-        <div class="panel-body">
-            <div class="well">
-                <p>Filter by project class</p>
-                <a class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                    href="{{ url_for('admin.match_dists_view', id=record.id, pclass_filter='all', text=text, url=url) }}">
-                    All
-                </a>
-                {% for pclass in pclasses %}
-                    <a class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('admin.match_dists_view', id=record.id, pclass_filter=pclass.id, text=text, url=url) }}">
-                        {{ pclass.name }}
-                    </a>
-                {% endfor %}
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-primary text-white">Diagnostic distributions for matching <strong>{{ record.name }}</strong></div>
+        <div class="card-body">
+            <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="row">
+                    <div class="col-12">
+                        <p>Filter by project class</p>
+                        <a class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('admin.match_dists_view', id=record.id, pclass_filter='all', text=text, url=url) }}">
+                            All
+                        </a>
+                        {% for pclass in pclasses %}
+                            <a class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                href="{{ url_for('admin.match_dists_view', id=record.id, pclass_filter=pclass.id, text=text, url=url) }}">
+                                {{ pclass.name }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
 
-            <div class="well">
+            <div class="card mt-3 mb-3 card-body bg-well">
                 <div class="row">
-                    <div class="col-xs-2"></div>
-                    <div class="col-xs-8">
+                    <div class="col-1"></div>
+                    <div class="col-10">
                         {% if CATS_div %}
                             {{ CATS_div|safe }}
                         {%  endif %}
                     </div>
-                    <div class="col-xs-2"></div>
+                    <div class="col-1"></div>
                 </div>
             </div>
 
-            <div class="well">
+            <div class="card mt-3 mb-3 card-body bg-well">
                 <div class="row">
-                    <div class="col-xs-2"></div>
-                    <div class="col-xs-8">
+                    <div class="col-1"></div>
+                    <div class="col-10">
                         {% if delta_div %}
                             {{ delta_div|safe }}
                         {%  endif %}
                     </div>
-                    <div class="col-xs-2"></div>
+                    <div class="col-1"></div>
                 </div>
             </div>
         </div>

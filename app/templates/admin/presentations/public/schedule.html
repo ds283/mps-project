@@ -1,6 +1,6 @@
 {% extends "bootstrap/base.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import on_click_selector_field %}
 
 {% block styles %}
@@ -13,22 +13,22 @@
 {% block content %}
     <div class="container-fluid">
         <div class="row vertical-top">
-            <div class="col-xs-2"></div>
-            <div class="col-xs-8">
+            <div class="col-1"></div>
+            <div class="col-10">
                 <div class="event-title">{{ event.name }}</div>
                 <hr class="intro-divider">
                 <div class="event-subheader">{{ event.earliest_date }}&mdash;{{ event.latest_date }}</div>
-                <div class="well" style="margin-top: 18px;">
+                <div class="card mt-3 mb-3 card-body bg-well" style="margin-top: 18px;">
                     <form action="{{ url_for('admin.view_schedule', tag=schedule.tag) }}" method="POST" name="display_form">
                         {{ form.hidden_tag() }}
                         {{ on_click_selector_field(form.selector, true) }}
                     </form>
                 </div>
                 {% for slot in slots %}
-                    <div class="well">
+                    <div class="card mt-3 mb-3 card-body bg-well">
                         <div>
                             <div class="row vertical-top">
-                                <div class="col-xs-7">
+                                <div class="col-7">
                                     <div class="slot-title">
                                         {{ slot.date_as_string }} {{ slot.session_type_string }}
                                     </div>
@@ -36,8 +36,8 @@
                                         {{ slot.session_details }}
                                     </div>
                                 </div>
-                                <div class="col-xs-5">
-                                    <div class="pull-right">
+                                <div class="col-5">
+                                    <div class="float-right">
                                         <div class="slot-title">
                                             {{ slot.room_full_name }}
                                         </div>
@@ -47,7 +47,7 @@
                         </div>
                         <div>
                             <div class="row vertical-top">
-                                <div class="col-xs-7">
+                                <div class="col-7">
                                     <ol class="breadcrumb">
                                         {% for assessor in slot.assessors %}
                                             <li>
@@ -56,8 +56,8 @@
                                         {% endfor %}
                                     </ol>
                                 </div>
-                                <div class="col-xs-5">
-                                    <div class="pull-right">
+                                <div class="col-5">
+                                    <div class="float-right">
                                         {{ slot.pclass.make_label()|safe }}
                                     </div>
                                 </div>
@@ -94,7 +94,7 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="col-xs-2"></div>
+            <div class="col-1"></div>
         </div>
     </div>
 {% endblock %}

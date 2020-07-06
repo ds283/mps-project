@@ -1,6 +1,6 @@
 {% extends "base_app.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import skill_groups_key %}
 
 {% if not group_filter or group_filter is none %}
@@ -18,11 +18,11 @@
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css""/>
 
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -64,70 +64,64 @@
         </div>
     {% endif %}
 
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Attach assessors for project <strong>{{ data.name }}</strong></div>
-        <div class="panel-body">
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-primary text-white">Attach assessors for project <strong>{{ data.name }}</strong></div>
+        <div class="card-body">
 
             {% if pclasses is not none and pclasses|length > 0 %}
-                <div class="well">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     <div class="row vertical-top marker-table">
-                        <div class="col-xs-4"><strong>Project type</strong></div>
-                        <div class="col-xs-2"><strong>Assessors required</strong></div>
-                        <div class="col-xs-2"><strong>Assessors attached</strong></div>
-                        <div class="col-xs-4"></div>
+                        <div class="col-4"><strong>Project type</strong></div>
+                        <div class="col-2"><strong>Assessors required</strong></div>
+                        <div class="col-2"><strong>Assessors attached</strong></div>
+                        <div class="col-4"></div>
                     </div>
 
                     {% for pclass, config in pclasses %}
                         <div class="row vertical-top marker-table">
-                            <div class="col-xs-4">{{ pclass.name }}</div>
-                            <div class="col-xs-2">
+                            <div class="col-4">{{ pclass.name }}</div>
+                            <div class="col-2">
                                 {% if pclass.uses_markers or pclass.uses_presentations %}
-                                    <span class="label label-info">{{ pclass.number_assessors }}</span>
+                                    <span class="badge badge-info">{{ pclass.number_assessors }}</span>
                                 {% else %}
-                                    <span class="label label-default">Not required</span>
+                                    <span class="badge badge-secondary">Not required</span>
                                 {% endif %}
                             </div>
-                            <div class="col-xs-6">
+                            <div class="col-6">
                                 {% set num = data.number_assessors(pclass) %}
                                 {% if pclass.uses_markers or pclass.uses_presentations %}
                                     {% if num >= pclass.number_assessors %}
-                                        <span class="label label-success">{{ num }}</span>
+                                        <span class="badge badge-success">{{ num }}</span>
                                     {% else %}
-                                        <span class="label label-warning">{{ num }}</span>
+                                        <span class="badge badge-warning">{{ num }}</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="label label-default">{{ num }}</span>
+                                    <span class="badge badge-secondary">{{ num }}</span>
                                 {% endif %}
                                 {% set live_counterpart = data.live_counterpart(config.id) %}
                                 {% set running_counterpart = data.running_counterpart(config.id) %}
                                 {% if running_counterpart is not none %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
-                                        <a class="label label-danger dropdown-toggle" type="button" data-toggle="dropdown">
+                                        <a class="badge badge-danger dropdown-toggle" data-toggle="dropdown">
                                             RUNNING {{ running_counterpart.number_assessors }}
-                                            <span class="caret"></span>
                                         </a>
-                                        <ul class="dropdown-menu dropdown-menu-right">
-                                            <li>
-                                                <a href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=running_counterpart.id) }}">
-                                                    <i class="fa fa-refresh"></i> Sync with library version
-                                                </a>
-                                            </li>
-                                        </ul>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <a class="dropdown-item" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=running_counterpart.id) }}">
+                                                <i class="fa fa-refresh"></i> Sync with library version
+                                            </a>
+                                        </div>
                                     </div>
                                 {% endif %}
                                 {% if live_counterpart is not none %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
-                                        <a href="#" class="label label-success dropdown-toggle" type="button" data-toggle="dropdown">
+                                        <a href="#" class="badge badge-success dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                             LIVE {{ live_counterpart.number_assessors }}
-                                            <span class="caret"></span>
                                         </a>
-                                        <ul class="dropdown-menu dropdown-menu-right">
-                                            <li>
-                                                <a href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=live_counterpart.id) }}">
-                                                    <i class="fa fa-refresh"></i> Sync with library version
-                                                </a>
-                                            </li>
-                                        </ul>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <a class="dropdown-item" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=live_counterpart.id) }}">
+                                                <i class="fa fa-refresh"></i> Sync with library version
+                                            </a>
+                                        </div>
                                     </div>
                                 {% endif %}
                                 <p></p>
@@ -135,88 +129,69 @@
                                 {% for marker in project_assessor_list %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
                                         {% if running_counterpart is not none and running_counterpart.is_assessor(marker.id) %}
-                                            <a class="label label-danger dropdown-toggle" type="button" data-toggle="dropdown">{{ marker.user.name }} <span class="caret"></span></a>
+                                            <a class="badge badge-danger dropdown-toggle" data-toggle="dropdown"∏ role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% elif live_counterpart is not none and live_counterpart.is_assessor(marker.id) %}
-                                            <a class="label label-success dropdown-toggle" type="button" data-toggle="dropdown">{{ marker.user.name }} <span class="caret"></span></a>
+                                            <a class="badge badge-success dropdown-toggle" data-toggle="dropdown"∏ role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% else %}
-                                            <a class="label label-default dropdown-toggle" type="button" data-toggle="dropdown">{{ marker.user.name }} <span class="caret"></span></a>
+                                            <a class="badge badge-secondary dropdown-toggle" data-toggle="dropdown"∏ role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% endif %}
-                                        <ul class="dropdown-menu dropdown-menu-right">
-                                            <li class="dropdown-header">Attached to library version</li>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <div class="dropdown-header">Attached to library version</div>
                                             {% if running_counterpart is none %}
-                                                <li class="disabled">
-                                                    <a><i class="fa fa-times"></i> No running project</a>
-                                                </li>
+                                                <a class="dropdown-item disabled"><i class="fa fa-times"></i> No running project</a>
                                             {% else %}
                                                 {% if running_counterpart.is_assessor(marker.id) %}
-                                                    <li>
-                                                        <a href="{{ url_for('convenor.liveproject_remove_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
-                                                            <i class="fa fa-trash"></i> Remove from running project
-                                                        </a>
-                                                    </li>
+                                                    <a class="dropdown-item" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
+                                                        <i class="fa fa-trash"></i> Remove from running project
+                                                    </a>
                                                 {% else %}
-                                                    <li>
-                                                        <a href="{{ url_for('convenor.liveproject_attach_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
-                                                            <i class="fa fa-plus"></i> Attach to running project
-                                                        </a>
-                                                    </li>
+                                                    <a class="dropdown-item" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
+                                                        <i class="fa fa-plus"></i> Attach to running project
+                                                    </a>
+
                                                 {% endif %}
                                             {% endif %}
                                             {% if live_counterpart is none %}
-                                                <li class="disabled">
-                                                    <a><i class="fa fa-times"></i> No live project</a>
-                                                </li>
+                                                <a class="dropdown-item disabled"><i class="fa fa-times"></i> No live project</a>
                                             {% else %}
                                                 {% if live_counterpart.is_assessor(marker.id) %}
-                                                    <li>
-                                                        <a href="{{ url_for('convenor.liveproject_remove_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
-                                                            <i class="fa fa-trash"></i> Remove from live project
-                                                        </a>
-                                                    </li>
+                                                    <a class="dropdown-item" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
+                                                        <i class="fa fa-trash"></i> Remove from live project
+                                                    </a>
                                                 {% else %}
-                                                    <li>
-                                                        <a href="{{ url_for('convenor.liveproject_attach_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
-                                                            <i class="fa fa-plus"></i> Attach to live project
-                                                        </a>
-                                                    </li>
+                                                    <a class="dropdown-item" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
+                                                        <i class="fa fa-plus"></i> Attach to live project
+                                                    </a>
                                                 {% endif %}
                                             {% endif %}
-                                        </ul>
+                                        </div>
                                     </div>
                                 {% endfor %}
                                 {% if running_counterpart is not none %}
                                     {% for marker in running_counterpart.assessor_list %}
                                         {% if not data.is_assessor(marker.id) %}
                                             <div class="dropdown project-status-button" style="display: inline-block;">
-                                                <a class="label label-warning" type="button" data-toggle="dropdown">{{ marker.user.name }} <span class="caret"></span></a>
-                                                <ul class="dropdown-menu dropdown-menu-right">
-                                                    <li class="dropdown-header">Not attached to library version</li>
+                                                <a class="badge badge-warning" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                                <div class="dropdown-menu dropdown-menu-right">
+                                                    <div class="dropdown-header">Not attached to library version</div>
                                                     {% set disabled = not data.can_enroll_assessor(marker) %}
-                                                    <li {% if disabled %}class="disabled"{% endif %}>
-                                                        <a {% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
-                                                            <i class="fa fa-plus"></i> Attach to library version
-                                                        </a>
-                                                    </li>
+                                                    <a class="dropdown-item {% if disabled %}disabled{% endif %}"{% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
+                                                        <i class="fa fa-plus"></i> Attach to library version
+                                                    </a>
                                                     {% if live_counterpart is none %}
-                                                        <li class="disabled">
-                                                            <a><i class="fa fa-times"></i> No live project</a>
-                                                        </li>
+                                                        <a class="dropdown-item disabled"><i class="fa fa-times"></i> No live project</a>
                                                     {% else %}
                                                         {% if live_counterpart.is_assessor(marker.id) %}
-                                                            <li>
-                                                                <a href="{{ url_for('convenor.liveproject_remove_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
-                                                                    <i class="fa fa-trash"></i> Remove from live project
-                                                                </a>
-                                                            </li>
+                                                            <a class="dropdown-item" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
+                                                                <i class="fa fa-trash"></i> Remove from live project
+                                                            </a>
                                                         {% else %}
-                                                            <li>
-                                                                <a href="{{ url_for('convenor.liveproject_attach_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
-                                                                    <i class="fa fa-plus"></i> Attach to live project
-                                                                </a>
-                                                            </li>
+                                                            <a class="dropdown-item" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
+                                                                <i class="fa fa-plus"></i> Attach to live project
+                                                            </a>
                                                         {% endif %}
                                                     {% endif %}
-                                                </ul>
+                                                </div>
                                             </div>
                                         {% endif %}
                                     {% endfor %}
@@ -225,28 +200,22 @@
                                     {% for marker in live_counterpart.assessor_list %}
                                         {% if not data.is_assessor(marker.id) and (running_counterpart is none or (running_counterpart is not none and not running_counterpart.is_assessor(marker.id))) %}
                                             <div class="dropdown project-status-button" style="display: inline-block;">
-                                                <a class="label label-warning" type="button" data-toggle="dropdown">{{ marker.user.name }} <span class="caret"></span></a>
-                                                <ul class="dropdown-menu dropdown-menu-right">
-                                                    <li class="dropdown-header">Not attached to library version</li>
+                                                <a class="badge badge-warning" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                                <div class="dropdown-menu dropdown-menu-right">
+                                                    <div class="dropdown-header">Not attached to library version</div>
                                                     {% set disabled = not data.can_enroll_assessor(marker) %}
-                                                    <li {% if disabled %}class="disabled"{% endif %}>
-                                                        <a {% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
-                                                            <i class="fa fa-plus"></i> Attach to library version
-                                                        </a>
-                                                    </li>
+                                                    <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
+                                                        <i class="fa fa-plus"></i> Attach to library version
+                                                    </a>
                                                     {% if running_counterpart is none %}
-                                                        <li class="disabled">
-                                                            <a><i class="fa fa-times"></i> No running project</a>
-                                                        </li>
+                                                        <a class="dropdown-item disabled"><i class="fa fa-times"></i> No running project</a>
                                                     {% else %}
                                                         {# guaranteed not to be attached to the running project #}
-                                                        <li>
-                                                            <a href="{{ url_for('convenor.liveproject_attach_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
-                                                                <i class="fa fa-plus"></i> Attach to running project
-                                                            </a>
-                                                        </li>
+                                                        <a class="dropdown-item" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
+                                                            <i class="fa fa-plus"></i> Attach to running project
+                                                        </a>
                                                     {% endif %}
-                                                </ul>
+                                                </div>
                                             </div>
                                         {% endif %}
                                     {% endfor %}
@@ -256,72 +225,80 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="well">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     This project is not currently attached to any project types that require assessors
                 </div>
             {% endif %}
 
-            <div class="well">
-                <p>Filter by attachment status</p>
-                <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter='all', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                   class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
-                    All
-                </a>
-                <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter='attached', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                   class="btn btn-sm filter-btn {% if state_filter == 'attached' %}btn-primary{% else %}btn-default{% endif %}">
-                    Attached
-                </a>
-                <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter='not-attached', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                   class="btn btn-sm filter-btn {% if state_filter == 'not-attached' %}btn-primary{% else %}btn-default{% endif %}">
-                    Not attached
-                </a>
+            <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="row">
+                    <div class="col-12">
+                        <p>Filter by attachment status</p>
+                        <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter='all', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
+                           class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            All
+                        </a>
+                        <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter='attached', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
+                           class="btn btn-sm filter-btn {% if state_filter == 'attached' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Attached
+                        </a>
+                        <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter='not-attached', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
+                           class="btn btn-sm filter-btn {% if state_filter == 'not-attached' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Not attached
+                        </a>
+                    </div>
+                </div>
 
                 {% if pclasses is not none and pclasses|length > 0 %}
                     <hr class="intro-divider">
-
-                    <p>Filter by enrollment for project type</p>
-                    <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter='all', group_filter=group_filter, create=create) }}"
-                       class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
-                        All
-                    </a>
-                    {% for pclass, config in pclasses %}
-                        <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass.id, group_filter=group_filter, create=create) }}"
-                           class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
-                            {{ pclass.name }}
-                        </a>
-                    {% endfor %}
+                    <div class="row">
+                        <div class="col-12">
+                            <p>Filter by enrollment for project type</p>
+                            <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter='all', group_filter=group_filter, create=create) }}"
+                               class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                All
+                            </a>
+                            {% for pclass, config in pclasses %}
+                                <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass.id, group_filter=group_filter, create=create) }}"
+                                   class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    {{ pclass.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
                 {% endif %}
 
                 {% if groups is not none and groups|length > 0 %}
                     <hr class="intro-divider">
-
-                    <p>Filter by research group affiliation</p>
-                    <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter='all', create=create) }}"
-                       class="btn btn-sm filter-btn {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
-                        All
-                    </a>
-                    {% for group in groups %}
-                        <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group.id, create=create) }}"
-                           class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-default{% endif %}">
-                            {{ group.name }}
-                        </a>
-                    {% endfor %}
-                {% endif %}
-
-                <hr class="intro-divider">
-
-                <div class="row vertical-align">
-                    <div class="col-xs-12">
-                        <div class="pull-right">
-                            <a href="{{ url_for('convenor.remove_all_assessors', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                               class="btn btn-default">
-                                <i class="fa fa-trash"></i> Remove all
+                    <div class="row">
+                        <div class="col-12">
+                            <p>Filter by research group affiliation</p>
+                            <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter='all', create=create) }}"
+                               class="btn btn-sm filter-btn {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                All
                             </a>
-                            <a href="{{ url_for('convenor.attach_all_assessors', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
-                               class="btn btn-default">
-                                <i class="fa fa-check"></i> Attach all
-                            </a>
+                            {% for group in groups %}
+                                <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group.id, create=create) }}"
+                                   class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    {{ group.name }}
+                                </a>
+                            {% endfor %}
                         </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="row vertical-align">
+                <div class="col-12">
+                    <div class="float-right">
+                        <a href="{{ url_for('convenor.remove_all_assessors', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
+                           class="btn btn-secondary">
+                            <i class="fa fa-trash"></i> Remove all
+                        </a>
+                        <a href="{{ url_for('convenor.attach_all_assessors', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
+                           class="btn btn-secondary">
+                            <i class="fa fa-check"></i> Attach all
+                        </a>
                     </div>
                 </div>
             </div>
@@ -345,10 +322,10 @@
         <a href="{{ url_for('convenor.attach_skills', id=data.id, pclass_id=pclass_id, create=1) }}" class="btn btn-primary">
             Next: Attach transferable skills
         </a>
-        <a href="{{ url_for('convenor.attached', id=pclass_id) }}" class="btn btn-default">
+        <a href="{{ url_for('convenor.attached', id=pclass_id) }}" class="btn btn-secondary">
             Save and exit
         </a>
-        <a href="{{ url_for('faculty.project_preview', id=data.id, text='attached projects list', url=url_for('convenor.attached', id=pclass_id)) }}" class="btn btn-default">
+        <a href="{{ url_for('faculty.project_preview', id=data.id, text='attached projects list', url=url_for('convenor.attached', id=pclass_id)) }}" class="btn btn-secondary">
             Save and preview
         </a>
     {% else %}

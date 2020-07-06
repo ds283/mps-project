@@ -1,23 +1,23 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import date_field %}
 
 {% from "convenor/dashboard/overview_cards/prelive_capacity.html" import prelive_capacity %}
 {% from "convenor/dashboard/overview_cards/approvals_state.html" import approvals_state %}
 
 {% macro waiting_confirmations(config, issue_form, capacity_data, sel_count) %}
-    <div class="panel panel-info">
-        <div class="panel-heading"><strong>Student selections are not yet live</strong></div>
-        <div class="panel-body">
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-info text-white"><strong>Student selections are not yet live</strong></div>
+        <div class="card-body">
             <div class="row vertical-top">
-                <div class="col-xs-9">
+                <div class="col-9">
                     <p>
                         Confirmations are outstanding from
                         <strong>{{ config.confirm_outstanding_count }} faculty</strong>.
                     </p>
                     <p><a href="{{ url_for('convenor.outstanding_confirm', id=config.id) }}">View outstanding responses...</a></p>
                 </div>
-                <div class="col-xs-3">
-                    <div class="pull-right">
+                <div class="col-3">
+                    <div class="float-right">
                         <a href="{{ url_for('convenor.force_confirm_all', id=config.id) }}"
                            class="btn btn-danger">
                             Force confirm all
@@ -26,23 +26,23 @@
                 </div>
             </div>
             <div class="row" style="margin-top: 10px;">
-                <div class="col-xs-2"></div>
-                <div class="col-xs-8">
+                <div class="col-1"></div>
+                <div class="col-10">
                     {{ approvals_state(capacity_data) }}
                 </div>
-                <div class="col-xs-2"></div>
+                <div class="col-1"></div>
             </div>
             <hr class="intro-divider">
             <form action="{{ url_for('convenor.issue_confirm_requests', id=config.id) }}"  method="POST" name="issue-form">
                 {{ issue_form.hidden_tag() }}
                 {{ date_field(issue_form.request_deadline) }}
                 <div class="row">
-                    <div class="col-xs-12">
-                        <div class="pull-right">
-                            <a href="{{ url_for('convenor.confirmation_reminder', id=config.id) }}" class="btn btn-default">
+                    <div class="col-12">
+                        <div class="float-right">
+                            <a href="{{ url_for('convenor.confirmation_reminder', id=config.id) }}" class="btn btn-secondary">
                                 Send reminders
                             </a>
-                            {{ wtf.form_field(issue_form.submit_button, button_map={'submit_button': 'default'}) }}
+                            {{ wtf.render_field(issue_form.submit_button, button_map={'submit_button': 'secondary'}) }}
                         </div>
                     </div>
                 </div>

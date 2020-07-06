@@ -14,33 +14,30 @@ from flask import render_template_string, jsonify
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.edit_room', id=r.id) }}">
-                <i class="fa fa-pencil"></i> Edit details...
-            </a>
-        </li>
+    <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item" href="{{ url_for('admin.edit_room', id=r.id) }}">
+            <i class="fa fa-pencil"></i> Edit details...
+        </a>
 
         {% if r.active %}
-            <li><a href="{{ url_for('admin.deactivate_room', id=r.id) }}">
+            <a class="dropdown-item" href="{{ url_for('admin.deactivate_room', id=r.id) }}">
                 <i class="fa fa-wrench"></i> Make inactive
-            </a></li>
+            </a>
         {% else %}
             {% if r.available %}
-                <li><a href="{{ url_for('admin.activate_room', id=r.id) }}">
+                <a class="dropdown-item" href="{{ url_for('admin.activate_room', id=r.id) }}">
                     <i class="fa fa-wrench"></i> Make active
-                </a></li>
+                </a>
             {% else %}
-                <li class="disabled"><a>
+                <a class="dropdown-item disabled">
                     <i class="fa fa-ban"></i> Building inactive
-                </a></li>
+                </a>
             {% endif %}
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 
@@ -48,18 +45,18 @@ _menu = \
 _active = \
 """
 {% if r.active %}
-    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
 {% else %}
-    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+    <span class="badge badge-warning"><i class="fa fa-times"></i> Inactive</span>
 {% endif %}
 """
 
 
 _info = \
 """
-<span class="label label-primary">Capacity {{ r.capacity }}</span>
+<span class="badge badge-primary">Capacity {{ r.capacity }}</span>
 {% if r.lecture_capture %}
-    <span class="label label-info">Lecture capture</span>
+    <span class="badge badge-info">Lecture capture</span>
 {% endif %}
 """
 

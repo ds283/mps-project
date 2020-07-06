@@ -14,28 +14,23 @@ from flask import render_template_string, jsonify
 _supervisors_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.edit_supervisor', id=role.id) }}">
-                <i class="fa fa-pencil"></i> Edit details...
-            </a>
-        </li>
+    <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item" href="{{ url_for('admin.edit_supervisor', id=role.id) }}">
+            <i class="fa fa-pencil"></i> Edit details...
+        </a>
 
-        <li>
-            {% if role.active %}
-                <a href="{{ url_for('admin.deactivate_supervisor', id=role.id) }}">
-                    <i class="fa fa-wrench"></i> Make inactive
-                </a>
-            {% else %}
-                <a href="{{ url_for('admin.activate_supervisor', id=role.id) }}">
-                    <i class="fa fa-wrench"></i> Make active
-                </a>
-            {% endif %}
-        </li>
+        {% if role.active %}
+            <a class="dropdown-item" href="{{ url_for('admin.deactivate_supervisor', id=role.id) }}">
+                <i class="fa fa-wrench"></i> Make inactive
+            </a>
+        {% else %}
+            <a class="dropdown-item" href="{{ url_for('admin.activate_supervisor', id=role.id) }}">
+                <i class="fa fa-wrench"></i> Make active
+            </a>
+        {% endif %}
     </ul>
 </div>
 """
@@ -44,9 +39,9 @@ _supervisors_menu = \
 _active = \
 """
 {% if r.active %}
-    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
 {% else %}
-    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+    <span class="badge badge-warning"><i class="fa fa-times"></i> Inactive</span>
 {% endif %}
 """
 

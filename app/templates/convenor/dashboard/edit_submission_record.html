@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, date_field %}
 
 {% extends "security/index.html" %}
@@ -6,7 +6,7 @@
 {% block scripts %}
     {{ super() }}
 
-    {% assets filters="cssmin", output="gen/bootstrap-datepicker3-min.css", "css/bootstrap-datepicker3.css" -%}
+    {% assets filters="cssmin", output="gen/bootstrap-datepicker-min.css", "css/bootstrap-datepicker.css" -%}
         <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
     {% endassets %}
 
@@ -41,25 +41,25 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        <div class="well">
+        <div class="card mt-3 mb-3 card-body bg-well">
             {{ date_field(form.start_date) }}
         </div>
 
-        <div class="well">
-            {{ wtf.form_field(form.has_presentation) }}
-            {{ wtf.form_field(form.collect_presentation_feedback) }}
-            {{ wtf.form_field(form.collect_project_feedback) }}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.has_presentation) }}
+            {{ wtf.render_field(form.collect_presentation_feedback) }}
+            {{ wtf.render_field(form.collect_project_feedback) }}
             <hr class="intro-divider">
-            {{ wtf.form_field(form.lecture_capture) }}
-            {{ wtf.form_field(form.number_assessors) }}
-            {{ wtf.form_field(form.max_group_size) }}
+            {{ wtf.render_field(form.lecture_capture) }}
+            {{ wtf.render_field(form.number_assessors) }}
+            {{ wtf.render_field(form.max_group_size) }}
             <hr class="intro-divider">
-            {{ wtf.form_field(form.morning_session) }}
-            {{ wtf.form_field(form.afternoon_session) }}
-            {{ wtf.form_field(form.talk_format) }}
+            {{ wtf.render_field(form.morning_session) }}
+            {{ wtf.render_field(form.afternoon_session) }}
+            {{ wtf.render_field(form.talk_format) }}
         </div>
 
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

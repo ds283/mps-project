@@ -18,25 +18,24 @@
     {% else %}
         {% set nproj_plural = 's' %}
     {% endif %}
-    <div class="panel
-        {% if is_sabbatical or is_exempt %}
-            panel-default
-        {% else %}
-            {% if nproj == 0 %}
-                panel-danger
-            {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                panel-success
-            {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
-                panel-default
-            {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
-                panel-warning
+    <div class="card mt-3 mb-3">
+        <div class="card-header
+            {% if is_sabbatical or is_exempt %}
+                {# no markup required; formerly panel-default #}
             {% else %}
-                panel-info
+                {% if nproj == 0 %}
+                    bg-danger text-white
+                {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                    bg-success text-white
+                {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
+                    {# no markup required; formerly panel-default #}
+                {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
+                    bg-warning text-white
+                {% else %}
+                    bg-info text-white
+                {% endif %}
             {% endif %}
-        {% endif %}
         ">
-
-        <div class="panel-heading">
             {% if is_sabbatical %}
                 Student selections: on sabbatical
             {% elif is_exempt %}
@@ -62,14 +61,14 @@
             {% endif %}
         </div>
 
-        <div class="panel-body">
+        <div class="card-body">
             {# show confirmation request if one is active #}
             {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
                 <p>Please review your projects to ensure the descriptions are up-to-date,
                 and those you wish to offer next year are active and attached to
                 the correct project classes.</p>
                 <div class="row vertical-bottom">
-                    <div class="col-xs-9">
+                    <div class="col-9">
                         {% if config.request_deadline %}
                             <p>The project convenor has set a deadline of
                                 <strong>{{ config.request_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
@@ -78,8 +77,8 @@
                             <p>After the deadline, projects will be made available to students for selection.</p>
                         {% endif %}
                     </div>
-                    <div class="col-xs-3">
-                        <div class="pull-right">
+                    <div class="col-3">
+                        <div class="float-right">
                             <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-danger">Confirm</a>
                         </div>
                     </div>
@@ -89,7 +88,7 @@
 
             {# show basic details about this project class #}
             <div class="row vertical-align">
-                <div class="col-xs-9">
+                <div class="col-9">
                     {% if nproj == 0 and not (is_sabbatical or is_exempt) %}
                         <div class="has-error">
                             <div class="help-block">
@@ -102,9 +101,9 @@
                         </div>
                     {% endif %}
                 </div>
-                <div class="col-xs-3">
-                    <span class="pull-right">
-                        <a href="{{ url_for('faculty.edit_projects') }}" class="btn {% if nproj==0 %}btn-danger{% else %}btn-default{% endif %}" style="margin-bottom: 15px;">Edit my projects</a>
+                <div class="col-3">
+                    <span class="float-right">
+                        <a href="{{ url_for('faculty.edit_projects') }}" class="btn {% if nproj==0 %}btn-danger{% else %}btn-secondary{% endif %}" style="margin-bottom: 15px;">Edit my projects</a>
                     </span>
                 </div>
             </div>
@@ -113,29 +112,29 @@
                     {% set available = project.is_offerable %}
                     {% set desc = project.get_description(pclass.id) %}
                     <div class="row vertical-top fac-project-table">
-                        <div class="col-xs-1">
+                        <div class="col-1">
                             <strong>{{ loop.index }}</strong>
                         </div>
-                        <div class="col-xs-8">
+                        <div class="col-8">
                             <a href="{{ url_for('faculty.project_preview', id=project.id, url=url_for('faculty.dashboard', id=pclass.id), text='dashboard', pclass=pclass.id) }}">{{ project.name }}</a>
                             <div>
                                 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
-                                    <span class="label label-danger">Meeting required</span>
+                                    <span class="badge badge-danger">Meeting required</span>
                                 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-                                    <span class="label label-warning">Meeting optional</span>
+                                    <span class="badge badge-warning">Meeting optional</span>
                                 {% elif project.meeting_reqd == project.MEETING_NONE %}
-                                    <span class="label label-success">Meeting not required</span>
+                                    <span class="badge badge-success">Meeting not required</span>
                                 {% endif %}
                                 {% if project.group  %}
                                     {{ project.group.make_label()|safe }}
                                 {% else %}
-                                    <span class="label label-warning">Missing research group</span>
+                                    <span class="badge badge-warning">Missing research group</span>
                                 {% endif %}
                                 {% set num_assessors = project.number_assessors(pclass) %}
                                 {% if num_assessors > 0 %}
-                                    <span class="label label-info" data-toggle="tooltip" data-html="true" title="{% for assessor in project.get_assessor_list(pclass) %}<div>{{ assessor.user.name }}</div>{% endfor %}">{{ num_assessors }} assessors</span>
+                                    <span class="badge badge-info" data-toggle="tooltip" data-html="true" title="{% for assessor in project.get_assessor_list(pclass) %}<div>{{ assessor.user.name }}</div>{% endfor %}">{{ num_assessors }} assessors</span>
                                 {% else %}
-                                    <span class="label label-danger">No assessors assigned</span>
+                                    <span class="badge badge-danger">No assessors assigned</span>
                                 {% endif %}
                             </div>
                             {% if not available %}
@@ -148,8 +147,8 @@
                                 </div>
                             {% endif %}
                         </div>
-                        <div class="col-xs-3">
-                            <div class="pull-right">
+                        <div class="col-3">
+                            <div class="float-right">
                                 {% if desc %}
                                     {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and config.project_class.require_confirm %}
                                         {% if desc.confirmed %}
@@ -159,10 +158,10 @@
                                         {% endif %}
                                     {% endif %}
                                 {% else %}
-                                    <span class="label label-warning">Unknown description</span>
+                                    <span class="badge badge-warning">Unknown description</span>
                                 {% endif %}
-                                <a href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-default btn-table-block">Remove</a>
-                                <a href="{{ url_for('faculty.edit_project', id=project.id) }}" class="btn btn-sm btn-default btn-table-block">Edit</a>
+                                <a href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-secondary btn-table-block">Remove</a>
+                                <a href="{{ url_for('faculty.edit_project', id=project.id) }}" class="btn btn-sm btn-secondary btn-table-block">Edit</a>
                             </div>
                         </div>
                     </div>
@@ -182,14 +181,14 @@
                     on the live system for students making selections for {{ config.year+1 }}&ndash;{{ config.year+2 }}.</p>
                 <div class="container-fluid">
                     <div class="row fac-project-table">
-                        <div class="col-xs-3"><strong>Name</strong></div>
-                        <div class="col-xs-3"><strong>Info</strong></div>
-                        <div class="col-xs-3"><strong>Meeting requests</strong></div>
-                        <div class="col-xs-3"><strong>Meetings confirmed</strong></div>
+                        <div class="col-3"><strong>Name</strong></div>
+                        <div class="col-3"><strong>Info</strong></div>
+                        <div class="col-3"><strong>Meeting requests</strong></div>
+                        <div class="col-3"><strong>Meetings confirmed</strong></div>
                     </div>
                     {% for project in live_projects %}
                         <div class="row fac-project-table">
-                            <div class="col-xs-3">
+                            <div class="col-3">
                                 <a href="{{ url_for('faculty.live_project', pid=project.id, text='home dashboard', url=home_dashboard_url) }}">
                                     {{ project.name }}
                                 </a>
@@ -197,7 +196,7 @@
                                     {{ project_metadata(project) }}
                                 </div>
                             </div>
-                            <div class="col-xs-3">
+                            <div class="col-3">
                                 <div>
                                     {{ project_selection_data(project) }}
                                 </div>
@@ -205,73 +204,58 @@
                                     {{ project_rank_data(project, url_for('faculty.dashboard', pane=config.id), text='faculty dashboard', live=true) }}
                                 </div>
                             </div>
-                            <div class="col-xs-3 faculty-confirm-area">
+                            <div class="col-3 faculty-confirm-area">
                                 {% for req in project.requests_waiting %}
                                     {% set sel = req.owner %}
                                     {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">
                                         {% set has_recommended = sel.satisfies_recommended(project) %}
-                                        <a class="label {% if has_recommended %}label-primary{% else %}label-warning{% endif %} dropdown-toggle" type="button" data-toggle="dropdown">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fa fa-exclamation-triangle" style="color:red;"></i> {% endif %}<span class="caret"></span></a>
+                                        <a class="badge {% if has_recommended %}badge-primary{% else %}badge-warning{% endif %} dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fa fa-exclamation-triangle" style="color:red;"></i> {% endif %}</a>
                                         {% if req.viewed is not none and not req.viewed %}
-                                            <span class="label label-info">NEW</span>
+                                            <span class="badge badge-info">NEW</span>
                                         {% endif %}
-                                        <ul class="dropdown-menu">
+                                        <div class="dropdown-menu">
                                             {% if not has_recommended %}
-                                                <li class="disabled">
-                                                    <a>Programme does not include recommended modules</a>
-                                                </li>
-                                                <li role="separator" class="divider"></li>
+                                                <a class="dropdown-item disabled">Programme does not include recommended modules</a>
+                                                <div role="separator" class="dropdown-divider"></div>
                                             {% endif %}
                                             {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                                <li>
-                                                    <a href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
-                                                        <i class="fa fa-check"></i> Confirm
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a href="{{ url_for('faculty.cancel_confirm', sid=sel.id, pid=project.id) }}">
-                                                        <i class="fa fa-trash"></i> Delete
-                                                    </a>
-                                                </li>
+                                                <a class="dropdown-item" href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
+                                                    <i class="fa fa-check"></i> Confirm
+                                                </a>
+                                                <a class="dropdown-item" href="{{ url_for('faculty.cancel_confirm', sid=sel.id, pid=project.id) }}">
+                                                    <i class="fa fa-trash"></i> Delete
+                                                </a>
                                             {% else %}
-                                                <li class="disabled">
-                                                    <a>
-                                                        <i class="fa fa-check"></i> Confirm
-                                                    </a>
-                                                </li>
-                                                <li class="disabled">
-                                                    <a>
-                                                        <i class="fa fa-trash"></i> Delete
-                                                    </a>
-                                                </li>
+                                                <a class=""dropdown-item disabled">
+                                                    <i class="fa fa-check"></i> Confirm
+                                                </a>
+                                                <a class=""dropdown-item disabled">
+                                                    <i class="fa fa-trash"></i> Delete
+                                                </a>
                                             {% endif %}
-                                        </ul>
+                                        </div>
                                     </div>
                                 {% endfor %}
                             </div>
-                            <div class="col-xs-3 faculty-confirm-area">
+                            <div class="col-3 faculty-confirm-area">
                                 {% for req in project.requests_confirmed %}
                                     {% set sel = req.owner %}
                                     {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">
-                                        <a class="label label-success dropdown-toggle"
-                                                type="button" data-toggle="dropdown">
-                                            {{ sel.student.user.name }} <span class="caret"></span>
+                                        <a class="badge badge-success dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                            {{ sel.student.user.name }}
                                         </a>
-                                        <ul class="dropdown-menu">
-                                            <li>
-                                                <a href="{{ url_for('faculty.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
-                                                    <i class="fa fa-clock-o"></i> Make pending
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="{{ url_for('faculty.deconfirm', sid=sel.id, pid=project.id) }}">
-                                                    <i class="fa fa-trash"></i> Delete
-                                                </a>
-                                            </li>
-                                        </ul>
+                                        <div class="dropdown-menu">
+                                            <a class="dropdown-item" href="{{ url_for('faculty.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
+                                                <i class="fa fa-clock-o"></i> Make pending
+                                            </a>
+                                            <a class="dropdown-item" href="{{ url_for('faculty.deconfirm', sid=sel.id, pid=project.id) }}">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </a>
+                                        </div>
                                     </div>
                                 {% endfor %}
                             </div>

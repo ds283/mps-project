@@ -8,14 +8,14 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
-            <div class="panel panel-success">
-                <div class="panel-heading">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card mt-3 mb-3">
+                <div class="card-header bg-success text-white">
                     Submitted project preferences for
                     <strong>{{ sel.config.name }} {{ sel.config.year }}&ndash;{{ sel.config.year+1 }}</strong>
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     {% if sel.has_submitted %}
                         {% if sel.has_accepted_offer %}
                             {% set offer = sel.accepted_offer %}
@@ -27,11 +27,11 @@
                                     <i class="fa fa-user"></i> {{ project.owner.user.name }}
                                 </div>
                             {% else %}
-                                <span class="label label-danger">MISSING ACCEPTED PROJECT</span>
+                                <span class="badge badge-danger">MISSING ACCEPTED PROJECT</span>
                                 <p>This is an internal error. Please contact a system administrator.</p>
                             {% endif %}
                         {% else %}
-                            <div class="well">
+                            <div class="card mt-3 mb-3 card-body bg-well">
                                 Last submission received at
                                 <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
                                 from IP address
@@ -51,6 +51,6 @@
                 </a>
             </div>
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

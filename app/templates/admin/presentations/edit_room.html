@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
 
 {% extends "security/index.html" %}
@@ -30,12 +30,12 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        {{ wtf.form_field(form.name) }}
-        {{ wtf.form_field(form.building) }}
-        {{ wtf.form_field(form.capacity) }}
-        {{ wtf.form_field(form.lecture_capture) }}
+        {{ wtf.render_field(form.name) }}
+        {{ wtf.render_field(form.building) }}
+        {{ wtf.render_field(form.capacity) }}
+        {{ wtf.render_field(form.lecture_capture) }}
 
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

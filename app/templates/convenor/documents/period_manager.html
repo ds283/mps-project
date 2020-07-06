@@ -1,6 +1,6 @@
 {% extends "base_app.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% block scripts %}
     {{ super() }}
@@ -46,7 +46,7 @@
     <tr id="PA-{{ attachment.id }}">
         <td>
             <i class="fa fa-bars drag-handle"></i>
-            <span id="ranking" class="label label-primary">#{{ attachment.rank_order }}</span>
+            <span id="ranking" class="badge badge-primary">#{{ attachment.rank_order }}</span>
         </td>
         <td>
             <div>
@@ -73,63 +73,62 @@
             </div>
             <div>
                 {% if attachment.publish_to_students %}
-                    <span class="label label-success"><i class="fa fa-check"></i> Publish to students</span>
+                    <span class="badge badge-success"><i class="fa fa-check"></i> Publish to students</span>
                 {% endif %}
                 {% if attachment.include_marker_emails %}
-                    <span class="label label-success"><i class="fa fa-check"></i> Include in notifications to marker</span>
+                    <span class="badge badge-success"><i class="fa fa-check"></i> Include in notifications to marker</span>
                 {% endif %}
                 {% if attachment.include_supervisor_emails %}
-                    <span class="label label-success"><i class="fa fa-check"></i> Include in notifications to supervisor</span>
+                    <span class="badge badge-success"><i class="fa fa-check"></i> Include in notifications to supervisor</span>
                 {% endif %}
             </div>
             <div>
-                <span class="label label-default">Downloads: {{ asset.number_downloads }}</span>
+                <span class="badge badge-secondary">Downloads: {{ asset.number_downloads }}</span>
             </div>
         </td>
         <td>
             {% if asset.license %}
                 {{ asset.license.make_label()|safe }}
-                <span class="label label-info">{{ asset.license.version }}</span>
+                <span class="badge badge-info">{{ asset.license.version }}</span>
             {% else %}
                 <strong>Unset</strong>
             {% endif %}
         </td>
         <td>
-            <div style="text-align: right;" class="pull-right">
+            <div style="text-align: right;" class="float-right">
                 <div class="dropdown">
-                    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                         Actions
-                        <span class="caret"></span>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-right">
+                    <div class="dropdown-menu dropdown-menu-right">
                         {% set has_access = asset.has_access(current_user.id) %}
                         {# no need to check whether user is admin, because anyone accessing this view must be an admin user #}
                         {% if edit_url is not none %}
-                            <li><a href="{{ edit_url }}"><i class="fa fa-pencil"></i> Edit</a></li>
+                            <a class="dropdown-item" href="{{ edit_url }}"><i class="fa fa-pencil"></i> Edit</a>
                         {% else %}
-                            <li class="disabled"><a><i class="fa fa-pencil"></i> Edit</a></li>
+                            <a class="dropdown-item disabled"><i class="fa fa-pencil"></i> Edit</a>
                         {% endif %}
                         {% if has_access and download_url is not none %}
-                            <li><a href="{{ download_url }}"><i class="fa fa-cloud-download"></i> Download</a></li>
+                            <a class="dropdown-item" href="{{ download_url }}"><i class="fa fa-cloud-download"></i> Download</a>
                         {% else %}
-                            <li class="disabled"><a><i class="fa fa-cloud-download"></i> Download</a></li>
+                            <a class="dropdown-item disabled"><i class="fa fa-cloud-download"></i> Download</a>
                         {% endif %}
                         {% if acl_url is not none %}
-                            <li><a href="{{ acl_url }}"><i class="fa fa-check-square"></i> Access control...</a></li>
+                            <a class="dropdown-item" href="{{ acl_url }}"><i class="fa fa-check-square"></i> Access control...</a>
                         {% else %}
-                            <li class="disabled"><a><i class="fa fa-check-square"></i> Access control...</a></li>
+                            <a class="dropdown-item disabled"><i class="fa fa-check-square"></i> Access control...</a>
                         {% endif %}
                         {% if log_url is not none %}
-                            <li><a href="{{ log_url }}"><i class="fa fa-address-book"></i> Download log...</a></li>
+                            <a class="dropdown-item" href="{{ log_url }}"><i class="fa fa-address-book"></i> Download log...</a>
                         {% else %}
-                            <li class="disabled"><a><i class="fa fa-address-book"></i> Download log...</a></li>
+                            <a class="dropdown-item disabled"><i class="fa fa-address-book"></i> Download log...</a>
                         {% endif %}
                         {% if deletable and delete_url is not none %}
-                            <li><a href="{{ delete_url }}"><i class="fa fa-trash"></i> Remove</a></li>
+                            <a class="dropdown-item" href="{{ delete_url }}"><i class="fa fa-trash"></i> Remove</a>
                         {% else %}
-                            <li class="disabled"><a><i class="fa fa-trash"></i> Remove</a></li>
+                            <a class="dropdown-item disabled"><i class="fa fa-trash"></i> Remove</a>
                         {% endif %}
-                    </ul>
+                    </div>
                 </div>
             </div>
         </td>
@@ -145,10 +144,10 @@
         </div>
     {% endif %}
 
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Manage documents for <strong>{{ record.display_name }}</strong></div>
-        <div class="panel-body">
-            <div class="well">
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-primary text-white">Manage documents for <strong>{{ record.display_name }}</strong></div>
+        <div class="card-body">
+            <div class="card mt-3 mb-3 card-body bg-well">
                 {% if record.has_attachments %}
                     <span class="document-group-title">Attachments</span>
                     <hr class="intro-divider">
@@ -180,7 +179,7 @@
                 {% endif %}
                 <hr class="into-divider">
                 <div style="text-align: center;">
-                    <a href="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
+                    <a href="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}" class="btn btn-secondary btn-lg">
                         <i class="fa fa-plus"></i>
                         Upload new attachment
                     </a>

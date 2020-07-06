@@ -14,38 +14,29 @@ from flask import render_template_string, jsonify
 _scheduled_menu_template = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
+    <div class="dropdown-menu dropdown-menu-right">
+            <a class="dropdown-item" href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
                 <i class="fa fa-cogs"></i> Edit task
             </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.delete_scheduled_task', id=task.id) }}">
+            <a class="dropdown-item" href="{{ url_for('admin.delete_scheduled_task', id=task.id) }}">
                 <i class="fa fa-trash"></i> Delete
             </a>
-        </li>
-        <li>
             {% if task.enabled %}
-                <a href="{{ url_for('admin.deactivate_scheduled_task', id=task.id) }}">
+                <a class="dropdown-item" href="{{ url_for('admin.deactivate_scheduled_task', id=task.id) }}">
                     <i class="fa fa-wrench"></i> Make inactive
                 </a>
             {% else %}
-                <a href="{{ url_for('admin.activate_scheduled_task', id=task.id) }}">
+                <a class="dropdown-item" href="{{ url_for('admin.activate_scheduled_task', id=task.id) }}">
                     <i class="fa fa-wrench"></i> Make active
                 </a>
             {% endif %}
-        </li>
-        <li>
-            <a href="{{ url_for('admin.launch_scheduled_task', id=task.id) }}">
+            <a class="dropdown-item" href="{{ url_for('admin.launch_scheduled_task', id=task.id) }}">
                 <i class="fa fa-angle-double-right"></i> Run now
             </a>
-        </li>
-    </ul>
+    </div>
 </div>
 """
 
@@ -53,9 +44,9 @@ _scheduled_menu_template = \
 _active = \
 """
 {% if t.enabled %}
-    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
 {% else %}
-    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+    <span class="badge badge-warning"><i class="fa fa-times"></i> Inactive</span>
 {% endif %}
 """
 
@@ -65,9 +56,9 @@ _name = \
 {{ t.name }}
 <div>
     {% if t.queue == 'priority' %}
-        <span class="label label-danger">PRIORITY</span>
+        <span class="badge badge-danger">PRIORITY</span>
     {% else %}
-        <span class="label label-default">{{ t.queue|upper }}</span>
+        <span class="badge badge-secondary">{{ t.queue|upper }}</span>
     {% endif %}
 </div>
 """
@@ -86,7 +77,7 @@ def _format_schedule(task):
             m=data.minute, h=data.hour, wd=data.day_of_week,
             mo=data.day_of_month, mon=data.month_of_year)
 
-    return '<span class="label label-danger">Invalid</a>'
+    return '<span class="badge badge-danger">Invalid</a>'
 
 
 def scheduled_task_data(tasks):
@@ -94,7 +85,7 @@ def scheduled_task_data(tasks):
              'schedule': _format_schedule(t),
              'owner': '<a href="mailto:{e}">{name}</a>'.format(e=t.owner.email,
                                                                name=t.owner.name) if t.owner is not None
-                else '<span class="label label-default">Nobody</span>',
+                else '<span class="badge badge-secondary">Nobody</span>',
              'active': render_template_string(_active, t=t),
              'last_run': {
                  'display': t.last_run_at.strftime("%a %d %b %Y %H:%M:%S"),
@@ -109,7 +100,7 @@ def scheduled_task_data(tasks):
                  'display': t.expires.strftime("%a %d %b %Y %H:%M:%S"),
                  'timestamp': t.expires.timestamp()
              } if t.expires is not None else {
-                 'display': '<span class="label label-default">No expiry</span>',
+                 'display': '<span class="badge badge-secondary">No expiry</span>',
                  'timestamp': None
              },
              'menu': render_template_string(_scheduled_menu_template, task=t)} for t in tasks]

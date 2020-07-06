@@ -1,5 +1,5 @@
 {% extends "base_app.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% from "admin/presentations/availability/request.html" import issue_requests %}
 {% from "admin/presentations/availability/waiting.html" import waiting_responses %}
@@ -8,7 +8,7 @@
 {% block scripts %}
     {{ super() }}
 
-    {% assets filters="cssmin", output="gen/bootstrap-datepicker3-min.css", "css/bootstrap-datepicker3.css" -%}
+    {% assets filters="cssmin", output="gen/bootstrap-datepicker-min.css", "css/bootstrap-datepicker.css" -%}
         <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
     {% endassets %}
 
@@ -34,10 +34,10 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
+        <div class="col-1"></div>
+        <div class="col-10">
             {% if assessment %}
-                <div class="well">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     {% set state = assessment.availability_lifecycle %}
                     {% if state == assessment.AVAILABILITY_NOT_REQUESTED %}
 
@@ -53,9 +53,9 @@
 
                     {% else %}
 
-                        <div class="panel panel-danger">
-                            <div class="panel-heading">Error</div>
-                            <div class="panel-body">
+                        <div class="card mt-3 mb-3">
+                            <div class="card-header bg-danger text-white">Error</div>
+                            <div class="card-body">
                                 <strong>Error:</strong>
                                 Unknown availability lifecycle state {{ state }}
                             </div>
@@ -64,9 +64,9 @@
                     {% endif %}
                 </div>
             {% else %}
-                <div class="panel panel-danger">
-                    <div class="panel-heading">Error</div>
-                    <div class="panel-body">
+                <div class="card mt-3 mb-3">
+                    <div class="card-header bg-danger text-white">Error</div>
+                    <div class="card-body">
                         <strong>Error:</strong>
                         Data for this assessment is missing
                     </div>
@@ -79,6 +79,6 @@
                 </a>
             </div>
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-1"></div>
     </div>
 {%  endblock %}

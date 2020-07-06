@@ -1,6 +1,6 @@
 {% extends "base_app.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "convenor/macros.html" import ranked_selection %}
 {% from "student/macros.html" import custom_offers_table %}
 
@@ -10,8 +10,8 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
+        <div class="col-1"></div>
+        <div class="col-10">
             {% if text and url %}
                 <div class="top-return-link">
                     <a href="{{ url }}">
@@ -21,16 +21,16 @@
             {% endif %}
 
             {% for year in years %}
-                <div class="well well-lg">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     <p><span class="timeline-title">Records for {{ year }}&ndash;{{ year+1 }}</span></p>
                     <hr class="intro-divider">
                     {% set selectors = selector_records[year] %}
                     {% if selectors is not none and selectors|length > 0 %}
                         {% for rec in selectors %}
                             {% set pclass = rec.config.project_class %}
-                            <div class="panel {% if rec.has_submitted %}panel-primary{% else %}panel-danger{% endif %}">
-                                <div class="panel-heading">Selecting for <strong>{{ pclass.name }}</strong></div>
-                                <div class="panel-body">
+                            <div class="card mt-3 mb-3 {% if not rec.has_submitted %}border-danger{% endif %}">
+                                <div class="card-header {% if rec.has_submitted %}bg-primary text-white{% else %}bg-danger text-white{% endif %}">Selecting for <strong>{{ pclass.name }}</strong></div>
+                                <div class="card-body">
                                     <div>
                                         Convenor for {{ year }}&ndash;{{ year+1 }}:
                                         <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
@@ -69,9 +69,9 @@
                     {% if submitters is not none and submitters|length > 0 %}
                         {% for rec in submitters %}
                             {% set pclass = rec.config.project_class %}
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">Submitting for <strong>{{ pclass.name }}</strong></div>
-                                <div class="panel-body">
+                            <div class="card mt-3 mb-3">
+                                <div class="card-header bg-primary text-white">Submitting for <strong>{{ pclass.name }}</strong></div>
+                                <div class="card-body">
                                     <div>
                                         Convenor for {{ year }}&ndash;{{ year+1 }}:
                                         <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
@@ -90,27 +90,27 @@
                                                 {% endif %}
                                                 <div class="dashboard-subtitle" style="padding-bottom: 8px;">{{ record.period.display_name }}</div>
                                                 <div class="row vertical-top">
-                                                    <div class="col-xs-3">
+                                                    <div class="col-3">
                                                         <a href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }}</a>
                                                     </div>
-                                                    <div class="col-xs-5">
+                                                    <div class="col-5">
                                                         {{ record.project.name }} (No. {{ record.project.number }})
                                                         <div>
                                                             {% if record.student_feedback_submitted and record.acknowledge_feedback %}
                                                                 {% if is_student %}
-                                                                    <span class="label label-success"><i class="fa fa-check"></i> Your feedback acknowledged</span>
+                                                                    <span class="badge badge-success"><i class="fa fa-check"></i> Your feedback acknowledged</span>
                                                                 {% else %}
-                                                                    <span class="label label-success"><i class="fa fa-check"></i> Student feedback acknowledged</span>
+                                                                    <span class="badge badge-success"><i class="fa fa-check"></i> Student feedback acknowledged</span>
                                                                 {% endif %}
                                                             {% endif %}
                                                             {% if record.faculty_response_submitted %}
-                                                                <span class="label label-success"><i class="fa fa-check"></i> Supervisor response</span>
+                                                                <span class="badge badge-success"><i class="fa fa-check"></i> Supervisor response</span>
                                                             {% endif %}
                                                         </div>
                                                     </div>
-                                                    <div class="col-xs-4">
-                                                        <div style="text-align: right;" class="pull-right">
-                                                            <a href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}" class="btn btn-sm btn-default btn-table-block">Documents ({{ record.number_attachments }})...</a>
+                                                    <div class="col-4">
+                                                        <div style="text-align: right;" class="float-right">
+                                                            <a href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}" class="btn btn-sm btn-secondary btn-table-block">Documents ({{ record.number_attachments }})...</a>
                                                             {% if record.has_feedback %}
                                                                 {% if record.id in roles %}
                                                                     {% set role = roles[record.id] %}
@@ -121,10 +121,10 @@
                                                                     {% elif role == 'convenor' %}
                                                                         <a href="{{ url_for('convenor.view_feedback', id=record.id, text=generic_text, url=return_url) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
                                                                     {% else %}
-                                                                        <span class="label label-danger">Unknown role</span>
+                                                                        <span class="badge badge-danger">Unknown role</span>
                                                                     {% endif %}
                                                                 {% else %}
-                                                                    <span class="label label-default">Feedback locked</span>
+                                                                    <span class="badge badge-secondary">Feedback locked</span>
                                                                 {% endif %}
                                                             {% endif %}
                                                         </div>
@@ -138,16 +138,16 @@
                                                         {% set slot = period.get_student_presentation_slot(rec.id) %}
                                                         <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</div>
                                                         {% if slot is not none %}
-                                                            <span class="label label-primary">{{ slot.date_as_string }}</span>
-                                                            <span class="label label-info">{{ slot.session_type_string }}</span>
-                                                            <span class="label label-info">{{ slot.room_full_name }}</span>
+                                                            <span class="badge badge-primary">{{ slot.date_as_string }}</span>
+                                                            <span class="badge badge-info">{{ slot.session_type_string }}</span>
+                                                            <span class="badge badge-info">{{ slot.room_full_name }}</span>
                                                             {% for assessor in slot.assessors %}
-                                                                <span class="label label-default">{{ assessor.user.name }}</span>
+                                                                <span class="badge badge-secondary">{{ assessor.user.name }}</span>
                                                             {% else %}
-                                                                <span class="label label-danger">Assessor information missing</span>
+                                                                <span class="badge badge-danger">Assessor information missing</span>
                                                             {% endfor %}
                                                         {% else %}
-                                                            <span class="label label-warning">Did not attend</span>
+                                                            <span class="badge badge-warning">Did not attend</span>
                                                         {% endif %}
                                                     {% else %}
                                                         <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">Presentation assessment</div>
@@ -175,7 +175,7 @@
                 </div>
             {% endif %}
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
 
     </div>
 {% endblock %}

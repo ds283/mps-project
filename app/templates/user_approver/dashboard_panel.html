@@ -4,19 +4,19 @@
 
     {# user_approver role needed to perform approval #}
     {% if current_user.has_role('user_approver') %}
-        <div class="panel {% if to_approve > 0 %}panel-warning{% else %}panel-default{% endif %}">
-            <div class="panel-heading">{{ to_approve }} student {% if to_approve != 1 %}records require{% else %}record requires{% endif %} validation</div>
-            <div class="panel-body">
+        <div class="card mt-3 mb-3">
+            <div class="card-header {% if to_approve > 0 %}bg-warning text-white{% endif %}">{{ to_approve }} student {% if to_approve != 1 %}records require{% else %}record requires{% endif %} validation</div>
+            <div class="card-body">
                 {% if to_approve == 0 %}
                     <p>No student records currently require validation.</p>
                 {% else %}
                     <div class="row vertical-top">
-                        <div class="col-xs-8">
+                        <div class="col-8">
                             You have validation tasks to perform.
                         </div>
-                        <div class="col-xs-4">
-                            <div class="pull-right">
-                                <a href="{{ url_for('user_approver.validate') }}" class="btn btn-default">
+                        <div class="col-4">
+                            <div class="float-right">
+                                <a href="{{ url_for('user_approver.validate') }}" class="btn btn-secondary">
                                     Approve records
                                 </a>
                             </div>
@@ -29,19 +29,19 @@
 
     {# admin or root role needed to edit users #}
     {% if current_user.has_role('manage_users') or current_user.has_role('root') %}
-        <div class="panel {% if to_correct > 0 %}panel-warning{% else %}panel-default{% endif %}">
-            <div class="panel-heading">{{ to_correct }} student {% if to_correct != 1 %}records require{% else %}record requires{% endif %} correction</div>
-            <div class="panel-body">
+        <div class="card mt-3 mb-3">
+            <div class="card-header {% if to_correct > 0 %}bg-warning text-white{% endif %}">{{ to_correct }} student {% if to_correct != 1 %}records require{% else %}record requires{% endif %} correction</div>
+            <div class="card-body">
                 {% if to_correct == 0 %}
                     <p>None of your student record edits have been flagged for corrections.</p>
                 {% else %}
                     <div class="row vertical-bottom">
-                        <div class="col-xs-8">
+                        <div class="col-8">
                             One or more student records edited by you have been flagged for correction.
                         </div>
-                        <div class="col-xs-4">
-                            <div class="pull-right">
-                                <a href="{{ url_for('user_approver.correct') }}" class="btn btn-default">
+                        <div class="col-4">
+                            <div class="float-right">
+                                <a href="{{ url_for('user_approver.correct') }}" class="btn btn-secondary">
                                     Correct records
                                 </a>
                             </div>

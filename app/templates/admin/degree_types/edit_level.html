@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, colour_field %}
 
 {% extends "security/index.html" %}
@@ -43,12 +43,12 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        {{ wtf.form_field(form.name) }}
-        {{ wtf.form_field(form.short_name) }}
-        {{ wtf.form_field(form.academic_year) }}
+        {{ wtf.render_field(form.name) }}
+        {{ wtf.render_field(form.short_name) }}
+        {{ wtf.render_field(form.academic_year) }}
         {{ colour_field(form.colour, 'colour-group') }}
 
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

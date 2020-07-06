@@ -8,11 +8,11 @@
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css""/>
 
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -53,70 +53,94 @@
         </div>
     {% endif %}
 
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Sessions view of schedule <strong>{{ record.name }}</strong> for assessment <strong>{{ record.owner.name }}</strong></div>
-        <div class="panel-body">
-            {% if pclasses and pclasses is not none and pclasses|length > 1 %}
-                <div class="well">
-                    <p>Filter by project class</p>
-                    <a class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter='all', building_filter=building_filter, room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
-                        All
-                    </a>
-                    {% for pclass in pclasses %}
-                        <a class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass.id, building_filter=building_filter, room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
-                            {{ pclass.name }}
-                        </a>
-                    {% endfor %}
-                </div>
-            {% endif %}
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-primary text-white">Sessions view of schedule <strong>{{ record.name }}</strong> for assessment <strong>{{ record.owner.name }}</strong></div>
+        <div class="card-body">
+            {% set has_pclasses = (pclasses and pclasses is not none and pclasses|length > 1) %}
+            {% set has_buildings = (buildings and buildings is not none and buildings|length > 1) %}
+            {% set has_rooms = (rooms and rooms is not none and rooms|length > 1) %}
+            {% set has_sessions = (sessions and sessions is not none and sessions|length > 1) %}
+            {% if has_pclsses or has_buildings or has_rooms or has_sessions %}
+                <div class="card mt-3 mb-3 card-body bg-well">
+                    {% set needs_hrule = false %}
+                    {% if has_pclasses %}
+                        {% set needs_hrule = true %}
+                        <div class="row">
+                            <div class="col-12">
+                                <p>Filter by project class</p>
+                                <a class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                    href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter='all', building_filter=building_filter, room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
+                                    All
+                                </a>
+                                {% for pclass in pclasses %}
+                                    <a class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                        href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass.id, building_filter=building_filter, room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
+                                        {{ pclass.name }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
 
-            {% if buildings and buildings is not none and buildings|length > 1 %}
-                <div class="well">
-                    <p>Filter by building</p>
-                    <a class="btn btn-sm filter-btn {% if building_filter is none or building_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter='all', room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
-                        All
-                    </a>
-                    {% for building in buildings %}
-                        <a class="btn btn-sm filter-btn {% if building_filter == building.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building.id, room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
-                            {{ building.name }}
-                        </a>
-                    {% endfor %}
-                </div>
-            {% endif %}
+                    {% if has_buildings %}
+                        {% if needs_hrule %}<hr class="intro-divider">{% endif %}
+                        {% set needs_hrule = true %}
+                        <div class="row">
+                            <div class="col-12">
+                                <p>Filter by building</p>
+                                <a class="btn btn-sm filter-btn {% if building_filter is none or building_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                    href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter='all', room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
+                                    All
+                                </a>
+                                {% for building in buildings %}
+                                    <a class="btn btn-sm filter-btn {% if building_filter == building.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                        href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building.id, room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
+                                        {{ building.name }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
 
-            {% if rooms and rooms is not none and rooms|length > 1 %}
-                <div class="well">
-                    <p>Filter by room</p>
-                    <a class="btn btn-sm filter-btn {% if room_filter is none or room_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter='all', session_filter=session_filter, text=text, url=url) }}">
-                        All
-                    </a>
-                    {% for room in rooms %}
-                        <a class="btn btn-sm filter-btn {% if room_filter == room.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room.id, session_filter=session_filter, text=text, url=url) }}">
-                            {{ room.full_name }}
-                        </a>
-                    {% endfor %}
-                </div>
-            {% endif %}
+                    {% if has_rooms %}
+                        {% if needs_hrule %}<hr class="intro-divider">{% endif %}
+                        {% set needs_hrule = true %}
+                        <div class="row">
+                            <div class="col-12">
+                                <p>Filter by room</p>
+                                <a class="btn btn-sm filter-btn {% if room_filter is none or room_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                    href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter='all', session_filter=session_filter, text=text, url=url) }}">
+                                    All
+                                </a>
+                                {% for room in rooms %}
+                                    <a class="btn btn-sm filter-btn {% if room_filter == room.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                        href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room.id, session_filter=session_filter, text=text, url=url) }}">
+                                        {{ room.full_name }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
 
-            {% if sessions and sessions is not none and sessions|length > 1 %}
-                <div class="well">
-                    <p>Filter by session</p>
-                    <a class="btn btn-sm filter-btn {% if session_filter is none or session_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room_filter, session_filter='all', text=text, url=url) }}">
-                        All
-                    </a>
-                    {% for session in sessions %}
-                        <a class="btn btn-sm filter-btn {% if session_filter == session.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room_filter, session_filter=session.id, text=text, url=url) }}">
-                            {{ session.short_date_as_string }} ({{ session.session_type_string }})
-                        </a>
-                    {% endfor %}
+                    {% if has_sessions %}
+                        {% if needs_hrule %}<hr class="intro-divider">{% endif %}
+                        {% set needs_hrule = true %}
+                        <div class="row">
+                            <div class="col-12">
+                                <p>Filter by session</p>
+                                <a class="btn btn-sm filter-btn {% if session_filter is none or session_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                    href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room_filter, session_filter='all', text=text, url=url) }}">
+                                    All
+                                </a>
+                                {% for session in sessions %}
+                                    <a class="btn btn-sm filter-btn {% if session_filter == session.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                        href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room_filter, session_filter=session.id, text=text, url=url) }}">
+                                        {{ session.short_date_as_string }} ({{ session.session_type_string }})
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
             {% endif %}
 

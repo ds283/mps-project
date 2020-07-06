@@ -1,6 +1,6 @@
 {% extends "security/index.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% block title %}
     Rename match
@@ -17,9 +17,9 @@
 
 {#        {{ wtf.form_errors(role_form) }}#}
 
-        {{ wtf.form_field(form.name) }}
+        {{ wtf.render_field(form.name) }}
 
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

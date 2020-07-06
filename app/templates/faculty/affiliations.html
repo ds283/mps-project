@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% extends "security/index.html" %}
 
@@ -11,14 +11,14 @@
 {% endblock %}
 
 {% block form_content %}
-    <div class="panel panel-default">
-        <div class="panel-body">
+    <div class="card mt-3 mb-3">
+        <div class="card-body">
             {% if data and data.affiliations and research_groups %}
                 <h4>
                 {% for group in research_groups %}
                     {% if group in data.affiliations %}
                         {% set style = group.make_CSS_style() %}
-                        <a class="btn {% if style %}btn-default{% else %}btn-success{% endif %} selection-label"
+                        <a class="btn {% if style %}btn-secondary{% else %}btn-success{% endif %} selection-label"
                            {% if style %}style="{{ style }}"{% endif %}
                            href="{{ url_for('faculty.remove_affiliation', groupid=group.id) }}">
                             <i class="fa fa-times"></i> {{ group.name }}
@@ -30,12 +30,12 @@
                 <p>No current affiliations</p>
             {% endif %}
         </div>
-        <div class="panel-footer">
+        <div class="card-footer">
             {% if data and research_groups %}
                 <h4>
                 {% for group in research_groups %}
                     {% if group not in data.affiliations %}
-                        <a class="btn btn-default selection-label" href="{{ url_for('faculty.add_affiliation', groupid=group.id) }}"><i class="fa fa-plus"></i> {{ group.name }}</a>
+                        <a class="btn btn-secondary selection-label" href="{{ url_for('faculty.add_affiliation', groupid=group.id) }}"><i class="fa fa-plus"></i> {{ group.name }}</a>
                     {% endif %}
                 {% endfor %}
                 </h4>

@@ -1,6 +1,6 @@
 {% extends "base_project.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import on_click_selector_field %}
 
 {% block scripts %}
@@ -34,7 +34,7 @@
                   name="selector_form">
                 {{ form.hidden_tag() }}
                 {% if show_selector %}
-                    <div class="well">
+                    <div class="card mt-3 mb-3 card-body bg-well">
                         {{ on_click_selector_field(form.selector, true) }}
                     </div>
                 {% else %}
@@ -61,22 +61,22 @@
                 {% endif %}
         {% endif %}
         <div class="row">
-            <div class="col-xs-2"></div>
-            <div class="col-xs-8">
+            <div class="col-1"></div>
+            <div class="col-10">
                 <div class="row sm-gap-below">
-                    <div class="col-xs-12 project-title">
+                    <div class="col-12 project-title">
                         {{ title }}
                     </div>
                 </div>
                 <div class="row sm-gap-below">
-                    <div class="col-xs-6">
+                    <div class="col-6">
                         <div class="project-owner-name">{{ project.owner.user.name }}</div>
                         {% if project.owner.office %}
                             <div>{{ project.owner.office }}</div>
                         {% endif %}
                     </div>
-                    <div class="col-xs-6">
-                        <div class="pull-right">
+                    <div class="col-6">
+                        <div class="float-right">
                             {% if project.group %}
                                 <div class="research-group-banner">{{ project.group.name }}</div>
                                 {% if project.group.website and project.group.website is not none %}
@@ -104,26 +104,26 @@
                     </div>
                 {% endif %}
 
-                <div class="panel panel-primary panel-primary-bg">
-                    <div class="panel-heading">Project details</div>
-                    <div class="panel-body">
-                        <div class="panel panel-default ataglance-background">
-                            <div class="panel-heading">
+                <div class="card mt-3 mb-3">
+                    <div class="card-header bg-primary text-white">Project details</div>
+                    <div class="card-body">
+                        <div class="card mt-3 mb-3 ataglance-background">
+                            <div class="card-header">
                                 <div class="row vertical-align">
-                                    <div class="col-xs-4">
+                                    <div class="col-4">
                                         Key facts
                                     </div>
-                                    <div class="col-xs-8">
+                                    <div class="col-8">
                                         {% if sel and selections_open %}
-                                            <div class="pull-right">
+                                            <div class="float-right">
                                                 {% if sel.bookmarks.filter_by(liveproject_id=project.id).first() %}
                                                     <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
-                                                       class="btn btn-default btn-sm">
+                                                       class="btn btn-secondary btn-sm">
                                                         Remove bookmark
                                                     </a>
                                                 {% else %}
                                                     <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}"
-                                                       class="btn btn-default btn-sm">
+                                                       class="btn btn-secondary btn-sm">
                                                         Add bookmark
                                                     </a>
                                                 {% endif %}
@@ -145,30 +145,30 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="panel-body">
+                            <div class="card-body">
                                 <div class="container-fluid">
                                     {# show sign-up details if being viewed by a live student #}
                                     {% if sel %}
                                         <div class="row vertical-top">
-                                            <div class="col-xs-3">Sign-up details</div>
-                                            <div class="col-xs-9">
+                                            <div class="col-3">Sign-up details</div>
+                                            <div class="col-9">
                                                 <div class="sm-gap-below">
                                                     {% if project.meeting_reqd == project.MEETING_REQUIRED %}
                                                         {% if project.is_confirmed(sel) %}
-                                                            <span class="label label-primary project-label"><i
+                                                            <span class="badge badge-primary project-label"><i
                                                                     class="fa fa-check"></i> Meeting confirmed</span>
                                                         {% else %}
-                                                            <span class="label label-danger project-label"><i
+                                                            <span class="badge badge-danger project-label"><i
                                                                     class="fa fa-times"></i> Meeting required</span>
                                                         {% endif %}
                                                     {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-                                                        <span class="label label-warning project-label">Meeting optional</span>
+                                                        <span class="badge badge-warning project-label">Meeting optional</span>
                                                     {% else %}
-                                                        <span class="label label-default project-label"><i
+                                                        <span class="badge badge-secondary project-label"><i
                                                                 class="fa fa-check"></i> Meeting not required</span>
                                                     {% endif %}
                                                     {% if selections_open and project.is_available(sel) %}
-                                                        <span class="label label-success project-label"><i
+                                                        <span class="badge badge-success project-label"><i
                                                                 class="fa fa-check"></i> Available</span>
                                                     {% endif %}
                                                 </div>
@@ -178,8 +178,8 @@
 
                                     {% if selections_open and project.show_popularity_data %}
                                         <div class="row sm-gap-below vertical-top">
-                                            <div class="col-xs-3">Popularity</div>
-                                            <div class="col-xs-9">
+                                            <div class="col-3">Popularity</div>
+                                            <div class="col-9">
                                                 {% set lab = project.format_popularity_label(['project-label']) %}
                                                 {% if lab is not none %}{{ lab|safe }}{% endif %}
                                                 {% set lab = project.format_bookmarks_label(['project-label']) %}
@@ -192,10 +192,10 @@
 
                                     {% if keywords and keywords|length > 0 %}
                                         <div class="row sm-gap-below vertical-top">
-                                            <div class="col-xs-3">Subject keywords</div>
-                                            <div class="col-xs-9">
+                                            <div class="col-3">Subject keywords</div>
+                                            <div class="col-9">
                                                 {% for keyword in keywords %}
-                                                    <span class="label label-success project-label">{{ keyword }}</span>
+                                                    <span class="badge badge-success project-label">{{ keyword }}</span>
                                                 {% endfor %}
                                             </div>
                                         </div>
@@ -203,8 +203,8 @@
 
                                     {% if project.skills and project.skills.first() %}
                                         <div class="row sm-gap-below vertical-top">
-                                            <div class="col-xs-3">Transferable skills</div>
-                                            <div class="col-xs-9">
+                                            <div class="col-3">Transferable skills</div>
+                                            <div class="col-9">
                                                 {% for skill in project.ordered_skills %}
                                                     {% if skill.is_active %}
                                                         {{ skill.make_label(user_classes="project-label")|safe }}
@@ -216,8 +216,8 @@
 
                                     {% if project.programmes and project.programmes.first() %}
                                         <div class="row sm-gap-below vertical-top">
-                                            <div class="col-xs-3">Prefer degree programmes</div>
-                                            <div class="col-xs-9">
+                                            <div class="col-3">Prefer degree programmes</div>
+                                            <div class="col-9">
                                                 {% for programme in project.ordered_programmes %}
                                                     {% if programme.active %}
                                                         {{ programme.make_label(user_classes="project-label")|safe }}
@@ -231,8 +231,8 @@
                                         {% set modules = desc.ordered_modules.all() if desc is not none else none %}
                                         {% if modules and modules|length > 0 %}
                                             <div class="row sm-gap-below vertical-top">
-                                                <div class="col-xs-3">Recommended modules</div>
-                                                <div class="col-xs-9">
+                                                <div class="col-3">Recommended modules</div>
+                                                <div class="col-9">
                                                     {% for module in modules %}
                                                         {% if module.active %}
                                                             {{ module.make_label(user_classes="project-label")|safe }}
@@ -252,12 +252,12 @@
                                     {% endif %}
 
                                     <div class="row vertical-top">
-                                        <div class="col-xs-3">Supervision team</div>
-                                        <div class="col-xs-9">
+                                        <div class="col-3">Supervision team</div>
+                                        <div class="col-9">
                                             {% if desc %}
                                                 {% for role in desc.team %}
                                                     {% set style = role.make_CSS_style() %}
-                                                    <span class="label label-default project-label"
+                                                    <span class="badge badge-secondary project-label"
                                                           {% if style %}style="{{ style }}"{% endif %}>{{ role.name }}</span>
                                                 {% endfor %}
                                             {% endif %}
@@ -268,11 +268,11 @@
                         </div>
 
                         {% if desc.review_only %}
-                            <div class="panel panel-default">
-                                <div class="panel-heading">
+                            <div class="card mt-3 mb-3">
+                                <div class="card-header">
                                     This project is a <strong>literature review</strong>
                                 </div>
-                                <div class="panel-body">
+                                <div class="card-body">
                                     <p>Literature reviews are marked in the same way as conventional projects.
                                     An outstanding original literature review will attract the same credit
                                     as any other outstanding project.</p>
@@ -309,31 +309,33 @@
 
                 {% if allow_approval %}
                     <hr class="intro-divider">
-                    <div class="well" style="margin-top: 15px;">
-                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int, all_workflow=0) }}"
-                           class="btn btn-sm {% if all_workflow %}btn-default{% else %}btn-primary{% endif %}">
-                            Show workflow events only from this year
-                       </a>
-                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int, all_workflow=1) }}"
-                           class="btn btn-sm {% if all_workflow %}btn-primary{% else %}btn-default{% endif %}">
-                            Show workflow events from all years
-                       </a>
-                    </div>
-                        <div class="list-group">
-                            {% for item in workflow_history %}
-                                <div class="list-group-item">
-                                    {{ item.text_description|safe }}
-                                </div>
-                            {% else %}
-                                <div class="list-group-item">
-                                    No workflow events
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% if desc.workflow_state == desc.WORKFLOW_APPROVAL_QUEUED %}
+                    <div class="card mt-3 mb-3 card-body bg-well" style="margin-top: 15px;">
                         <div class="row">
-                            <div class="col-xs-12">
-                                <div class="pull-right">
+                            <div class="col-12">
+                                <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int, all_workflow=0) }}"
+                                   class="btn btn-sm {% if all_workflow %}btn-outline-secondary{% else %}btn-primary{% endif %}">
+                                    Show workflow events only from this year
+                               </a>
+                                <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int, all_workflow=1) }}"
+                                   class="btn btn-sm {% if all_workflow %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    Show workflow events from all years
+                               </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% for item in workflow_history %}
+                        <div class="card mt-3 mb-3 card-body bg-well text-left">
+                            {{ item.text_description|safe }}
+                        </div>
+                    {% else %}
+                        <div class="card mt-3 mb-3 card-body bg-well text-left">
+                            No workflow events
+                        </div>
+                    {% endfor %}
+                    {% if desc.workflow_state == desc.WORKFLOW_APPROVAL_QUEUED %}
+                        <div class="row m-3">
+                            <div class="col-12">
+                                <div class="float-right">
                                     <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}" class="btn btn-success">
                                         <i class="fa fa-check"></i> Approve
                                     </a>
@@ -344,13 +346,13 @@
                             </div>
                         </div>
                     {% elif desc.workflow_state == desc.WORKFLOW_APPROVAL_REJECTED %}
-                        <div class="row">
-                            <div class="col-xs-12">
-                                <div class="pull-right">
+                        <div class="row m-3">
+                            <div class="col-12">
+                                <div class="float-right">
                                     <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}" class="btn btn-success">
                                         <i class="fa fa-check"></i> Approve
                                     </a>
-                                    <a href="{{ url_for('project_approver.requeue', id=desc.id, url=url) }}" class="btn btn-default">
+                                    <a href="{{ url_for('project_approver.requeue', id=desc.id, url=url) }}" class="btn btn-secondary">
                                         <i class="fa fa-undo"></i> Re-queue
                                     </a>
                                     <a href="{{ url_for('project_approver.return_to_owner', id=desc.id, url=url) }}" class="btn btn-danger">
@@ -361,26 +363,30 @@
                     {% endif %}
                 {% endif %}
                 {% if show_comments %}
-                    <div class="well" style="margin-top: 15px;">
-                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=0, all_workflow=all_workflow|int) }}"
-                           class="btn btn-sm {% if all_comments %}btn-default{% else %}btn-primary{% endif %}">
-                            Show comments only from this year
-                       </a>
-                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=1, all_workflow=all_workflow|int) }}"
-                           class="btn btn-sm {% if all_comments %}btn-primary{% else %}btn-default{% endif %}">
-                            Show comments from all years
-                       </a>
+                    <div class="card mt-3 mb-3 card-body bg-well" style="margin-top: 15px;">
+                        <div class="row">
+                            <div class="col-12">
+                                <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=0, all_workflow=all_workflow|int) }}"
+                                   class="btn btn-sm {% if all_comments %}btn-outline-secondary{% else %}btn-primary{% endif %}">
+                                    Show comments only from this year
+                               </a>
+                                <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=1, all_workflow=all_workflow|int) }}"
+                                   class="btn btn-sm {% if all_comments %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    Show comments from all years
+                               </a>
+                            </div>
+                        </div>
                     </div>
                     {% for comment in comments %}
                         {% if comment.is_visible(current_user) %}
                             {% set owner_name = comment.format_name %}
                             {% set approvals_team_only = comment.visibility == comment.VISIBILITY_APPROVALS_TEAM %}
-                            <div class="panel panel-default" style="margin-top: 15px;">
-                                <div class="panel-heading">
+                            <div class="card mt-3 mb-3">
+                                <div class="card-header">
                                     <i class="fa fa-comment-o"></i> {{ owner_name|safe }}
                                     at {{ comment.creation_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                 </div>
-                                <div class="panel-body">
+                                <div class="card-body">
                                     {% if comment.deleted %}
                                         {% if comment.last_edit_timestamp %}
                                             <span class="text-muted"><em>{{ owner_name|safe }} deleted their comment at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</em></span>
@@ -397,53 +403,53 @@
                                     {% endif %}
                                 </div>
                                 {% if not comment.deleted and (comment.last_edit_timestamp or current_user.id == comment.owner_id or (is_approver and approvals_team_only)) %}
-                                    <div class="panel-footer">
+                                    <div class="card-footer">
                                         <div class="row vertical-align">
                                             {% if comment.last_edit_timestamp and current_user.id == comment.owner_id %}
-                                                <div class="col-xs-7">
+                                                <div class="col-7">
                                                     Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                                 </div>
-                                                <div class="col-xs-5">
-                                                    <div class="pull-right">
+                                                <div class="col-5">
+                                                    <div class="float-right">
                                                         {% if is_approver and approvals_team_only %}
-                                                            <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Publish</a>
+                                                            <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Publish</a>
                                                         {% endif %}
-                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Edit</a>
+                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Edit</a>
                                                         <a href="{{ url_for('project_approver.delete_comment', id=comment.id) }}" class="btn btn-sm btn-danger btn-table-block">Delete</a>
                                                     </div>
                                                 </div>
                                             {% elif comment.last_edit_timestamp and (is_approver and approvals_team_only) %}
-                                                <div class="col-xs-7">
+                                                <div class="col-7">
                                                     Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                                 </div>
-                                                <div class="col-xs-5">
-                                                    <div class="pull-right">
-                                                        <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Publish</a>
+                                                <div class="col-5">
+                                                    <div class="float-right">
+                                                        <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Publish</a>
                                                     </div>
                                                 </div>
                                             {% elif comment.last_edit_timestamp %}
-                                                <div class="col-xs-12">
+                                                <div class="col-12">
                                                     Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                                 </div>
                                             {% elif current_user.id == comment.owner_id %}
-                                                <div class="col-xs-12">
-                                                    <div class="pull-right">
+                                                <div class="col-12">
+                                                    <div class="float-right">
                                                         {% if is_approver and approvals_team_only %}
-                                                            <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Publish</a>
+                                                            <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Publish</a>
                                                         {% endif %}
-                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Edit</a>
+                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Edit</a>
                                                         <a href="{{ url_for('project_approver.delete_comment', id=comment.id) }}" class="btn btn-sm btn-danger btn-table-block">Delete</a>
                                                     </div>
                                                 </div>
                                             {% elif is_approver and approvals_team_only %}
-                                                <div class="col-xs-12">
-                                                    <div class="pull-right">
-                                                        <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Publish</a>
+                                                <div class="col-12">
+                                                    <div class="float-right">
+                                                        <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Publish</a>
                                                     </div>
                                                 </div>
                                             {% else %}
-                                                <div class="col-xs-12">
-                                                    <span class="label label-danger">Unknown comment configuration</span>
+                                                <div class="col-12">
+                                                    <span class="badge badge-danger">Unknown comment configuration</span>
                                                 </div>
                                             {% endif %}
                                         </div>
@@ -452,18 +458,18 @@
                             </div>
                         {% endif %}
                     {% endfor %}
-                    <div class="well" style="margin-top: 15px;">
-                        {{ wtf.form_field(form.comment) }}
+                    <div class="card mt-3 mb-3 card-body bg-well" style="margin-top: 15px;">
+                        {{ wtf.render_field(form.comment) }}
                         {% if is_approver %}
-                            {{ wtf.form_field(form.limit_visibility) }}
+                            {{ wtf.render_field(form.limit_visibility) }}
                         {% endif %}
                         <div class="row vertical-align">
-                            <div class="col-xs-12">
-                                <div class="pull-right">
+                            <div class="col-12">
+                                <div class="float-right">
                                     {% if desc and current_user.has_role('admin') or current_user.has_role('root') %}
                                         <a href="{{ url_for('project_approver.clean_comments', id=desc.id) }}" class="btn btn-warning">Remove deleted comments</a>
                                     {% endif %}
-                                    {{ wtf.form_field(form.post_comment, button_map={'post_comment': 'primary'}) }}
+                                    {{ wtf.render_field(form.post_comment, button_map={'post_comment': 'primary'}) }}
                                 </div>
                             </div>
                         </div>
@@ -475,22 +481,18 @@
                     </a>
                 {% endif %}
             </div>
-            <div class="col-xs-2"></div>
+            <div class="col-1"></div>
         </div>
         {% if form %}
             </form>
         {% endif %}
     </div>
-    <nav class="navbar {% if real_user %}navbar-inverse{% else %}navbar-default{% endif %} navbar-fixed-bottom" role="navigation">
-        <div class="navbar-header footer-bar">
-            <div class="container">
-                <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} University of Sussex</span>
-                {% if real_user %}
-                    <span class="navbar-text small" style="float: right;">You
-                        are viewing as <i class="fa fa-user"></i>
-                        {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if current_user.theme == current_user.THEME_FLAT or current_user.theme == current_user.THEME_DARK %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
-                {% endif %}
-            </div>
-        </div>
+    <nav class="navbar navbar-expand {% if real_user %}navbar-dark bg-dark{% else %}navbar-light bg-light{% endif %} fixed-bottom" role="navigation">
+        <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} University of Sussex</span>
+        {% if real_user %}
+            <span class="navbar-text small" style="float: right;">You
+                are viewing as <i class="fa fa-user"></i>
+                {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if theme == 'flat' or theme == 'dark' %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
+        {% endif %}
     </nav>
 {% endblock %}

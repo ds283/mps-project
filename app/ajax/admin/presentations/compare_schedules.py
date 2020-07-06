@@ -21,42 +21,42 @@ _source = \
 {% macro show_changes(s, t) %}
     {% for assessor in s.assessors: %}
         {% if assessor not in t.assessors: %}
-            <span class="label label-danger"><i class="fa fa-minus"></i> Assessor: {{ assessor.user.name }}</span>
+            <span class="badge badge-danger"><i class="fa fa-minus"></i> Assessor: {{ assessor.user.name }}</span>
         {% endif %}
     {% endfor %}
     {% for talk in s.talks %}
         {% if talk not in t.talks %}
-            <span class="label label-danger"><i class="fa fa-minus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
+            <span class="badge badge-danger"><i class="fa fa-minus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
         {% endif %}
     {% endfor %}
 {% endmacro %}
 {% if op == 'move' %}
     <div>
-        <span class="label label-warning">MOVE FROM</span>
+        <span class="badge badge-warning">MOVE FROM</span>
         {{ slot_id(s) }}
     </div>
     {{ show_changes(s, t) }}
 {% elif op == 'edit' %}
     <div>
-        <span class="label label-primary">CHANGE FROM</span>
+        <span class="badge badge-primary">CHANGE FROM</span>
         {{ slot_id(s) }}
     </div>
     {{ show_changes(s, t) }}
 {% elif op == 'add' %}
-    <span class="label label-default">No counterpart</span>
+    <span class="badge badge-secondary">No counterpart</span>
 {% elif op == 'delete' %}
     <div>
-        <span class="label label-danger">DELETE</span>
+        <span class="badge badge-danger">DELETE</span>
         {{ slot_id(s) }}
     </div>  
     {% for assessor in s.assessors %}
-        <span class="label label-danger"><i class="fa fa-minus"></i> Assessor: {{ assessor.user.name }}</span>
+        <span class="badge badge-danger"><i class="fa fa-minus"></i> Assessor: {{ assessor.user.name }}</span>
     {% endfor %}
     {% for talk in s.talks %}
-        <span class="label label-danger"><i class="fa fa-minus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
+        <span class="badge badge-danger"><i class="fa fa-minus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
     {% endfor %}
 {% else %}
-    <span class="label label-danger">UNKNOWN DIFF OPERATION</span>
+    <span class="badge badge-danger">UNKNOWN DIFF OPERATION</span>
 {% endif %}
 """
 
@@ -71,41 +71,41 @@ _target = \
 {% macro show_changes(s, t) %}
     {% for assessor in t.assessors: %}
         {% if assessor not in s.assessors: %}
-            <span class="label label-success"><i class="fa fa-plus"></i> Assessor: {{ assessor.user.name }}</span>
+            <span class="badge badge-success"><i class="fa fa-plus"></i> Assessor: {{ assessor.user.name }}</span>
         {% endif %}
     {% endfor %}
     {% for talk in t.talks %}
         {% if talk not in s.talks %}
-            <span class="label label-success"><i class="fa fa-plus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
+            <span class="badge badge-success"><i class="fa fa-plus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
         {% endif %}
     {% endfor %}
 {% endmacro %}
 {% if op == 'move' %}
     <div>
-        <span class="label label-warning">MOVE TO</span>
+        <span class="badge badge-warning">MOVE TO</span>
         {{ slot_id(t) }}
     </div>
     {{ show_changes(s, t) }}
 {% elif op == 'edit' %}
     <div>
-        <span class="label label-primary">CHANGE TO</span>
+        <span class="badge badge-primary">CHANGE TO</span>
     </div>
     {{ show_changes(s, t) }}
 {% elif op == 'add' %}
     <div>
-        <span class="label label-success">ADD</span>
+        <span class="badge badge-success">ADD</span>
         {{ slot_id(t) }}
     </div>
     {% for assessor in t.assessors %}
-        <span class="label label-success"><i class="fa fa-plus"></i> Assessor: {{ assessor.user.name }}</span>
+        <span class="badge badge-success"><i class="fa fa-plus"></i> Assessor: {{ assessor.user.name }}</span>
     {% endfor %}
     {% for talk in t.talks %}
-        <span class="label label-success"><i class="fa fa-plus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
+        <span class="badge badge-success"><i class="fa fa-plus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
     {% endfor %}
 {% elif op == 'delete' %}
-    <span class="label label-default">No counterpart</span>
+    <span class="badge badge-secondary">No counterpart</span>
 {% else %}
-    <span class="label label-danger">UNKNOWN DIFF OPERATION</span>
+    <span class="badge badge-danger">UNKNOWN DIFF OPERATION</span>
 {% endif %}
 """
 
@@ -113,23 +113,18 @@ _target = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button"
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.merge_change_schedule', source_id=t.id if t is not none else -1, target_id=s.id if s is not none else -1, source_sched=tid, target_sched=sid) }}">
-                <i class="fa fa-chevron-circle-left"></i> Apply change to source
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.merge_change_schedule', source_id=s.id if s is not none else -1, target_id=t.id if t is not none else -1, source_sched=sid, target_sched=tid) }}">
-                <i class="fa fa-chevron-circle-right"></i> Revert change in target
-            </a>
-        </li>
-    </ul>
+    <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item" href="{{ url_for('admin.merge_change_schedule', source_id=t.id if t is not none else -1, target_id=s.id if s is not none else -1, source_sched=tid, target_sched=sid) }}">
+            <i class="fa fa-chevron-circle-left"></i> Apply change to source
+        </a>
+        <a class="dropdown-item" href="{{ url_for('admin.merge_change_schedule', source_id=s.id if s is not none else -1, target_id=t.id if t is not none else -1, source_sched=sid, target_sched=tid) }}">
+            <i class="fa fa-chevron-circle-right"></i> Revert change in target
+        </a>
+    </div>
 </div>
 """
 

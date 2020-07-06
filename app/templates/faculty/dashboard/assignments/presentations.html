@@ -14,11 +14,9 @@
                 {% if slot.belongs_to(period) %}
                     {% set ns.count = ns.count + 1 %}
                     <p>
-                        <h4>
-                            <span class="label label-primary">{{ slot.date_as_string }}</span>
-                            <span class="label label-info">{{ slot.session_type_string }}</span>
-                            <span class="label label-info">{{ slot.room_full_name }}</span>
-                        </h4>
+                        <span class="badge badge-info">{{ slot.date_as_string }}</span>
+                        <span class="badge badge-info">{{ slot.session_type_string }}</span>
+                        <span class="badge badge-info">{{ slot.room_full_name }}</span>
                     </p>
                     <table class="table table-striped">
                         <thead>
@@ -47,31 +45,30 @@
                                             </a>
                                             <div>
                                                 {% if submitted %}
-                                                    <span class="label label-success"><i class="fa fa-check"></i> Feedback submitted</span>
+                                                    <span class="badge badge-success"><i class="fa fa-check"></i> Feedback submitted</span>
                                                 {% elif not slot.owner.owner.is_feedback_open and not submitted %}
-                                                    <span class="label label-warning"><i class="fa fa-times"></i> Feedback missing</span>
+                                                    <span class="badge badge-warning"><i class="fa fa-times"></i> Feedback missing</span>
                                                 {% endif %}
                                             </div>
                                         </td>
                                         <td>
-                                            <div style="text-align: right;" class="pull-right">
+                                            <div style="text-align: right;" class="float-right">
                                                 <div class="dropdown">
-                                                    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                                    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                                                         Actions
-                                                        <span class="caret"></span>
                                                     </button>
-                                                    <ul class="dropdown-menu dropdown-menu-right">
-                                                        <li><a href="{{ url_for('documents.submitter_documents', sid=talk.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ talk.number_attachments }})...</a></li>
+                                                    <div class="dropdown-menu dropdown-menu-right">
+                                                        <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=talk.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ talk.number_attachments }})...</a>
                                                         {% if slot.feedback_state(faculty_id) > slot.FEEDBACK_NOT_YET %}
                                                             {% if slot.owner.owner.is_feedback_open or (not slot.owner.owner.is_feedback_open and not submitted) %}
                                                                 {% if valid %}
-                                                                    <li><a href="{{ url_for('faculty.view_feedback', id=talk.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> Preview feedback...</a></li>
+                                                                    <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=talk.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> Preview feedback...</a>
                                                                 {% else %}
-                                                                    <li><a href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=talk.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Edit feedback...</a></li>
+                                                                    <a class="dropdown-item" href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=talk.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Edit feedback...</a>
                                                                 {% endif %}
                                                             {% endif %}
                                                         {% endif %}
-                                                    </ul>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>

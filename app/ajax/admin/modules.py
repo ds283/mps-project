@@ -20,12 +20,12 @@ _code = \
 _status = \
 """
 {% if m.active %}
-    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
-    <span class="label label-info">First taught {{ m.first_taught }}</span>
+    <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
+    <span class="badge badge-info">First taught {{ m.first_taught }}</span>
 {% else %}
-    <span class="label label-default"><i class="fa fa-times"></i> Retired</span>
-    <span class="label label-info">First taught {{ m.first_taught }}</span>
-    <span class="label label-info">Last taught {{ m.last_taught }}</span>
+    <span class="badge badge-secondary"><i class="fa fa-times"></i> Retired</span>
+    <span class="badge badge-info">First taught {{ m.first_taught }}</span>
+    <span class="badge badge-info">Last taught {{ m.last_taught }}</span>
 {% endif %}
 """
 
@@ -33,31 +33,26 @@ _status = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-right">
         {% set disabled = not m.active %}
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.edit_module', id=m.id) }}"{% endif %}>
-                <i class="fa fa-pencil"></i> Edit details...
-            </a>
-        </li>
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_module', id=m.id) }}"{% endif %}>
+            <i class="fa fa-pencil"></i> Edit details...
+        </a>
 
         {% if m.active %}
-            <li><a href="{{ url_for('admin.retire_module', id=m.id) }}">
+            <a class="dropdown-item" href="{{ url_for('admin.retire_module', id=m.id) }}">
                 <i class="fa fa-wrench"></i> Retire
-            </a></li>
+            </a>
         {% else %}
             {% set disabled = m.available %}
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('admin.unretire_module', id=m.id) }}"{% endif %}>
-                    <i class="fa fa-wrench"></i> Unretire
-                </a>
-            </li>
+            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.unretire_module', id=m.id) }}"{% endif %}>
+                <i class="fa fa-wrench"></i> Unretire
+            </a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 

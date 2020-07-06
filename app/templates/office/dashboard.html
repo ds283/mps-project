@@ -11,8 +11,8 @@
     <ul class="nav nav-pills dashboard-nav">
         {% set warning = root_data['warning'] %}
         {% set messages = root_data['messages'] %}
-        <li {% if pane == 'overview' %}class="active"{% endif %}>
-            <a href="{{ url_for('office.dashboard', pane='overview') }}">
+        <li class="nav-item">
+            <a class="nav-link {% if pane == 'overview' %}active{% endif %}" href="{{ url_for('office.dashboard', pane='overview') }}">
                 {% if warning or (messages is not none and messages|length > 0) %}
                     <i class="fa fa-exclamation-triangle"></i>
                 {% endif %}
@@ -25,14 +25,14 @@
         {%- set user_warning = (user_num_rejected > 0) if user_num_rejected is not none else false -%}
         {%- set project_warning = (project_num_rejected > 0) if project_num_rejected is not none else false -%}
         {% if is_user_approver or is_project_approver or (user_warning and (is_manage_users or is_root)) %}
-            <li {% if pane == 'approve' %}class="active"{% endif %}>
-                <a href="{{ url_for('office.dashboard', pane='approve') }}">
+            <li class="nav-item">
+                <a class="nav-link {% if pane == 'approve' %}active{% endif %}" href="{{ url_for('office.dashboard', pane='approve') }}">
                     {% if user_warning or project_warning %}
                         <i class="fa fa-exclamation-triangle"></i>
                     {% endif %}
                     Approvals
                     {% if approve_total > 0 %}
-                        <span class="badge badge-info">{{ approve_total }}</span>
+                        <span class="badge badge-pill badge-light">{{ approve_total }}</span>
                     {% endif %}
                 </a>
             </li>
@@ -46,10 +46,10 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
+        <div class="col-1"></div>
+        <div class="col-10">
             {% if pane == 'overview' %}
-                <div class="well">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     {{ admin_dashboard_card(root_data) }}
                 </div>
             {% endif %}
@@ -63,6 +63,6 @@
                 {% endif %}
             {% endif %}
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

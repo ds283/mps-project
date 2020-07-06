@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
 
 {% extends "security/index.html" %}
@@ -26,14 +26,14 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        <div class="well">
-            {{ wtf.form_field(form.name) }}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.name) }}
         </div>
 
-        <div class="well {% if form.submission_periods.errors %}has-error{% endif %}">
+        <div class="card mt-3 mb-3 card-body bg-well {% if form.submission_periods.errors %}has-error{% endif %}">
             <p>Select the submission periods for which project presentations will be given</p>
             {% for widget in form.submission_periods %}
-                {{ wtf.form_field(widget) }}
+                {{ wtf.render_field(widget) }}
             {% else %}
                 <div class="has-error">
                     <p class="help-block">All available submission periods have already been assigned</p>
@@ -46,7 +46,7 @@
             {% endif %}
         </div>
 
-        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

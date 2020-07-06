@@ -16,24 +16,24 @@ _name = \
 <a href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
 <div>
     {% if a.confirmed %}
-        <span class="label label-success">Confirmed</span>
+        <span class="badge badge-success">Confirmed</span>
     {% else %}
-        <span class="label label-danger">Not confirmed</span>
+        <span class="badge badge-danger">Not confirmed</span>
     {% endif %}
     {% if slot.session.faculty_ifneeded(a.faculty_id) %}
-        <span class="label label-warning">If needed</span>
+        <span class="badge badge-warning">If needed</span>
     {% endif %}
     {% set rec = slot.owner %}
     {% set count = rec.get_number_faculty_slots(a.faculty_id) %}
     {% set pl = 's' %}{% if count == 1 %}{% set pl = '' %}{% endif %}
-    <span class="label label-info">{{ count }} session{{ pl }}</span>
+    <span class="badge badge-info">{{ count }} session{{ pl }}</span>
     {% if slot.assessor_has_overlap(a.faculty_id) %}
-        <span class="label label-success"><i class="fa fa-check"></i> Pool overlap</span>
+        <span class="badge badge-success"><i class="fa fa-check"></i> Pool overlap</span>
     {% else %}
-        <span class="label label-danger"><i class="fa fa-times"></i> No pool overlap</span>
+        <span class="badge badge-danger"><i class="fa fa-times"></i> No pool overlap</span>
     {% endif %}
     {% if slot.assessor_makes_valid(a.faculty_id) %}
-        <span class="label label-success"><i class="fa fa-check"></i> Makes valid</span>
+        <span class="badge badge-success"><i class="fa fa-check"></i> Makes valid</span>
     {% endif %}
 </div>
 """
@@ -50,20 +50,17 @@ _sessions = \
 {% endmacro %}
 {% for slot in slots %}
     <div class="row vertical-top" style="margin-bottom: 3px;">
-        <div class="col-xs-3">
+        <div class="col-3">
             {% set style = slot.session.get_label_type() %}
             <div class="dropdown schedule-assign-button" style="display: inline-block;">
-                <a class="label {% if style is not none %}{{ style }}{% else %}label-default{% endif %}" type="button" data-toggle="dropdown">
+                <a class="badge {% if style is not none %}{{ style }}{% else %}badge-secondary{% endif %}" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                     {{ slot.session.short_date_as_string }} {{ slot.session.session_type_string }}
-                    <span class="caret"></span>
                 </a>
-                <ul class="dropdown-menu">
-                    <li>
-                        <a href="{{ url_for('admin.schedule_adjust_assessors', id=slot.id, url=url, text=text) }}">
-                            Reassign assessors...
-                        </a>
-                    </li>
-                </ul>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_assessors', id=slot.id, url=url, text=text) }}">
+                        Reassign assessors...
+                    </a>
+                </div>
             </div>
             {{ slot.room.label|safe }}
             {% if not slot.is_valid %}
@@ -72,37 +69,34 @@ _sessions = \
                 {% set errors = slot.errors %}
                 {% set warnings = slot.warnings %}
                 {% if errors|length == 1 %}
-                    <span class="label label-danger">1 error</span>
+                    <span class="badge badge-danger">1 error</span>
                 {% elif errors|length > 1 %}
-                    <span class="label label-danger">{{ errors|length }} errors</span>
+                    <span class="badge badge-danger">{{ errors|length }} errors</span>
                 {% else %}
-                    <span class="label label-success">0 errors</span>
+                    <span class="badge badge-success">0 errors</span>
                 {% endif %}
                 {% if warnings|length == 1 %}
-                    <span class="label label-warning">1 warning</span>
+                    <span class="badge badge-warning">1 warning</span>
                 {% elif warnings|length > 1 %}
-                    <span class="label label-warning">{{ warnings|length }} warnings</span>
+                    <span class="badge badge-warning">{{ warnings|length }} warnings</span>
                 {% else %}
-                    <span class="label label-success">0 warnings</span>
+                    <span class="badge badge-success">0 warnings</span>
                 {% endif %}
             {% endif %}
         </div>
-        <div class="col-xs-9">
+        <div class="col-9">
             {% for talk in slot.talks %}
                 {% set style = talk.pclass.make_CSS_style() %}
                 <div class="dropdown schedule-assign-button" style="display: inline-block;">
-                    <a class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                    <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                         {{ talk.owner.student.user.last_name }}
                         ({{ talk.project.owner.user.last_name }} &ndash; {{ truncate_name(talk.project.name) }})
-                        <span class="caret"></span>
                     </a>
-                    <ul class="dropdown-menu">
-                        <li>
-                            <a href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">
-                                Reassign assessors...
-                            </a>
-                        </li>
-                    </ul>
+                    <div class="dropdown-menu">
+                        <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">
+                            Reassign assessors...
+                        </a>
+                    </div>
                 </div>
                 {% if slot.session.submitter_unavailable(talk.id) %}
                     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
@@ -138,15 +132,15 @@ _sessions = \
         </div>
     </div>
 {% else %}
-    <span class="label label-default">No assignment</span>
+    <span class="badge badge-secondary">No assignment</span>
 {% endfor %}
 """
 
 
 _menu = \
 """
-<div class="pull-right">
-    <a href="{{ url_for('admin.schedule_attach_assessor', slot_id=slot.id, fac_id=a.faculty_id) }}" class="btn btn-default btn-sm"><i class="fa fa-plus"></i> Attach</a>
+<div class="float-right">
+    <a href="{{ url_for('admin.schedule_attach_assessor', slot_id=slot.id, fac_id=a.faculty_id) }}" class="btn btn-secondary btn-sm"><i class="fa fa-plus"></i> Attach</a>
 </div>
 """
 

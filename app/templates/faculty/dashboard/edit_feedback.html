@@ -1,6 +1,6 @@
 {% extends "security/index.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% block title %}
     {{ title }}
@@ -31,18 +31,18 @@
         {% endif %}
 
         {% if form.assessor %}
-            <div class="well">
-                {{ wtf.form_field(form.assessor) }}
+            <div class="card mt-3 mb-3 card-body bg-well">
+                {{ wtf.render_field(form.assessor) }}
             </div>
         {% endif %}
 
-        <div class="well">
-            {{ wtf.form_field(form.positive) }}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.positive) }}
         </div>
-        <div class="well">
-            {{ wtf.form_field(form.negative) }}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.negative) }}
         </div>
 
-        {{ wtf.form_field(form.save_feedback) }}
+        {{ wtf.render_field(form.save_feedback) }}
     </form>
 {% endblock %}

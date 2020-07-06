@@ -3,11 +3,11 @@
 {% block scripts %}
     {{ super() }}
 
-    <link href="https://cdn.pydata.org/bokeh/release/bokeh-2.0.2.min.css" rel="stylesheet" type="text/css">
+    <link href="https://cdn.pydata.org/bokeh/release/bokeh-2.1.1.min.css" rel="stylesheet" type="text/css">
     {#    <link href="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.css" rel="stylesheet" type="text/css">#}
     {#    <link href="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.css" rel="stylesheet" type="text/css">#}
 
-    <script src="https://cdn.pydata.org/bokeh/release/bokeh-2.0.2.min.js"></script>
+    <script src="https://cdn.pydata.org/bokeh/release/bokeh-2.1.1.min.js"></script>
     {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>#}
     {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.js"></script>#}
 {% endblock %}
@@ -22,70 +22,70 @@
     {% endif %}
 
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
-            <div class="well well-lg">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card mt-3 mb-3 card-body bg-well">
                 <p><span class="dashboard-project-title">{{ project.name }}</span></p>
                 <p>{{ config.year }}&ndash;{{ config.year+1 }} |
                     <a href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a> |
                     {{ config.project_class.name }}</p>
                 <hr class="intro-divider">
                 <div class="row vertical-top">
-                    <div class="col-xs-3">
+                    <div class="col-3">
                         <div class="list-group">
                             <div class="list-group-item list-group-item-info">
                                 {% set R = project.popularity_rank(live=require_live) %}
                                 {% if R is not none %}
                                     {% set rank, total = R %}
-                                    Popularity rank <span class="badge">{{ rank }}/{{ total }}</span>
+                                    Popularity rank <span class="badge badge-light badge-pill">{{ rank }}/{{ total }}</span>
                                 {% else %}
                                     Popularity rank updating...
                                 {% endif %}
                             </div>
                         </div>
                     </div>
-                    <div class="col-xs-3">
+                    <div class="col-3">
                         <div class="list-group">
                             <div class="list-group-item">
-                                Views <span class="badge">{{ project.page_views }}</span>
+                                Views <span class="badge badge-light badge-pill">{{ project.page_views }}</span>
                             </div>
                             <div class="list-group-item">
                                 {% set R = project.views_rank(live=require_live) %}
                                 {% if R is not none %}
                                     {% set rank, total = R %}
-                                    View rank <span class="badge">{{ rank }}/{{ total }}</span>
+                                    View rank <span class="badge badge-light badge-pill">{{ rank }}/{{ total }}</span>
                                 {% else %}
                                     View rank updating...
                                 {% endif %}
                             </div>
                         </div>
                     </div>
-                    <div class="col-xs-3">
+                    <div class="col-3">
                         <div class="list-group">
                             <div class="list-group-item">
-                                Bookmarks <span class="badge">{{ project.number_bookmarks }}</span>
+                                Bookmarks <span class="badge badge-light badge-pill">{{ project.number_bookmarks }}</span>
                             </div>
                             <div class="list-group-item">
                                 {% set R = project.bookmarks_rank(live=require_live) %}
                                 {% if R is not none %}
                                     {% set rank, total = R %}
-                                    Bookmarks rank <span class="badge">{{ rank }}/{{ total }}</span>
+                                    Bookmarks rank <span class="badge badge-light badge-pill">{{ rank }}/{{ total }}</span>
                                 {% else %}
                                     Bookmarks rank updating...
                                 {% endif %}
                             </div>
                         </div>
                     </div>
-                    <div class="col-xs-3">
+                    <div class="col-3">
                         <div class="list-group">
                             <div class="list-group-item">
-                                Selections <span class="badge">{{ project.number_selections }}</span>
+                                Selections <span class="badge badge-light badge-pill">{{ project.number_selections }}</span>
                             </div>
                             <div class="list-group-item">
                                 {% set R = project.selections_rank(live=require_live) %}
                                 {% if R is not none %}
                                     {% set rank, total = R %}
-                                    Selections rank <span class="badge">{{ rank }}/{{ total }}</span>
+                                    Selections rank <span class="badge badge-light badge-pill">{{ rank }}/{{ total }}</span>
                                 {% else %}
                                     Selections rank updating...
                                 {% endif %}
@@ -95,23 +95,27 @@
                 </div>
             </div>
             <ul class="nav nav-tabs">
-                <li {% if pane == 'popularity' %}class="active"{% endif %}>
-                    <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}">
+                <li class="nav-item">
+                    <a class="nav-link {% if pane == 'popularity' %}active{% endif %}"
+                       href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}">
                         Popularity
                     </a>
                 </li>
-                <li {% if pane == 'views' %}class="active"{% endif %}>
-                    <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}">
+                <li class="nav-item">
+                    <a class="nav-link {% if pane == 'views' %}active{% endif %}"
+                       href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}">
                         Page views
                     </a>
                 </li>
-                <li {% if pane == 'bookmarks' %}class="active"{% endif %}>
-                    <a href="{{ url_for('reports.liveproject_analytics', pane='bookmarks', proj_id=project.id, url=url, text=text) }}">
+                <li class="nav-item">
+                    <a class="nav-link {% if pane == 'bookmarks' %}active{% endif %}"
+                       href="{{ url_for('reports.liveproject_analytics', pane='bookmarks', proj_id=project.id, url=url, text=text) }}">
                         Bookmarks
                     </a>
                 </li>
-                <li {% if pane == 'selections' %}class="active"{% endif %}>
-                    <a href="{{ url_for('reports.liveproject_analytics', pane='selections', proj_id=project.id, url=url, text=text) }}">
+                <li class="nav-item">
+                    <a class="nav-link {% if pane == 'selections' %}active{% endif %}"
+                       href="{{ url_for('reports.liveproject_analytics', pane='selections', proj_id=project.id, url=url, text=text) }}">
                         Selections
                     </a>
                 </li>
@@ -119,7 +123,7 @@
             {% block graphblock %}
             {% endblock %}
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 
     {% if text and url %}

@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
 
 {% extends "security/index.html" %}
@@ -18,33 +18,33 @@
     {{ form.hidden_tag() }}
 
     {% if record.pclass.uses_supervisor %}
-        <div class="well">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p><strong>Role: Supervisor</strong></p>
-            {{ wtf.form_field(form.supervisor_state) }}
-            {{ wtf.form_field(form.supervisor_reenroll) }}
-            {{ wtf.form_field(form.supervisor_comment) }}
+            {{ wtf.render_field(form.supervisor_state) }}
+            {{ wtf.render_field(form.supervisor_reenroll) }}
+            {{ wtf.render_field(form.supervisor_comment) }}
         </div>
     {% endif %}
 
     {% if record.pclass.uses_marker %}
-        <div class="well">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p><strong>Role: 2nd marker</strong></p>
-            {{ wtf.form_field(form.marker_state) }}
-            {{ wtf.form_field(form.marker_reenroll) }}
-            {{ wtf.form_field(form.marker_comment) }}
+            {{ wtf.render_field(form.marker_state) }}
+            {{ wtf.render_field(form.marker_reenroll) }}
+            {{ wtf.render_field(form.marker_comment) }}
         </div>
     {% endif %}
 
     {% if record.pclass.uses_presentations %}
-        <div class="well">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p><strong>Role: Presentation assessor</strong></p>
-            {{ wtf.form_field(form.presentations_state) }}
-            {{ wtf.form_field(form.presentations_reenroll) }}
-            {{ wtf.form_field(form.presentations_comment) }}
+            {{ wtf.render_field(form.presentations_state) }}
+            {{ wtf.render_field(form.presentations_reenroll) }}
+            {{ wtf.render_field(form.presentations_comment) }}
         </div>
     {% endif %}
 
-    {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+    {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

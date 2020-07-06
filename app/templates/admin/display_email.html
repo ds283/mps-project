@@ -1,4 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% extends "base_app.html" %}
 
@@ -8,48 +8,48 @@
 
 {% block bodyblock %}
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
-            <div class="panel panel-primary">
-                <div class="panel-heading">{{ email.subject }}</div>
-                <div class="panel-body email-display">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card mt-3 mb-3">
+                <div class="card-header bg-primary text-white">{{ email.subject }}</div>
+                <div class="card-body email-display">
                     <p>To:
                         {% if email.user %}
                             <strong>{{ email.user.name }}</strong> &lt;{{ email.user.email }}&gt;</p>
                         {% elif email.recipient %}
                             <strong>{{ email.recipient }}</strong>
                         {% else %}
-                            <span class="label label-danger">Invalid</span>
+                            <span class="badge badge-danger">Invalid</span>
                         {% endif %}
                     <p>Sent: <strong>{{ email.send_date.strftime("%a %d %b %Y %H:%M:%S") }}</strong></p>
                     <p>Subject: <strong>{{ email.subject }}</strong></p>
                     <hr class="intro-divider">
                     <pre>{{ email.body }}</pre>
                 </div>
-                <div class="panel-footer email-display">
+                <div class="card-footer email-display">
                     <h4>HTML content</h4>
                     {{ email.html|safe }}
                 </div>
             </div>
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-1"></div>
     </div>
     <div class="row">
-        <div class="col-xs-2"></div>
-        <div class="col-xs-8">
+        <div class="col-1"></div>
+        <div class="col-10">
             <div class="row vertical-align">
-                <div class="col-xs-6">
+                <div class="col-6">
                     <a href="{{ url_for('admin.email_log') }}">
                         <i class="fa fa-backward"></i> Return to email log
                     </a>
                 </div>
-                <div class="col-xs-6">
-                    <div class="pull-right">
+                <div class="col-6">
+                    <div class="float-right">
                         <a href="{{ url_for('admin.delete_email', id=email.id) }}" class="btn btn-danger">Delete</a>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-xs-2"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

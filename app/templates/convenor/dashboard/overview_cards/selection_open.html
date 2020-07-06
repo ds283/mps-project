@@ -1,104 +1,116 @@
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import date_field %}
 
 {% macro selection_open(config, change_form) %}
-    <div class="panel panel-success">
-        <div class="panel-heading">
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-success text-white">
             <strong>Student selections are currently live</strong>
             {% if config.live_deadline %}
                 &ndash;
                 deadline {{ config.live_deadline.strftime("%a %d %b %Y") }}
             {% endif %}
         </div>
-        <div class="panel-body">
+        <div class="card-body">
             {% set selector_data = config.selector_data %}
             {% set submitted = selector_data['have_submitted'] %}
             {% set bookmarks = selector_data['have_bookmarks'] %}
             {% set missing = selector_data['missing'] %}
             {% set total = selector_data['total'] %}
             {% set outstanding_confirm = selector_data['outstanding_confirm'] %}
-            <div class="row vertical-top">
-                <div class="col-xs-4">
+            <div class="row vertical-top mb-2">
+                <div class="col-4">
                     <div class="list-group">
                         <div class="list-group-item {% if submitted == total %}list-group-item-success{% else %}list-group-item-secondary"{% endif %}>
                             Submitted
                             <a href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='submitted') }}">(Show...)</a>
-                            <span class="badge">{{ submitted }}/{{ total }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ submitted }}/{{ total }}</span>
                         </div>
                         <div class="list-group-item {% if outstanding_confirm > 0 %}list-group-item-danger{% else %}list-group-item-success{% endif %}">
                             Confirmation requests
                             <a href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">(Show...)</a>
-                            <span class="badge">{{ outstanding_confirm }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ outstanding_confirm }}</span>
                         </div>
                     </div>
                 </div>
-                <div class="col-xs-4">
+                <div class="col-4">
                     <div class="list-group">
                         <div class="list-group-item {% if bookmarks > 0 %}list-group-item-primary{% else %}list-group-item-secondary{% endif %}">
                             Has bookmarks
                             <a href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='bookmarks') }}">(Show...)</a>
-                            <span class="badge">{{ bookmarks }}/{{ total }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ bookmarks }}/{{ total }}</span>
                         </div>
                     </div>
                 </div>
-                <div class="col-xs-4">
+                <div class="col-4">
                     <div class="list-group">
                         <div class="list-group-item {% if bookmarks > 0 %}list-group-item-primary{% else %}list-group-item-secondary{% endif %}">
                             No bookmarks
                             <a href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">(Show...)</a>
-                            <span class="badge">{{ missing}}/{{ total }}</span>
+                            <span class="badge badge-secondary badge-pill">{{ missing}}/{{ total }}</span>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="row vertical-top">
-                <div class="col-xs-12">
+            <div class="row vertical-top mb-2">
+                <div class="col-12">
                     {% if submitted == total %}
-                        <p>All students have submitted validated choices.</p>
-                        <p>
-                            It is safe to close selections.
-                            {% if total == 0 %}
-                                <a class="btn btn-sm btn-danger" href="{{ url_for('convenor.reverse_golive', config_id=config.id) }}" style="margin-left: 10px;">
-                                    Reverse Go Live to add more selectors
-                                </a>
-                            {% endif %}
-                        </p>
-                        <span class="label label-success"><i class="fa fa-check"></i> READY TO PROCEED</span>
+                        <div class="alert alert-success m-3">
+                            <p>All students have submitted validated choices.</p>
+                            <p>
+                                It is safe to close selections.
+                                {% if total == 0 %}
+                                    <a class="btn btn-sm btn-outline-danger" href="{{ url_for('convenor.reverse_golive', config_id=config.id) }}" style="margin-left: 10px;">
+                                        Reverse Go Live to add more selectors
+                                    </a>
+                                {% endif %}
+                            </p>
+                        </div>
                     {% elif missing == 0 %}
-                        <p>
+                        <div class="alert alert-info mt-3 mb-3">
                             Some students have not yet submitted a validated selection, but all students
                             have bookmark data.
-                        </p>
+                        </div>
                         {% if config.selection_open_to_all %}
-                            <p><strong>Selection for this project is available to all eligible students on an opt-in basis.</strong></p>
-                            <p>
-                                If selections are closed now, students who have not submitted a validated selection
-                                will be assumed not to have opted-in and will be ignored when performing
-                                automatic matching.
-                            </p>
+                            <div class="alert alert-warning mt-3 mb-3">
+                                <p>
+                                    <strong>Selection for this project is available to all eligible students on an opt-in basis.</strong>
+                                </p>
+                                <p>
+                                    <span class="badge badge-danger"><i class="fa fa-exclamation-triangle"></i></span>
+                                    If selections are closed now, students who have not submitted a validated selection
+                                    will be assumed not to have opted-in and will be ignored when performing
+                                    automatic matching.
+                                </p>
+                            </div>
                         {% else %}
-                            <p>
+                            <div class="alert alert-info mt-3 mb-3">
                                 If selections are closed now, bookmark data will be used when performing
                                 automatic matching for students who are missing a validated selection.
-                            </p>
+                            </div>
                         {% endif %}
-                        <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> PROCEED WITH CAUTION</span>
                     {% else %}
-                        <p>Some students are missing both a validated selection and bookmark data.</p>
+                        <div class="alert alert-warning mt-3 mb-3">
+                            <span class="badge badge-danger"><i class="fa fa-exclamation-triangle"></i></span>
+                            Some students are missing both a validated selection and bookmark data.
+                        </div>
                         {% if config.selection_open_to_all %}
-                            <p><strong>Selection for this project is available to all eligible students on an opt-in basis.</strong></p>
-                            <p>
-                                If selections are closed now, students who have not submitted a validated selection
-                                will be assumed not to have opted-in and will be ignored when performing
-                                automatic matching.
-                            </p>
+                            <div class="alert alert-warning mt-3 mb-3">
+                                <p>
+                                    <strong>Selection for this project is available to all eligible students on an opt-in basis.</strong>
+                                </p>
+                                <p>
+                                    <span class="badge badge-danger"><i class="fa fa-exclamation-triangle"></i></span>
+                                    If selections are closed now, students who have not submitted a validated selection
+                                    will be assumed not to have opted-in and will be ignored when performing
+                                    automatic matching.
+                                </p>
+                            </div>
                         {% else %}
-                            <p>
-                                If selections are closed now, these students will be allocated an arbitrary project
-                                during automated matching.
-                            </p>
+                            <div class="alert alert-info mt-3 mb-3">
+                                If selections are closed now, bookmark data will be used when performing
+                                automatic matching for students who are missing a validated selection.
+                            </div>
                         {% endif %}
-                        <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> PROCEED WITH CAUTION</span>
                     {% endif %}
                 </div>
             </div>
@@ -106,16 +118,16 @@
             <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}" method="POST" name="adjust_selection_deadline">
                 {{ change_form.hidden_tag() }}
                 {{ date_field(change_form.live_deadline) }}
-                {{ wtf.form_field(change_form.notify_convenor) }}
+                {{ wtf.render_field(change_form.notify_convenor) }}
                 <div class="row vertical-top">
-                    <div class="col-xs-12">
-                        <div class="pull-right">
+                    <div class="col-12">
+                        <div class="float-right">
                             <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
-                               class="btn btn-default grouped-button-margin">
+                               class="btn btn-secondary grouped-button-margin">
                                 Reset popularity data
                             </a>
-                            {{ wtf.form_field(change_form.change, button_map={'change': 'default'}) }}
-                            {{ wtf.form_field(change_form.close, button_map={'close': 'primary'}) }}
+                            {{ wtf.render_field(change_form.change, button_map={'change': 'secondary'}) }}
+                            {{ wtf.render_field(change_form.close, button_map={'close': 'primary'}) }}
                         </div>
                     </div>
                 </div>

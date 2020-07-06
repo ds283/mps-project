@@ -10,13 +10,13 @@
     {% set config = project.config %}
     {% set lifecycle = config.selector_lifecycle %}
     <div class="row">
-        <div class="col-xs-1"></div>
-        <div class="col-xs-10">
-            <div class="panel panel-default">
-                <div class="panel-heading">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card mt-3 mb-3">
+                <div class="card-header">
                     Viewing selecting students for <strong>{{ project.name }}</strong>
                 </div>
-                <div class="panel-body">
+                <div class="card-body">
                     {% if lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING %}
                         <div class="alert alert-info">
                             Selection hinting will become available once student selections are closed.
@@ -32,6 +32,6 @@
                 </a>
             </div>
         </div>
-        <div class="col-xs-1"></div>
+        <div class="col-1"></div>
     </div>
 {% endblock %}

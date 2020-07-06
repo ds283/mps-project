@@ -1,15 +1,15 @@
 {% extends "base_app.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css""/>
 
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
 
     {% if pane == 'users' %}
         <script>
@@ -60,13 +60,13 @@
 
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
-        <li {% if pane=='users' %}class="active"{% endif %}>
-            <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane='users', state_filter=state_filter) }}">
+        <li class="nav-item">
+            <a class="nav-link {% if pane=='users' %}active{% endif %}" href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane='users', state_filter=state_filter) }}">
                 User-based access control
             </a>
         </li>
-        <li {% if pane=='roles' %}class="active"{% endif %}>
-            <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane='roles', state_filter=state_filter) }}">
+        <li class="nav-item">
+            <a class="nav-link {% if pane=='roles' %}active{% endif %}" href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane='roles', state_filter=state_filter) }}">
                 Role-based access control
             </a>
         </li>
@@ -86,26 +86,30 @@
         </div>
     {% endif %}
 
-    <div class="well">
-        <p>Filter by state</p>
-        <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='all') }}"
-           class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
-            All
-        </a>
-        <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='access') }}"
-           class="btn btn-sm filter-btn {% if state_filter == 'access' %}btn-primary{% else %}btn-default{% endif %}">
-            Has access
-        </a>
-        <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='no-access') }}"
-           class="btn btn-sm filter-btn {% if state_filter == 'no-access' %}btn-primary{% else %}btn-default{% endif %}">
-            No access
-        </a>
+    <div class="card mt-3 mb-3 card-body bg-well">
+        <div class="row">
+            <div class="col-12">
+                <p>Filter by state</p>
+                <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='all') }}"
+                   class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    All
+                </a>
+                <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='access') }}"
+                   class="btn btn-sm filter-btn {% if state_filter == 'access' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    Has access
+                </a>
+                <a href="{{ url_for('documents.attachment_acl', attach_type=type, attach_id=attachment.id, url=url, text=text, pane=pane, state_filter='no-access') }}"
+                   class="btn btn-sm filter-btn {% if state_filter == 'no-access' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    No access
+                </a>
+            </div>
+        </div>
     </div>
 
-    <div class="panel panel-primary panel-primary-bg">
+    <div class="card mt-3 mb-3">
         {% if pane == 'users' %}
-            <div class="panel-heading">Edit user access control list for <strong>{{ asset.target_name if asset.target_name is defined else asset.filename }}</strong></div>
-            <div class="panel-body">
+            <div class="card-header bg-primary text-white">Edit user access control list for <strong>{{ asset.target_name if asset.target_name is defined else asset.filename }}</strong></div>
+            <div class="card-body">
                 <table id="user-acl-table" class="table table-striped table-bordered">
                     <thead>
                     <tr>
@@ -118,8 +122,8 @@
                 </table>
             </div>
         {% elif pane == 'roles' %}
-            <div class="panel-heading">Edit role-based access control list for <strong>{{ asset.target_name if asset.target_name is defined else asset.filename }}</strong></div>
-            <div class="panel-body">
+            <div class="card-header bg-primary text-white">Edit role-based access control list for <strong>{{ asset.target_name if asset.target_name is defined else asset.filename }}</strong></div>
+            <div class="card-body">
                 <table id="role-acl-table" class="table table-striped table-bordered">
                     <thead>
                     <tr>

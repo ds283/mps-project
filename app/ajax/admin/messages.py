@@ -14,54 +14,42 @@ from flask import render_template_string, jsonify, url_for
 _messages_pclasses = \
 """
 {% for pclass in message.project_classes %}
-    <span class="label label-info">{{ pclass.name }}</span>
+    <span class="badge badge-info">{{ pclass.name }}</span>
 {% else %}
-    <span class="label label-default">Broadcast</span>
+    <span class="badge badge-secondary">Broadcast</span>
 {% endfor %}
 """
 
 _messages_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
-        <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.edit_message', id=message.id) }}">
-                <i class="fa fa-pencil"></i> Edit message
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.delete_message', id=message.id) }}">
-                <i class="fa fa-trash"></i> Delete message
-            </a>
-        </li>
-        <li role="separator" class="divider"></li>
+    <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item" href="{{ url_for('admin.edit_message', id=message.id) }}">
+            <i class="fa fa-pencil"></i> Edit message
+        </a>
+        <a class="dropdown-item" href="{{ url_for('admin.delete_message', id=message.id) }}">
+            <i class="fa fa-trash"></i> Delete message
+        </a>
+
+        <div role="separator" class="dropdown-divider"></div>
         {% if message.dismissible %}
             {% set dismiss_count = message.dismissed_by.count() %}
             {% set dpl = 's' %}
-            {% if dismiss_count == 1 %}
-                {% set dpl = '' %}
-            {% endif %}
+            {% if dismiss_count == 1 %}{% set dpl = '' %}{% endif %}
             {% if dismiss_count > 0 %}
-                <li>
-                    <a href="{{ url_for('admin.reset_dismissals', id=message.id) }}">
-                        Reset {{ dismiss_count }} dismissal{{ dpl }}
-                    </a>
-                </li>
+                <a class="dropdown-item" href="{{ url_for('admin.reset_dismissals', id=message.id) }}">
+                    Reset {{ dismiss_count }} dismissal{{ dpl }}
+                </a>
             {% else %}
-                <li class="disabled">
-                    <a>No dismissals</a>
-                </li>
+                <a class="dropdown-item disabled">No dismissals</a>
             {% endif %}
         {% else %}
-            <li class="disabled">
-                <a>Not dismissible</a>
-            </li>
+            <a class="dropdown-item disabled">Not dismissible</a>
         {% endif %}
-    </ul>
+    </div>
 </div>
 """
 
@@ -79,7 +67,7 @@ def messages_data(messages):
              'pclass': render_template_string(_messages_pclasses, message=m),
              'title': '<a href="{url}">{msg}</a>'.format(msg=m.title,
                                                          url=url_for('admin.edit_message', id=m.id))
-                 if m.title is not None and len(m.title) > 0 else '<span class="label label-default">No title</span>',
+                 if m.title is not None and len(m.title) > 0 else '<span class="badge badge-secondary">No title</span>',
              'menu': render_template_string(_messages_menu, message=m)} for m in messages]
 
     return jsonify(data)

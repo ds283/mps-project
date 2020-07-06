@@ -14,11 +14,11 @@
 
         function toggleFilterState(e) {
             let elt = $(e.target)
-                .prev('.panel-heading')
+                .prev('.card-header')
                 .find("i.indicator");
-            elt.toggleClass('glyphicon-chevron-down glyphicon-chevron-up');
+            elt.toggleClass('fa-chevron-down fa-chevron-up');
 
-            if (elt.hasClass('glyphicon-chevron-up')) {
+            if (elt.hasClass('fa-chevron-up')) {
                 localStorage.setItem('mps-project-filter-open', 'true')
             }
             else {
@@ -53,9 +53,9 @@
             let filter_state = localStorage.getItem('mps-project-filter-open');
             if (filter_state === 'false') {
                 let icon = $('#accordion').find("i.indicator");
-                icon.toggleClass('glyphicon-chevron-down glyphicon-chevron-up');    // switch state; it's open by default
+                icon.toggleClass('fa-chevron-down fa-chevron-up');    // switch state; it's open by default
 
-                $('#collapseFilter').removeClass('in');
+                $('#collapseFilter').removeClass('show');
             }
 
             $('#accordion').on('hidden.bs.collapse', toggleFilterState);
@@ -67,46 +67,50 @@
 {% block bodyblock %}
     {% if config.live %}
         <div class="row">
-            <div class="col-xs-1"></div>
-            <div class="col-xs-10">
+            <div class="col-1"></div>
+            <div class="col-10">
                 <div class="alert alert-danger">
                     <p>This project class has already gone live for the current academic year.</p>
                     <p>Edits made in this section will not be reflected in the live project database this year.</p>
                 </div>
             </div>
-            <div class="col-xs-1"></div>
+            <div class="col-1"></div>
         </div>
     {% endif %}
 
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Projects attached to <strong>{{ pclass.name }}</strong></div>
-        <div class="panel-body">
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-primary text-white">Projects attached to <strong>{{ pclass.name }}</strong></div>
+        <div class="card-body">
             {{ filter_block(filter_record, groups, skill_groups, skill_list, 'convenor.clear_group_filters', 'convenor.add_group_filter', 'convenor.remove_group_filter', 'convenor.clear_skill_filters', 'convenor.add_skill_filter', 'convenor.remove_skill_filter') }}
 
-            <div class="well">
-                <p>Filter by approval status</p>
-                    <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='all') }}"
-                       class="btn btn-sm filter-btn {% if valid_filter is none or valid_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
-                        All
-                    </a>
-                    {% if pclass.require_confirm %}
-                        <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='pending') }}"
-                           class="btn btn-sm filter-btn {% if valid_filter == 'pending' %}btn-primary{% else %}btn-default{% endif %}">
-                            Pending
-                        </a>
-                    {% endif %}
-                    <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='valid') }}"
-                       class="btn btn-sm filter-btn {% if valid_filter == 'valid' %}btn-primary{% else %}btn-default{% endif %}">
-                        Approved
-                    </a>
-                    <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='not-valid') }}"
-                       class="btn btn-sm filter-btn {% if valid_filter == 'not-valid' %}btn-primary{% else %}btn-default{% endif %}">
-                        Queued
-                    </a>
-                    <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='reject') }}"
-                       class="btn btn-sm filter-btn {% if valid_filter == 'reject' %}btn-primary{% else %}btn-default{% endif %}">
-                        Rejected
-                    </a>
+            <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="row">
+                    <div class="col-12">
+                        <p>Filter by approval status</p>
+                            <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='all') }}"
+                               class="btn btn-sm filter-btn {% if valid_filter is none or valid_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                All
+                            </a>
+                            {% if pclass.require_confirm %}
+                                <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='pending') }}"
+                                   class="btn btn-sm filter-btn {% if valid_filter == 'pending' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    Pending
+                                </a>
+                            {% endif %}
+                            <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='valid') }}"
+                               class="btn btn-sm filter-btn {% if valid_filter == 'valid' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Approved
+                            </a>
+                            <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='not-valid') }}"
+                               class="btn btn-sm filter-btn {% if valid_filter == 'not-valid' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Queued
+                            </a>
+                            <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='reject') }}"
+                               class="btn btn-sm filter-btn {% if valid_filter == 'reject' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Rejected
+                            </a>
+                    </div>
+                </div>
             </div>
             <table id="attached-table" class="table table-striped table-bordered">
                 <thead>
@@ -123,7 +127,7 @@
                 </thead>
             </table>
             <div style="text-align: center;">
-                <a href="{{ url_for('convenor.add_project', pclass_id=pclass.id) }}" class="btn btn-default btn-lg">
+                <a href="{{ url_for('convenor.add_project', pclass_id=pclass.id) }}" class="btn btn-secondary btn-lg">
                     <i class="fa fa-plus"></i>
                     Add new project
                 </a>

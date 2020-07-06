@@ -103,9 +103,9 @@ class ColouredLabelMixin():
         :return:
         """
         if user_classes is None:
-            classes = 'label label-default'
+            classes = 'badge badge-secondary'
         else:
-            classes = 'label label-default {cls}'.format(cls=user_classes)
+            classes = 'badge badge-secondary {cls}'.format(cls=user_classes)
 
         style = self.make_CSS_style()
 
@@ -1158,8 +1158,19 @@ class User(db.Model, UserMixin):
     THEME_FLAT = 1
     THEME_DARK = 2
 
+    THEME_KEYS = {THEME_DEFAULT: 'default',
+                  THEME_FLAT: 'flat',
+                  THEME_DARK: 'dark'}
+
     # theme options
     theme = db.Column(db.Integer(), default=THEME_DEFAULT, nullable=False)
+
+    @property
+    def ui_theme(self):
+        if self.theme in User.THEME_KEYS:
+            return User.THEME_KEYS[self.theme]
+
+        return User.THEME_KEYS[User.THEME_DEFAULT]
 
 
     # EMAIL PREFERENCES
@@ -1252,9 +1263,9 @@ class User(db.Model, UserMixin):
     @property
     def active_label(self):
         if self.active:
-            return '<span class="label label-success">Active</a>'
+            return '<span class="badge badge-success">Active</a>'
 
-        return '<span class="label label-default">Inactive</a>'
+        return '<span class="badge badge-secondary">Inactive</a>'
 
 
     def post_task_update(self, uuid, payload, remove_on_load=False, autocommit=False):
@@ -1929,9 +1940,9 @@ class FacultyData(db.Model):
         n = self.number_projects_offered(pclass)
 
         if n == 0:
-            return '<span class="label label-danger"><i class="fa fa-times"></i> 0 available</span>'
+            return '<span class="badge badge-danger"><i class="fa fa-times"></i> 0 available</span>'
 
-        return '<span class="label label-primary"><i class="fa fa-check"></i> {n} available</span>'.format(n=n)
+        return '<span class="badge badge-info"><i class="fa fa-check"></i> {n} available</span>'.format(n=n)
 
 
     @property
@@ -1949,9 +1960,9 @@ class FacultyData(db.Model):
         n = self.projects_unofferable
 
         if n == 0:
-            return '<span class="label label-default"><i class="fa fa-check"></i> 0 unofferable</span>'
+            return '<span class="badge badge-secondary"><i class="fa fa-check"></i> 0 unofferable</span>'
 
-        return '<span class="label label-warning"><i class="fa fa-times"></i> {n} unofferable</span>'.format(n=n)
+        return '<span class="badge badge-warning"><i class="fa fa-times"></i> {n} unofferable</span>'.format(n=n)
 
 
     def remove_affiliation(self, group, autocommit=False):
@@ -2070,7 +2081,7 @@ class FacultyData(db.Model):
         record = self.get_enrollment_record(pclass)
 
         if record is None:
-            return '<span class="label label-warning">Not enrolled</span>'
+            return '<span class="badge badge-warning">Not enrolled</span>'
 
         return record.enrolled_labels
 
@@ -2178,9 +2189,9 @@ class FacultyData(db.Model):
         num = self.number_assessor
 
         if num == 0:
-            return '<span class="label label-default"><i class="fa fa-times"></i> Assessor for 0</span>'
+            return '<span class="badge badge-secondary"><i class="fa fa-times"></i> Assessor for 0</span>'
 
-        return '<span class="label label-success"><i class="fa fa-check"></i> Assessor for {n}</span>'.format(n=num)
+        return '<span class="badge badge-info"><i class="fa fa-check"></i> Assessor for {n}</span>'.format(n=num)
 
 
     def supervisor_assignments(self, pclass_id, period=None):
@@ -2522,7 +2533,7 @@ class StudentData(db.Model, WorkflowMixin):
 
     @property
     def cohort_label(self):
-        return '<span class="label label-primary">{c} cohort</span>'.format(c=self.cohort)
+        return '<span class="badge badge-info">{c} cohort</span>'.format(c=self.cohort)
 
 
     def academic_year(self, current_year):
@@ -2559,7 +2570,7 @@ class StudentData(db.Model, WorkflowMixin):
             if self.repeated_years > 0:
                 text += ' +{n}'.format(n=self.repeated_years)
 
-        return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
+        return '<span class="badge badge-{type}">{label}</span>'.format(label=text, type=type)
 
 
     @property
@@ -2759,7 +2770,7 @@ class StudentBatchItem(db.Model):
             if self.repeated_years > 0:
                 text += ' +{n}'.format(n=self.repeated_years)
 
-        return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
+        return '<span class="badge badge-{type}">{label}</span>'.format(label=text, type=type)
 
 
     @property
@@ -3160,9 +3171,9 @@ class TransferableSkill(db.Model):
         """
         if self.group is None:
             if user_classes is None:
-                classes = 'label label-default'
+                classes = 'label badge-secondary'
             else:
-                classes = 'label label-default {cls}'.format(cls=user_classes)
+                classes = 'label badge-secondary {cls}'.format(cls=user_classes)
 
             return '<span class="{cls}">{name}</span>'.format(name=self.name, cls=classes)
 
@@ -4841,7 +4852,7 @@ class EnrollmentRecord(db.Model):
 
     def _generic_label(self, label, state, reenroll, comment, enrolled, sabbatical, exempt):
         if state == enrolled:
-            return '<span class="label label-success"><i class="fa fa-check"></i> ' + label + ': active</span>'
+            return '<span class="badge badge-info"><i class="fa fa-check"></i> ' + label + ': active</span>'
 
         if comment is not None:
             bleach = current_app.extensions['bleach']
@@ -4850,16 +4861,16 @@ class EnrollmentRecord(db.Model):
             comment_attr = None
 
         if state == sabbatical:
-            span = '<span class="label label-warning" ' + comment_attr + '><i class="fa fa-times"></i> ' + label + ': sab'
+            span = '<span class="badge badge-warning" ' + comment_attr + '><i class="fa fa-times"></i> ' + label + ': sab'
             if reenroll is not None:
                 span += ' ' + str(reenroll)
             span += '</span>'
             return span
 
         if state == exempt:
-            return '<span class="label label-danger" ' + comment_attr + '><i class="fa fa-times"></i> ' + label + ': exempt</span>'
+            return '<span class="badge badge-danger" ' + comment_attr + '><i class="fa fa-times"></i> ' + label + ': exempt</span>'
 
-        return '<span class="label label-danger">Unknown state</span>'
+        return '<span class="badge badge-danger">Unknown state</span>'
 
 
 
@@ -6347,7 +6358,7 @@ class LiveProject(db.Model,
 
         score = self.popularity_rank(live=True)
         if score is None:
-            return '<span class="label label-default {cls}">Popularity score unavailable</span>'.format(cls=cls)
+            return '<span class="badge badge-secondary {cls}">Popularity score unavailable</span>'.format(cls=cls)
 
         rank, total = score
         lowest_rank = self.lowest_popularity_rank(live=True)
@@ -6366,7 +6377,7 @@ class LiveProject(db.Model,
             lowest_frac = 1.0
 
         if lowest_frac < 0.5:
-            return '<span class="label label-default {cls}">Insufficient data for popularity score</span>'.format(cls=cls)
+            return '<span class="badge badge-secondary {cls}">Insufficient data for popularity score</span>'.format(cls=cls)
 
         label = 'Low'
         if frac < 0.1:
@@ -6376,7 +6387,7 @@ class LiveProject(db.Model,
         elif frac < 0.5:
             label = 'Medium'
 
-        return '<span class="label label-success {cls}">Popularity: {label}</span>'.format(cls=cls, label=label)
+        return '<span class="badge badge-info {cls}">Popularity: {label}</span>'.format(cls=cls, label=label)
 
 
     def format_bookmarks_label(self, css_classes=None, popover=False):
@@ -6400,7 +6411,7 @@ class LiveProject(db.Model,
         else:
             attrs = ''
 
-        return '<span class="label label-info {cls}" {attrs}>{n} ' \
+        return '<span class="badge badge-info {cls}" {attrs}>{n} ' \
                'bookmark{pl}</span>'.format(cls=cls, n=num, pl=pl, attrs=attrs)
 
 
@@ -6408,7 +6419,7 @@ class LiveProject(db.Model,
         pl = 's' if self.page_views != 1 else ''
         cls = '' if css_classes is None else ' '.join(css_classes)
 
-        return '<span class="label label-info {cls}">{n} view{pl}</span>'.format(cls=cls, n=self.page_views, pl=pl)
+        return '<span class="badge badge-info {cls}">{n} view{pl}</span>'.format(cls=cls, n=self.page_views, pl=pl)
 
 
     def format_selections_label(self, css_classes=None, popover=False):
@@ -6432,7 +6443,7 @@ class LiveProject(db.Model,
         else:
             attrs = ''
 
-        return '<span class="label label-info {cls}" {attrs}>{n} ' \
+        return '<span class="badge badge-info {cls}" {attrs}>{n} ' \
                'selection{pl}</span>'.format(cls=cls, n=num, pl=pl, attrs=attrs)
 
 
@@ -10842,8 +10853,8 @@ class PresentationSession(db.Model):
     SESSION_TO_TEXT = {MORNING_SESSION: 'morning',
                        AFTERNOON_SESSION: 'afternoon'}
 
-    SESSION_LABEL_TYPES = {MORNING_SESSION: 'label-success',
-                           AFTERNOON_SESSION: 'label-primary'}
+    SESSION_LABEL_TYPES = {MORNING_SESSION: 'badge-light',
+                           AFTERNOON_SESSION: 'badge-dark'}
 
     session_type = db.Column(db.Integer())
 
@@ -10889,16 +10900,16 @@ class PresentationSession(db.Model):
         if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
             return PresentationSession.SESSION_LABEL_TYPES[self.session_type]
 
-        return 'label-default'
+        return 'badge-secondary'
 
 
     def make_label(self, text):
         if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
             label_type = PresentationSession.SESSION_LABEL_TYPES[self.session_type]
         else:
-            label_type = 'label-default'
+            label_type = 'badge-secondary'
 
-        return '<span class="label {type}">{text}</span>'.format(type=label_type, text=text)
+        return '<span class="badge {type}">{text}</span>'.format(type=label_type, text=text)
 
     @property
     def label(self):
@@ -10929,11 +10940,11 @@ class PresentationSession(db.Model):
             if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
                 label_type = PresentationSession.SESSION_LABEL_TYPES[self.session_type]
             else:
-                label_type = 'label-default'
+                label_type = 'badge-secondary'
 
-            return '<span class="label {type}">{tag}</span>'.format(type=label_type, tag=self.session_type_string)
+            return '<span class="badge {type}">{tag}</span>'.format(type=label_type, tag=self.session_type_string)
 
-        return '<span class="label label-danger">Unknown session type</span>'
+        return '<span class="badge badge-danger">Unknown session type</span>'
 
 
     @property
@@ -12344,7 +12355,7 @@ class Module(db.Model):
             text = 'Unknown value {n}'.format(n=self.semester)
             type = 'danger'
 
-        return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
+        return '<span class="badge badge-{type}">{label}</span>'.format(label=text, type=type)
 
 
     @property

@@ -1,27 +1,27 @@
 {% macro ranked_selection(sel, list) %}
     <div class="container-fluid">
         <div class="row vertical-align final-selection-table">
-            <div class="col-xs-1"><strong>Rank</strong></div>
-            <div class="col-xs-5"><strong>Project title</strong></div>
-            <div class="col-xs-3"><strong>Research group</strong></div>
-            <div class="col-xs-3"><strong>Supervisor</strong></div>
+            <div class="col-1"><strong>Rank</strong></div>
+            <div class="col-5"><strong>Project title</strong></div>
+            <div class="col-3"><strong>Research group</strong></div>
+            <div class="col-3"><strong>Supervisor</strong></div>
         </div>
         {% for item in list %}
             {% if item.rank <= sel.number_choices %}
                 {% set project = item.liveproject %}
                 <div class="row vertical-align final-selection-table">
-                    <div class="col-xs-1">
-                        <span class="label label-success">#{{ item.rank }}</span>
+                    <div class="col-1">
+                        <span class="badge badge-success">#{{ item.rank }}</span>
                     </div>
-                    <div class="col-xs-5">
+                    <div class="col-5">
                         <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
                             <strong>{{ project.name }}</strong>
                         </a>
                     </div>
-                    <div class="col-xs-3">
+                    <div class="col-3">
                         {{ project.group.make_label(project.group.name)|safe }}
                     </div>
-                    <div class="col-xs-3">
+                    <div class="col-3">
                         <a href="mailto:{{ project.owner.user.email }}">
                             {{ project.owner.user.name }}
                         </a>
@@ -35,49 +35,49 @@
 {% macro custom_offers_table(sel, list, show_actions) %}
     <div class="container-fluid">
         <div class="row vertical-align offers-table">
-            {% if show_actions %}<div class="col-xs-4">{% else %}<div class="col-xs-5">{% endif %}<strong>Project</strong></div>
-            {% if show_actions %}<div class="col-xs-4">{% else %}<div class="col-xs-5">{% endif %}<strong>Supervisor</strong></div>
-            {% if show_actions %}<div class="col-xs-1">{% else %}<div class="col-xs-2">{% endif %}<strong>Status</strong></div>
-            {% if show_actions %}<div class="col-xs-3">{% endif %}<strong>Actions</strong></div>
+            {% if show_actions %}<div class="col-4">{% else %}<div class="col-5">{% endif %}<strong>Project</strong></div>
+            {% if show_actions %}<div class="col-4">{% else %}<div class="col-5">{% endif %}<strong>Supervisor</strong></div>
+            {% if show_actions %}<div class="col-1">{% else %}<div class="col-2">{% endif %}<strong>Status</strong></div>
+            {% if show_actions %}<div class="col-3">{% endif %}<strong>Actions</strong></div>
         </div>
         {% for offer in list %}
             <div class="row vertical-align offers-table">
-                {% if show_actions %}<div class="col-xs-4">{% else %}<div class="col-xs-5">{% endif %}
+                {% if show_actions %}<div class="col-4">{% else %}<div class="col-5">{% endif %}
                     {{ offer.liveproject.name }}
                 </div>
-                {% if show_actions %}<div class="col-xs-4">{% else %}<div class="col-xs-5">{% endif %}
+                {% if show_actions %}<div class="col-4">{% else %}<div class="col-5">{% endif %}
                     <a href="mailto:{{ offer.liveproject.owner.user.email }}">
                         {{ offer.liveproject.owner.user.name }}
                     </a>
                 </div>
-                {% if show_actions %}<div class="col-xs-1">{% else %}<div class="col-xs-2">{% endif %}
+                {% if show_actions %}<div class="col-1">{% else %}<div class="col-2">{% endif %}
                     {% set status = offer.status %}
                     {% if status == offer.OFFERED %}
-                        <span class="label label-primary">Offered</span>
+                        <span class="badge badge-primary">Offered</span>
                     {% elif status == offer.DECLINED %}
-                        <span class="label label-danger">Declined</span>
+                        <span class="badge badge-danger">Declined</span>
                     {% elif status == offer.ACCEPTED %}
-                        <span class="label label-success">Accepted</span>
+                        <span class="badge badge-success">Accepted</span>
                     {% else %}
-                        <span class="label label-danger">Unknown status</span>
+                        <span class="badge badge-danger">Unknown status</span>
                     {% endif %}
                 </div>
                 {% if show_actions %}
-                    <div class="col-xs-3">
+                    <div class="col-3">
                         {% if status == offer.OFFERED %}
                             {% if not sel.has_submitted %}
-                                <a href="{{ url_for('student.accept_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-default">Accept</a>
+                                <a href="{{ url_for('student.accept_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-secondary">Accept</a>
                             {% endif %}
-                            <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-default">Decline</a>
+                            <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-secondary">Decline</a>
                         {% elif status == offer.ACCEPTED %}
-                            <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-default">Decline</a>
+                            <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-secondary">Decline</a>
                         {% endif %}
                     </div>
                 {% endif %}
             </div>
         {% else %}
             <div class="row vertical-align offers-table">
-                <div class="col-xs-12">
+                <div class="col-12">
                     <div style="text-align: center; padding-top: 4px; padding-bottom: 4px; background-color: #e9ecef;">Nothing to display</div>
                 </div>
             </div>

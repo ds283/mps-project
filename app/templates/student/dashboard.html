@@ -106,13 +106,13 @@
         <li class="nav-item">
             <a class="nav-link {% if pane=='select' %}active{% elif not has_selections %}disabled{% endif %}"
                {% if has_selections %}href="{{ url_for('student.dashboard', pane='select') }}"{% endif %}>
-                Project selections for next year
+                Selections for next year
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link {% if pane=='submit' %}active{% elif not has_submissions %}disabled{% endif %}"
                {% if has_submissions %}href="{{ url_for('student.dashboard', pane='submit') }}"{% endif %}>
-                Projects running this year
+                Running this year
             </a>
         </li>
     </ul>

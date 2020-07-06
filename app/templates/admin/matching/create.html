@@ -10,7 +10,7 @@
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
-            <div class="card m-3">
+            <div class="card mt-3 mb-3">
                 <div class="card-header bg-primary text-white">
                     {% if have_base %}
                         Create new match based on <strong>{{ base_match.name }}</strong>
@@ -24,7 +24,7 @@
 
                         {{ wtf.render_field(form.name) }}
 
-                        <div class="card m-3 card-body bg-light">
+                        <div class="card mt-3 mb-3 card-body bg-well">
                             <p>Workload guidance (does not account for constraints)</p>
                             <div class="row">
                                 <div class="col-4">
@@ -50,7 +50,7 @@
                             </div>
                         </div>
 
-                        <div class="card m-3 card-body {% if form.pclasses_to_include.errors %}has-error{% endif %}">
+                        <div class="card mt-3 mb-3 card-body bg-well {% if form.pclasses_to_include.errors %}has-error{% endif %}">
                             {% if form.include_only_submitted is defined %}
                                 {{ wtf.render_field(form.include_only_submitted) }}
                             {% endif %}
@@ -81,7 +81,7 @@
                             {% endif %}
                         </div>
 
-                        <div class="card m-3 card-body bg-light">
+                        <div class="card mt-3 mb-3 card-body bg-well">
                             <p>Limits</p>
                             {{ wtf.render_field(form.ignore_per_faculty_limits) }}
                             {{ wtf.render_field(form.supervising_limit) }}
@@ -99,14 +99,14 @@
                             {% endif %}
                         </div>
 
-                        <div class="card m-3 card-body bg-light">
+                        <div class="card mt-3 mb-3 card-body bg-well">
                             <p>Matching parameters</p>
                             {{ wtf.render_field(form.ignore_programme_prefs) }}
                             {{ wtf.render_field(form.programme_bias) }}
                             {{ wtf.render_field(form.bookmark_bias) }}
                         </div>
 
-                        <div class="card m-3 card-body bg-light">
+                        <div class="card mt-3 mb-3 card-body bg-well">
                             <p>Biasing parameters</p>
                             {{ wtf.render_field(form.levelling_bias) }}
                             {{ wtf.render_field(form.intra_group_tension) }}
@@ -114,13 +114,13 @@
                             {{ wtf.render_field(form.marking_pressure) }}
                         </div>
 
-                        <div class="card m-3 card-body bg-light">
+                        <div class="card mt-3 mb-3 card-body bg-well">
                             <p>Violation penalties</p>
                             {{ wtf.render_field(form.CATS_violation_penalty) }}
                             {{ wtf.render_field(form.no_assignment_penalty) }}
                         </div>
 
-                        <div class="card m-3 card-body bg-light">
+                        <div class="card mt-3 mb-3 card-body bg-well">
                             <p>Convenor hints</p>
                             {{ wtf.render_field(form.use_hints) }}
                             {{ wtf.render_field(form.encourage_bias) }}
@@ -129,7 +129,7 @@
                             {{ wtf.render_field(form.strong_discourage_bias) }}
                         </div>
 
-                        <div class="card m-3 card-body bg-light">
+                        <div class="card mt-3 mb-3 card-body bg-well">
                             {{ wtf.render_field(form.solver) }}
                         </div>
 

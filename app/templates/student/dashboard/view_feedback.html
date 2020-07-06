@@ -31,7 +31,7 @@
             {% if record.period.collect_project_feedback %}
                 {% if record.period.config.uses_supervisor %}
                     {% if record.supervisor_submitted %}
-                        <div class="card m-3">
+                        <div class="card mt-3 mb-3">
                             <div class="card-header">Feedback from your supervisor on the project and marked report</div>
                             <div class="card-body">
                                 <span class="dashboard-subtitle">Positive aspects</span>
@@ -42,7 +42,7 @@
                             </div>
                         </div>
                     {% else %}
-                        <div class="card m-3 card-body bg-light">
+                        <div class="card mt-3 mb-3 card-body bg-well">
                             Feedback has not yet been recorded from the project supervisor.
                         </div>
                     {% endif %}
@@ -50,7 +50,7 @@
 
                 {% if record.period.config.uses_marker %}
                     {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
-                        <div class="card m-3">
+                        <div class="card mt-3 mb-3">
                             <div class="card-header">Feedback from the project marker on your report</div>
                             <div class="card-body">
                                 <span class="dashboard-subtitle">Positive aspects</span>
@@ -61,13 +61,13 @@
                             </div>
                         </div>
                     {% else %}
-                        <div class="card m-3 card-body bg-light">
+                        <div class="card mt-3 mb-3 card-body bg-well">
                             Feedback has not yet been recorded from the project marker.
                         </div>
                     {% endif %}
                 {% endif %}
             {% else %}
-                <div class="card m-3">
+                <div class="card mt-3 mb-3">
                     <div class="card-header">Feedback collection was disabled for this submission period</div>
                     <div class="card-body">No feedback available.</div>
                 </div>
@@ -78,7 +78,7 @@
                 {% for feedback in record.presentation_feedback %}
                     {% if feedback.submitted or (feedback.positive or feedback.negative) and preview %}
                         {% set ns.count = ns.count + 1 %}
-                        <div class="card m-3">
+                        <div class="card mt-3 mb-3">
                             <div class="card-header">
                                 Presentation assessment feedback from <strong>{{ feedback.assessor.user.name }}</strong>
                             </div>
@@ -93,14 +93,14 @@
                     {% endif %}
                 {% endfor %}
                 {% if ns.count == 0 %}
-                    <div class="card m-3 card-body bg-light">
+                    <div class="card mt-3 mb-3 card-body bg-well">
                         Feedback has not yet been recorded from the assessed presentation.
                     </div>
                 {% endif %}
             {% endif %}
 
             {% if record.student_feedback_submitted or (record.student_feedback and preview) %}
-                <div class="card m-3">
+                <div class="card mt-3 mb-3">
                     <div class="card-header bg-success text-white">
                         <div class="row vertical-align">
                             <div class="col-6">
@@ -133,7 +133,7 @@
                     {% endif %}
                 </div>
             {% else %}
-                <div class="card m-3">
+                <div class="card mt-3 mb-3">
                     <div class="card-header bg-success text-white">
                         <div class="row vertical-align">
                             <div class="col-6">

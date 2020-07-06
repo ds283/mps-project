@@ -59,10 +59,10 @@
         </div>
     {% endif %}
 
-    <div class="card m-3">
+    <div class="card mt-3 mb-3">
         <div class="card-header bg-primary text-white">Validate student records</div>
         <div class="card-body">
-            <div class="card m-3 card-body bg-light">
+            <div class="card mt-3 mb-3 card-body bg-well">
                 {% if programmes is not none and programmes|length > 0 %}
                     <p>Filter by programme</p>
                     <a href="{{ url_for('user_approver.validate', prog_filter='all', year_filter=year_filter, url=url, text=text) }}"

@@ -186,7 +186,7 @@
                 {% for config, sel, sub in enrollments %}
                     {% set pclass = config.project_class %}
                         {% if pane=='select' and sel %}
-                            <div class="card m-3 card-body bg-light">
+                            <div class="card mt-3 mb-3 card-body bg-well">
                                 {{ project_card(pclass, sel) }}
                                 {{ selection_card(config, sel) }}
                             </div>
@@ -194,7 +194,7 @@
                         {% endif %}
 
                         {% if pane=='submit' and sub %}
-                            <div class="card m-3 card-body bg-light">
+                            <div class="card mt-3 mb-3 card-body bg-well">
                             {{ project_card(pclass, sub) }}
                                 {% for n in range(config.submissions) %}
                                     {{ submission_card(config, sub, n, today) }}
@@ -207,13 +207,13 @@
                 {% endfor %}
 
                 {% if pane=='select' and ns.display==0 %}
-                    <div class="card m-3 card-body bg-light">
+                    <div class="card mt-3 mb-3 card-body bg-well">
                         <p>You do not currently need to make any project selections.</p>
                     </div>
                 {% endif %}
 
                 {% if pane=='submit' and ns.display==0 %}
-                    <div class="card m-3 card-body bg-light">
+                    <div class="card mt-3 mb-3 card-body bg-well">
                         <p>You are not making submissions for any project this year.</p>
                     </div>
                 {% endif %}

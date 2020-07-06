@@ -18,7 +18,7 @@
 
 {#        {{ wtf.form_errors(settings_form) }}#}
 
-    <div class="card m-3 card-body bg-light">
+    <div class="card mt-3 mb-3 card-body bg-well">
         {{ wtf.render_field(settings_form.username) }}
         {{ wtf.render_field(settings_form.first_name) }}
         {{ wtf.render_field(settings_form.last_name) }}
@@ -27,23 +27,23 @@
         {{ wtf.render_field(settings_form.theme) }}
     </div>
 
-    <div class="card m-3 card-body bg-light">
+    <div class="card mt-3 mb-3 card-body bg-well">
         {{ wtf.render_field(settings_form.default_license) }}
     </div>
 
-    <div class="card m-3 card-body bg-light">
+    <div class="card mt-3 mb-3 card-body bg-well">
         <p>Titles</p>
         {{ wtf.render_field(settings_form.academic_title) }}
         {{ wtf.render_field(settings_form.use_academic_title) }}
     </div>
 
-    <div class="card m-3 card-body bg-light">
+    <div class="card mt-3 mb-3 card-body bg-well">
         <p>Email notifications</p>
         {{ wtf.render_field(settings_form.group_summaries) }}
         {{ wtf.render_field(settings_form.summary_frequency) }}
     </div>
 
-    <div class="card m-3 card-body bg-light">
+    <div class="card mt-3 mb-3 card-body bg-well">
         <p>Default settings for new projects</p>
         {{ wtf.render_field(settings_form.sign_off_students) }}
         {{ wtf.render_field(settings_form.project_capacity) }}
@@ -53,7 +53,7 @@
     </div>
 
     {% if settings_form.mask_roles %}
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p>Temporarily mask roles</p>
             {% for widget in settings_form.mask_roles %}
                 {{ wtf.render_field(widget) }}

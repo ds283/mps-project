@@ -10,7 +10,7 @@
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
-            <div class="card m-3">
+            <div class="card mt-3 mb-3">
                 <div class="card-header bg-success text-white">
                     Submitted project preferences for
                     <strong>{{ sel.config.name }} {{ sel.config.year }}&ndash;{{ sel.config.year+1 }}</strong>
@@ -31,7 +31,7 @@
                                 <p>This is an internal error. Please contact a system administrator.</p>
                             {% endif %}
                         {% else %}
-                            <div class="card m-3 card-body bg-light">
+                            <div class="card mt-3 mb-3 card-body bg-well">
                                 Last submission received at
                                 <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
                                 from IP address

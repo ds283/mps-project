@@ -49,11 +49,11 @@
         </a>
     </div>
 
-    <div class="card m-3">
+    <div class="card mt-3 mb-3">
         <div class="card-header bg-primary text-white">Student availability for assessment event <strong>{{ assessment.name }}</strong>, session <strong>{{ sess.short_date_as_string }} {{ sess.session_type_string }}</strong></strong></div>
         <div class="card-body">
             {% if pclasses is not none and pclasses|length > 0 %}
-                <div class="card m-3 card-body bg-light">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     <p>Filter by project type</p>
                     <a href="{{ url_for('admin.submitter_session_availability', id=sess.id, pclass_filter='all') }}"
                        class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">

@@ -37,7 +37,7 @@
         <div class="col-1"></div>
         <div class="col-10">
             {% if assessment %}
-                <div class="card m-3 card-body bg-light">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     {% set state = assessment.availability_lifecycle %}
                     {% if state == assessment.AVAILABILITY_NOT_REQUESTED %}
 
@@ -53,7 +53,7 @@
 
                     {% else %}
 
-                        <div class="card m-3">
+                        <div class="card mt-3 mb-3">
                             <div class="card-header bg-danger text-white">Error</div>
                             <div class="card-body">
                                 <strong>Error:</strong>
@@ -64,7 +64,7 @@
                     {% endif %}
                 </div>
             {% else %}
-                <div class="card m-3">
+                <div class="card mt-3 mb-3">
                     <div class="card-header bg-danger text-white">Error</div>
                     <div class="card-body">
                         <strong>Error:</strong>

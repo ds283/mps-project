@@ -46,21 +46,21 @@
 
 {#        {{ wtf.form_errors(pclass_form) }}#}
 
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             {{ wtf.render_field(pclass_form.name) }}
             {{ wtf.render_field(pclass_form.abbreviation) }}
 
             {{ colour_field(pclass_form.colour, 'colour-group') }}
         </div>
 
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p>Personnel</p>
             {{ wtf.render_field(pclass_form.convenor) }}
             {{ wtf.render_field(pclass_form.coconvenors) }}
             {{ wtf.render_field(pclass_form.office_contacts) }}
         </div>
 
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p>Configuration</p>
             {{ wtf.render_field(pclass_form.start_level) }}
             {{ wtf.render_field(pclass_form.extent) }}
@@ -73,20 +73,20 @@
             {{ wtf.render_field(pclass_form.reenroll_supervisors_early) }}
         </div>
 
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p>Options</p>
             {{ wtf.render_field(pclass_form.require_confirm) }}
             {{ wtf.render_field(pclass_form.supervisor_carryover) }}
             {{ wtf.render_field(pclass_form.include_available) }}
         </div>
 
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p>Automated matching</p>
             {{ wtf.render_field(pclass_form.do_matching) }}
             {{ wtf.render_field(pclass_form.number_assessors) }}
         </div>
 
-        <div class="card m-3 card-body {% if pclass_form.programmes.errors %}has-error{% endif %}">
+        <div class="card mt-3 mb-3 card-body bg-well {% if pclass_form.programmes.errors %}has-error{% endif %}">
             <p>Select degree programmes to which this project class applies</p>
             {% for widget in pclass_form.programmes %}
                 {{ wtf.render_field(widget) }}
@@ -110,21 +110,21 @@
             {{ wtf.render_field(pclass_form.auto_enroll_years) }}
         </div>
 
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p>Student selections</p>
             {{ wtf.render_field(pclass_form.initial_choices) }}
             {{ wtf.render_field(pclass_form.switch_choices) }}
             {{ wtf.render_field(pclass_form.faculty_maximum) }}
         </div>
 
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p>Workload model support</p>
             {{ wtf.render_field(pclass_form.CATS_supervision) }}
             {{ wtf.render_field(pclass_form.CATS_marking) }}
             {{ wtf.render_field(pclass_form.CATS_presentation) }}
         </div>
 
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p>Popularity data</p>
             {{ wtf.render_field(pclass_form.keep_hourly_popularity) }}
             {{ wtf.render_field(pclass_form.keep_daily_popularity) }}

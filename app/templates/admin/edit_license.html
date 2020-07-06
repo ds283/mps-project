@@ -49,19 +49,19 @@
 
         {{ form.hidden_tag() }}
 
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             {{ wtf.render_field(form.name) }}
             {{ wtf.render_field(form.abbreviation) }}
             {{ wtf.render_field(form.version) }}
             {{ colour_field(form.colour, 'colour-group') }}
         </div>
 
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             {{ wtf.render_field(form.description) }}
             {{ wtf.render_field(form.url) }}
         </div>
 
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             {{ wtf.render_field(form.allows_redistribution) }}
         </div>
 

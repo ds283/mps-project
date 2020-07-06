@@ -30,7 +30,7 @@
 
             {% if record.period.collect_project_feedback %}
                 {% if record.period.config.uses_supervisor %}
-                    <div class="card m-3">
+                    <div class="card mt-3 mb-3">
                         <div class="card-header">
                             <div class="row vertical-align">
                                 <div class="col-6">
@@ -70,7 +70,7 @@
                 {% endif %}
 
                 {% if record.period.config.uses_marker %}
-                    <div class="card m-3">
+                    <div class="card mt-3 mb-3">
                         <div class="card-header">
                             <div class="row vertical-align">
                                 <div class="col-6">
@@ -109,7 +109,7 @@
                     </div>
                 {% endif %}
             {% else %}
-                <div class="card m-3">
+                <div class="card mt-3 mb-3">
                     <div class="card-header">Feedback collection was disabled for this submission period</div>
                     <div class="card-body">No feedback available.</div>
                 </div>
@@ -120,7 +120,7 @@
                 {% set slot = record.schedule_slot %}
                 {% for feedback in record.presentation_feedback %}
                     {% set ns.count = ns.count + 1 %}
-                    <div class="card m-3">
+                    <div class="card mt-3 mb-3">
                         <div class="card-header">
                             <div class="row vertical-align">
                                 <div class="col-5">
@@ -156,7 +156,7 @@
             {% endif %}
 
             {% if record.student_feedback_submitted %}
-                <div class="card m-3">
+                <div class="card mt-3 mb-3">
                     <div class="card-header bg-success text-white">
                         <div class="row vertical-align">
                             <div class="col-6">

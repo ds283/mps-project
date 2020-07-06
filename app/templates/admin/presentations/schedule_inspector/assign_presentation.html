@@ -69,14 +69,14 @@
                 </div>
             {% endif %}
 
-            <div class="card m-3">
+            <div class="card mt-3 mb-3">
                 <div class="card-header bg-success text-white">
                     Manually assign presentation for <i class="fa fa-user"></i> <strong>{{ talk.owner.student.user.name }}</strong>,
                     schedule <strong>{{ rec.name }}</strong>,
                     assessment <strong>{{ slot.event_name }}</strong>
                 </div>
                 <div class="card-body">
-                    <div class="card m-3">
+                    <div class="card mt-3 mb-3">
                         <div class="card-header">Current allocation</div>
                         <div class="card-body">
                             <p>
@@ -165,7 +165,7 @@
 
                     {% set original_slot = rec.get_original_student_slot(talk.owner_id).first() %}
                     {% if original_slot is not none %}
-                        <div class="card m-3">
+                        <div class="card mt-3 mb-3">
                             <div class="card-header">Automatic scheduling proposal</div>
                             <div class="card-body">
                                 <div class="row vertical-align final-selection-table">

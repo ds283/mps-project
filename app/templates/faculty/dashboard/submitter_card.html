@@ -18,7 +18,7 @@
     {% set is_sabbatical = supv_sabbatical and mark_sabbatical and pres_sabbatical %}
     {% set is_exempt = supv_exempt and mark_exempt and pres_exempt %}
     {% if period %}
-        <div class="card m-3">
+        <div class="card mt-3 mb-3">
             <div class="card-header
                 {% if is_sabbatical or is_exempt %}
                     {# no markup required; formerly panel-default #}
@@ -104,7 +104,7 @@
             </div>
         </div>
     {% else %}
-        <div class="card m-3">
+        <div class="card mt-3 mb-3">
             <div class="card-header"><strong>Submission period #{{ n+1 }}</strong></div>
             <div class="card-body">
                 <span class="badge badge-danger">Error: Could not read period record</span>

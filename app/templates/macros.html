@@ -34,7 +34,7 @@
 {% macro edit_data(item) %}
     {% if item and (item.created_by or item.last_edited_by) %}
         <hr class="intro-divider">
-        <div class="card m-3">
+        <div class="card mt-3 mb-3">
             <div class="card-header">History</div>
             <div class="card-body">
                 {% if item.created_by %}
@@ -59,7 +59,7 @@
 {% endmacro %}
 
 {% macro message_card(message, fac_data) %}
-    <div class="card m-3 border-secondary">
+    <div class="card mt-3 mb-3 border-secondary">
         {% if message.title is defined and message.title|length > 0 %}
             <div class="card-header bg-secondary text-white">
                 <strong>{{ message.title }}</strong>
@@ -156,7 +156,7 @@
 {% endmacro %}
 
 {% macro research_groups_key(groups) %}
-    <div class="card m-3 card-body bg-light">
+    <div class="card mt-3 mb-3 card-body bg-well">
         <div class="row">
             <div class="col-12">
                 <p>Research groups colour key</p>
@@ -170,7 +170,7 @@
 {% endmacro %}
 
 {% macro skill_groups_key(groups) %}
-    <div class="card m-3 card-body bg-light">
+    <div class="card mt-3 mb-3 card-body bg-well">
         <div class="row">
             <div class="col-12">
                 <p>Transferable skill groups colour key</p>
@@ -185,7 +185,7 @@
 
 {% macro filter_block(config, groups, skill_groups, skill_list, clear_group, add_group, remove_group, clear_skill, add_skill, remove_skill) %}
     <div id="accordion">
-        <div class="card m-3">
+        <div class="card mt-3 mb-3">
             <div class="card-header">
                 <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseFilter">
                     Filters
@@ -197,7 +197,7 @@
             </div>
             <div id="collapseFilter" class="collapse show">
                 <div class="card-body">
-                    <div class="card m-3">
+                    <div class="card mt-3 mb-3">
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-9"><span class="filter-title">Research group filters</span></div>
@@ -234,7 +234,7 @@
                             {% endfor %}
                         </div>
                     </div>
-                    <div class="card m-3">
+                    <div class="card mt-3 mb-3">
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-9"><span class="filter-title">Transferable skill filters</span></div>

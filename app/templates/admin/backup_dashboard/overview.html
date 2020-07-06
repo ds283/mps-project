@@ -27,7 +27,7 @@
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
-            <div class="card m-3 card-body bg-light">
+            <div class="card mt-3 mb-3 card-body bg-well">
                 <form action="{{ url_for('admin.backups_overview') }}" method="POST" name="backup_options_form">
                     {{ form.hidden_tag() }}
                     <span class="badge badge-primary" style="font-size: 95%;">Current backup size {{ backup_size }}</span>
@@ -46,7 +46,7 @@
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
-            <div class="card m-3 card-body bg-light">
+            <div class="card mt-3 mb-3 card-body bg-well">
                 <div class="row">
                     <div class="col-8">
                         {% if archive_div is defined and archive_div is not none and archive_script is defined and archive_script is not none %}

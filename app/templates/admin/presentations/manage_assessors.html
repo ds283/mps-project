@@ -56,10 +56,10 @@
         </a>
     </div>
 
-    <div class="card m-3">
+    <div class="card mt-3 mb-3">
         <div class="card-header bg-primary text-white">Assessor attendance for assessment event <strong>{{ assessment.name }}</strong></div>
         <div class="card-body">
-            <div class="card m-3 card-body bg-light">
+            <div class="card mt-3 mb-3 card-body bg-well">
                 <p>Filter by state</p>
                 <a href="{{ url_for('admin.assessment_manage_assessors', id=assessment.id, state_filter='all') }}"
                    class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">

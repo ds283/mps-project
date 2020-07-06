@@ -13,7 +13,7 @@
     {% set number_sessions = data['number_sessions'] %}
 
     {% if has_assessments %}
-        <div class="card m-3 border-info">
+        <div class="card mt-3 mb-3 border-info">
             <div class="card-header bg-info text-white">Presentation assessments</div>
             <div class="card-body">
                 <div class="row vertical-align">
@@ -33,7 +33,7 @@
     {% endif %}
 
     {% if matching_ready and not rollover_in_progress %}
-        <div class="card m-3 border-info">
+        <div class="card mt-3 mb-3 border-info">
             <div class="card-header bg-info text-white">Perform automatic matching</div>
             <div class="card-body">
                 <div class="row vertical-align">
@@ -58,7 +58,7 @@
     {% endif %}
 
     {% if rollover_ready and not rollover_in_progress %}
-        <div class="card m-3 border-danger">
+        <div class="card mt-3 mb-3 border-danger">
             <div class="card-header bg-danger text-white">Rollover academic year</div>
             <div class="card-body">
                 <div class="row vertical-align">
@@ -77,7 +77,7 @@
         </div>
     {% endif %}
 
-    <div class="card m-3 border-info">
+    <div class="card mt-3 mb-3 border-info">
         <div class="card-header">Manage website services</div>
         <div class="card-body">
             <div class="container-fluid">

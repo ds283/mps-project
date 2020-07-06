@@ -56,7 +56,7 @@
         </div>
     {% endif %}
 
-    <div class="card m-3">
+    <div class="card mt-3 mb-3">
         <div class="card-header bg-primary text-white">Faculty view of schedule <strong>{{ record.name }}</strong> for assessment <strong>{{ record.owner.name }}</strong></div>
         <div class="card-body">
             {% set has_pclasses = (pclasses and pclasses is not none and pclasses|length > 1) %}
@@ -64,7 +64,7 @@
             {% set has_rooms = (rooms and rooms is not none and rooms|length > 1) %}
             {% set has_sessions = (sessions and sessions is not none and sessions|length > 1) %}
             {% if has_pclsses or has_buildings or has_rooms or has_sessions %}
-                <div class="card m-3 card-body bg-light">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     {% set needs_hrule = false %}
                     {% if has_pclasses %}
                         {% set needs_hrule = true %}

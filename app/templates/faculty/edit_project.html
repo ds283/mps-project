@@ -38,7 +38,7 @@
             {{ wtf.render_field(project_form.owner) }}
         {% endif %}
 
-        <div class="card m-3 card-body {% if project_form.project_classes.errors %}has-error{% endif %}">
+        <div class="card mt-3 mb-3 card-body bg-well {% if project_form.project_classes.errors %}has-error{% endif %}">
             <p>Select the project classes for which this project should be made available</p>
             {% for widget in project_form.project_classes %}
                 {{ wtf.render_field(widget) }}
@@ -52,7 +52,7 @@
             {% endif %}
         </div>
 
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p>Options</p>
             {{ wtf.render_field(project_form.meeting_reqd) }}
             {{ wtf.render_field(project_form.enforce_capacity) }}

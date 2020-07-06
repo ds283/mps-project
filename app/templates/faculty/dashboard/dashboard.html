@@ -97,13 +97,12 @@
             {% endif %}
 
             {% if is_root and pane == 'system' %}
-                <div class="card m-3 card-body bg-light">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     {{ admin_dashboard_card(root_dash_data) }}
                     {{ root_functions(root_dash_data, matching_ready, has_assessments) }}
                 </div>
             {% else %}
                 {% if enrollments and enrollments|length > 0 %}
-
                     {% for item in enrollments %}
                         {% set config = item['config'] %}
                         {% if pane == config.id|string %}
@@ -112,10 +111,9 @@
                             {{ pclass_card(item, today) }}
                         {% endif %}
                     {% endfor %}
-
                 {% else %}
 
-                    <div class="card m-3 card-body bg-light">
+                    <div class="card mt-3 mb-3 card-body bg-well">
                         <h3 class="dashboard-subtitle"> You have no active project enrollments</h3>
                         <p>
                             Project classes for which you are enrolled, but are not active because of

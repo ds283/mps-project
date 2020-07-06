@@ -21,14 +21,14 @@
             {% endif %}
 
             {% for year in years %}
-                <div class="card m-3 card-body bg-light">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     <p><span class="timeline-title">Records for {{ year }}&ndash;{{ year+1 }}</span></p>
                     <hr class="intro-divider">
                     {% set selectors = selector_records[year] %}
                     {% if selectors is not none and selectors|length > 0 %}
                         {% for rec in selectors %}
                             {% set pclass = rec.config.project_class %}
-                            <div class="card m-3 {% if not rec.has_submitted %}border-danger{% endif %}">
+                            <div class="card mt-3 mb-3 {% if not rec.has_submitted %}border-danger{% endif %}">
                                 <div class="card-header {% if rec.has_submitted %}bg-primary text-white{% else %}bg-danger text-white{% endif %}">Selecting for <strong>{{ pclass.name }}</strong></div>
                                 <div class="card-body">
                                     <div>
@@ -69,7 +69,7 @@
                     {% if submitters is not none and submitters|length > 0 %}
                         {% for rec in submitters %}
                             {% set pclass = rec.config.project_class %}
-                            <div class="card m-3">
+                            <div class="card mt-3 mb-3">
                                 <div class="card-header bg-primary text-white">Submitting for <strong>{{ pclass.name }}</strong></div>
                                 <div class="card-body">
                                     <div>

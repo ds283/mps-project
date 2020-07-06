@@ -71,14 +71,14 @@
                 </div>
             {% endif %}
 
-            <div class="card m-3">
+            <div class="card mt-3 mb-3">
                 <div class="card-header bg-success text-white">
                     Manually assign assessors for <strong>{{ slot.date_as_string }} {{ slot.session_type_string }}</strong>,
                     schedule <strong>{{ rec.name }}</strong>,
                     assessment <strong>{{ slot.event_name }}</strong>
                 </div>
                 <div class="card-body">
-                    <div class="card m-3">
+                    <div class="card mt-3 mb-3">
                         <div class="card-header">Current allocation</div>
                         <div class="card-body">
                             <div class="row vertical-align final-selection-table">
@@ -124,7 +124,7 @@
                     {% set original_assessors = slot.original_assessors.all() %}
                     {% set original_length = original_assessors|length %}
                     {% if original_length > 0 %}
-                        <div class="card m-3">
+                        <div class="card mt-3 mb-3">
                             <div class="card-header">Automatic scheduling proposal</div>
                             <div class="card-body">
                                 <div class="row vertical-align final-selection-table">

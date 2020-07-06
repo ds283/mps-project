@@ -1,5 +1,5 @@
 {% macro selection_closed(config, rollover_in_progress) %}
-    <div class="card m-3">
+    <div class="card mt-3 mb-3">
         <div class="card-header"><strong>Student selections are now closed</strong></div>
         <div class="card-body">
             {% set selector_data = config.selector_data %}
@@ -83,7 +83,7 @@
         </div>
     </div>
     {% if config.has_published_matches and not rollover_in_progress %}
-        <div class="card m-3 border-danger">
+        <div class="card mt-3 mb-3 border-danger">
             <div class="card-header bg-danger text-white">Proposed matches are available to view</div>
             <div class="card-body">
                 <p>An administrator has published one or more proposals for selector/project matches.</p>

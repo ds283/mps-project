@@ -36,7 +36,7 @@
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
-            <div class="card m-3 card-body bg-light">
+            <div class="card mt-3 mb-3 card-body bg-well">
                 <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
                 <div class="list-group mb-2">
                     <div class="list-group-item">
@@ -106,11 +106,11 @@
 
             {% if pclass.publish %}
                 {# SELECTING #}
-                <div class="card m-3 card-body bg-light">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     {# provide summary #}
 
                     {% if config.has_auditable_schedules %}
-                        <div class="card m-3 border-danger">
+                        <div class="card mt-3 mb-3 border-danger">
                             <div class="card-header bg-danger text-white">Proposed assessment schedules are available to view</div>
                             <div class="card-body">
                                 <p>An administrator has published one or more proposed schedules for presentation assessments.</p>
@@ -133,7 +133,7 @@
                     {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
                         {{ selection_closed(config, config.year < current_year) }}
                     {% else %}
-                        <div class="card m-3">
+                        <div class="card mt-3 mb-3">
                             <div class="card-header bg-danger text-white">Error</div>
                             <div class="card-body">
                                 <strong>Error:</strong>
@@ -144,13 +144,13 @@
                 </div>
 
                 {# SUBMITTING #}
-                <div class="card m-3 card-body bg-light">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     {% for n in range(config.submissions) %}
                         {{ submitter_card(config, n, today, feedback_form)  }}
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="card m-3 card-body bg-light">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     <p>
                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                         This project class is not published, so its administration options are limited.

@@ -16,7 +16,7 @@
 
         {{ form.hidden_tag() }}
 
-        <div class="card m-3 card-body bg-light">
+        <div class="card mt-3 mb-3 card-body bg-well">
             {% if form.recipient is defined %}
                 {{ wtf.render_field(form.recipient) }}
             {% else %}

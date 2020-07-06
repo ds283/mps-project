@@ -57,14 +57,14 @@
         </div>
     {% endif %}
 
-    <div class="card m-3">
+    <div class="card mt-3 mb-3">
         <div class="card-header bg-primary text-white">Students available to be enrolled as <strong>submitters</strong> for <strong>{{ pclass.name }}</strong></div>
         <div class="card-body">
             {% set has_cohorts = (cohorts and cohorts is not none and cohorts|length > 1) %}
             {% set has_years = (years and years is not none and years|length > 1) %}
             {% set has_progs = (progs and progs is not none and progs|length > 1) %}
             {% if has_cohorts or has_years or has_progs %}
-                <div class="card m-3 card-body bg-light">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     {% set needs_rule = false %}
                     <div class="row">
                         <div class="col-12">

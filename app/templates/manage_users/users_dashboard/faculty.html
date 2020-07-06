@@ -50,13 +50,13 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <div class="card m-3">
+    <div class="card mt-3 mb-3">
         <div class="card-header bg-primary text-white">Edit users</div>
         <div class="card-body">
             {% set has_pclasses = (pclasses is not none and pclasses|length > 0) %}
             {% set has_groups = (groups is not none and groups|length > 0) %}
             {% if has_pclasses or has_groups %}
-                <div class="card m-3 card-body bg-light">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     {% set needs_hrule = false %}
                     {% if has_pclasses %}
                         {% set needs_hrule = true %}

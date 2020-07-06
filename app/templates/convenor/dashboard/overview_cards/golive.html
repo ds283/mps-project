@@ -5,7 +5,7 @@
 {% from "convenor/dashboard/overview_cards/approvals_state.html" import approvals_state %}
 
 {% macro golive(config, golive_form, capacity_data, sel_count) %}
-    <div class="card m-3">
+    <div class="card mt-3 mb-3">
         <div class="card-header bg-danger text-white"><strong>Student selections are not yet live</strong></div>
         <div class="card-body">
             {% set total_projects = capacity_data['projects'] %}

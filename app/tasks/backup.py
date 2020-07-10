@@ -155,19 +155,13 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def make_backup_archive(self, paths):
-        self.update_state(state='STARTED', meta='Compressing database backup and website assets')
-
-        # get location of assets folder from configuraiton
-        assets_folder = current_app.config.get('ASSETS_FOLDER')
+        self.update_state(state='STARTED', meta='Compressing database backup')
 
         temp_SQL_file, backup_folder, backup_abspath, backup_relpath = paths
 
         # embed into tar archive
         with tarfile.open(name=backup_abspath, mode="w:gz", format=tarfile.PAX_FORMAT) as archive:
             archive.add(name=temp_SQL_file, arcname="database.sql")
-
-            if path.exists(assets_folder):
-                archive.add(name=assets_folder, arcname="assets", recursive=True)
 
             archive.close()
 

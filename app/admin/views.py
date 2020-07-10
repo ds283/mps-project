@@ -2834,7 +2834,7 @@ def delete_all_backups():
     error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
 
     backups = db.session.query(BackupRecord.id).all()
-    work_group = group(del_backup.si(id) for id in backups)
+    work_group = group(del_backup.si(id[0]) for id in backups)
 
     seq = chain(init.si(task_id, tk_name), work_group,
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))

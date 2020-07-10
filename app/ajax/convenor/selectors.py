@@ -201,6 +201,9 @@ _name = \
 {% else %}
     <span class="badge badge-danger"><i class="fa fa-times"></i> Disable convert</span>
 {% endif %}
+{% if sel.student.intermitting %}
+    <span class="badge badge-warning">TWD</span>
+{% endif %}
 </div>
 """
 

@@ -43,7 +43,7 @@ _name = \
         <span class="badge badge-success"><i class="fa fa-check"></i> Matches {{ item.existing_record.user.name }} {{ item.existing_record.cohort }}</span>
     {% endif %}
     {% if item.intermitting %}
-        <span class="badge badge-danger">INTERMITTING</span>
+        <span class="badge badge-danger">TWD</span>
     {% endif %}
     {% if item.dont_convert %}
         <span class="badge badge-warning"><i class="fa fa-times"></i> Import disabled</span>

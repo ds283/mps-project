@@ -16,7 +16,7 @@ name = \
     {{ 'REPACTIVE'|safe }}
     {% if u.student_data and u.student_data is not none %}
         {% if u.student_data.intermitting %}
-            <span class="badge badge-warning">INTERMITTING</span>
+            <span class="badge badge-warning">TWD</span>
         {% endif %}
         {% set state = u.student_data.workflow_state %}
         {% if state == u.student_data.WORKFLOW_APPROVAL_QUEUED %}

@@ -1068,7 +1068,7 @@ def build_submitters_data(config, cohort_filter, prog_filter, state_filter, year
     prog_flag, prog_value = is_integer(prog_filter)
     year_flag, year_value = is_integer(year_filter)
 
-    if cohort_flag or prog_flag:
+    if cohort_flag or prog_flag or state_filter == 'twd':
         submitters = submitters \
             .join(StudentData, StudentData.id == SubmittingStudent.student_id)
 
@@ -1098,6 +1098,9 @@ def build_submitters_data(config, cohort_filter, prog_filter, state_filter, year
         data = [x for x in submitters.all() if x.has_attachments]
     elif state_filter == 'no-attachments':
         data = [x for x in submitters.all() if not x.has_attachments]
+    elif state_filter == 'twd':
+        submitters = submitters.filter(StudentData.intermitting == True)
+        data = submitters.all()
     else:
         data = submitters.all()
 

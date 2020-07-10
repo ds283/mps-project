@@ -162,6 +162,10 @@
                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='no-attachments', data_display=data_display) }}">
                             No attachments
                         </a>
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'twd' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='twd', data_display=data_display) }}">
+                            TWD
+                        </a>
                     </div>
                     <div class="col-6">
                         <p>Display data</p>

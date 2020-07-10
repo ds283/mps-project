@@ -344,6 +344,9 @@ _name = \
     {% if show_name %}
         <a href="mailto:{{ sub.student.user.email }}">{{ sub.student.user.name }}</a>
     {% endif %}
+    {% if sub.student.intermitting %}
+        <span class="badge badge-warning">TWD</span>
+    {% endif %}
     {% if show_number %}
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
             <a href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="badge badge-secondary">

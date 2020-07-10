@@ -633,6 +633,7 @@ def selectors(id):
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
+    convert_filter = request.args.get('convert_filter')
     year_filter = request.args.get('year_filter')
     match_filter = request.args.get('match_filter')
     match_show = request.args.get('match_show')
@@ -688,11 +689,20 @@ def selectors(id):
         state_filter = session['convenor_selectors_state_filter']
 
     if isinstance(state_filter, str) and state_filter not in ['all', 'submitted', 'bookmarks', 'none', 'confirmations',
-                                                              'convert', 'no-convert']:
+                                                              'twd']:
         state_filter = 'all'
 
     if state_filter is not None:
         session['convenor_selectors_state_filter'] = state_filter
+
+    if convert_filter is None and session.get('convenor_selectors_convert_filter'):
+        convert_filter = session['convenor_selectors_convert_filter']
+
+    if isinstance(convert_filter, str) and convert_filter not in ['all', 'convert', 'no-convert']:
+        convert_filter = 'all'
+
+    if convert_filter is not None:
+        session['convenor_selectors_convert_filter'] = convert_filter
 
     if year_filter is None and session.get('convenor_selectors_year_filter'):
         year_filter = session['convenor_selectors_year_filter']
@@ -741,7 +751,7 @@ def selectors(id):
                            cohorts=sorted(cohorts), progs=progs, years=sorted(years),
                            matches=matches, match_filter=match_filter, match_show=match_show,
                            cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter,
-                           year_filter=year_filter)
+                           year_filter=year_filter, convert_filter=convert_filter)
 
 
 @convenor.route('/selectors_ajax/<int:id>')
@@ -762,6 +772,7 @@ def selectors_ajax(id):
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
+    convert_filter = request.args.get('convert_filter')
     year_filter = request.args.get('year_filter')
     match_filter = request.args.get('match_filter')
     match_show = request.args.get('match_show')
@@ -772,12 +783,14 @@ def selectors_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
-    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter, match_filter, match_show)
+    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter,
+                                match_filter, match_show)
 
     return ajax.convenor.selectors_data(data, config)
 
 
-def _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter, match_filter, match_show):
+def _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter, match_filter,
+                         match_show):
     # build a list of live students selecting from this project class
     selectors = config.selecting_students.filter_by(retired=False)
 
@@ -797,6 +810,11 @@ def _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_
     if prog_flag:
         selectors = selectors.filter(StudentData.programme_id == prog_value)
 
+    if convert_filter == 'convert':
+        selectors = selectors.filter(SelectingStudent.convert_to_submitter == True)
+    elif convert_filter == 'no-convert':
+        selectors = selectors.filter(SelectingStudent.convert_to_submitter == False)
+
     if state_filter == 'submitted':
         data = [rec for rec in selectors.all() if rec.has_submitted]
     elif state_filter == 'bookmarks':
@@ -805,12 +823,8 @@ def _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_
         data = [rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks]
     elif state_filter == 'confirmations':
         data = [rec for rec in selectors.all() if rec.number_pending > 0]
-    elif state_filter == 'convert':
-        selectors = selectors.filter(SelectingStudent.convert_to_submitter == True)
-        data = selectors.all()
-    elif state_filter == 'no-convert':
-        selectors = selectors.filter(SelectingStudent.convert_to_submitter == False)
-        data = selectors.all()
+    elif state_filter == 'twd':
+        data = [rec for rec in selectors.all() if rec.student.intermitting]
     else:
         data = selectors.all()
 
@@ -1106,6 +1120,7 @@ def selector_grid(id):
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
+    state_filter = request.args.get('state_filter')
     match_filter = request.args.get('match_filter')
     match_show = request.args.get('match_show')
 
@@ -1166,6 +1181,15 @@ def selector_grid(id):
     if year_filter is not None:
         session['convenor_sel_grid_filter'] = year_filter
 
+    if state_filter is None and session.get('convenor_sel_grid_state_filter'):
+        state_filter = session['convenor_sel_grid_state_filter']
+
+    if isinstance(state_filter, str) and state_filter not in ['all', 'twd']:
+        state_filter = 'all'
+
+    if state_filter is not None:
+        session['convenor_sel_grid_state_filter'] = state_filter
+
     # get list of current published matchings (if any) that include this project type;
     # these can be used to filter for students that are/are not included in the matching
     if config.has_published_matches:
@@ -1203,7 +1227,8 @@ def selector_grid(id):
                            pclass=pclass, config=config, convenor_data=data,
                            current_year=current_year, cohorts=sorted(cohorts), progs=progs, years=sorted(years),
                            matches=matches, match_filter=match_filter, match_show=match_show,
-                           cohort_filter=cohort_filter, prog_filter=prog_filter, year_filter=year_filter, groups=groups)
+                           cohort_filter=cohort_filter, prog_filter=prog_filter, year_filter=year_filter, groups=groups,
+                           state_filter=state_filter)
 
 
 @convenor.route('/selector_grid_ajax/<int:id>')
@@ -1219,6 +1244,7 @@ def selector_grid_ajax(id):
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
+    state_filter = request.args.get('state_filter')
     match_filter = request.args.get('match_filter')
     match_show = request.args.get('match_show')
 
@@ -1240,9 +1266,12 @@ def selector_grid_ajax(id):
     year_flag, year_value = is_integer(year_filter)
     match_flag, match_value = is_integer(match_filter)
 
-    if cohort_flag or prog_flag:
+    if cohort_flag or prog_flag or state_filter != 'all':
         selectors = selectors \
             .join(StudentData, StudentData.id == SelectingStudent.student_id)
+
+    if state_filter == 'twd':
+        selectors = selectors.filter(StudentData.intermitting == True)
 
     if cohort_flag:
         selectors = selectors.filter(StudentData.cohort == cohort_value)
@@ -1406,7 +1435,7 @@ def submitters(id):
 
     if isinstance(state_filter, str) and state_filter not in ['all', 'published', 'unpublished', 'late-feedback',
                                                               'no-late-feedback', 'not-started', 'report',
-                                                              'no-report', 'attachments', 'no-attachments']:
+                                                              'no-report', 'attachments', 'no-attachments', 'twd']:
         state_filter = 'all'
 
     if state_filter is not None:
@@ -4366,11 +4395,13 @@ def email_selectors(configid):
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
+    convert_filter = request.args.get('convert_filter')
     year_filter = request.args.get('year_filter')
     match_filter = request.args.get('match_filter')
     match_show = request.args.get('match_show')
 
-    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter, match_filter, match_show)
+    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter,
+                                match_filter, match_show)
 
     if len(data) > 0:
         to_list = []
@@ -4433,11 +4464,13 @@ def convert_all(configid):
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
+    convert_filter = request.args.get('convert_filter')
     year_filter = request.args.get('year_filter')
     match_filter = request.args.get('match_filter')
     match_show = request.args.get('match_show')
 
-    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter, match_filter, match_show)
+    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter,
+                                match_filter, match_show)
 
     for s in data:
         s.convert_to_submitter = True
@@ -4460,11 +4493,13 @@ def convert_none(configid):
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
+    convert_filter = request.args.get('convert_filter')
     year_filter = request.args.get('year_filter')
     match_filter = request.args.get('match_filter')
     match_show = request.args.get('match_show')
 
-    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter, match_filter, match_show)
+    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter,
+                                match_filter, match_show)
 
     for s in data:
         s.convert_to_submitter = False

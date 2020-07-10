@@ -1757,6 +1757,10 @@ def do_delete_submitter(sid):
         flash('Manual deletion of submitters is only possible during normal project activity', 'error')
         return redirect(redirect_url())
 
+    url = request.args.get('url', None)
+    if url is None:
+        url = redirect_url()
+
     try:
         sub.detach_records()
         db.session.delete(sub)
@@ -1767,7 +1771,7 @@ def do_delete_submitter(sid):
         flash('Could not delete submitter due to a database error ("{n}"). Please contact a system '
               'administrator.'.format(n=e), 'error')
 
-    return redirect(redirect_url())
+    return redirect(url)
 
 
 @convenor.route('/liveprojects/<int:id>')

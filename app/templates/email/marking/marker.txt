@@ -31,10 +31,10 @@ other good report.
 {% endif -%}
 The submitted report (or a link to download it) is attached to this email.
 If a link is provided then after following it your download will begin
-immediately if you are logged in to mpsprojects.co.uk. If not, you will be
+immediately if you are logged in to mpsprojects.sussex.ac.uk. If not, you will be
 redirected to a login page. The download will begin automatically once you
 log in successfully. Alternatively, you can download the report from your
-dashboard on https://mpsprojects.co.uk. The convenor has requested that
+dashboard on https://mpsprojects.sussex.ac.uk. The convenor has requested that
 marking and feedback be completed by midnight
 on {{ deadline.strftime("%a %d %b %Y") }}.
 
@@ -54,7 +54,7 @@ convenor ({{ config.convenor_email }}), together with the agreed
 mark and its rationale. (Only one copy of this is needed.)
 
 Please also enter your feedback for the student online at
-https://mpsprojects.co.uk using the 'Edit feedback' button for this
+https://mpsprojects.sussex.ac.uk using the 'Edit feedback' button for this
 project visible on your dashboard. By capturing your feedback electronically
 we ensure that it is pushed directly to the student by email.
 

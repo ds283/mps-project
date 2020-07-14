@@ -1,7 +1,7 @@
 Dear Administrator
 
 This is a periodic advisory email from the Sussex Physics & Astronomy
-project management web app at https://mpsprojects.co.uk.
+project management web app at https://mpsprojects.sussex.ac.uk.
 
 Garbage collection statistics as measured at {{ now.strftime("%a %d %b %Y %H:%M:%S") }}:
 

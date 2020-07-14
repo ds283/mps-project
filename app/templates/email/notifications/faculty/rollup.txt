@@ -1,7 +1,7 @@
 Dear {{ user.name }}
 
 This is an automated email from the Sussex Physics & Astronomy
-project management web app at https://mpsprojects.co.uk.
+project management web app at https://mpsprojects.sussex.ac.uk.
 It is sent from an address that is not monitored or answered;
 please direct any queries to the project convenor.
 
@@ -17,7 +17,7 @@ email notification:
 
 {% if outstanding|length > 0 -%}
 The following confirmation requests have been generated since your last
-visit to https://mpsprojects.co.uk. It is the students' responsibility
+visit to https://mpsprojects.sussex.ac.uk. It is the students' responsibility
 to contact you and arrange a meeting, but if you wish to expedite the
 process you are welcome to contact them yourself.
 

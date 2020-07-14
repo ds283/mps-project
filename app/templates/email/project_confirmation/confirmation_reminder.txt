@@ -1,7 +1,7 @@
 Dear {{ user.first_name }}
 
 This is an automated email from the Sussex Physics & Astronomy
-project management web app at https://mpsprojects.co.uk.
+project management web app at https://mpsprojects.sussex.ac.uk.
 It is sent from an address that is not monitored or answered;
 please direct any queries to the project convenor.
 
@@ -18,7 +18,7 @@ if you could confirm your projects before then.
 {%- endif %}
 
 To check your projects, please log in to the project management web app
-at https://mpsprojects.co.uk and select 'My projects/My project library...'
+at https://mpsprojects.sussex.ac.uk and select 'My projects/My project library...'
 from the drop-down menu in the menubar. All active projects associated
 with this project type will be published to the students. If you wish
 to withdraw a project from this year's selection, please deactivate the

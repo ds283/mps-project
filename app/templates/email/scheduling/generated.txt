@@ -1,7 +1,7 @@
 For attention of: {{ user.name }}
 
 This is an automated email from the Sussex Physics & Astronomy
-project management web app at https://mpsprojects.co.uk.
+project management web app at https://mpsprojects.sussex.ac.uk.
 
 The files needed for offline scheduling of '{{ name }}' are now ready
 and are attached to this email. Alternatively, you can download

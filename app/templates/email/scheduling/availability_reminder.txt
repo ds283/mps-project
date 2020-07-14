@@ -1,7 +1,7 @@
 Dear {{ user.first_name }}
 
 This is an automated email from the Sussex Physics & Astronomy
-project management web app at https://mpsprojects.co.uk.
+project management web app at https://mpsprojects.sussex.ac.uk.
 It is sent from an address that is not monitored or answered;
 please direct any queries to the project convenor.
 
@@ -16,7 +16,7 @@ In order to prepare a timetable we are collecting availability information
 from faculty members, but we do not yet appear to have received your details.
 
 To enter your availability, please log in to the project management web app
-at https://mpsprojects.co.uk. Once you have logged in, the information request
+at https://mpsprojects.sussex.ac.uk. Once you have logged in, the information request
 box should appear highlighted in red at the top of your dashboard. It would be
 very helpful if you could provide your response by {{ event.availability_deadline.strftime("%a %d %b %Y") }}
 at latest.

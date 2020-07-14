@@ -1,7 +1,7 @@
 Dear {{ user.first_name }}
 
 This is an automated email from the Sussex Physics & Astronomy
-project management web app at https://mpsprojects.co.uk.
+project management web app at https://mpsprojects.sussex.ac.uk.
 It is sent from an address that is not monitored or answered;
 please direct any queries to the project convenor.
 
@@ -23,7 +23,7 @@ possible.
 The following projects have now been published on the live platform:
 {% for p in projects -%}
 - {{ p.name }}
-  https://mpsprojects.co.uk/faculty/live_project/{{ p.id }}
+  https://mpsprojects.sussex.ac.uk/faculty/live_project/{{ p.id }}
 {% endfor -%}
 Follow the links to see how each project will appear to student selectors.
 {%- endif %}

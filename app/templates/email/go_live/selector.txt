@@ -3,7 +3,7 @@ Dear {{ user.first_name }}
 ** NOTE: PROJECT SELECTION DEADLINE IS {{ deadline.strftime("%a %d %b %Y") }} **
 
 This is an automated email from the Sussex Physics & Astronomy
-project management web app at https://mpsprojects.co.uk.
+project management web app at https://mpsprojects.sussex.ac.uk.
 It is sent from an address that is not monitored or answered;
 please direct any queries to the project convenor.
 
@@ -26,7 +26,7 @@ the convenor as soon as possible. Contact details are given below.)
 {%- endif %}
 
 This year's project list has now been published, and can be inspected
-by logging in to our web platform: https://mpsprojects.co.uk.
+by logging in to our web platform: https://mpsprojects.sussex.ac.uk.
 If you have used the platform before then log in with your Sussex email
 address and existing password. If not, an account has been set up for you
 using your Sussex email address and a random password that is not known to

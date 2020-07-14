@@ -1,7 +1,7 @@
 Dear {{ student.user.first_name }}
 
 This is an automated email from the Sussex Physics & Astronomy
-project management web app at https://mpsprojects.co.uk.
+project management web app at https://mpsprojects.sussex.ac.uk.
 It is sent from an address that is not monitored or answered;
 please direct any queries to the project convenor.
 
@@ -11,7 +11,7 @@ for the period "{{ period.display_name }}". Your numerical mark
 should also be available to check, either on Canvas or Sussex Direct.
 
 You can access your feedback at any time using the projects web interface
-at https://mpsprojects.co.uk. You can also, optionally, leave your own
+at https://mpsprojects.sussex.ac.uk. You can also, optionally, leave your own
 feedback about the project. If you have not used the web interface
 before you will need to reset your password before you can log in.
 Your login identifier is your Sussex email address.

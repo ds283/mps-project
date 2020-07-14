@@ -1,5 +1,5 @@
 This is an automated email from the Sussex Physics & Astronomy
-project management web app at https://mpsprojects.co.uk.
+project management web app at https://mpsprojects.sussex.ac.uk.
 
 You are receiving this email because your password has been
 successfully reset. If you continue to experience difficulties

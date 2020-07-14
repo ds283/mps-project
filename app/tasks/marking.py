@@ -266,11 +266,11 @@ def register_marking_tasks(celery):
         if max_attachment is not None \
                 and float(current_size + asset_size)/(1024*1024) > max_attachment:
             if filename is not None:
-                link = 'https://mpsprojects.co.uk/admin/{endpoint}/{asset_id}?filename={fnam}'.format(endpoint=endpoint,
+                link = 'https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}?filename={fnam}'.format(endpoint=endpoint,
                                                                                                       asset_id=asset.id,
                                                                                                       fnam=url_quote(filename))
             else:
-                link = 'https://mpsprojects.co.uk/admin/{endpoint}/{asset_id}'.format(endpoint=endpoint,
+                link = 'https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}'.format(endpoint=endpoint,
                                                                                       asset_id=asset.id)
             attached_documents.append((False, link, description))
 

@@ -5,7 +5,7 @@
     {% set show_manual_enroll = (lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
     {% set show_selector_grid = (lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
     {% set show_confirmations = (lifecycle >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN) and (lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
-    <ul class="nav nav-tabs dashboard-nav">
+    <ul class="nav nav-tabs justify-content-center dashboard-nav">
         <li class="nav-item">
             <a class="nav-link {% if subpane=='list' %}active{% endif %}" href="{{ url_for('convenor.selectors', id=pclass.id) }}">
                 Show selectors

@@ -102,7 +102,7 @@
 {% endblock %}
 
 {% block pillblock %}
-    <ul class="nav nav-pills dashboard-nav">
+    <ul class="nav nav-pills justify-content-center dashboard-nav">
         <li class="nav-item">
             <a class="nav-link {% if pane=='select' %}active{% elif not has_selections %}disabled{% endif %}"
                {% if has_selections %}href="{{ url_for('student.dashboard', pane='select') }}"{% endif %}>

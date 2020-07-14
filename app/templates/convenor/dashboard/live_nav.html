@@ -1,7 +1,7 @@
 {% extends "convenor/dashboard/nav.html" %}
 
 {% block tabblock %}
-    <ul class="nav nav-tabs dashboard-nav">
+    <ul class="nav nav-tabs justify-content-center dashboard-nav">
         <li class="nav-item">
             <a class="nav-link {% if subpane=='list' %}active{% endif %}" href="{{ url_for('convenor.liveprojects', id=pclass.id) }}">
                 Currently live projects

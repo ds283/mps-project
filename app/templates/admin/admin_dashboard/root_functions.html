@@ -41,13 +41,13 @@
                         Automatic matching can now be carried out for one or more project classes.
                     </div>
                     <div class="col-4">
-                        <div class="float-right">
+                        <div class="float-right text-right">
                             {% if not rollover_ready %}
-                                <a href="{{ url_for('admin.skip_matching') }}" class="btn btn-secondary">
+                                <a href="{{ url_for('admin.skip_matching') }}" class="btn btn-secondary btn-table-block">
                                     Skip matching
                                 </a>
                             {% endif %}
-                            <a href="{{ url_for('admin.manage_matching') }}" class="btn btn-warning">
+                            <a href="{{ url_for('admin.manage_matching') }}" class="btn btn-warning btn-table-block">
                                 Manage matching
                             </a>
                         </div>
@@ -84,7 +84,7 @@
                 <div class="row vertical-top" style="height: 54px;">
                     <div class="col-6">
                         <div class="container-fluid">
-                            <div class="row vertical-align">
+                            <div class="row vertical-top">
                                 <div class="col-9">
                                     Clear contents of Redis cache.
                                 </div>
@@ -98,7 +98,7 @@
                      </div>
                     <div class="col-6">
                         <div class="container-fluid">
-                            <div class="row vertical-align">
+                            <div class="row vertical-top">
                                 <div class="col-9">
                                     Reset stored precompute time for all users.
                                 </div>

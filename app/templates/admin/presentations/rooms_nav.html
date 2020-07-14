@@ -1,7 +1,7 @@
 {% extends "base_app.html" %}
 
 {% block pillblock %}
-    <ul class="nav nav-pills dashboard-nav">
+    <ul class="nav nav-pills justify-content-center dashboard-nav">
         <li class="nav-item">
             <a class="nav-link {% if pane=='rooms' %}active{% endif %}"
                href="{{ url_for('admin.edit_rooms') }}">

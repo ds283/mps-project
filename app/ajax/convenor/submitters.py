@@ -145,7 +145,7 @@ _markers = \
     <div>
         {% if r.marker is not none %}
             <div class="dropdown assignment-label">
-                <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                     {% if show_period %}#{{ r.submission_period }}: {% endif %}
                     {{ r.marker.user.name }}
                 </a>
@@ -213,12 +213,12 @@ _presentations = \
                     {% set slot = rec.schedule_slot %}
                     <div class="dropdown assignment-label">
                         {% if slot is not none %}
-                            <a class="badge badge-info btn-table-block dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                            <a class="badge badge-info btn-table-block dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                 {{ slot.short_date_as_string }}
                                 {{ slot.session_type_string }}
                             </a>
                         {% else %}
-                            <a class="badge badge-warning btn-table-block dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                            <a class="badge badge-warning btn-table-block dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                 Not attending
                             </a>
                         {% endif %}

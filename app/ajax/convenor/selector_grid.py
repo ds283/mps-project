@@ -33,7 +33,7 @@ _selections = \
             {% set project = item.liveproject %}
             <div class="dropdown">
                 {% set style = project.group.make_CSS_style() %}
-                <a class="badge badge-info dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">#{{ item.rank }}
+                <a class="badge badge-info dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">#{{ item.rank }}
                     {{ item.format_project()|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}</a>
                 <div class="dropdown-menu">
                     {% set menu_items = item.menu_order %}

@@ -64,7 +64,7 @@ _project = \
         <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
             <a class="badge {% if proj_overassigned %}badge-danger{% elif style %}badge-secondary{% else %}badge-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
                     {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
-                    {% if adjustable %}data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }}
+                    {% if adjustable %}data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }}
                 (No. {{ r.project.number }})</a>
             {% if adjustable %}
                 {% set list = r.selector.ordered_selections %}
@@ -160,7 +160,7 @@ _marker = \
 {% macro marker_tag(r, show_period) %}
     {% if r.marker %}
         <div class="dropdown match-assign-button" style="display: inline-block;">
-            <a class="badge badge-light dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+            <a class="badge badge-light dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.marker.user.name }}
             </a>
             <div class="dropdown-menu">

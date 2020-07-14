@@ -26,7 +26,7 @@ _assessors = \
 {% for assessor in s.assessors %}
     <div>
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
-            <a class="badge badge-light" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+            <a class="badge badge-light" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                 {{ assessor.user.name }}
             </a>
             <div class="dropdown-menu">
@@ -52,7 +52,7 @@ _talks = \
     {% set ns.count = ns.count + 1 %}
     <div class="dropdown schedule-assign-button" style="display: inline-block;">
         {% set style = talk.pclass.make_CSS_style() %}
-        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
             {{ talk.owner.student.user.name }}
         </a>
         <div class="dropdown-menu">
@@ -113,7 +113,7 @@ _room = \
 """
 {% set style = s.room.building.make_CSS_style() %}
 <div class="dropdown schedule-assign-button">
-    <a class="badge {% if style is none %}badge-info{% else %}badge-secondary{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+    <a class="badge {% if style is none %}badge-info{% else %}badge-secondary{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
         {{ s.room.full_name }}
     </a>
     <div class="dropdown-menu">

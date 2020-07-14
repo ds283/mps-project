@@ -449,7 +449,7 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                     if desc.requires_confirmation and not desc.confirmed:
                         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
                             repapprove = """<div class="dropdown" style="display: inline-block;">
-                                                <a class="badge badge-light dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
+                                                <a class="badge badge-light dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
                                                 <div class="dropdown-menu">
                                                     <a class="dropdown-item" href="{url}"><i class="fa fa-check"></i> Confirm</a>
                                                 </div>

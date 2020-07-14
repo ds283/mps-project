@@ -165,7 +165,7 @@ _presentations = \
     {% for slot in slots %}
         <div {% if loop.index < loop.length %}style="padding-bottom: 10px;"{% endif %}>
             <div class="dropdown assignment-label">
-                <a class="badge badge-info btn-table-block dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                <a class="badge badge-info btn-table-block dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                     {{ slot.short_date_as_string }}
                     {{ slot.session_type_string }}
                     {{ slot.room_full_name }}

@@ -94,7 +94,7 @@
                                             {% if talk.is_in_assessor_pool(item.id) %}
                                                 <div class="dropdown schedule-assign-button" style="display: inline-block;">
                                                     {% set style = talk.pclass.make_CSS_style() %}
-                                                    <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                                    <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                         {{ talk.owner.student.user.name }}
                                                     </a>
                                                     <div class="dropdown-menu">
@@ -140,7 +140,7 @@
                                                 {% if talk.is_in_assessor_pool(item.id) %}
                                                     <div class="dropdown schedule-assign-button" style="display: inline-block;">
                                                         {% set style = talk.pclass.make_CSS_style() %}
-                                                        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                                        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                             {{ talk.owner.student.user.name }}
                                                         </a>
                                                         <div class="dropdown-menu">

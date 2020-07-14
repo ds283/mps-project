@@ -23,9 +23,8 @@ from flask import current_app, render_template, redirect, url_for, flash, reques
     stream_with_context, send_file, abort
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 from numpy import histogram
-from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.sql import func, collate
+from sqlalchemy.sql import func, literal_column
 from werkzeug.datastructures import Headers
 from werkzeug.wrappers import Response
 
@@ -54,6 +53,7 @@ from .forms import AddResearchGroupForm, EditResearchGroupForm, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
     PublicScheduleFormFactory, CompareScheduleFormFactory, \
     AddAssetLicenseForm, EditAssetLicenseForm
+from ..tools import ServerSideHandler
 from ..cache import cache
 from ..database import db
 from ..limiter import limiter
@@ -68,7 +68,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
 from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
     canonical_submitted_asset_filename
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
-from ..shared.conversions import is_integer, is_boolean
+from ..shared.conversions import is_integer
 from ..shared.formatters import format_size
 from ..shared.forms.queries import ScheduleSessionQuery
 from ..shared.internal_redis import get_redis
@@ -1925,62 +1925,29 @@ def email_log_ajax():
     Ajax data point for email log
     :return:
     """
-    data = json.loads(request.values.get("args"))
+    base_query = db.session.query(EmailLog) \
+        .join(User, User.id == EmailLog.user_id, isouter=True)
 
-    draw = None
-    try:
-        draw = int(data['draw'])
-        start = int(data['start'])
-        length = int(data['length'])
+    recipient = {'search': func.concat(User.first_name, ' ', User.last_name),
+            'order': func.concat(User.last_name, User.first_name),
+            'search_collation': 'utf8_general_ci'}
+    address = {'search': User.email,
+               'order': User.email,
+               'search_collation': 'utf8_general_ci'}
+    date = {'search': func.date_format(EmailLog.send_date, "%a %d %b %Y %H:%M:%S"),
+            'order': EmailLog.send_date,
+            'search_collation': 'utf8_general_ci'}
+    subject = {'search': EmailLog.subject,
+               'order': EmailLog.subject,
+               'search_collaboration': 'utf8_general_ci'}
 
-        filter_value = str(data['search']['value'])
+    columns = {'recipient': recipient,
+               'address': address,
+               'date': date,
+               'subject': subject}
 
-        column_array = data['columns']
-        order_array = data['order']
-    except KeyError:
-        return jsonify({'draw': draw,
-                        'error': 'Could not interpret AJAX payload from client'})
-
-    query = db.session.query(EmailLog)
-    records_total = get_count(query)
-
-    # join EmailLog query to User records
-    query = query.join(User, User.id == EmailLog.user_id, isouter=True)
-
-    if filter_value:
-        query = query.filter(or_(collate(EmailLog.subject, 'utf8_general_ci').contains(filter_value),
-                                 collate(EmailLog.recipient, 'utf8_general_ci').contains(filter_value),
-                                 collate(User.email, 'utf8_general_ci').contains(filter_value),
-                                 collate(func.concat(User.first_name, ' ', User.last_name), 'utf8_general_ci').contains(filter_value)))
-    records_filtered = get_count(query)
-
-    order_map = {'recipient': func.concat(User.last_name, User.first_name),
-                 'address': User.email,
-                 'date': EmailLog.send_date,
-                 'subject': EmailLog.subject}
-
-    for order in order_array:
-        col = int(order['column'])
-        dir = str(order['dir'])
-
-        label = str(column_array[col]['data'])
-
-        if label in order_map:
-            if dir == 'asc':
-                query = query.order_by(order_map[label].asc())
-            elif dir == 'desc':
-                query = query.order_by(order_map[label].desc())
-
-    if length > 0:
-        query = query.limit(length)
-
-    emails = query.offset(start).all()
-    rows = ajax.site.email_log_data(emails)
-
-    return jsonify({'draw': draw,
-                    'recordsTotal': records_total,
-                    'recordsFiltered': records_filtered,
-                    'data': rows})
+    with ServerSideHandler(request, base_query, columns, ajax.site.email_log_data) as handler:
+        return handler.build_payload()
 
 
 @admin.route('/display_email/<int:id>')

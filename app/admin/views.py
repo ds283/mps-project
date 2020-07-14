@@ -25,7 +25,7 @@ from flask_security import login_required, roles_required, roles_accepted, curre
 from numpy import histogram
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, collate
 from werkzeug.datastructures import Headers
 from werkzeug.wrappers import Response
 
@@ -1948,10 +1948,10 @@ def email_log_ajax():
     query = query.join(User, User.id == EmailLog.user_id, isouter=True)
 
     if filter_value:
-        query = query.filter(or_(EmailLog.subject.contains(filter_value),
-                                 EmailLog.recipient.contains(filter_value),
-                                 User.email.contains(filter_value),
-                                 func.concat(User.first_name, ' ', User.last_name).contains(filter_value)))
+        query = query.filter(or_(collate(EmailLog.subject, 'utf8_general_ci').contains(filter_value),
+                                 collate(EmailLog.recipient, 'utf8_general_ci').contains(filter_value),
+                                 collate(User.email, 'utf8_general_ci').contains(filter_value),
+                                 collate(func.concat(User.first_name, ' ', User.last_name), 'utf8_general_ci').contains(filter_value)))
     records_filtered = get_count(query)
 
     order_map = {'recipient': func.concat(User.last_name, User.first_name),

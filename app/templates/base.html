@@ -55,36 +55,6 @@
         $(window).resize(determineDropDirection);
     </script>
 
-    {# fade out masthead from navbar on scroll #}
-    <script>
-        function fadeNavBarOnScroll() {
-            let masthead = $('#mps-masthead');
-            let scrollPos = $(this).scrollTop()
-
-            // check if masthead is already hidden
-            if(sessionStorage.hasOwnProperty('masthead-hidden')) {
-                if(scrollPos == 0) {
-                    masthead.slideDown();
-                    sessionStorage.removeItem('masthead-hidden')
-                }
-            } else {
-                if(scrollPos > 80) {
-                    masthead.slideUp();
-                    sessionStorage.setItem('masthead-hidden', 'true');
-                }
-            }
-        }
-
-        function showMastheadPageLoad() {
-            if(sessionStorage.hasOwnProperty('masthead-hidden')) {
-                $('#mps-masthead').hide();
-            }
-        }
-
-        showMastheadPageLoad();
-        $(window).scroll(fadeNavBarOnScroll);
-    </script>
-
     {# initialize any tooltips on the page #}
     <script>
         $(document).ready(function() {
@@ -330,9 +300,12 @@
 {#                </div>#}
 {#            </div>#}
 {#        {% endif %}#}
-        <div class="w-100 d-flex">
-            <a class="navbar-brand mx-md-auto" href="{{ home_dashboard_url }}" id="mps-masthead">
+        <div class="w-100 d-flex justify-content-center vertical-align">
+            <a class="navbar-brand" href="{{ home_dashboard_url }}">
                 <img src="{{ url_for('static', filename='assets/UoS_logo_white.png') }}" width="70" class="d-inline-block align-top m-1" alt="">
+            </a>
+            <a class="navbar-brand" href="{{ home_dashboard_urk }}">
+                Physics &amp; Astronomy projects
             </a>
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
                     aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">

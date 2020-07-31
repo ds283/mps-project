@@ -32,6 +32,7 @@
                                 {% if talk.belongs_to(period) %}
                                     {% set valid = talk.is_presentation_assessor_valid(faculty_id) %}
                                     {% set submitted = talk.presentation_assessor_submitted(faculty_id) %}
+                                    {% set uses_feedback = talk.uses_presentation_feedback %}
                                     <tr>
                                         <td>
                                             <a href="mailto:{{ talk.owner.student.user.email }}">{{ talk.student_identifier }}</a>
@@ -43,13 +44,15 @@
                                             <a href="{{ url_for('faculty.live_project', pid=talk.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
                                                 {{ talk.project.name }} (No. {{ talk.project.number }})
                                             </a>
-                                            <div>
-                                                {% if submitted %}
-                                                    <span class="badge badge-success"><i class="fa fa-check"></i> Feedback submitted</span>
-                                                {% elif not slot.owner.owner.is_feedback_open and not submitted %}
-                                                    <span class="badge badge-warning"><i class="fa fa-times"></i> Feedback missing</span>
-                                                {% endif %}
-                                            </div>
+                                            {% if uses_feedback %}
+                                                <div>
+                                                    {% if submitted %}
+                                                        <span class="badge badge-success"><i class="fa fa-check"></i> Feedback submitted</span>
+                                                    {% elif not slot.owner.owner.is_feedback_open and not submitted %}
+                                                        <span class="badge badge-warning"><i class="fa fa-times"></i> Feedback missing</span>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
                                         </td>
                                         <td>
                                             <div style="text-align: right;" class="float-right">
@@ -59,12 +62,14 @@
                                                     </button>
                                                     <div class="dropdown-menu dropdown-menu-right">
                                                         <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=talk.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ talk.number_attachments }})...</a>
-                                                        {% if slot.feedback_state(faculty_id) > slot.FEEDBACK_NOT_YET %}
-                                                            {% if slot.owner.owner.is_feedback_open or (not slot.owner.owner.is_feedback_open and not submitted) %}
-                                                                {% if valid %}
-                                                                    <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=talk.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> Preview feedback...</a>
-                                                                {% else %}
-                                                                    <a class="dropdown-item" href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=talk.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Edit feedback...</a>
+                                                        {% if uses_feedback %}
+                                                            {% if slot.feedback_state(faculty_id) > slot.FEEDBACK_NOT_YET %}
+                                                                {% if slot.owner.owner.is_feedback_open or (not slot.owner.owner.is_feedback_open and not submitted) %}
+                                                                    {% if valid %}
+                                                                        <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=talk.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> Preview feedback...</a>
+                                                                    {% else %}
+                                                                        <a class="dropdown-item" href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=talk.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Edit feedback...</a>
+                                                                    {% endif %}
                                                                 {% endif %}
                                                             {% endif %}
                                                         {% endif %}

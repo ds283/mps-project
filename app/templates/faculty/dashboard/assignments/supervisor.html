@@ -16,6 +16,7 @@
             <tbody>
                 {% for rec in records %}
                     {% set valid = rec.is_supervisor_valid %}
+                    {% set uses_feedback = rec.uses_supervisor_feedback %}
                     <tr>
                         <td>
                             <a href="mailto:{{ rec.owner.student.user.email }}">{{ rec.student_identifier }}</a>
@@ -51,12 +52,14 @@
                                 <span class="badge badge-success"><i class="fa fa-check"></i> Report uploaded</span>
                             {% endif %}
                             <div>
-                                {% if rec.supervisor_submitted %}
-                                    <span class="badge badge-success"><i class="fa fa-check"></i> Feedback submitted</span>
-                                {% elif period.closed and not rec.supervisor_submitted %}
-                                    <span class="badge badge-warning"><i class="fa fa-times"></i> Feedback missing</span>
+                                {% if uses_feedback %}
+                                    {% if rec.supervisor_submitted %}
+                                        <span class="badge badge-success"><i class="fa fa-check"></i> Feedback submitted</span>
+                                    {% elif period.closed and not rec.supervisor_submitted %}
+                                        <span class="badge badge-warning"><i class="fa fa-times"></i> Feedback missing</span>
+                                    {% endif %}
                                 {% endif %}
-                                {% if rec.student_feedback_submitted %}
+                                {% if rec.student_feedback_submitted %} {# still want student feedback reported, even if not collecting project feedback #}
                                     <span class="badge badge-success"><i class="fa fa-check"></i> Student feedback</span>
                                     {% if not rec.acknowledge_feedback %}
                                         <span class="badge badge-warning"><i class="fa fa-exclamation-triangle"></i> Acknowledgment required</span>
@@ -83,13 +86,14 @@
                                                 {% if rec.submission_period <= rec.owner.config.submission_period %}
                                                     <a class="dropdown-item" href="{{ url_for('faculty.mark_started', id=rec.id) }}"><i class="fa fa-check"></i> Mark as started</a>
                                                 {% endif %}
-                                            {% elif (period.is_feedback_open and not period.closed) or (period.closed and not rec.supervisor_submitted) %}
+                                            {% elif uses_feedback and (period.is_feedback_open and not period.closed) or (period.closed and not rec.supervisor_submitted) %}
                                                 {% if valid %}
                                                     <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> Preview feedback...</a>
                                                 {% else %}
                                                     <a class="dropdown-item" href="{{ url_for('faculty.supervisor_edit_feedback', id=rec.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Edit feedback...</a>
                                                 {% endif %}
-                                            {% elif period.closed %}
+                                            {% endif %}
+                                            {% if period.closed %}
                                                 {% if rec.student_feedback_submitted and not rec.acknowledge_feedback %}
                                                     <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Respond to feedback...</a>
                                                 {% elif rec.student_feedback_submitted and not rec.faculty_response_submitted %}

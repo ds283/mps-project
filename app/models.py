@@ -7547,8 +7547,23 @@ class SubmissionRecord(db.Model):
 
 
     @property
+    def uses_supervisor_feedback(self):
+        return self.period.collect_project_feedback and self.period.config.uses_supervisor
+
+
+    @property
+    def uses_marker_feedback(self):
+        return self.period.collect_project_feedback and self.period.config.uses_marker
+
+
+    @property
+    def uses_presentation_feedback(self):
+        return self.period.has_presentation and self.period.collect_presentation_feedback
+
+
+    @property
     def supervisor_feedback_state(self):
-        if not self.period.collect_project_feedback or not self.period.config.uses_supervisor:
+        if not self.uses_supervisor_feedback:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
         return self._feedback_state(self.is_supervisor_valid, self.supervisor_submitted)
@@ -7556,7 +7571,7 @@ class SubmissionRecord(db.Model):
 
     @property
     def marker_feedback_state(self):
-        if not self.period.collect_project_feedback or not self.period.config.uses_marker:
+        if not self.uses_marker_feedback:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
         return self._feedback_state(self.is_marker_valid, self.marker_submitted)
@@ -7564,7 +7579,7 @@ class SubmissionRecord(db.Model):
 
     @property
     def presentation_feedback_late(self):
-        if not self.period.has_presentation or not self.period.collect_presentation_feedback:
+        if not self.uses_presentation_feedback:
             return False
 
         if not self.period.config.project_class.publish:

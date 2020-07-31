@@ -29,8 +29,17 @@
                     <span class="badge badge-secondary badge-pill">{{ pushed }}/{{ total }}</span>
                 </div>
                 <div class="list-group-item">
-                    <span class="{% if not_pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback available to push</span>
-                    <span class="badge badge-secondary badge-pill">{{ not_pushed }}/{{ total }}</span>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <span class="{% if not_pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback available to push</span>
+                            <span class="badge badge-secondary badge-pill">{{ not_pushed }}/{{ total }}</span>
+                        </div>
+                        <div>
+                            {% if not pushed > 0 %}
+                                <a href="{{ url_for('convenor.push_feedback', id=period.id) }}" class="btn btn-success btn-sm">Push feedback</a>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -56,13 +65,4 @@
         {% endif %}
         <div class="col-1"></div>
     </div>
-    {% if not_pushed > 0 %}
-        <div class="row vertical-align">
-            <div class="col-12">
-                <div class="float-right">
-                    <a href="{{ url_for('convenor.push_feedback', id=period.id) }}" class="btn btn-success">Push feedback</a>
-                </div>
-            </div>
-        </div>
-    {% endif %}
 {% endmacro %}

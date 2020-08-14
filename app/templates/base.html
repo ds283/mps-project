@@ -274,7 +274,7 @@
             Convenor
         </a>
 
-        <div class="dropdown-menu">
+        <div class="dropdown-menu dropdown-menu-right">
             <div class="dropdown-header">Convenorships</div>
             {% for project_class in pclasses %}
                 <a class="dropdown-item"href="{{ url_for('convenor.overview', id=project_class.id) }}">
@@ -292,7 +292,7 @@
 {% endmacro %}
 
 {% block navbar %}
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top flex-column mx-md-auto" role="navigation">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top" role="navigation">
 {#        {% if not live_platform %}#}
 {#            <div class="container">#}
 {#                <div class="notify-bar">#}
@@ -300,18 +300,13 @@
 {#                </div>#}
 {#            </div>#}
 {#        {% endif %}#}
-        <div class="w-100 d-flex justify-content-center vertical-align">
-            <a class="navbar-brand" href="{{ home_dashboard_url }}">
-                <img src="{{ url_for('static', filename='assets/UoS_logo_white.png') }}" width="70" class="d-inline-block align-top m-1" alt="">
-            </a>
-            <a class="navbar-brand" href="{{ home_dashboard_urk }}">
-                Physics &amp; Astronomy projects
-            </a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
-                    aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-        </div>
+        <a class="navbar-brand" href="{{ home_dashboard_urk }}">
+            Physics &amp; Astronomy projects
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
+                aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
         <!-- Collect nav links and other content into a menu for mobile devices -->
         <div class="collapse navbar-collapse" id="navbarCollapse">
@@ -323,7 +318,7 @@
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
                             My projects
                         </a>
-                        <div class="dropdown-menu">
+                        <div class="dropdown-menu dropdown-menu-right">
                             <a class="dropdown-item" href="{{ url_for('faculty.edit_projects') }}">
                                 <i class="fa fa-pencil"></i> My project library...
                             </a>
@@ -348,7 +343,7 @@
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
                             My projects
                         </a>
-                        <div class="dropdown-menu">
+                        <div class="dropdown-menu dropdown-menu-right">
                             {% if current_user.student_data.has_timeline %}
                                 <a class="dropdown-item" href="{{ url_for('student.timeline', student_id=current_user.id) }}">
                                     <i class="fa fa-clock-o"></i> Show history...
@@ -367,7 +362,7 @@
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
                             Reports
                         </a>
-                        <div class="dropdown-menu">
+                        <div class="dropdown-menu dropdown-menu-right">
                             <a class="dropdown-item" href="{{ url_for('reports.all_projects') }}">
                                 <i class="fa fa-binoculars"></i> All projects...
                             </a>
@@ -391,7 +386,7 @@
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
                             Admin
                         </a>
-                        <div class="dropdown-menu">
+                        <div class="dropdown-menu dropdown-menu-right">
                             {% if is_manage_users or is_root %}
                                 <a class="dropdown-item" href="{{ url_for('manage_users.edit_users') }}">
                                     <i class="fa fa-users"></i> Manage users...
@@ -453,7 +448,7 @@
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
                             Site management
                         </a>
-                        <div class="dropdown-menu">
+                        <div class="dropdown-menu dropdown-menu-right">
                             {% if is_root %}
                                 <a class="dropdown-item" href="{{ url_for('manage_users.edit_roles') }}">
                                     <i class="fa fa-cogs"></i> Role editor...
@@ -493,7 +488,7 @@
                                 (student)
                             {% endif %}
                         </a>
-                        <div class="dropdown-menu">
+                        <div class="dropdown-menu dropdown-menu-right">
                             <a class="dropdown-item" href="{{ url_for('home.homepage') }}">
                                 <i class="fa fa-area-chart"></i> Dashboard...
                             </a>

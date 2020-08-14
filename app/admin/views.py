@@ -2755,7 +2755,6 @@ def manage_backups_ajax():
     Ajax data point for backup-management view
     :return:
     """
-
     backups = db.session.query(BackupRecord)
     return ajax.site.backups_data(backups)
 
@@ -2767,7 +2766,6 @@ def confirm_delete_all_backups():
     Show confirmation box to delete all backups
     :return:
     """
-
     title = 'Confirm delete'
     panel_title = 'Confirm delete all backups'
 
@@ -2787,7 +2785,6 @@ def delete_all_backups():
     Delete all backups
     :return:
     """
-
     # hand off job to asynchronous task backend since potentially long-running on a big database
     celery = current_app.extensions['celery']
     del_backup = celery.tasks['app.tasks.backup.delete_backup']
@@ -2818,7 +2815,6 @@ def confirm_delete_backup_cutoff(cutoff):
     :param cutoff:
     :return:
     """
-
     pl = 's'
     if cutoff == 1:
         pl = ''
@@ -2843,7 +2839,6 @@ def delete_backup_cutoff(cutoff):
     :param cutoff:
     :return:
     """
-
     pl = 's'
     if cutoff == 1:
         pl = ''
@@ -2881,7 +2876,6 @@ def confirm_delete_backup(id):
     Show confirmation box to delete a backup
     :return:
     """
-
     backup = BackupRecord.query.get_or_404(id)
 
     title = 'Confirm delete'
@@ -2899,11 +2893,9 @@ def confirm_delete_backup(id):
 @admin.route('/delete_backup/<int:id>')
 @roles_required('root')
 def delete_backup(id):
-
     success, msg = remove_backup(id)
 
     if not success:
-
         flash('Could not delete backup: {msg}'.format(msg=msg), 'error')
 
     return redirect(url_for('admin.manage_backups'))
@@ -2916,7 +2908,6 @@ def background_tasks():
     List all background tasks
     :return:
     """
-
     return render_template("admin/background_tasks.html")
 
 
@@ -2927,7 +2918,6 @@ def background_ajax():
     Ajax data point for background tasks view
     :return:
     """
-
     tasks = TaskRecord.query.all()
     return ajax.site.background_task_data(tasks)
 
@@ -2935,7 +2925,6 @@ def background_ajax():
 @admin.route('/terminate_background_task/<string:id>')
 @roles_required('root')
 def terminate_background_task(id):
-
     record = TaskRecord.query.get_or_404(id)
 
     if record.status == TaskRecord.SUCCESS or record.status == TaskRecord.FAILURE \

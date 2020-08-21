@@ -8,6 +8,7 @@ RUN adduser --disabled-password --shell /bin/bash --gecos '' --uid 500 mpsprojec
 WORKDIR /home/mpsproject
 
 COPY requirements.txt requirements.txt
+RUN pip install --upgrade pip
 RUN pypy3 -m venv venv
 RUN venv/bin/pip install -r requirements.txt
 

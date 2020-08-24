@@ -32,10 +32,12 @@
                             {% endif %}
                         {% else %}
                             <div class="card mt-3 mb-3 card-body bg-well">
-                                Last submission received at
-                                <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
-                                from IP address
-                                <strong>{{ sel.submission_IP }}</strong>
+                                <p>
+                                    Last submission received at
+                                    <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
+                                    from IP address
+                                    <strong>{{ sel.submission_IP }}</strong>
+                                </p>
                             </div>
                             {{ ranked_selection(sel, sel.ordered_selections) }}
                         {% endif %}

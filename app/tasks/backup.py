@@ -9,6 +9,8 @@
 #
 
 
+from typing import List
+
 from os import path, makedirs, rmdir, remove, scandir
 from flask import current_app
 import errno
@@ -229,22 +231,33 @@ def register_backup_tasks(celery):
     def thin_bin(self, bin):
         self.update_state(state='STARTED', meta='Thinning backup bin')
 
-        # l should be a list of ids for BackupRecords that need to be thinned down to just 1
+        # 'remain' should be a list of ids for BackupRecords that need to be thinned down to just 1
         remain = bin
+
+        # keep a list of backups that we drop
+        dropped = []
+
         while len(remain) > 1:
+            # draw a random index corresponding to a backup that should be dropped
             index = random.randrange(len(remain))
+
+            # remove from list of backups remaining in the bin
             thin_id = remain[index]
             del remain[index]
+            dropped.append(index)
 
             try:
                 success, msg = remove_backup(thin_id)
 
                 if not success:
                     self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
-                    return
+                    raise self.retry()
+
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
+
+        return {'retained': remain[0], 'dropped': dropped}
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -277,22 +290,26 @@ def register_backup_tasks(celery):
 
         # query database for backup records, and queue a retry if it fails
         try:
-            records = db.session.query(BackupRecord) \
+            records: List[BackupRecord] = db.session.query(BackupRecord) \
                 .filter_by(type=BackupRecord.SCHEDULED_BACKUP) \
                 .order_by(BackupRecord.date.desc()).all()
+
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         for record in records:
-            age = now - record.date
+            record: BackupRecord
+
+            # deduce current age of the backup as a timedelta
+            age: timedelta = now - record.date
 
             if age < max_hourly_age:
-
                 # do nothing; in this period we just keep all backups
                 pass
 
             elif age < max_daily_age:
+                # bin into groups based on age in days
                 if age.days in daily:
                     daily[age.days].append(record.id)
                 else:
@@ -301,6 +318,8 @@ def register_backup_tasks(celery):
             else:
                 # work out age in weeks (as an integer)
                 age_weeks = floor(float(age.days) / float(7))   # returns an Integer in Python3
+
+                # bin into groups based on age in weeks
                 if age_weeks in weekly:
                     weekly[age_weeks].append(record.id)
                 else:
@@ -310,6 +329,7 @@ def register_backup_tasks(celery):
         thinning.apply_async()
 
         self.update_state(state='SUCCESS')
+
 
     @celery.task(default_retry_delay=30)
     def thin():

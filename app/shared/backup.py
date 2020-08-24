@@ -11,6 +11,7 @@
 
 from flask import current_app
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import BackupConfiguration, BackupRecord
@@ -31,8 +32,10 @@ def get_backup_config():
     num = get_count(db.session.query(BackupConfiguration))
 
     if num == 0:
-        # no configuration record is present; generate a default
-        data = BackupConfiguration(keep_hourly=7, keep_daily=2, limit=None, last_changed=datetime.now())
+        # no configuration record is present; generate a default and
+        # allow exceptions to propagate up to caller (we have no sensible way to handle them here)
+        data: BackupConfiguration = BackupConfiguration(keep_hourly=7, keep_daily=2, limit=None,
+                                                        last_changed=datetime.now())
         db.session.add(data)
         db.session.commit()
 
@@ -43,7 +46,7 @@ def get_backup_config():
         BackupConfiguration.query().filter(~BackupConfiguration.id == keep_id).delete()
         db.session.commit()
 
-    config = db.session.query(BackupConfiguration).one()
+    config: BackupConfiguration = db.session.query(BackupConfiguration).one()
 
     return config.keep_hourly, config.keep_daily, (config.limit, config.units), config.backup_max, config.last_changed
 
@@ -58,9 +61,10 @@ def set_backup_config(keep_hourly, keep_daily, limit, units):
     num = get_count(db.session.query(BackupConfiguration))
 
     if num == 0:
-        # no configuration record is present; generate a default
-        data = BackupConfiguration(keep_hourly=keep_hourly, keep_daily=keep_daily,
-                                   limit=limit, units=units, last_changed=datetime.now())
+        # no configuration record is present; generate a default and allow exceptions to propagate
+        # back up to caller (we have no sensible way to handle them here)
+        data: BackupConfiguration = BackupConfiguration(keep_hourly=keep_hourly, keep_daily=keep_daily,
+                                                        limit=limit, units=units, last_changed=datetime.now())
         db.session.add(data)
         db.session.commit()
         return
@@ -69,16 +73,22 @@ def set_backup_config(keep_hourly, keep_daily, limit, units):
         # remove all but most-recently-edited configuration
         keep_id = db.session.query(BackupConfiguration.id).order_by(BackupConfiguration.last_changed.desc()).scalar()
 
-        BackupConfiguration.query().filter(~BackupConfiguration.id == keep_id).delete()
-        db.session.commit()
+        try:
+            BackupConfiguration.query().filter(~BackupConfiguration.id == keep_id).delete()
+            db.session.commit()
 
-    config = db.session.query(BackupConfiguration).one()
+        except SQLAlchemyError as e:
+            pass
+
+    config: BackupConfiguration = db.session.query(BackupConfiguration).one()
 
     config.keep_hourly = keep_hourly
     config.keep_daily = keep_daily
     config.limit = limit
     config.units = units
     config.last_changed = datetime.now()
+
+    # allow exceptions to propagate back to caller; we have no sensible way to deal with them here
     db.session.commit()
 
 
@@ -104,7 +114,11 @@ def remove_backup(id):
 
     remove(abspath)
 
-    db.session.delete(record)
-    db.session.commit()
+    try:
+        db.session.delete(record)
+        db.session.commit()
+
+    except SQLAlchemyError as e:
+        return False, 'could not delete database entry for this backup'
 
     return True, ''

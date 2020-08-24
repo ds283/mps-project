@@ -8344,7 +8344,6 @@ class BackupConfiguration(db.Model):
 
     @property
     def backup_max(self):
-
         if self.limit is None or self.limit == 0:
             return None
 

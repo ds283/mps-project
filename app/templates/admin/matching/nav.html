@@ -4,7 +4,7 @@
 
 {% block pillblock %}
     {% set match_count = info %}
-    <ul class="nav nav-pills justify-content-center dashboard-nav">
+    <ul class="nav nav-pills dashboard-nav">
         <li class="nav-item">
             <a class="nav-link {% if pane == 'manage' %}active{% endif %}"
                href="{{ url_for('admin.manage_matching') }}">

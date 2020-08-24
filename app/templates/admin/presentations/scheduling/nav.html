@@ -4,7 +4,7 @@
 
 {% block pillblock %}
     {% set schedule_count = info %}
-    <ul class="nav nav-pills justify-content-center dashboard-nav">
+    <ul class="nav nav-pills dashboard-nav">
         <li class="nav-item">
             <a class="nav-link {% if pane == 'manage' %}active{% endif %}"
                href="{{ url_for('admin.assessment_schedules', id=assessment.id) }}">

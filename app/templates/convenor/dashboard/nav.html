@@ -23,7 +23,7 @@
     {% set proj_count = convenor_data['attached_projects'] %}
     {% set sel_count = convenor_data['selectors'] %}
     {% set sub_count = convenor_data['submitters'] %}
-    <ul class="nav nav-pills justify-content-center dashboard-nav">
+    <ul class="nav nav-pills dashboard-nav">
         <li class="nav-item">
             <a class="nav-link {% if pane == 'overview' %}active{% endif %}" href="{{ url_for('convenor.overview', id=pclass.id) }}">
                 Overview

@@ -12,7 +12,7 @@
 {%- set is_project_approver = current_user.has_role('project_approver') -%}
 
 {% block pillblock %}
-    <ul class="nav nav-pills justify-content-center dashboard-nav">
+    <ul class="nav nav-pills dashboard-nav">
         {% if is_root %}
             {% set warning = root_dash_data['warning'] %}
             {% set messages = root_dash_data['messages'] %}

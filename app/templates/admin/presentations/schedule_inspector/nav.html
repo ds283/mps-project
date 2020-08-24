@@ -3,7 +3,7 @@
 {% import "bootstrap/form.html" as wtf %}
 
 {% block pillblock %}
-    <ul class="nav nav-pills justify-content-center dashboard-nav">
+    <ul class="nav nav-pills dashboard-nav">
         <li class="nav-item">
             <a class="nav-link {% if pane == 'sessions' %}active{% endif %}"
                href="{{ url_for('admin.schedule_view_sessions', id=record.id, text=text, url=url) }}">

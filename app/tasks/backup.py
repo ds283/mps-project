@@ -244,7 +244,7 @@ def register_backup_tasks(celery):
             # remove from list of backups remaining in the bin
             thin_id = remain[index]
             del remain[index]
-            dropped.append(index)
+            dropped.append(thin_id)
 
             try:
                 success, msg = remove_backup(thin_id)

@@ -24,6 +24,7 @@ from celery.exceptions import Ignore
 from ..database import db
 from ..models import BackupRecord
 from ..shared.backup import get_backup_config, get_backup_count, get_backup_size, remove_backup
+from ..shared.formatters import format_size
 
 from datetime import datetime, timedelta
 from dateutil import parser
@@ -352,11 +353,28 @@ def register_backup_tasks(celery):
         backup_folder = current_app.config['BACKUP_FOLDER']
         abspath = path.join(backup_folder, record.filename)
 
+        # return value is 'found' if the backup was found; otherwise it is 'missing' if the backup file
+        # was not found but the database entry cannot be dropped, or 'dropped' if the database
+        # entry was purged
+        state = 'found'
+
         if not path.exists(abspath):
-            db.session.delete(record)
-            db.session.commit()
+            # switch return value to 'missing'
+            state = 'missing'
+
+            try:
+                db.session.delete(record)
+                db.session.commit()
+
+                # switch return value to 'dropped'
+                state = 'dropped'
+
+            except SQLAlchemyError as e:
+                pass
 
         self.update_state(state='SUCCESS')
+        return state
+
 
     @celery.task(bind=True, default_retry_delay=30)
     def apply_size_limit(self):
@@ -368,9 +386,24 @@ def register_backup_tasks(celery):
         if backup_max is None:
             return
 
-        while get_backup_size() > backup_max and get_backup_count() > 0:
+        # cache current size of backup folder and number of recorded backups
+        current_size = get_backup_size()
+        current_count = get_backup_count()
+
+        # remember initial size and count
+        initial_size = current_size
+        initial_count = current_count
+
+        # number of dropped backups
+        dropped = 0
+
+        while current_size > backup_max and current_count > 0:
+            print('apply_size_limit: current backup size = {current}, maximum size = '
+                  '{maxsize}, backup count = {count}'.format(current=format_size(current_size),
+                                                             maxsize=format_size(backup_max), count=current_count))
             try:
-                oldest_backup = db.session.query(BackupRecord.id).order_by(BackupRecord.date.asc()).first()
+                oldest_backup: BackupRecord = db.session.query(BackupRecord.id).order_by(BackupRecord.date.asc()).first()
+
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 return self.retry()
@@ -378,15 +411,33 @@ def register_backup_tasks(celery):
             if oldest_backup is not None:
                 try:
                     success, msg = remove_backup(oldest_backup[0])
+                    dropped += 1
+
                 except SQLAlchemyError as e:
                     current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     return self.retry()
 
                 if not success:
+                    print('apply_size_limit: failed to remove backup {timestamp} '
+                          '("{desc}")'.format(timestamp=oldest_backup.timestamp,
+                                              desc=oldest_backup.description))
                     self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
+                    raise self.retry()
 
             else:
                 self.update_state(state='FAILED', meta='Database record for oldest backup could not be loaded')
+                raise self.retry()
+
+            # update cached values
+            current_size = get_backup_size()
+            current_count = get_backup_count()
+
+        # return status (currently ignored by caller, but useful for debugging Celery jobs)
+        return {'initial size': initial_size,
+                'initial count': initial_count,
+                'dropped': dropped,
+                'new size': current_size,
+                'limit': backup_max}
 
 
     @celery.task(default_retry_delay=30)

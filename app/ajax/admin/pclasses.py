@@ -27,13 +27,13 @@ _menu = \
     <div class="dropdown-menu dropdown-menu-right">
         <div class="dropdown-header">Edit</div>
         
-        <a class="dropown-item" href="{{ url_for('admin.edit_pclass', id=pcl.id) }}">
+        <a class="dropdown-item" href="{{ url_for('admin.edit_pclass', id=pcl.id) }}">
             <i class="fa fa-cogs"></i> Settings...
         </a>
-        <a class="dropown-item" href="{{ url_for('admin.edit_pclass_text', id=pcl.id) }}">
+        <a class="dropdown-item" href="{{ url_for('admin.edit_pclass_text', id=pcl.id) }}">
             <i class="fa fa-pencil"></i> Customize messages...
         </a>
-        <a class="dropown-item" href="{{ url_for('admin.edit_submission_periods', id=pcl.id) }}">
+        <a class="dropdown-item" href="{{ url_for('admin.edit_submission_periods', id=pcl.id) }}">
             <i class="fa fa-cogs"></i> Submission periods...
         </a>
         

@@ -181,7 +181,7 @@ _desc_menu = \
             <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
                                 url=url_for('convenor.edit_descriptions', id=d.parent.id, pclass_id=pclass_id, create=create),
                                 text='description list view') }}">
-                <i class="fas fa-search"></i> Preview web page
+                <i class="fas fa-search fa-fw"></i> Preview web page
             </a>
 
             {% if desc_validator and desc_validator(d) %}
@@ -189,19 +189,19 @@ _desc_menu = \
                 <div class="dropdown-header">Edit description</div>
     
                 <a class="dropdown-item" href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
-                    <i class="fas fa-pencil"></i> Edit content...
+                    <i class="fas fa-pencil-alt fa-fw"></i> Edit content...
                 </a>
                 <a class="dropdown-item" href="{{ url_for('convenor.description_modules', did=d.id, pclass_id=pclass_id, create=create) }}">
-                    <i class="fas fa-cogs"></i> Recommended modules...
+                    <i class="fas fa-cogs fa-fw"></i> Recommended modules...
                 </a>
                 <a class="dropdown-item" href="{{ url_for('convenor.duplicate_description', did=d.id, pclass_id=pclass_id) }}">
-                    <i class="fas fa-clone"></i> Duplicate
+                    <i class="fas fa-clone fa-fw"></i> Duplicate
                 </a>
                 <a class="dropdown-item" href="{{ url_for('convenor.move_description', did=d.id, pclass_id=pclass_id, create=create) }}">
-                    <i class="fas fa-arrows"></i> Move to project...
+                    <i class="fas fa-arrows fa-fw"></i> Move to project...
                 </a>
                 <a class="dropdown-item" href="{{ url_for('convenor.delete_description', did=d.id, pclass_id=pclass_id) }}">
-                    <i class="fas fa-trash"></i> Delete
+                    <i class="fas fa-trash fa-fw"></i> Delete
                 </a>
             {% endif %}
     
@@ -209,11 +209,11 @@ _desc_menu = \
 
             {% if d.default is none %}
                 <a class="dropdown-item" href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id, did=d.id) }}">
-                    <i class="fas fa-wrench"></i> Make default
+                    <i class="fas fa-wrench fa-fw"></i> Make default
                 </a>
             {% else %}
                 <a class="dropdown-item" href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id) }}">
-                    <i class="fas fa-wrench"></i> Remove default
+                    <i class="fas fa-wrench fa-fw"></i> Remove default
                 </a>
             {% endif %}
         </div>

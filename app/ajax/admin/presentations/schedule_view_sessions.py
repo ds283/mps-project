@@ -124,7 +124,7 @@ _room = \
                 {{ room.full_name }}
             </a>
         {% else %}
-            <a class="dropdown-item disabled"><i class="fas fa-bar"></i> None available</a>
+            <a class="dropdown-item disabled"><i class="fas fa-bar fa-fw"></i> None available</a>
         {% endfor %}
     </ul>
 </div>

@@ -39,17 +39,17 @@ _menu = \
     <div class="dropdown-menu dropdown-menu-right">
         {% set disabled = not m.active %}
         <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_module', id=m.id) }}"{% endif %}>
-            <i class="fas fa-pencil"></i> Edit details...
+            <i class="fas fa-pencil-alt fa-fw"></i> Edit details...
         </a>
 
         {% if m.active %}
             <a class="dropdown-item" href="{{ url_for('admin.retire_module', id=m.id) }}">
-                <i class="fas fa-wrench"></i> Retire
+                <i class="fas fa-wrench fa-fw"></i> Retire
             </a>
         {% else %}
             {% set disabled = m.available %}
             <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.unretire_module', id=m.id) }}"{% endif %}>
-                <i class="fas fa-wrench"></i> Unretire
+                <i class="fas fa-wrench fa-fw"></i> Unretire
             </a>
         {% endif %}
     </div>

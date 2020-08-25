@@ -62,12 +62,12 @@ _projects = \
                         <a class="dropdown-item disabled">Submission period not yet open</a>
                     {% elif not r.student_engaged %}
                         <a class="dropdown-item" href="{{ url_for('convenor.mark_started', id=r.id) }}">
-                            <i class="fas fa-check"></i> Mark as started
+                            <i class="fas fa-check fa-fw"></i> Mark as started
                         </a>
                     {% else %}
                         {% set disabled = (r.owner.config.submitter_lifecycle >= r.owner.config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
                         <a class="dropdown-item {% if disabled %}disabled{% endif %}"{% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
-                            <i class="fas fa-times"></i> Mark as waiting
+                            <i class="fas fa-times fa-fw"></i> Mark as waiting
                         </a>
                     {% endif %}
                 </div>

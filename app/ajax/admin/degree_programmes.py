@@ -20,10 +20,10 @@ _menu = \
     <div class="dropdown-menu dropdown-menu-right">
         <div class="dropdown-header">Edit</div>
         <a class="dropdown-item" href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
-            <i class="fas fa-cogs"></i> Edit details...
+            <i class="fas fa-cogs fa-fw"></i> Edit details...
         </a>
         <a class="dropdown-item" href="{{ url_for('admin.attach_modules', id=programme.id) }}">
-            <i class="fas fa-cogs"></i> Attach modules...
+            <i class="fas fa-cogs fa-fw"></i> Attach modules...
         </a>
         
         <div role="separator" class="dropdown-divider"></div>
@@ -31,16 +31,16 @@ _menu = \
 
         {% if programme.active %}
             <a class="dropdown-item" href="{{ url_for('admin.deactivate_degree_programme', id=programme.id) }}">
-                <i class="fas fa-wrench"></i> Make inactive
+                <i class="fas fa-wrench fa-fw"></i> Make inactive
             </a>
         {% else %}
             {% if programme.available %}
                 <a class="dropdown-item" href="{{ url_for('admin.activate_degree_programme', id=programme.id) }}">
-                    <i class="fas fa-wrench"></i> Make active
+                    <i class="fas fa-wrench fa-fw"></i> Make active
                 </a>
             {% else %}
                 <a class="dropdown-item disabled">
-                    <i class="fas fa-ban"></i> Degree type inactive
+                    <i class="fas fa-ban fa-fw"></i> Degree type inactive
                 </a>
             {% endif %}
         {% endif %}

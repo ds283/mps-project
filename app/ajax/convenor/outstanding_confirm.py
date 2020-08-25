@@ -91,10 +91,10 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('convenor.force_confirm', id=config.id, uid=f.id) }}">
-            <i class="fas fa-check"></i> Force confirm all
+            <i class="fas fa-check fa-fw"></i> Force confirm all
         </a>
         <a hclass="dropdown-item" ref="{{ url_for('convenor.confirmation_reminder_individual', fac_id=f.id, config_id=config.id) }}">
-            <i class="fas fa-envelope"></i> Send reminder
+            <i class="fas fa-envelope fa-fw"></i> Send reminder
         </a>
     </div>
 </div>

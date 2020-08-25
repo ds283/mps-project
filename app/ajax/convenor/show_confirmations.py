@@ -69,17 +69,17 @@ _menu = \
     {% set lifecycle = config.selector_lifecycle %}
     {% if lifecycle >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING%}
         <a class="dropdown-item" href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
-            <i class="fas fa-check"></i> Confirm
+            <i class="fas fa-check fa-fw"></i> Confirm
         </a>
         <a class="dropdown-item" href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
-            <i class="fas fa-trash"></i> Delete
+            <i class="fas fa-trash fa-fw"></i> Delete
         </a>
     {% else %}
         <a class="dropdown-item disabled">
-            <i class="fas fa-check"></i> Confirm
+            <i class="fas fa-check fa-fw"></i> Confirm
         </a>
         <a class="dropdown-item disabled">
-            <i class="fas fa-trash"></i> Delete
+            <i class="fas fa-trash fa-fw"></i> Delete
         </a>
     {% endif %}
     </div>

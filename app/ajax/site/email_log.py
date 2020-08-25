@@ -19,10 +19,10 @@ _email_log_menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('admin.delete_email', id=e.id) }}">
-            <i class="fas fa-trash"></i> Delete
+            <i class="fas fa-trash fa-fw"></i> Delete
         </a>
         <a class="dropdown-item" href="{{ url_for('admin.display_email', id=e.id) }}">
-            <i class="fas fa-eye"></i> View email
+            <i class="fas fa-eye fa-fw"></i> View email
         </a>
     </div>
 </div>

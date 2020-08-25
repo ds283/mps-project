@@ -119,10 +119,10 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('admin.merge_change_schedule', source_id=t.id if t is not none else -1, target_id=s.id if s is not none else -1, source_sched=tid, target_sched=sid) }}">
-            <i class="fas fa-chevron-circle-left"></i> Apply change to source
+            <i class="fas fa-chevron-circle-left fa-fw"></i> Apply change to source
         </a>
         <a class="dropdown-item" href="{{ url_for('admin.merge_change_schedule', source_id=s.id if s is not none else -1, target_id=t.id if t is not none else -1, source_sched=sid, target_sched=tid) }}">
-            <i class="fas fa-chevron-circle-right"></i> Revert change in target
+            <i class="fas fa-chevron-circle-right fa-fw"></i> Revert change in target
         </a>
     </div>
 </div>

@@ -19,21 +19,21 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('admin.edit_room', id=r.id) }}">
-            <i class="fas fa-pencil"></i> Edit details...
+            <i class="fas fa-pencil-alt fa-fw"></i> Edit details...
         </a>
 
         {% if r.active %}
             <a class="dropdown-item" href="{{ url_for('admin.deactivate_room', id=r.id) }}">
-                <i class="fas fa-wrench"></i> Make inactive
+                <i class="fas fa-wrench fa-fw"></i> Make inactive
             </a>
         {% else %}
             {% if r.available %}
                 <a class="dropdown-item" href="{{ url_for('admin.activate_room', id=r.id) }}">
-                    <i class="fas fa-wrench"></i> Make active
+                    <i class="fas fa-wrench fa-fw"></i> Make active
                 </a>
             {% else %}
                 <a class="dropdown-item disabled">
-                    <i class="fas fa-ban"></i> Building inactive
+                    <i class="fas fa-ban fa-fw"></i> Building inactive
                 </a>
             {% endif %}
         {% endif %}

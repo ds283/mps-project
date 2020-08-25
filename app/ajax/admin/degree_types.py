@@ -19,16 +19,16 @@ _types_menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('admin.edit_degree_type', id=type.id) }}">
-            <i class="fas fa-pencil"></i> Edit details...
+            <i class="fas fa-pencil-alt fa-fw"></i> Edit details...
         </a>
 
         {% if type.active %}
             <a class="dropdown-item" href="{{ url_for('admin.deactivate_degree_type', id=type.id) }}">
-                <i class="fas fa-wrench"></i> Make inactive
+                <i class="fas fa-wrench fa-fw"></i> Make inactive
             </a>
         {% else %}
             <a class="dropdown-item" href="{{ url_for('admin.activate_degree_type', id=type.id) }}">
-                <i class="fas fa-wrench"></i> Make active
+                <i class="fas fa-wrench fa-fw"></i> Make active
             </a>
         {% endif %}
     </div>

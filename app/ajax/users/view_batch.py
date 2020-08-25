@@ -93,18 +93,18 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('manage_users.edit_batch_item', item_id=item.id) }}">
-            <i class="fas fa-pencil"></i> Edit...
+            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
         </a>
         
         <div role="separator" class="dropdown-divider"></div>
 
         {% if item.dont_convert %}
             <a class="dropdown-item" href="{{ url_for('manage_users.mark_batch_item_convert', item_id=item.id) }}">
-                <i class="fas fa-wrench"></i> Allow import
+                <i class="fas fa-wrench fa-fw"></i> Allow import
             </a>
         {% else %}
             <a class="dropdown-item" href="{{ url_for('manage_users.mark_batch_item_dont_convert', item_id=item.id) }}">
-                <i class="fas fa-wrench"></i> Disallow import
+                <i class="fas fa-wrench fa-fw"></i> Disallow import
             </a>
         {% endif %}
     </div>

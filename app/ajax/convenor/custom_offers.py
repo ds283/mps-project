@@ -63,23 +63,23 @@ _menu = \
         {% set status = offer.status %}
         {% if status == offer.OFFERED and not offer.selector.has_submitted %}
             <a class="dropdown-item" href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">
-                <i class="fas fa-check"></i> Accept
+                <i class="fas fa-check fa-fw"></i> Accept
             </a>
             <a class="dropdown-item" href="{{ url_for('convenor.decline_custom_offer', offer_id=offer.id) }}">
-                <i class="fas fa-times"></i> Decline
+                <i class="fas fa-times fa-fw"></i> Decline
             </a>
         {% elif status == offer.DECLINED and not offer.selector.has_submitted %}
             <a class="dropdown-item" href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">
-                <i class="fas fa-check"></i> Accept
+                <i class="fas fa-check fa-fw"></i> Accept
             </a>
         {% elif status == offer.ACCEPTED %}
             <a class="dropdown-item" href="{{ url_for('convenor.decline_custom_offer', offer_id=offer.id) }}">
-                <i class="fas fa-check"></i> Decline
+                <i class="fas fa-check fa-fw"></i> Decline
             </a>
         {% endif %}        
     
         <a class="dropdown-item" href="{{ url_for('convenor.delete_custom_offer', offer_id=offer.id) }}">
-            <i class="fas fa-trash"></i> Delete
+            <i class="fas fa-trash fa-fw"></i> Delete
         </a>
     </div>
 </dic>

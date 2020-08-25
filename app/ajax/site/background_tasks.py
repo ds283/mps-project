@@ -34,11 +34,11 @@ _menu = \
     <div class="dropdown-menu dropdown-menu-right">
         {% if t.status == t.PENDING or t.status == t.RUNNING %}
             <a class="dropdown-item" href="{{ url_for('admin.terminate_background_task', id=t.id) }}">
-                <i class="fas fa-hand-paper"></i> Terminate
+                <i class="fas fa-hand-paper fa-fw"></i> Terminate
             </a>
         {% else %}
             <a class="dropdown-item" href="{{ url_for('admin.delete_background_task', id=t.id) }}">
-                <i class="fas fa-trash"></i> Delete
+                <i class="fas fa-trash fa-fw"></i> Delete
             </a>
         {% endif %}
     </div>

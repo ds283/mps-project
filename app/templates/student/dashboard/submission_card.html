@@ -72,9 +72,9 @@
                                             Actions
                                         </button>
                                         <div class="dropdown-menu dropdown-menu-right">
-                                            <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fas fa-file-text"></i> Manage documents ({{ record.number_attachments_student }})...</a>
+                                            <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ record.number_attachments_student }})...</a>
                                             {% if record.has_feedback %}
-                                                <a class="dropdown-item" href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}"><i class="fas fa-search"></i> View feedback...</a>
+                                                <a class="dropdown-item" href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}"><i class="fas fa-search fa-fw"></i> View feedback...</a>
                                             {% endif %}
                                         </div>
                                     </div>

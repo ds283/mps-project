@@ -45,10 +45,10 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('admin.edit_period', id=period.id) }}">
-            <i class="fas fa-cogs"></i> Edit period...
+            <i class="fas fa-cogs fa-fw"></i> Edit period...
         </a>
         <a class="dropdown-item" href="{{ url_for('admin.delete_period', id=period.id) }}">
-            <i class="fas fa-trash"></i> Delete period
+            <i class="fas fa-trash fa-fw"></i> Delete period
         </a>
     </div>
 </div>

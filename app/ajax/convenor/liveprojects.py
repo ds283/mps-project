@@ -103,51 +103,51 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('faculty.live_project', pid=project.id, text='live projects list', url=url_for('convenor.liveprojects', id=config.pclass_id)) }}">
-            <i class="fas fa-eye"></i> View web page
+            <i class="fas fa-eye fa-fw"></i> View web page
         </a>
         <a class="dropdown-item" href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}">
-            <i class="fas fa-wrench"></i> View analytics
+            <i class="fas fa-wrench fa-fw"></i> View analytics
         </a>
         <a class="dropdown-item" href="{{ url_for('convenor.delete_live_project', pid=project.id) }}">
-            <i class="fas fa-trash"></i> Delete
+            <i class="fas fa-trash fa-fw"></i> Delete
         </a>
         
         <div role="separator" class="dropdown-divider">
 
         {% if project.number_bookmarks > 0 %}
             <a class="dropdown-item" href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
-                <i class="fas fa-cogs"></i> Bookmarking students
+                <i class="fas fa-cogs fa-fw"></i> Bookmarking students
             </a>
         {% else %}
-            <a class="dropdown-item disabled">><i class="fas fa-cogs"></i> Bookmarking students</a>
+            <a class="dropdown-item disabled">><i class="fas fa-cogs fa-fw"></i> Bookmarking students</a>
         {% endif %}
         
         {% if project.number_selections > 0 %}
             <a class="dropdown-item" href="{{ url_for('convenor.project_choices', id=project.id) }}">
-                <i class="fas fa-cogs"></i> Selecting students
+                <i class="fas fa-cogs fa-fw"></i> Selecting students
             </a>
         {% else %}
-            <a class="dropdown-item disabled"><i class="fas fa-cogs"></i> Selecting students</a>
+            <a class="dropdown-item disabled"><i class="fas fa-cogs fa-fw"></i> Selecting students</a>
         {% endif %}
         <a class="dropdown-item" href="{{ url_for('convenor.project_custom_offers', proj_id=project.id) }}">
-            <i class="fas fa-cogs"></i> Custom offers...
+            <i class="fas fa-cogs fa-fw"></i> Custom offers...
         </a>
 
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Meeting requests</div>
         {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and project.number_pending > 0 %}
             <a class="dropdown-item" href="{{ url_for('convenor.project_confirm_all', pid=project.id) }}">
-                <i class="fas fa-check"></i> Confirm all requests
+                <i class="fas fa-check fa-fw"></i> Confirm all requests
             </a>
             <a class="dropdown-item" href="{{ url_for('convenor.project_clear_requests', pid=project.id) }}">
-                <i class="fas fa-trash"></i> Delete all requests
+                <i class="fas fa-trash fa-fw"></i> Delete all requests
             </a>
         {% else %}
             <a class="dropdown-item disabled">
-                <i class="fas fa-check"></i> Confirm all requests
+                <i class="fas fa-check fa-fw"></i> Confirm all requests
             </a>
             <a class="dropdown-item disabled">
-                <i class="fas fa-trash"></i> Delete all requests
+                <i class="fas fa-trash fa-fw"></i> Delete all requests
             </a>
         {% endif %}
 
@@ -155,27 +155,27 @@ _menu = \
         div class="dropdown-header">Meeting confirmations</div>
         {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and project.number_confirmed > 0 %}
             <a class="dropdown-item" href="{{ url_for('convenor.project_remove_confirms', pid=project.id) }}">
-                <i class="fas fa-trash"></i> Delete confirmations
+                <i class="fas fa-trash fa-fw"></i> Delete confirmations
             </a>
             <a class="dropdown-item" href="{{ url_for('convenor.project_make_all_confirms_pending', pid=project.id) }}">
-                <i class="fas fa-clock"></i> Make all pending
+                <i class="fas fa-clock fa-fw"></i> Make all pending
             </a>
         {% else %}
             <a class="dropdown-item disabled">
-                <i class="fas fa-trash"></i> Delete confirmations
+                <i class="fas fa-trash fa-fw"></i> Delete confirmations
             </a>
             <a class="dropdown-item disabled">
-                <i class="fas fa-clock"></i> Make all pending
+                <i class="fas fa-clock fa-fw"></i> Make all pending
             </a>
         {% endif %}
         
         {% if project.number_pending > 0 or project.number_confirmed > 0 %}
             <a class="dropdown-item" href="{{ url_for('convenor.project_confirmations', id=project.id) }}">
-                <i class="fas fa-cogs"></i> Show confirmations
+                <i class="fas fa-cogs fa-fw"></i> Show confirmations
             </a>
         {% else %}
             <a class="dropdown-item disabled">
-                <i class="fas fa-cogs"></i> Show confirmations
+                <i class="fas fa-cogs fa-fw"></i> Show confirmations
             </a>
         {% endif %}
     </div>

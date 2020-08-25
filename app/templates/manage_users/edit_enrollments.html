@@ -29,19 +29,19 @@
                                 <div class="dropdown-menu">
                                     <div class="dropdown-header">Admin</div>
                                     <a class="dropdown-item" href="{{ url_for('manage_users.remove_enrollment', userid=user.id, pclassid=pclass.id) }}">
-                                        <i class="fas fa-trash"></i> Remove enrollment
+                                        <i class="fas fa-trash fa-fw"></i> Remove enrollment
                                     </a>
                                     <a class="dropdown-item" href="{{ url_for('manage_users.edit_enrollment', id=record.id, url=url_for('manage_users.edit_enrollments', id=record.owner_id, pane=pane), pane=pane) }}">
-                                        <i class="fas fa-cogs"></i> Edit enrollment
+                                        <i class="fas fa-cogs fa-fw"></i> Edit enrollment
                                     </a>
                                     <div role="separator" class="dropdown-divider"></div>
                                     <div class="dropdown-header">Operations</div>
                                     {% set disable = record.marker_state != record.MARKER_ENROLLED and record.presentations_state != record.PRESENTATIONS_ENROLLED %}
                                     <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disable %}href="{{  url_for('manage_users.enroll_projects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
-                                        <i class="fas fa-cogs"></i> Make assessor for all projects
+                                        <i class="fas fa-cogs fa-fw"></i> Make assessor for all projects
                                     </a>
                                     <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disable %}href="{{  url_for('manage_users.enroll_liveprojects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
-                                        <i class="fas fa-cogs"></i> Make assessor for this year's live projects
+                                        <i class="fas fa-cogs fa-fw"></i> Make assessor for this year's live projects
                                     </a>
                                 </div>
                             </div>

@@ -104,29 +104,29 @@
                         {% set has_access = asset.has_access(current_user.id) %}
                         {# no need to check whether user is admin, because anyone accessing this view must be an admin user #}
                         {% if edit_url is not none %}
-                            <a class="dropdown-item" href="{{ edit_url }}"><i class="fas fa-pencil"></i> Edit</a>
+                            <a class="dropdown-item" href="{{ edit_url }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit</a>
                         {% else %}
-                            <a class="dropdown-item disabled"><i class="fas fa-pencil"></i> Edit</a>
+                            <a class="dropdown-item disabled"><i class="fas fa-pencil-alt fa-fw"></i> Edit</a>
                         {% endif %}
                         {% if has_access and download_url is not none %}
-                            <a class="dropdown-item" href="{{ download_url }}"><i class="fas fa-cloud-download"></i> Download</a>
+                            <a class="dropdown-item" href="{{ download_url }}"><i class="fas fa-cloud-download fa-fw"></i> Download</a>
                         {% else %}
-                            <a class="dropdown-item disabled"><i class="fas fa-cloud-download"></i> Download</a>
+                            <a class="dropdown-item disabled"><i class="fas fa-cloud-download fa-fw"></i> Download</a>
                         {% endif %}
                         {% if acl_url is not none %}
-                            <a class="dropdown-item" href="{{ acl_url }}"><i class="fas fa-check-square"></i> Access control...</a>
+                            <a class="dropdown-item" href="{{ acl_url }}"><i class="fas fa-check-square fa-fw"></i> Access control...</a>
                         {% else %}
-                            <a class="dropdown-item disabled"><i class="fas fa-check-square"></i> Access control...</a>
+                            <a class="dropdown-item disabled"><i class="fas fa-check-square fa-fw"></i> Access control...</a>
                         {% endif %}
                         {% if log_url is not none %}
-                            <a class="dropdown-item" href="{{ log_url }}"><i class="fas fa-address-book"></i> Download log...</a>
+                            <a class="dropdown-item" href="{{ log_url }}"><i class="fas fa-address-book fa-fw"></i> Download log...</a>
                         {% else %}
-                            <a class="dropdown-item disabled"><i class="fas fa-address-book"></i> Download log...</a>
+                            <a class="dropdown-item disabled"><i class="fas fa-address-book fa-fw"></i> Download log...</a>
                         {% endif %}
                         {% if deletable and delete_url is not none %}
-                            <a class="dropdown-item" href="{{ delete_url }}"><i class="fas fa-trash"></i> Remove</a>
+                            <a class="dropdown-item" href="{{ delete_url }}"><i class="fas fa-trash fa-fw"></i> Remove</a>
                         {% else %}
-                            <a class="dropdown-item disabled"><i class="fas fa-trash"></i> Remove</a>
+                            <a class="dropdown-item disabled"><i class="fas fa-trash fa-fw"></i> Remove</a>
                         {% endif %}
                     </div>
                 </div>

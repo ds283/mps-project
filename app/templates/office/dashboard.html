@@ -14,7 +14,7 @@
         <li class="nav-item">
             <a class="nav-link {% if pane == 'overview' %}active{% endif %}" href="{{ url_for('office.dashboard', pane='overview') }}">
                 {% if warning or (messages is not none and messages|length > 0) %}
-                    <i class="fa fa-exclamation-triangle"></i>
+                    <i class="fas fa-exclamation-triangle"></i>
                 {% endif %}
                 Administration
             </a>
@@ -28,7 +28,7 @@
             <li class="nav-item">
                 <a class="nav-link {% if pane == 'approve' %}active{% endif %}" href="{{ url_for('office.dashboard', pane='approve') }}">
                     {% if user_warning or project_warning %}
-                        <i class="fa fa-exclamation-triangle"></i>
+                        <i class="fas fa-exclamation-triangle"></i>
                     {% endif %}
                     Approvals
                     {% if approve_total > 0 %}

@@ -12,7 +12,7 @@
         <div class="col-10">
             <div class="card mt-3 mb-3">
                 <div class="card-header bg-primary text-white">
-                    Upload report for <i class="fa fa-user"></i> <strong>{{ record.student_identifier }}</strong> {{ record.period.display_name }}
+                    Upload report for <i class="fas fa-user"></i> <strong>{{ record.student_identifier }}</strong> {{ record.period.display_name }}
                 </div>
                 <div class="card-body">
                     <form action="{{ url_for('documents.upload_submitter_report', sid=record.id, url=url, text=text) }}" method="POST" enctype="multipart/form-data" name="report_form">
@@ -35,7 +35,7 @@
 
             <div>
                 <a href="{{ url_for('documents.submitter_documents', sid=record.id, url=url, text=text) }}">
-                    <i class="fa fa-backward"></i> Return to document manager for <i class="fa fa-user"></i> {{ record.student_identifier }}
+                    <i class="fas fa-backward"></i> Return to document manager for <i class="fas fa-user"></i> {{ record.student_identifier }}
                 </a>
             </div>
         </div>

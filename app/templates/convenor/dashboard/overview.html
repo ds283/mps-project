@@ -38,15 +38,12 @@
         <div class="col-10">
             <div class="card mt-3 mb-3 card-body bg-well">
                 <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
-                <div class="list-group mb-2">
-                    <div class="list-group-item">
-                        Submission periods:
-                        {% for p in config.periods %}
-                            <span class="badge badge-primary">{{ p.display_name|safe }}</span>
-                        {% else %}
-                            <span class="badge badge-secondary">None</span>
-                        {% endfor %}
-                    </div>
+                <div>
+                    {% for p in config.periods %}
+                        <span class="badge badge-primary">{{ p.display_name|safe }}</span>
+                    {% else %}
+                        <span class="badge badge-secondary">None</span>
+                    {% endfor %}
                 </div>
                 <div class="row vertical-align mb-2">
                     <div class="col-4">
@@ -152,7 +149,7 @@
             {% else %}
                 <div class="card mt-3 mb-3 card-body bg-well">
                     <p>
-                        <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                        <i class="fas fa-exclamation-triangle" style="color:red;"></i>
                         This project class is not published, so its administration options are limited.
                     </p>
                 </div>

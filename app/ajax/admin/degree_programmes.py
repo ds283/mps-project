@@ -20,10 +20,10 @@ _menu = \
     <div class="dropdown-menu dropdown-menu-right">
         <div class="dropdown-header">Edit</div>
         <a class="dropdown-item" href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
-            <i class="fa fa-cogs"></i> Edit details...
+            <i class="fas fa-cogs"></i> Edit details...
         </a>
         <a class="dropdown-item" href="{{ url_for('admin.attach_modules', id=programme.id) }}">
-            <i class="fa fa-cogs"></i> Attach modules...
+            <i class="fas fa-cogs"></i> Attach modules...
         </a>
         
         <div role="separator" class="dropdown-divider"></div>
@@ -31,16 +31,16 @@ _menu = \
 
         {% if programme.active %}
             <a class="dropdown-item" href="{{ url_for('admin.deactivate_degree_programme', id=programme.id) }}">
-                <i class="fa fa-wrench"></i> Make inactive
+                <i class="fas fa-wrench"></i> Make inactive
             </a>
         {% else %}
             {% if programme.available %}
                 <a class="dropdown-item" href="{{ url_for('admin.activate_degree_programme', id=programme.id) }}">
-                    <i class="fa fa-wrench"></i> Make active
+                    <i class="fas fa-wrench"></i> Make active
                 </a>
             {% else %}
                 <a class="dropdown-item disabled">
-                    <i class="fa fa-ban"></i> Degree type inactive
+                    <i class="fas fa-ban"></i> Degree type inactive
                 </a>
             {% endif %}
         {% endif %}
@@ -52,9 +52,9 @@ _menu = \
 _active = \
 """
 {% if p.active %}
-    <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
+    <span class="badge badge-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
-    <span class="badge badge-warning"><i class="fa fa-times"></i> Inactive</span>
+    <span class="badge badge-warning"><i class="fas fa-times"></i> Inactive</span>
 {% endif %}
 """
 
@@ -62,9 +62,9 @@ _active = \
 _show_type = \
 """
 {% if p.show_type %}
-    <span class="badge badge-success"><i class="fa fa-check"></i> Yes</span>
+    <span class="badge badge-success"><i class="fas fa-check"></i> Yes</span>
 {% else %}
-    <span class="badge badge-secondary"><i class="fa fa-times"></i> No</span>
+    <span class="badge badge-secondary"><i class="fas fa-times"></i> No</span>
 {% endif %}
 """
 

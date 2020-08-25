@@ -21,12 +21,12 @@ _source = \
 {% macro show_changes(s, t) %}
     {% for assessor in s.assessors: %}
         {% if assessor not in t.assessors: %}
-            <span class="badge badge-danger"><i class="fa fa-minus"></i> Assessor: {{ assessor.user.name }}</span>
+            <span class="badge badge-danger"><i class="fas fa-minus"></i> Assessor: {{ assessor.user.name }}</span>
         {% endif %}
     {% endfor %}
     {% for talk in s.talks %}
         {% if talk not in t.talks %}
-            <span class="badge badge-danger"><i class="fa fa-minus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
+            <span class="badge badge-danger"><i class="fas fa-minus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
         {% endif %}
     {% endfor %}
 {% endmacro %}
@@ -50,10 +50,10 @@ _source = \
         {{ slot_id(s) }}
     </div>  
     {% for assessor in s.assessors %}
-        <span class="badge badge-danger"><i class="fa fa-minus"></i> Assessor: {{ assessor.user.name }}</span>
+        <span class="badge badge-danger"><i class="fas fa-minus"></i> Assessor: {{ assessor.user.name }}</span>
     {% endfor %}
     {% for talk in s.talks %}
-        <span class="badge badge-danger"><i class="fa fa-minus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
+        <span class="badge badge-danger"><i class="fas fa-minus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
     {% endfor %}
 {% else %}
     <span class="badge badge-danger">UNKNOWN DIFF OPERATION</span>
@@ -71,12 +71,12 @@ _target = \
 {% macro show_changes(s, t) %}
     {% for assessor in t.assessors: %}
         {% if assessor not in s.assessors: %}
-            <span class="badge badge-success"><i class="fa fa-plus"></i> Assessor: {{ assessor.user.name }}</span>
+            <span class="badge badge-success"><i class="fas fa-plus"></i> Assessor: {{ assessor.user.name }}</span>
         {% endif %}
     {% endfor %}
     {% for talk in t.talks %}
         {% if talk not in s.talks %}
-            <span class="badge badge-success"><i class="fa fa-plus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
+            <span class="badge badge-success"><i class="fas fa-plus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
         {% endif %}
     {% endfor %}
 {% endmacro %}
@@ -97,10 +97,10 @@ _target = \
         {{ slot_id(t) }}
     </div>
     {% for assessor in t.assessors %}
-        <span class="badge badge-success"><i class="fa fa-plus"></i> Assessor: {{ assessor.user.name }}</span>
+        <span class="badge badge-success"><i class="fas fa-plus"></i> Assessor: {{ assessor.user.name }}</span>
     {% endfor %}
     {% for talk in t.talks %}
-        <span class="badge badge-success"><i class="fa fa-plus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
+        <span class="badge badge-success"><i class="fas fa-plus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
     {% endfor %}
 {% elif op == 'delete' %}
     <span class="badge badge-secondary">No counterpart</span>
@@ -119,10 +119,10 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('admin.merge_change_schedule', source_id=t.id if t is not none else -1, target_id=s.id if s is not none else -1, source_sched=tid, target_sched=sid) }}">
-            <i class="fa fa-chevron-circle-left"></i> Apply change to source
+            <i class="fas fa-chevron-circle-left"></i> Apply change to source
         </a>
         <a class="dropdown-item" href="{{ url_for('admin.merge_change_schedule', source_id=s.id if s is not none else -1, target_id=t.id if t is not none else -1, source_sched=sid, target_sched=tid) }}">
-            <i class="fa fa-chevron-circle-right"></i> Revert change in target
+            <i class="fas fa-chevron-circle-right"></i> Revert change in target
         </a>
     </div>
 </div>

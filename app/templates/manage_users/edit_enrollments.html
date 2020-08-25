@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block formtitle %}
-    Edit enrollments for <i class="fa fa-user"></i> <strong>{{ user.name }}</strong>
+    Edit enrollments for <i class="fas fa-user"></i> <strong>{{ user.name }}</strong>
 {% endblock %}
 
 {% block form_content %}
@@ -29,19 +29,19 @@
                                 <div class="dropdown-menu">
                                     <div class="dropdown-header">Admin</div>
                                     <a class="dropdown-item" href="{{ url_for('manage_users.remove_enrollment', userid=user.id, pclassid=pclass.id) }}">
-                                        <i class="fa fa-trash"></i> Remove enrollment
+                                        <i class="fas fa-trash"></i> Remove enrollment
                                     </a>
                                     <a class="dropdown-item" href="{{ url_for('manage_users.edit_enrollment', id=record.id, url=url_for('manage_users.edit_enrollments', id=record.owner_id, pane=pane), pane=pane) }}">
-                                        <i class="fa fa-cogs"></i> Edit enrollment
+                                        <i class="fas fa-cogs"></i> Edit enrollment
                                     </a>
                                     <div role="separator" class="dropdown-divider"></div>
                                     <div class="dropdown-header">Operations</div>
                                     {% set disable = record.marker_state != record.MARKER_ENROLLED and record.presentations_state != record.PRESENTATIONS_ENROLLED %}
                                     <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disable %}href="{{  url_for('manage_users.enroll_projects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
-                                        <i class="fa fa-cogs"></i> Make assessor for all projects
+                                        <i class="fas fa-cogs"></i> Make assessor for all projects
                                     </a>
                                     <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disable %}href="{{  url_for('manage_users.enroll_liveprojects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
-                                        <i class="fa fa-cogs"></i> Make assessor for this year's live projects
+                                        <i class="fas fa-cogs"></i> Make assessor for this year's live projects
                                     </a>
                                 </div>
                             </div>
@@ -60,7 +60,7 @@
                     {% if not data.is_enrolled(pclass) %}
                         <a class="btn btn-secondary selection-label"
                            href="{{ url_for('manage_users.add_enrollment', userid=user.id, pclassid=pclass.id) }}">
-                            <i class="fa fa-plus"></i> {{ pclass.name }}
+                            <i class="fas fa-plus"></i> {{ pclass.name }}
                         </a>
                     {% endif %}
                 {% endfor %}
@@ -90,15 +90,15 @@
     {% else %}
         {% if pane is none or pane == 'accounts' %}
             <a href="{{ url_for('manage_users.edit_users') }}">
-                <i class="fa fa-backward"></i> Return to user accounts
+                <i class="fas fa-backward"></i> Return to user accounts
             </a>
         {% elif pane == 'faculty' %}
             <a href="{{ url_for('manage_users.edit_users_faculty') }}">
-                <i class="fa fa-backward"></i> Return to faculty accounts
+                <i class="fas fa-backward"></i> Return to faculty accounts
             </a>
         {% elif pane == 'students' %}
             <a href="{{ url_for('manage_users.edit_users_students') }}">
-                <i class="fa fa-backward"></i> Return to student accounts
+                <i class="fas fa-backward"></i> Return to student accounts
             </a>
         {% else  %}
             <span class="badge badge-danger">Unknown user dashboard pane '{{ pane }}'</span>

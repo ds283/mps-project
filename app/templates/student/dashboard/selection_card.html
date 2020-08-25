@@ -95,7 +95,7 @@
                                 You have accepted a custom offer for the project
                                 <strong>{{ project.name }}</strong>
                                 supervised by
-                                <i class="fa fa-user"></i> {{ project.owner.user.name }}
+                                <i class="fas fa-user"></i> {{ project.owner.user.name }}
                             {% else %}
                                 <span class="badge badge-danger">MISSING ACCEPTED PROJECT</span>
                                 <p>This is an internal error. Please contact a system administrator.</p>
@@ -157,7 +157,7 @@
                 {% if sel.submission_time %}
                     <p>Your preferences were received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.</p>
                 {% endif %}
-                <span class="badge badge-success"><i class="fa fa-check"></i> Preferences received</span>
+                <span class="badge badge-success"><i class="fas fa-check"></i> Preferences received</span>
             {% endif %}
             <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
         </div>
@@ -194,7 +194,7 @@
             <div id="P{{ config.id }}-{{ project.id }}"
                  class="row vertical-top list-group-item {% if loop.index <= sel.number_choices %}selected-project{% else %}deselected-project{% endif %}">
                 <div class="col-1">
-                    <i class="fa fa-bars drag-handle"></i>
+                    <i class="fas fa-bars drag-handle"></i>
                     <span id="ranking" class="badge {% if loop.index <= sel.number_choices %}badge-success{% else %}badge-danger{% endif %}">#{{ loop.index }}</span>
                 </div>
                 <div class="col-3">
@@ -202,7 +202,7 @@
                         <strong>{{ project.name }}</strong>
                     </a>
                     {% if not sel.satisfies_recommended(project) %}
-                        <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                        <i class="fas fa-exclamation-triangle" style="color:red;"></i>
                         <p>This project has recommended modules that are not available on your programme</p>
                     {% endif %}
                 </div>
@@ -216,7 +216,7 @@
                         {% if project.is_waiting(sel) %}
                             <div class="dropdown student-confirm-button" style="display: inline-block;">
                                 <a class="badge badge-info dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                    <i class="fa fa-clock-o"></i>
+                                    <i class="fas fa-clock"></i>
                                     Meeting confirmation requested
                                 </a>
                                 <div class="dropdown-menu">
@@ -228,7 +228,7 @@
                         {% else %}
                             <div class="dropdown student-confirm-button" style="display: inline-block;">
                                 <a class="badge badge-danger dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                    <i class="fa fa-exclamation-triangle"></i>
+                                    <i class="fas fa-exclamation-triangle"></i>
                                     Requires meeting confirmation
                                 </a>
                                 <div class="dropdown-menu">
@@ -240,17 +240,17 @@
                         {% endif %}
                     {% else %}
                         {% if project.is_confirmed(sel) %}
-                            <span class="badge badge-success"><i class="fa fa-check"></i> Available for selection</span>
-                            <span class="badge badge-primary"><i class="fa fa-check"></i> Meeting confirmed</span>
+                            <span class="badge badge-success"><i class="fas fa-check"></i> Available for selection</span>
+                            <span class="badge badge-primary"><i class="fas fa-check"></i> Meeting confirmed</span>
                         {% else %}
-                            <span class="badge badge-success"><i class="fa fa-check"></i> Available for selection</span>
+                            <span class="badge badge-success"><i class="fas fa-check"></i> Available for selection</span>
                         {% endif %}
                     {% endif %}
                 </div>
                 <div class="col-2">
                     <div class="float-right">
                         <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="badge badge-secondary">
-                            <i class="fa fa-times"></i> Remove bookmark
+                            <i class="fas fa-times"></i> Remove bookmark
                         </a>
                     </div>
                 </div>

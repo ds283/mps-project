@@ -14,21 +14,21 @@
             {% if url and text %}
                 <div class="top-return-link">
                     <a href="{{ url }}">
-                        <i class="fa fa-backward"></i> Return to {{ text }}
+                        <i class="fas fa-backward"></i> Return to {{ text }}
                     </a>
                 </div>
             {% endif %}
 
             <div class="card mt-3 mb-3">
                 <div class="card-header bg-primary text-white">
-                    Set <i class="fa fa-user"></i> <strong>{{ assessor.user.name }}</strong> availability for assessment event <strong>{{ assessment.name }}</strong>
+                    Set <i class="fas fa-user"></i> <strong>{{ assessor.user.name }}</strong> availability for assessment event <strong>{{ assessment.name }}</strong>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-12">
                             <div class="float-right">
-                                <a class="btn btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_all_available', f_id=assessor.id, a_id=assessment.id) }}"{% endif %}><i class="fa fa-check"></i> Available for all</a>
-                                <a class="btn btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_all_unavailable', f_id=assessor.id, a_id=assessment.id) }}"{% endif %}><i class="fa fa-times"></i> Not available for all</a>
+                                <a class="btn btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_all_available', f_id=assessor.id, a_id=assessment.id) }}"{% endif %}><i class="fas fa-check"></i> Available for all</a>
+                                <a class="btn btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_all_unavailable', f_id=assessor.id, a_id=assessment.id) }}"{% endif %}><i class="fas fa-times"></i> Not available for all</a>
                             </div>
                         </div>
                     </div>
@@ -46,17 +46,17 @@
                             <div class="col-7">
                                 <div class="float-right">
                                 {% if session.faculty_available(assessor.id) %}
-                                    <a class="btn btn-success btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
+                                    <a class="btn btn-success btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fas fa-check"></i> Available</a>
                                     <a {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-secondary btn-sm btn-table-block {% if not editable %}disabled{% endif %}">If needed</a>
-                                    <a {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-secondary btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fa fa-times"></i> Not available</a>
+                                    <a {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-secondary btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fas fa-times"></i> Not available</a>
                                 {% elif session.faculty_ifneeded(assessor.id) %}
-                                    <a {% if editable %}href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-secondary btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
+                                    <a {% if editable %}href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-secondary btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fas fa-check"></i> Available</a>
                                     <a class="btn btn-warning btn-sm btn-table-block {% if not editable %}disabled{% endif %}">If needed</a>
-                                    <a {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-secondary btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fa fa-times"></i> Not available</a>
+                                    <a {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-secondary btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fas fa-times"></i> Not available</a>
                                 {% else %}
-                                    <a {% if editable %}href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-secondary btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
+                                    <a {% if editable %}href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-secondary btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fas fa-check"></i> Available</a>
                                     <a {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-secondary btn-sm btn-table-block {% if not editable %}disabled{% endif %}">If needed</a>
-                                    <a class="btn btn-danger btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fa fa-times"></i> Not available</a>
+                                    <a class="btn btn-danger btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fas fa-times"></i> Not available</a>
                                 {% endif %}
                                 </div>
                             </div>
@@ -68,7 +68,7 @@
             {% if url and text %}
                 <div>
                     <a href="{{ url }}">
-                        <i class="fa fa-backward"></i> Return to {{ text }}
+                        <i class="fas fa-backward"></i> Return to {{ text }}
                     </a>
                 </div>
             {% endif %}

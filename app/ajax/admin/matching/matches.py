@@ -73,23 +73,23 @@ _status = \
 
 _info = \
 """
-<span class="badge badge-primary">Supervisor <i class="fa fa-chevron-circle-down"></i> {{ m.supervising_limit }} CATS</span>
-<span class="badge badge-info">2nd mark <i class="fa fa-chevron-circle-down"></i> {{ m.marking_limit }} CATS</span>
-<span class="badge badge-info">Marker multiplicity <i class="fa fa-chevron-circle-down"></i> {{ m.max_marking_multiplicity }}</span>
+<span class="badge badge-primary">Supervisor <i class="fas fa-chevron-circle-down"></i> {{ m.supervising_limit }} CATS</span>
+<span class="badge badge-info">2nd mark <i class="fas fa-chevron-circle-down"></i> {{ m.marking_limit }} CATS</span>
+<span class="badge badge-info">Marker multiplicity <i class="fas fa-chevron-circle-down"></i> {{ m.max_marking_multiplicity }}</span>
 {% if m.ignore_per_faculty_limits %}
-    <span class="badge badge-warning"><i class="fa fa-times"></i> Ignore per-faculty limits</span>
+    <span class="badge badge-warning"><i class="fas fa-times"></i> Ignore per-faculty limits</span>
 {% else %}
-    <span class="badge badge-secondary"><i class="fa fa-check"></i> Apply per-faculty limits</span>
+    <span class="badge badge-secondary"><i class="fas fa-check"></i> Apply per-faculty limits</span>
 {% endif %}
 {% if m.ignore_programme_prefs %}
-    <span class="badge badge-warning"><i class="fa fa-times"></i> Ignore programmes prefs/span>
+    <span class="badge badge-warning"><i class="fas fa-times"></i> Ignore programmes prefs/span>
 {% else %}
-    <span class="badge badge-secondary"><i class="fa fa-check"></i> Apply programme prefs</span>
+    <span class="badge badge-secondary"><i class="fas fa-check"></i> Apply programme prefs</span>
 {% endif %}
 {% if m.include_only_submitted %}
-    <span class="badge badge-warning"><i class="fa fa-times"></i> Only submitted selectors</span>
+    <span class="badge badge-warning"><i class="fas fa-times"></i> Only submitted selectors</span>
 {% else %}
-    <span class="badge badge-secondary"><i class="fa fa-check"></i> All selectors</span>
+    <span class="badge badge-secondary"><i class="fas fa-check"></i> All selectors</span>
 {% endif %}
 <div>
     <span class="badge badge-success">Solver {{ m.solver_name }}</span>
@@ -113,14 +113,14 @@ _info = \
 </div>
 <p></p>
 {% if m.use_hints %}
-    <span class="badge badge-success"><i class="fa fa-check"></i> Use hints</span>
+    <span class="badge badge-success"><i class="fas fa-check"></i> Use hints</span>
 {% else %}
-    <span class="badge badge-warning"><i class="fa fa-times"></i> Ignore hints</span>
+    <span class="badge badge-warning"><i class="fas fa-times"></i> Ignore hints</span>
 {% endif %}
-<span class="badge badge-secondary">Encourage <i class="fa fa-times"></i> {{ m.encourage_bias }}</span>
-<span class="badge badge-secondary">Discourage <i class="fa fa-times"></i> {{ m.discourage_bias }}</span>
-<span class="badge badge-secondary">Strong encourage <i class="fa fa-times"></i> {{ m.strong_encourage_bias }}</span>
-<span class="badge badge-secondary">Strong discourage <i class="fa fa-times"></i> {{ m.strong_discourage_bias }}</span>
+<span class="badge badge-secondary">Encourage <i class="fas fa-times"></i> {{ m.encourage_bias }}</span>
+<span class="badge badge-secondary">Discourage <i class="fas fa-times"></i> {{ m.discourage_bias }}</span>
+<span class="badge badge-secondary">Strong encourage <i class="fas fa-times"></i> {{ m.strong_encourage_bias }}</span>
+<span class="badge badge-secondary">Strong discourage <i class="fas fa-times"></i> {{ m.strong_discourage_bias }}</span>
 <p></p>
 {% if not m.ignore_programme_prefs %}
     {% set outcome = m.prefer_programme_status %}
@@ -237,7 +237,7 @@ _menu = \
     <div class="dropdown-menu dropdown-menu-right">
         {% if m.finished and m.solution_usable %}
             <a class="dropdown-item" href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">
-                <i class="fa fa-search"></i> Inspect match...
+                <i class="fas fa-search"></i> Inspect match...
             </a>
             <div role="separator" class="dropdown-divider"></div>
         {% endif %}    
@@ -246,47 +246,47 @@ _menu = \
             {% set disabled = not current_user.has_role('root') %}
             {% if m.awaiting_upload %}
                 <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.upload_match', match_id=m.id) }}"{% endif %}>
-                    <i class="fa fa-cloud-upload"></i> Upload solution...
+                    <i class="fas fa-cloud-upload"></i> Upload solution...
                 </a>
             {% endif %}
             <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.duplicate_match', id=m.id) }}"{% endif %}>
-                <i class="fa fa-clone"></i> Duplicate
+                <i class="fas fa-clone"></i> Duplicate
             </a>
             <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.terminate_match', id=m.id) }}"{% endif %}>
-                <i class="fa fa-hand-paper-o"></i> Terminate
+                <i class="fas fa-hand-paper"></i> Terminate
             </a>
         {% else %}
             {% if m.solution_usable %}
                 <a class="dropdown-item" href="{{ url_for('admin.rename_match', id=m.id, url=url) }}">
-                    <i class="fa fa-exchange"></i> Rename...
+                    <i class="fas fa-exchange"></i> Rename...
                 </a>
                 {% if m.is_modified %}
                     <a class="dropdown-item" href="{{ url_for('admin.revert_match', id=m.id) }}">
-                        <i class="fa fa-undo"></i> Revert to original
+                        <i class="fas fa-undo"></i> Revert to original
                     </a>
                 {% endif %}
                 <a class="dropdown-item" href="{{ url_for('admin.duplicate_match', id=m.id) }}">
-                    <i class="fa fa-clone"></i> Duplicate
+                    <i class="fas fa-clone"></i> Duplicate
                 </a>
                 <a class="dropdown-item" href="{{ url_for('admin.compare_match', id=m.id, text=text, url=url) }}">
-                    <i class="fa fa-balance-scale"></i> Compare to...
+                    <i class="fas fa-balance-scale"></i> Compare to...
                 </a>
                 {% if is_root %}
                     <a class="dropdown-item" href="{{ url_for('admin.create_match', base_id=m.id) }}">
-                        <i class="fa fa-plus-circle"></i> Use as base...
+                        <i class="fas fa-plus-circle"></i> Use as base...
                     </a>
                 {% endif %}
             {% else %}
-                <a class="dropdown-item disabled"><i class="fa fa-times"></i> Solution is not usable</a>
+                <a class="dropdown-item disabled"><i class="fas fa-times"></i> Solution is not usable</a>
             {% endif %}
 
             {% if current_user.has_role('root') or current_user.id == m.creator_id %}
                 <a class="dropdown-item" href="{{ url_for('admin.delete_match', id=m.id) }}">
-                    <i class="fa fa-trash"></i> Delete
+                    <i class="fas fa-trash"></i> Delete
                 </a>
                 {% if m.can_clean_up %}
                     <a class="dropdown-item" href="{{ url_for('admin.clean_up_match', id=m.id) }}">
-                        <i class="fa fa-scissors"></i> Clean up
+                        <i class="fas fa-scissors"></i> Clean up
                     </a>
                 {% endif %}
             {% endif %}
@@ -297,31 +297,31 @@ _menu = \
                 
                 {% if m.published %}
                     <a class="dropdown-item" href="{{ url_for('admin.unpublish_match', id=m.id) }}">
-                        <i class="fa fa-stop-circle"></i> Unpublish
+                        <i class="fas fa-stop-circle"></i> Unpublish
                     </a>
                 {% else %}
                     <a class="dropdown-item" href="{{ url_for('admin.publish_match', id=m.id) }}">
-                        <i class="fa fa-share"></i> Publish to convenors
+                        <i class="fas fa-share"></i> Publish to convenors
                     </a>
                 {% endif %}
                 
                 {% if m.selected %}
                     <a class="dropdown-item" href="{{ url_for('admin.deselect_match', id=m.id) }}">
-                        <i class="fa fa-times"></i> Deselect
+                        <i class="fas fa-times"></i> Deselect
                     </a>
                 {% else %}
                     <a class="dropdown-item" href="{{ url_for('admin.select_match', id=m.id, force=0) }}">
-                        <i class="fa fa-check"></i> Select
+                        <i class="fas fa-check"></i> Select
                     </a>
                 {% endif %}
                 
                 {% if m.selected or m.published %}
                     <div role="separator" class="dropdown-divider"></div>
                     <a class="dropdown-item" href="{{ url_for('admin.publish_matching_selectors', id=m.id) }}">
-                        <i class="fa fa-envelope-o"></i> Email to selectors
+                        <i class="fas fa-mail-bulk"></i> Email to selectors
                     </a>
                     <a class="dropdown-item" href="{{ url_for('admin.publish_matching_supervisors', id=m.id) }}">
-                        <i class="fa fa-envelope-o"></i> Email to supervisors
+                        <i class="fas fa-mail-bulk"></i> Email to supervisors
                     </a>
                 {% endif %}
             {% endif %}            
@@ -337,7 +337,7 @@ _name = \
     {% if m.finished and m.solution_usable %}
         <a href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">{{ m.name }}</a>
         {% if not m.is_valid %}
-            <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+            <i class="fas fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}
     {% else %}
         {{ m.name }}
@@ -359,7 +359,7 @@ _name = \
 {% if has_extra_matches %}
     <p></p>
     {% if m.base is not none %}
-        <span class="badge badge-success"><i class="fa fa-plus-circle"></i> Base: {{ m.base.name }}</span>
+        <span class="badge badge-success"><i class="fas fa-plus-circle"></i> Base: {{ m.base.name }}</span>
         {% if m.force_base %}
             <span class="badge badge-info">Force match</span>
         {% else %}
@@ -367,16 +367,16 @@ _name = \
         {% endif %}
     {% endif %}
     {% for match in m.include_matches %}
-        <span class="badge badge-primary"><i class="fa fa-arrow-right"></i> Inc: {{ match.name }}</span>
+        <span class="badge badge-primary"><i class="fas fa-arrow-right"></i> Inc: {{ match.name }}</span>
     {% endfor %}
 {% endif %}
 {% if m.finished and m.solution_usable %}
     <p></p>
     {% if m.construct_time %}
-        <span class="badge badge-secondary"><i class="fa fa-clock-o"></i> Construct {{ m.formatted_construct_time }}</span>
+        <span class="badge badge-secondary"><i class="fas fa-stopwatch"></i> Construct {{ m.formatted_construct_time }}</span>
     {% endif %}
     {% if m.compute_time %}
-        <span class="badge badge-secondary"><i class="fa fa-clock-o"></i> Compute {{ m.formatted_compute_time }}</span>
+        <span class="badge badge-secondary"><i class="fas fa-stopwatch"></i> Compute {{ m.formatted_compute_time }}</span>
     {% endif %}
 {% endif %}
 """

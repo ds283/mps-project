@@ -15,7 +15,7 @@ from flask import render_template_string, jsonify
 _enroll_action = \
 """
 <a href="{{ url_for('convenor.enroll_submitter', sid=s.id, configid=config.id) }}" class="btn btn-warning btn-sm">
-    <i class="fa fa-plus"></i> Manually enroll
+    <i class="fas fa-plus"></i> Manually enroll
 </a>
 """
 

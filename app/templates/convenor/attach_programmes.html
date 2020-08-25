@@ -17,7 +17,7 @@
                 <h4>
                 {% for programme in programmes %}
                     {% if programme in data.programmes %}
-                        <a class="btn btn-success selection-label" href="{{ url_for('convenor.remove_programme', id=data.id, pclass_id=pclass_id, prog_id=programme.id) }}"><i class="fa fa-times"></i> {{ programme.full_name }}</a>
+                        <a class="btn btn-success selection-label" href="{{ url_for('convenor.remove_programme', id=data.id, pclass_id=pclass_id, prog_id=programme.id) }}"><i class="fas fa-times"></i> {{ programme.full_name }}</a>
                     {% endif %}
                 {% endfor %}
                 </h4>
@@ -33,7 +33,7 @@
                     <h4>
                     {% for programme in programmes %}
                         {% if (programme in proj_class.programmes) and (programme not in data.programmes) %}
-                            <a class="btn btn-secondary selection-label" href="{{ url_for('convenor.add_programme', id=data.id, pclass_id=pclass_id, prog_id=programme.id) }}"><i class="fa fa-plus"></i> {{ programme.full_name }}</a>
+                            <a class="btn btn-secondary selection-label" href="{{ url_for('convenor.add_programme', id=data.id, pclass_id=pclass_id, prog_id=programme.id) }}"><i class="fas fa-plus"></i> {{ programme.full_name }}</a>
                             {% set ns.output = true %}
                         {% endif %}
                     {% endfor %}
@@ -57,7 +57,7 @@
         </a>
     {% else %}
         <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
-            <i class="fa fa-backward"></i> Return to convenor dashboard
+            <i class="fas fa-backward"></i> Return to convenor dashboard
         </a>
     {% endif %}
 {% endblock %}

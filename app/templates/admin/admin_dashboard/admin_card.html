@@ -29,52 +29,52 @@
                     <div class="col-2">
                         {% if config.year == current_year %}
                             <span class="badge badge-secondary">{{ config.year }}&ndash;{{ config.year+1 }}</span>
-                            <span class="badge badge-success"><i class="fa fa-check"></i> Current</span>
+                            <span class="badge badge-success"><i class="fas fa-check"></i> Current</span>
                         {% else %}
                             <span class="badge badge-secondary">{{ config.year }}&ndash;{{ config.year+1 }}</span>
-                            <span class="badge badge-success"><i class="fa fa-exclamation-triangle"></i> Not current</span>
+                            <span class="badge badge-success"><i class="fas fa-exclamation-triangle"></i> Not current</span>
                         {% endif %}
                     </div>
                     <div class="col-5">
                         {% if config.year < current_year %}
-                            <span class="badge badge-danger"><i class="fa fa-check"></i> Rollover available</span>
+                            <span class="badge badge-danger"><i class="fas fa-check"></i> Rollover available</span>
                         {% endif %}
 
                         {% set sel_state = config.selector_lifecycle %}
                         {% set sub_state = config.submitter_lifecycle %}
                         {% set published = pclass.publish %}
                         {% if not published %}
-                            <span class="badge badge-danger"><i class="fa fa-eye-slash"></i> Not published</span>
+                            <span class="badge badge-danger"><i class="fas fa-eye-slash"></i> Not published</span>
                         {% else %}
                             {% if sub_state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
                                 <span class="badge badge-success">{{ config.current_period.display_name|safe }}</span>
                             {% elif sub_state == config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
                                 <span class="badge badge-warning">Marking/feedback: {{ config.current_period.display_name|safe }}</span>
                             {% elif sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
-                                <span class="badge badge-primary"><i class="fa fa-check"></i> Submissions complete</span>
+                                <span class="badge badge-primary"><i class="fas fa-check"></i> Submissions complete</span>
                             {% else %}
                                 <span class="badge badge-danger">Unknown submitted lifecycle state {{ sub_state }}</span>
                             {% endif %}
                             {% if sel_state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-                                <span class="badge badge-secondary"><i class="fa fa-times"></i> Confirmations not issued</span>
+                                <span class="badge badge-secondary"><i class="fas fa-times"></i> Confirmations not issued</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                                <span class="badge badge-secondary"><i class="fa fa-times"></i> Not live</span>
-                                <span class="badge badge-primary"><i class="fa fa-clock-o"></i> Confirmations outstanding</span>
+                                <span class="badge badge-secondary"><i class="fas fa-times"></i> Not live</span>
+                                <span class="badge badge-primary"><i class="fas fa-clock"></i> Confirmations outstanding</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                                <span class="badge badge-secondary"><i class="fa fa-times"></i> Not live</span>
-                                <span class="badge badge-success"><i class="fa fa-check"></i> GoLive ready</span>
+                                <span class="badge badge-secondary"><i class="fas fa-times"></i> Not live</span>
+                                <span class="badge badge-success"><i class="fas fa-check"></i> GoLive ready</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                <span class="badge badge-primary"><i class="fa fa-check"></i> Selection open</span>
+                                <span class="badge badge-primary"><i class="fas fa-check"></i> Selection open</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_MATCHING %}
-                                <span class="badge badge-primary"><i class="fa fa-bar"></i> Selection closed</span>
-                                <span class="badge badge-success"><i class="fa fa-check"></i> Matching ready</span>
+                                <span class="badge badge-primary"><i class="fas fa-bar"></i> Selection closed</span>
+                                <span class="badge badge-success"><i class="fas fa-check"></i> Matching ready</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
-                                <span class="badge badge-primary"><i class="fa fa-bar"></i> Selection closed</span>
+                                <span class="badge badge-primary"><i class="fas fa-bar"></i> Selection closed</span>
                                 {% if sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER and not (config.year < current_year) %}
-                                    <span class="badge badge-success"><i class="fa fa-check"></i> Rollover ready</span>
+                                    <span class="badge badge-success"><i class="fas fa-check"></i> Rollover ready</span>
                                 {% else %}
                                     {% if config.do_matching %}
-                                        <span class="badge badge-success"><i class="fa fa-check"></i> Matching selected</span>
+                                        <span class="badge badge-success"><i class="fas fa-check"></i> Matching selected</span>
                                     {% endif %}
                                 {% endif %}
                             {% else %}

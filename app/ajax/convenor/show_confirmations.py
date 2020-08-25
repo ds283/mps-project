@@ -44,11 +44,11 @@ _timestamps = \
 {% if req.request_timestamp is not none and req.response_timestamp is not none %}
     {% set delta = req.response_timestamp - req.request_timestamp %}
     {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge badge-primary"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+    <span class="badge badge-primary"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
 {% elif req.request_timestamp is not none %}
     {% set delta = now - req.request_timestamp %}
     {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge badge-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+    <span class="badge badge-danger"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
 {% endif %}
 {% if not req.viewed %}
     <span class="badge badge-danger">NOT VIEWED</span>
@@ -69,17 +69,17 @@ _menu = \
     {% set lifecycle = config.selector_lifecycle %}
     {% if lifecycle >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING%}
         <a class="dropdown-item" href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
-            <i class="fa fa-check"></i> Confirm
+            <i class="fas fa-check"></i> Confirm
         </a>
         <a class="dropdown-item" href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
-            <i class="fa fa-trash"></i> Delete
+            <i class="fas fa-trash"></i> Delete
         </a>
     {% else %}
         <a class="dropdown-item disabled">
-            <i class="fa fa-check"></i> Confirm
+            <i class="fas fa-check"></i> Confirm
         </a>
         <a class="dropdown-item disabled">
-            <i class="fa fa-trash"></i> Delete
+            <i class="fas fa-trash"></i> Delete
         </a>
     {% endif %}
     </div>

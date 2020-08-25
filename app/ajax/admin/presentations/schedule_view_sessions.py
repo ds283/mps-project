@@ -16,7 +16,7 @@ _name = \
 """
 {{ s.session.label|safe }}
 {% if not s.is_valid %}
-    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 """
 
@@ -38,7 +38,7 @@ _assessors = \
         {% if s.session.faculty_ifneeded(assessor.id) %}
             <span class="badge badge-warning">if-needed</span>
         {% elif s.session.faculty_unavailable(assessor.id) %}
-            <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+            <i class="fas fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}
     </div>
 {% endfor %}
@@ -62,7 +62,7 @@ _talks = \
         </div>
     </div>
     {% if s.session.submitter_unavailable(talk.id) %}
-        <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+        <i class="fas fa-exclamation-triangle" style="color:red;"></i>
     {% endif %}
 {% endfor %}
 {% if ns.count > 0 %}
@@ -124,7 +124,7 @@ _room = \
                 {{ room.full_name }}
             </a>
         {% else %}
-            <a class="dropdown-item disabled"><i class="fa fa-bar"></i> None available</a>
+            <a class="dropdown-item disabled"><i class="fas fa-bar"></i> None available</a>
         {% endfor %}
     </ul>
 </div>

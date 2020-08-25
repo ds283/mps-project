@@ -127,7 +127,7 @@
         <div class="input-group date" data-provide="datepicker">
             {{ field(class="form-control")|safe }}
             <div class="input-group-append">
-                <span class="input-group-text"><i class="fa fa-calendar"></i></span>
+                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
             </div>
         </div>
         {% if field.errors %}
@@ -192,7 +192,7 @@
                     {% if config.group_filters.first() or config.skill_filters.first() %}
                         [active]
                     {% endif %}
-                    <i class="indicator fa fa-chevron-up float-right"></i>
+                    <i class="indicator fas fa-chevron-up float-right"></i>
                 </a>
             </div>
             <div id="collapseFilter" class="collapse show">
@@ -216,7 +216,7 @@
                                 {% if group in config.group_filters %}
                                     <a href="{{ url_for(remove_group, id=config.id, gid=group.id) }}"
                                        class="badge badge-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
-                                        <i class="fa fa-times"></i>
+                                        <i class="fas fa-times"></i>
                                         {{ group.name }}
                                     </a>
                                 {% endif %}
@@ -227,7 +227,7 @@
                                 {% if group not in config.group_filters %}
                                     <a href="{{ url_for(add_group, id=config.id, gid=group.id) }}"
                                        class="badge badge-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
-                                        <i class="fa fa-plus"></i>
+                                        <i class="fas fa-plus"></i>
                                         {{ group.name }}
                                     </a>
                                 {% endif %}
@@ -256,7 +256,7 @@
                                         {% if skill in config.skill_filters %}
                                             <a href="{{ url_for(remove_skill, id=config.id, skill_id=skill.id) }}"
                                                class="badge badge-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
-                                                <i class="fa fa-times"></i>
+                                                <i class="fas fa-times"></i>
                                                 {{ skill.name }}
                                             </a>
                                         {% endif %}
@@ -275,7 +275,7 @@
                                         {% if skill not in config.skill_filters %}
                                             <a href="{{ url_for(add_skill, id=config.id, skill_id=skill.id) }}"
                                                class="badge badge-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
-                                                <i class="fa fa-plus"></i>
+                                                <i class="fas fa-plus"></i>
                                                 {{ skill.name }}
                                             </a>
                                         {% endif %}

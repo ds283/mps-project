@@ -28,12 +28,12 @@ _name = \
     {% set pl = 's' %}{% if count == 1 %}{% set pl = '' %}{% endif %}
     <span class="badge badge-info">{{ count }} session{{ pl }}</span>
     {% if slot.assessor_has_overlap(a.faculty_id) %}
-        <span class="badge badge-success"><i class="fa fa-check"></i> Pool overlap</span>
+        <span class="badge badge-success"><i class="fas fa-check"></i> Pool overlap</span>
     {% else %}
-        <span class="badge badge-danger"><i class="fa fa-times"></i> No pool overlap</span>
+        <span class="badge badge-danger"><i class="fas fa-times"></i> No pool overlap</span>
     {% endif %}
     {% if slot.assessor_makes_valid(a.faculty_id) %}
-        <span class="badge badge-success"><i class="fa fa-check"></i> Makes valid</span>
+        <span class="badge badge-success"><i class="fas fa-check"></i> Makes valid</span>
     {% endif %}
 </div>
 """
@@ -64,7 +64,7 @@ _sessions = \
             </div>
             {{ slot.room.label|safe }}
             {% if not slot.is_valid %}
-                <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                <i class="fas fa-exclamation-triangle" style="color:red;"></i>
                 <p></p>
                 {% set errors = slot.errors %}
                 {% set warnings = slot.warnings %}
@@ -99,7 +99,7 @@ _sessions = \
                     </div>
                 </div>
                 {% if slot.session.submitter_unavailable(talk.id) %}
-                    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
                 {% endif %}
             {% endfor %}
             {% if not slot.is_valid %}
@@ -140,7 +140,7 @@ _sessions = \
 _menu = \
 """
 <div class="float-right">
-    <a href="{{ url_for('admin.schedule_attach_assessor', slot_id=slot.id, fac_id=a.faculty_id) }}" class="btn btn-secondary btn-sm"><i class="fa fa-plus"></i> Attach</a>
+    <a href="{{ url_for('admin.schedule_attach_assessor', slot_id=slot.id, fac_id=a.faculty_id) }}" class="btn btn-secondary btn-sm"><i class="fas fa-plus"></i> Attach</a>
 </div>
 """
 

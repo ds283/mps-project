@@ -19,7 +19,7 @@
             <li class="nav-item">
                 <a class="nav-link {% if pane == 'system' %}active{% endif %}" href="{{ url_for('faculty.dashboard', pane='system') }}">
                     {% if warning or (messages is not none and messages|length > 0) %}
-                        <i class="fa fa-exclamation-triangle"></i>
+                        <i class="fas fa-exclamation-triangle"></i>
                     {% endif %}
                     Administration
                 </a>
@@ -34,7 +34,7 @@
             <li class="nav-item">
                 <a class="nav-link {% if pane == 'approve' %}active{% endif %}" href="{{ url_for('faculty.dashboard', pane='approve') }}">
                     {% if user_warning or project_warning %}
-                        <i class="fa fa-exclamation-triangle"></i>
+                        <i class="fas fa-exclamation-triangle"></i>
                     {% endif %}
                     Approvals
                     {% if approve_total > 0 %}
@@ -54,7 +54,7 @@
                         {% if selector_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and config.is_confirmation_required(current_user.faculty_data)
                            or submitter_state == config.SUBMITTER_LIFECYCLE_MARKING_ACTIVITY
                            or (nproj == 0 and config.uses_supervisor) %}
-                            <i class="fa fa-exclamation-triangle"></i>
+                            <i class="fas fa-exclamation-triangle"></i>
                         {% endif %}
                         {{ config.name }}
                     </a>

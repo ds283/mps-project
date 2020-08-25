@@ -71,9 +71,9 @@
     {% if item.submission_period == rec.submission_period %}
         <a class="badge badge-success" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">#{{ item.submission_period }}</a>
         {% if item.project is not none %}
-            <i class="fa fa-check"></i>
+            <i class="fas fa-check"></i>
         {% else %}
-            <i class="fa fa-times"></i>
+            <i class="fas fa-times"></i>
         {% endif %}
     {% else %}
         <a class="badge badge-secondary" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">#{{ item.submission_period }}</a>
@@ -87,14 +87,14 @@
             {% if url and text %}
                 <div class="top-return-link">
                     <a href="{{ url }}">
-                        <i class="fa fa-backward"></i> Return to {{ text }}
+                        <i class="fas fa-backward"></i> Return to {{ text }}
                     </a>
                 </div>
             {% endif %}
 
             <div class="card mt-3 mb-3">
                 <div class="card-header bg-success text-white">
-                    Manual assignment for <i class="fa fa-user"></i> <strong>{{ rec.owner.student.user.name }}</strong>,
+                    Manual assignment for <i class="fas fa-user"></i> <strong>{{ rec.owner.student.user.name }}</strong>,
                     submission period <strong>#{{ rec.submission_period }}</strong>
                 </div>
                 <div class="card-body">
@@ -167,7 +167,7 @@
                     {% if allow_reassign_project %}
                         {% if rec.owner.selector is not none %}
                             <div class="card mt-3 mb-3">
-                                <div class="card-header"><i class="fa fa-user"></i> {{ rec.owner.student.user.name }} &ndash; ranked project selection</div>
+                                <div class="card-header"><i class="fas fa-user"></i> {{ rec.owner.student.user.name }} &ndash; ranked project selection</div>
                                 <div class="card-body">
                                     {% if rec.owner.selector.has_submitted %}
                                         <div class="row vertical-align final-selection-table">
@@ -275,7 +275,7 @@
             {% if url and text %}
                 <div>
                     <a href="{{ url }}">
-                        <i class="fa fa-backward"></i> Return to {{ text }}
+                        <i class="fas fa-backward"></i> Return to {{ text }}
                     </a>
                 </div>
             {% endif %}

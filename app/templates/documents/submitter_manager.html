@@ -38,7 +38,7 @@
                     uploaded at {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
                 {% endif %}
                 {% if asset.uploaded_by %}
-                    <i class="fa fa-user"></i> {{ asset.uploaded_by.name }}
+                    <i class="fas fa-user"></i> {{ asset.uploaded_by.name }}
                 {% endif %}
             </div>
             {% if admin_rights %}
@@ -70,39 +70,39 @@
                         {% if has_access or editable or deletable %}
                             {% if editable %}
                                 {% if edit_url is not none %}
-                                    <a class="dropdown-item" href="{{ edit_url }}"><i class="fa fa-pencil"></i> Edit</a>
+                                    <a class="dropdown-item" href="{{ edit_url }}"><i class="fas fa-pencil"></i> Edit</a>
                                 {% else %}
-                                    <a class="dropdown-item disabled"><i class="fa fa-pencil"></i> Edit</a>
+                                    <a class="dropdown-item disabled"><i class="fas fa-pencil"></i> Edit</a>
                                 {% endif %}
                             {% endif %}
                             {% if has_access %}
                                 {% if download_url is not none %}
-                                    <a class="dropdown-item" href="{{ download_url }}"><i class="fa fa-cloud-download"></i> Download</a>
+                                    <a class="dropdown-item" href="{{ download_url }}"><i class="fas fa-cloud-download"></i> Download</a>
                                 {% else %}
-                                    <a class="dropdown-item disabled"><i class="fa fa-cloud-download"></i> Download</a>
+                                    <a class="dropdown-item disabled"><i class="fas fa-cloud-download"></i> Download</a>
                                 {% endif %}
                             {% endif %}
                             {% if admin_rights %}
                                 {% if acl_url is not none %}
-                                    <a class="dropdown-item" href="{{ acl_url }}"><i class="fa fa-check-square"></i> Access control...</a>
+                                    <a class="dropdown-item" href="{{ acl_url }}"><i class="fas fa-check-square"></i> Access control...</a>
                                 {% else %}
-                                    <a class="dropdown-item disabled"><i class="fa fa-check-square"></i> Access control...</a>
+                                    <a class="dropdown-item disabled"><i class="fas fa-check-square"></i> Access control...</a>
                                 {% endif %}
                                 {% if log_url is not none %}
-                                    <a class="dropdown-item" href="{{ log_url }}"><i class="fa fa-address-book"></i> Download log...</a>
+                                    <a class="dropdown-item" href="{{ log_url }}"><i class="fas fa-address-book"></i> Download log...</a>
                                 {% else %}
-                                    <a class="dropdown-item disabled"><i class="fa fa-address-book"></i> Download log...</a>
+                                    <a class="dropdown-item disabled"><i class="fas fa-address-book"></i> Download log...</a>
                                 {% endif %}
                             {% endif %}
                             {% if deletable %}
                                 {% if delete_url is not none %}
-                                    <a class="dropdown-item" href="{{ delete_url }}"><i class="fa fa-trash"></i> Remove</a>
+                                    <a class="dropdown-item" href="{{ delete_url }}"><i class="fas fa-trash"></i> Remove</a>
                                 {% else %}
-                                    <a class="dropdown-item disabled"><i class="fa fa-trash"></i> Remove</a>
+                                    <a class="dropdown-item disabled"><i class="fas fa-trash"></i> Remove</a>
                                 {% endif %}
                             {% endif %}
                         {% else %}
-                            <a class="dropdown-item disabled"><i class="fa fa-times"></i> No access</a>
+                            <a class="dropdown-item disabled"><i class="fas fa-times"></i> No access</a>
                         {% endif %}
                     </div>
                 </div>
@@ -116,13 +116,13 @@
     {% if url and text %}
         <div class="top-return-link">
             <a href="{{ url }}">
-                <i class="fa fa-backward"></i> Return to {{ text }}
+                <i class="fas fa-backward"></i> Return to {{ text }}
             </a>
         </div>
     {% endif %}
 
     <div class="card mt-3 mb-3">
-        <div class="card-header bg-primary text-white">Manage documents for <i class="fa fa-user"></i> <strong>{{ record.student_identifier }}</strong> {{ record.period.display_name }}</div>
+        <div class="card-header bg-primary text-white">Manage documents for <i class="fas fa-user"></i> <strong>{{ record.student_identifier }}</strong> {{ record.period.display_name }}</div>
         <div class="card-body">
             {% if admin_rights %}
                 <div class="row">
@@ -220,7 +220,7 @@
                         <hr class="into-divider">
                         <div style="text-align: center;">
                             <a href="{{ url_for('documents.upload_submitter_report', sid=record.id, url=url, text=text) }}" class="btn btn-secondary btn-lg">
-                                <i class="fa fa-plus"></i>
+                                <i class="fas fa-plus"></i>
                                 Upload report
                             </a>
                         </div>
@@ -267,7 +267,7 @@
                     <hr class="into-divider">
                     <div style="text-align: center;">
                         <a href="{{ url_for('documents.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" class="btn btn-secondary btn-lg">
-                            <i class="fa fa-plus"></i>
+                            <i class="fas fa-plus"></i>
                             Upload new attachment
                         </a>
                     </div>
@@ -278,7 +278,7 @@
 
     {% if url and text %}
         <a href="{{ url }}">
-            <i class="fa fa-backward"></i> Return to {{ text }}
+            <i class="fas fa-backward"></i> Return to {{ text }}
         </a>
     {% endif %}
 {% endblock %}

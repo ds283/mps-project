@@ -17,7 +17,7 @@ _date = \
 """
 {{ s.date_as_string }}
 {% if not s.is_valid %}
-    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
     <p></p>
     {% set errors = s.errors %}
     {% set warnings = s.warnings %}
@@ -66,7 +66,7 @@ _rooms = \
 {% for room in s.ordered_rooms %}
     {{ room.label|safe }}
 {% else %}
-    <span class="badge badge-warning"><i class="fa fa-times"></i> No rooms attached</span>
+    <span class="badge badge-warning"><i class="fas fa-times"></i> No rooms attached</span>
 {% endfor %}
 """
 
@@ -82,18 +82,18 @@ _menu = \
         {% set disabled = not s.owner.is_feedback_open %}
         <div class="dropdown-header">Edit session</div>
         <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_session', id=s.id) }}"{% endif %}>
-            <i class="fa fa-cogs"></i> Settings...
+            <i class="fas fa-cogs"></i> Settings...
         </a>
         {% set disabled = not a.requested_availability or a.is_deployed %}
         <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.submitter_session_availability', id=s.id) }}"{% endif %}>
-            <i class="fa fa-cogs"></i> Submitters...
+            <i class="fas fa-cogs"></i> Submitters...
         </a>
         <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.assessor_session_availability', id=s.id) }}"{% endif %}>
-            <i class="fa fa-cogs"></i> Assessors...
+            <i class="fas fa-cogs"></i> Assessors...
         </a>
         {% set disabled = not a.is_feedback_open %}
         <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.delete_session', id=s.id) }}"{% endif %}>
-            <i class="fa fa-trash"></i> Delete
+            <i class="fas fa-trash"></i> Delete
         </a>
     </div>
 </div>

@@ -15,7 +15,7 @@
             {% if text and url %}
                 <div class="top-return-link">
                     <a href="{{ url }}">
-                        <i class="fa fa-backward"></i> Return to {{ text }}
+                        <i class="fas fa-backward"></i> Return to {{ text }}
                     </a>
                 </div>
             {% endif %}
@@ -98,13 +98,13 @@
                                                         <div>
                                                             {% if record.student_feedback_submitted and record.acknowledge_feedback %}
                                                                 {% if is_student %}
-                                                                    <span class="badge badge-success"><i class="fa fa-check"></i> Your feedback acknowledged</span>
+                                                                    <span class="badge badge-success"><i class="fas fa-check"></i> Your feedback acknowledged</span>
                                                                 {% else %}
-                                                                    <span class="badge badge-success"><i class="fa fa-check"></i> Student feedback acknowledged</span>
+                                                                    <span class="badge badge-success"><i class="fas fa-check"></i> Student feedback acknowledged</span>
                                                                 {% endif %}
                                                             {% endif %}
                                                             {% if record.faculty_response_submitted %}
-                                                                <span class="badge badge-success"><i class="fa fa-check"></i> Supervisor response</span>
+                                                                <span class="badge badge-success"><i class="fas fa-check"></i> Supervisor response</span>
                                                             {% endif %}
                                                         </div>
                                                     </div>
@@ -170,7 +170,7 @@
             {% if text and url %}
                 <div>
                     <a href="{{ url }}">
-                        <i class="fa fa-backward"></i> Return to {{ text }}
+                        <i class="fas fa-backward"></i> Return to {{ text }}
                     </a>
                 </div>
             {% endif %}

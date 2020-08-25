@@ -21,14 +21,14 @@ _meeting = \
 """
 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
     {% if project.is_confirmed(sel) %}
-        <span class="badge badge-primary"><i class="fa fa-check"></i> Confirmed</span>
+        <span class="badge badge-primary"><i class="fas fa-check"></i> Confirmed</span>
     {% else %}
-        <span class="badge badge-danger"><i class="fa fa-times"></i> Required</span>
+        <span class="badge badge-danger"><i class="fas fa-times"></i> Required</span>
     {% endif %}
 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
     <span class="badge badge-warning">Optional</span>
 {% else %}
-    <span class="badge badge-secondary"><i class="fa fa-check"></i> Not required</span>
+    <span class="badge badge-secondary"><i class="fas fa-check"></i> Not required</span>
 {% endif %}
 """
 
@@ -36,15 +36,15 @@ _meeting = \
 _status = \
 """
 {% if project.is_available(sel) %}
-    <span class="badge badge-success"><i class="fa fa-check"></i> Available for selection</span>
+    <span class="badge badge-success"><i class="fas fa-check"></i> Available for selection</span>
 {% else %}
     {% if project.is_waiting(sel) %}
         <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="badge badge-warning">
-            <i class="fa fa-times"></i> Cancel request
+            <i class="fas fa-times"></i> Cancel request
         </a>
     {% else %}
         <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="badge badge-primary">
-            <i class="fa fa-plus"></i> Request confirmation
+            <i class="fas fa-plus"></i> Request confirmation
         </a>
     {% endif %}
 {% endif %}
@@ -55,12 +55,12 @@ _bookmarks = \
 {% if sel.is_project_bookmarked(project) %}
     <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
        class="badge badge-primary">
-       <i class="fa fa-times"></i> Remove
+       <i class="fas fa-times"></i> Remove
     </a>
 {% else %}
     <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}"
        class="badge badge-secondary">
-       <i class="fa fa-plus"></i> Add
+       <i class="fas fa-plus"></i> Add
     </a>
 {% endif %}
 """

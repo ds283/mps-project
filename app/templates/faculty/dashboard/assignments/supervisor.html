@@ -49,25 +49,25 @@
                                 {{ rec.project.name }} (No. {{ rec.project.number }})
                             </a>
                             {% if rec.report %}
-                                <span class="badge badge-success"><i class="fa fa-check"></i> Report uploaded</span>
+                                <span class="badge badge-success"><i class="fas fa-check"></i> Report uploaded</span>
                             {% endif %}
                             <div>
                                 {% if uses_feedback %}
                                     {% if rec.supervisor_submitted %}
-                                        <span class="badge badge-success"><i class="fa fa-check"></i> Feedback submitted</span>
+                                        <span class="badge badge-success"><i class="fas fa-check"></i> Feedback submitted</span>
                                     {% elif period.closed and not rec.supervisor_submitted %}
-                                        <span class="badge badge-warning"><i class="fa fa-times"></i> Feedback missing</span>
+                                        <span class="badge badge-warning"><i class="fas fa-times"></i> Feedback missing</span>
                                     {% endif %}
                                 {% endif %}
                                 {% if rec.student_feedback_submitted %} {# still want student feedback reported, even if not collecting project feedback #}
-                                    <span class="badge badge-success"><i class="fa fa-check"></i> Student feedback</span>
+                                    <span class="badge badge-success"><i class="fas fa-check"></i> Student feedback</span>
                                     {% if not rec.acknowledge_feedback %}
-                                        <span class="badge badge-warning"><i class="fa fa-exclamation-triangle"></i> Acknowledgment required</span>
+                                        <span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Acknowledgment required</span>
                                     {% endif %}
                                     {% if not rec.faculty_response_submitted %}
-                                        <span class="badge badge-warning"><i class="fa fa-times"></i> Response not submitted</span>
+                                        <span class="badge badge-warning"><i class="fas fa-times"></i> Response not submitted</span>
                                     {% else %}
-                                        <span class="badge badge-success"><i class="fa fa-check"></i> Response submitted</span>
+                                        <span class="badge badge-success"><i class="fas fa-check"></i> Response submitted</span>
                                     {% endif %}
                                 {% endif %}
                             </div>
@@ -79,27 +79,27 @@
                                         Actions
                                     </button>
                                     <div class="dropdown-menu dropdown-menu-right">
-                                        <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ rec.number_attachments }})...</a>
+                                        <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fas fa-file-text"></i> Manage documents ({{ rec.number_attachments }})...</a>
                                         {% set state = rec.supervisor_feedback_state %}
                                         {% if state > rec.FEEDBACK_NOT_YET %}
                                             {% if not period.is_feedback_open and not rec.student_engaged and rec.owner.published %}
                                                 {% if rec.submission_period <= rec.owner.config.submission_period %}
-                                                    <a class="dropdown-item" href="{{ url_for('faculty.mark_started', id=rec.id) }}"><i class="fa fa-check"></i> Mark as started</a>
+                                                    <a class="dropdown-item" href="{{ url_for('faculty.mark_started', id=rec.id) }}"><i class="fas fa-check"></i> Mark as started</a>
                                                 {% endif %}
                                             {% elif uses_feedback and (period.is_feedback_open and not period.closed) or (period.closed and not rec.supervisor_submitted) %}
                                                 {% if valid %}
-                                                    <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> Preview feedback...</a>
+                                                    <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-search"></i> Preview feedback...</a>
                                                 {% else %}
-                                                    <a class="dropdown-item" href="{{ url_for('faculty.supervisor_edit_feedback', id=rec.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Edit feedback...</a>
+                                                    <a class="dropdown-item" href="{{ url_for('faculty.supervisor_edit_feedback', id=rec.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil"></i> Edit feedback...</a>
                                                 {% endif %}
                                             {% endif %}
                                             {% if period.closed %}
                                                 {% if rec.student_feedback_submitted and not rec.acknowledge_feedback %}
-                                                    <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Respond to feedback...</a>
+                                                    <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil"></i> Respond to feedback...</a>
                                                 {% elif rec.student_feedback_submitted and not rec.faculty_response_submitted %}
-                                                    <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Respond to feedback...</a>
+                                                    <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil"></i> Respond to feedback...</a>
                                                 {% else %}
-                                                    <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> View feedback...</a>
+                                                    <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-search"></i> View feedback...</a>
                                                 {% endif %}
                                             {% endif %}
                                         {% endif %}

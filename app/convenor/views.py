@@ -57,16 +57,16 @@ _marker_menu = \
 {% if proj.is_assessor(f.id) %}
  <a href="{{ url_for('convenor.remove_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
     class="btn btn-sm btn-block btn-secondary">
-     <i class="fa fa-trash"></i> Remove
+     <i class="fas fa-trash"></i> Remove
  </a>
 {% elif proj.can_enroll_assessor(f) %}
  <a href="{{ url_for('convenor.add_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
     class="btn btn-sm btn-block btn-secondary">
-     <i class="fa fa-plus"></i> Attach
+     <i class="fas fa-plus"></i> Attach
  </a>
 {% else %}
  <a class="btn btn-secondary btn-block btn-sm disabled">
-     <i class="fa fa-ban"></i> Can't attach
+     <i class="fas fa-ban"></i> Can't attach
  </a>
 {% endif %}
 """
@@ -80,16 +80,16 @@ _desc_label = \
     {{ d.label }}
 </a>
 {% if not d.is_valid %}
-    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 <div>
     {% if d.review_only %}
         <span class="badge badge-info">REVIEW</span>
     {% endif %}
     {% if d.aims is not none and d.aims|length > 0 %}
-        <span class="badge badge-success"><i class="fa fa-check"></i> Includes aims</span>
+        <span class="badge badge-success"><i class="fas fa-check"></i> Includes aims</span>
     {% else %}
-        <span class="badge badge-warning"><i class="fa fa-times"></i> Aims not specified</span>
+        <span class="badge badge-warning"><i class="fas fa-times"></i> Aims not specified</span>
     {% endif %}
     {% set state = d.workflow_state %}
     {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
@@ -98,7 +98,7 @@ _desc_label = \
             <div class="dropdown" style="display: inline-block;">
                 <a class="badge badge-secondary dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
                 <div class="dropdown-menu">
-                    <a class="dropdown-item" class="dropdown-item" href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm</a>
+                    <a class="dropdown-item" class="dropdown-item" href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fas fa-check"></i> Confirm</a>
                 </div>
             </div>
         {% else %}
@@ -106,7 +106,7 @@ _desc_label = \
         {% endif %}
     {% else %}
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
-            <span class="badge badge-success"><i class="fa fa-check"></i> Approved</span>
+            <span class="badge badge-success"><i class="fas fa-check"></i> Approved</span>
         {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
             <span class="badge badge-warning">Approval: Queued</span>
         {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
@@ -181,7 +181,7 @@ _desc_menu = \
             <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
                                 url=url_for('convenor.edit_descriptions', id=d.parent.id, pclass_id=pclass_id, create=create),
                                 text='description list view') }}">
-                <i class="fa fa-search"></i> Preview web page
+                <i class="fas fa-search"></i> Preview web page
             </a>
 
             {% if desc_validator and desc_validator(d) %}
@@ -189,19 +189,19 @@ _desc_menu = \
                 <div class="dropdown-header">Edit description</div>
     
                 <a class="dropdown-item" href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
-                    <i class="fa fa-pencil"></i> Edit content...
+                    <i class="fas fa-pencil"></i> Edit content...
                 </a>
                 <a class="dropdown-item" href="{{ url_for('convenor.description_modules', did=d.id, pclass_id=pclass_id, create=create) }}">
-                    <i class="fa fa-cogs"></i> Recommended modules...
+                    <i class="fas fa-cogs"></i> Recommended modules...
                 </a>
                 <a class="dropdown-item" href="{{ url_for('convenor.duplicate_description', did=d.id, pclass_id=pclass_id) }}">
-                    <i class="fa fa-clone"></i> Duplicate
+                    <i class="fas fa-clone"></i> Duplicate
                 </a>
                 <a class="dropdown-item" href="{{ url_for('convenor.move_description', did=d.id, pclass_id=pclass_id, create=create) }}">
-                    <i class="fa fa-arrows"></i> Move to project...
+                    <i class="fas fa-arrows"></i> Move to project...
                 </a>
                 <a class="dropdown-item" href="{{ url_for('convenor.delete_description', did=d.id, pclass_id=pclass_id) }}">
-                    <i class="fa fa-trash"></i> Delete
+                    <i class="fas fa-trash"></i> Delete
                 </a>
             {% endif %}
     
@@ -209,11 +209,11 @@ _desc_menu = \
 
             {% if d.default is none %}
                 <a class="dropdown-item" href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id, did=d.id) }}">
-                    <i class="fa fa-wrench"></i> Make default
+                    <i class="fas fa-wrench"></i> Make default
                 </a>
             {% else %}
                 <a class="dropdown-item" href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id) }}">
-                    <i class="fa fa-wrench"></i> Remove default
+                    <i class="fas fa-wrench"></i> Remove default
                 </a>
             {% endif %}
         </div>
@@ -1757,10 +1757,10 @@ def delete_submitter(sid):
         url = redirect_url()
 
     title = 'Delete submitter "{name}"'.format(name=sub.student.user.name)
-    panel_title = 'Delete submitter <i class="fa fa-user"></i> <strong>{name}</strong>'.format(name=sub.student.user.name)
+    panel_title = 'Delete submitter <i class="fas fa-user"></i> <strong>{name}</strong>'.format(name=sub.student.user.name)
 
     action_url = url_for('convenor.do_delete_submitter', sid=sid, url=url)
-    message = '<p>Are you sure that you wish to delete submitter <i class="fa fa-user"></i> <strong>{name}</strong>?</p>' \
+    message = '<p>Are you sure that you wish to delete submitter <i class="fas fa-user"></i> <strong>{name}</strong>?</p>' \
               '<p>This action cannot be undone.</p>'.format(name=sub.student.user.name)
     submit_label = 'Delete submitter'
 
@@ -4772,11 +4772,11 @@ def delete_student_bookmark(sid, bid):
         return redirect(redirect_url())
 
     title = 'Delete selector bookmark'
-    panel_title = 'Delete bookmark for selector <i class="fa fa-user"></i> <strong>{name}</strong>, ' \
+    panel_title = 'Delete bookmark for selector <i class="fas fa-user"></i> <strong>{name}</strong>, ' \
                   'project <strong>{proj}</strong>'.format(name=sel.student.user.name,
                                                            proj=bookmark.liveproject.name)
     action_url = url_for('convenor.perform_delete_student_bookmark', sid=sid, bid=bid)
-    message = '<p>Please confirm that you wish to delete <i class="fa fa-user"></i> <strong>{name}</strong> ' \
+    message = '<p>Please confirm that you wish to delete <i class="fas fa-user"></i> <strong>{name}</strong> ' \
               'bookmark for project <strong>{proj}</strong>.</p>' \
               '<p>This action cannot be undone.</p>'.format(name=sel.student.user.name,
                                                             proj=bookmark.liveproject.name)
@@ -5015,11 +5015,11 @@ def delete_student_choice(sid, cid):
         return redirect(redirect_url())
 
     title = 'Delete selector ranking'
-    panel_title = 'Delete ranking for selector <i class="fa fa-user"></i> <strong>{name}</strong>, ' \
+    panel_title = 'Delete ranking for selector <i class="fas fa-user"></i> <strong>{name}</strong>, ' \
                   'project <strong>{proj}</strong>'.format(name=sel.student.user.name,
                                                            proj=record.liveproject.name)
     action_url = url_for('convenor.perform_delete_student_choice', sid=sid, cid=cid)
-    message = '<p>Please confirm that you wish to delete <i class="fa fa-user"></i> <strong>{name}</strong> ' \
+    message = '<p>Please confirm that you wish to delete <i class="fas fa-user"></i> <strong>{name}</strong> ' \
               'ranking #{num} for project <strong>{proj}</strong>.</p>' \
               '<p>This action cannot be undone.</p>' \
               '<p><strong>Student-submitted rankings should be deleted only when there ' \
@@ -7099,9 +7099,9 @@ def supervisor_edit_feedback(id):
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
                            title='Edit supervisor feedback from {supervisor}'.format(supervisor=record.project.owner.user.name),
-                           formtitle='Edit supervisor feedback from <i class="fa fa-user"></i> '
+                           formtitle='Edit supervisor feedback from <i class="fas fa-user"></i> '
                                      '<strong>{supervisor}</strong> '
-                                     'for <i class="fa fa-user"></i> <strong>{name}</strong>'.format(supervisor=record.project.owner.user.name,
+                                     'for <i class="fas fa-user"></i> <strong>{name}</strong>'.format(supervisor=record.project.owner.user.name,
                                                                                                      name=record.student_identifier),
                            submit_url=url_for('convenor.supervisor_edit_feedback', id=id, url=url),
                            period=period, record=record, dont_show_warnings=True)
@@ -7150,7 +7150,7 @@ def marker_edit_feedback(id):
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
                            title='Edit marker feedback from {supervisor}'.format(supervisor=record.marker.user.name),
-                           formtitle='Edit marker feedback from <i class="fa fa-user"></i> '
+                           formtitle='Edit marker feedback from <i class="fas fa-user"></i> '
                                      '<strong>{supervisor}</strong> '
                                      'for <strong>{num}</strong>'.format(supervisor=record.marker.user.name,
                                                                          num=record.owner.student.exam_number),
@@ -7345,9 +7345,9 @@ def presentation_edit_feedback(feedback_id):
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
                            title='Edit presentation feedback from {supervisor}'.format(supervisor=feedback.assessor.user.name),
-                           formtitle='Edit presentation feedback from <i class="fa fa-user"></i> '
+                           formtitle='Edit presentation feedback from <i class="fas fa-user"></i> '
                                      '<strong>{supervisor}</strong> '
-                                     'for <i class="fa fa-user"></i> <strong>{name}</strong>'.format(supervisor=feedback.assessor.user.name,
+                                     'for <i class="fas fa-user"></i> <strong>{name}</strong>'.format(supervisor=feedback.assessor.user.name,
                                                                                                      name=talk.owner.student.user.name),
                            submit_url=url_for('convenor.presentation_edit_feedback', feedback_id=feedback_id, url=url),
                            assessment=slot.owner.owner, dont_show_warnings=True)

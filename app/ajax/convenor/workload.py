@@ -56,18 +56,18 @@ _projects = \
             <div class="dropdown assignment-label">
                 <a class="badge {% if r.student_engaged %}badge-success{% else %}badge-warning{% endif %} btn-table-block dropdown-toggle"
                      role="button" aria-haspopup="true" aria-expanded="false"
-                    data-toggle="dropdown">{% if r.student_engaged %}<i class="fa fa-check"></i> Started{% else %}<i class="fa fa-times"></i> Waiting{% endif %}
+                    data-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}
                 <div class="dropdown-menu">
                     {% if r.submission_period > r.owner.config.submission_period %}
                         <a class="dropdown-item disabled">Submission period not yet open</a>
                     {% elif not r.student_engaged %}
                         <a class="dropdown-item" href="{{ url_for('convenor.mark_started', id=r.id) }}">
-                            <i class="fa fa-check"></i> Mark as started
+                            <i class="fas fa-check"></i> Mark as started
                         </a>
                     {% else %}
                         {% set disabled = (r.owner.config.submitter_lifecycle >= r.owner.config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
                         <a class="dropdown-item {% if disabled %}disabled{% endif %}"{% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
-                            <i class="fa fa-times"></i> Mark as waiting
+                            <i class="fas fa-times"></i> Mark as waiting
                         </a>
                     {% endif %}
                 </div>

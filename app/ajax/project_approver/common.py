@@ -17,7 +17,7 @@ title = \
     {%- if project -%}{{ project.name }}{%- else -%}<unnamed project>{%- endif -%}/{%- if r.label -%}{{ r.label }}{%- else -%}<unnamed description>{%- endif -%}
 </a>
 {% if not project.is_offerable %}
-    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
     <div>
         This project has validation errors that will prevent it from being published.
     </div>
@@ -53,6 +53,6 @@ pclasses = \
 {% endif %}
 {% if r.has_modules %}
     <p></p>
-    <span class="badge badge-primary"><i class="fa fa-exclamation-circle"></i> Has recommended modules</span>
+    <span class="badge badge-primary"><i class="fas fa-exclamation-circle"></i> Has recommended modules</span>
 {% endif %}
 """

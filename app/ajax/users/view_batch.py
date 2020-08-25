@@ -32,21 +32,21 @@ _name = \
         <span class="badge badge-warning">{{ w_length }} warnings</span>
     {% else %}
         {% if item.existing_record is none %}
-            <span class="badge badge-success"><i class="fa fa-plus-circle"></i> New</span>
+            <span class="badge badge-success"><i class="fas fa-plus-circle"></i> New</span>
         {% else %}
-            <span class="badge badge-success"><i class="fa fa-check"></i> Safe to import</span>
+            <span class="badge badge-success"><i class="fas fa-check"></i> Safe to import</span>
         {% endif %}
     {% endif %}
 </div>
 <div>
     {% if item.existing_record is not none %}
-        <span class="badge badge-success"><i class="fa fa-check"></i> Matches {{ item.existing_record.user.name }} {{ item.existing_record.cohort }}</span>
+        <span class="badge badge-success"><i class="fas fa-check"></i> Matches {{ item.existing_record.user.name }} {{ item.existing_record.cohort }}</span>
     {% endif %}
     {% if item.intermitting %}
         <span class="badge badge-danger">TWD</span>
     {% endif %}
     {% if item.dont_convert %}
-        <span class="badge badge-warning"><i class="fa fa-times"></i> Import disabled</span>
+        <span class="badge badge-warning"><i class="fas fa-times"></i> Import disabled</span>
     {% endif %}
 </div>
 {% if w_length > 0 %}
@@ -93,18 +93,18 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('manage_users.edit_batch_item', item_id=item.id) }}">
-            <i class="fa fa-pencil"></i> Edit...
+            <i class="fas fa-pencil"></i> Edit...
         </a>
         
         <div role="separator" class="dropdown-divider"></div>
 
         {% if item.dont_convert %}
             <a class="dropdown-item" href="{{ url_for('manage_users.mark_batch_item_convert', item_id=item.id) }}">
-                <i class="fa fa-wrench"></i> Allow import
+                <i class="fas fa-wrench"></i> Allow import
             </a>
         {% else %}
             <a class="dropdown-item" href="{{ url_for('manage_users.mark_batch_item_dont_convert', item_id=item.id) }}">
-                <i class="fa fa-wrench"></i> Disallow import
+                <i class="fas fa-wrench"></i> Disallow import
             </a>
         {% endif %}
     </div>

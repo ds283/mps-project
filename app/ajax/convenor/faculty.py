@@ -21,19 +21,19 @@ _faculty_menu = \
     <div class="dropdown-menu dropdown-menu-right">
         {% if userdata.is_enrolled(pclass) %}
             <a class="dropdown-item" href="{{ url_for('convenor.unenroll', userid=user.id, pclassid=pclass.id) }}">
-                <i class="fa fa-trash"></i> Remove enrollment
+                <i class="fas fa-trash"></i> Remove enrollment
             </a>
         {% else %}
             <a class="dropdown-item" href="{{ url_for('convenor.enroll', userid=user.id, pclassid=pclass.id) }}">
-                <i class="fa fa-plus"></i> Enroll
+                <i class="fas fa-plus"></i> Enroll
             </a>
         {% endif %}
         {% set record = userdata.get_enrollment_record(pclass) %}
         <a class="dropdown-item {% if record is none %}disabled{% endif %}" {% if record is not none %}href="{{ url_for('manage_users.edit_enrollment', id=record.id, url=url_for('convenor.faculty', id=pclass.id)) }}"{% endif %}>
-            <i class="fa fa-cogs"></i> Edit enrollment...
+            <i class="fas fa-cogs"></i> Edit enrollment...
         </a>
         <a class="dropdown-item {% if record is none %}disabled{% endif %}" {% if record is not none %}href="{{ url_for('convenor.custom_CATS_limits', record_id=record.id) }}"{% endif %}>
-            <i class="fa fa-cogs"></i> Custom CATS limits...
+            <i class="fas fa-cogs"></i> Custom CATS limits...
         </a>
     </div>
 </div>
@@ -44,16 +44,16 @@ _golive = \
 {% if config.require_confirm %}
     {% if config.requests_issued %}
         {% if config.is_confirmation_required(userdata) %}
-            <span class="badge badge-warning"><i class="fa fa-times"></i> Outstanding</span>
+            <span class="badge badge-warning"><i class="fas fa-times"></i> Outstanding</span>
         {% else %}
             {% if userdata.is_enrolled(pclass) %}
                 {% set record = userdata.get_enrollment_record(pclass.id) %}
                 {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
-                    <span class="badge badge-success"><i class="fa fa-check"></i> Confirmed</span>
+                    <span class="badge badge-success"><i class="fas fa-check"></i> Confirmed</span>
                 {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                    <span class="badge badge-secondary"><i class="fa fa-check"></i> Sabbatical</span>
+                    <span class="badge badge-secondary"><i class="fas fa-check"></i> Sabbatical</span>
                 {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                    <span class="badge badge-secondary"><i class="fa fa-check"></i> Exempt</span>
+                    <span class="badge badge-secondary"><i class="fas fa-check"></i> Exempt</span>
                 {% else %}
                     <span class="badge badge-danger">Unknown</span>
                 {% endif %}

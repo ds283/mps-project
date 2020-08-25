@@ -1940,9 +1940,9 @@ class FacultyData(db.Model):
         n = self.number_projects_offered(pclass)
 
         if n == 0:
-            return '<span class="badge badge-danger"><i class="fa fa-times"></i> 0 available</span>'
+            return '<span class="badge badge-danger"><i class="fas fa-times"></i> 0 available</span>'
 
-        return '<span class="badge badge-info"><i class="fa fa-check"></i> {n} available</span>'.format(n=n)
+        return '<span class="badge badge-info"><i class="fas fa-check"></i> {n} available</span>'.format(n=n)
 
 
     @property
@@ -1960,9 +1960,9 @@ class FacultyData(db.Model):
         n = self.projects_unofferable
 
         if n == 0:
-            return '<span class="badge badge-secondary"><i class="fa fa-check"></i> 0 unofferable</span>'
+            return '<span class="badge badge-secondary"><i class="fas fa-check"></i> 0 unofferable</span>'
 
-        return '<span class="badge badge-warning"><i class="fa fa-times"></i> {n} unofferable</span>'.format(n=n)
+        return '<span class="badge badge-warning"><i class="fas fa-times"></i> {n} unofferable</span>'.format(n=n)
 
 
     def remove_affiliation(self, group, autocommit=False):
@@ -2189,9 +2189,9 @@ class FacultyData(db.Model):
         num = self.number_assessor
 
         if num == 0:
-            return '<span class="badge badge-secondary"><i class="fa fa-times"></i> Assessor for 0</span>'
+            return '<span class="badge badge-secondary"><i class="fas fa-times"></i> Assessor for 0</span>'
 
-        return '<span class="badge badge-info"><i class="fa fa-check"></i> Assessor for {n}</span>'.format(n=num)
+        return '<span class="badge badge-info"><i class="fas fa-check"></i> Assessor for {n}</span>'.format(n=num)
 
 
     def supervisor_assignments(self, pclass_id, period=None):
@@ -4852,7 +4852,7 @@ class EnrollmentRecord(db.Model):
 
     def _generic_label(self, label, state, reenroll, comment, enrolled, sabbatical, exempt):
         if state == enrolled:
-            return '<span class="badge badge-info"><i class="fa fa-check"></i> ' + label + ': active</span>'
+            return '<span class="badge badge-info"><i class="fas fa-check"></i> ' + label + ': active</span>'
 
         if comment is not None:
             bleach = current_app.extensions['bleach']
@@ -4861,14 +4861,14 @@ class EnrollmentRecord(db.Model):
             comment_attr = None
 
         if state == sabbatical:
-            span = '<span class="badge badge-warning" ' + comment_attr + '><i class="fa fa-times"></i> ' + label + ': sab'
+            span = '<span class="badge badge-warning" ' + comment_attr + '><i class="fas fa-times"></i> ' + label + ': sab'
             if reenroll is not None:
                 span += ' ' + str(reenroll)
             span += '</span>'
             return span
 
         if state == exempt:
-            return '<span class="badge badge-danger" ' + comment_attr + '><i class="fa fa-times"></i> ' + label + ': exempt</span>'
+            return '<span class="badge badge-danger" ' + comment_attr + '><i class="fas fa-times"></i> ' + label + ': exempt</span>'
 
         return '<span class="badge badge-danger">Unknown state</span>'
 
@@ -8051,12 +8051,12 @@ class SelectionRecord(db.Model):
     SELECTION_HINT_DISCOURAGE_STRONG = 6
 
     _icons = {SELECTION_HINT_NEUTRAL: '',
-              SELECTION_HINT_REQUIRE: '<i class="fa fa-check"></i>',
-              SELECTION_HINT_FORBID: '<i class="fa fa-times"></i>',
-              SELECTION_HINT_ENCOURAGE: '<i class="fa fa-plus"></i>',
-              SELECTION_HINT_DISCOURAGE: '<i class="fa fa-minus"></i>',
-              SELECTION_HINT_ENCOURAGE_STRONG: '<i class="fa fa-plus"></i> <i class="fa fa-plus"></i>',
-              SELECTION_HINT_DISCOURAGE_STRONG: '<i class="fa fa-minus"></i> <i class="fa fa-minus"></i>'}
+              SELECTION_HINT_REQUIRE: '<i class="fas fa-check"></i>',
+              SELECTION_HINT_FORBID: '<i class="fas fa-times"></i>',
+              SELECTION_HINT_ENCOURAGE: '<i class="fas fa-plus"></i>',
+              SELECTION_HINT_DISCOURAGE: '<i class="fas fa-minus"></i>',
+              SELECTION_HINT_ENCOURAGE_STRONG: '<i class="fas fa-plus"></i> <i class="fas fa-plus"></i>',
+              SELECTION_HINT_DISCOURAGE_STRONG: '<i class="fas fa-minus"></i> <i class="fas fa-minus"></i>'}
 
     _menu_items = {SELECTION_HINT_NEUTRAL: 'Neutral',
                    SELECTION_HINT_REQUIRE: 'Require',

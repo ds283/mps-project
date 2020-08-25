@@ -43,7 +43,7 @@
 {% block bodyblock %}
     <div class="top-return-link">
         <a href="{{ url_for('admin.manage_assessments') }}">
-            <i class="fa fa-backward"></i> Return to presentation assessment list
+            <i class="fas fa-backward"></i> Return to presentation assessment list
         </a>
     </div>
 
@@ -63,7 +63,7 @@
             </table>
             <div style="text-align: center;">
                 <a href="{{ url_for('admin.add_session', id=assessment.id) }}" class="btn btn-secondary btn-lg">
-                    <i class="fa fa-plus"></i>
+                    <i class="fas fa-plus"></i>
                     Add new session
                 </a>
             </div>
@@ -72,7 +72,7 @@
 
     <div>
         <a href="{{ url_for('admin.manage_assessments') }}">
-            <i class="fa fa-backward"></i> Return to presentation assessment list
+            <i class="fas fa-backward"></i> Return to presentation assessment list
         </a>
     </div>
 {% endblock %}

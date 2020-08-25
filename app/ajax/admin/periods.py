@@ -14,11 +14,11 @@ from flask import render_template_string, jsonify
 _presentation = \
 """
 {% if p.has_presentation %}
-    <span class="badge badge-success"><i class="fa fa-check"></i> Required</span>
+    <span class="badge badge-success"><i class="fas fa-check"></i> Required</span>
     {% if p.collect_presentation_feedback %}
-        <span class="badge badge-success"><i class="fa fa-check"></i> Collect feedback</span>
+        <span class="badge badge-success"><i class="fas fa-check"></i> Collect feedback</span>
     {% else %}
-        <span class="badge badge-warning"><i class="fa fa-times"></i> Do not collect feedback</span>
+        <span class="badge badge-warning"><i class="fas fa-times"></i> Do not collect feedback</span>
     {% endif %}
     <span class="badge badge-primary">Assessors per group = {{ p.number_assessors }}</span>
     <span class="badge badge-primary">Max group size = {{ p.max_group_size }}</span> 
@@ -45,10 +45,10 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('admin.edit_period', id=period.id) }}">
-            <i class="fa fa-cogs"></i> Edit period...
+            <i class="fas fa-cogs"></i> Edit period...
         </a>
         <a class="dropdown-item" href="{{ url_for('admin.delete_period', id=period.id) }}">
-            <i class="fa fa-trash"></i> Delete period
+            <i class="fas fa-trash"></i> Delete period
         </a>
     </div>
 </div>
@@ -69,7 +69,7 @@ _name = \
 {% endif %}
 {% if p.collect_project_feedback %}
     <div>
-        <span class="badge badge-info"><i class="fa fa-check"></i> Collect feedback</span>
+        <span class="badge badge-info"><i class="fas fa-check"></i> Collect feedback</span>
     </div>
 {% endif %}  
 """

@@ -24,7 +24,7 @@
 
 {% block scripts %}
     {{ super() }}
-    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/a95036619a.js" crossorigin="anonymous"></script>
 
     {# attempt to ensure that dropdown menus don't open off-screen #}
     {# based on https://stackoverflow.com/questions/32746598/bootstrap-dropdown-list-position-up-bottom-based-on-document-height #}
@@ -278,13 +278,13 @@
             <div class="dropdown-header">Convenorships</div>
             {% for project_class in pclasses %}
                 <a class="dropdown-item"href="{{ url_for('convenor.overview', id=project_class.id) }}">
-                    <i class="fa fa-briefcase"></i> {{ project_class.name }}...
+                    <i class="fas fa-briefcase"></i> {{ project_class.name }}...
                 </a>
             {% endfor %}
             {% if current_user.has_role('admin') or current_user.has_role('root') %}
                 <div role="separator" class="dropdown-divider"></div>
                 <a class="dropdown-item" href="{{ url_for('convenor.show_unofferable', id=0) }}">
-                    <i class="fa fa-exclamation-circle"></i> Unofferable projects...
+                    <i class="fas fa-exclamation-circle"></i> Unofferable projects...
                 </a>
             {% endif %}
         </div>
@@ -320,18 +320,18 @@
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             <a class="dropdown-item" href="{{ url_for('faculty.edit_projects') }}">
-                                <i class="fa fa-pencil"></i> My project library...
+                                <i class="fas fa-pencil"></i> My project library...
                             </a>
                             <a class="dropdown-item" href="{{ url_for('faculty.assessor_for') }}">
-                                <i class="fa fa-book"></i> My assessor projects...
+                                <i class="fas fa-book"></i> My assessor projects...
                             </a>
                             <div role="separator" class="dropdown-divider"></div>
                             <div class="dropdown-header">Browse history</div>
                             <a class="dropdown-item"href="{{ url_for('faculty.past_projects') }}">
-                                <i class="fa fa-archive"></i> Offered projects...
+                                <i class="fas fa-archive"></i> Offered projects...
                             </a>
                             <a class="dropdown-item"href="#">
-                                <i class="fa fa-archive"></i> Students...
+                                <i class="fas fa-archive"></i> Students...
                             </a>
                         </div>
                     </li>
@@ -346,11 +346,11 @@
                         <div class="dropdown-menu dropdown-menu-right">
                             {% if current_user.student_data.has_timeline %}
                                 <a class="dropdown-item" href="{{ url_for('student.timeline', student_id=current_user.id) }}">
-                                    <i class="fa fa-clock-o"></i> Show history...
+                                    <i class="fas fa-history"></i> Show history...
                                 </a>
                             {% else %}
                                 <a class="dropdown-item disabled">
-                                    <i class="fa fa-clock-o"></i> Show history...
+                                    <i class="fas fa-history"></i> Show history...
                                 </a>
                             {% endif %}
                         </div>
@@ -364,10 +364,10 @@
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             <a class="dropdown-item" href="{{ url_for('reports.all_projects') }}">
-                                <i class="fa fa-binoculars"></i> All projects...
+                                <i class="fas fa-binoculars"></i> All projects...
                             </a>
                             <a class="dropdown-item" href="{{ url_for('reports.workload') }}">
-                                <i class="fa fa-binoculars"></i> Workload...
+                                <i class="fas fa-binoculars"></i> Workload...
                             </a>
                         </div>
                     </li>
@@ -389,24 +389,24 @@
                         <div class="dropdown-menu dropdown-menu-right">
                             {% if is_manage_users or is_root %}
                                 <a class="dropdown-item" href="{{ url_for('manage_users.edit_users') }}">
-                                    <i class="fa fa-users"></i> Manage users...
+                                    <i class="fas fa-users"></i> Manage users...
                                 </a>
                                 <div role="separator" class="dropdown-divider"></div>
                             {% endif %}
                             {% if is_admin or is_root or is_convenor %}
                                 <div class="dropdown-header">Tools</div>
                                 <a class="dropdown-item" href="{{ url_for('admin.edit_messages') }}">
-                                    <i class="fa fa-comment"></i> Messages...
+                                    <i class="fas fa-comment"></i> Messages...
                                 </a>
                             {% endif %}
                             {% if is_admin or is_root or is_edit_tags %}
                                 <div role="separator" class="dropdown-divider"></div>
                                 <div class="dropdown-header">Project components</div>
                                 <a class="dropdown-item" href="{{ url_for('admin.edit_skills') }}">
-                                    <i class="fa fa-cogs"></i> Transferable skills...
+                                    <i class="fas fa-cogs"></i> Transferable skills...
                                 </a>
                                 <a class="dropdown-item" href="{{ url_for('admin.edit_supervisors') }}">
-                                    <i class="fa fa-cogs"></i> Supervisory team...
+                                    <i class="fas fa-cogs"></i> Supervisory team...
                                 </a>
                             {% endif %}
                             {% if is_root %}
@@ -414,28 +414,28 @@
                                 <div class="dropdown-header">Sysadmin only</div>
                                 {% if matching_ready %}
                                     <a class="dropdown-item" href="{{ url_for('admin.manage_matching') }}">
-                                        <i class="fa fa-cogs"></i> Manage matching...
+                                        <i class="fas fa-cogs"></i> Manage matching...
                                     </a>
                                 {% endif %}
                                 {% if has_assessments %}
                                     <a class="dropdown-item" href="{{ url_for('admin.manage_assessments') }}">
-                                        <i class="fa fa-cogs"></i> Manage assessments...
+                                        <i class="fas fa-cogs"></i> Manage assessments...
                                     </a>
                                 {% endif %}
                                 <a class="dropdown-item" href="{{ url_for('admin.edit_project_classes') }}">
-                                    <i class="fa fa-cogs"></i> Project classes...
+                                    <i class="fas fa-cogs"></i> Project classes...
                                 </a>
                                 <a class="dropdown-item" href="{{ url_for('admin.edit_groups') }}">
-                                    <i class="fa fa-cogs"></i> Research groups...
+                                    <i class="fas fa-cogs"></i> Research groups...
                                 </a>
                                 <a class="dropdown-item" href="{{ url_for('admin.edit_degree_programmes') }}">
-                                    <i class="fa fa-cogs"></i> Degree programmes...
+                                    <i class="fas fa-cogs"></i> Degree programmes...
                                 </a>
                                 <a class="dropdown-item" href="{{ url_for('admin.edit_rooms') }}">
-                                    <i class="fa fa-cogs"></i> Presentation venues...
+                                    <i class="fas fa-cogs"></i> Presentation venues...
                                 </a>
                                 <a class="dropdown-item" href="{{ url_for('admin.edit_licenses') }}">
-                                    <i class="fa fa-cogs"></i> Asset licenses...
+                                    <i class="fas fa-cogs"></i> Asset licenses...
                                 </a>
                             {% endif %}
                         </div>
@@ -451,23 +451,23 @@
                         <div class="dropdown-menu dropdown-menu-right">
                             {% if is_root %}
                                 <a class="dropdown-item" href="{{ url_for('manage_users.edit_roles') }}">
-                                    <i class="fa fa-cogs"></i> Role editor...
+                                    <i class="fas fa-cogs"></i> Role editor...
                                 </a>
                             {% endif %}
                             {% if is_root or is_view_email %}
                                 <a class="dropdown-item" href="{{ url_for('admin.email_log') }}">
-                                    <i class="fa fa-wrench"></i> Email log...
+                                    <i class="fas fa-wrench"></i> Email log...
                                 </a>
                             {% endif %}
                             {% if is_root %}
                                 <a class="dropdown-item" href="{{ url_for('admin.background_tasks') }}">
-                                    <i class="fa fa-wrench"></i> Background tasks...
+                                    <i class="fas fa-wrench"></i> Background tasks...
                                 </a>
                                 <a class="dropdown-item" href="{{ url_for('admin.scheduled_tasks') }}">
-                                    <i class="fa fa-wrench"></i> Scheduled tasks...
+                                    <i class="fas fa-wrench"></i> Scheduled tasks...
                                 </a>
                                 <a class="dropdown-item" href="{{ url_for('admin.backups_overview') }}">
-                                    <i class="fa fa-wrench"></i> Manage backups...
+                                    <i class="fas fa-wrench"></i> Manage backups...
                                 </a>
                             {% endif %}
                         </div>
@@ -478,7 +478,7 @@
                 {% if current_user.is_authenticated %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">
-                            <i class="fa fa-user"></i>
+                            <i class="fas fa-user"></i>
                             {{ current_user.username }}
                             {% if current_user.has_role('office') %}
                                 (School Office)
@@ -490,49 +490,49 @@
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             <a class="dropdown-item" href="{{ url_for('home.homepage') }}">
-                                <i class="fa fa-area-chart"></i> Dashboard...
+                                <i class="fas fa-tachometer-alt"></i> Dashboard...
                             </a>
                             {% if current_user.faculty_data.has_editable_availability_requests %}
                                 <div role="separator" class="dropdown-divider"></div>
                                 <div class="dropdown-header">Assessment events</div>
                                 <a class="dropdown-item" href="{{ url_for('faculty.change_availability') }}">
-                                    <i class="fa fa-calendar"></i> Change availability...
+                                    <i class="fas fa-calendar"></i> Change availability...
                                 </a>
                             {% endif %}
                             {% if is_faculty %}
                                 <div role="separator" class="dropdown-divider"></div>
                                 <div class="dropdown-header">Faculty options</div>
                                 <a class="dropdown-item" href="{{ url_for('faculty.show_enrollments') }}">
-                                    <i class="fa fa-info-circle"></i> Show enrollments...
+                                    <i class="fas fa-info-circle"></i> Show enrollments...
                                 </a>
                                 <a class="dropdown-item" href="{{ url_for('faculty.show_workload') }}">
-                                    <i class="fa fa-info-circle"></i> Show workload limits...
+                                    <i class="fas fa-info-circle"></i> Show workload limits...
                                 </a>
                                 <a class="dropdown-item" href="{{ url_for('faculty.settings') }}">
-                                    <i class="fa fa-cogs"></i> Settings...
+                                    <i class="fas fa-cogs"></i> Settings...
                                 </a>
                                 <a class="dropdown-item" href="{{ url_for('faculty.affiliations') }}">
-                                    <i class="fa fa-cogs"></i> Research affiliations...
+                                    <i class="fas fa-cogs"></i> Research affiliations...
                                 </a>
                             {% elif is_student %}
                                 <div role="separator" class="dropdown-divider"></div>
                                 <div class="dropdown-header">Student options</div>
                                 <a class="dropdown-item" href="{{ url_for('student.settings') }}">
-                                    <i class="fa fa-cogs"></i> Settings...
+                                    <i class="fas fa-cogs"></i> Settings...
                                 </a>
                             {% elif is_office %}
                                 <div role="separator" class="dropdown-divider"></div>
                                 <div class="dropdown-header">Office options</div>
                                 <a class="dropdown-item" href="{{ url_for('office.settings') }}">
-                                    <i class="fa fa-cogs"></i> Settings...
+                                    <i class="fas fa-cogs"></i> Settings...
                                 </a>
                             {% endif %}
                             <a class="dropdown-item" href="{{ url_for_security('change_password') }}">
-                                <i class="fa fa-cogs"></i> Change password...
+                                <i class="fas fa-cogs"></i> Change password...
                             </a>
                             <div role="separator" class="dropdown-divider"></div>
                             <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
-                                <i class="fa fa-times-circle"></i> Logout
+                                <i class="fas fa-times-circle"></i> Logout
                             </a>
                         </div>
                     </li>
@@ -559,7 +559,7 @@
                         </div>
                         <div class="col-1">
                             <div class="float-right">
-                                <div id="close-tasks-area"><i class="fa fa-times"></i></div>
+                                <div id="close-tasks-area"><i class="fas fa-times"></i></div>
                             </div>
                         </div>
                     </div>
@@ -591,7 +591,7 @@
         <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} University of Sussex</span>
         {% if real_user %}
             <span class="navbar-text small" style="float: right;">You
-                are viewing as <i class="fa fa-user"></i>
+                are viewing as <i class="fas fa-user"></i>
                 {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if theme == 'flat' or theme == 'dark' %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
         {% endif %}
     </nav>

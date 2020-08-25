@@ -22,7 +22,7 @@
                             style="{{ skill.group.make_CSS_style() }}"
                        {% endif %}
                        href="{{ url_for('faculty.remove_skill', projectid=data.id, skillid=skill.id, sel_id=sel_id, create=create) }}">
-                        <i class="fa fa-times"></i>
+                        <i class="fas fa-times"></i>
                         {% if skill.group is not none  %}
                             {{ skill.group.name }}:
                         {% endif %}
@@ -45,7 +45,7 @@
                         {% if skill not in data.skills %}
                             <a class="btn btn-secondary selection-label"
                                href="{{ url_for('faculty.add_skill', projectid=data.id, skillid=skill.id, sel_id=sel_id, create=create) }}">
-                                <i class="fa fa-plus"></i> {{ skill.name }}
+                                <i class="fas fa-plus"></i> {{ skill.name }}
                             </a>
                         {% endif %}
                     {% endfor %}
@@ -68,7 +68,7 @@
         </a>
     {% else %}
         <a href="{{ url_for('faculty.edit_projects') }}">
-            <i class="fa fa-backward"></i> Return to project list
+            <i class="fas fa-backward"></i> Return to project list
         </a>
     {% endif %}
 {% endblock %}

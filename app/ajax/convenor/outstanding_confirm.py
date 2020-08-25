@@ -26,15 +26,15 @@ _projects = \
                 {{ p.name }}
             </a>
             {% if not offerable %}
-                <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                <i class="fas fa-exclamation-triangle" style="color:red;"></i>
             {% endif %}
         </div>
         <div class="outstanding-confirm-row">
             {% if offerable %}
                 {% if p.active %}
-                    <span class="badge badge-success"><i class="fa fa-check"></i> Project active</span>
+                    <span class="badge badge-success"><i class="fas fa-check"></i> Project active</span>
                 {% else %}
-                    <span class="badge badge-warning"><i class="fa fa-times"></i> Project inactive</span>
+                    <span class="badge badge-warning"><i class="fas fa-times"></i> Project inactive</span>
                 {% endif %}
                 {% set enrollment = f.get_enrollment_record(pclass.id) %}
                 {% if enrollment %}
@@ -54,12 +54,12 @@ _projects = \
                     <div class="dropdown" style="display: inline-block;">
                         <a class="badge badge-secondary dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
                         <div class="dropdown-menu">
-                            <a class="dropdown-item" href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm</a>
+                            <a class="dropdown-item" href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fas fa-check"></i> Confirm</a>
                         </div>
                     </div>
                 {% else %}
                     {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
-                        <span class="badge badge-success"><i class="fa fa-check"></i> Approved</span>
+                        <span class="badge badge-success"><i class="fas fa-check"></i> Approved</span>
                     {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
                         <span class="badge badge-warning">Approval: Queued</span>
                     {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
@@ -91,10 +91,10 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('convenor.force_confirm', id=config.id, uid=f.id) }}">
-            <i class="fa fa-check"></i> Force confirm all
+            <i class="fas fa-check"></i> Force confirm all
         </a>
         <a hclass="dropdown-item" ref="{{ url_for('convenor.confirmation_reminder_individual', fac_id=f.id, config_id=config.id) }}">
-            <i class="fa fa-envelope-o"></i> Send reminder
+            <i class="fas fa-envelope"></i> Send reminder
         </a>
     </div>
 </div>

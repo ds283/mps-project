@@ -20,13 +20,13 @@ _menu = \
     <div class="dropdown-menu dropdown-menu-right">
         {% set disabled = a.availability_closed %} 
         <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=assessor.faculty.id) }}"{% endif %}>
-            <i class="fa fa-check"></i> Force confirm
+            <i class="fas fa-check"></i> Force confirm
         </a>
         <a class="dropdown-item" href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=assessor.faculty.id) }}">
-            <i class="fa fa-trash"></i> Remove
+            <i class="fas fa-trash"></i> Remove
         </a>
         <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.availability_reminder_individual', id=assessor.id) }}"{% endif %}>
-            <i class="fa fa-envelope-o"></i> Send reminder
+            <i class="fas fa-envelope"></i> Send reminder
         </a>
     </div>
 </div>

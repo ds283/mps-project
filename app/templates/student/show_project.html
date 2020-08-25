@@ -81,7 +81,7 @@
                                 <div class="research-group-banner">{{ project.group.name }}</div>
                                 {% if project.group.website and project.group.website is not none %}
                                     <a class="research-group-webpage" href="{{ project.group.website }}">
-                                        Research group website <i class="fa fa-external-link"></i>
+                                        Research group website <i class="fas fa-external-link"></i>
                                     </a>
                                 {% endif %}
                             {% endif %}
@@ -156,20 +156,20 @@
                                                     {% if project.meeting_reqd == project.MEETING_REQUIRED %}
                                                         {% if project.is_confirmed(sel) %}
                                                             <span class="badge badge-primary project-label"><i
-                                                                    class="fa fa-check"></i> Meeting confirmed</span>
+                                                                    class="fas fa-check"></i> Meeting confirmed</span>
                                                         {% else %}
                                                             <span class="badge badge-danger project-label"><i
-                                                                    class="fa fa-times"></i> Meeting required</span>
+                                                                    class="fas fa-times"></i> Meeting required</span>
                                                         {% endif %}
                                                     {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
                                                         <span class="badge badge-warning project-label">Meeting optional</span>
                                                     {% else %}
                                                         <span class="badge badge-secondary project-label"><i
-                                                                class="fa fa-check"></i> Meeting not required</span>
+                                                                class="fas fa-check"></i> Meeting not required</span>
                                                     {% endif %}
                                                     {% if selections_open and project.is_available(sel) %}
                                                         <span class="badge badge-success project-label"><i
-                                                                class="fa fa-check"></i> Available</span>
+                                                                class="fas fa-check"></i> Available</span>
                                                     {% endif %}
                                                 </div>
                                             </div>
@@ -337,10 +337,10 @@
                             <div class="col-12">
                                 <div class="float-right">
                                     <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}" class="btn btn-success">
-                                        <i class="fa fa-check"></i> Approve
+                                        <i class="fas fa-check"></i> Approve
                                     </a>
                                     <a href="{{ url_for('project_approver.reject', id=desc.id, url=url) }}" class="btn btn-danger">
-                                        <i class="fa fa-times"></i> Reject
+                                        <i class="fas fa-times"></i> Reject
                                     </a>
                                 </div>
                             </div>
@@ -350,13 +350,13 @@
                             <div class="col-12">
                                 <div class="float-right">
                                     <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}" class="btn btn-success">
-                                        <i class="fa fa-check"></i> Approve
+                                        <i class="fas fa-check"></i> Approve
                                     </a>
                                     <a href="{{ url_for('project_approver.requeue', id=desc.id, url=url) }}" class="btn btn-secondary">
-                                        <i class="fa fa-undo"></i> Re-queue
+                                        <i class="fas fa-undo"></i> Re-queue
                                     </a>
                                     <a href="{{ url_for('project_approver.return_to_owner', id=desc.id, url=url) }}" class="btn btn-danger">
-                                        <i class="fa fa-exclamation-circle"></i> Return to owner</a>
+                                        <i class="fas fa-exclamation-circle"></i> Return to owner</a>
                                 </div>
                             </div>
                         </div>
@@ -383,7 +383,7 @@
                             {% set approvals_team_only = comment.visibility == comment.VISIBILITY_APPROVALS_TEAM %}
                             <div class="card mt-3 mb-3">
                                 <div class="card-header">
-                                    <i class="fa fa-comment-o"></i> {{ owner_name|safe }}
+                                    <i class="fas fa-comments"></i> {{ owner_name|safe }}
                                     at {{ comment.creation_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                 </div>
                                 <div class="card-body">
@@ -477,7 +477,7 @@
                 {% endif %}
                 {% if text and url %}
                     <a href="{{ url }}">
-                        <i class="fa fa-backward"></i> Return to {{ text }}
+                        <i class="fas fa-backward"></i> Return to {{ text }}
                     </a>
                 {% endif %}
             </div>
@@ -491,7 +491,7 @@
         <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} University of Sussex</span>
         {% if real_user %}
             <span class="navbar-text small" style="float: right;">You
-                are viewing as <i class="fa fa-user"></i>
+                are viewing as <i class="fas fa-user"></i>
                 {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if theme == 'flat' or theme == 'dark' %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
         {% endif %}
     </nav>

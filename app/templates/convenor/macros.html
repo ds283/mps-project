@@ -11,7 +11,7 @@
                 {% set project = item.liveproject %}
                 <div id="P-{{ project.id }}" class="row vertical-top final-selection-table">
                     <div class="col-1">
-                        {% if not sel.retired %}<i class="fa fa-bars drag-handle"></i>{% endif %}
+                        {% if not sel.retired %}<i class="fas fa-bars drag-handle"></i>{% endif %}
                         <span id="ranking" class="badge badge-primary">#{{ item.rank }}</span>
                     </div>
                     <div class="col-5">
@@ -19,9 +19,9 @@
                             {{ item.format_project|safe }}
                         </a>
                         {% if project.is_available(sel) %}
-                            <span class="badge badge-success"><i class="fa fa-check"></i> Available</span>
+                            <span class="badge badge-success"><i class="fas fa-check"></i> Available</span>
                         {% else %}
-                            <span class="badge badge-danger"><i class="fa fa-times"></i> Not available</span>
+                            <span class="badge badge-danger"><i class="fas fa-times"></i> Not available</span>
                         {% endif %}
                     </div>
                     <div class="col-4">
@@ -32,7 +32,7 @@
                     </div>
                    <div class="col-2">
                        <div class="float-right">
-                           <a href="{{ url_for('convenor.delete_student_bookmark', sid=sel.id, bid=item.id) }}" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                           <a href="{{ url_for('convenor.delete_student_bookmark', sid=sel.id, bid=item.id) }}" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>
                        </div>
                     </div>
                 </div>
@@ -66,9 +66,9 @@
                             <span class="badge badge-secondary">No</span>
                         {% endif %}
                         {% if proj.is_available(item.owner) %}
-                            <span class="badge badge-success"><i class="fa fa-check"></i> Available</span>
+                            <span class="badge badge-success"><i class="fas fa-check"></i> Available</span>
                         {% else %}
-                            <span class="badge badge-danger"><i class="fa fa-times"></i> Not available</span>
+                            <span class="badge badge-danger"><i class="fas fa-times"></i> Not available</span>
                         {% endif %}
                     </div>
                     <div class="col-3">
@@ -84,7 +84,7 @@
                     </div>
                     <div class="col-2">
                         <div class="float-right">
-                            <a href="#" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                            <a href="#" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>
                         </div>
                     </div>
                 </div>
@@ -141,7 +141,7 @@
                     </div>
                     <div class="col-2">
                         <div class="float-right">
-                            <a href="#" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                            <a href="#" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>
                         </div>
                     </div>
                 </div>
@@ -164,7 +164,7 @@
                 {% set project = item.liveproject %}
                 <div id="P-{{ project.id }}" class="row vertical-top final-selection-table">
                     <div {% if show_hint %}class="col-2"{% else %}class="col-1"{% endif %}>
-                        {% if not sel.retired %}<i class="fa fa-bars drag-handle"></i>{% endif %}
+                        {% if not sel.retired %}<i class="fas fa-bars drag-handle"></i>{% endif %}
                         <span id="ranking" class="badge badge-success rank-hint-button">#{{ item.rank }}</span>
                         {% if item.converted_from_bookmark %}
                             <span class="badge badge-warning rank-hint-button">Bookmark</span>
@@ -206,7 +206,7 @@
                     <div class="col-2">
                         {% if show_delete %}
                             <div class="float-right">
-                                <a {% if can_delete %}href="{{ url_for('convenor.delete_student_choice', sid=sel.id, cid=item.id) }}"{% endif %} class="btn btn-sm btn-danger {% if not can_delete %}disabled{% endif %}"><i class="fa fa-trash"></i> Delete</a>
+                                <a {% if can_delete %}href="{{ url_for('convenor.delete_student_choice', sid=sel.id, cid=item.id) }}"{% endif %} class="btn btn-sm btn-danger {% if not can_delete %}disabled{% endif %}"><i class="fas fa-trash"></i> Delete</a>
                             </div>
                         {% endif %}
                     </div>

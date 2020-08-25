@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block formtitle %}
-    Edit research group affiliations for <i class="fa fa-user"></i> <strong>{{ user.name_and_username }}</strong>
+    Edit research group affiliations for <i class="fas fa-user"></i> <strong>{{ user.name_and_username }}</strong>
 {% endblock %}
 
 {% block form_content %}
@@ -21,7 +21,7 @@
                         <a class="btn {% if style %}btn-secondary{% else %}btn-success{% endif %} selection-label"
                            {% if style %}style="{{ style }}"{% endif %}
                            href="{{ url_for('manage_users.remove_affiliation', userid=user.id, groupid=group.id) }}">
-                            <i class="fa fa-times"></i> {{ group.name }}
+                            <i class="fas fa-times"></i> {{ group.name }}
                         </a>
                     {% endif %}
                 {% endfor %}
@@ -35,7 +35,7 @@
                 <h4>
                 {% for group in research_groups %}
                     {% if group not in data.affiliations %}
-                        <a class="btn btn-secondary selection-label" href="{{ url_for('manage_users.add_affiliation', userid=user.id, groupid=group.id) }}"><i class="fa fa-plus"></i> {{ group.name }}</a>
+                        <a class="btn btn-secondary selection-label" href="{{ url_for('manage_users.add_affiliation', userid=user.id, groupid=group.id) }}"><i class="fas fa-plus"></i> {{ group.name }}</a>
                     {% endif %}
                 {% endfor %}
                 </h4>
@@ -67,15 +67,15 @@
     {% else %}
         {% if pane is none or pane == 'accounts' %}
             <a href="{{ url_for('manage_users.edit_users') }}">
-                <i class="fa fa-backward"></i> Return to user accounts
+                <i class="fas fa-backward"></i> Return to user accounts
             </a>
         {% elif pane == 'faculty' %}
             <a href="{{ url_for('manage_users.edit_users_faculty') }}">
-                <i class="fa fa-backward"></i> Return to faculty accounts
+                <i class="fas fa-backward"></i> Return to faculty accounts
             </a>
         {% elif pane == 'students' %}
             <a href="{{ url_for('manage_users.edit_users_students') }}">
-                <i class="fa fa-backward"></i> Return to student accounts
+                <i class="fas fa-backward"></i> Return to student accounts
             </a>
         {% else %}
             <span class="badge badge-danger">Unknown user dashboard pane '{{ pane }}'</span>

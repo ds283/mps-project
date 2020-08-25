@@ -33,9 +33,9 @@ _properties = \
     </div>
 {% endif %}
 {% if l.allows_redistribution %}
-    <span class="badge badge-success"><i class="fa fa-check"></i> Allows redistribution</span>
+    <span class="badge badge-success"><i class="fas fa-check"></i> Allows redistribution</span>
 {% else %}
-    <span class="badge badge-secondary"><i class="fa fa-times"></i> No redistribution</span>
+    <span class="badge badge-secondary"><i class="fas fa-times"></i> No redistribution</span>
 {% endif %}
 <div style="padding-top: 5px;">
     Created by
@@ -61,9 +61,9 @@ _properties = \
 _active = \
 """
 {% if l.active %}
-    <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
+    <span class="badge badge-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
-    <span class="badge badge-warning"><i class="fa fa-times"></i> Inactive</span>
+    <span class="badge badge-warning"><i class="fas fa-times"></i> Inactive</span>
 {% endif %}
 """
 
@@ -76,16 +76,16 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('admin.edit_license', lid=l.id) }}">
-            <i class="fa fa-pencil"></i> Edit details...
+            <i class="fas fa-pencil"></i> Edit details...
         </a>
 
         {% if l.active %}
             <a class="dropdown-item" href="{{ url_for('admin.deactivate_license', lid=l.id) }}">
-                <i class="fa fa-wrench"></i> Make inactive
+                <i class="fas fa-wrench"></i> Make inactive
             </a>
         {% else %}
             <a class="dropdown-item" href="{{ url_for('admin.activate_license', lid=l.id) }}">
-                <i class="fa fa-wrench"></i> Make active
+                <i class="fas fa-wrench"></i> Make active
             </a>
         {% endif %}
     </div>

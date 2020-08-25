@@ -22,7 +22,7 @@ _name = \
 """
 <a href="mailto:{{ f.user.email }}">{{ f.user.name }}</a>
 {% if overassigned %}
-    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 """
 

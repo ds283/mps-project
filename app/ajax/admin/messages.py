@@ -28,10 +28,10 @@ _messages_menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('admin.edit_message', id=message.id) }}">
-            <i class="fa fa-pencil"></i> Edit message
+            <i class="fas fa-pencil"></i> Edit message
         </a>
         <a class="dropdown-item" href="{{ url_for('admin.delete_message', id=message.id) }}">
-            <i class="fa fa-trash"></i> Delete message
+            <i class="fas fa-trash"></i> Delete message
         </a>
 
         <div role="separator" class="dropdown-divider"></div>

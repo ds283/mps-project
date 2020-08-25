@@ -57,7 +57,7 @@
 {% block bodyblock %}
     <div class="top-return-link">
         <a href="{{ url_for('faculty.edit_projects') }}">
-            <i class="fa fa-backward"></i> Return to project list
+            <i class="fas fa-backward"></i> Return to project list
         </a>
     </div>
 
@@ -172,11 +172,11 @@
                     <div class="float-right">
                         <a href="{{ url_for('faculty.remove_all_assessors', proj_id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
                            class="btn btn-secondary">
-                            <i class="fa fa-trash"></i> Remove all
+                            <i class="fas fa-trash"></i> Remove all
                         </a>
                         <a href="{{ url_for('faculty.attach_all_assessors', proj_id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
                            class="btn btn-secondary">
-                            <i class="fa fa-check"></i> Attach all
+                            <i class="fas fa-check"></i> Attach all
                         </a>
                     </div>
                 </div>
@@ -209,7 +209,7 @@
         </a>
     {% else %}
         <a href="{{ url_for('faculty.edit_projects') }}">
-            <i class="fa fa-backward"></i> Return to project list
+            <i class="fas fa-backward"></i> Return to project list
         </a>
     {% endif %}
 {% endblock %}

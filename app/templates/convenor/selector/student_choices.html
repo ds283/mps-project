@@ -51,7 +51,7 @@
         <div class="col-10">
             <div class="card mt-3 mb-3">
                 <div class="card-header">
-                    View submitted choices for student <i class="fa fa-user"></i> <strong>{{ sel.student.user.name }}</strong>
+                    View submitted choices for student <i class="fas fa-user"></i> <strong>{{ sel.student.user.name }}</strong>
                 </div>
                 <div class="card-body">
                     {% if lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING %}
@@ -69,7 +69,7 @@
                                     the project
                                     <strong>{{ project.name }}</strong>
                                     supervised by
-                                    <i class="fa fa-user"></i> {{ project.owner.user.name }}
+                                    <i class="fas fa-user"></i> {{ project.owner.user.name }}
                                 </div>
                             {% else %}
                                 <span class="badge badge-danger">MISSING ACCEPTED PROJECT</span>
@@ -102,7 +102,7 @@
 
             <div>
                 <a href="{{ url_for('convenor.selectors', id=config.pclass_id) }}">
-                    <i class="fa fa-backward"></i> Return to dashboard
+                    <i class="fas fa-backward"></i> Return to dashboard
                 </a>
             </div>
         </div>

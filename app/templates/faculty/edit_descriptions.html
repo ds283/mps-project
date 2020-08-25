@@ -40,7 +40,7 @@
 {% block bodyblock %}
     <div class="top-return-link">
         <a href="{{ url_for('faculty.edit_projects') }}">
-            <i class="fa fa-backward"></i> Return to project list
+            <i class="fas fa-backward"></i> Return to project list
         </a>
     </div>
 
@@ -60,7 +60,7 @@
             </table>
             <div style="text-align: center;">
                 <a href="{{ url_for('faculty.add_description', pid=project.id, create=create) }}" class="btn btn-secondary btn-lg">
-                    <i class="fa fa-plus"></i>
+                    <i class="fas fa-plus"></i>
                     Add new description
                 </a>
             </div>
@@ -79,7 +79,7 @@
         </a>
     {% else %}
         <a href="{{ url_for('faculty.edit_projects') }}">
-            <i class="fa fa-backward"></i> Return to project list
+            <i class="fas fa-backward"></i> Return to project list
         </a>
     {% endif %}
 {% endblock %}

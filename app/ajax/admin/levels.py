@@ -19,16 +19,16 @@ _types_menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('admin.edit_level', id=l.id) }}">
-            <i class="fa fa-pencil"></i> Edit details...
+            <i class="fas fa-pencil"></i> Edit details...
         </a>
 
         {% if l.active %}
             <a class="dropdown-item" href="{{ url_for('admin.deactivate_level', id=l.id) }}">
-                <i class="fa fa-wrench"></i> Make inactive
+                <i class="fas fa-wrench"></i> Make inactive
             </a>
         {% else %}
             <a class="dropdown-item" href="{{ url_for('admin.activate_level', id=l.id) }}">
-                <i class="fa fa-wrench"></i> Make active
+                <i class="fas fa-wrench"></i> Make active
             </a>
         {% endif %}
     </div>
@@ -39,9 +39,9 @@ _types_menu = \
 _status = \
 """
 {% if l.active %}
-    <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
+    <span class="badge badge-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
-    <span class="badge badge-warning"><i class="fa fa-times"></i> Inactive</span>
+    <span class="badge badge-warning"><i class="fas fa-times"></i> Inactive</span>
 {% endif %}
 """
 

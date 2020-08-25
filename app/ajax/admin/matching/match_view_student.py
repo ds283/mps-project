@@ -15,7 +15,7 @@ _student = \
 """
 <a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 {% if not valid %}
-    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 {% if not sel.convert_to_submitter %}
     <div class="has-error">
@@ -85,18 +85,18 @@ _project = \
         {% if outcome is not none %}
             {% set satisfied, violated = outcome %}
             {% if satisfied|length > 0 %}
-                <span class="badge badge-success">{%- for i in range(satisfied|length) -%}<i class="fa fa-check"></i>{%- endfor %} HINT</span>
+                <span class="badge badge-success">{%- for i in range(satisfied|length) -%}<i class="fas fa-check"></i>{%- endfor %} HINT</span>
             {% endif %}
             {% if violated|length > 0 %}
-                <span class="badge badge-warning">{%- for i in range(violated|length) -%}<i class="fa fa-times"></i>{%- endfor %} HINT</span>
+                <span class="badge badge-warning">{%- for i in range(violated|length) -%}<i class="fas fa-times"></i>{%- endfor %} HINT</span>
             {% endif %}
         {% endif %}
         {% set prog_status = r.project.satisfies_preferences(r.selector) %}
         {% if prog_status is not none %}
             {% if prog_status %}
-                <span class="badge badge-success"><i class="fa fa-check"></i> PROG</span>
+                <span class="badge badge-success"><i class="fas fa-check"></i> PROG</span>
             {% else %}
-                <span class="badge badge-warning"><i class="fa fa-times"></i> PROG</span>
+                <span class="badge badge-warning"><i class="fas fa-times"></i> PROG</span>
             {% endif %}
         {% endif %}
     </div>

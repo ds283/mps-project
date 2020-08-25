@@ -15,7 +15,7 @@ _name = \
 """
 {{ s.session.label|safe }}
 {% if not s.is_valid %}
-    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 """
 
@@ -40,15 +40,15 @@ _assessors = \
         {% if s.session.faculty_ifneeded(assessor.id) %}
             <span class="badge badge-warning">if-needed</span>
         {% elif s.session.faculty_unavailable(assessor.id) %}
-            <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+            <i class="fas fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}
     </div>
 {% endfor %}
 <div>
 {% if s.presenter_has_overlap(t) %}
-    <span class="badge badge-success"><i class="fa fa-check"></i> Pool overlap</span>
+    <span class="badge badge-success"><i class="fas fa-check"></i> Pool overlap</span>
 {% else %}
-    <span class="badge badge-danger"><i class="fa fa-times"></i> No pool overlap</span>
+    <span class="badge badge-danger"><i class="fas fa-times"></i> No pool overlap</span>
 {% endif %}
 </div>
 """
@@ -79,7 +79,7 @@ _talks = \
         </div>
     </div>
     {% if s.session.submitter_unavailable(talk.id) %}
-        <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+        <i class="fas fa-exclamation-triangle" style="color:red;"></i>
     {% endif %}
 {% endfor %}
 {% if not s.is_valid %}
@@ -130,7 +130,7 @@ _menu = \
 """
 <div class="float-right">
     <a href="{{ url_for('admin.schedule_move_submitter', old_id=old_slot.id, new_id=new_slot.id, talk_id=talk.id, url=back_url, text=back_text) }}" class="btn btn-secondary btn-sm">
-        <i class="fa fa-arrows"></i> Move
+        <i class="fas fa-arrows"></i> Move
     </a>
 </div>
 """

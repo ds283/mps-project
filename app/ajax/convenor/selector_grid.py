@@ -24,7 +24,7 @@ _selections = \
         {% set offer = sel.accepted_offer %}
         {% set project = offer.liveproject %}
         {% if project %}
-            <span class="badge badge-success"><i class="fa fa-check"></i> {{ project.name }} ({{ project.owner.user.last_name }})</span>
+            <span class="badge badge-success"><i class="fas fa-check"></i> {{ project.name }} ({{ project.owner.user.last_name }})</span>
         {% else %}
             <span class="badge badge-danger">MISSING ACCEPTED PROJECT</span>
         {% endif %}
@@ -50,10 +50,10 @@ _selections = \
                     {% endfor %}
                 </div>
                 {% if item.converted_from_bookmark %}
-                    <span class="badge badge-warning"><i class="fa fa-exclamation-triangle"></i> Bookmark</span>
+                    <span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Bookmark</span>
                 {% endif %}
                 {% if item.hint != item.SELECTION_HINT_NEUTRAL %}
-                    <span class="badge badge-warning"><i class="fa fa-exclamation-triangle"></i> Hint</span>
+                    <span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Hint</span>
                 {% endif %}
             </div>
         {% endfor %}
@@ -79,9 +79,9 @@ _name = \
 <a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 <div>
 {% if sel.convert_to_submitter %}
-    <span class="badge badge-success"><i class="fa fa-check"></i> Convert</span>
+    <span class="badge badge-success"><i class="fas fa-check"></i> Convert</span>
 {% else %}
-    <span class="badge badge-danger"><i class="fa fa-times"></i> Disable convert</span>
+    <span class="badge badge-danger"><i class="fas fa-times"></i> Disable convert</span>
 {% endif %}
 {% if sel.student.intermitting %}
     <span class="badge badge-warning">TWD</span>

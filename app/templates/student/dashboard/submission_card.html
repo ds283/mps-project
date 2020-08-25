@@ -58,10 +58,10 @@
                                 {{ record.project.name }} (No. {{ record.project.number }})
                                 <div>
                                     {% if record.student_feedback_submitted and record.acknowledge_feedback %}
-                                        <span class="badge badge-success"><i class="fa fa-check"></i> Your feedback acknowledged</span>
+                                        <span class="badge badge-success"><i class="fas fa-check"></i> Your feedback acknowledged</span>
                                     {% endif %}
                                     {% if record.faculty_response_submitted %}
-                                        <span class="badge badge-success"><i class="fa fa-check"></i> Supervisor response</span>
+                                        <span class="badge badge-success"><i class="fas fa-check"></i> Supervisor response</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -72,9 +72,9 @@
                                             Actions
                                         </button>
                                         <div class="dropdown-menu dropdown-menu-right">
-                                            <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ record.number_attachments_student }})...</a>
+                                            <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fas fa-file-text"></i> Manage documents ({{ record.number_attachments_student }})...</a>
                                             {% if record.has_feedback %}
-                                                <a class="dropdown-item" href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}"><i class="fa fa-search"></i> View feedback...</a>
+                                                <a class="dropdown-item" href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}"><i class="fas fa-search"></i> View feedback...</a>
                                             {% endif %}
                                         </div>
                                     </div>

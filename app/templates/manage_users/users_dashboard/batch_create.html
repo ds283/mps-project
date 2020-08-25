@@ -42,12 +42,12 @@
                                     <span class="badge badge-info">In progress</span>
                                 {% else %}
                                     {% if batch.success %}
-                                        <span class="badge badge-success"><i class="fa fa-check"></i> Read succeeded</span>
+                                        <span class="badge badge-success"><i class="fas fa-check"></i> Read succeeded</span>
                                     {% else %}
-                                        <span class="badge badge-danger"><i class="fa fa-times"></i> Read failed</span>
+                                        <span class="badge badge-danger"><i class="fas fa-times"></i> Read failed</span>
                                     {% endif %}
                                     {% if batch.converted %}
-                                        <span class="badge badge-success"><i class="fa fa-check"></i> Converted</span>
+                                        <span class="badge badge-success"><i class="fas fa-check"></i> Converted</span>
                                     {% else %}
                                         <span class="badge badge-secondary">Not converted</span>
                                     {% endif %}
@@ -72,14 +72,14 @@
                             <div>
                                 <span class="badge badge-info">Reference academic year {{ batch.academic_year }}</span>
                                 {% if batch.trust_cohort %}
-                                    <span class="badge badge-success"><i class="fa fa-check"></i> Trust cohort data</span>
+                                    <span class="badge badge-success"><i class="fas fa-check"></i> Trust cohort data</span>
                                 {% else %}
-                                    <span class="badge badge-secondary"><i class="fa fa-times"></i> Do not trust cohort data</span>
+                                    <span class="badge badge-secondary"><i class="fas fa-times"></i> Do not trust cohort data</span>
                                 {% endif %}
                                 {% if batch.trust_exams %}
-                                    <span class="badge badge-success"><i class="fa fa-check"></i> Trust exam numbers</span>
+                                    <span class="badge badge-success"><i class="fas fa-check"></i> Trust exam numbers</span>
                                 {% else %}
-                                    <span class="badge badge-secondary"><i class="fa fa-times"></i> Do not trust exam numbers </span>
+                                    <span class="badge badge-secondary"><i class="fas fa-times"></i> Do not trust exam numbers </span>
                                 {% endif %}
                             </div>
                         </div>

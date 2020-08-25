@@ -29,14 +29,14 @@
                                 {{ rec.project.name }} (No. {{ rec.project.number }})
                             </a>
                             {% if rec.report %}
-                                <span class="badge badge-success"><i class="fa fa-check"></i> Report uploaded</span>
+                                <span class="badge badge-success"><i class="fas fa-check"></i> Report uploaded</span>
                             {% endif %}
                             {% if uses_feedback %}
                                 <div>
                                     {% if rec.marker_submitted %}
-                                        <span class="badge badge-success"><i class="fa fa-check"></i> Feedback submitted</span>
+                                        <span class="badge badge-success"><i class="fas fa-check"></i> Feedback submitted</span>
                                     {% elif period.closed and not rec.marker_submitted %}
-                                        <span class="badge badge-warning"><i class="fa fa-times"></i> Feedback missing</span>
+                                        <span class="badge badge-warning"><i class="fas fa-times"></i> Feedback missing</span>
                                     {% endif %}
                                 </div>
                             {% endif %}
@@ -48,18 +48,18 @@
                                         Actions
                                     </button>
                                     <div class="dropdown-menu dropdown-menu-right">
-                                        <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fa fa-file-text"></i> Manage documents ({{ rec.number_attachments }})...</a>
+                                        <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fas fa-file-text"></i> Manage documents ({{ rec.number_attachments }})...</a>
                                         {% if uses_feedback %}
                                             {% set state = rec.marker_feedback_state %}
                                             {% if state > rec.FEEDBACK_NOT_YET %}
                                                 {% if (period.is_feedback_open and not period.closed) or (period.closed and not rec.marker_submitted) %}
                                                     {% if valid %}
-                                                        <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> Preview feedback...</a>
+                                                        <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-search"></i> Preview feedback...</a>
                                                     {% else %}
-                                                        <a class="dropdown-item" href="{{ url_for('faculty.marker_edit_feedback', id=rec.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Edit feedback...</a>
+                                                        <a class="dropdown-item" href="{{ url_for('faculty.marker_edit_feedback', id=rec.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil"></i> Edit feedback...</a>
                                                     {% endif %}
                                                 {% elif period.closed %}
-                                                    <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> View feedback...</a>
+                                                    <a class="dropdown-item" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-search"></i> View feedback...</a>
                                                 {% endif %}
                                             {% endif %}
                                         {% endif %}

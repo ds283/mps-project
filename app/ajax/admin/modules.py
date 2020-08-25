@@ -20,10 +20,10 @@ _code = \
 _status = \
 """
 {% if m.active %}
-    <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
+    <span class="badge badge-success"><i class="fas fa-check"></i> Active</span>
     <span class="badge badge-info">First taught {{ m.first_taught }}</span>
 {% else %}
-    <span class="badge badge-secondary"><i class="fa fa-times"></i> Retired</span>
+    <span class="badge badge-secondary"><i class="fas fa-times"></i> Retired</span>
     <span class="badge badge-info">First taught {{ m.first_taught }}</span>
     <span class="badge badge-info">Last taught {{ m.last_taught }}</span>
 {% endif %}
@@ -39,17 +39,17 @@ _menu = \
     <div class="dropdown-menu dropdown-menu-right">
         {% set disabled = not m.active %}
         <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_module', id=m.id) }}"{% endif %}>
-            <i class="fa fa-pencil"></i> Edit details...
+            <i class="fas fa-pencil"></i> Edit details...
         </a>
 
         {% if m.active %}
             <a class="dropdown-item" href="{{ url_for('admin.retire_module', id=m.id) }}">
-                <i class="fa fa-wrench"></i> Retire
+                <i class="fas fa-wrench"></i> Retire
             </a>
         {% else %}
             {% set disabled = m.available %}
             <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.unretire_module', id=m.id) }}"{% endif %}>
-                <i class="fa fa-wrench"></i> Unretire
+                <i class="fas fa-wrench"></i> Unretire
             </a>
         {% endif %}
     </div>

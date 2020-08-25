@@ -54,16 +54,16 @@ _marker_menu = \
 {% if proj.is_assessor(f.id) %}
     <a href="{{ url_for('faculty.remove_assessor', proj_id=proj.id, mid=f.id) }}"
        class="btn btn-sm btn-block btn-secondary">
-        <i class="fa fa-trash"></i> Remove
+        <i class="fas fa-trash"></i> Remove
     </a>
 {% elif proj.can_enroll_assessor(f) %}
     <a href="{{ url_for('faculty.add_assessor', proj_id=proj.id, mid=f.id) }}"
        class="btn btn-sm btn-block btn-secondary">
-        <i class="fa fa-plus"></i> Attach
+        <i class="fas fa-plus"></i> Attach
     </a>
 {% else %}
     <a class="btn btn-secondary btn-block btn-sm disabled">
-        <i class="fa fa-ban"></i> Can't attach
+        <i class="fas fa-ban"></i> Can't attach
     </a>
 {% endif %}
 """
@@ -78,16 +78,16 @@ _desc_label = \
     {{ d.label }}
 </a>
 {% if not d.is_valid %}
-    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 <div>
     {% if d.review_only %}
         <span class="badge badge-info">REVIEW</span>
     {% endif %}
     {% if d.aims is not none and d.aims|length > 0 %}
-        <span class="badge badge-success"><i class="fa fa-check"></i> Aims specified</span>
+        <span class="badge badge-success"><i class="fas fa-check"></i> Aims specified</span>
     {% else %}
-        <span class="badge badge-warning"><i class="fa fa-times"></i> Aims not specified</span>
+        <span class="badge badge-warning"><i class="fas fa-times"></i> Aims not specified</span>
     {% endif %}
 </div>
 {% set state = d.workflow_state %}
@@ -97,7 +97,7 @@ _desc_label = \
         <span class="badge badge-secondary">Approval: Not confirmed</span>
     {% else %}
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
-            <span class="badge badge-success"><i class="fa fa-check"></i> Approved</span>
+            <span class="badge badge-success"><i class="fas fa-check"></i> Approved</span>
         {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
             <span class="badge badge-warning">Approval: Queued</span>
         {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
@@ -174,37 +174,37 @@ _desc_menu = \
         <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
            url=url_for('faculty.edit_descriptions', id=d.parent.id, create=create),
            text='description list view') }}">
-            <i class="fa fa-search"></i> Preview web page
+            <i class="fas fa-search"></i> Preview web page
         </a>
 
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Edit description</div>
 
         <a class="dropdown-item" href="{{ url_for('faculty.edit_description', did=d.id, create=create) }}">
-            <i class="fa fa-pencil"></i> Edit content...
+            <i class="fas fa-pencil"></i> Edit content...
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.description_modules', did=d.id, create=create) }}">
-            <i class="fa fa-cogs"></i> Recommended modules...
+            <i class="fas fa-cogs"></i> Recommended modules...
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.duplicate_description', did=d.id) }}">
-            <i class="fa fa-clone"></i> Duplicate
+            <i class="fas fa-clone"></i> Duplicate
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.move_description', did=d.id, create=create) }}">
-            <i class="fa fa-arrows"></i> Move to project...
+            <i class="fas fa-arrows"></i> Move to project...
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.delete_description', did=d.id) }}">
-            <i class="fa fa-trash"></i> Delete
+            <i class="fas fa-trash"></i> Delete
         </a>
         
         <div role="separator" class="dropdown-divider"></div>
         
         {% if d.default is none %}
             <a class="dropdown-item" href="{{ url_for('faculty.make_default_description', pid=d.parent_id, did=d.id) }}">
-                <i class="fa fa-wrench"></i> Make default
+                <i class="fas fa-wrench"></i> Make default
             </a>
         {% else %}
             <a class="dropdown-item" href="{{ url_for('faculty.make_default_description', pid=d.parent_id) }}">
-                <i class="fa fa-wrench"></i> Remove default
+                <i class="fas fa-wrench"></i> Remove default
             </a>
         {% endif %}
     </div>
@@ -1668,7 +1668,7 @@ def supervisor_edit_feedback(id):
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
                            title='Edit supervisor feedback',
-                           formtitle='Edit supervisor feedback for <i class="fa fa-user"></i> <strong>{name}</strong>'.format(name=record.student_identifier),
+                           formtitle='Edit supervisor feedback for <i class="fas fa-user"></i> <strong>{name}</strong>'.format(name=record.student_identifier),
                            submit_url=url_for('faculty.supervisor_edit_feedback', id=id, url=url),
                            period=period, record=record)
 

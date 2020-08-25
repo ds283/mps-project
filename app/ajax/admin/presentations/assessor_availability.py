@@ -19,33 +19,33 @@ _session_actions = \
     <div class="float-right">
         {% if available %}
             <a class="btn btn-sm btn-success {% if not editable %}disabled{% endif %}">
-                <i class="fa fa-check"></i> Available
+                <i class="fas fa-check"></i> Available
             </a>
             <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 If needed
             </a>
             <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}"{% endif %}>
-                <i class="fa fa-times"></i> Not available
+                <i class="fas fa-times"></i> Not available
             </a>
         {% elif ifneeded %}
             <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}"{% endif %}>
-                <i class="fa fa-check"></i> Available
+                <i class="fas fa-check"></i> Available
             </a>
             <a class="btn btn-sm btn-warning {% if not editable %}disabled{% endif %}">
                 If needed
             </a>
             <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}"{% endif %}>
-                <i class="fa fa-times"></i> Not available
+                <i class="fas fa-times"></i> Not available
             </a>
         {% else %}
             <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}"{% endif %}>
-                <i class="fa fa-check"></i> Available
+                <i class="fas fa-check"></i> Available
             </a>
             <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 If needed
             </a>
             <a class="btn btn-sm btn-danger {% if not editable %}disabled{% endif %}">
-                <i class="fa fa-times"></i> Not available
+                <i class="fas fa-times"></i> Not available
             </a>
         {% endif %}
     </div>
@@ -74,18 +74,18 @@ _assessor_actions = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         <a class="dropdown-item" href="{{ url_for('admin.assessment_assessor_availability', a_id=a.id, f_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}">
-            <i class="fa fa-calendar"></i> Sessions...
+            <i class="fas fa-calendar"></i> Sessions...
         </a>
         {% set disabled = not editable or not a.is_faculty_outstanding(f.id) %} 
         <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=f.id) }}"{% endif %}>
-            <i class="fa fa-check"></i> {% if not disabled %}Force confirm{% else %}Confirmed{% endif %}
+            <i class="fas fa-check"></i> {% if not disabled %}Force confirm{% else %}Confirmed{% endif %}
         </a>
         {% set disabled = not editable %}
         <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.schedule_set_limit', assessment_id=a.id, faculty_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}"{% endif %}>
-            <i class="fa fa-cogs"></i> Set assignment limit...
+            <i class="fas fa-cogs"></i> Set assignment limit...
         </a>
         <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=f.id) }}"{% endif %}>
-            <i class="fa fa-trash"></i> Remove
+            <i class="fas fa-trash"></i> Remove
         </a>
     </div>
 </div>
@@ -123,13 +123,13 @@ _name = \
             <span class="badge badge-primary">Assignment limit {{ rec.assigned_limit }}</span>
         {% endif %}
         {% if rec.request_email_sent %}
-            <span class="badge badge-info"><i class="fa fa-envelope-o"></i> Invite sent</span>
+            <span class="badge badge-info"><i class="fas fa-envelope"></i> Invite sent</span>
             {% if rec.request_timestamp is not none %}
                 <span class="badge badge-secondary">{{ rec.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
             {% endif %}
         {% endif %}
         {% if rec.reminder_email_sent %}
-            <span class="badge badge-info"><i class="fa fa-envelope-o"></i> Reminder sent</span>
+            <span class="badge badge-info"><i class="fas fa-envelope"></i> Reminder sent</span>
             {% if rec.last_reminder_timestamp is not none %}
                 <span class="badge badge-secondary">{{ rec.last_reminder_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
             {% endif %}

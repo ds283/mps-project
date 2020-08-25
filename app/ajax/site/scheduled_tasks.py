@@ -19,22 +19,22 @@ _scheduled_menu_template = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
             <a class="dropdown-item" href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
-                <i class="fa fa-cogs"></i> Edit task
+                <i class="fas fa-cogs"></i> Edit task
             </a>
             <a class="dropdown-item" href="{{ url_for('admin.delete_scheduled_task', id=task.id) }}">
-                <i class="fa fa-trash"></i> Delete
+                <i class="fas fa-trash"></i> Delete
             </a>
             {% if task.enabled %}
                 <a class="dropdown-item" href="{{ url_for('admin.deactivate_scheduled_task', id=task.id) }}">
-                    <i class="fa fa-wrench"></i> Make inactive
+                    <i class="fas fa-wrench"></i> Make inactive
                 </a>
             {% else %}
                 <a class="dropdown-item" href="{{ url_for('admin.activate_scheduled_task', id=task.id) }}">
-                    <i class="fa fa-wrench"></i> Make active
+                    <i class="fas fa-wrench"></i> Make active
                 </a>
             {% endif %}
             <a class="dropdown-item" href="{{ url_for('admin.launch_scheduled_task', id=task.id) }}">
-                <i class="fa fa-angle-double-right"></i> Run now
+                <i class="fas fa-angle-double-right"></i> Run now
             </a>
     </div>
 </div>
@@ -44,9 +44,9 @@ _scheduled_menu_template = \
 _active = \
 """
 {% if t.enabled %}
-    <span class="badge badge-success"><i class="fa fa-check"></i> Active</span>
+    <span class="badge badge-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
-    <span class="badge badge-warning"><i class="fa fa-times"></i> Inactive</span>
+    <span class="badge badge-warning"><i class="fas fa-times"></i> Inactive</span>
 {% endif %}
 """
 

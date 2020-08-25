@@ -29,7 +29,7 @@
                                      style="{{ module.level.make_CSS_style() }}"
                                    {% endif %}
                                    href="{{ url_for('convenor.description_detach_module', did=desc.id, pclass_id=pclass_id, mod_id=module.id, level_id=level_id, create=create) }}">
-                                    <i class="fa fa-times"></i> {{ module.text_label }}
+                                    <i class="fas fa-times"></i> {{ module.text_label }}
                                 </a>
                             {% endfor %}
                         {% endif %}
@@ -50,7 +50,7 @@
                         {% if module not in desc.modules %}
                             <a class="btn btn-secondary selection-label"
                                href="{{ url_for('convenor.description_attach_module', did=desc.id, pclass_id=pclass_id, mod_id=module.id, level_id=level_id, create=create) }}">
-                                <i class="fa fa-plus"></i> {{ module.text_label }}
+                                <i class="fas fa-plus"></i> {{ module.text_label }}
                             </a>
                         {% endif %}
                     {% endfor %}
@@ -62,6 +62,6 @@
     </div>
 
     <a href="{{ url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create) }}">
-        <i class="fa fa-backward"></i> Return to project description list
+        <i class="fas fa-backward"></i> Return to project description list
     </a>
 {% endblock %}

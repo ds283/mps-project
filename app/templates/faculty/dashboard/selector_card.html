@@ -140,7 +140,7 @@
                             {% if not available %}
                                 <div class="has-error">
                                     <p class="help-block">
-                                        <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                                        <i class="fas fa-exclamation-triangle" style="color:red;"></i>
                                         This project has validation errors that will prevent it from being published.
                                         <a href="{{ url_for('faculty.edit_projects') }}">Edit in library...</a>
                                     </p>
@@ -211,7 +211,7 @@
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">
                                         {% set has_recommended = sel.satisfies_recommended(project) %}
-                                        <a class="badge {% if has_recommended %}badge-primary{% else %}badge-warning{% endif %} dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fa fa-exclamation-triangle" style="color:red;"></i> {% endif %}</a>
+                                        <a class="badge {% if has_recommended %}badge-primary{% else %}badge-warning{% endif %} dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fas fa-exclamation-triangle" style="color:red;"></i> {% endif %}</a>
                                         {% if req.viewed is not none and not req.viewed %}
                                             <span class="badge badge-info">NEW</span>
                                         {% endif %}
@@ -222,17 +222,17 @@
                                             {% endif %}
                                             {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                 <a class="dropdown-item" href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
-                                                    <i class="fa fa-check"></i> Confirm
+                                                    <i class="fas fa-check"></i> Confirm
                                                 </a>
                                                 <a class="dropdown-item" href="{{ url_for('faculty.cancel_confirm', sid=sel.id, pid=project.id) }}">
-                                                    <i class="fa fa-trash"></i> Delete
+                                                    <i class="fas fa-trash"></i> Delete
                                                 </a>
                                             {% else %}
                                                 <a class=""dropdown-item disabled">
-                                                    <i class="fa fa-check"></i> Confirm
+                                                    <i class="fas fa-check"></i> Confirm
                                                 </a>
                                                 <a class=""dropdown-item disabled">
-                                                    <i class="fa fa-trash"></i> Delete
+                                                    <i class="fas fa-trash"></i> Delete
                                                 </a>
                                             {% endif %}
                                         </div>
@@ -250,10 +250,10 @@
                                         </a>
                                         <div class="dropdown-menu">
                                             <a class="dropdown-item" href="{{ url_for('faculty.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
-                                                <i class="fa fa-clock-o"></i> Make pending
+                                                <i class="fas fa-clock"></i> Make pending
                                             </a>
                                             <a class="dropdown-item" href="{{ url_for('faculty.deconfirm', sid=sel.id, pid=project.id) }}">
-                                                <i class="fa fa-trash"></i> Delete
+                                                <i class="fas fa-trash"></i> Delete
                                             </a>
                                         </div>
                                     </div>

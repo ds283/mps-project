@@ -190,7 +190,7 @@ _desc_menu = \
             <i class="fas fa-clone fa-fw"></i> Duplicate
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.move_description', did=d.id, create=create) }}">
-            <i class="fas fa-arrows fa-fw"></i> Move to project...
+            <i class="fas fa-folder-open fa-fw"></i> Move to project...
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.delete_description', did=d.id) }}">
             <i class="fas fa-trash fa-fw"></i> Delete

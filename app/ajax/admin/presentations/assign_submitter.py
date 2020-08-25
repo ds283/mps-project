@@ -130,7 +130,7 @@ _menu = \
 """
 <div class="float-right">
     <a href="{{ url_for('admin.schedule_move_submitter', old_id=old_slot.id, new_id=new_slot.id, talk_id=talk.id, url=back_url, text=back_text) }}" class="btn btn-secondary btn-sm">
-        <i class="fas fa-arrows"></i> Move
+        <i class="fas fa-arrow-alt-circle-right"></i> Move
     </a>
 </div>
 """

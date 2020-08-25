@@ -18,8 +18,8 @@ _student = \
     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 {% if not sel.convert_to_submitter %}
-    <div class="has-error">
-        <p class="help-block">
+    <div class="error-block">
+        <p class="error-message">
             Conversion of this student is disabled.
         </p>
     <div>
@@ -129,23 +129,23 @@ _project = \
             <span class="badge badge-success">0 warnings</span>
         {% endif %}
         {% if errors|length > 0 %}
-            <div class="has-error">
+            <div class="error-block">
                 {% for item in errors %}
                     {% if loop.index <= 10 %}
-                        <p class="help-block">{{ item }}</p>
+                        <p class="error-message">{{ item }}</p>
                     {% elif loop.index == 11 %}
-                        <p class="help-block">...</p>
+                        <p class="error-message">...</p>
                     {% endif %}            
                 {% endfor %}
             </div>
         {% endif %}
         {% if warnings|length > 0 %}
-            <div class="has-error">
+            <div class="error-block">
                 {% for item in warnings %}
                     {% if loop.index <= 10 %}
-                        <p class="help-block">Warning: {{ item }}</p>
+                        <p class="error-message">Warning: {{ item }}</p>
                     {% elif loop.index == 11 %}
-                        <p class="help-block">...</p>
+                        <p class="error-message">...</p>
                     {% endif %}
                 {% endfor %}
             </div>

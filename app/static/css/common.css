@@ -272,7 +272,6 @@ p.copyright {
     margin-bottom: 0.375em
 }
 
-
 .notify-bar {
     margin: 0px;
     padding-top: 6px;
@@ -280,4 +279,9 @@ p.copyright {
     background-color: darkslategrey;
     color: #c0a16b;
     text-align: center;
+}
+
+.error-block .error-message {
+    color: #e9322d;
+    margin-bottom: 0.5rem;
 }

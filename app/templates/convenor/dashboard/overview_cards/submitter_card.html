@@ -97,7 +97,6 @@
                             </div>
                         {% endif %}
                     </div>
-                    {% set state = config.submitter_lifecycle %}
                     {% if not period.is_feedback_open %}
                         {{ project_activity(config, period, feedback_form, today) }}
                     {% elif period.is_feedback_open %}

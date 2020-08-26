@@ -40,60 +40,89 @@
                 <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
                 <div>
                     {% for p in config.periods %}
-                        <span class="badge badge-primary">{{ p.display_name|safe }}</span>
+                        {% if loop.index > 1 %}
+                            <hr class="intro-divider">
+                        {% endif %}
+                        {% set validation_messages = p.validate %}
+                        <div class="row vertical-top">
+                            <div class="col-4">
+                                <i class="fas fa-cubes fa-lg"></i>
+                                <span class="badge badge-primary">{{ p.display_name|safe }}</span>
+                                {% if validation_messages is not none and validation_messages|length > 0 %}
+                                    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+                                {% endif %}
+                                {% if p.start_date %}
+                                    <span class="badge badge-secondary">{{ p.start_date.strftime("%a %d %b %Y") }}</span>
+                                {% endif %}
+                                {% if p.has_presentation %}
+                                    <span class="badge badge-secondary"><i class="fas fa-check"></i> Has presentation</span>
+                                    {% if p.collect_presentation_feedback %}
+                                        <span class="badge badge-secondary"><i class="fas fa-check"></i> Presentation feedback</span>
+                                    {%  else %}
+                                        <span class="badge badge-secondary"><i class="fas fa-times"></i> No presentation feedback</span>
+                                    {% endif %}
+                                {% endif %}
+                                {% if p.collect_project_feedback %}
+                                    <span class="badge badge-secondary"><i class="fas fa-check"></i> Project feedback</span>
+                                {% else %}
+                                    <span class="badge badge-secondary"><i class="fas fa-times"></i> No project feedback</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-4">
+                                {% if p.start_date %}
+                                    <p>Commences {{ p.start_date.strftime("%a %d %b %Y") }}</p>
+                                {% endif %}
+                                {% if p.feedback_open %}
+                                    {% if p.closed %}
+                                        <span class="badge badge-primary"><i class="fas fa-check"></i> Feedback closed</span>
+                                        {% if p.feedback_id %}
+                                            <span class="badge badge-info">Opened by {{ p.feedback_by.name }}{% if p.feedback_timestamp %} at {{ p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}{% endif %}</span>
+                                        {% endif %}
+                                        {% if p.closed_id %}
+                                            <span class="badge badge-info">Closed by {{ p.closed_by.name }}{% if p.closed_timestamp %} at {{ p.closed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}{% endif %}</span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge badge-primary"><i class="fas fa-check"></i> Feedback open</span>
+                                    {% if p.feedback_id %}
+                                        <p>
+                                            Opened by {{ p.feedback_by.name }}
+                                            {% if p.feedback_timestamp %}
+                                                at {{ p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                                            {% endif %}
+                                        </p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="col-4">
+                                <div class="float-right">
+                                    {% if not p.is_feedback_open %}
+                                        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('convenor.edit_submission_record', pid=p.id) }}">Configure...</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                     {% else %}
-                        <span class="badge badge-secondary">None</span>
+                        <span class="badge badge-secondary"><i class="fas fa-ban"></i> No configured submission periods</span>
                     {% endfor %}
                 </div>
-                <div class="row vertical-align mb-2">
-                    <div class="col-4">
-                        <div class="list-group">
-                            <div class="list-group-item">
-                                Current supervision CATS <span class="badge badge-secondary badge-pill">{{ config.CATS_supervision }}</span>
-                            </div>
-                            {% if pclass.CATS_supervision != config.CATS_supervision %}
-                                <div class="list-group-item list-group-item-danger">
-                                    Updated value <span class="badge badge-secondary badge-pill">{{ pclass.CATS_supervision }}</span>
-                                </div>
-                            {% endif %}
-                        </div>
+                <div class="row vertical-top mt-2 mb-2">
+                    <div class="col-12">
+                        <i class="fas fa-gift"></i> Supervision <span class="badge badge-secondary badge-pill">{{ config.CATS_supervision }} CATS</span>
+                        {% if config.CATS_supervision != pclass.CATS_supervision %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}
+                        <i class="fas fa-gift"></i> Marking <span class="badge badge-secondary badge-pill">{{ config.CATS_marking }} CATS</span>
+                        {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}
+                        <i class="fas fa-gift"></i> Presentation <span class="badge badge-secondary badge-pill">{{ config.CATS_presentation }} CATS</span>
+                        {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}
                     </div>
-                    <div class="col-4">
-                        <div class="list-group">
-                            <div class="list-group-item">
-                                Current 2nd-marking CATS <span class="badge badge-secondary badge-pill">{{ config.CATS_marking }}</span>
-                            </div>
-                            {% if pclass.CATS_marking != config.CATS_marking %}
-                                <div class="list-group-item list-group-item-danger">
-                                    Updated value <span class="badge badge-secondary badge-pill">{{ pclass.CATS_marking }}</span>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="list-group">
-                            <div class="list-group-item">
-                                Current presentation CATS <span class="badge badge-secondary badge-pill">{{ config.CATS_presentation }}</span>
-                            </div>
-                            {% if pclass.CATS_presentation != config.CATS_presentation %}
-                                <div class="list-group-item list-group-item-danger">
-                                    Updated value <span class="badge badge-secondary badge-pill">{{ pclass.CATS_presentation }}</span>
-                                </div>
-                            {% endif %}
+                </div>
+                <div class="row vertical-top mt-2 mb-2">
+                    <div class="col-12">
+                        <div class="float-right">
+                            <a class="btn btn-primary" href="#">Configure project class....</a>
                         </div>
                     </div>
                 </div>
-                {% if config.CATS_supervision != pclass.CATS_supervision or config.CATS_marking != pclass.CATS_marking or config.CATS_presentation != pclass.CATS_presentation %}
-                    <div class="row vertical-top mb-2">
-                        <div class="col-12">
-                            <div class="float-right">
-                                <a href="{{ url_for('convenor.update_CATS', config_id=config.id) }}" class="btn btn-secondary">
-                                    Update CATS values
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
             </div>
 
             {# offer rollover of academic year if available #}

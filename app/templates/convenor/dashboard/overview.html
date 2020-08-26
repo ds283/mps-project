@@ -36,7 +36,7 @@
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
-            <div class="card mt-3 mb-3 card-body bg-well">
+            <div class="card mt-3 mb-3 card-body border-dark bg-well">
                 <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
                 <div>
                     {% for p in config.periods %}
@@ -46,14 +46,12 @@
                         {% set validation_messages = p.validate %}
                         <div class="row vertical-top">
                             <div class="col-4">
-                                <i class="fas fa-cubes fa-lg"></i>
-                                <span class="badge badge-primary">{{ p.display_name|safe }}</span>
-                                {% if validation_messages is not none and validation_messages|length > 0 %}
-                                    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
-                                {% endif %}
-                                {% if p.start_date %}
-                                    <span class="badge badge-secondary">{{ p.start_date.strftime("%a %d %b %Y") }}</span>
-                                {% endif %}
+                                <h5>
+                                    <span class="badge badge-primary"><i class="fas fa-cubes fa-lg"></i> {{ p.display_name|safe }}</span>
+                                    {% if validation_messages is not none and validation_messages|length > 0 %}
+                                        <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+                                    {% endif %}
+                                </h5>
                                 {% if p.has_presentation %}
                                     <span class="badge badge-secondary"><i class="fas fa-check"></i> Has presentation</span>
                                     {% if p.collect_presentation_feedback %}
@@ -106,20 +104,20 @@
                         <span class="badge badge-secondary"><i class="fas fa-ban"></i> No configured submission periods</span>
                     {% endfor %}
                 </div>
+                <hr class="intro-divider">
                 <div class="row vertical-top mt-2 mb-2">
                     <div class="col-12">
-                        <i class="fas fa-gift"></i> Supervision <span class="badge badge-secondary badge-pill">{{ config.CATS_supervision }} CATS</span>
-                        {% if config.CATS_supervision != pclass.CATS_supervision %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}
-                        <i class="fas fa-gift"></i> Marking <span class="badge badge-secondary badge-pill">{{ config.CATS_marking }} CATS</span>
-                        {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}
-                        <i class="fas fa-gift"></i> Presentation <span class="badge badge-secondary badge-pill">{{ config.CATS_presentation }} CATS</span>
-                        {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}
+                        <h5>
+                            <span class="badge badge-info"><i class="fas fa-coins"></i> Supervision <span class="badge badge-secondary badge-pill">{{ config.CATS_supervision }} CATS</span> {% if config.CATS_supervision != pclass.CATS_supervision %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span>
+                            <span class="badge badge-info"><i class="fas fa-coins"></i> Marking <span class="badge badge-secondary badge-pill">{{ config.CATS_marking }} CATS</span> {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span>
+                            <span class="badge badge-info"><i class="fas fa-coins"></i> Presentation <span class="badge badge-secondary badge-pill">{{ config.CATS_presentation }} CATS</span> {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span>
+                        </h5>
                     </div>
                 </div>
                 <div class="row vertical-top mt-2 mb-2">
                     <div class="col-12">
                         <div class="float-right">
-                            <a class="btn btn-primary" href="#">Configure project class....</a>
+                            <a class="btn btn-primary" href="#">Configure for {{ config.year }}&ndash;{{ config.year+1 }}....</a>
                         </div>
                     </div>
                 </div>
@@ -132,7 +130,7 @@
 
             {% if pclass.publish %}
                 {# SELECTING #}
-                <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="card mt-3 mb-3 card-body border-info bg-well">
                     {# provide summary #}
 
                     {% if config.has_auditable_schedules %}
@@ -170,7 +168,7 @@
                 </div>
 
                 {# SUBMITTING #}
-                <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="card mt-3 mb-3 card-body border-info bg-well">
                     {% for n in range(config.submissions) %}
                         {{ submitter_card(config, n, today, feedback_form)  }}
                     {% endfor %}

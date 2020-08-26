@@ -109,9 +109,9 @@
                             <a class="dropdown-item disabled"><i class="fas fa-pencil-alt fa-fw"></i> Edit</a>
                         {% endif %}
                         {% if has_access and download_url is not none %}
-                            <a class="dropdown-item" href="{{ download_url }}"><i class="fas fa-cloud-download fa-fw"></i> Download</a>
+                            <a class="dropdown-item" href="{{ download_url }}"><i class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
                         {% else %}
-                            <a class="dropdown-item disabled"><i class="fas fa-cloud-download fa-fw"></i> Download</a>
+                            <a class="dropdown-item disabled"><i class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
                         {% endif %}
                         {% if acl_url is not none %}
                             <a class="dropdown-item" href="{{ acl_url }}"><i class="fas fa-check-square fa-fw"></i> Access control...</a>

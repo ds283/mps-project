@@ -130,7 +130,7 @@
 
             {% if pclass.publish %}
                 {# SELECTING #}
-                <div class="card mt-3 mb-3 card-body border-info bg-well">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     {# provide summary #}
 
                     {% if config.has_auditable_schedules %}
@@ -168,7 +168,7 @@
                 </div>
 
                 {# SUBMITTING #}
-                <div class="card mt-3 mb-3 card-body border-info bg-well">
+                <div class="card mt-3 mb-3 card-body bg-well">
                     {% for n in range(config.submissions) %}
                         {{ submitter_card(config, n, today, feedback_form)  }}
                     {% endfor %}

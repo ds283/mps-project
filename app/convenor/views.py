@@ -27,7 +27,8 @@ from . import convenor
 from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
     EditSubmissionRecordForm, UploadPeriodAttachmentForm, \
-    EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm
+    EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
+    EditProjectConfigForm
 from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
@@ -6113,6 +6114,60 @@ def do_close_feedback(id):
     return redirect(url)
 
 
+@convenor.route('/edit_project_config/<int:pid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_project_config(pid):
+    # pid is a ProjectClassConfig
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(pid)
+
+    # reject is user is not a convenor for the associated project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    # check configuration is still current
+    if config.project_class.most_recent_config.id != config.id:
+        flash('It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} '
+              'because it has been rolled over.'.format(yra=config.year, yrb=config.year+1), 'info')
+        return redirect(redirect_url())
+
+    edit_form = EditProjectConfigForm(obj=config)
+
+    if edit_form.validate_on_submit():
+        now = datetime.now()
+
+        if edit_form.skip_matching.data != config.skip_matching:
+            config.skip_matching = edit_form.skip_matching.data
+
+        if edit_form.requests_skipped.data != config.requests_skipped:
+            config.requests_skipped = edit_form.requests_skipped.data
+
+            if config.requests_skipped:
+                config.requests_skipped_id = current_user.id
+                config.requests_skipped_timestamp = now
+            else:
+                config.requests_skipped_by = None
+                config.requests_skipped_timestamp = None
+
+        if edit_form.full_CATS.data != config.full_CATS:
+            config.full_CATS = edit_form.full_CATS.data
+
+        config.CATS_supervision = edit_form.CATS_supervision.data
+        config.CATS_marking = edit_form.CATS_marking.data
+        config.CATS_presentation = edit_form.CATS_presentation.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not save project configuration because of a database error. '
+                  'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for('convenor.overview', id=config.project_class.id))
+
+    return render_template('convenor/dashboard/edit_project_config.html', form=edit_form, config=config)
+
+
 @convenor.route('/edit_submission_record/<int:pid>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def edit_submission_record(pid):
@@ -6122,6 +6177,12 @@ def edit_submission_record(pid):
 
     # reject is user is not a convenor for the associated project class
     if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    # check configuration is still current
+    if config.pclass.most_recent_config.id != config.id:
+        flash('It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} '
+              'because it has been rolled over.'.format(yra=config.year, yrb=config.year+1), 'info')
         return redirect(redirect_url())
 
     # reject if project class is not published
@@ -6166,7 +6227,13 @@ def edit_submission_record(pid):
             record.afternoon_session = edit_form.afternoon_session.data
             record.talk_format = edit_form.talk_format.data
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not save submission period configuration because of a database error. '
+                  'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('convenor.overview', id=config.project_class.id))
 
@@ -6192,7 +6259,14 @@ def publish_assignment(id):
         return redirect(redirect_url())
 
     sub.published = True
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not publish assignment because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -6216,8 +6290,14 @@ def unpublish_assignment(id):
         flash('It is now too late to unpublish an assignment for this project class.', 'error')
         return redirect(redirect_url())
 
-    sub.published = False
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not unpublish assignment because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -6250,7 +6330,13 @@ def publish_all_assignments(id):
     for sel in data:
         sel.published = True
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not publish assignments because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -6283,7 +6369,13 @@ def unpublish_all_assignments(id):
     for sel in data:
         sel.published = False
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not unpublish assignments because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -6315,7 +6407,14 @@ def mark_started(id):
         return redirect(redirect_url())
 
     rec.student_engaged = True
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not mark student "started" because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -6350,7 +6449,13 @@ def mark_all_started(id):
         if record is not None:
             record.student_engaged = True
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not mark students "started" because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -6382,7 +6487,14 @@ def mark_waiting(id):
         return redirect(redirect_url())
 
     rec.student_engaged = False
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not mark student "waiting" because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 

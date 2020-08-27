@@ -159,6 +159,30 @@ class EditSubmissionRecordForm(Form, SubmissionRecordMixin, SubmissionPeriodComm
     pass
 
 
+class EditProjectConfigForm(Form, SaveChangesMixin):
+
+    skip_matching = BooleanField('Skip matching',
+                                 description='Opt out of automated matching for this academic year')
+
+    requests_skipped = BooleanField('Skip confirmation requests',
+                                    description='Disable confirmation of project descriptions for '
+                                                'this academic year')
+
+    full_CATS = IntegerField('CAT threshold for supervisors to be full',
+                             description='If a partial match is being accommodated, this is the maximum '
+                                         'number of CATS a supervisor can carry before they are regarded '
+                                         'as full for the purposes of further allocation.')
+
+    CATS_supervision = IntegerField('CATS awarded for project supervision',
+                                    validators=[InputRequired(message='Please enter an integer value')])
+
+    CATS_marking = IntegerField('CATS awarded for project 2nd marking',
+                                validators=[Optional()])
+
+    CATS_presentation = IntegerField('CATS awarded for assessing presentations',
+                                     validators=[Optional()])
+
+
 def AssignMarkerFormFactory(live_project, pclass_id, uses_marker):
 
     class AssignMarkerForm(Form):

@@ -1,5 +1,5 @@
 {% import "bootstrap/form.html" as wtf %}
-{% from "macros.html" import edit_data, date_field %}
+{% from "macros.html" import date_field %}
 
 {% extends "security/index.html" %}
 
@@ -35,7 +35,7 @@
 {% endblock %}
 
 {% block form_content %}
-    <form action="{{ url_for('convenor.edit_submission_record', pid=record.id) }}" method="POST" name="period_form">
+    <form action="{{ url_for('convenor.edit_submission_record', pid=record.id) }}" method="POST" name="edit_form">
 
         {{ form.hidden_tag() }}
 

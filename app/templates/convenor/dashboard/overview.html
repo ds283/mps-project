@@ -117,7 +117,7 @@
                 <div class="row vertical-top mt-2 mb-2">
                     <div class="col-12">
                         <div class="float-right">
-                            <a class="btn btn-primary" href="#">Configure for {{ config.year }}&ndash;{{ config.year+1 }}....</a>
+                            <a class="btn btn-primary" href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure for {{ config.year }}&ndash;{{ config.year+1 }}....</a>
                         </div>
                     </div>
                 </div>

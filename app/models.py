@@ -84,8 +84,33 @@ auto_enroll_year_choices = [(0, 'The year before students join the project'),
                             (1, 'Every year for which students are eligible')]
 
 
-class ColouredLabelMixin():
+class EditingMetadataMixin():
+    # created by
+    @declared_attr
+    def creator_id(cls):
+        return db.Column(db.Integer(), db.ForeignKey('users.id'))
 
+    @declared_attr
+    def created_by(cls):
+        return db.relationship('User', primaryjoin=lambda: User.id == cls.creator_id, uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    @declared_attr
+    def last_edit_id(cls):
+        return db.Column(db.Integer(), db.ForeignKey('users.id'))
+
+    @declared_attr
+    def last_edited_by(cls):
+        return db.relationship('User', primaryjoin=lambda: User.id == cls.last_edit_id, uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
+
+class ColouredLabelMixin():
     # colour
     colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
@@ -1072,6 +1097,19 @@ submitted_acr = db.Table('acr_submitted',
                          db.Column('asset_id', db.Integer(), db.ForeignKey('submitted_assets.id'), primary_key=True),
                          db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True))
 
+
+# CONVENOR TASKS
+
+# tasks for selecting students
+selector_tasks = db.Table('selector_tasks',
+                          db.Column('selector_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True),
+                          db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_student_tasks.id'), primary_key=True))
+
+submitter_tasks = db.Table('submitter_tasks',
+                           db.Column('submitter_id', db.Integer(), db.ForeignKey('submitting_students.id'), primary_key=True),
+                           db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_student_tasks.id'), primary_key=True))
+
+
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
@@ -1772,7 +1810,7 @@ def delete_notification(user, event, object_1, object_2=None):
     db.session.commit()
 
 
-class ResearchGroup(db.Model, ColouredLabelMixin):
+class ResearchGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Model a row from the research group table
     """
@@ -1793,20 +1831,6 @@ class ResearchGroup(db.Model, ColouredLabelMixin):
 
     # active flag
     active = db.Column(db.Boolean())
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def disable(self):
@@ -1843,7 +1867,7 @@ class ResearchGroup(db.Model, ColouredLabelMixin):
         return self._make_label(text, user_classes)
 
 
-class FacultyData(db.Model):
+class FacultyData(db.Model, EditingMetadataMixin):
     """
     Models extra data held on faculty members
     """
@@ -1896,23 +1920,6 @@ class FacultyData(db.Model):
 
     # presentation assessment CATS capacity
     CATS_presentation = db.Column(db.Integer())
-
-
-    # METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def _projects_offered_query(self, pclass):
@@ -2469,7 +2476,7 @@ def _FacultyData_update_handler(mapper, connection, target):
         _FacultyData_delete_cache(target.id)
 
 
-class StudentData(db.Model, WorkflowMixin):
+class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     """
     Models extra data held on students
     """
@@ -2512,23 +2519,6 @@ class StudentData(db.Model, WorkflowMixin):
             self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
 
         return value
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     @property
@@ -2810,7 +2800,7 @@ class StudentBatchItem(db.Model):
         return w
 
 
-class DegreeType(db.Model, ColouredLabelMixin):
+class DegreeType(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Model a degree type
     """
@@ -2831,20 +2821,6 @@ class DegreeType(db.Model, ColouredLabelMixin):
 
     # active flag
     active = db.Column(db.Boolean())
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def disable(self):
@@ -2874,7 +2850,7 @@ class DegreeType(db.Model, ColouredLabelMixin):
         return self._make_label(text, user_classes)
 
 
-class DegreeProgramme(db.Model):
+class DegreeProgramme(db.Model, EditingMetadataMixin):
     """
     Model a row from the degree programme table
     """
@@ -2906,23 +2882,6 @@ class DegreeProgramme(db.Model):
 
     # course code, used to uniquely identify this degree programme
     course_code = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def disable(self):
@@ -3018,7 +2977,7 @@ class DegreeProgramme(db.Model):
         return self._level_modules_query(level_id).all()
 
 
-class SkillGroup(db.Model, ColouredLabelMixin):
+class SkillGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Model a group of transferable skills
     """
@@ -3036,20 +2995,6 @@ class SkillGroup(db.Model, ColouredLabelMixin):
 
     # add group name to labels
     add_group = db.Column(db.Boolean())
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def enable(self):
@@ -3097,7 +3042,7 @@ class SkillGroup(db.Model, ColouredLabelMixin):
         return self._make_label(text=label, user_classes=user_classes)
 
 
-class TransferableSkill(db.Model):
+class TransferableSkill(db.Model, EditingMetadataMixin):
     """
     Model a transferable skill
     """
@@ -3117,20 +3062,6 @@ class TransferableSkill(db.Model):
 
     # active?
     active = db.Column(db.Boolean())
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     @property
@@ -3185,7 +3116,7 @@ class TransferableSkill(db.Model):
         return self.group.make_label(self.name)
 
 
-class ProjectClass(db.Model, ColouredLabelMixin):
+class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Model a single project class
     """
@@ -3338,23 +3269,6 @@ class ProjectClass(db.Model, ColouredLabelMixin):
     # re-enroll supervisors one year early (normally we want this to be yes, because projects are
     # *offered* one academic year before they *run*)
     reenroll_supervisors_early = db.Column(db.Boolean(), default=True)
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     @orm.reconstructor
@@ -3575,7 +3489,7 @@ def _ProjectClass_delete_handler(mapper, connection, target):
         cache.delete_memoized(_Project_num_assessors)
 
 
-class SubmissionPeriodDefinition(db.Model):
+class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
     """
     Record the configuration of an individual submission period
     """
@@ -3626,23 +3540,6 @@ class SubmissionPeriodDefinition(db.Model):
 
     # use platform to collect project feedback online?
     collect_project_feedback = db.Column(db.Boolean(), default=True)
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def display_name(self, year):
@@ -4736,7 +4633,7 @@ class SubmissionPeriodRecord(db.Model):
         return messages
 
 
-class EnrollmentRecord(db.Model):
+class EnrollmentRecord(db.Model, EditingMetadataMixin):
     """
     Capture details about a faculty member's enrollment in a single project class
     """
@@ -4819,23 +4716,6 @@ class EnrollmentRecord(db.Model):
 
     # custom limit for presentations
     CATS_presentation = db.Column(db.Integer())
-
-
-    # METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     @orm.reconstructor
@@ -4987,7 +4867,7 @@ def _EnrollmentRecord_delete_handler(mapper, connection, target):
         _delete_EnrollmentRecord_cache(target.owner_id)
 
 
-class Supervisor(db.Model, ColouredLabelMixin):
+class Supervisor(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Model a supervision team member
     """
@@ -5005,20 +4885,6 @@ class Supervisor(db.Model, ColouredLabelMixin):
 
     # active flag
     active = db.Column(db.Boolean())
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def disable(self):
@@ -5101,7 +4967,7 @@ def _Project_num_assessors(pid, pclass_id):
     return get_count(project.assessor_list_query(pclass_id))
 
 
-class Project(db.Model,
+class Project(db.Model, EditingMetadataMixin,
               ProjectConfigurationMixinFactory('projects', 'unique', project_skills, project_skills.c.skill_id,
                                                project_skills.c.project_id, 'allow', project_programmes,
                                                project_programmes.c.programme_id, project_programmes.c.project_id,
@@ -5175,23 +5041,6 @@ class Project(db.Model,
     default_id = db.Column(db.Integer(), db.ForeignKey('descriptions.id'))
     default = db.relationship('ProjectDescription', foreign_keys=[default_id], uselist=False, post_update=True,
                               backref=db.backref('default', uselist=False))
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def __init__(self, *args, **kwargs):
@@ -5592,7 +5441,7 @@ def _ProjectDescription_is_valid(id):
     return True, errors, warnings
 
 
-class ProjectDescription(db.Model,
+class ProjectDescription(db.Model, EditingMetadataMixin,
                          ProjectDescriptionMixinFactory(description_supervisors, 'descriptions', description_to_modules,
                                                         'tagged_descriptions', description_to_modules.c.module_id,
                                                         description_to_modules.c.description_id),
@@ -5681,23 +5530,6 @@ class ProjectDescription(db.Model,
             self.confirmed = False
 
         return value
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def __init__(self, *args, **kwargs):
@@ -6635,7 +6467,51 @@ class ConfirmRequest(db.Model):
                 delete_notification(self.project.owner.user, EmailNotification.CONFIRMATION_REQUEST_CREATED, self)
 
 
-class SelectingStudent(db.Model):
+class ConvenorStudentTask(db.Model, EditingMetadataMixin):
+    """
+    Record a to-do item for the convenor, and can be attached either to a SelectingStudent or a SubmittingStudent
+    """
+
+    __tablename__ = 'convenor_student_tasks'
+
+
+    # unique ID for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # task description
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=False)
+
+    # task notes
+    notes = db.Column(db.Text())
+
+    # blocks movement to next lifecyce stage?
+    blocking = db.Column(db.Boolean(), default=False)
+
+    # completed?
+    complete = db.Column(db.Boolean(), default=False)
+
+    # dropppd?
+    dropped = db.Column(db.Boolean(), default=False)
+
+    # defer date
+    defer_date = db.Column(db.DateTime(), index=True)
+
+    # due date
+    due_date = db.Column(db.DateTime(), index=True)
+
+
+def ConvenorTasksMixinFactory(association_table):
+
+    class ConvenorTasksMixin():
+
+        @declared_attr
+        def tasks(cls):
+            return db.relationship('ConvenorStudentTask', secondary=association_table, lazy='dynamic')
+
+    return ConvenorTasksMixin
+
+
+class SelectingStudent(db.Model, ConvenorTasksMixinFactory(selector_tasks)):
     """
     Model a student who is selecting a project in the current cycle
     """
@@ -7058,7 +6934,7 @@ def _SelectingStudent_update_handler(mapper, connection, target):
             _delete_MatchingRecord_cache(record.id, record.matching_id)
 
 
-class SubmittingStudent(db.Model):
+class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(submitter_tasks)):
     """
     Model a student who is submitting work for evaluation in the current cycle
     """
@@ -7208,7 +7084,7 @@ class PresentationFeedback(db.Model):
     Collect details of feedback for a student presentation
     """
 
-    __tablename = 'presentation_feedback'
+    __tablename__ = 'presentation_feedback'
 
 
     # unique id for this record
@@ -8182,7 +8058,7 @@ def _SelectionRecord_delete_handler(mapper, connection, target):
         cache.delete_memoized(_MatchingAttempt_hint_status)
 
 
-class CustomOffer(db.Model):
+class CustomOffer(db.Model, EditingMetadataMixin):
     """
     Model a customized offer to an individual student
     """
@@ -8211,23 +8087,6 @@ class CustomOffer(db.Model):
 
     # status of offer
     status = db.Column(db.Integer(), default=OFFERED, nullable=False)
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
 class EmailLog(db.Model):
@@ -8910,7 +8769,7 @@ class PuLPMixin():
         return self.outcome == PuLPMixin.OUTCOME_OPTIMAL or self.outcome == PuLPMixin.OUTCOME_FEASIBLE
 
 
-class MatchingAttempt(db.Model, PuLPMixin):
+class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     """
     Model configuration data for a matching attempt
     """
@@ -9072,24 +8931,6 @@ class MatchingAttempt(db.Model, PuLPMixin):
 
     # final version circulated to supervisors?
     final_to_supervisors = db.Column(db.DateTime())
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False,
-                                 backref=db.backref('matching_attempts', lazy='dynamic'))
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def __init__(self, *args, **kwargs):
@@ -9959,7 +9800,7 @@ def _PresentationAssessment_is_valid(id):
     return True, errors, warnings
 
 
-class PresentationAssessment(db.Model):
+class PresentationAssessment(db.Model, EditingMetadataMixin):
     """
     Store data for a presentation assessment
     """
@@ -10003,24 +9844,6 @@ class PresentationAssessment(db.Model):
 
     # feedback is open
     feedback_open = db.Column(db.Boolean())
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False,
-                                 backref=db.backref('presentation_assessments', lazy='dynamic'))
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def __init__(self, *args, **kwargs):
@@ -10841,7 +10664,7 @@ def _SubmitterAttendanceData_unavailable_remove_handler(target, value, initiator
                 cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
 
 
-class PresentationSession(db.Model):
+class PresentationSession(db.Model, EditingMetadataMixin):
     """
     Store data about a presentation session
     """
@@ -10875,24 +10698,6 @@ class PresentationSession(db.Model):
     # rooms available for this session
     rooms = db.relationship('Room', secondary=session_to_rooms, lazy='dynamic',
                             backref=db.backref('sessions', lazy='dynamic'))
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False,
-                                 backref=db.backref('presentation_sessions', lazy='dynamic'))
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def __init__(self, *args, **kwargs):
@@ -11203,7 +11008,7 @@ def _PresentationSession_delete_handler(mapper, connection, target):
                 cache.delete_memoized(_PresentationSession_is_valid, dup.id)
 
 
-class Building(db.Model, ColouredLabelMixin):
+class Building(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Store data modelling a building that houses bookable rooms for presentation assessments
     """
@@ -11219,23 +11024,6 @@ class Building(db.Model, ColouredLabelMixin):
 
     # active flag
     active = db.Column(db.Boolean())
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def make_label(self, text=None, user_classes=None):
@@ -11256,7 +11044,7 @@ class Building(db.Model, ColouredLabelMixin):
         self.active = False
 
 
-class Room(db.Model):
+class Room(db.Model, EditingMetadataMixin):
     """
     Store data modelling a bookable room for presentation assessments
     """
@@ -11283,23 +11071,6 @@ class Room(db.Model):
 
     # active flag
     active = db.Column(db.Boolean())
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     @property
@@ -11378,7 +11149,7 @@ def _ScheduleAttempt_is_valid(id):
     return True, errors, warnings
 
 
-class ScheduleAttempt(db.Model, PuLPMixin):
+class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     """
     Model configuration data for an assessment scheduling attempt
     """
@@ -11438,22 +11209,6 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
     # final version circulated to assessors?
     final_to_assessors = db.Column(db.DateTime())
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def _init__(self, *args, **kwargs):
@@ -12282,7 +12037,7 @@ def _ScheduleSlot_talks_remove_handler(target, value, initiator):
             cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
 
 
-class Module(db.Model):
+class Module(db.Model, EditingMetadataMixin):
     """
     Represent a module (course)
     """
@@ -12312,23 +12067,6 @@ class Module(db.Model):
 
     # retired in
     last_taught = db.Column(db.Integer())
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     @hybrid_property
@@ -12389,7 +12127,7 @@ class Module(db.Model):
         return self.level.make_label(text=text, user_classes=user_classes)
 
 
-class FHEQ_Level(db.Model, ColouredLabelMixin):
+class FHEQ_Level(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Characterize an FHEQ level
     """
@@ -12412,23 +12150,6 @@ class FHEQ_Level(db.Model, ColouredLabelMixin):
 
     # active flag
     active = db.Column(db.Boolean())
-
-
-    # EDITING METADATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def enable(self):
@@ -12532,7 +12253,7 @@ class DownloadRecord(db.Model):
     timestamp = db.Column(db.DateTime(), index=True)
 
 
-class AssetLicense(db.Model, ColouredLabelMixin):
+class AssetLicense(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Model a license for distributing content
     """
@@ -12564,23 +12285,6 @@ class AssetLicense(db.Model, ColouredLabelMixin):
 
     # license allows redistribution?
     allows_redistribution = db.Column(db.Boolean(), default=False)
-
-
-    # EDITING DATA
-
-    # created by
-    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
-
-    # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
-
-    # last editor
-    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
-
-    # last edited timestamp
-    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def make_label(self, text=None, user_classes=None, popover=True):

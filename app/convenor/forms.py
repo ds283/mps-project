@@ -252,12 +252,15 @@ class ConvenorStudentTaskMixin():
                             description='Select if the task should block progress, eg. to Go Live or '
                                         'rollover to the next academic year', default=False)
 
-    complete = BooleanField('Complete', default=False)
+    complete = BooleanField('Task has been completed', default=False,
+                            description='Select if the task has been finished.')
 
-    dropped = BooleanField('Dropped', default=False)
+    dropped = BooleanField('Task is dropped', default=False,
+                           description='Select if the task is no longer required, but should be '
+                                       'kept in the database rather than simply deleted.')
 
     defer_date = DateTimeField('Defer date',
-                               description='If the task is deferred (that is, is not available to be'
+                               description='If the task is deferred (that is, is not available to be '
                                            'completed) before some date, enter this here.',
                                validators=[Optional()])
 

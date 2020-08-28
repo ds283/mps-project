@@ -3,6 +3,29 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, date_field %}
 
+{% block scripts %}
+    {{ super() }}
+
+    {% assets filters="cssmin", output="gen/bootstrap-datepicker-min.css", "css/bootstrap-datepicker.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/bootstrap-datepicker-min.js", "js/bootstrap-datepicker.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('.date').datepicker({
+                format: 'dd/mm/yyyy',
+                todayHighlight: true
+            });
+        });
+    </script>
+{% endblock %}
+
 {% block title %}
     Edit task
 {% endblock %}
@@ -27,6 +50,7 @@
             </div>
 
             <div class="card mt-3 mb-3 card-body bg-well">
+                <p>Task status</p>
                 {{ wtf.render_field(form.complete) }}
                 {{ wtf.render_field(form.dropped) }}
             </div>

@@ -107,10 +107,9 @@
         {% set kwargs = dict(required=True, **kwargs) %}
     {% endif %}
     {% set extra_classes = ' ' + field.render_kw.class if field.render_kw.class else '' %}
-    <div class="form-group {% if field.errors %} has-error{% endif -%}
-                           {%- if field.flags.required %} required{% endif -%}">
+    <div class="form-group {%- if field.flags.required %} required{% endif -%}">
         {{ field.label(class="control-label")|safe }}
-        <div id="{{ id }}" class="input-group colorpicker-component">
+        <div id="{{ id }}" class="input-group {%- if field.errors %} is-invalid {% endif -%} colorpicker-component">
             {% if field.errors %}
                 {{ field(class="form-control mb-2 mb-sm-0 is-invalid%s" % extra_classes, **kwargs)|safe }}
             {% else %}
@@ -120,10 +119,10 @@
         </div>
         {% if field.errors %}
             {% for error in field.errors %}
-                <p class="help-block">{{ error }}</p>
+                <span class="invalid-feedback">{{ error }}</span>
             {% endfor %}
         {% elif field.description %}
-            <p class="help-block">{{ field.description|safe }}</p>
+            <small class="form-text text-muted">{{ field.description|safe }}</small>
         {% endif %}
     </div>
 {% endmacro %}
@@ -135,7 +134,7 @@
     {% set extra_classes = ' ' + field.render_kw.class if field.render_kw.class else '' %}
     <div class="form-group {% if field.flags_required %} require{% endif -%}">
         {{ field.label(class="control-label")|safe }}
-        <div class="input-group date" data-provide="datepicker">
+        <div class="input-group {%- if field.errors %} is-invalid {% endif -%} date" data-provide="datepicker">
             {% if field.errors %}
                 {{ field(class="form-control mb-2 mb-sm-0 is-invalid%s" % extra_classes, **kwargs)|safe }}
             {% else %}
@@ -147,10 +146,10 @@
         </div>
         {% if field.errors %}
             {% for error in field.errors %}
-                <p class="help-block">{{ error }}</p>
+                <span class="invalid-feedback">{{ error }}</span>
             {% endfor %}
         {% elif field.description %}
-            <p class="help-block">{{ field.description|safe }}</p>
+            <small class="form-text text-muted">{{ field.description|safe }}</small>
         {% endif %}
     </div>
 {% endmacro %}
@@ -164,7 +163,7 @@
         {{ field(class="form-control", onchange="this.form.submit()")|safe }}
         {% if field.errors %}
             {% for error in field.errors %}
-                <p class="help-block">{{ error }}</p>
+                <p class="invalid-feedback">{{ error }}</p>
             {% endfor %}
         {% endif %}
     </div>

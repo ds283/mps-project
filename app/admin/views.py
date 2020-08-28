@@ -24,7 +24,7 @@ from flask import current_app, render_template, redirect, url_for, flash, reques
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 from numpy import histogram
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.sql import func, literal_column
+from sqlalchemy.sql import func
 from werkzeug.datastructures import Headers
 from werkzeug.wrappers import Response
 
@@ -1928,6 +1928,7 @@ def email_log_ajax():
     base_query = db.session.query(EmailLog) \
         .join(User, User.id == EmailLog.user_id, isouter=True)
 
+    # set up columns for server-side processing
     recipient = {'search': func.concat(User.first_name, ' ', User.last_name),
             'order': func.concat(User.last_name, User.first_name),
             'search_collation': 'utf8_general_ci'}
@@ -1946,8 +1947,8 @@ def email_log_ajax():
                'date': date,
                'subject': subject}
 
-    with ServerSideHandler(request, base_query, columns, ajax.site.email_log_data) as handler:
-        return handler.build_payload()
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.site.email_log_data)
 
 
 @admin.route('/display_email/<int:id>')

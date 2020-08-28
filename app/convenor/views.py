@@ -10,16 +10,18 @@
 
 
 from datetime import date, datetime, timedelta
+from functools import partial
 from pathlib import Path
 
 import parse
 from celery import chain
 from dateutil import parser
-from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session
+from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session, abort
 from flask_mail import Message
 from flask_security import roles_accepted, current_user
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from sqlalchemy.sql import func
 from sqlalchemy.orm.exc import StaleDataError
 
 import app.ajax as ajax
@@ -28,7 +30,7 @@ from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, Ope
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
     EditSubmissionRecordForm, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
-    EditProjectConfigForm
+    EditProjectConfigForm, AddConvenorStudentTask, EditConvenorStudentTask
 from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
@@ -39,7 +41,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Role, \
-    Bookmark
+    Bookmark, ConvenorStudentTask
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
@@ -51,7 +53,13 @@ from ..shared.validators import validate_is_convenor, validate_is_administrator,
     validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
 from ..student.actions import store_selection
 from ..task_queue import register_task
+from ..tools import ServerSideHandler
 from ..uploads import submitted_files
+
+
+STUDENT_TASKS_SELECTOR = 0
+STUDENT_TASKS_SUBMITTER = 1
+
 
 _marker_menu = \
 """
@@ -8067,3 +8075,165 @@ def update_period_attachments():
         return jsonify({'status': 'database_failure'})
 
     return jsonify({'status': 'success'})
+
+
+def _get_student_task_container(type, sid):
+    if type == STUDENT_TASKS_SELECTOR:
+        obj: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sid).first()
+        return obj
+
+    if type == STUDENT_TASKS_SUBMITTER:
+        obj: SubmittingStudent = db.session.query(SubmittingStudent).filter_by(id=sid).first()
+        return obj
+
+    return KeyError
+
+
+@convenor.route('/student_tasks/<int:type>/<int:sid>')
+@roles_accepted('faculty', 'admin', 'root')
+def student_tasks(type, sid):
+    try:
+        obj = _get_student_task_container(type, sid)
+    except KeyError as e:
+        abort(404)
+
+    config: ProjectClassConfig = obj.config
+    student: StudentData = obj.student
+
+    # check user is convenor for this project class, or an administrator
+    if not validate_is_convenor(config.project_class, message=True):
+        return redirect(redirect_url())
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    return render_template('convenor/tasks/student_tasks.html', type=type, obj=obj, config=config, student=student,
+                           url=url, text=text)
+
+
+@convenor.route('/student_tasks_ajax/<int:type>/<int:sid>', methods=['POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def student_tasks_ajax(type, sid):
+    try:
+        obj = _get_student_task_container(type, sid)
+    except KeyError as e:
+        abort(404)
+
+    config: ProjectClassConfig = obj.config
+    student: StudentData = obj.student
+
+    # check user is convenor for this project class, or an administrator
+    if not validate_is_convenor(config.project_class, message=True):
+        return jsonify({})
+
+    base_query = obj.tasks
+
+    # set up columns for server-side processing
+    task = {'search': ConvenorStudentTask.description,
+            'order': ConvenorStudentTask.description,
+            'search_collation': 'utf8_general_ci'}
+    defer_date = {'search': func.date_format(ConvenorStudentTask.defer_date, "%a %d %b %Y %H:%M:%S"),
+                  'order': ConvenorStudentTask.defer_date,
+                  'search_collation': 'utf8_general_ci'}
+    due_date = {'search': func.date_format(ConvenorStudentTask.due_date, "%a %d %b %Y %H:%M:%S"),
+                'order': ConvenorStudentTask.due_date,
+                'search_collation': 'utf8_general_ci'}
+
+    columns = {'task': task,
+               'defer_date': defer_date,
+               'due_date': due_date}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(partial(ajax.convenor.student_task_data, type, sid))
+
+
+@convenor.route('/add_student_task/<int:type>/<int:sid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def add_student_task(type, sid):
+    try:
+        obj = _get_student_task_container(type, sid)
+    except KeyError as e:
+        abort(404)
+
+    config: ProjectClassConfig = obj.config
+
+    # check user is convenor for this project class, or an administrator
+    if not validate_is_convenor(config.project_class, message=True):
+        return jsonify({})
+
+    form = AddConvenorStudentTask(request.form)
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('convenor.student_tasks', type=type, sid=sid)
+
+    if form.validate_on_submit():
+        task = ConvenorStudentTask(description=form.description.data,
+                                   notes=form.notes.data,
+                                   blocking=form.blocking.data,
+                                   complete=form.complete.data,
+                                   dropped=form.dropped.data,
+                                   defer_date=form.defer_date.data,
+                                   due_date=form.due_date.data,
+                                   creator_id=current_user.id,
+                                   creation_timestamp=datetime.now(),
+                                   )
+
+        try:
+            obj.tasks.append(task)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not create new task due to a database error. '
+                  'Please contact a system administrator', 'error')
+
+        return redirect(url)
+
+    return render_template('convenor/tasks/edit_task.html', form=form, url=url,
+                           type=type, obj=obj)
+
+
+@convenor.route('/edit_student_task/<int:tid>/<int:type>/<int:sid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_student_task(tid, type, sid):
+    task: ConvenorStudentTask = ConvenorStudentTask.query.get_or_404(id=tid)
+
+    try:
+        obj = _get_student_task_container(type, sid)
+    except KeyError as e:
+        abort(404)
+
+    config: ProjectClassConfig = obj.config
+
+    # check user is convenor for this project class, or an administrator
+    if not validate_is_convenor(config.project_class, message=True):
+        return jsonify({})
+
+    form = EditConvenorStudentTask(obj=task)
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('convenor.student_tasks', type=type, sid=sid)
+
+    if form.validate_on_submit():
+        task.description = form.description.data
+        task.notes = form.notes.data
+        task.blocking = form.blocking.data
+        task.complete = form.complete.data
+        task.dropped = form.dropped.data
+        task.defer_date = form.defer_date.data
+        task.due_date = form.due_date
+        task.last_edit_id = current_user.id
+        task.last_edit_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changed to task due to a database error. '
+                  'Please contact a system administrator', 'error')
+
+        return redirect(url)
+
+    return render_template('convenor/tasks/edit_task.html', form=form, url=url,
+                           type=type, obj=obj, task=task)

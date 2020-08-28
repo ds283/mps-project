@@ -33,7 +33,9 @@ _menu = \
         <a class="dropdown-item" href="{{ url_for('convenor.selector_custom_offers', sel_id=student.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Custom offers...
         </a>
-
+        <a class="dropdown-item" href="{{ url_for('convenor.student_tasks', type=0, sid=student.id, text='selectors view', url=url_for('convenor.selectors', id=pclass.id)) }}">
+            <i class="fas fa-clipboard-check fa-fw"></i> Tasks...
+        </a>
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Selections</div>
         {% if student.is_valid_selection[0] %}

@@ -19,12 +19,11 @@ from sqlalchemy.sql import collate, or_
 
 class ServerSideHandler():
 
-    def __init__(self, request, query, data, make_rows):
+    def __init__(self, request, query, data):
         """
         :param request: Flask 'request' instance
         :param query: base query defining the set of records we consider
         :param columns: dictionary specify columns to query and sort
-        :param make_rows: function to make row data from SQL table data
         """
 
         request_data = json.loads(request.values.get("args"))
@@ -43,14 +42,13 @@ class ServerSideHandler():
             self._order = request_data['order']
         except KeyError:
             self._fail = True
-            self._fail_msg = 'Could not interpret AJAX payload from website front-end'
+            self._fail_msg = 'The server could not interpret the AJAX payload from the website front-end'
             return
 
         self._query = query
         self._total_records = get_count(self._query)
 
         self._data = data
-        self._make_rows = make_rows
 
         # filter if being used
         if self._filter_value:
@@ -103,7 +101,6 @@ class ServerSideHandler():
 
 
     def __enter__(self):
-        self._rows = self._make_rows(self._query.all())
         return self
 
 
@@ -111,12 +108,12 @@ class ServerSideHandler():
         return
 
 
-    def build_payload(self):
+    def build_payload(self, row_formatter):
         if not self._fail:
             return jsonify({'draw': self._draw,
                             'recordsTotal': self._total_records,
                             'recordsFiltered': self._filtered_records,
-                            'data': self._make_rows(self._query.all())})
+                            'data': row_formatter(self._query.all())})
         else:
             return jsonify({'draw': self._draw,
                             'error': self._fail_msg})

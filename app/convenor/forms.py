@@ -9,7 +9,8 @@
 #
 
 from flask_security.forms import Form
-from wtforms import SubmitField, DateField, IntegerField, StringField, BooleanField
+from wtforms import SubmitField, DateField, IntegerField, StringField, BooleanField, TextAreaField, \
+    DateTimeField
 from wtforms.validators import InputRequired, Optional, Email
 from wtforms_alchemy import QuerySelectField
 
@@ -234,5 +235,42 @@ class UploadPeriodAttachmentForm(Form, PeriodAttachmentMixin):
 
 
 class EditPeriodAttachmentForm(Form, PeriodAttachmentMixin, SaveChangesMixin):
+
+    pass
+
+
+class ConvenorStudentTaskMixin():
+
+    description = StringField('Description', description='Briefly summarize the task',
+                              validators=[InputRequired()])
+
+    notes = TextAreaField('Notes', description='Add any notes or commentary that you wish to '
+                                               'associate with this task',
+                          render_kw={"rows": 8}, validators=[Optional()])
+
+    blocking = BooleanField('Task blocks progress to next lifecycle stage',
+                            description='Select if the task should block progress, eg. to Go Live or '
+                                        'rollover to the next academic year', default=False)
+
+    complete = BooleanField('Complete', default=False)
+
+    dropped = BooleanField('Dropped', default=False)
+
+    defer_date = DateTimeField('Defer date',
+                               description='If the task is deferred (that is, is not available to be'
+                                           'completed) before some date, enter this here.',
+                               validators=[Optional()])
+
+    due_date = DateTimeField('Due date',
+                             description='If the task is due by a certain date, enter it here.',
+                             validators=[Optional()])
+
+
+class AddConvenorStudentTask(Form, ConvenorStudentTaskMixin):
+
+    submit = SubmitField('Create new task')
+
+
+class EditConvenorStudentTask(Form, ConvenorStudentTaskMixin, SaveChangesMixin):
 
     pass

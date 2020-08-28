@@ -1,0 +1,94 @@
+{% extends "base_app.html" %}
+
+{% block scripts %}
+    {{ super() }}
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css"
+          href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css"
+    "/>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#student-tasks-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                serverSide: true,
+                ajax: { url: $SCRIPT_ROOT + '/convenor/student_tasks_ajax/{{ type }}/{{ obj.id }}',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'});},
+                columns: [
+                    { data: 'task',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'defer_date',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'due_date',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'status',
+                      orderable: false,
+                      searchable: false },
+                    { data: 'menu',
+                      orderable: false,
+                      searchable: false }
+                ],
+                order: [[2, 'desc']]
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Edit tasks for {{ student.user.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    {% if url and text %}
+        <div class="top-return-link">
+            <a href="{{ url }}">
+                <i class="fas fa-backward"></i> Return to {{ text }}
+            </a>
+        </div>
+    {% endif %}
+
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-primary text-white">Edit tasks for student <i class="fas fa-user"></i>
+            <strong>{{ student.user.name }}</strong></div>
+        <div class="card-body">
+            <table id="student-tasks-table" class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th width="40%"> Task</th>
+                    <th width="15%"> Defer date</th>
+                    <th width="15%"> Due date</th>
+                    <th width="15%"> Status</th>
+                    <th width="15%"> Actions</th>
+                </tr>
+                </thead>
+            </table>
+            <div style="text-align: center;">
+                <a href="{{ url_for('convenor.add_student_task', type=type, sid=obj.id, url=url_for('convenor.student_tasks', type=type, sid=obj.id, url=url, text=text)) }}" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-plus"></i>
+                    New task
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if url and text %}
+        <div>
+            <a href="{{ url }}">
+                <i class="fas fa-backward"></i> Return to {{ text }}
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}

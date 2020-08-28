@@ -1,0 +1,48 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import edit_data, date_field %}
+
+{% block title %}
+    Edit task
+{% endblock %}
+
+{% block formtitle %}
+    Edit task
+{% endblock %}
+
+{% block form_content %}
+    {% if task is defined %}
+        <form action="{{ url_for('convenor.edit_student_task', tid=task.id, type=type, sid=obj.id, url=url) }}" method="POST" name="edit_form">
+    {% else %}
+        <form action="{{ url_for('convenor.add_student_task', type=type, sid=obj.id, url=url) }}" method="POST" name="edit_form">
+    {% endif %}
+
+            {{ form.hidden_tag() }}
+
+            <div class="card mt-3 mb-3 card-body bg-well">
+                {{ wtf.render_field(form.description) }}
+                {{ wtf.render_field(form.notes) }}
+                {{ wtf.render_field(form.blocking)}}
+            </div>
+
+            <div class="card mt-3 mb-3 card-body bg-well">
+                {{ wtf.render_field(form.complete) }}
+                {{ wtf.render_field(form.dropped) }}
+            </div>
+
+            <div class="card mt-3 mb-3 card-body bg-well">
+                {{ date_field(form.defer_date) }}
+                {{ date_field(form.due_date) }}
+            </div>
+
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+
+        </form>
+{% endblock %}
+
+{% if task is defined %}
+    {% block footer %}
+        {{ edit_data(task) }}
+    {% endblock %}
+{% endif %}

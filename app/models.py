@@ -6490,7 +6490,7 @@ class ConvenorStudentTask(db.Model, EditingMetadataMixin):
     # completed?
     complete = db.Column(db.Boolean(), default=False)
 
-    # dropppd?
+    # dropped?
     dropped = db.Column(db.Boolean(), default=False)
 
     # defer date

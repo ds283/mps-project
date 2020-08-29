@@ -14,7 +14,7 @@
             <hr class="intro-divider">
             <form action="{{ url_for('admin.assessment_availability', id=assessment.id) }}"
                   method="POST" name="availability-fom">
-                {{ date_field(form.availability_deadline) }}
+                {{ date_field(form.availability_deadline, 'datetimepicker1') }}
                 <div class="row">
                     <div class="col-12">
                         <div class="float-right">

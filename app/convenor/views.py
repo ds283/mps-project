@@ -8196,7 +8196,7 @@ def add_student_task(type, sid):
 @convenor.route('/edit_student_task/<int:tid>/<int:type>/<int:sid>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def edit_student_task(tid, type, sid):
-    task: ConvenorStudentTask = ConvenorStudentTask.query.get_or_404(id=tid)
+    task: ConvenorStudentTask = ConvenorStudentTask.query.get_or_404(tid)
 
     try:
         obj = _get_student_task_container(type, sid)
@@ -8221,7 +8221,7 @@ def edit_student_task(tid, type, sid):
         task.complete = form.complete.data
         task.dropped = form.dropped.data
         task.defer_date = form.defer_date.data
-        task.due_date = form.due_date
+        task.due_date = form.due_date.data
         task.last_edit_id = current_user.id
         task.last_edit_timestamp = datetime.now()
 

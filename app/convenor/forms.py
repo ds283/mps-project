@@ -11,12 +11,14 @@
 from flask_security.forms import Form
 from wtforms import SubmitField, DateField, IntegerField, StringField, BooleanField, TextAreaField, \
     DateTimeField
-from wtforms.validators import InputRequired, Optional, Email
+from wtforms.validators import InputRequired, Optional, Email, Length
 from wtforms_alchemy import QuerySelectField
 
+from ..models import DEFAULT_STRING_LENGTH
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
     GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses, GetAccommodatableMatchings
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodCommonMixin
+
 from functools import partial
 
 
@@ -242,7 +244,7 @@ class EditPeriodAttachmentForm(Form, PeriodAttachmentMixin, SaveChangesMixin):
 class ConvenorStudentTaskMixin():
 
     description = StringField('Description', description='Briefly summarize the task',
-                              validators=[InputRequired()])
+                              validators=[InputRequired(), Length(max=DEFAULT_STRING_LENGTH)])
 
     notes = TextAreaField('Notes', description='Add any notes or commentary that you wish to '
                                                'associate with this task',
@@ -259,12 +261,12 @@ class ConvenorStudentTaskMixin():
                            description='Select if the task is no longer required, but should be '
                                        'kept in the database rather than simply deleted.')
 
-    defer_date = DateTimeField('Defer date',
+    defer_date = DateTimeField('Defer date', format='%d/%m/%Y %H:%M',
                                description='If the task is deferred (that is, is not available to be '
                                            'completed) before some date, enter this here.',
                                validators=[Optional()])
 
-    due_date = DateTimeField('Due date',
+    due_date = DateTimeField('Due date', format='%d/%m/%Y %H:%M',
                              description='If the task is due by a certain date, enter it here.',
                              validators=[Optional()])
 

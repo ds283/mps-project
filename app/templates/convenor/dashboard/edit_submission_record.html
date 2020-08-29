@@ -6,11 +6,15 @@
 {% block scripts %}
     {{ super() }}
 
-    {% assets filters="cssmin", output="gen/bootstrap-datepicker-min.css", "css/bootstrap-datepicker.css" -%}
+    {% assets filters="cssmin", output="gen/tempusdominus-bootstrap-4.min.css", "css/tempusdominus-bootstrap-4.css" -%}
         <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
     {% endassets %}
 
-    {% assets filters="jsmin", output="gen/bootstrap-datepicker-min.js", "js/bootstrap-datepicker.js" -%}
+    {% assets filters="rjsmin", output="gen/moment.min.js", "js/moment.min.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/tempusdominus-bootstrap-4.min.js", "js/tempusdominus-bootstrap-4.js" -%}
         <script src="{{ ASSET_URL }}"></script>
     {% endassets %}
 
@@ -18,9 +22,9 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('.date').datepicker({
-                format: 'dd/mm/yyyy',
-                todayHighlight: true
+            $('#datetimepicker1').datetimepicker({
+                format: 'DD/MM/YYYY',
+                allowInputToggle: true
             });
         });
     </script>
@@ -42,7 +46,7 @@
 {#        {{ wtf.form_errors(form) }}#}
 
         <div class="card mt-3 mb-3 card-body bg-well">
-            {{ date_field(form.start_date) }}
+            {{ date_field(form.start_date, 'datetimepicker1') }}
         </div>
 
         <div class="card mt-3 mb-3 card-body bg-well">

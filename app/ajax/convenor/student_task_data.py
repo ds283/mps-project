@@ -48,7 +48,7 @@ _menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <a class="dropdown-item" href="{{ url_for('convenor.edit_student_task', tid=tk.id, type=type, sid=sid, url=url_for('convenor.student_tasks', type=type, sid=sid) }}">
+        <a class="dropdown-item" href="{{ url_for('convenor.edit_student_task', tid=tk.id, type=type, sid=sid, url=url_for('convenor.student_tasks', type=type, sid=sid)) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit task...
         </a>
     </div>
@@ -60,11 +60,11 @@ def student_task_data(type, sid, tasks: List[ConvenorStudentTask]):
     now = datetime.now()
 
     data = [{'task': render_template_string(_task, tk=t),
-             'due_date': t.due_date.strftime("%a %d %b %Y %H:%M:%S") if t.due_date is not None else 'None',
-             'defer_date': t.defer_date.strftime("%a %d %b %Y %H:%M:%S") if t.defer_date is not None else 'None',
+             'due_date': t.due_date.strftime("%a %d %b %Y %H:%M") if t.due_date is not None else 'None',
+             'defer_date': t.defer_date.strftime("%a %d %b %Y %H:%M") if t.defer_date is not None else 'None',
              'status': render_template_string(_status,
-                                              available=t.defer_date > now if t.defer_date is not None else True,
-                                              overdue=t.due_date > now if t.defer_date is not None else True,
+                                              available=t.defer_date < now if t.defer_date is not None else True,
+                                              overdue=t.due_date < now if t.due_date is not None else True,
                                               tk=t),
              'menu': render_template_string(_menu, tk=t, type=type, sid=sid)} for t in tasks]
 

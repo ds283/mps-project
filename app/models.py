@@ -6479,7 +6479,7 @@ class ConvenorStudentTask(db.Model, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # task description
-    description = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=False)
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), nullable=False)
 
     # task notes
     notes = db.Column(db.Text())

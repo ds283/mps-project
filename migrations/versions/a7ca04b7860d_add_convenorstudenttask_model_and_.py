@@ -22,7 +22,7 @@ def upgrade():
     sa.Column('creation_timestamp', sa.DateTime(), nullable=True),
     sa.Column('last_edit_timestamp', sa.DateTime(), nullable=True),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('description', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.String(length=255, collation='utf8_bin'), nullable=False),
     sa.Column('notes', sa.Text(), nullable=True),
     sa.Column('blocking', sa.Boolean(), nullable=True),
     sa.Column('complete', sa.Boolean(), nullable=True),

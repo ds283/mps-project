@@ -117,7 +117,7 @@
             <hr class="intro-divider">
             <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}" method="POST" name="adjust_selection_deadline">
                 {{ change_form.hidden_tag() }}
-                {{ date_field(change_form.live_deadline) }}
+                {{ date_field(change_form.live_deadline, 'live_datetimepicker') }}
                 {{ wtf.render_field(change_form.notify_convenor) }}
                 <div class="row vertical-top">
                     <div class="col-12">

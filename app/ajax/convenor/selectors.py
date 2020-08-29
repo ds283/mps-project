@@ -206,6 +206,10 @@ _name = \
 {% if sel.student.intermitting %}
     <span class="badge badge-warning">TWD</span>
 {% endif %}
+{% set num_tasks = sel.number_tasks %}
+{% if num_tasks > 0 %}
+    <span class="badge badge-info">{{ num_tasks }} tasks</span>
+{% endif %}
 </div>
 """
 

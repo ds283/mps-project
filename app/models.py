@@ -6508,6 +6508,12 @@ def ConvenorTasksMixinFactory(association_table):
         def tasks(cls):
             return db.relationship('ConvenorStudentTask', secondary=association_table, lazy='dynamic')
 
+
+        @property
+        def number_tasks(self):
+            return get_count(self.tasks)
+
+
     return ConvenorTasksMixin
 
 

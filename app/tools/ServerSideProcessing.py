@@ -10,6 +10,8 @@
 
 
 import json
+from collections import Iterable
+
 from flask import jsonify
 
 from ..shared.utils import get_count
@@ -89,9 +91,15 @@ class ServerSideHandler():
                     order_col = item_data['order']
 
                 if dir == 'asc':
-                    self._query = self._query.order_by(order_col.asc())
+                    if isinstance(order_col, Iterable):
+                        self._query = self._query.order_by(*(x.asc() for x in order_col))
+                    else:
+                        self._query = self._query.order_by(order_col.asc())
                 else:
-                    self._query = self._query.order_by(order_col.desc())
+                    if isinstance(order_col, Iterable):
+                        self._query = self._query.order_by(*(x.desc() for x in order_col))
+                    else:
+                        self._query = self._query.order_by(order_col.desc())
 
         # impose limit on number of records retrieved
         if self._length > 0:

@@ -6500,6 +6500,27 @@ class ConvenorStudentTask(db.Model, EditingMetadataMixin):
     due_date = db.Column(db.DateTime(), index=True)
 
 
+    @property
+    def is_overdue(self):
+        if self.complete or self.dropped:
+            return False
+
+        now = datetime.now()
+        return self.due_date < now
+
+
+    @property
+    def is_available(self):
+        if self.complete or self.dropped:
+            return False
+
+        if self.defer_date is None:
+            return False
+
+        now = datetime.now()
+        return self.defer_date <= now
+
+
 def ConvenorTasksMixinFactory(association_table):
 
     class ConvenorTasksMixin():

@@ -18,7 +18,8 @@ from sqlalchemy.event import listens_for
 from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, FilterRecord, StudentData, \
-    MatchingAttempt, ProjectDescription, WorkflowMixin, DegreeProgramme, DegreeType
+    MatchingAttempt, ProjectDescription, WorkflowMixin, DegreeProgramme, DegreeType, ConvenorStudentTask, \
+    selector_tasks, submitter_tasks
 from ..models import project_assessors
 from ..cache import cache
 
@@ -542,12 +543,52 @@ def get_convenor_dashboard_data(pclass, config):
     sub_count = get_count(config.submitting_students.filter_by(retired=False))
     live_count = get_count(config.live_projects)
 
+    # EXTRACT TO-DO TASKS
+
+    # TODO: this is not very efficient; might need to consider a different database
+    #  schema to allow more performant recovery of the task list
+
+    # subquery to get list of current selectors
+    selectors = db.session.query(SelectingStudent.id) \
+        .filter(~SelectingStudent.retired,
+                SelectingStudent.config_id == config.id).subquery()
+
+    # subquery to get list of currentn submitters
+    submitters = db.session.query(SubmittingStudent.id) \
+        .filter(~SubmittingStudent.retired,
+                SubmittingStudent.config_id == config.id).subquery()
+
+    sel_tks = db.session.query(selector_tasks.c.tasks_id) \
+        .join(selectors, selectors.c.id == selector_tasks.c.selector_id) \
+        .filter(selectors.c.id != None).subquery()
+
+    sub_tks = db.session.query(submitter_tasks.c.tasks_id) \
+        .join(submitters, submitters.c.id == submitter_tasks.c.submitter_id) \
+        .filter(submitters.c.id != None).subquery()
+
+    sel_to_do = db.session.query(ConvenorStudentTask) \
+        .join(sel_tks, ConvenorStudentTask.id == sel_tks.c.tasks_id) \
+        .filter(~ConvenorStudentTask.complete, ~ConvenorStudentTask.dropped) \
+        .order_by(ConvenorStudentTask.due_date)
+
+    sub_to_do = db.session.query(ConvenorStudentTask) \
+        .join(sub_tks, ConvenorStudentTask.id == sub_tks.c.tasks_id) \
+        .filter(~ConvenorStudentTask.complete, ~ConvenorStudentTask.dropped) \
+        .order_by(ConvenorStudentTask.due_date)
+
+    tks = sel_to_do.union(sub_to_do).order_by(ConvenorStudentTask.due_date)
+    tks_count = get_count(tks)
+
+    top_tks = tks.limit(10).all()
+
     return {'faculty': fac_count,
             'total_faculty': fac_total,
             'live_projects': live_count,
             'attached_projects': proj_count,
             'selectors': sel_count,
-            'submitters': sub_count}
+            'submitters': sub_count,
+            'num_to_dos': tks_count,
+            'top_to_dos': top_tks}
 
 
 @cache.memoize()

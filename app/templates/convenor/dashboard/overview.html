@@ -62,6 +62,8 @@
 {% endblock %}
 
 {% block bodyblock %}
+    {% set num_to_dos = convenor_data['num_to_dos'] %}
+    {% set top_to_dos = convenor_data['top_to_dos'] %}
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
@@ -143,6 +145,63 @@
                         </h5>
                     </div>
                 </div>
+                {% if top_to_dos is defined and top_do_dos is not none and top_to_dos|length > 0 %}
+                    <div class="card mt-3 mb-3">
+                        {% set pl = 's' %}{% if num_to_dos == 1 %}{% set pl = '' %}{% endif %}
+                        <div class="card-header bg-warning">Upcoming tasks (<strong>{{ num_to_dos }}</strong> task{{ pl }} waiting</div>
+                        <div class="card-body">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th width="40%">Task</th>
+                                        <th width="20%">Defer date</th>
+                                        <th width="20%">Due date</th>
+                                        <th width="20%">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for tk in top_to_dos %}
+                                        <tr>
+                                            <td>
+                                                {{ tk.description|truncate(40) }}
+                                                {% if tk.blocking %}
+                                                    <span class="badge badge-warning"><i class="fas fa-hand-paper"></i> Blocking</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if tk.defer_date is not none %}
+                                                    {{ tk.defer_date.strftime("%a %d %b %Y %H:%M") }}
+                                                {% else %}
+                                                    <span class="badge badge-secondary">None</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if tk.due_date is not none %}
+                                                    {{ tk.due_date.strftime("%a %d %b %Y %H:%M") }}
+                                                {% else %}
+                                                    <span class="badge badge-secondary">None</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if tk.dropped %}
+                                                    <span class="badge badge-warning"><i class="fas fa-times"></i> Dropped</span>
+                                                {% elif tk.complete %}
+                                                    <span class="badge badge-success"><i class="fas fa-check"></i> Complete</span>
+                                                {% elif tk.is_overdue %}
+                                                    <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Overdue</span>
+                                                {% elif tk.is_available %}
+                                                    <span class="badge badge-info"><i class="fas fa-thumbs-up"></i> Available</span>
+                                                {% else %}
+                                                    <span class="badge badge-secondary"><i class="fas fa-ban"></i> Not yet available</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endif %}
                 <div class="row vertical-top mt-2 mb-2">
                     <div class="col-12">
                         <div class="float-right">

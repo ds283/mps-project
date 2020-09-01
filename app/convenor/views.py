@@ -21,7 +21,7 @@ from flask_mail import Message
 from flask_security import roles_accepted, current_user
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, literal_column
 from sqlalchemy.orm.exc import StaleDataError
 
 import app.ajax as ajax
@@ -8107,8 +8107,30 @@ def student_tasks(type, sid):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
+    status_filter = request.args.get('status_filter')
+
+    if status_filter is None and session.get('convenor_student_tasks_status_filter'):
+        status_filter = session['convenor_student_tasks_status_filter']
+
+    if status_filter is not None and status_filter not in ['all', 'overdue', 'available', 'dropped', 'completed']:
+        status_filter = 'all'
+
+    if status_filter is not None:
+        session['convenor_student_tasks_status_filter'] = status_filter
+
+    blocking_filter = request.args.get('blocking_filter')
+
+    if blocking_filter is None and session.get('convenor_student_tasks_blocking_filter'):
+        blocking_filter = session['convenor_student_tasks_blocking_filter']
+
+    if blocking_filter is not None and blocking_filter not in ['all', 'blocking', 'not-blocking']:
+        blocking_filter = 'all'
+
+    if blocking_filter is not None:
+        session['convenor_student_tasks_blocking_filter'] = blocking_filter
+
     return render_template('convenor/tasks/student_tasks.html', type=type, obj=obj, config=config, student=student,
-                           url=url, text=text)
+                           url=url, text=text, status_filter=status_filter, blocking_filter=blocking_filter)
 
 
 @convenor.route('/student_tasks_ajax/<int:type>/<int:sid>', methods=['POST'])
@@ -8129,7 +8151,28 @@ def student_tasks_ajax(type, sid):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
+    status_filter = request.args.get('status_filter', 'all')
+    blocking_filter = request.args.get('blocking_filter', 'all')
+
     base_query = obj.tasks
+
+    if status_filter == 'overdue':
+        base_query = base_query.filter(~ConvenorStudentTask.complete,
+                                       ~ConvenorStudentTask.dropped,
+                                       literal_column("due_date < CURDATE()"))
+    elif status_filter == 'available':
+        base_query = base_query.filter(~ConvenorStudentTask.complete,
+                                       ~ConvenorStudentTask.dropped,
+                                       literal_column("defer_date <= CURDATE()"))
+    elif status_filter == 'completed':
+        base_query = base_query.filter(ConvenorStudentTask.complete)
+    elif status_filter == 'dropped':
+        base_query = base_query.filter(ConvenorStudentTask.dropped)
+
+    if blocking_filter == 'blocking':
+        base_query = base_query.filter(ConvenorStudentTask.blocking)
+    elif blocking_filter == 'not-blocking':
+        base_query = base_query.filter(~ConvenorStudentTask.blocking)
 
     # set up columns for server-side processing
     task = {'search': ConvenorStudentTask.description,
@@ -8141,10 +8184,12 @@ def student_tasks_ajax(type, sid):
     due_date = {'search': func.date_format(ConvenorStudentTask.due_date, "%a %d %b %Y %H:%M:%S"),
                 'order': ConvenorStudentTask.due_date,
                 'search_collation': 'utf8_general_ci'}
+    status = {'order': literal_column("(NOT(complete OR dropped) * (100*(due_date > CURDATE()) + 50*(defer_date > CURDATE())) + 10*complete + 1*dropped)")}
 
     columns = {'task': task,
                'defer_date': defer_date,
-               'due_date': due_date}
+               'due_date': due_date,
+               'status': status}
 
     return_url = url_for('convenor.student_tasks', type=type, sid=sid, url=url, text=text)
 

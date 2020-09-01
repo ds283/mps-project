@@ -8124,7 +8124,10 @@ def student_tasks_ajax(type, sid):
 
     # check user is convenor for this project class, or an administrator
     if not validate_is_convenor(config.project_class, message=True):
-        return jsonify({})
+        return redirect(redirect_url())
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
 
     base_query = obj.tasks
 
@@ -8143,8 +8146,10 @@ def student_tasks_ajax(type, sid):
                'defer_date': defer_date,
                'due_date': due_date}
 
+    return_url = url_for('convenor.student_tasks', type=type, sid=sid, url=url, text=text)
+
     with ServerSideHandler(request, base_query, columns) as handler:
-        return handler.build_payload(partial(ajax.convenor.student_task_data, type, sid))
+        return handler.build_payload(partial(ajax.convenor.student_task_data, type, sid, return_url))
 
 
 @convenor.route('/add_student_task/<int:type>/<int:sid>', methods=['GET', 'POST'])
@@ -8159,7 +8164,7 @@ def add_student_task(type, sid):
 
     # check user is convenor for this project class, or an administrator
     if not validate_is_convenor(config.project_class, message=True):
-        return jsonify({})
+        return redirect(redirect_url())
 
     form = AddConvenorStudentTask(request.form)
     url = request.args.get('url', None)
@@ -8207,7 +8212,7 @@ def edit_student_task(tid, type, sid):
 
     # check user is convenor for this project class, or an administrator
     if not validate_is_convenor(config.project_class, message=True):
-        return jsonify({})
+        return redirect(redirect_url())
 
     form = EditConvenorStudentTask(obj=task)
     url = request.args.get('url', None)
@@ -8237,3 +8242,68 @@ def edit_student_task(tid, type, sid):
 
     return render_template('convenor/tasks/edit_task.html', form=form, url=url,
                            type=type, obj=obj, task=task)
+
+
+@convenor.route('/delete_student_task/<int:tid>/<int:type>/<int:sid>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_student_task(tid, type, sid):
+    task: ConvenorStudentTask = ConvenorStudentTask.query.get_or_404(tid)
+
+    try:
+        obj = _get_student_task_container(type, sid)
+    except KeyError as e:
+        abort(404)
+
+    config: ProjectClassConfig = obj.config
+
+    # check user is convenor for this project class, or an administrator
+    if not validate_is_convenor(config.project_class, message=True):
+        return redirect(redirect_url())
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('convenor.student_tasks', type=type, sid=sid)
+
+    title = 'Delete student task'
+    panel_title = 'Delete task for student <i class="fas fa-user"></i> {name}'.format(name=obj.student.user.name)
+
+    action_url = url_for('convenor.do_delete_student_task', tid=tid, type=type, sid=sid, url=url)
+    message = '<p>Are you sure that you wish to delete the following task for student ' \
+              '<i class="fas fa-user"></i> {name}?</p>' \
+              '<p><strong>{desc}</strong></p>' \
+              '<p>This action cannot be undone.</p>'.format(name=obj.student.user.name, desc=task.description)
+    submit_label = 'Delete task'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@convenor.route('/do_delete_student_task/<int:tid>/<int:type>/<int:sid>')
+@roles_accepted('faculty', 'admin', 'root')
+def do_delete_student_task(tid, type, sid):
+    task: ConvenorStudentTask = ConvenorStudentTask.query.get_or_404(tid)
+
+    try:
+        obj = _get_student_task_container(type, sid)
+    except KeyError as e:
+        abort(404)
+
+    config: ProjectClassConfig = obj.config
+
+    # check user is convenor for this project class, or an administrator
+    if not validate_is_convenor(config.project_class, message=True):
+        return redirect(redirect_url())
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = redirect_url()
+
+    try:
+        obj.tasks.remove(task)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash('Could not delete student task due to a database error. Please contact a system administrator.',
+              'error')
+
+    return redirect(url)

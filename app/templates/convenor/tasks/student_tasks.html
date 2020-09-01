@@ -1,5 +1,8 @@
 {% extends "base_app.html" %}
 
+{% if url is not defined %}{% set url=none %}{% endif %}
+{% if text is not defined %}{% set text=none %}{% endif %}
+
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
@@ -20,7 +23,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/student_tasks_ajax/{{ type }}/{{ obj.id }}',
+                ajax: { url: $SCRIPT_ROOT + '/convenor/student_tasks_ajax/{{ type }}/{{ obj.id }}?url={{ url|urlencode }}&text={{ text|urlencode }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'});},

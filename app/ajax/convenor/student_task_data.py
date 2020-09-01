@@ -48,15 +48,18 @@ _menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <a class="dropdown-item" href="{{ url_for('convenor.edit_student_task', tid=tk.id, type=type, sid=sid, url=url_for('convenor.student_tasks', type=type, sid=sid)) }}">
-            <i class="fas fa-pencil-alt fa-fw"></i> Edit task...
+        <a class="dropdown-item" href="{{ url_for('convenor.edit_student_task', tid=tk.id, type=type, sid=sid, url=return_url) }}">
+            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.delete_student_task', tid=tk.id, type=type, sid=sid, url=return_url) }}">
+            <i class="fas fa-trash fa-fw"></i> Delete
         </a>
     </div>
 </div>
 """
 
 
-def student_task_data(type, sid, tasks: List[ConvenorStudentTask]):
+def student_task_data(type, sid, return_url, tasks: List[ConvenorStudentTask]):
     now = datetime.now()
 
     data = [{'task': render_template_string(_task, tk=t),
@@ -66,6 +69,7 @@ def student_task_data(type, sid, tasks: List[ConvenorStudentTask]):
                                               available=t.defer_date < now if t.defer_date is not None else True,
                                               overdue=t.due_date < now if t.due_date is not None else True,
                                               tk=t),
-             'menu': render_template_string(_menu, tk=t, type=type, sid=sid)} for t in tasks]
+             'menu': render_template_string(_menu, tk=t, type=type, sid=sid,
+                                            return_url=return_url)} for t in tasks]
 
     return data

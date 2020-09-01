@@ -151,25 +151,36 @@
                 {% if top_to_dos is defined and top_do_dos is not none and top_to_dos|length > 0 %}
                     <div class="card mt-3 mb-3">
                         {% set pl = 's' %}{% if num_to_dos == 1 %}{% set pl = '' %}{% endif %}
-                        <div class="card-header bg-warning">Upcoming tasks (<strong>{{ num_to_dos }}</strong> task{{ pl }} waiting</div>
+                        <div class="card-header bg-warning">Upcoming tasks (<strong>{{ num_to_dos }}</strong> task{{ pl }} waiting)</div>
                         <div class="card-body">
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
-                                        <th width="40%">Task</th>
-                                        <th width="20%">Defer date</th>
-                                        <th width="20%">Due date</th>
-                                        <th width="20%">Status</th>
+                                        <th width="30%">Task</th>
+                                        <th width="15%">Student</th>
+                                        <th width="17%">Defer date</th>
+                                        <th width="17%">Due date</th>
+                                        <th width="10%">Status</th>
+                                        <th width="11%"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for tk in top_to_dos %}
+                                        {% set obj = tk.parent %}
+                                        {% set tk_config = obj.config %}
+                                        {% set tk_pclass = tk_config.project_class %}
                                         <tr>
                                             <td>
                                                 {{ tk.description|truncate(40) }}
                                                 {% if tk.blocking %}
                                                     <span class="badge badge-warning"><i class="fas fa-hand-paper"></i> Blocking</span>
                                                 {% endif %}
+                                            </td>
+                                            <td>
+                                                <i class="fas fa-user"></i>
+                                                <a href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.overview', id=pclass.id), text='convenor overview') }}">
+                                                    {{ obj.student.user.name }}
+                                                </a>
                                             </td>
                                             <td>
                                                 {% if tk.defer_date is not none %}
@@ -197,6 +208,24 @@
                                                 {% else %}
                                                     <span class="badge badge-secondary"><i class="fas fa-ban"></i> Not yet available</span>
                                                 {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                                        Actions
+                                                    </button>
+                                                    <div class="dropdown-menu dropdown-menu-right">
+                                                        <a class="dropdown-item" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.overview', id=pclass.id)) }}">
+                                                            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
+                                                        </a>
+                                                        <a class="dropdown-item" href="{{ url_for('convenor.student_task_complete', tid=tk.id, action='complete') }}">
+                                                            <i class="fas fa-check fa-fw"></i> Complete
+                                                        </a>
+                                                        <a class="dropdown-item" href="{{ url_for('convenor.student_task_drop', tid=tk.id, action='drop') }}">
+                                                            <i class="fas fa-ban fa-fw"></i> Drop
+                                                        </a>
+                                                    </div>
+                                                </div>
                                             </td>
                                         </tr>
                                     {% endfor %}

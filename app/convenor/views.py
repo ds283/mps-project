@@ -8289,7 +8289,7 @@ def edit_student_task(tid):
 
 @convenor.route('/delete_student_task/<int:tid>')
 @roles_accepted('faculty', 'admin', 'root')
-def delete_student_task(tid, type, sid):
+def delete_student_task(tid):
     task = \
         db.session.query(with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
             .filter_by(id=tid).first()
@@ -8323,7 +8323,7 @@ def delete_student_task(tid, type, sid):
 
 @convenor.route('/do_delete_student_task/<int:tid>')
 @roles_accepted('faculty', 'admin', 'root')
-def do_delete_student_task(tid, type, sid):
+def do_delete_student_task(tid):
     task = \
         db.session.query(with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
             .filter_by(id=tid).first()
@@ -8351,3 +8351,75 @@ def do_delete_student_task(tid, type, sid):
               'error')
 
     return redirect(url)
+
+
+@convenor.route('/student_task_complete/<int:tid>')
+@roles_accepted('faculty', 'admin', 'root')
+def student_task_complete(tid):
+    task = \
+        db.session.query(with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
+            .filter_by(id=tid).first()
+    if task is None:
+        abort(404)
+
+    obj = task.parent
+    config: ProjectClassConfig = obj.config
+
+    # check user is convenor for this project class, or an administrator
+    if not validate_is_convenor(config.project_class, message=True):
+        return redirect(redirect_url())
+
+    action = request.args.get('action', 'complete')
+
+    if action == 'complete':
+        task.complete = True
+    elif action == 'active':
+        task.complete = False
+    else:
+        flash('Unknown action parameter "{param}" passed to student_task_complete(). Please inform an '
+              'administrator.'.format(param=action), 'error')
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash('Could not change completion status for this convenor student task due to a database error. '
+              'Please contact a system administrator.', 'error')
+
+    return redirect(redirect_url())
+
+
+@convenor.route('/student_task_drop/<int:tid>')
+@roles_accepted('faculty', 'admin', 'root')
+def student_task_drop(tid):
+    task = \
+        db.session.query(with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
+            .filter_by(id=tid).first()
+    if task is None:
+        abort(404)
+
+    obj = task.parent
+    config: ProjectClassConfig = obj.config
+
+    # check user is convenor for this project class, or an administrator
+    if not validate_is_convenor(config.project_class, message=True):
+        return redirect(redirect_url())
+
+    action = request.args.get('action', 'complete')
+
+    if action == 'drop':
+        task.dropped = True
+    elif action == 'undrop':
+        task.dropped = False
+    else:
+        flash('Unknown action parameter "{param}" passed to student_task_drop(). Please inform an '
+              'administrator.'.format(param=action), 'error')
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash('Could not change dropped status for this convenor student task due to a database error. '
+              'Please contact a system administrator.', 'error')
+
+    return redirect(redirect_url())

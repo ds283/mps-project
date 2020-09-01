@@ -51,6 +51,16 @@ _menu = \
         <a class="dropdown-item" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=return_url) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
         </a>
+        {% set complete_action='complete' if not tk.complete else 'active' %}
+        {% set complete_label='Complete' if not tk.complete else 'Not complete' %}
+        {% set drop_action='drop' if not tk.dropped else 'undrop' %}
+        {% set drop_label='Drop' if not tk.dropped else 'Restore' %}
+        <a class="dropdown-item" href="{{ url_for('convenor.student_task_complete', tid=tk.id, action=complete_action) }}">
+            <i class="fas fa-check fa-fw"></i> {{ complete_label }}
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.student_task_drop', tid=tk.id, action=drop_action) }}">
+            <i class="fas fa-ban fa-fw"></i> {{ drop_label }}
+        </a>
         <a class="dropdown-item" href="{{ url_for('convenor.delete_student_task', tid=tk.id, url=return_url) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>

@@ -62,8 +62,8 @@
 {% endblock %}
 
 {% block bodyblock %}
-    {% set num_to_dos = convenor_data['num_to_dos'] %}
-    {% set top_to_dos = convenor_data['top_to_dos'] %}
+    {% set num_to_dos = todo['num_to_dos'] %}
+    {% set top_to_dos = todo['top_to_dos'] %}
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
@@ -77,12 +77,15 @@
                         {% set validation_messages = p.validate %}
                         <div class="row vertical-top">
                             <div class="col-4">
-                                <h5>
-                                    <span class="badge badge-primary"><i class="fas fa-cubes fa-lg"></i> {{ p.display_name|safe }}</span>
+                                <div class="d-flex flex-row align-content-end mb-3">
+                                    <h5 class="mr-2 mb-0">
+                                        <span class="badge badge-primary"><i class="fas fa-cubes fa-lg"></i> {{ p.display_name|safe }}</span>
+                                    </h5>
                                     {% if validation_messages is not none and validation_messages|length > 0 %}
-                                        <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+                                        <h6 class="mr-2 mb-0 mt-1"><i class="fas fa-exclamation-triangle" style="color:red;"></i></h6>
+                                        <a href="#submitter_card_{{ loop.index }}">Validation errors....</a>
                                     {% endif %}
-                                </h5>
+                                </div>
                                 {% if p.has_presentation %}
                                     <span class="badge badge-secondary"><i class="fas fa-check"></i> Has presentation</span>
                                     {% if p.collect_presentation_feedback %}
@@ -258,7 +261,9 @@
                 {# SUBMITTING #}
                 <div class="card mt-3 mb-3 card-body bg-well">
                     {% for n in range(config.submissions) %}
-                        {{ submitter_card(config, n, today, feedback_form)  }}
+                        <a id="submitter_card_{{ loop.index }}">
+                            {{ submitter_card(config, n, today, feedback_form)  }}
+                        </a>
                     {% endfor %}
                 </div>
             {% else %}

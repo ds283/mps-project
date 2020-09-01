@@ -274,7 +274,7 @@ _menu = \
                 <i class="fas fa-history fa-fw"></i> Show history... 
             </a>
         {% endif %}
-        <a class="dropdown-item" href="{{ url_for('convenor.student_tasks', type=1, sid=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
+        <a class="dropdown-item" href="{{ url_for('convenor.student_tasks', type=2, sid=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
             <i class="fas fa-clipboard-check fa-fw"></i> Tasks...
         </a>
         {% if allow_delete %}

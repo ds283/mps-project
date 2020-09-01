@@ -22,6 +22,7 @@ from sqlalchemy.event import listens_for
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import validates
+from sqlalchemy.sql import func
 
 from .cache import cache
 from .database import db
@@ -29,7 +30,7 @@ from .shared.colours import get_text_colour
 from .shared.formatters import format_size, format_time, format_readable_time
 from .shared.sqlalchemy import get_count
 
-from collections.abc import Iterable
+from collections import Iterable
 
 # length of database string for typical fields, if used
 DEFAULT_STRING_LENGTH = 255
@@ -6478,6 +6479,9 @@ class ConvenorStudentTask(db.Model, EditingMetadataMixin):
     # unique ID for this record
     id = db.Column(db.Integer(), primary_key=True)
 
+    # polymorphic identifier
+    type = db.Column(db.Integer(), default=0, nullable=False)
+
     # task description
     description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), nullable=False)
 
@@ -6500,6 +6504,10 @@ class ConvenorStudentTask(db.Model, EditingMetadataMixin):
     due_date = db.Column(db.DateTime(), index=True)
 
 
+    __mapper_args__ = {'polymorphic_identity': 0,
+                       'polymorphic_on': 'type'}
+
+
     @property
     def is_overdue(self):
         if self.complete or self.dropped:
@@ -6515,19 +6523,51 @@ class ConvenorStudentTask(db.Model, EditingMetadataMixin):
             return False
 
         if self.defer_date is None:
-            return False
+            return True
 
         now = datetime.now()
         return self.defer_date <= now
 
 
-def ConvenorTasksMixinFactory(association_table):
+class ConvenorSelectorTask(ConvenorStudentTask):
+    __tablename__ = None
+
+    __mapper_args__ = {'polymorphic_identity': 1}
+
+
+class ConvenorSubmitterTask(ConvenorStudentTask):
+    __tablename__ = None
+
+    __mapper_args__ = {'polymorphic_identity': 2}
+
+
+
+def ConvenorTasksMixinFactory(association_table, subclass):
 
     class ConvenorTasksMixin():
 
         @declared_attr
         def tasks(cls):
-            return db.relationship('ConvenorStudentTask', secondary=association_table, lazy='dynamic')
+            return db.relationship(subclass, secondary=association_table, lazy='dynamic',
+                                   backref=db.backref('parent', uselist=False))
+
+
+        @property
+        def available_tasks(self):
+            return self.tasks.filter(~ConvenorStudentTask.complete,
+                                     ~ConvenorStudentTask.dropped,
+                                     or_(ConvenorStudentTask.defer_date == None,
+                                         and_(ConvenorStudentTask.defer_date != None,
+                                              ConvenorStudentTask.defer_date <= func.curdate())))
+
+
+        @property
+        def overdue_tasks(self):
+            return self.tasks.filter(~ConvenorStudentTask.complete,
+                                     ~ConvenorStudentTask.dropped,
+                                     or_(ConvenorStudentTask.due_date == None,
+                                         and_(ConvenorStudentTask.due_date != None,
+                                              ConvenorStudentTask.due_date < func.curdate())))
 
 
         @property
@@ -6535,10 +6575,30 @@ def ConvenorTasksMixinFactory(association_table):
             return get_count(self.tasks)
 
 
+        @property
+        def number_available_tasks(self):
+            return get_count(self.available_tasks)
+
+
+        @property
+        def number_overdue_tasks(self):
+            return get_count(self.overdue_tasks)
+
+
+        @staticmethod
+        def TaskObjectFactory(**kwargs):
+            return subclass(**kwargs)
+
+
+        @staticmethod
+        def polymorphic_identity():
+            return subclass.__mapper_args__['polymorphic_identity']
+
+
     return ConvenorTasksMixin
 
 
-class SelectingStudent(db.Model, ConvenorTasksMixinFactory(selector_tasks)):
+class SelectingStudent(db.Model, ConvenorTasksMixinFactory(selector_tasks, ConvenorSelectorTask)):
     """
     Model a student who is selecting a project in the current cycle
     """
@@ -6961,7 +7021,7 @@ def _SelectingStudent_update_handler(mapper, connection, target):
             _delete_MatchingRecord_cache(record.id, record.matching_id)
 
 
-class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(submitter_tasks)):
+class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(submitter_tasks, ConvenorSubmitterTask)):
     """
     Model a student who is submitting work for evaluation in the current cycle
     """

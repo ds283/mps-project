@@ -47,7 +47,7 @@
 
 {% block form_content %}
     {% if task is defined %}
-        <form action="{{ url_for('convenor.edit_student_task', tid=task.id, type=type, sid=obj.id, url=url) }}" method="POST" name="edit_form">
+        <form action="{{ url_for('convenor.edit_student_task', tid=task.id, url=url) }}" method="POST" name="edit_form">
     {% else %}
         <form action="{{ url_for('convenor.add_student_task', type=type, sid=obj.id, url=url) }}" method="POST" name="edit_form">
     {% endif %}

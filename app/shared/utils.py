@@ -13,13 +13,15 @@ from flask import redirect, url_for, flash, current_app, request
 from flask_security import current_user
 
 from sqlalchemy import and_, or_
+from sqlalchemy.sql import func
 from sqlalchemy.event import listens_for
+from sqlalchemy.orm import with_polymorphic
 
 from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, FilterRecord, StudentData, \
     MatchingAttempt, ProjectDescription, WorkflowMixin, DegreeProgramme, DegreeType, ConvenorStudentTask, \
-    selector_tasks, submitter_tasks
+    selector_tasks, submitter_tasks, ConvenorSelectorTask, ConvenorSubmitterTask
 from ..models import project_assessors
 from ..cache import cache
 
@@ -543,6 +545,16 @@ def get_convenor_dashboard_data(pclass, config):
     sub_count = get_count(config.submitting_students.filter_by(retired=False))
     live_count = get_count(config.live_projects)
 
+
+    return {'faculty': fac_count,
+            'total_faculty': fac_total,
+            'live_projects': live_count,
+            'attached_projects': proj_count,
+            'selectors': sel_count,
+            'submitters': sub_count}
+
+
+def get_convenor_todo_data(config):
     # EXTRACT TO-DO TASKS
 
     # TODO: this is not very efficient; might need to consider a different database
@@ -558,38 +570,30 @@ def get_convenor_dashboard_data(pclass, config):
         .filter(~SubmittingStudent.retired,
                 SubmittingStudent.config_id == config.id).subquery()
 
-    sel_tks = db.session.query(selector_tasks.c.tasks_id) \
+    sel_tks = db.session.query(selector_tasks.c.tasks_id.label('tasks_id')) \
         .join(selectors, selectors.c.id == selector_tasks.c.selector_id) \
-        .filter(selectors.c.id != None).subquery()
+        .filter(selectors.c.id != None)
 
-    sub_tks = db.session.query(submitter_tasks.c.tasks_id) \
+    sub_tks = db.session.query(submitter_tasks.c.tasks_id.label('tasks_id')) \
         .join(submitters, submitters.c.id == submitter_tasks.c.submitter_id) \
-        .filter(submitters.c.id != None).subquery()
+        .filter(submitters.c.id != None)
 
-    sel_to_do = db.session.query(ConvenorStudentTask) \
-        .join(sel_tks, ConvenorStudentTask.id == sel_tks.c.tasks_id) \
-        .filter(~ConvenorStudentTask.complete, ~ConvenorStudentTask.dropped) \
-        .order_by(ConvenorStudentTask.due_date)
+    task_ids = sel_tks.union(sub_tks).subquery()
 
-    sub_to_do = db.session.query(ConvenorStudentTask) \
-        .join(sub_tks, ConvenorStudentTask.id == sub_tks.c.tasks_id) \
-        .filter(~ConvenorStudentTask.complete, ~ConvenorStudentTask.dropped) \
-        .order_by(ConvenorStudentTask.due_date)
+    convenor_task = with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])
+    tks = db.session.query(convenor_task) \
+        .join(task_ids, convenor_task.id == task_ids.c.tasks_id) \
+        .filter(~convenor_task.complete, ~convenor_task.dropped,
+                or_(convenor_task.defer_date == None,
+                    and_(convenor_task.defer_date != None,
+                         convenor_task.defer_date <= func.curdate()))) \
+        .order_by(convenor_task.due_date)
 
-    tks = sel_to_do.union(sub_to_do).order_by(ConvenorStudentTask.due_date)
     tks_count = get_count(tks)
-
     top_tks = tks.limit(10).all()
 
-    return {'faculty': fac_count,
-            'total_faculty': fac_total,
-            'live_projects': live_count,
-            'attached_projects': proj_count,
-            'selectors': sel_count,
-            'submitters': sub_count,
-            'num_to_dos': tks_count,
+    return {'num_to_dos': tks_count,
             'top_to_dos': top_tks}
-
 
 @cache.memoize()
 def _compute_group_capacity_data(pclass_id, group_id):

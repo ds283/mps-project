@@ -48,10 +48,10 @@ _menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-right">
-        <a class="dropdown-item" href="{{ url_for('convenor.edit_student_task', tid=tk.id, type=type, sid=sid, url=return_url) }}">
+        <a class="dropdown-item" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=return_url) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
         </a>
-        <a class="dropdown-item" href="{{ url_for('convenor.delete_student_task', tid=tk.id, type=type, sid=sid, url=return_url) }}">
+        <a class="dropdown-item" href="{{ url_for('convenor.delete_student_task', tid=tk.id, url=return_url) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
     </div>

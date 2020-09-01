@@ -23,6 +23,7 @@ from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.sql import func, literal_column
 from sqlalchemy.orm.exc import StaleDataError
+from sqlalchemy.orm import with_polymorphic
 
 import app.ajax as ajax
 from . import convenor
@@ -41,14 +42,14 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Role, \
-    Bookmark, ConvenorStudentTask
+    Bookmark, ConvenorStudentTask, ConvenorSelectorTask, ConvenorSubmitterTask
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
-    build_enroll_submitter_candidates, build_submitters_data, get_count, redirect_url
+    build_enroll_submitter_candidates, build_submitters_data, get_count, redirect_url, get_convenor_todo_data
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
 from ..student.actions import store_selection
@@ -57,8 +58,8 @@ from ..tools import ServerSideHandler
 from ..uploads import submitted_files
 
 
-STUDENT_TASKS_SELECTOR = 0
-STUDENT_TASKS_SUBMITTER = 1
+STUDENT_TASKS_SELECTOR = SelectingStudent.polymorphic_identity()
+STUDENT_TASKS_SUBMITTER = SubmittingStudent.polymorphic_identity()
 
 
 _marker_menu = \
@@ -321,12 +322,14 @@ def overview(id):
         feedback_form.max_attachment.data = 2
 
     data = get_convenor_dashboard_data(pclass, config)
+    todo = get_convenor_todo_data(config)
     capacity_data = get_capacity_data(pclass)
 
     return render_template('convenor/dashboard/overview.html', pane='overview',
                            golive_form=golive_form, change_form=change_form, issue_form=issue_form,
                            feedback_form=feedback_form, pclass=pclass, config=config, current_year=current_year,
-                           convenor_data=data, capacity_data=capacity_data, today=date.today())
+                           convenor_data=data, capacity_data=capacity_data, today=date.today(),
+                           todo=todo)
 
 
 @convenor.route('/attached/<int:id>')
@@ -8086,7 +8089,7 @@ def _get_student_task_container(type, sid):
         obj: SubmittingStudent = db.session.query(SubmittingStudent).filter_by(id=sid).first()
         return obj
 
-    return KeyError
+    raise KeyError
 
 
 @convenor.route('/student_tasks/<int:type>/<int:sid>')
@@ -8154,20 +8157,16 @@ def student_tasks_ajax(type, sid):
     status_filter = request.args.get('status_filter', 'all')
     blocking_filter = request.args.get('blocking_filter', 'all')
 
-    base_query = obj.tasks
-
     if status_filter == 'overdue':
-        base_query = base_query.filter(~ConvenorStudentTask.complete,
-                                       ~ConvenorStudentTask.dropped,
-                                       literal_column("due_date < CURDATE()"))
+        base_query = obj.overdue_tasks
     elif status_filter == 'available':
-        base_query = base_query.filter(~ConvenorStudentTask.complete,
-                                       ~ConvenorStudentTask.dropped,
-                                       literal_column("defer_date <= CURDATE()"))
+        base_query = obj.available_tasks
     elif status_filter == 'completed':
-        base_query = base_query.filter(ConvenorStudentTask.complete)
+        base_query = obj.tasks.filter(ConvenorStudentTask.complete)
     elif status_filter == 'dropped':
-        base_query = base_query.filter(ConvenorStudentTask.dropped)
+        base_query = obj.tasks.filter(ConvenorStudentTask.dropped)
+    else:
+        base_query = obj.tasks
 
     if blocking_filter == 'blocking':
         base_query = base_query.filter(ConvenorStudentTask.blocking)
@@ -8217,20 +8216,20 @@ def add_student_task(type, sid):
         url = url_for('convenor.student_tasks', type=type, sid=sid)
 
     if form.validate_on_submit():
-        task = ConvenorStudentTask(description=form.description.data,
-                                   notes=form.notes.data,
-                                   blocking=form.blocking.data,
-                                   complete=form.complete.data,
-                                   dropped=form.dropped.data,
-                                   defer_date=form.defer_date.data,
-                                   due_date=form.due_date.data,
-                                   creator_id=current_user.id,
-                                   creation_timestamp=datetime.now(),
-                                   )
+        task = obj.TaskObjectFactory(description=form.description.data,
+                                     notes=form.notes.data,
+                                     blocking=form.blocking.data,
+                                     complete=form.complete.data,
+                                     dropped=form.dropped.data,
+                                     defer_date=form.defer_date.data,
+                                     due_date=form.due_date.data,
+                                     creator_id=current_user.id,
+                                     creation_timestamp=datetime.now())
 
         try:
             obj.tasks.append(task)
             db.session.commit()
+
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -8243,16 +8242,16 @@ def add_student_task(type, sid):
                            type=type, obj=obj)
 
 
-@convenor.route('/edit_student_task/<int:tid>/<int:type>/<int:sid>', methods=['GET', 'POST'])
+@convenor.route('/edit_student_task/<int:tid>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def edit_student_task(tid, type, sid):
-    task: ConvenorStudentTask = ConvenorStudentTask.query.get_or_404(tid)
-
-    try:
-        obj = _get_student_task_container(type, sid)
-    except KeyError as e:
+def edit_student_task(tid):
+    task = \
+        db.session.query(with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
+            .filter_by(id=tid).first()
+    if task is None:
         abort(404)
 
+    obj = task.parent
     config: ProjectClassConfig = obj.config
 
     # check user is convenor for this project class, or an administrator
@@ -8262,7 +8261,7 @@ def edit_student_task(tid, type, sid):
     form = EditConvenorStudentTask(obj=task)
     url = request.args.get('url', None)
     if url is None:
-        url = url_for('convenor.student_tasks', type=type, sid=sid)
+        url = url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id)
 
     if form.validate_on_submit():
         task.description = form.description.data
@@ -8285,20 +8284,19 @@ def edit_student_task(tid, type, sid):
 
         return redirect(url)
 
-    return render_template('convenor/tasks/edit_task.html', form=form, url=url,
-                           type=type, obj=obj, task=task)
+    return render_template('convenor/tasks/edit_task.html', form=form, url=url, obj=obj, task=task)
 
 
-@convenor.route('/delete_student_task/<int:tid>/<int:type>/<int:sid>')
+@convenor.route('/delete_student_task/<int:tid>')
 @roles_accepted('faculty', 'admin', 'root')
 def delete_student_task(tid, type, sid):
-    task: ConvenorStudentTask = ConvenorStudentTask.query.get_or_404(tid)
-
-    try:
-        obj = _get_student_task_container(type, sid)
-    except KeyError as e:
+    task = \
+        db.session.query(with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
+            .filter_by(id=tid).first()
+    if task is None:
         abort(404)
 
+    obj = task.parent
     config: ProjectClassConfig = obj.config
 
     # check user is convenor for this project class, or an administrator
@@ -8307,12 +8305,12 @@ def delete_student_task(tid, type, sid):
 
     url = request.args.get('url', None)
     if url is None:
-        url = url_for('convenor.student_tasks', type=type, sid=sid)
+        url = url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id)
 
     title = 'Delete student task'
     panel_title = 'Delete task for student <i class="fas fa-user"></i> {name}'.format(name=obj.student.user.name)
 
-    action_url = url_for('convenor.do_delete_student_task', tid=tid, type=type, sid=sid, url=url)
+    action_url = url_for('convenor.do_delete_student_task', tid=tid, url=url)
     message = '<p>Are you sure that you wish to delete the following task for student ' \
               '<i class="fas fa-user"></i> {name}?</p>' \
               '<p><strong>{desc}</strong></p>' \
@@ -8323,16 +8321,16 @@ def delete_student_task(tid, type, sid):
                            message=message, submit_label=submit_label)
 
 
-@convenor.route('/do_delete_student_task/<int:tid>/<int:type>/<int:sid>')
+@convenor.route('/do_delete_student_task/<int:tid>')
 @roles_accepted('faculty', 'admin', 'root')
 def do_delete_student_task(tid, type, sid):
-    task: ConvenorStudentTask = ConvenorStudentTask.query.get_or_404(tid)
-
-    try:
-        obj = _get_student_task_container(type, sid)
-    except KeyError as e:
+    task = \
+        db.session.query(with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
+            .filter_by(id=tid).first()
+    if task is None:
         abort(404)
 
+    obj = task.parent
     config: ProjectClassConfig = obj.config
 
     # check user is convenor for this project class, or an administrator
@@ -8345,6 +8343,7 @@ def do_delete_student_task(tid, type, sid):
 
     try:
         obj.tasks.remove(task)
+        db.session.delete(task)
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()

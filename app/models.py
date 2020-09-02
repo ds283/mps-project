@@ -3661,6 +3661,13 @@ class ProjectClassConfig(db.Model):
     # 'periods' member constructed by backreference from SubmissionPeriodRecord below
 
 
+    # STUDENTS
+
+    # 'selectors' member constructed by backreference from SelectingStudent
+
+    # 'submitters' member constructed by backreference from SubmittingStudent
+
+
     # MATCHING
 
     # override participation in automatic matching, just for this instance
@@ -4022,6 +4029,16 @@ class ProjectClassConfig(db.Model):
     @property
     def email_text_final_match_preamble(self):
         return self.project_class.email_text_final_match_preamble
+
+
+    @property
+    def has_blocking_tasks(self):
+        return get_count(self.selectors.tasks.any(~ConvenorStudentTask.complete,
+                                                  ~ConvenorStudentTask.dropped,
+                                                  ConvenorStudentTask.blocking)) > 0 \
+               or get_count(self.submitters.tasks.any(~ConvenorStudentTask.complete,
+                                                      ~ConvenorStudentTask.dropped,
+                                                      ConvenorStudentTask.blocking)) > 0
 
 
     @property

@@ -277,13 +277,6 @@ _menu = \
         <a class="dropdown-item" href="{{ url_for('convenor.student_tasks', type=2, sid=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
             <i class="fas fa-clipboard-check fa-fw"></i> Tasks...
         </a>
-        {% if allow_delete %}
-            <a class="dropdown-item" href="{{ url_for('convenor.delete_submitter', sid=sub.id) }}">
-                <i class="fas fa-trash fa-fw"></i> Delete
-            </a>
-        {% else %}
-            <a class="dropdown-item disabled"><i class="fas fa-trash fa-fw"></i> Delete is disabled</a>
-        {% endif %}
         
         {% if sub.published and pclass.publish %}
             <a class="dropdown-item" href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">
@@ -299,6 +292,13 @@ _menu = \
                     <i class="fas fa-eye-slash fa-fw"></i> Cannot publish
                 </a>
             {% endif %}
+        {% endif %}
+        {% if allow_delete %}
+            <a class="dropdown-item" href="{{ url_for('convenor.delete_submitter', sid=sub.id) }}">
+                <i class="fas fa-trash fa-fw"></i> Delete
+            </a>
+        {% else %}
+            <a class="dropdown-item disabled"><i class="fas fa-trash fa-fw"></i> Delete is disabled</a>
         {% endif %}
 
         {% set recs = sub.ordered_assignments.all() %}

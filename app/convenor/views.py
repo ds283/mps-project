@@ -3779,16 +3779,21 @@ def confirm_go_live(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        redirect(url_for('convenor.overview', id=config.pclass_id))
+        return redirect(url_for('convenor.overview', id=config.pclass_id))
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        redirect(url_for('convenor.overview', id=config.pclass_id))
+        return redirect(url_for('convenor.overview', id=config.pclass_id))
 
     if config.live:
         flash('A request to Go Live was ignored, because project "{name}" is already '
               'live.'.format(name=config.project_class.name), 'error')
-        redirect(url_for('convenor.overview', id=config.pclass_id))
+        return redirect(url_for('convenor.overview', id=config.pclass_id))
+
+    if config.has_blocking_tasks:
+        flash('{name} cannot yet Go Live because it has one or more blocking tasks for '
+              'the convenor'.format(name=config.name), 'error')
+        return redirect(url_for('convenor.overview', id=config.pclass_id))
 
     close = bool(int(request.args.get('close', 0)))
     deadline = request.args.get('deadline', None)
@@ -3843,7 +3848,12 @@ def perform_go_live(id):
     if config.live:
         flash('A request to Go Live was ignored, because project "{name}" is already '
               'live.'.format(name=config.project_class.name), 'error')
-        return request.referrer
+        return redirect(redirect_url())
+
+    if config.has_blocking_tasks:
+        flash('{name} cannot yet Go Live because it has one or more blocking tasks for '
+              'the convenor'.format(name=config.name), 'error')
+        return redirect(redirect_url())
 
     close = bool(int(request.args.get('close', 0)))
     deadline = request.args.get('deadline', None)
@@ -4556,6 +4566,19 @@ def confirm_rollover(id, markers):
     use_markers = bool(markers)
 
     year = get_current_year()
+    if config.year == year:
+        flash('This project is not yet ready to rollover', 'info')
+        return redirect(redirect_url())
+
+    if not config.project_class.active:
+        flash('{name} is not an active project class, and therefore cannot be rolled over'.format(name=config.name),
+              'error')
+        return redirect(redirect_url())
+
+    if config.has_blocking_tasks:
+        flash('{name} cannot yet be rolled over because it has one or more blocking tasks for '
+              'the convenor'.format(name=config.name), 'error')
+        return redirect(redirect_url())
 
     title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.name, yeara=year, yearb=year + 1)
     action_url = url_for('convenor.rollover', id=id, url=request.referrer, markers=int(use_markers))
@@ -4594,6 +4617,11 @@ def rollover(id, markers):
 
     if not config.project_class.active:
         flash('{name} is not an active project class'.format(name=config.name), 'error')
+        return redirect(url) if url is not None else home_dashboard()
+
+    if config.has_blocking_tasks:
+        flash('{name} cannot yet be rolled over because it has one or more blocking tasks for '
+              'the convenor'.format(name=config.name), 'error')
         return redirect(url) if url is not None else home_dashboard()
 
     # build task chains

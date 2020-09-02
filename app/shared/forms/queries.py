@@ -384,3 +384,10 @@ def GetAccommodatableMatchings():
     return db.session.query(MatchingAttempt).filter(MatchingAttempt.year == year,
                                                     or_(MatchingAttempt.selected == True,
                                                         MatchingAttempt.published == True))
+
+def GetSubmissionRecords(config: ProjectClassConfig):
+    return config.ordered_periods
+
+
+def BuildSubmissionRecordLabel(period: SubmissionPeriodRecord):
+    return period.display_name

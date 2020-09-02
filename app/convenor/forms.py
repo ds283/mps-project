@@ -14,10 +14,11 @@ from wtforms import SubmitField, DateField, IntegerField, StringField, BooleanFi
 from wtforms.validators import InputRequired, Optional, Email, Length
 from wtforms_alchemy import QuerySelectField
 
-from ..models import DEFAULT_STRING_LENGTH
+from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
     GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses, GetAccommodatableMatchings
-from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodCommonMixin
+from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodCommonMixin, \
+    PeriodSelectorMixinFactory
 
 from functools import partial
 
@@ -186,9 +187,10 @@ class EditProjectConfigForm(Form, SaveChangesMixin):
                                      validators=[Optional()])
 
 
-def AssignMarkerFormFactory(live_project, pclass_id, uses_marker):
+def AssignMarkerFormFactory(live_project: LiveProject, uses_marker: bool,
+                            config: ProjectClassConfig, is_admin: bool):
 
-    class AssignMarkerForm(Form):
+    class AssignMarkerForm(Form, PeriodSelectorMixinFactory(config, is_admin)):
 
         if uses_marker:
             # 2nd marker

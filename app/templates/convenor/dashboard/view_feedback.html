@@ -1,5 +1,7 @@
 {% extends "base_app.html" %}
 
+{% from "macros.html" import on_click_selector_field %}
+
 {% block scripts %}
     {{ super() }}
     <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/latest.js?config=TeX-MML-AM_CHTML' async></script>
@@ -26,6 +28,14 @@
                         <i class="fas fa-backward"></i> Return to {{ text }}
                     </a>
                 </div>
+            {% endif %}
+
+            {% if form.selector is defined %}
+                <form action="{{ url_for('convenor.view_feedback', sub_id=submitter.id, url=url, text=text) }}" method="POST" name="selector_form">
+                    {{ form.hidden_tag() }}
+                    <span class="form-text"><strong>Select submission period to review</strong></span>
+                    {{ on_click_selector_field(form.selector) }}
+                </form>
             {% endif %}
 
             {% if record.period.collect_project_feedback %}

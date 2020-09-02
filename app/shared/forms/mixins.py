@@ -8,14 +8,17 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+
+from functools import partial
+
 from wtforms import SubmitField, StringField, SelectField, BooleanField, IntegerField, TextAreaField
 from wtforms.validators import InputRequired, Optional, Length
 from wtforms_alchemy import QuerySelectField
 
-from ...models import theme_choices, academic_titles, email_freq_choices, DEFAULT_STRING_LENGTH
+from ...models import theme_choices, academic_titles, email_freq_choices, DEFAULT_STRING_LENGTH, ProjectClassConfig
 from .wtf_validators import valid_username, unique_or_original_username, NotOptionalIf
 
-from .queries import GetActiveAssetLicenses
+from .queries import GetActiveAssetLicenses, GetSubmissionRecords, BuildSubmissionRecordLabel
 
 
 class SaveChangesMixin():
@@ -149,3 +152,15 @@ class SubmissionPeriodCommonMixin():
     collect_presentation_feedback = BooleanField('Collect presentation feedback online')
 
     collect_project_feedback = BooleanField('Collect project feedback online')
+
+
+def PeriodSelectorMixinFactory(config: ProjectClassConfig, is_admin: bool):
+
+    class PeriodSelectorMixin():
+
+        # only include selector if user has admin privileges
+        if is_admin:
+            selector = QuerySelectField('Select submission period', query_factory=partial(GetSubmissionRecords, config),
+                                        get_label=BuildSubmissionRecordLabel)
+
+    return PeriodSelectorMixin

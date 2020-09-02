@@ -13,6 +13,7 @@ from datetime import date, datetime, timedelta
 from os import path
 from time import time
 from uuid import uuid4
+from typing import List
 
 from celery import schedules
 from flask import flash, current_app
@@ -7094,8 +7095,9 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(submitter_tasks, Con
         else:
             raise TypeError('Expected period to be a SubmissionPeriodRecord or an integer')
 
-        records = self.records.join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
-            .filter(SubmissionPeriodRecord.submission_period == period_number).all()
+        records: List[SubmissionRecord] = \
+            self.records.join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
+                .filter(SubmissionPeriodRecord.submission_period == period_number).all()
 
         if len(records) == 0:
             return None

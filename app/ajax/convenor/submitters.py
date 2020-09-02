@@ -258,7 +258,8 @@ _presentations = \
 
 _menu = \
 """
-{% set pclass = sub.config.project_class %}
+{% set config = sub.config %}
+{% set pclass = config.project_class %}
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
@@ -292,49 +293,29 @@ _menu = \
                     <i class="fas fa-eye-slash fa-fw"></i> Cannot publish
                 </a>
             {% endif %}
-        {% endif %}
+        {% endif %}        
+        <div role="separator" class="dropdown-divider"></div>
+
+        {% set disabled = not pclass.publish %}
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('documents.submitter_documents', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+            <i class="fas fa-file fa-fw"></i> Manage documents...
+        </a>
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.view_feedback', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+            <i class="fas fa-comments fa-fw"></i> View feedback...
+        </a>
+        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.manual_assign', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+            <i class="fas fa-wrench fa-fw"></i> Manual assignment...
+        </a>
+
+        <div role="separator" class="dropdown-divider"></div>
+
         {% if allow_delete %}
             <a class="dropdown-item" href="{{ url_for('convenor.delete_submitter', sid=sub.id) }}">
                 <i class="fas fa-trash fa-fw"></i> Delete
             </a>
         {% else %}
-            <a class="dropdown-item disabled"><i class="fas fa-trash fa-fw"></i> Delete is disabled</a>
+            <a class="dropdown-item disabled"><i class="fas fa-trash fa-fw"></i> Delete disabled</a>
         {% endif %}
-
-        {% set recs = sub.ordered_assignments.all() %}
-        
-        <div role="separator" class="dropdown-divider"></div>
-        <div class="dropdown-header">Manage documents</div>
-        {% for r in recs %}
-            {% set disabled = not pclass.publish %}
-            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('documents.submitter_documents', sid=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                <i class="fas fa-file fa-fw"></i> Period #{{ r.submission_period }}
-            </a>
-        {% else %}
-            <a class="dropdown-item disabled">No periods</a>
-        {% endfor %}
-        
-        <div role="separator" class="dropdown-divider"></div>
-        <div class="dropdown-header">View feedback</div>
-        {% for r in recs %}
-            {% set disabled = not pclass.publish %}
-            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                <i class="fas fa-comments fa-fw"></i> Period #{{ r.submission_period }}
-            </a>
-        {% else %}
-            <a class="dropdown-item disabled">No periods</a>
-        {% endfor %}
-
-        <div role="separator" class="dropdown-divider"></div>
-        <div class="dropdown-header">Manual reassignment</div>
-        {% for r in recs %}
-            {% set disabled = r.period.is_fsedback_open %}
-            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                <i class="fas fa-wrench fa-fw"></i> Period #{{ r.submission_period }}
-            </a>
-        {% else %}
-            <a class="dropdown-item disabled">No periods</a>
-        {% endfor %}
     </div>
 </div>
 """

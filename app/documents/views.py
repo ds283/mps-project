@@ -19,11 +19,12 @@ from sqlalchemy import or_
 
 from . import documents
 from .forms import UploadReportForm, UploadSubmitterAttachmentForm, EditReportForm, EditSubmitterAttachmentForm
+from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from .utils import is_editable, is_deletable, is_listable, is_uploadable
 
 from ..database import db
 from ..models import SubmissionRecord, SubmittedAsset, SubmissionAttachment, Role, SubmissionPeriodRecord, \
-    ProjectClassConfig, ProjectClass, PeriodAttachment, User, AssetLicense
+    ProjectClassConfig, ProjectClass, PeriodAttachment, User, AssetLicense, SubmittingStudent
 
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.validators import validate_is_convenor
@@ -38,27 +39,67 @@ ATTACHMENT_TYPE_SUBMISSION = 1
 ATTACHMENT_TYPE_REPORT = 2
 
 
-@documents.route('/submitter_documents/<int:sid>')
+@documents.route('/submitter_documents', methods=['GET', 'POST'])
 @login_required
-def submitter_documents(sid):
-    # sid is a SubmissionRecord id
-    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+def submitter_documents():
+    sub_id = request.args.get('sub_id', None)
+    sid = request.args.get('sid', None)
 
-    period: SubmissionPeriodRecord = record.period
-    config: ProjectClassConfig = period.config
-    pclass: ProjectClass = config.project_class
+    # reject request if neither sub_id nor sid is specified
+    if sub_id is None and sid is None:
+        abort(404)
+
+    submitter: SubmittingStudent = SubmittingStudent.query.get_or_404(sub_id) if sub_id is not None else None
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid) if sid is not None else None
+
+    if submitter is not None:
+        config: ProjectClassConfig = submitter.config
+    else:
+        config: ProjectClassConfig = record.period.config
+
+    # construct selector form
+    is_admin = validate_is_convenor(config.project_class, message=False)
+    SelectSubmissionRecordForm = SelectSubmissionRecordFormFactory(config, is_admin)
+    form: SelectSubmissionRecordForm = SelectSubmissionRecordForm(request.form)
+
+    # if submitter and record are both specified, check that SubmissionRecord belongs to it.
+    # otherwise, we select the SubmissionRecord corresponding to the current period
+    if submitter is not None:
+        if record is not None:
+            if record.owner.id != submitter.id:
+                flash('Cannot display submitter documents for this combination of student and submission record, '
+                      'because the specified submission record does not belong to the student', 'info')
+                return redirect(redirect_url())
+
+        else:
+            if hasattr(form, 'selector') and form.selector.data is not None:
+                record: SubmissionRecord = submitter.get_assignment(period=form.selector.data)
+            else:
+                record: SubmissionRecord = submitter.get_assignment()
+
+    else:
+        # submitter was not specified, so SubmissionRecord must have been.
+        # we extract the SubmittingStudent from the record
+        assert record is not None
+        submitter = record.owner
 
     # determine if the currently-logged-in user has permissions to view the documents associated with this
     # submission record
     if not is_listable(record, message=True):
         return redirect(redirect_url())
 
+    # ensure form selector reflects the record that is actually being displayed
+    period: SubmissionPeriodRecord = record.period
+    if hasattr(form, 'selector'):
+        form.selector.data = period
+
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
-    return render_template('documents/submitter_manager.html', record=record, period=period, url=url, text=text,
+    return render_template('documents/submitter_manager.html', submitter=submitter,
+                           record=record, period=period, url=url, text=text, form=form,
                            is_editable=partial(is_editable, record, period=period, config=config, message=False),
-                           deletable=is_deletable(record, period, config, message=False),
+                           deletable=is_deletable(record, period=period, config=config, message=False),
                            report_uploadable=is_uploadable(record, message=False, allow_student=False,
                                                            allow_faculty=False),
                            attachment_uploadable=is_uploadable(record, message=False, allow_student=True,

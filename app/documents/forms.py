@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+
 from flask_security.forms import Form
 from wtforms import SubmitField, StringField
 from wtforms.validators import InputRequired

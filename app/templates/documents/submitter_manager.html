@@ -1,6 +1,6 @@
 {% extends "base_app.html" %}
 
-{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import on_click_selector_field %}
 
 {% block title %}
     Manage documents for {{ record.student_identifier }}
@@ -119,6 +119,14 @@
                 <i class="fas fa-backward"></i> Return to {{ text }}
             </a>
         </div>
+    {% endif %}
+
+    {% if form.selector is defined %}
+        <form action="{{ url_for('documents.submitter_documents', sub_id=submitter.id, url=url, text=text) }}" method="POST" name="selector_form">
+            {{ form.hidden_tag() }}
+            <span class="form-text"><strong>Select submission period to review</strong></span>
+            {{ on_click_selector_field(form.selector) }}
+        </form>
     {% endif %}
 
     <div class="card mt-3 mb-3">

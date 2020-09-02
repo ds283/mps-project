@@ -43,6 +43,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Role, \
     Bookmark, ConvenorStudentTask, ConvenorSelectorTask, ConvenorSubmitterTask
+from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
@@ -6614,18 +6615,58 @@ def do_remove_markers(configid):
     return redirect(url)
 
 
-@convenor.route('/view_feedback/<int:id>')
+@convenor.route('/view_feedback/', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def view_feedback(id):
-    # id is a SubmissionRecord
-    rec = SubmissionRecord.query.get_or_404(id)
+def view_feedback():
+    sub_id = request.args.get('sub_id', None)
+    sid = request.args.get('id', None)
+
+    # reject request if neither sub_id nor sid is specified
+    if sub_id is None and sid is None:
+        abort(404)
+
+    submitter: SubmittingStudent = SubmittingStudent.query.get_or_404(sub_id) if sub_id is not None else None
+    rec: SubmissionRecord = SubmissionRecord.query.get_or_404(sid) if sid is not None else None
+
+    if submitter is not None:
+        config: ProjectClassConfig = submitter.config
+    else:
+        config: ProjectClassConfig = rec.period.config
+
+    # construct selector form
+    is_admin = validate_is_convenor(config.project_class, message=False)
+    SelectSubmissionRecordForm = SelectSubmissionRecordFormFactory(config, is_admin)
+    form: SelectSubmissionRecordForm = SelectSubmissionRecordForm(request.form)
+
+    # if submitter and record are both specified, check that SubmissionRecord belongs to it.
+    # otherwise, we select the SubmissionRecord corresponding to the current period
+    if submitter is not None:
+        if rec is not None:
+            if rec.owner.id != submitter.id:
+                flash('Cannot display submitter documents for this combination of student and submission record, '
+                      'because the specified submission record does not belong to the student', 'info')
+                return redirect(redirect_url())
+
+        else:
+            if hasattr(form, 'selector') and form.selector.data is not None:
+                rec: SubmissionRecord = submitter.get_assignment(period=form.selector.data)
+            else:
+                rec: SubmissionRecord = submitter.get_assignment()
+
+    else:
+        # submitter was not specified, so SubmissionRecord must have been.
+        # we extract the SubmittingStudent from the record
+        assert rec is not None
+        submitter = rec.owner
 
     # reject if logged-in user is not a convenor for the project class associated with this submission record
-    if not validate_is_convenor(rec.owner.config.project_class):
+    pclass = config.project_class
+
+    if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
     # reject if project class not published
-    if not validate_project_class(rec.owner.config.project_class):
+    if not validate_project_class(pclass):
         return redirect(redirect_url())
 
     text = request.args.get('text', None)
@@ -6633,7 +6674,13 @@ def view_feedback(id):
     if url is None:
         url = redirect_url()
 
-    return render_template('convenor/dashboard/view_feedback.html', record=rec, text=text, url=url)
+    # ensure form selector reflects the record that is actually being displayed
+    if hasattr(form, 'selector'):
+        period: SubmissionPeriodRecord = rec.period
+        form.selector.data = period
+
+    return render_template('convenor/dashboard/view_feedback.html', submitter=submitter, record=rec, form=form,
+                           text=text, url=url)
 
 
 @convenor.route('/faculty_workload/<int:id>')
@@ -6900,23 +6947,67 @@ def teaching_groups_ajax(id):
     return ajax.convenor.teaching_group_by_student(config.submitting_students, config, show_period)
 
 
-@convenor.route('/manual_assign/<int:id>', methods=['GET', 'POST'])
+@convenor.route('/manual_assign/', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def manual_assign(id):
-    # id is a SubmissionRecord
-    rec = SubmissionRecord.query.get_or_404(id)
+def manual_assign():
+    sub_id = request.args.get('sub_id', None)
+    sid = request.args.get('id', None)
+
+    # reject request if neither sub_id nor sid is specified
+    if sub_id is None and sid is None:
+        abort(404)
+
+    submitter: SubmittingStudent = SubmittingStudent.query.get_or_404(sub_id) if sub_id is not None else None
+    rec: SubmissionRecord = SubmissionRecord.query.get_or_404(sid) if sid is not None else None
+
+    if submitter is not None:
+        new_config: ProjectClassConfig = submitter.config
+    else:
+        new_config: ProjectClassConfig = rec.period.config
+
+    # construct selector form, except that at this stage we might not know what the intended
+    # submission record is -- we'll ahave to reconstruct later to be sure we get it right
+    is_admin = validate_is_convenor(new_config.project_class, message=False)
+    AssignMarkerForm = AssignMarkerFormFactory(rec.project if rec is not None else None, new_config.uses_marker,
+                                               new_config, is_admin)
+    form = AssignMarkerForm(request.form)
+
+    # if submitter and record are both specified, check that SubmissionRecord belongs to it.
+    # otherwise, we select the SubmissionRecord corresponding to the current period
+    if submitter is not None:
+        if rec is not None:
+            if rec.owner.id != submitter.id:
+                flash('Cannot display submitter documents for this combination of student and submission record, '
+                      'because the specified submission record does not belong to the student', 'info')
+                return redirect(redirect_url())
+
+        else:
+            if hasattr(form, 'selector') and form.selector.data is not None:
+                rec: SubmissionRecord = submitter.get_assignment(period=form.selector.data)
+            else:
+                rec: SubmissionRecord = submitter.get_assignment()
+
+    else:
+        # submitter was not specified, so SubmissionRecord must have been.
+        # we extract the SubmittingStudent from the record
+        assert rec is not None
+        submitter = rec.owner
+
+    # reconstruct form now we are guaranteed to have the SubmissionRecord available
+    AssignMarkerForm = AssignMarkerFormFactory(rec.project, new_config.uses_marker, new_config, is_admin)
+    form = AssignMarkerForm(request.form)
 
     # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
-    config = rec.previous_config
-    if config is None:
+    old_config = rec.previous_config
+    if old_config is None:
         flash('Can not reassign because the list of available Live Projects could not be found', 'error')
         return redirect(redirect_url())
 
-    if not validate_is_convenor(config.project_class):
-        return redirect(redirect_url())
+    # reject if logged-in user is not a convenor for the project class associated with this submission record
+    pclass = new_config.project_class
 
-    AssignMarkerForm = AssignMarkerFormFactory(rec.project, rec.pclass_id, config.uses_marker)
-    form = AssignMarkerForm(request.form)
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
 
     if form.validate_on_submit():
         modified = False
@@ -6938,8 +7029,13 @@ def manual_assign(id):
     if url is None:
         url = redirect_url()
 
-    return render_template('convenor/dashboard/manual_assign.html', rec=rec, config=config, url=url, text=text,
-                           form=form if config.uses_marker else None,
+    # ensure form selector reflects the record that is actually being displayed
+    if hasattr(form, 'selector'):
+        period: SubmissionPeriodRecord = rec.period
+        form.selector.data = period
+
+    return render_template('convenor/dashboard/manual_assign.html', rec=rec, config=old_config, url=url, text=text,
+                           form=form, submitter=submitter,
                            allow_reassign_project=not (rec.period.is_feedback_open or rec.student_engaged))
 
 

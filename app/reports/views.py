@@ -8,17 +8,25 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+
+from functools import partial
+
 from flask import render_template, redirect, url_for, flash, request, session
 from flask_security import login_required, roles_required, roles_accepted, current_user
 
 from ..database import db
-from ..models import User, FacultyData, ResearchGroup, SkillGroup, ProjectClass, ProjectClassConfig,\
-    Project, LiveProject
+from ..models import User, FacultyData, ResearchGroup, SkillGroup, ProjectClass, ProjectClassConfig, \
+    Project, LiveProject, StudentData, DegreeProgramme, DegreeType
 
 from ..shared.conversions import is_integer
-from ..shared.utils import redirect_url
+from ..shared.utils import redirect_url, get_current_year
+
+from ..tools import ServerSideHandler
 
 import app.ajax as ajax
+
+from sqlalchemy import or_, and_
+from sqlalchemy.sql import func
 
 from bokeh.plotting import figure
 from bokeh.models.ranges import Range1d
@@ -300,3 +308,152 @@ def _build_rank_plot(pop_rank_dates, pop_ranks, total, title, colour):
     script, div = components(plot)
 
     return div, script
+
+
+@reports.route('/year_groups')
+@roles_accepted('faculty', 'admin', 'root', 'reports')
+def year_groups():
+    year_filter = request.args.get('year_filter')
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    type_filter = request.args.get('type_filter')
+
+    if year_filter is None and session.get('reports_year_group_filter'):
+        year_filter = session['reports_year_group_filter']
+
+    if year_filter is not None and year_filter not in ['all', '1', '2', '3', '4', 'twd']:
+        year_filter = 'all'
+
+    if year_filter is not None:
+        session['reports_year_group_filter'] = year_filter
+
+    prog_query = db.session.query(StudentData.programme_id).distinct().subquery()
+    programmes = db.session.query(DegreeProgramme) \
+        .join(prog_query, prog_query.c.programme_id == DegreeProgramme.id) \
+        .filter(DegreeProgramme.active == True) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+        .order_by(DegreeType.name.asc(),
+                  DegreeProgramme.name.asc()).all()
+
+    type_query = db.session.query(DegreeProgramme.type_id) \
+        .select_from(DegreeProgramme).distinct().subquery()
+    types = db.session.query(DegreeType) \
+        .join(type_query, type_query.c.type_id == DegreeType.id) \
+        .filter(DegreeType.active == True) \
+        .order_by(DegreeType.name.asc()).all()
+
+    prog_ids = set(p.id for p in programmes)
+    type_ids = set(t.id for t in types)
+
+    cohort_data = db.session.query(StudentData.cohort) \
+        .join(User, User.id == StudentData.id) \
+        .filter(User.active == True).distinct().all()
+    cohorts = [c[0] for c in cohort_data]
+
+    if cohort_filter is None and session.get('reports_year_group_cohort_filter'):
+        cohort_filter = session['reports_year_group_cohort_filter']
+
+    if isinstance(cohort_filter, str) and cohort_filter != 'all' and int(cohort_filter) not in cohorts:
+        cohort_filter = 'all'
+
+    if cohort_filter is not None:
+        session['reports_year_group_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('reports_year_group_prog_filter'):
+        prog_filter = session['reports_year_group_prog_filter']
+
+    if isinstance(prog_filter, str) and prog_filter != 'all' and int(prog_filter) not in prog_ids:
+        prog_filter = 'all'
+
+    if type_filter is None and session.get('reports_year_group_type_filter'):
+        type_filter = session['reports_year_group_type_filter']
+
+    if isinstance(type_filter, str) and type_filter != 'all' and int(type_filter) not in type_ids:
+        type_filter = 'all'
+
+    if type_filter is not None:
+        session['reports_year_group_type_filter'] = type_filter
+
+        if type_filter != 'all' and prog_filter is not None:
+            prog_filter = 'all'
+
+    if prog_filter is not None:
+        session['reports_year_group_prog_filter'] = prog_filter
+
+    return render_template('reports/year_groups.html', year_filter=year_filter, prog_filter=prog_filter,
+                           type_filter=type_filter, cohort_filter=cohort_filter, programmes=programmes,
+                           cohorts=cohorts, types=types)
+
+
+@reports.route('/year_groups_ajax', methods=['POST'])
+@roles_accepted('faculty', 'admin', 'root', 'reports')
+def year_groups_ajax():
+    year_filter = request.args.get('year_filter')
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    type_filter = request.args.get('type_filter')
+
+    if year_filter not in ['all', '1', '2', '3', '4', 'twd']:
+        year_filter = 'all'
+
+    current_year = get_current_year()
+
+    flag, value = is_integer(year_filter)
+
+    if year_filter == 'twd':
+        base_query = db.session.query(StudentData) \
+            .join(User, User.id == StudentData.id) \
+            .filter(User.active, StudentData.intermitting) \
+            .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
+            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
+
+    elif year_filter == 'all' or not flag:
+        base_query = db.session.query(StudentData) \
+            .join(User, User.id == StudentData.id) \
+            .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
+            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+            .filter(User.active,
+                    or_(and_(StudentData.foundation_year,
+                             current_year - StudentData.cohort - StudentData.repeated_years <= DegreeType.duration),
+                        and_(~StudentData.foundation_year,
+                             current_year - StudentData.cohort + 1 - StudentData.repeated_years <= DegreeType.duration)))
+
+    else:
+        base_query = db.session.query(StudentData) \
+            .join(User, User.id == StudentData.id) \
+            .filter(User.active,
+                    or_(and_(StudentData.foundation_year,
+                             current_year - StudentData.cohort - StudentData.repeated_years == value),
+                        and_(~StudentData.foundation_year,
+                             current_year - StudentData.cohort + 1 - StudentData.repeated_years == value))) \
+            .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
+            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
+
+    name = {'search': func.concat(User.first_name, ' ', User.last_name),
+            'order': func.concat(User.last_name, User.first_name),
+            'search_collation': 'utf8_general_ci'}
+    programme = {'order': DegreeProgramme.name}
+
+    columns = {'name': name,
+               'programme': programme}
+
+    if cohort_filter is not None:
+        flag, value = is_integer(cohort_filter)
+
+        if flag:
+            base_query = base_query.filter(StudentData.cohort == value)
+
+    if prog_filter is not None:
+        flag, value = is_integer(prog_filter)
+
+        if flag:
+            base_query = base_query.filter(DegreeProgramme.id == value)
+
+    if type_filter is not None:
+        flag, value = is_integer(type_filter)
+
+        if flag:
+            base_query = base_query.filter(DegreeType.id == value)
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(partial(ajax.reports.year_groups, current_year))

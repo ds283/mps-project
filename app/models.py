@@ -2606,6 +2606,22 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         return years, selector_records, submitter_records
 
 
+    @property
+    def ordered_selecting(self):
+        return self.selecting \
+            .join(ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id) \
+            .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id) \
+            .order_by(ProjectClass.name.asc())
+
+
+    @property
+    def ordered_submitting(self):
+        return self.submitting \
+            .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id) \
+            .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id) \
+            .order_by(ProjectClass.name.asc())
+
+
 class StudentBatch(db.Model):
     """
     Model a batch import of student accounts

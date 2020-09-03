@@ -7,7 +7,7 @@
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css""/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css">
 
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
@@ -55,15 +55,15 @@
             <div class="card mt-3 mb-3 card-body bg-well">
                 <p>Filter by state</p>
                 <a href="{{ url_for('admin.assessor_session_availability', id=sess.id, state_filter='all') }}"
-                   class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
+                   class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                     All
                 </a>
                 <a href="{{ url_for('admin.assessor_session_availability', id=sess.id, state_filter='confirm') }}"
-                   class="btn btn-sm filter-btn {% if state_filter == 'confirm' %}btn-primary{% else %}btn-secondary{% endif %}">
+                   class="btn btn-sm filter-btn {% if state_filter == 'confirm' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                     Confirmed
                 </a>
                 <a href="{{ url_for('admin.assessor_session_availability', id=sess.id, state_filter='not-confirm') }}"
-                   class="btn btn-sm filter-btn {% if state_filter == 'not-confirm' %}btn-primary{% else %}btn-secondary{% endif %}">
+                   class="btn btn-sm filter-btn {% if state_filter == 'not-confirm' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                     Not confirmed
                 </a>
             </div>

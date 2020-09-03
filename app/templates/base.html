@@ -214,7 +214,7 @@
                         // if first pass, show or hide task area based on whether or not tasks are visible
                         // and the user's previous explicit actions
                         if (first_pass && !closure_preference && created_tasks > 0) {
-                            task_area.addClass('in');
+                            task_area.addClass('show');
                             task_area.attr('aria-expanded', 'true');
                         }
 
@@ -226,7 +226,7 @@
 
                         // same for messages area, except we always show messages
                         if (first_pass && created_messages > 0) {
-                            message_area.addClass('in');
+                            message_area.addClass('show');
                             message_area.attr('aria-expanded', 'true');
                         }
 

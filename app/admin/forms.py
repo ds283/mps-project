@@ -777,16 +777,16 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
 
         use_hints = BooleanField('Use convenor hints')
 
-        encourage_bias = FloatField('Bias for convenor <i>encouraged</i> hint', default=2.0,
+        encourage_bias = FloatField('Bias for convenor "encouraged" hint', default=2.0,
                                     validators=[InputRequired(message='Please specify a bias')])
 
-        discourage_bias = FloatField('Bias for convenor <i>discouraged</i> hint', default=0.5,
+        discourage_bias = FloatField('Bias for convenor "discouraged" hint', default=0.5,
                                      validators=[InputRequired(message='Please specify a bias')])
 
-        strong_encourage_bias = FloatField('Bias for convenor <i>strongly encouraged</i> hint', default=5.0,
+        strong_encourage_bias = FloatField('Bias for convenor "strongly encouraged" hint', default=5.0,
                                            validators=[InputRequired(message='Please specify a bias')])
 
-        strong_discourage_bias = FloatField('Bias for convenor <i>strongly discouraged</i> hint', default=0.2,
+        strong_discourage_bias = FloatField('Bias for convenor "strongly discouraged" hint', default=0.2,
                                             validators=[InputRequired(message='Please specify a bias')])
 
     return MatchingMixin

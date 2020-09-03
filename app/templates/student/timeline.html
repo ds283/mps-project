@@ -20,6 +20,12 @@
                 </div>
             {% endif %}
 
+            {% if not is_student %}
+                <div class="card mt-3 mb-4 card-body bg-info text-white">
+                    <span class="h2">Timeline for {{ user.name }}</span>
+                </div>
+            {% endif %}
+
             {% for year in years %}
                 <div class="card mt-3 mb-3 card-body bg-well">
                     <p><span class="timeline-title">Records for {{ year }}&ndash;{{ year+1 }}</span></p>
@@ -110,7 +116,7 @@
                                                     </div>
                                                     <div class="col-4">
                                                         <div style="text-align: right;" class="float-right">
-                                                            <a href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}" class="btn btn-sm btn-secondary btn-table-block">Documents ({{ record.number_attachments }})...</a>
+                                                            <a href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=student_text if is_student else generic_text) }}" class="btn btn-sm btn-secondary btn-table-block">Documents ({{ record.number_attachments }})...</a>
                                                             {% if record.has_feedback %}
                                                                 {% if record.id in roles %}
                                                                     {% set role = roles[record.id] %}

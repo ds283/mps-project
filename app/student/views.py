@@ -1026,10 +1026,10 @@ def timeline(student_id):
                     roles[record.id] = 'student'
 
     student_text = 'my timeline'
-    generic_text = 'student timeline'
+    generic_text = 'student timeline'.format(name=user.name)
     return_url = url_for('student.timeline', student_id=data.id, text=text, url=url)
 
-    return render_template('student/timeline.html', data=data, years=years,
+    return render_template('student/timeline.html', data=data, years=years, user=user, student=data,
                            selector_records=selector_records, submitter_records=submitter_records,
                            roles=roles, text=text, url=url,
                            student_text=student_text, generic_text=generic_text, return_url=return_url)

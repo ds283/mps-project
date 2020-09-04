@@ -70,7 +70,7 @@ def register_selecting_tasks(celery):
     def move_selector(self, sel_id, dest_id, user_id):
         try:
             sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sel_id).first()
-            dest_config: Proprogress-jectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=dest_id).first()
+            dest_config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=dest_id).first()
             user: User = db.session.query(User).filter_by(id=user_id).first()
 
         except SQLAlchemyError as e:

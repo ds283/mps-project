@@ -9,6 +9,7 @@
 #
 
 from flask import render_template_string, jsonify
+from flask_security import current_user
 
 
 _menu = \
@@ -103,7 +104,7 @@ _menu = \
         {% endif %}
         
         <div role="separator" class="dropdown-divider"></div>
-        {% if config.selection_closed %}
+        {% if config.selection_closed and not is_admin %}
             <a class="dropdown-item disabled">
                 <i class="fas fa-trash fa-fw"></i> Delete is disabled
             </a>
@@ -219,6 +220,8 @@ def selectors_data(students, config):
     # cache selector lifecycle information
     state = config.selector_lifecycle
 
+    is_admin = current_user.has_role('admin') or current_user.has_role('root')
+
     data = [{'name': {
                 'display': render_template_string(_name, sel=s),
                 'sortstring': s.student.user.last_name + s.student.user.first_name
@@ -236,7 +239,8 @@ def selectors_data(students, config):
                  'value': s.number_pending + s.number_confirmed
              },
              'submitted': render_template_string(_submitted, sel=s, config=config, state=state),
-             'menu': render_template_string(_menu, student=s, config=config, state=state)} for s in students]
+             'menu': render_template_string(_menu, student=s, config=config, state=state, is_admin=is_admin)}
+        for s in students]
 
     return jsonify(data)
 

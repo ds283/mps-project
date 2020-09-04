@@ -6731,7 +6731,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(selector_tasks, Conve
         determine whether this SelectingStudent has bookmarks
         :return:
         """
-        return get_count(self.bookmarks) > 0
+        return self.number_bookmarks > 0
 
 
     @property
@@ -7046,6 +7046,21 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(selector_tasks, Conve
                 return False
 
         return True
+
+
+    @property
+    def number_matches(self):
+        return get_count(self.matching_records)
+
+
+    @property
+    def has_matches(self):
+        return self.number_matches > 0
+
+
+    def detach_records(self):
+        for rec in self.matching_records:
+            db.session.delete(rec)
 
 
 @listens_for(SelectingStudent, 'before_update')

@@ -1098,18 +1098,40 @@ def delete_selector(sid):
     :param sid:
     :return:
     """
-    sel = SelectingStudent.query.get_or_404(sid)
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
         return redirect(redirect_url())
 
-    if sel.config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+    if not (current_user.has_role('admin') or current_user.has_role('root')) and \
+            sel.config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash('Manual deletion of selectors is only possible before student choices are closed', 'error')
         return redirect(redirect_url())
 
+    if sel.has_bookmarks or sel.has_submitted or sel.has_matches:
+        url = request.args.get('url', None)
+        if url is None:
+            url = redirect_url()
+
+        title = 'Delete selector "{name}"'.format(name=sel.student.user.name)
+        panel_title = 'Delete selector <i class="fas fa-user"></i> <strong>{name}</strong>'.format(name=sel.student.user.name)
+
+        action_url = url_for('convenor.do_delete_selector', sid=sid, url=url)
+        message = '<p>Are you sure that you wish to delete selector <i class="fas fa-user"></i> <strong>{name}</strong>?</p>' \
+                  '<p>This selector has stored bookmarks, submitted a list of project choices, or has been included ' \
+                  'in a matching.</p>' \
+                  '<p>This action cannot be undone. Any bookmarks and submitted preferences will be lost, and ' \
+                  'the selector will be deleted from any matches of which they are currently part.</p>'.format(name=sel.student.user.name)
+        submit_label = 'Delete selector'
+
+        return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                               message=message, submit_label=submit_label)
+
     try:
-        db.session.delete(sel)      # delete should cascade to Bookmark and SelectionRecord items
+        # delete should cascade to Bookmark and SelectionRecord items; also, no need to remove
+        # matching_records elements because we are guaranteed that there aren't any
+        db.session.delete(sel)
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -1118,6 +1140,43 @@ def delete_selector(sid):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
+
+
+@convenor.route('/do_delete_selector/<int:sid>')
+@roles_accepted('faculty', 'admin', 'root')
+def do_delete_selector(sid):
+    """
+    Manually delete a selector -- action step
+    :param sid:
+    :return:
+    """
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(sel.config.project_class):
+        return redirect(redirect_url())
+
+    if not (current_user.has_role('admin') or current_user.has_role('root')) and \
+            sel.config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+        flash('Manual deletion of selectors is only possible before student choices are closed', 'error')
+        return redirect(redirect_url())
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = redirect_url()
+
+    try:
+        sel.detach_records()
+        db.session.delete(sel)
+
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash('Could not delete selector due to a database error. Please contact a system administrator.',
+              'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(url)
 
 
 @convenor.route('/selector_grid/<int:id>')

@@ -323,7 +323,7 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         # load current configuration record for this project
-        config: ProjectClassConfig = record.get_config(current_year)
+        config: ProjectClassConfig = record.pclass.get_config(current_year)
 
         if record is None or config is None:
             self.update_state('FAILURE', meta='Could not load database records')

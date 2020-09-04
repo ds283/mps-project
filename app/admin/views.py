@@ -15,6 +15,7 @@ from datetime import date, datetime, timedelta
 from math import pi
 from pathlib import Path
 from urllib.parse import urlsplit
+from typing import List
 
 from bokeh.embed import components
 from bokeh.plotting import figure
@@ -64,7 +65,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset, \
-    AssetLicense, DownloadRecord
+    AssetLicense, DownloadRecord, SelectingStudent
 from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
     canonical_submitted_asset_filename
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
@@ -8143,3 +8144,92 @@ def clear_redis_cache():
     flash('The Redis cache has been successfully cleared.', 'success')
 
     return redirect(redirect_url())
+
+
+@admin.route('/move_selector/<int:sid>')
+@roles_accepted('admin', 'root')
+def move_selector(sid):
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+
+    url = request.args.get('url')
+    text = request.args.get('text')
+    if url is None:
+        url = redirect_url()
+
+    available = set()
+
+    pclasses: List[ProjectClass] = db.session.query(ProjectClass) \
+        .filter(ProjectClass.active,
+                ProjectClass.id != sel.config.pclass_id).all()
+
+    for pcl in pclasses:
+        config: ProjectClassConfig = pcl.most_recent_config
+
+        # reject if not gone live, since then we cannot match up project choices
+        if not config.live:
+            continue
+
+        # reject if this student is already a selector for this project class
+        if get_count(config.selecting_students.filter(SelectingStudent.student_id == sel.student_id)) > 0:
+            continue
+
+        available.add(config)
+
+    if len(available) == 0:
+        flash('Selector <i class="fas fa-user"></i> {name} cannot be moved at this time because there are no '
+              'live project classes available as destinations.'.format(name=sel.student.user.name), 'info')
+        return redirect(url)
+
+    return render_template('admin/move_selector.html', sel=sel, student=sel.student,
+                           available=available, url=url, text=text)
+
+
+@admin.route('/do_move_selector/<int:sid>/<int:dest_id>')
+@roles_accepted('admin', 'root')
+def do_move_selector(sid, dest_id):
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+    dest_config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(dest_id)
+
+    url = request.args.get('url')
+    if url is None:
+        url = redirect_url()
+
+    # reject if source and destination are the same
+    if sel.config_id == dest_config.id:
+        flash('Cannot move selector <i class="fas fa-user"></i> {name} to project class "{pcl}" because it '
+              'is already attached.'.format(name=sel.student.user.name, pcl=dest_config.name), 'error')
+        return redirect(url)
+
+    # reject is destination has not gone live
+    if not dest_config.live:
+        flash('Cannot move selector <i class="fas fa-user"></i> {name} to project class "{pcl}" because it '
+              'is not yet live in this academic '
+              'cycle.'.format(name=sel.student.user.name, pcl=dest_config.name), 'error')
+        return redirect(url)
+
+    # reject is this student is already selecting for destination
+    if get_count(dest_config.selecting_students.filter(SelectingStudent.student_id == sel.student_id)) > 0:
+        flash('Cannot move selector <i class="fas fa-user"></i> {name} to project class "{pcl}" '
+              'because this student is already selecting for '
+              'it.'.format(name=sel.student.user.name, pcl=dest_config.name), 'error')
+        return redirect(url)
+
+    # hand off job to asynchronous task backend since potentially long-running on a big database
+    celery = current_app.extensions['celery']
+    move_selector = celery.tasks['app.tasks.selecting.move_selector']
+
+    tk_name = 'Move selector'
+    tk_description = 'Move selector {name} to project class "{pcl}"'.format(name=sel.student.user.name,
+                                                                            pcl=dest_config.name)
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    seq = chain(init.si(task_id, tk_name),
+                move_selector.si(sid, dest_id, current_user.id),
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
+
+    return redirect(url)

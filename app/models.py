@@ -7058,9 +7058,23 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(selector_tasks, Conve
         return self.number_matches > 0
 
 
-    def detach_records(self):
+    def remove_matches(self):
+        # remove any matching records pointing to this selector
+        # (they are owned by the MatchingAttempt, so won't be deleted by cascade)
         for rec in self.matching_records:
             db.session.delete(rec)
+
+
+    def detach_records(self):
+        # remove any matching records pointing to this selector
+        # (they are owned by the MatchingAttempt, so won't be deleted by cascade)
+        for rec in self.matching_records:
+            db.session.delete(rec)
+
+        # remove any custom offers pointing to this selector
+        # (they are owned by the LiveProject being offered, so won't be deleted by cascade)
+        for offer in self.custom_offers:
+            db.session.delete(offer)
 
 
 @listens_for(SelectingStudent, 'before_update')

@@ -37,6 +37,11 @@ _menu = \
         <a class="dropdown-item" href="{{ url_for('convenor.student_tasks', type=1, sid=student.id, text='selectors view', url=url_for('convenor.selectors', id=pclass.id)) }}">
             <i class="fas fa-clipboard-check fa-fw"></i> Tasks...
         </a>
+        {% if is_admin %}
+            <a class="dropdown-item" href="{{ url_for('admin.move_selector', sid=student.id, text='selectors view', url=url_for('convenor.selectors', id=pclass.id)) }}">
+                <i class="fas fa-arrow-alt-circle-right fa-fw"></i> Move...
+            </a>
+        {% endif %}
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Selections</div>
         {% if student.is_valid_selection[0] %}

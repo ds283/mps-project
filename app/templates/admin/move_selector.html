@@ -1,0 +1,58 @@
+{% extends "base_app.html" %}
+
+{% block title %}
+    Move selection record
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="top-return-link">
+                <a href="{{ url }}">
+                    <i class="fas fa-backward"></i> Return to {{ text }}
+                </a>
+            </div>
+
+            <div class="card mt-3 mb-3">
+                <div class="card-header">
+                    Move selection record for <i class="fas fa-user"></i> <strong>{{ student.user.name }}</strong>
+                </div>
+                <div class="card-body">
+                    <div class="container-fluid">
+                        <div class="mb-4">Current selection is for <strong>{{ sel.config.project_class.make_label()|safe }}</strong></div>
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th width="85%">Destination</th>
+                                    <th width="15%"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for config in available %}
+                                    <tr>
+                                        <td>
+                                            {{ config.name }}
+                                        </td>
+                                        <td>
+                                            <div class="float-right">
+                                                <a class="btn btn-primary btn-sm" href="{{ url_for('admin.do_move_selector', sid=sel.id, dest_id=config.id, url=url, text=text) }}">Move</a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <a href="{{ url }}">
+                    <i class="fas fa-backward"></i> Return to {{ text }}
+                </a>
+            </div>
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

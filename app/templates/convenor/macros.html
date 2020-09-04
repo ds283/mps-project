@@ -55,6 +55,11 @@
                 <div class="row vertical-top bookmark-table">
                     <div class="col-3">
                         {{ item.format_name|safe }}
+                        {% if item.owner.convert_to_submitter %}
+                            <span class="badge badge-success"><i class="fas fa-check"></i> Converting</span>
+                        {% else %}
+                            <span class="badge badge-danger"><i class="fas fa-times"></i> Not converting</span>
+                        {% endif %}
                     </div>
                     <div class="col-1">
                         <span class="badge badge-success">#{{ item.rank }}</span>
@@ -106,11 +111,16 @@
                 <div class="row vertical-top bookmark-table">
                     <div {% if show_hint %}class="col-4"{% else %}class="col-5"{% endif %}>
                         {{ item.format_name|safe }}
+                        {% if item.owner.convert_to_submitter %}
+                            <span class="badge badge-success"><i class="fas fa-check"></i> Converting</span>
+                        {% else %}
+                            <span class="badge badge-danger"><i class="fas fa-times"></i> Not converting</span>
+                        {% endif %}
                     </div>
                     <div {% if show_hint %}class="col-3"{% else %}class="col-2"{% endif %}>
                         <span class="badge badge-success rank-hint-button">#{{ item.rank }}</span>
                         {% if item.converted_from_bookmark %}
-                            <span class="badge badge-warning rank-hint-button">Bookmark</span>
+                            <span class="badge badge-warning rank-hint-button">From bookmark</span>
                         {% endif %}
                         {% if show_hint %}
                             <div class="rank-hint-button">

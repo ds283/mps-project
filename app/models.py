@@ -9590,9 +9590,12 @@ def _MatchingRecord_current_score(id):
 
 @cache.memoize()
 def _MatchingRecord_is_valid(id):
-    obj = db.session.query(MatchingRecord).filter_by(id=id).one()
-    attempt = obj.matching_attempt
-    project = obj.project
+    obj: MatchingRecord = db.session.query(MatchingRecord).filter_by(id=id).one()
+    attempt: MatchingAttempt = obj.matching_attempt
+    project: LiveProject = obj.project
+    supervisor: FacultyData = project.owner
+    marker: FacultyData = obj.marker
+    pclass: ProjectClass = project.config.project_class
 
     errors = {}
     warnings = {}
@@ -9618,7 +9621,12 @@ def _MatchingRecord_is_valid(id):
     if project.config_id != obj.selector.config_id:
         errors[('pclass', 0)] = 'Assigned project does not belong to the correct class for this selector'
 
-    # 5. PROJECT SHOULD NOT BE MULTIPLY ASSIGNED TO SAME SELECTOR BUT A DIFFERENT SUBMISSION PERIOD
+    # 5. SUPERVISOR SHOULD BE ENROLLED FOR THIS PROJECT CLASS
+    supervisor_enrolment: EnrollmentRecord = supervisor.get_enrollment_record(pclass)
+    if supervisor_enrolment is None or supervisor_enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+        errors[('enrolment', 0)] = 'Supervisor for assignment project is not currently enrolled for this project class'
+
+    # 6. PROJECT SHOULD NOT BE MULTIPLY ASSIGNED TO SAME SELECTOR BUT A DIFFERENT SUBMISSION PERIOD
     count = get_count(attempt.records.filter_by(selector_id=obj.selector_id,
                                                 project_id=obj.project_id))
 
@@ -9633,20 +9641,25 @@ def _MatchingRecord_is_valid(id):
             warnings[('assignment', 2)] = 'Project "{name}" is duplicated in multiple submission ' \
                                           'periods'.format(name=project.name)
 
-    # 6. ASSIGNED MARKER SHOULD BE COMPATIBLE WITH ASSIGNED PROJECT
+    # 7. ASSIGNED MARKER SHOULD BE COMPATIBLE WITH ASSIGNED PROJECT
     if obj.selector.config.uses_marker:
         count = get_count(project.assessor_list_query.filter(FacultyData.id == obj.marker_id))
 
         if count != 1:
             errors[('assignment', 3)] = 'Assigned 2nd marker is not compatible with assigned project'
 
-    # 7. ASSIGNED PROJECT SHOULD NOT BE OVERASSIGNED
+    # 8. ASSIGNED MARKER SHOULD BE ENROLLED FOR THIS PROJECT CLASS
+    marker_enrolment: EnrollmentRecord = marker.get_enrollment_record(pclass)
+    if marker_enrolment is None or marker_enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED:
+        errors[('enrolment', 1)] = 'Assigned marker is not currently enrolled for this project class'
+
+    # 9. ASSIGNED PROJECT SHOULD NOT BE OVERASSIGNED
     # (we have to ask our parent MatchingAttempt for help with this)
     flag, msg = attempt.is_project_overassigned(project)
     if flag:
         errors[('overassigned', 0)] = msg
 
-    # 8. SELECTOR SHOULD BE MARKED FOR CONVERSION
+    # 10. SELECTOR SHOULD BE MARKED FOR CONVERSION
     if not obj.selector.convert_to_submitter:
         # only refuse to validate if we are the first member of the multiplet
         lo_rec = attempt.records \

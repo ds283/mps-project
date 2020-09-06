@@ -9593,7 +9593,7 @@ def _MatchingRecord_is_valid(id):
     obj: MatchingRecord = db.session.query(MatchingRecord).filter_by(id=id).one()
     attempt: MatchingAttempt = obj.matching_attempt
     project: LiveProject = obj.project
-    supervisor: FacultyData = project.owner
+    supervisor: FacultyData = project.owner if project is not None else None
     marker: FacultyData = obj.marker
     pclass: ProjectClass = project.config.project_class
 
@@ -9622,9 +9622,10 @@ def _MatchingRecord_is_valid(id):
         errors[('pclass', 0)] = 'Assigned project does not belong to the correct class for this selector'
 
     # 5. SUPERVISOR SHOULD BE ENROLLED FOR THIS PROJECT CLASS
-    supervisor_enrolment: EnrollmentRecord = supervisor.get_enrollment_record(pclass)
-    if supervisor_enrolment is None or supervisor_enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-        errors[('enrolment', 0)] = 'Supervisor for assignment project is not currently enrolled for this project class'
+    if supervisor is not None:
+        supervisor_enrolment: EnrollmentRecord = supervisor.get_enrollment_record(pclass)
+        if supervisor_enrolment is None or supervisor_enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+            errors[('enrolment', 0)] = 'Supervisor for assignment project is not currently enrolled for this project class'
 
     # 6. PROJECT SHOULD NOT BE MULTIPLY ASSIGNED TO SAME SELECTOR BUT A DIFFERENT SUBMISSION PERIOD
     count = get_count(attempt.records.filter_by(selector_id=obj.selector_id,
@@ -9649,9 +9650,10 @@ def _MatchingRecord_is_valid(id):
             errors[('assignment', 3)] = 'Assigned 2nd marker is not compatible with assigned project'
 
     # 8. ASSIGNED MARKER SHOULD BE ENROLLED FOR THIS PROJECT CLASS
-    marker_enrolment: EnrollmentRecord = marker.get_enrollment_record(pclass)
-    if marker_enrolment is None or marker_enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED:
-        errors[('enrolment', 1)] = 'Assigned marker is not currently enrolled for this project class'
+    if marker is not None:
+        marker_enrolment: EnrollmentRecord = marker.get_enrollment_record(pclass)
+        if marker_enrolment is None or marker_enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED:
+            errors[('enrolment', 1)] = 'Assigned marker is not currently enrolled for this project class'
 
     # 9. ASSIGNED PROJECT SHOULD NOT BE OVERASSIGNED
     # (we have to ask our parent MatchingAttempt for help with this)

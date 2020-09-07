@@ -16,9 +16,18 @@ from ...models import ConvenorStudentTask
 
 _task = \
 """
-{{ tk.description }}
-{% if tk.blocking %}
-    <span class="badge badge-warning"><i class="fas fa-hand-paper"></i> Blocking</span>
+<strong>{{ tk.description }}</strong>
+<div>
+    <i class="fas fa-user"></i>
+    <a href="{{ url_for('convenor.student_tasks', type=type, sid=tk.parent.id, url=return_url) }}">
+        {{ tk.parent.student.user.name }}
+    </a>
+    {% if tk.blocking %}
+        <span class="badge badge-warning"><i class="fas fa-hand-paper"></i> Blocking</span>
+    {% endif %}
+</div>
+{% if tk.notes and tk.notes|length > 0 %}
+    <div class="text-muted text-small">{{ tk.notes|truncate(150) }}</div>
 {% endif %}
 """
 
@@ -70,7 +79,9 @@ _menu = \
 def _map(t, pclass_id):
     if isinstance(t, ConvenorStudentTask):
         t: ConvenorStudentTask
-        return {'task': render_template_string(_task, tk=t),
+        task_type = t.__mapper_args__['polymorphic_identity']
+
+        return {'task': render_template_string(_task, tk=t, type=task_type, return_url=url_for('convenor.todo_list', id=pclass_id)),
                 'due_date': t.due_date.strftime("%a %d %b %Y %H:%M") if t.due_date is not None else '<span class="badge badge-secondary">None</span>',
                 'defer_date': t.defer_date.strftime("%a %d %b %Y %H:%M") if t.defer_date is not None else '<span class="badge badge-secondary">None</span>',
                 'status': render_template_string(_status, available=t.is_available, overdue=t.is_overdue, tk=t),

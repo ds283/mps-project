@@ -2142,7 +2142,6 @@ def attach_liveproject_ajax(id):
     :param id:
     :return:
     """
-
     # get details for project class
     pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
@@ -2311,6 +2310,73 @@ def manual_attach_other_project(id, configid):
     add_liveproject(number, project, configid, autocommit=True)
 
     return redirect(redirect_url())
+
+
+@convenor.route('/todo_list/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def todo_list(id):
+    # get details for project class
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config: ProjectClassConfig = pclass.most_recent_config
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(redirect_url())
+
+    status_filter = request.args.get('status_filter')
+
+    if status_filter is None and session.get('convenor_todo_list_status_filter'):
+        status_filter = session['convenor_todo_list_status_filter']
+
+    if status_filter is not None and status_filter not in ['all', 'overdue', 'available', 'dropped', 'completed']:
+        status_filter = 'all'
+
+    if status_filter is not None:
+        session['convenor_todo_list_status_filter'] = status_filter
+
+    blocking_filter = request.args.get('blocking_filter')
+
+    if blocking_filter is None and session.get('convenor_todo_list_blocking_filter'):
+        blocking_filter = session['convenor_todo_list_blocking_filter']
+
+    if blocking_filter is not None and blocking_filter not in ['all', 'blocking', 'not-blocking']:
+        blocking_filter = 'all'
+
+    if blocking_filter is not None:
+        session['convenor_todo_list_blocking_filter'] = blocking_filter
+
+    data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template('convenor/dashboard/todo_list.html', pane='todo', pclass=pclass, config=config,
+                           convenor_date=data, current_year=current_year, status_filter=status_filter,
+                           blocking_filter=blocking_filter)
+
+
+@convenor.route('/todo_list_ajac/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def todo_list_ajax(id):
+    # get details for project class
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return jsonify({})
+
+    # get current configuration record for this project class
+    config: ProjectClassConfig = pclass.most_recent_config
+    if config is None:
+        return jsonify({})
+
+
+
 
 
 @convenor.route('/edit_descriptions/<int:id>/<int:pclass_id>')

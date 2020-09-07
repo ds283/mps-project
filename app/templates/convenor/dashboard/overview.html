@@ -8,7 +8,6 @@
 {% from "convenor/dashboard/overview_cards/selection_closed.html" import selection_closed %}
 {% from "convenor/dashboard/overview_cards/submitter_card.html" import submitter_card %}
 
-
 {% block scripts %}
     {{ super() }}
 
@@ -62,7 +61,6 @@
 {% endblock %}
 
 {% block bodyblock %}
-    {% set num_to_dos = todo['num_to_dos'] %}
     {% set top_to_dos = todo['top_to_dos'] %}
     <div class="row">
         <div class="col-1"></div>

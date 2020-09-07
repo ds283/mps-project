@@ -1,0 +1,121 @@
+{% extends "convenor/dashboard/nav.html" %}
+
+{% if url is not defined %}{% set url=none %}{% endif %}
+{% if text is not defined %}{% set text=none %}{% endif %}
+
+{% if status_filter is not defined %}{% set status_filter='all' %}{% endif %}
+{% if blocking_filter is not defined %}{% set blocking_filter='all' %}{% endif %}
+
+{% block scripts %}
+    {{ super() }}
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css">
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#todo-list-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                serverSide: true,
+                ajax: { url: $SCRIPT_ROOT + '/convenor/todo_list_ajax/{{ pclass.id }}?status_filter={{ status_filter }}&blocking_filter={{ blocking_filter }}',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'});},
+                columns: [
+                    { data: 'task',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'defer_date',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'due_date',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'status',
+                      orderable: true,
+                      searchable: false },
+                    { data: 'menu',
+                      orderable: false,
+                      searchable: false }
+                ],
+                order: [[2, 'asc']]
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-primary text-white">Tasks and actions</div>
+        <div class="card-body">
+            <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="row">
+                    <div class="col-12">
+                        <p>Filter by status</p>
+                        <a class="btn btn-sm filter-btn {% if status_filter is none or status_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('convenor.todo_list', id=pclass.id, status_filter='all', blocking_filter=block_filter) }}">
+                            All
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if status_filter == 'overdue' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('convenor.todo_list', id=pclass.id, status_filter='overdue', blocking_filter=block_filter) }}">
+                            Overdue
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if status_filter == 'available' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('convenor.todo_list', id=pclass.id, status_filter='available', blocking_filter=block_filter) }}">
+                            Available
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if status_filter == 'completed' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('convenor.todo_list', id=pclass.id, status_filter='completed', blocking_filter=block_filter) }}">
+                            Completed
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if status_filter == 'dropped' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('convenor.todo_list', id=pclass.id, status_filter='dropped', blocking_filter=block_filter) }}">
+                            Dropped
+                        </a>
+                    </div>
+                </div>
+                <hr class="intro-divider">
+                <div class="row">
+                    <div class="col-12">
+                        <p>Filter by blocking</p>
+                        <a class="btn btn-sm filter-btn {% if blocking_filter is none or blocking_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('convenor.todo_list', id=pclass.id, status_filter=status_filter, blocking_filter='all') }}">
+                            All
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if blocking_filter == 'blocking' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('convenor.todo_list', id=pclass.id, status_filter=status_filter, blocking_filter='blocking') }}">
+                            Blocking
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if blocking_filter == 'not-blocking' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('convenor.todo_list', id=pclass.id, status_filter=status_filter, blocking_filter='not-blocking') }}">
+                            Not blocking
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <table id="todo-list-table" class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th width="40%"> Task</th>
+                    <th width="15%"> Defer date</th>
+                    <th width="15%"> Due date</th>
+                    <th width="15%"> Status</th>
+                    <th width="15%"> Actions</th>
+                </tr>
+                </thead>
+            </table>
+{#            <div style="text-align: center;">#}
+{#                <a href="{{ url_for('convenor.add_student_task', type=type, sid=obj.id, url=url_for('convenor.todo_list', id=pclass.id)) }}" class="btn btn-secondary btn-lg">#}
+{#                    <i class="fas fa-plus"></i>#}
+{#                    New task#}
+{#                </a>#}
+{#            </div>#}
+        </div>
+    </div>
+{% endblock %}

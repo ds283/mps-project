@@ -545,16 +545,28 @@ def get_convenor_dashboard_data(pclass, config):
     sub_count = get_count(config.submitting_students.filter_by(retired=False))
     live_count = get_count(config.live_projects)
 
+    todos = _query_available_convenor_tasks(config)
+    todo_count = get_count(todos)
 
     return {'faculty': fac_count,
             'total_faculty': fac_total,
             'live_projects': live_count,
             'attached_projects': proj_count,
             'selectors': sel_count,
-            'submitters': sub_count}
+            'submitters': sub_count,
+            'todo_count': todo_count}
 
 
 def get_convenor_todo_data(config):
+    # get list of available tasks (not available != all, even excluding dropped and completed tasks)
+    tks = _query_available_convenor_tasks(config)
+
+    top_tks = tks.limit(10).all()
+
+    return {'top_to_dos': top_tks}
+
+
+def _query_available_convenor_tasks(config):
     # EXTRACT TO-DO TASKS
 
     # TODO: this is not very efficient; might need to consider a different database
@@ -565,35 +577,37 @@ def get_convenor_todo_data(config):
         .filter(~SelectingStudent.retired,
                 SelectingStudent.config_id == config.id).subquery()
 
-    # subquery to get list of currentn submitters
+    # subquery to get list of current submitters
     submitters = db.session.query(SubmittingStudent.id) \
         .filter(~SubmittingStudent.retired,
                 SubmittingStudent.config_id == config.id).subquery()
 
+    # find selector tasks that are linked to one of our current selectors
     sel_tks = db.session.query(selector_tasks.c.tasks_id.label('tasks_id')) \
         .join(selectors, selectors.c.id == selector_tasks.c.selector_id) \
         .filter(selectors.c.id != None)
 
+    # find submitter tasks that are linked to one of our current submitters
     sub_tks = db.session.query(submitter_tasks.c.tasks_id.label('tasks_id')) \
         .join(submitters, submitters.c.id == submitter_tasks.c.submitter_id) \
         .filter(submitters.c.id != None)
 
+    # join these lists to produce a single list of tasks associated with our current selectors or submitters
     task_ids = sel_tks.union(sub_tks).subquery()
-
     convenor_task = with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])
+
+    # restrict attention to available tasks only, or those that block lifecycle evolution
     tks = db.session.query(convenor_task) \
         .join(task_ids, convenor_task.id == task_ids.c.tasks_id) \
         .filter(~convenor_task.complete, ~convenor_task.dropped,
                 or_(convenor_task.defer_date == None,
+                    convenor_task.blocking,
                     and_(convenor_task.defer_date != None,
                          convenor_task.defer_date <= func.curdate()))) \
         .order_by(convenor_task.due_date)
 
-    tks_count = get_count(tks)
-    top_tks = tks.limit(10).all()
+    return tks
 
-    return {'num_to_dos': tks_count,
-            'top_to_dos': top_tks}
 
 @cache.memoize()
 def _compute_group_capacity_data(pclass_id, group_id):

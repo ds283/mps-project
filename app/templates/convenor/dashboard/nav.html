@@ -23,6 +23,7 @@
     {% set proj_count = convenor_data['attached_projects'] %}
     {% set sel_count = convenor_data['selectors'] %}
     {% set sub_count = convenor_data['submitters'] %}
+    {% set num_to_dos = convenor_data['todo_count'] %}
     <ul class="nav nav-pills dashboard-nav">
         <li class="nav-item">
             <a class="nav-link {% if pane == 'overview' %}active{% endif %}" href="{{ url_for('convenor.overview', id=pclass.id) }}">
@@ -31,7 +32,7 @@
         </li>
         <li class="nav-item">
             <a class="nav-link {% if pane == 'attached' %}active{% endif %}" href="{{ url_for('convenor.attached', id=pclass.id) }}">
-                Attached projects
+                Projects
                 {% if proj_count is defined %}
                     <span class="badge badge-light badge-pill">{{ proj_count }}</span>
                 {% endif %}
@@ -49,7 +50,7 @@
         </li>
         <li class="nav-item">
             <a class="nav-link {% if pane == 'selectors' %}active{% endif %}" href="{{ url_for('convenor.selectors', id=pclass.id) }}">
-                Students selecting for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                Selectors for {{ config.year+1 }}&ndash;{{ config.year+2 }}
                 {% if sel_count is defined %}
                     <span id="selector-count" class="badge badge-light badge-pill">{{ sel_count }}</span>
                 {% endif %}
@@ -57,7 +58,7 @@
         </li>
         <li class="nav-item">
             <a class="nav-link {% if pane == 'submitters' %}active{% endif %}" href="{{ url_for('convenor.submitters', id=pclass.id) }}">
-                Students submitting in {{ config.year }}&ndash;{{ config.year+1 }}
+                Submitters for {{ config.year }}&ndash;{{ config.year+1 }}
                 {% if sub_count is defined %}
                     <span id="submitter-count" class="badge badge-light badge-pill">{{ sub_count }}</span>
                 {% endif %}
@@ -66,11 +67,17 @@
         {% if live_count is defined %}
             <li class="nav-item">
                 <a class="nav-link {% if pane == 'live' %}active{% endif %}" href="{{ url_for('convenor.liveprojects', id=pclass.id) }}">
-                    Live projects for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                    Live projects {{ config.year+1 }}&ndash;{{ config.year+2 }}
                     <span id="live-project-count" class="badge badge-light badge-pill">{{ live_count }}</span>
                 </a>
             </li>
         {% endif %}
+        <li class="nav-item">
+            <a class="nav-link {% if pane == 'todo' %}active{% endif %}" href="{{ url_for('convenor.todo_list', id=pclass.id) }}">
+                Tasks
+                <span class="badge badge-light badge-pill">{{ num_to_dos }}</span>
+            </a>
+        </li>
     </ul>
     {% block tabblock %}
     {% endblock %}

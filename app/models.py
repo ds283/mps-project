@@ -6599,9 +6599,8 @@ def ConvenorTasksMixinFactory(association_table, subclass):
         def overdue_tasks(self):
             return self.tasks.filter(~ConvenorStudentTask.complete,
                                      ~ConvenorStudentTask.dropped,
-                                     or_(ConvenorStudentTask.due_date == None,
-                                         and_(ConvenorStudentTask.due_date != None,
-                                              ConvenorStudentTask.due_date < func.curdate())))
+                                     and_(ConvenorStudentTask.due_date != None,
+                                          ConvenorStudentTask.due_date < func.curdate()))
 
 
         @property

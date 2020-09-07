@@ -545,7 +545,7 @@ def get_convenor_dashboard_data(pclass, config):
     sub_count = get_count(config.submitting_students.filter_by(retired=False))
     live_count = get_count(config.live_projects)
 
-    todos = _query_available_convenor_tasks(config)
+    todos = build_convenor_tasks_query(config, status_filter='available', due_date_order=True)
     todo_count = get_count(todos)
 
     return {'faculty': fac_count,
@@ -559,15 +559,22 @@ def get_convenor_dashboard_data(pclass, config):
 
 def get_convenor_todo_data(config):
     # get list of available tasks (not available != all, even excluding dropped and completed tasks)
-    tks = _query_available_convenor_tasks(config)
+    tks = build_convenor_tasks_query(config, status_filter='available', due_date_order=True)
 
     top_tks = tks.limit(10).all()
 
     return {'top_to_dos': top_tks}
 
 
-def _query_available_convenor_tasks(config):
-    # EXTRACT TO-DO TASKS
+def build_convenor_tasks_query(config, status_filter='all', blocking_filter='all', due_date_order=True):
+    """
+    Return a query that extracts convenor tasks for a particular config instance
+    :param blocking_filter:
+    :param status_filter:
+    :param due_date_order:
+    :param config: ProjectClassConfig instance used to locate tasks
+    :return: SQLAlchemy query instance
+    """
 
     # TODO: this is not very efficient; might need to consider a different database
     #  schema to allow more performant recovery of the task list
@@ -598,13 +605,35 @@ def _query_available_convenor_tasks(config):
 
     # restrict attention to available tasks only, or those that block lifecycle evolution
     tks = db.session.query(convenor_task) \
-        .join(task_ids, convenor_task.id == task_ids.c.tasks_id) \
-        .filter(~convenor_task.complete, ~convenor_task.dropped,
+        .join(task_ids, convenor_task.id == task_ids.c.tasks_id)
+
+    # if only searching for available tasks, skip those that are complete or dropped.
+    # also skip tasks with a defer date that has not yet passed, unless they are blocking
+    if status_filter == 'overdue':
+        tks = tks.filter(~convenor_task.complete, ~convenor_task.dropped,
+                         and_(convenor_task.due_date != None,
+                             convenor_task.due_date < func.curdate()))
+    elif status_filter == 'available':
+        tks = tks.filter(~convenor_task.complete, ~convenor_task.dropped,
                 or_(convenor_task.defer_date == None,
                     convenor_task.blocking,
                     and_(convenor_task.defer_date != None,
-                         convenor_task.defer_date <= func.curdate()))) \
-        .order_by(convenor_task.due_date)
+                         convenor_task.defer_date <= func.curdate())))
+    elif status_filter == 'completed':
+        tks = tks.filter(convenor_task.complete)
+    elif status_filter == 'dropped':
+        tks = tks.filter(convenor_task.dropped)
+
+    if blocking_filter == 'blocking':
+        tks = tks.filter(convenor_task.blocking)
+    elif blocking_filter == 'not-blocking':
+        tks = tks.filter(~convenor_task.blocking)
+
+    # if required, order by due date
+    # (we don't want to do this for server side processing in DataTables, for instance, since the
+    # sort order will be specified separately)
+    if due_date_order:
+        tks = tks.order_by(convenor_task.due_date)
 
     return tks
 

@@ -10,10 +10,8 @@
 
 from typing import List
 
-from flask import render_template_string, jsonify
+from flask import render_template_string
 from ...models import ConvenorStudentTask
-
-from datetime import datetime
 
 
 _task = \

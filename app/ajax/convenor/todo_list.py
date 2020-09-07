@@ -22,12 +22,17 @@ _task = \
     <a href="{{ url_for('convenor.student_tasks', type=type, sid=tk.parent.id, url=return_url) }}">
         {{ tk.parent.student.user.name }}
     </a>
+    {% if type == 1 %}
+        <span class="badge badge-secondary">Selector</span>
+    {% elif type == 2 %}
+        <span class="badge badge-secondary">Submitter</span>
+    {% endif %}
     {% if tk.blocking %}
         <span class="badge badge-warning"><i class="fas fa-hand-paper"></i> Blocking</span>
     {% endif %}
 </div>
 {% if tk.notes and tk.notes|length > 0 %}
-    <div class="text-muted text-small">{{ tk.notes|truncate(150) }}</div>
+    <small class="text-muted">{{ tk.notes|truncate(150) }}</smalld>
 {% endif %}
 """
 

@@ -234,7 +234,7 @@ def student_view_data(selector_data):
                 'sortvalue': r[0].selector.student.user.last_name + r[0].selector.student.user.first_name
              },
              'pclass': render_template_string(_pclass, sel=r[0].selector),
-             'cohort': render_template_string(_cohort, sel=r[0].selector),
+             'details': render_template_string(_cohort, sel=r[0].selector),
              'project': render_template_string(_project, recs=r),
              'marker': render_template_string(_marker, recs=r),
              'rank': {

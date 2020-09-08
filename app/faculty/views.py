@@ -1667,7 +1667,7 @@ def supervisor_edit_feedback(id):
             form.negative.data = record.supervisor_negative
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
-                           title='Edit supervisor feedback',
+                           title='Edit supervisor feedback', unique_id='supv-{id}'.format(id=id),
                            formtitle='Edit supervisor feedback for <i class="fas fa-user"></i> <strong>{name}</strong>'.format(name=record.student_identifier),
                            submit_url=url_for('faculty.supervisor_edit_feedback', id=id, url=url),
                            period=period, record=record)
@@ -1723,7 +1723,7 @@ def marker_edit_feedback(id):
             form.negative.data = record.marker_negative
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
-                           title='Edit marker feedback',
+                           title='Edit marker feedback', unique_id='mark-{id}'.format(id=id),
                            formtitle='Edit marker feedback for <strong>{num}</strong>'.format(num=record.owner.student.exam_number),
                            submit_url=url_for('faculty.marker_edit_feedback', id=id, url=url),
                            period=period, record=record)
@@ -1941,7 +1941,7 @@ def presentation_edit_feedback(slot_id, talk_id):
             form.positive.data = feedback.positive
             form.negative.data = feedback.negative
 
-    return render_template('faculty/dashboard/edit_feedback.html', form=form,
+    return render_template('faculty/dashboard/edit_feedback.html', form=form, unique_id='pres-{id}'.format(id=id),
                            title='Edit presentation feedback',
                            formtitle='Edit presentation feedback for <strong>{num}</strong>'.format(num=talk.owner.student.user.name),
                            submit_url=url_for('faculty.presentation_edit_feedback', slot_id=slot_id, talk_id=talk_id, url=url),

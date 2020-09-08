@@ -900,7 +900,7 @@ def edit_feedback(id):
         if request.method == 'GET':
             form.feedback.data = record.student_feedback
 
-    return render_template('student/dashboard/edit_feedback.html', form=form,
+    return render_template('student/dashboard/edit_feedback.html', form=form, unique_id='stud-{id}'.format(id=id),
                            submit_url=url_for('student.edit_feedback', id=id, url=url),
                            text='home dashboard', url=home_dashboard_url())
 

@@ -2,6 +2,56 @@
 
 {% import "bootstrap/form.html" as wtf %}
 
+{% block scripts %}
+    {{ super() }}
+
+    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+
+    <script>
+        var posiiven_MDE = new EasyMDE({
+            element: document.getElementById('positive'),
+            autosave: {
+                enabled: true,
+                uniqueId: "feedback-pos-{{ unique_id }}",
+                text: 'Autosaved: ',
+                timeFormat: {
+                    locale: 'en-GB',
+                    format: {
+                        year: 'numeric',
+                        month: 'long',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    }
+                }
+            },
+            hideIcons: ['image']
+        });
+        var negative_MDE = new EasyMDE({
+            element: document.getElementById('negative'),
+            autosave: {
+                enabled: true,
+                uniqueId: "feedback-neg-{{ unique_id }}",
+                text: 'Autosaved: ',
+                timeFormat: {
+                    locale: 'en-GB',
+                    format: {
+                        year: 'numeric',
+                        month: 'long',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    }
+                }
+            },
+            hideIcons: ['image']
+        });
+    </script>
+{% endblock %}
+
 {% block title %}
     {{ title }}
 {% endblock %}

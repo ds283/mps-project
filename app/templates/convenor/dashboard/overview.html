@@ -289,9 +289,8 @@
                 {# SUBMITTING #}
                 <div class="card mt-3 mb-3 card-body bg-well">
                     {% for n in range(config.submissions) %}
-                        <a id="submitter_card_{{ loop.index }}">
-                            {{ submitter_card(config, n, today, feedback_form)  }}
-                        </a>
+                        <a id="submitter_card_{{ loop.index }}"></a>
+                        {{ submitter_card(config, n, today, feedback_form)  }}
                     {% endfor %}
                 </div>
             {% else %}

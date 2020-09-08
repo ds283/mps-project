@@ -7433,7 +7433,7 @@ def assign_presentation_feedback(id):
         return redirect(url)
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
-                           title='Assign presentation feedback',
+                           title='Assign presentation feedback', unique_id='assign-{id}'.format(id=id),
                            formtitle='Assign presentation feedback for <strong>{num}</strong>'.format(num=talk.owner.student.user.name),
                            submit_url=url_for('convenor.assign_presentation_feedback', id=talk.id, url=url))
 
@@ -7495,7 +7495,7 @@ def supervisor_edit_feedback(id):
             form.positive.data = record.supervisor_positive
             form.negative.data = record.supervisor_negative
 
-    return render_template('faculty/dashboard/edit_feedback.html', form=form,
+    return render_template('faculty/dashboard/edit_feedback.html', form=form, unique_id='supv-{id}'.format(id=id),
                            title='Edit supervisor feedback from {supervisor}'.format(supervisor=record.project.owner.user.name),
                            formtitle='Edit supervisor feedback from <i class="fas fa-user"></i> '
                                      '<strong>{supervisor}</strong> '
@@ -7546,7 +7546,7 @@ def marker_edit_feedback(id):
             form.positive.data = record.marker_positive
             form.negative.data = record.marker_negative
 
-    return render_template('faculty/dashboard/edit_feedback.html', form=form,
+    return render_template('faculty/dashboard/edit_feedback.html', form=form, unique_id='mark-{id}'.format(id=id),
                            title='Edit marker feedback from {supervisor}'.format(supervisor=record.marker.user.name),
                            formtitle='Edit marker feedback from <i class="fas fa-user"></i> '
                                      '<strong>{supervisor}</strong> '
@@ -7741,7 +7741,7 @@ def presentation_edit_feedback(feedback_id):
             form.positive.data = feedback.positive
             form.negative.data = feedback.negative
 
-    return render_template('faculty/dashboard/edit_feedback.html', form=form,
+    return render_template('faculty/dashboard/edit_feedback.html', form=form, unique_id='pres-{id}'.format(id=id),
                            title='Edit presentation feedback from {supervisor}'.format(supervisor=feedback.assessor.user.name),
                            formtitle='Edit presentation feedback from <i class="fas fa-user"></i> '
                                      '<strong>{supervisor}</strong> '

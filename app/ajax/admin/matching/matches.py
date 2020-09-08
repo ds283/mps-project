@@ -286,7 +286,7 @@ _menu = \
                 </a>
                 {% if m.can_clean_up %}
                     <a class="dropdown-item" href="{{ url_for('admin.clean_up_match', id=m.id) }}">
-                        <i class="fas fa-scissors fa-fw"></i> Clean up
+                        <i class="fas fa-cut fa-fw"></i> Clean up
                     </a>
                 {% endif %}
             {% endif %}

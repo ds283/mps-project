@@ -3,6 +3,57 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
 
+{% block scripts %}
+    {{ super() }}
+
+    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+
+    <script>
+        var description_MDE = new EasyMDE({
+            element: document.getElementById('description'),
+            autosave: {
+                enabled: true,
+                uniqueId: "desc-{{ desc.id }}",
+                text: 'Autosaved: ',
+                timeFormat: {
+                    locale: 'en-GB',
+                    format: {
+                        year: 'numeric',
+                        month: 'long',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    }
+                }
+            },
+            hideIcons: ['image']
+        });
+        var reading_MDE = new EasyMDE({
+            element: document.getElementById('reading'),
+            autosave: {
+                enabled: true,
+                uniqueId: "reading-{{ desc.id }}",
+                text: 'Autosaved: ',
+                timeFormat: {
+                    locale: 'en-GB',
+                    format: {
+                        year: 'numeric',
+                        month: 'long',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    }
+                }
+            },
+            hideIcons: ['image']
+        });
+    </script>
+</script>
+{% endblock %}
+
 {% block title %}
     {{ title }}
 {% endblock %}

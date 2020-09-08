@@ -126,7 +126,7 @@ def DescriptionMixinFactory(query_factory):
         team = CheckboxQuerySelectMultipleField('Supervisory team',
                                                 query_factory=GetSupervisorRoles, get_label='name')
 
-        description = TextAreaField('Text description of project', render_kw={"rows": 15},
+        description = TextAreaField('Text description of project', render_kw={"rows": 10},
                                     description=r'Enter a description of your project. '
                                                 r'The LaTeX mathematics environments are supported, as are common LaTeX commands. '
                                                 r'The amsmath, amsthm, and amssymb packages are included. '

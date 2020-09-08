@@ -545,17 +545,36 @@ def get_convenor_dashboard_data(pclass, config):
     sub_count = get_count(config.submitting_students.filter_by(retired=False))
     live_count = get_count(config.live_projects)
 
+    todos = build_convenor_tasks_query(config, status_filter='available', due_date_order=True)
+    todo_count = get_count(todos)
 
     return {'faculty': fac_count,
             'total_faculty': fac_total,
             'live_projects': live_count,
             'attached_projects': proj_count,
             'selectors': sel_count,
-            'submitters': sub_count}
+            'submitters': sub_count,
+            'todo_count': todo_count}
 
 
 def get_convenor_todo_data(config):
-    # EXTRACT TO-DO TASKS
+    # get list of available tasks (not available != all, even excluding dropped and completed tasks)
+    tks = build_convenor_tasks_query(config, status_filter='available', due_date_order=True)
+
+    top_tks = tks.limit(10).all()
+
+    return {'top_to_dos': top_tks}
+
+
+def build_convenor_tasks_query(config, status_filter='all', blocking_filter='all', due_date_order=True):
+    """
+    Return a query that extracts convenor tasks for a particular config instance
+    :param blocking_filter:
+    :param status_filter:
+    :param due_date_order:
+    :param config: ProjectClassConfig instance used to locate tasks
+    :return: SQLAlchemy query instance
+    """
 
     # TODO: this is not very efficient; might need to consider a different database
     #  schema to allow more performant recovery of the task list
@@ -565,35 +584,59 @@ def get_convenor_todo_data(config):
         .filter(~SelectingStudent.retired,
                 SelectingStudent.config_id == config.id).subquery()
 
-    # subquery to get list of currentn submitters
+    # subquery to get list of current submitters
     submitters = db.session.query(SubmittingStudent.id) \
         .filter(~SubmittingStudent.retired,
                 SubmittingStudent.config_id == config.id).subquery()
 
+    # find selector tasks that are linked to one of our current selectors
     sel_tks = db.session.query(selector_tasks.c.tasks_id.label('tasks_id')) \
         .join(selectors, selectors.c.id == selector_tasks.c.selector_id) \
         .filter(selectors.c.id != None)
 
+    # find submitter tasks that are linked to one of our current submitters
     sub_tks = db.session.query(submitter_tasks.c.tasks_id.label('tasks_id')) \
         .join(submitters, submitters.c.id == submitter_tasks.c.submitter_id) \
         .filter(submitters.c.id != None)
 
+    # join these lists to produce a single list of tasks associated with our current selectors or submitters
     task_ids = sel_tks.union(sub_tks).subquery()
-
     convenor_task = with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])
+
+    # restrict attention to available tasks only, or those that block lifecycle evolution
     tks = db.session.query(convenor_task) \
-        .join(task_ids, convenor_task.id == task_ids.c.tasks_id) \
-        .filter(~convenor_task.complete, ~convenor_task.dropped,
+        .join(task_ids, convenor_task.id == task_ids.c.tasks_id)
+
+    # if only searching for available tasks, skip those that are complete or dropped.
+    # also skip tasks with a defer date that has not yet passed, unless they are blocking
+    if status_filter == 'overdue':
+        tks = tks.filter(~convenor_task.complete, ~convenor_task.dropped,
+                         and_(convenor_task.due_date != None,
+                             convenor_task.due_date < func.curdate()))
+    elif status_filter == 'available':
+        tks = tks.filter(~convenor_task.complete, ~convenor_task.dropped,
                 or_(convenor_task.defer_date == None,
+                    convenor_task.blocking,
                     and_(convenor_task.defer_date != None,
-                         convenor_task.defer_date <= func.curdate()))) \
-        .order_by(convenor_task.due_date)
+                         convenor_task.defer_date <= func.curdate())))
+    elif status_filter == 'completed':
+        tks = tks.filter(convenor_task.complete)
+    elif status_filter == 'dropped':
+        tks = tks.filter(convenor_task.dropped)
 
-    tks_count = get_count(tks)
-    top_tks = tks.limit(10).all()
+    if blocking_filter == 'blocking':
+        tks = tks.filter(convenor_task.blocking)
+    elif blocking_filter == 'not-blocking':
+        tks = tks.filter(~convenor_task.blocking)
 
-    return {'num_to_dos': tks_count,
-            'top_to_dos': top_tks}
+    # if required, order by due date
+    # (we don't want to do this for server side processing in DataTables, for instance, since the
+    # sort order will be specified separately)
+    if due_date_order:
+        tks = tks.order_by(convenor_task.due_date)
+
+    return tks
+
 
 @cache.memoize()
 def _compute_group_capacity_data(pclass_id, group_id):

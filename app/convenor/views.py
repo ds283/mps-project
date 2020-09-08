@@ -50,7 +50,8 @@ from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
-    build_enroll_submitter_candidates, build_submitters_data, get_count, redirect_url, get_convenor_todo_data
+    build_enroll_submitter_candidates, build_submitters_data, get_count, redirect_url, get_convenor_todo_data, \
+    build_convenor_tasks_query
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
 from ..student.actions import store_selection
@@ -2142,7 +2143,6 @@ def attach_liveproject_ajax(id):
     :param id:
     :return:
     """
-
     # get details for project class
     pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
@@ -2311,6 +2311,98 @@ def manual_attach_other_project(id, configid):
     add_liveproject(number, project, configid, autocommit=True)
 
     return redirect(redirect_url())
+
+
+@convenor.route('/todo_list/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def todo_list(id):
+    # get details for project class
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config: ProjectClassConfig = pclass.most_recent_config
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(redirect_url())
+
+    status_filter = request.args.get('status_filter')
+
+    if status_filter is None and session.get('convenor_todo_list_status_filter'):
+        status_filter = session['convenor_todo_list_status_filter']
+
+    if status_filter is not None and status_filter not in ['all', 'overdue', 'available', 'dropped', 'completed']:
+        status_filter = 'all'
+
+    if status_filter is not None:
+        session['convenor_todo_list_status_filter'] = status_filter
+
+    blocking_filter = request.args.get('blocking_filter')
+
+    if blocking_filter is None and session.get('convenor_todo_list_blocking_filter'):
+        blocking_filter = session['convenor_todo_list_blocking_filter']
+
+    if blocking_filter is not None and blocking_filter not in ['all', 'blocking', 'not-blocking']:
+        blocking_filter = 'all'
+
+    if blocking_filter is not None:
+        session['convenor_todo_list_blocking_filter'] = blocking_filter
+
+    data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template('convenor/dashboard/todo_list.html', pane='todo', pclass=pclass, config=config,
+                           convenor_date=data, current_year=current_year, status_filter=status_filter,
+                           blocking_filter=blocking_filter, convenor_data=data)
+
+
+@convenor.route('/todo_list_ajax/<int:id>', methods=['POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def todo_list_ajax(id):
+    # get details for project class
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return jsonify({})
+
+    # get current configuration record for this project class
+    config: ProjectClassConfig = pclass.most_recent_config
+    if config is None:
+        return jsonify({})
+
+    status_filter = request.args.get('status_filter', 'all')
+    blocking_filter = request.args.get('blocking_filter', 'all')
+
+    base_query = build_convenor_tasks_query(config, status_filter=status_filter, blocking_filter=blocking_filter,
+                                            due_date_order=False)
+
+    # set up columns for server-side processing;
+    # use column literals because the query returned from base_query is likely to be built using
+    # polymorphic objects
+    task = {'search': literal_column('description'),
+            'order': literal_column('description'),
+            'search_collation': 'utf8_general_ci'}
+    defer_date = {'search': literal_column('DATE_FORMAT(defer_date, "%a %d %b %Y %H:%M:%S")'),
+                  'order': literal_column('defer_date'),
+                  'search_collation': 'utf8_general_ci'}
+    due_date = {'search': literal_column('DATE_FORMAT(due_date, "%a %d %b %Y %H:%M:%S")'),
+                'order': literal_column('due_date'),
+                'search_collation': 'utf8_general_ci'}
+    status = {'order': literal_column("(NOT(complete OR dropped) * (100*(due_date > CURDATE()) + 50*(defer_date > CURDATE())) + 10*complete + 1*dropped)")}
+
+    columns = {'task': task,
+               'defer_date': defer_date,
+               'due_date': due_date,
+               'status': status}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(partial(ajax.convenor.todo_list_data, pclass.id))
 
 
 @convenor.route('/edit_descriptions/<int:id>/<int:pclass_id>')
@@ -8328,7 +8420,6 @@ def student_tasks_ajax(type, sid):
         abort(404)
 
     config: ProjectClassConfig = obj.config
-    student: StudentData = obj.student
 
     # check user is convenor for this project class, or an administrator
     if not validate_is_convenor(config.project_class, message=True):

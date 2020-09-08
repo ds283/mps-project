@@ -1,0 +1,85 @@
+#
+# Created by David Seery on 08/09/2020.
+# Copyright (c) 2020 University of Sussex. All rights reserved.
+#
+# This file is part of the MPS-Project platform developed in
+# the School of Mathematics & Physical Sciences, University of Sussex.
+#
+# Contributors: David Seery <D.Seery@sussex.ac.uk>
+#
+
+
+from typing import List
+
+from flask import render_template_string
+from flask_security import current_user
+
+from ...models import EnrollmentRecord
+
+
+_name = \
+"""
+<a href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
+"""
+
+
+_exemptions = \
+"""
+{% macro display(state, sabbatical_state, exempt_state, reenroll, comment) %}
+    {% if state == sabbatical_state %}
+        <span class="badge badge-info">Sabbatical</span>
+        {% if reenroll %}
+            <span class="badge badge-secondary">Re-enroll {{ reenroll }}</span>
+        {% endif %}
+    {% elif state == exempt_state %}
+        <span class="badge badge-danger">Exempt</span>
+    {% endif %}
+    {% if comment and comment|length > 0 %}
+        <div class="text-muted">{{ comment }}</div>
+    {% endif %}
+{% endmacro %}
+{% if rec.pclass.uses_supervisor and rec.supervisor_state != rec.SUPERVISOR_ENROLLED %}
+    <div class="mb-2">
+        <strong class="mr-1">Supervising</strong>
+        {{ display(rec.supervisor_state, rec.SUPERVISOR_SABBATICAL, rec.SUPERVISOR_EXEMPT, rec.supervisor_reenroll, rec.supervisor_comment) }}
+    </div>
+{% endif %}
+{% if rec.pclass.uses_marker and rec.marker_state != rec.MARKER_ENROLLED %}
+    <div class="mb-2">
+        <strong class="mr-1">Marking</strong>
+        {{ display(rec.marker_state, rec.MARKER_SABBATICAL, rec.MARKER_EXEMPT, rec.marker_reenroll, rec.marker_comment) }}
+    </div>
+{% endif %}
+{% if rec.pclass.uses_presentations and rec.presentations_state != rec.PRESENTATIONS_ENROLLED %}
+    <div class="mb-2">
+        <strong class="mr-1">Presentations</strong>
+        {{ display(rec.presentations_state, rec.PRESENTATIONS_SABBATICAL, rec.PRESENTATIONS_EXEMPT, rec.presentations_reenroll, rec.presentations_comment) }}
+    </div>
+{% endif %}
+"""
+
+
+_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+    </button>
+    <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item {% if not is_admin %}disabled{% endif %}" {% if is_admin %}href="{{ url_for('manage_users.edit_enrollment', id=rec.id, url=url_for('reports.sabbaticals')) }}"{% endif %}>
+            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
+        </a>
+    </div>
+</div>
+"""
+
+
+def sabbaticals(enrolments: List[EnrollmentRecord]):
+    is_admin = current_user.has_role('admin') or current_user.has_role('root') or current_user.has_role('manage_users')
+
+    data = [{'name': render_template_string(_name, fac=e.owner),
+             'pclass': e.pclass.make_label(),
+             'exemptions': render_template_string(_exemptions, rec=e),
+             'menu': render_template_string(_menu, rec=e, is_admin=is_admin)} for e in enrolments]
+
+    return data

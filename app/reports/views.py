@@ -10,13 +10,14 @@
 
 
 from functools import partial
+from typing import List, Set
 
 from flask import render_template, redirect, url_for, flash, request, session
 from flask_security import login_required, roles_required, roles_accepted, current_user
 
 from ..database import db
 from ..models import User, FacultyData, ResearchGroup, SkillGroup, ProjectClass, ProjectClassConfig, \
-    Project, LiveProject, StudentData, DegreeProgramme, DegreeType
+    Project, LiveProject, StudentData, DegreeProgramme, DegreeType, EnrollmentRecord
 
 from ..shared.conversions import is_integer
 from ..shared.utils import redirect_url, get_current_year
@@ -36,7 +37,7 @@ from . import reports
 
 
 @reports.route('/workload')
-@roles_required('reports')
+@roles_accepted('admin', 'root', 'reports')
 def workload():
     """
     Basic workload report
@@ -67,7 +68,7 @@ def workload():
 
 
 @reports.route('/workload_ajax')
-@roles_required('reports')
+@roles_accepted('admin', 'root', 'reports')
 def workload_ajax():
     """
     AJAX data point for workload report
@@ -90,7 +91,7 @@ def workload_ajax():
 
 
 @reports.route('/all_projects')
-@roles_required('reports')
+@roles_accepted('admin', 'root', 'reports')
 def all_projects():
     pclass_filter = request.args.get('pclass_filter')
 
@@ -134,7 +135,7 @@ def all_projects():
 
 
 @reports.route('/all_projects_ajax')
-@roles_required('reports')
+@roles_accepted('admin', 'root', 'reports')
 def all_projects_ajax():
     """
     Ajax data point for All Projects report
@@ -311,7 +312,7 @@ def _build_rank_plot(pop_rank_dates, pop_ranks, total, title, colour):
 
 
 @reports.route('/year_groups')
-@roles_accepted('faculty', 'admin', 'root', 'reports')
+@roles_accepted('admin', 'root', 'reports')
 def year_groups():
     year_filter = request.args.get('year_filter')
     cohort_filter = request.args.get('cohort_filter')
@@ -386,7 +387,7 @@ def year_groups():
 
 
 @reports.route('/year_groups_ajax', methods=['POST'])
-@roles_accepted('faculty', 'admin', 'root', 'reports')
+@roles_accepted('admin', 'root', 'reports')
 def year_groups_ajax():
     year_filter = request.args.get('year_filter')
     cohort_filter = request.args.get('cohort_filter')
@@ -457,3 +458,68 @@ def year_groups_ajax():
 
     with ServerSideHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.reports.year_groups, current_year))
+
+
+@reports.route('/sabbaticals')
+@roles_accepted('admin', 'root', 'reports')
+def sabbaticals():
+    pclass_filter = request.args.get('pclass_filter')
+
+    if pclass_filter is None and session.get('reports_sabbatical_pclass_filter'):
+        pclass_filter = session['reports_sabbatical_pclass_filter']
+
+    pclasses: List[ProjectClass] = db.session.query(ProjectClass).filter(ProjectClass.active).all()
+    pclass_ids: Set[int] = set(p.id for p in pclasses)
+
+    if pclass_filter is not None and pclass_filter != 'all':
+        flag, value = is_integer(pclass_filter)
+
+        if flag:
+            if value not in pclass_ids:
+                pclass_filter = 'all'
+        else:
+            pclass_filter = 'all'
+
+    if pclass_filter is not None:
+        session['reports_sabbatical_pclass_filter'] = pclass_filter
+
+    return render_template('reports/sabbaticals.html', pclasses=pclasses, pclass_filter=pclass_filter)
+
+
+@reports.route('/sabbaticals_ajax', methods=['POST'])
+@roles_accepted('admin', 'root', 'reports')
+def sabbaticals_ajax():
+    pclass_filter = request.args.get('pclass_filter')
+
+    base_query = db.session.query(EnrollmentRecord) \
+        .filter(or_(EnrollmentRecord.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED,
+                    EnrollmentRecord.marker_state != EnrollmentRecord.MARKER_ENROLLED,
+                    EnrollmentRecord.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED)) \
+        .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id) \
+        .join(User, User.id == FacultyData.id) \
+        .filter(User.active)
+
+    if pclass_filter != 'all':
+        flag, value = is_integer(pclass_filter)
+
+        if flag:
+            base_query = base_query.filter(EnrollmentRecord.pclass_id == value)
+
+    base_query = base_query.join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id)
+
+    name = {'search': func.concat(User.first_name + ' ' + User.last_name),
+            'order': func.concat(User.last_name, User.first_name),
+            'search_collation': 'utf8_general_ci'}
+    pclass = {'order': ProjectClass.name}
+    exemptions = {'search': func.concat(EnrollmentRecord.supervisor_comment, EnrollmentRecord.marker_comment,
+                                        EnrollmentRecord.presentations_comment),
+                  'order': [EnrollmentRecord.supervisor_reenroll, EnrollmentRecord.marker_reenroll,
+                            EnrollmentRecord.presentations_reenroll],\
+                  'search_collation': 'utf8_general_ci'}
+
+    columns = {'name': name,
+               'pclass': pclass,
+               'exemptions': exemptions}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.reports.sabbaticals)

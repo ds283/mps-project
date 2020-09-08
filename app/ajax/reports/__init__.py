@@ -10,3 +10,4 @@
 
 from .workload import workload_data
 from .year_groups import year_groups
+from .sabbaticals import sabbaticals

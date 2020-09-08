@@ -32,7 +32,7 @@ _task = \
     {% endif %}
 </div>
 {% if tk.notes and tk.notes|length > 0 %}
-    <small class="text-muted">{{ tk.notes|truncate(150) }}</smalld>
+    <div class="text-muted">{{ tk.notes|truncate(150) }}</div>
 {% endif %}
 """
 

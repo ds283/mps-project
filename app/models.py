@@ -1111,6 +1111,10 @@ submitter_tasks = db.Table('submitter_tasks',
                            db.Column('submitter_id', db.Integer(), db.ForeignKey('submitting_students.id'), primary_key=True),
                            db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True))
 
+project_tasks = db.Table('project_tasks',
+                         db.Column('config_id', db.Integer(), db.ForeignKey('project_class_config.id'), primary_key=True),
+                         db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True))
+
 
 class MainConfig(db.Model):
     """
@@ -1421,6 +1425,164 @@ def _User_role_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         if value in target.mask_roles:
             target.mask_roles.remove(value)
+
+
+class ConvenorTask(db.Model, EditingMetadataMixin):
+    """
+    Record a to-do item for the convenor, and can be attached either to a SelectingStudent or a SubmittingStudent
+    """
+
+    __tablename__ = 'convenor_tasks'
+
+
+    # unique ID for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # polymorphic identifier
+    type = db.Column(db.Integer(), default=0, nullable=False)
+
+    # task description
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), nullable=False)
+
+    # task notes
+    notes = db.Column(db.Text())
+
+    # blocks movement to next lifecycle stage?
+    blocking = db.Column(db.Boolean(), default=False)
+
+    # completed?
+    complete = db.Column(db.Boolean(), default=False)
+
+    # dropped?
+    dropped = db.Column(db.Boolean(), default=False)
+
+    # defer date
+    defer_date = db.Column(db.DateTime(), index=True)
+
+    # due date
+    due_date = db.Column(db.DateTime(), index=True)
+
+
+    __mapper_args__ = {'polymorphic_identity': 0,
+                       'polymorphic_on': 'type'}
+
+
+    @property
+    def is_overdue(self):
+        if self.complete or self.dropped:
+            return False
+
+        now = datetime.now()
+        return self.due_date < now
+
+
+    @property
+    def is_available(self):
+        if self.complete or self.dropped:
+            return False
+
+        if self.defer_date is None:
+            return True
+
+        now = datetime.now()
+        return self.defer_date <= now
+
+
+class ConvenorSelectorTask(ConvenorTask):
+    __tablename__ = None
+
+    __mapper_args__ = {'polymorphic_identity': 1}
+
+
+class ConvenorSubmitterTask(ConvenorTask):
+    __tablename__ = None
+
+    __mapper_args__ = {'polymorphic_identity': 2}
+
+
+class ConvenorGenericTask(ConvenorTask):
+    __tablename__ = None
+
+
+    # is this task repeating, ie. does it recur every year?
+    repeat = db.Column(db.Boolean(), default=False)
+
+    # repeat period
+    REPEAT_DAILY = 0
+    REPEAT_MONTHLY = 1
+    REPEAT_YEARLY = 2
+    repeat_options = {REPEAT_DAILY: 'Daily',
+                      REPEAT_MONTHLY: 'Monthly',
+                      REPEAT_YEARLY: 'Yearly'}
+    repeat_interval = db.Column(db.Boolean(), default=REPEAT_DAILY)
+
+    # repeat frequency
+    repeat_frequency = db.Column(db.Integer())
+
+    # repeat from due date or real completion date?
+    repeat_from_due_date = db.Column(db.Integer(), default=True)
+
+    # roll over this task? ie., does this task repeat every cycle?
+    rollover = db.Column(db.Boolean(), default=False)
+
+
+    __mapper_args__ = {'polymorphic_identity': 3}
+
+
+
+def ConvenorTasksMixinFactory(association_table, subclass):
+
+    class ConvenorTasksMixin():
+
+        @declared_attr
+        def tasks(cls):
+            return db.relationship(subclass, secondary=association_table, lazy='dynamic',
+                                   backref=db.backref('parent', uselist=False))
+
+
+        @property
+        def available_tasks(self):
+            return self.tasks.filter(~ConvenorTask.complete,
+                                     ~ConvenorTask.dropped,
+                                     or_(ConvenorTask.defer_date == None,
+                                         and_(ConvenorTask.defer_date != None,
+                                              ConvenorTask.defer_date <= func.curdate())))
+
+
+        @property
+        def overdue_tasks(self):
+            return self.tasks.filter(~ConvenorTask.complete,
+                                     ~ConvenorTask.dropped,
+                                     and_(ConvenorTask.due_date != None,
+                                          ConvenorTask.due_date < func.curdate()))
+
+
+        @property
+        def number_tasks(self):
+            return get_count(self.tasks)
+
+
+        @property
+        def number_available_tasks(self):
+            return get_count(self.available_tasks)
+
+
+        @property
+        def number_overdue_tasks(self):
+            return get_count(self.overdue_tasks)
+
+
+        @staticmethod
+        def TaskObjectFactory(**kwargs):
+            return subclass(**kwargs)
+
+
+        @staticmethod
+        def polymorphic_identity():
+            return subclass.__mapper_args__['polymorphic_identity']
+
+
+    return ConvenorTasksMixin
 
 
 class EmailNotification(db.Model):
@@ -3574,7 +3736,7 @@ class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
         return 'Submission Period #{n}'.format(n=self.period)
 
 
-class ProjectClassConfig(db.Model):
+class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, ConvenorGenericTask)):
     """
     Model current configuration options for each project class
     """
@@ -6500,135 +6662,6 @@ class ConfirmRequest(db.Model):
                 add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_REQUEST_DELETED, self.project,
                                  notification_id=self.id)
                 delete_notification(self.project.owner.user, EmailNotification.CONFIRMATION_REQUEST_CREATED, self)
-
-
-class ConvenorTask(db.Model, EditingMetadataMixin):
-    """
-    Record a to-do item for the convenor, and can be attached either to a SelectingStudent or a SubmittingStudent
-    """
-
-    __tablename__ = 'convenor_tasks'
-
-
-    # unique ID for this record
-    id = db.Column(db.Integer(), primary_key=True)
-
-    # polymorphic identifier
-    type = db.Column(db.Integer(), default=0, nullable=False)
-
-    # task description
-    description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), nullable=False)
-
-    # task notes
-    notes = db.Column(db.Text())
-
-    # blocks movement to next lifecycle stage?
-    blocking = db.Column(db.Boolean(), default=False)
-
-    # completed?
-    complete = db.Column(db.Boolean(), default=False)
-
-    # dropped?
-    dropped = db.Column(db.Boolean(), default=False)
-
-    # defer date
-    defer_date = db.Column(db.DateTime(), index=True)
-
-    # due date
-    due_date = db.Column(db.DateTime(), index=True)
-
-
-    __mapper_args__ = {'polymorphic_identity': 0,
-                       'polymorphic_on': 'type'}
-
-
-    @property
-    def is_overdue(self):
-        if self.complete or self.dropped:
-            return False
-
-        now = datetime.now()
-        return self.due_date < now
-
-
-    @property
-    def is_available(self):
-        if self.complete or self.dropped:
-            return False
-
-        if self.defer_date is None:
-            return True
-
-        now = datetime.now()
-        return self.defer_date <= now
-
-
-class ConvenorSelectorTask(ConvenorTask):
-    __tablename__ = None
-
-    __mapper_args__ = {'polymorphic_identity': 1}
-
-
-class ConvenorSubmitterTask(ConvenorTask):
-    __tablename__ = None
-
-    __mapper_args__ = {'polymorphic_identity': 2}
-
-
-
-def ConvenorTasksMixinFactory(association_table, subclass):
-
-    class ConvenorTasksMixin():
-
-        @declared_attr
-        def tasks(cls):
-            return db.relationship(subclass, secondary=association_table, lazy='dynamic',
-                                   backref=db.backref('parent', uselist=False))
-
-
-        @property
-        def available_tasks(self):
-            return self.tasks.filter(~ConvenorTask.complete,
-                                     ~ConvenorTask.dropped,
-                                     or_(ConvenorTask.defer_date == None,
-                                         and_(ConvenorTask.defer_date != None,
-                                              ConvenorTask.defer_date <= func.curdate())))
-
-
-        @property
-        def overdue_tasks(self):
-            return self.tasks.filter(~ConvenorTask.complete,
-                                     ~ConvenorTask.dropped,
-                                     and_(ConvenorTask.due_date != None,
-                                          ConvenorTask.due_date < func.curdate()))
-
-
-        @property
-        def number_tasks(self):
-            return get_count(self.tasks)
-
-
-        @property
-        def number_available_tasks(self):
-            return get_count(self.available_tasks)
-
-
-        @property
-        def number_overdue_tasks(self):
-            return get_count(self.overdue_tasks)
-
-
-        @staticmethod
-        def TaskObjectFactory(**kwargs):
-            return subclass(**kwargs)
-
-
-        @staticmethod
-        def polymorphic_identity():
-            return subclass.__mapper_args__['polymorphic_identity']
-
-
-    return ConvenorTasksMixin
 
 
 class SelectingStudent(db.Model, ConvenorTasksMixinFactory(selector_tasks, ConvenorSelectorTask)):

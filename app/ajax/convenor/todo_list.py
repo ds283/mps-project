@@ -11,7 +11,7 @@
 from typing import List
 
 from flask import render_template_string, url_for
-from ...models import ConvenorStudentTask
+from ...models import ConvenorTask
 
 
 _task = \
@@ -82,8 +82,8 @@ _menu = \
 
 
 def _map(t, pclass_id):
-    if isinstance(t, ConvenorStudentTask):
-        t: ConvenorStudentTask
+    if isinstance(t, ConvenorTask):
+        t: ConvenorTask
         task_type = t.__mapper_args__['polymorphic_identity']
 
         return {'task': render_template_string(_task, tk=t, type=task_type, return_url=url_for('convenor.todo_list', id=pclass_id)),

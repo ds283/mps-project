@@ -42,7 +42,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Role, \
-    Bookmark, ConvenorStudentTask, ConvenorSelectorTask, ConvenorSubmitterTask
+    Bookmark, ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import make_submitted_asset_filename
@@ -8436,26 +8436,26 @@ def student_tasks_ajax(type, sid):
     elif status_filter == 'available':
         base_query = obj.available_tasks
     elif status_filter == 'completed':
-        base_query = obj.tasks.filter(ConvenorStudentTask.complete)
+        base_query = obj.tasks.filter(ConvenorTask.complete)
     elif status_filter == 'dropped':
-        base_query = obj.tasks.filter(ConvenorStudentTask.dropped)
+        base_query = obj.tasks.filter(ConvenorTask.dropped)
     else:
         base_query = obj.tasks
 
     if blocking_filter == 'blocking':
-        base_query = base_query.filter(ConvenorStudentTask.blocking)
+        base_query = base_query.filter(ConvenorTask.blocking)
     elif blocking_filter == 'not-blocking':
-        base_query = base_query.filter(~ConvenorStudentTask.blocking)
+        base_query = base_query.filter(~ConvenorTask.blocking)
 
     # set up columns for server-side processing
-    task = {'search': ConvenorStudentTask.description,
-            'order': ConvenorStudentTask.description,
+    task = {'search': ConvenorTask.description,
+            'order': ConvenorTask.description,
             'search_collation': 'utf8_general_ci'}
-    defer_date = {'search': func.date_format(ConvenorStudentTask.defer_date, "%a %d %b %Y %H:%M:%S"),
-                  'order': ConvenorStudentTask.defer_date,
+    defer_date = {'search': func.date_format(ConvenorTask.defer_date, "%a %d %b %Y %H:%M:%S"),
+                  'order': ConvenorTask.defer_date,
                   'search_collation': 'utf8_general_ci'}
-    due_date = {'search': func.date_format(ConvenorStudentTask.due_date, "%a %d %b %Y %H:%M:%S"),
-                'order': ConvenorStudentTask.due_date,
+    due_date = {'search': func.date_format(ConvenorTask.due_date, "%a %d %b %Y %H:%M:%S"),
+                'order': ConvenorTask.due_date,
                 'search_collation': 'utf8_general_ci'}
     status = {'order': literal_column("(NOT(complete OR dropped) * (100*(due_date > CURDATE()) + 50*(defer_date > CURDATE())) + 10*complete + 1*dropped)")}
 
@@ -8520,7 +8520,7 @@ def add_student_task(type, sid):
 @roles_accepted('faculty', 'admin', 'root')
 def edit_student_task(tid):
     task = \
-        db.session.query(with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
+        db.session.query(with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
             .filter_by(id=tid).first()
     if task is None:
         abort(404)
@@ -8565,7 +8565,7 @@ def edit_student_task(tid):
 @roles_accepted('faculty', 'admin', 'root')
 def delete_student_task(tid):
     task = \
-        db.session.query(with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
+        db.session.query(with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
             .filter_by(id=tid).first()
     if task is None:
         abort(404)
@@ -8599,7 +8599,7 @@ def delete_student_task(tid):
 @roles_accepted('faculty', 'admin', 'root')
 def do_delete_student_task(tid):
     task = \
-        db.session.query(with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
+        db.session.query(with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
             .filter_by(id=tid).first()
     if task is None:
         abort(404)
@@ -8631,7 +8631,7 @@ def do_delete_student_task(tid):
 @roles_accepted('faculty', 'admin', 'root')
 def student_task_complete(tid):
     task = \
-        db.session.query(with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
+        db.session.query(with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
             .filter_by(id=tid).first()
     if task is None:
         abort(404)
@@ -8667,7 +8667,7 @@ def student_task_complete(tid):
 @roles_accepted('faculty', 'admin', 'root')
 def student_task_drop(tid):
     task = \
-        db.session.query(with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
+        db.session.query(with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
             .filter_by(id=tid).first()
     if task is None:
         abort(404)

@@ -11,7 +11,7 @@
 from typing import List
 
 from flask import render_template_string
-from ...models import ConvenorStudentTask
+from ...models import ConvenorTask
 
 
 _task = \
@@ -67,7 +67,7 @@ _menu = \
 """
 
 
-def student_task_data(type, sid, return_url, tasks: List[ConvenorStudentTask]):
+def student_task_data(type, sid, return_url, tasks: List[ConvenorTask]):
     data = [{'task': render_template_string(_task, tk=t),
              'due_date': t.due_date.strftime("%a %d %b %Y %H:%M") if t.due_date is not None else '<span class="badge badge-secondary">None</span>',
              'defer_date': t.defer_date.strftime("%a %d %b %Y %H:%M") if t.defer_date is not None else '<span class="badge badge-secondary">None</span>',

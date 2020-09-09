@@ -20,7 +20,7 @@ from sqlalchemy.orm import with_polymorphic
 from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, FilterRecord, StudentData, \
-    MatchingAttempt, ProjectDescription, WorkflowMixin, DegreeProgramme, DegreeType, ConvenorStudentTask, \
+    MatchingAttempt, ProjectDescription, WorkflowMixin, DegreeProgramme, DegreeType, ConvenorTask, \
     selector_tasks, submitter_tasks, ConvenorSelectorTask, ConvenorSubmitterTask
 from ..models import project_assessors
 from ..cache import cache
@@ -601,7 +601,7 @@ def build_convenor_tasks_query(config, status_filter='all', blocking_filter='all
 
     # join these lists to produce a single list of tasks associated with our current selectors or submitters
     task_ids = sel_tks.union(sub_tks).subquery()
-    convenor_task = with_polymorphic(ConvenorStudentTask, [ConvenorSelectorTask, ConvenorSubmitterTask])
+    convenor_task = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask])
 
     # restrict attention to available tasks only, or those that block lifecycle evolution
     tks = db.session.query(convenor_task) \

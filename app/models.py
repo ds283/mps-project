@@ -1105,11 +1105,11 @@ submitted_acr = db.Table('acr_submitted',
 # tasks for selecting students
 selector_tasks = db.Table('selector_tasks',
                           db.Column('selector_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True),
-                          db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_student_tasks.id'), primary_key=True))
+                          db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True))
 
 submitter_tasks = db.Table('submitter_tasks',
                            db.Column('submitter_id', db.Integer(), db.ForeignKey('submitting_students.id'), primary_key=True),
-                           db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_student_tasks.id'), primary_key=True))
+                           db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True))
 
 
 class MainConfig(db.Model):
@@ -4050,12 +4050,12 @@ class ProjectClassConfig(db.Model):
 
     @property
     def has_blocking_tasks(self):
-        return get_count(self.selectors.tasks.any(~ConvenorStudentTask.complete,
-                                                  ~ConvenorStudentTask.dropped,
-                                                  ConvenorStudentTask.blocking)) > 0 \
-               or get_count(self.submitters.tasks.any(~ConvenorStudentTask.complete,
-                                                      ~ConvenorStudentTask.dropped,
-                                                      ConvenorStudentTask.blocking)) > 0
+        return get_count(self.selectors.tasks.any(~ConvenorTask.complete,
+                                                  ~ConvenorTask.dropped,
+                                                  ConvenorTask.blocking)) > 0 \
+               or get_count(self.submitters.tasks.any(~ConvenorTask.complete,
+                                                      ~ConvenorTask.dropped,
+                                                      ConvenorTask.blocking)) > 0
 
 
     @property
@@ -6502,12 +6502,12 @@ class ConfirmRequest(db.Model):
                 delete_notification(self.project.owner.user, EmailNotification.CONFIRMATION_REQUEST_CREATED, self)
 
 
-class ConvenorStudentTask(db.Model, EditingMetadataMixin):
+class ConvenorTask(db.Model, EditingMetadataMixin):
     """
     Record a to-do item for the convenor, and can be attached either to a SelectingStudent or a SubmittingStudent
     """
 
-    __tablename__ = 'convenor_student_tasks'
+    __tablename__ = 'convenor_tasks'
 
 
     # unique ID for this record
@@ -6563,13 +6563,13 @@ class ConvenorStudentTask(db.Model, EditingMetadataMixin):
         return self.defer_date <= now
 
 
-class ConvenorSelectorTask(ConvenorStudentTask):
+class ConvenorSelectorTask(ConvenorTask):
     __tablename__ = None
 
     __mapper_args__ = {'polymorphic_identity': 1}
 
 
-class ConvenorSubmitterTask(ConvenorStudentTask):
+class ConvenorSubmitterTask(ConvenorTask):
     __tablename__ = None
 
     __mapper_args__ = {'polymorphic_identity': 2}
@@ -6588,19 +6588,19 @@ def ConvenorTasksMixinFactory(association_table, subclass):
 
         @property
         def available_tasks(self):
-            return self.tasks.filter(~ConvenorStudentTask.complete,
-                                     ~ConvenorStudentTask.dropped,
-                                     or_(ConvenorStudentTask.defer_date == None,
-                                         and_(ConvenorStudentTask.defer_date != None,
-                                              ConvenorStudentTask.defer_date <= func.curdate())))
+            return self.tasks.filter(~ConvenorTask.complete,
+                                     ~ConvenorTask.dropped,
+                                     or_(ConvenorTask.defer_date == None,
+                                         and_(ConvenorTask.defer_date != None,
+                                              ConvenorTask.defer_date <= func.curdate())))
 
 
         @property
         def overdue_tasks(self):
-            return self.tasks.filter(~ConvenorStudentTask.complete,
-                                     ~ConvenorStudentTask.dropped,
-                                     and_(ConvenorStudentTask.due_date != None,
-                                          ConvenorStudentTask.due_date < func.curdate()))
+            return self.tasks.filter(~ConvenorTask.complete,
+                                     ~ConvenorTask.dropped,
+                                     and_(ConvenorTask.due_date != None,
+                                          ConvenorTask.due_date < func.curdate()))
 
 
         @property

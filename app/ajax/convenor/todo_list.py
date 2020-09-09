@@ -11,10 +11,11 @@
 from typing import List
 
 from flask import render_template_string, url_for
-from ...models import ConvenorTask
+
+from ...models import ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask
 
 
-_task = \
+_student_task = \
 """
 <strong>{{ tk.description }}</strong>
 <div>
@@ -27,6 +28,21 @@ _task = \
     {% elif type == 2 %}
         <span class="badge badge-secondary">Submitter</span>
     {% endif %}
+    {% if tk.blocking %}
+        <span class="badge badge-warning"><i class="fas fa-hand-paper"></i> Blocking</span>
+    {% endif %}
+</div>
+{% if tk.notes and tk.notes|length > 0 %}
+    <div class="text-muted">{{ tk.notes|truncate(150) }}</div>
+{% endif %}
+"""
+
+
+_project_task = \
+"""
+<strong>{{ tk.description }}</strong>
+<div>
+    <span class="badge badge-secondary">Project</span>
     {% if tk.blocking %}
         <span class="badge badge-warning"><i class="fas fa-hand-paper"></i> Blocking</span>
     {% endif %}
@@ -53,7 +69,7 @@ _status = \
 """
 
 
-_menu = \
+_student_menu = \
 """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
@@ -67,13 +83,41 @@ _menu = \
         {% set complete_label='Complete' if not tk.complete else 'Not complete' %}
         {% set drop_action='drop' if not tk.dropped else 'undrop' %}
         {% set drop_label='Drop' if not tk.dropped else 'Restore' %}
-        <a class="dropdown-item" href="{{ url_for('convenor.student_task_complete', tid=tk.id, action=complete_action) }}">
+        <a class="dropdown-item" href="{{ url_for('convenor.mark_task_complete', tid=tk.id, action=complete_action) }}">
             <i class="fas fa-check fa-fw"></i> {{ complete_label }}
         </a>
-        <a class="dropdown-item" href="{{ url_for('convenor.student_task_drop', tid=tk.id, action=drop_action) }}">
+        <a class="dropdown-item" href="{{ url_for('convenor.mark_task_dropped', tid=tk.id, action=drop_action) }}">
             <i class="fas fa-ban fa-fw"></i> {{ drop_label }}
         </a>
-        <a class="dropdown-item" href="{{ url_for('convenor.delete_student_task', tid=tk.id, url=return_url) }}">
+        <a class="dropdown-item" href="{{ url_for('convenor.delete_task', tid=tk.id, url=return_url) }}">
+            <i class="fas fa-trash fa-fw"></i> Delete
+        </a>
+    </div>
+</div>
+"""
+
+
+_project_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+    </button>
+    <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item" href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=return_url) }}">
+            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
+        </a>
+        {% set complete_action='complete' if not tk.complete else 'active' %}
+        {% set complete_label='Complete' if not tk.complete else 'Not complete' %}
+        {% set drop_action='drop' if not tk.dropped else 'undrop' %}
+        {% set drop_label='Drop' if not tk.dropped else 'Restore' %}
+        <a class="dropdown-item" href="{{ url_for('convenor.mark_task_complete', tid=tk.id, action=complete_action) }}">
+            <i class="fas fa-check fa-fw"></i> {{ complete_label }}
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.mark_task_dropped', tid=tk.id, action=drop_action) }}">
+            <i class="fas fa-ban fa-fw"></i> {{ drop_label }}
+        </a>
+        <a class="dropdown-item" href="{{ url_for('convenor.delete_task', tid=tk.id, url=return_url) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
     </div>
@@ -82,15 +126,21 @@ _menu = \
 
 
 def _map(t, pclass_id):
-    if isinstance(t, ConvenorTask):
-        t: ConvenorTask
+    if isinstance(t, ConvenorSelectorTask) or isinstance(t, ConvenorSubmitterTask):
         task_type = t.__mapper_args__['polymorphic_identity']
 
-        return {'task': render_template_string(_task, tk=t, type=task_type, return_url=url_for('convenor.todo_list', id=pclass_id)),
+        return {'task': render_template_string(_student_task, tk=t, type=task_type, return_url=url_for('convenor.todo_list', id=pclass_id)),
                 'due_date': t.due_date.strftime("%a %d %b %Y %H:%M") if t.due_date is not None else '<span class="badge badge-secondary">None</span>',
                 'defer_date': t.defer_date.strftime("%a %d %b %Y %H:%M") if t.defer_date is not None else '<span class="badge badge-secondary">None</span>',
                 'status': render_template_string(_status, available=t.is_available, overdue=t.is_overdue, tk=t),
-                'menu': render_template_string(_menu, tk=t, return_url=url_for('convenor.todo_list', id=pclass_id))}
+                'menu': render_template_string(_student_menu, tk=t, return_url=url_for('convenor.todo_list', id=pclass_id))}
+
+    if isinstance(t, ConvenorGenericTask):
+        return {'task': render_template_string(_project_task, tk=t, return_url=url_for('convenor.todo_list', id=pclass_id)),
+                'due_date': t.due_date.strftime("%a %d %b %Y %H:%M") if t.due_date is not None else '<span class="badge badge-secondary">None</span>',
+                'defer_date': t.defer_date.strftime("%a %d %b %Y %H:%M") if t.defer_date is not None else '<span class="badge badge-secondary">None</span>',
+                'status': render_template_string(_status, available=t.is_available, overdue=t.is_overdue, tk=t),
+                'menu': render_template_string(_project_menu, tk=t, return_url=url_for('convenor.todo_list', id=pclass_id))}
 
     return {'task': 'Unknown',
             'due_date': None,

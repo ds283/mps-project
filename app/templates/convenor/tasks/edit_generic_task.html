@@ -1,0 +1,90 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import edit_data, date_field %}
+
+{% block scripts %}
+    {{ super() }}
+
+    {% assets filters="cssmin", output="gen/tempusdominus-bootstrap-4.min.css", "css/tempusdominus-bootstrap-4.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="rjsmin", output="gen/moment.min.js", "js/moment.min.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/tempusdominus-bootstrap-4.min.js", "js/tempusdominus-bootstrap-4.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#datetimepicker1').datetimepicker({
+                format: 'DD/MM/YYYY HH:mm',
+                allowInputToggle: true,
+                sideBySide: true
+            });
+
+            $('#datetimepicker2').datetimepicker({
+                format: 'DD/MM/YYYY HH:mm',
+                allowInputToggle: true,
+                sideBySide: true
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Edit task
+{% endblock %}
+
+{% block formtitle %}
+    Edit task
+{% endblock %}
+
+{% block form_content %}
+    {% if task is defined %}
+        <form action="{{ url_for('convenor.edit_generic_task', tid=task.id, url=url) }}" method="POST" name="edit_form">
+    {% else %}
+        <form action="{{ url_for('convenor.add_generic_task', config_id=config.id, url=url) }}" method="POST" name="edit_form">
+    {% endif %}
+
+            {{ form.hidden_tag() }}
+
+            <div class="card mt-3 mb-3 card-body bg-well">
+                {{ wtf.render_field(form.description) }}
+                {{ wtf.render_field(form.notes) }}
+                {{ wtf.render_field(form.blocking)}}
+            </div>
+
+            <div class="card mt-3 mb-3 card-body bg-well">
+                <p>Task status</p>
+                {{ wtf.render_field(form.complete) }}
+                {{ wtf.render_field(form.dropped) }}
+            </div>
+
+            <div class="card mt-3 mb-3 card-body bg-well">
+                {{ date_field(form.defer_date, 'datetimepicker1') }}
+                {{ date_field(form.due_date, 'datetimepicker2') }}
+            </div>
+
+            <div class="card mt-3 mb-3 card-body bg-well">
+                {{ wtf.render_field(form.repeat) }}
+                {{ wtf.render_field(form.repeat_interval) }}
+                {{ wtf.render_field(form.repeat_frequency) }}
+                {{ wtf.render_field(form.repeat_from_due_date) }}
+                {{ wtf.render_field(form.rollover) }}
+            </div>
+
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        </form>
+{% endblock %}
+
+{% if task is defined %}
+    {% block footer %}
+        {{ edit_data(task) }}
+    {% endblock %}
+{% endif %}

@@ -110,12 +110,12 @@
                 </tr>
                 </thead>
             </table>
-{#            <div style="text-align: center;">#}
-{#                <a href="{{ url_for('convenor.add_student_task', type=type, sid=obj.id, url=url_for('convenor.todo_list', id=pclass.id)) }}" class="btn btn-secondary btn-lg">#}
-{#                    <i class="fas fa-plus"></i>#}
-{#                    New task#}
-{#                </a>#}
-{#            </div>#}
+            <div style="text-align: center;">
+                <a href="{{ url_for('convenor.add_generic_task', config_id=config.id, url=url_for('convenor.todo_list', id=pclass.id)) }}" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-plus"></i>
+                    New task
+                </a>
+            </div>
         </div>
     </div>
 {% endblock %}

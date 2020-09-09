@@ -21,7 +21,7 @@ from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, FilterRecord, StudentData, \
     MatchingAttempt, ProjectDescription, WorkflowMixin, DegreeProgramme, DegreeType, ConvenorTask, \
-    selector_tasks, submitter_tasks, ConvenorSelectorTask, ConvenorSubmitterTask
+    selector_tasks, submitter_tasks, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask, project_tasks
 from ..models import project_assessors
 from ..cache import cache
 
@@ -590,22 +590,31 @@ def build_convenor_tasks_query(config, status_filter='all', blocking_filter='all
                 SubmittingStudent.config_id == config.id).subquery()
 
     # find selector tasks that are linked to one of our current selectors
-    sel_tks = db.session.query(selector_tasks.c.tasks_id.label('tasks_id')) \
+    sel_tks = db.session.query(selector_tasks.c.tasks_id) \
         .join(selectors, selectors.c.id == selector_tasks.c.selector_id) \
         .filter(selectors.c.id != None)
 
     # find submitter tasks that are linked to one of our current submitters
-    sub_tks = db.session.query(submitter_tasks.c.tasks_id.label('tasks_id')) \
+    sub_tks = db.session.query(submitter_tasks.c.tasks_id) \
         .join(submitters, submitters.c.id == submitter_tasks.c.submitter_id) \
         .filter(submitters.c.id != None)
 
-    # join these lists to produce a single list of tasks associated with our current selectors or submitters
-    task_ids = sel_tks.union(sub_tks).subquery()
-    convenor_task = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask])
+    # find ids of tasks linked ot this project class config
+    task_tks = db.session.query(project_tasks.c.tasks_id) \
+        .filter(project_tasks.c.config_id == config.id)
 
-    # restrict attention to available tasks only, or those that block lifecycle evolution
+    # join these lists to produce a single list of tasks associated with our current selectors or submitters
+    task_ids = sel_tks.union(sub_tks).union(task_tks).subquery()
+
+    # query convenor tasks matching our list.
+    # Note the bodge tuple(task_ids.c)[0]. This seems to be the only way to get the right column
+    # object from the query.union.union construct; if we have just query.union then specifying a column
+    # label works, but with a double union the columns end up with anonymous names. That means we have
+    # to select by position.
+    convenor_task = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask,
+                                                    ConvenorGenericTask])
     tks = db.session.query(convenor_task) \
-        .join(task_ids, convenor_task.id == task_ids.c.tasks_id)
+        .join(task_ids, convenor_task.id == tuple(task_ids.c)[0])
 
     # if only searching for available tasks, skip those that are complete or dropped.
     # also skip tasks with a defer date that has not yet passed, unless they are blocking

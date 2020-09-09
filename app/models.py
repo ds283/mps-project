@@ -1511,9 +1511,9 @@ class ConvenorGenericTask(ConvenorTask):
     REPEAT_DAILY = 0
     REPEAT_MONTHLY = 1
     REPEAT_YEARLY = 2
-    repeat_options = {REPEAT_DAILY: 'Daily',
-                      REPEAT_MONTHLY: 'Monthly',
-                      REPEAT_YEARLY: 'Yearly'}
+    repeat_options = [(REPEAT_DAILY, 'Daily'),
+                      (REPEAT_MONTHLY, 'Monthly'),
+                      (REPEAT_YEARLY, 'Yearly')]
     repeat_interval = db.Column(db.Boolean(), default=REPEAT_DAILY)
 
     # repeat frequency

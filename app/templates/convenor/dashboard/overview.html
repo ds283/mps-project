@@ -165,8 +165,13 @@
                                 </thead>
                                 <tbody>
                                     {% for tk in top_to_dos %}
+                                        {% set tk_type = tk.__mapper_args__['polymorphic_identity'] %}
                                         {% set obj = tk.parent %}
-                                        {% set tk_config = obj.config %}
+                                        {% if  tk_type == 1 or tk_type == 2%}
+                                            {% set tk_config = obj.config %}
+                                        {% else %}
+                                            {% set tk_config = obj %}
+                                        {% endif %}
                                         {% set tk_pclass = tk_config.project_class %}
                                         <tr>
                                             <td>
@@ -176,10 +181,14 @@
                                                 {% endif %}
                                             </td>
                                             <td>
-                                                <i class="fas fa-user"></i>
-                                                <a href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.overview', id=pclass.id), text='convenor overview') }}">
-                                                    {{ obj.student.user.name }}
-                                                </a>
+                                                {% if tk_type == 1 or tk_type == 2 %}
+                                                    <i class="fas fa-user"></i>
+                                                    <a href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.overview', id=pclass.id), text='convenor overview') }}">
+                                                        {{ obj.student.user.name }}
+                                                    </a>
+                                                {% elif tk_type == 3 %}
+                                                    <span class="badge badge-secondary">Project task</span>
+                                                {% endif %}
                                             </td>
                                             <td>
                                                 {% if tk.defer_date is not none %}
@@ -214,13 +223,19 @@
                                                         Actions
                                                     </button>
                                                     <div class="dropdown-menu dropdown-menu-right">
-                                                        <a class="dropdown-item" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.overview', id=pclass.id)) }}">
-                                                            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
-                                                        </a>
-                                                        <a class="dropdown-item" href="{{ url_for('convenor.student_task_complete', tid=tk.id, action='complete') }}">
+                                                        {% if tk_type == 1 or tk_type == 2 %}
+                                                            <a class="dropdown-item" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.overview', id=pclass.id)) }}">
+                                                                <i class="fas fa-pencil-alt fa-fw"></i> Edit...
+                                                            </a>
+                                                        {% elif tk_type == 3 %}
+                                                            <a class="dropdown-item" href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.overview', id=pclass.id)) }}">
+                                                                <i class="fas fa-pencil-alt fa-fw"></i> Edit...
+                                                            </a>
+                                                        {% endif %}
+                                                        <a class="dropdown-item" href="{{ url_for('convenor.mark_task_complete', tid=tk.id, action='complete') }}">
                                                             <i class="fas fa-check fa-fw"></i> Complete
                                                         </a>
-                                                        <a class="dropdown-item" href="{{ url_for('convenor.student_task_drop', tid=tk.id, action='drop') }}">
+                                                        <a class="dropdown-item" href="{{ url_for('convenor.mark_task_dropped', tid=tk.id, action='drop') }}">
                                                             <i class="fas fa-ban fa-fw"></i> Drop
                                                         </a>
                                                     </div>

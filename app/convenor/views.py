@@ -31,7 +31,7 @@ from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, Ope
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
     EditSubmissionRecordForm, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
-    EditProjectConfigForm, AddConvenorStudentTask, EditConvenorStudentTask
+    EditProjectConfigForm, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask
 from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
@@ -42,7 +42,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Role, \
-    Bookmark, ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask
+    Bookmark, ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import make_submitted_asset_filename
@@ -51,7 +51,7 @@ from ..shared.conversions import is_integer
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
     build_enroll_submitter_candidates, build_submitters_data, get_count, redirect_url, get_convenor_todo_data, \
-    build_convenor_tasks_query
+    build_convenor_tasks_query, home_dashboard_url
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
 from ..student.actions import store_selection
@@ -2403,6 +2403,103 @@ def todo_list_ajax(id):
 
     with ServerSideHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.convenor.todo_list_data, pclass.id))
+
+
+@convenor.route('/add_generic_task/<int:config_id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def add_generic_task(config_id):
+    # get details for project class config record
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(config_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    form = AddConvenorGenericTask(request.form)
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('convenor.todo_list', id=config.pclass_id)
+
+    if form.validate_on_submit():
+        task = ConvenorGenericTask(description=form.description.data,
+                                   notes=form.notes.data,
+                                   blocking=form.blocking.data,
+                                   complete=form.complete.data,
+                                   dropped=form.dropped.data,
+                                   defer_date=form.defer_date.data,
+                                   due_date=form.due_date.data,
+                                   repeat=form.repeat.data,
+                                   repeat_interval=form.repeat_interval.data,
+                                   repeat_frequency=form.repeat_frequency.data,
+                                   repeat_from_due_date=form.repeat_from_due_date.data,
+                                   rollover=form.rollover.data,
+                                   creator_id=current_user.id,
+                                   creation_timestamp=datetime.now())
+
+        try:
+            config.tasks.append(task)
+            db.session.commit()
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not create new task due to a database error. '
+                  'Please contact a system administrator', 'error')
+
+        return redirect(url)
+
+    return render_template('convenor/tasks/edit_generic_task.html', form=form, url=url, config=config)
+
+
+@convenor.route('/edit_generic_task/<int:tid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_generic_task(tid):
+    # get details for task
+    task: AddConvenorGenericTask = ConvenorGenericTask.query.get_or_404(tid)
+    config: ProjectClassConfig = task.parent
+
+    if config is None:
+        flash('Cannot edit this task because it is orphaned, or because a polymorphism loading '
+              'error has occurred. Please contact a system administrator.', 'error')
+        return redirect(redirect_url())
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    form = AddConvenorGenericTask(obj=task)
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('convenor.todo_list', id=config.pclass_id)
+
+    if form.validate_on_submit():
+        task.description = form.description.data
+        task.notes = form.notes.data
+        task.blocking = form.blocking.data
+        task.complete = form.complete.data
+        task.dropped = form.dropped.data
+        task.defer_date = form.defer_date.data
+        task.due_date = form.due_date.data
+        task.repeat = form.repeat.data
+        task.repeat_interval = form.repeat_interval.data
+        task.repeat_frequency = form.repeat_frequency.data
+        task.repeat_from_due_data = form.repeat_from_due_date.data
+        task.rollover = form.rollover.data
+        task.last_edit_id = current_user.id
+        task.last_edit_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes to task due to a database error. '
+                  'Please contact a system administrator', 'error')
+
+        return redirect(url)
+
+    return render_template('convenor/tasks/edit_generic_task.html', form=form, url=url, task=task,
+                           config=config)
 
 
 @convenor.route('/edit_descriptions/<int:id>/<int:pclass_id>')
@@ -8553,7 +8650,7 @@ def edit_student_task(tid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash('Could not save changed to task due to a database error. '
+            flash('Could not save changes to task due to a database error. '
                   'Please contact a system administrator', 'error')
 
         return redirect(url)
@@ -8561,17 +8658,25 @@ def edit_student_task(tid):
     return render_template('convenor/tasks/edit_task.html', form=form, url=url, obj=obj, task=task)
 
 
-@convenor.route('/delete_student_task/<int:tid>')
+@convenor.route('/delete_task/<int:tid>')
 @roles_accepted('faculty', 'admin', 'root')
-def delete_student_task(tid):
-    task = \
-        db.session.query(with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
-            .filter_by(id=tid).first()
+def delete_task(tid):
+    task_types = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask,
+                                                 ConvenorGenericTask])
+
+    task = db.session.query(task_types).filter_by(id=tid).first()
     if task is None:
         abort(404)
 
     obj = task.parent
-    config: ProjectClassConfig = obj.config
+    task_type = task.__mapper_args__['polymorphic_identity']
+    if task_type == 1 or task_type == 2:
+        config: ProjectClassConfig = obj.config
+    elif task_type == 3:
+        config: ProjectClassConfig = obj
+    else:
+        flash('Error loading polymorphic object in ', 'error')
+        return redirect(redirect_url())
 
     # check user is convenor for this project class, or an administrator
     if not validate_is_convenor(config.project_class, message=True):
@@ -8579,33 +8684,61 @@ def delete_student_task(tid):
 
     url = request.args.get('url', None)
     if url is None:
-        url = url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id)
+        if task_type == 1 or task_type == 2:
+            url = url_for('convenor.student_tasks', type=task_type, sid=obj.id)
+        elif task_type == 3:
+            url = url_for('convenor.todo_list', id=config.pclass_id)
+        else:
+            url = home_dashboard_url()
 
-    title = 'Delete student task'
-    panel_title = 'Delete task for student <i class="fas fa-user"></i> {name}'.format(name=obj.student.user.name)
+    if task_type == 1 or task_type == 2:
+        title = 'Delete student task'
+        panel_title = 'Delete task for student <i class="fas fa-user"></i> {name}'.format(name=obj.student.user.name)
 
-    action_url = url_for('convenor.do_delete_student_task', tid=tid, url=url)
-    message = '<p>Are you sure that you wish to delete the following task for student ' \
-              '<i class="fas fa-user"></i> {name}?</p>' \
-              '<p><strong>{desc}</strong></p>' \
-              '<p>This action cannot be undone.</p>'.format(name=obj.student.user.name, desc=task.description)
+        message = '<p>Are you sure that you wish to delete the following task for student ' \
+                  '<i class="fas fa-user"></i> {name}?</p>' \
+                  '<p><strong>{desc}</strong></p>' \
+                  '<p>This action cannot be undone.</p>'.format(name=obj.student.user.name, desc=task.description)
+
+    elif task_type == 3:
+        title = 'Delete project task'
+        panel_title = 'Delete project task'
+
+        message = '<p>Are you sure that you wish to delete the following task?</p>' \
+                  '<p><strong>{desc}</strong></p>' \
+                  '<p>This action cannot be undone.</p>'.format(desc=task.description)
+
+    else:
+        title = 'ERROR'
+        panel_title = 'ERROR'
+        message = '<p>This message should not appear. Please contact a aystem administrator.</p>'
+
+    action_url = url_for('convenor.do_delete_task', tid=tid, url=url)
     submit_label = 'Delete task'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
                            message=message, submit_label=submit_label)
 
 
-@convenor.route('/do_delete_student_task/<int:tid>')
+@convenor.route('/do_delete_task/<int:tid>')
 @roles_accepted('faculty', 'admin', 'root')
-def do_delete_student_task(tid):
-    task = \
-        db.session.query(with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
-            .filter_by(id=tid).first()
+def do_delete_task(tid):
+    task_types = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask,
+                                                 ConvenorGenericTask])
+
+    task = db.session.query(task_types).filter_by(id=tid).first()
     if task is None:
         abort(404)
 
     obj = task.parent
-    config: ProjectClassConfig = obj.config
+    task_type = task.__mapper_args__['polymorphic_identity']
+    if task_type == 1 or task_type == 2:
+        config: ProjectClassConfig = obj.config
+    elif task_type == 3:
+        config: ProjectClassConfig = obj
+    else:
+        flash('Error loading polymorphic object in ', 'error')
+        return redirect(redirect_url())
 
     # check user is convenor for this project class, or an administrator
     if not validate_is_convenor(config.project_class, message=True):
@@ -8621,23 +8754,31 @@ def do_delete_student_task(tid):
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash('Could not delete student task due to a database error. Please contact a system administrator.',
+        flash('Could not delete task due to a database error. Please contact a system administrator.',
               'error')
 
     return redirect(url)
 
 
-@convenor.route('/student_task_complete/<int:tid>')
+@convenor.route('/mark_task_complete/<int:tid>')
 @roles_accepted('faculty', 'admin', 'root')
-def student_task_complete(tid):
-    task = \
-        db.session.query(with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
-            .filter_by(id=tid).first()
+def mark_task_complete(tid):
+    task_types = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask,
+                                                 ConvenorGenericTask])
+
+    task = db.session.query(task_types).filter_by(id=tid).first()
     if task is None:
         abort(404)
 
     obj = task.parent
-    config: ProjectClassConfig = obj.config
+    task_type = task.__mapper_args__['polymorphic_identity']
+    if task_type == 1 or task_type == 2:
+        config: ProjectClassConfig = obj.config
+    elif task_type == 3:
+        config: ProjectClassConfig = obj
+    else:
+        flash('Error loading polymorphic object in ', 'error')
+        return redirect(redirect_url())
 
     # check user is convenor for this project class, or an administrator
     if not validate_is_convenor(config.project_class, message=True):
@@ -8650,30 +8791,38 @@ def student_task_complete(tid):
     elif action == 'active':
         task.complete = False
     else:
-        flash('Unknown action parameter "{param}" passed to student_task_complete(). Please inform an '
+        flash('Unknown action parameter "{param}" passed to mark_task_complete(). Please inform an '
               'administrator.'.format(param=action), 'error')
 
     try:
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash('Could not change completion status for this convenor student task due to a database error. '
+        flash('Could not change completion status for this convenor task due to a database error. '
               'Please contact a system administrator.', 'error')
 
     return redirect(redirect_url())
 
 
-@convenor.route('/student_task_drop/<int:tid>')
+@convenor.route('/mark_task_dropped/<int:tid>')
 @roles_accepted('faculty', 'admin', 'root')
-def student_task_drop(tid):
-    task = \
-        db.session.query(with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask])) \
-            .filter_by(id=tid).first()
+def mark_task_dropped(tid):
+    task_types = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask,
+                                                 ConvenorGenericTask])
+
+    task = db.session.query(task_types).filter_by(id=tid).first()
     if task is None:
         abort(404)
 
     obj = task.parent
-    config: ProjectClassConfig = obj.config
+    task_type = task.__mapper_args__['polymorphic_identity']
+    if task_type == 1 or task_type == 2:
+        config: ProjectClassConfig = obj.config
+    elif task_type == 3:
+        config: ProjectClassConfig = obj
+    else:
+        flash('Error loading polymorphic object in ', 'error')
+        return redirect(redirect_url())
 
     # check user is convenor for this project class, or an administrator
     if not validate_is_convenor(config.project_class, message=True):
@@ -8686,14 +8835,14 @@ def student_task_drop(tid):
     elif action == 'undrop':
         task.dropped = False
     else:
-        flash('Unknown action parameter "{param}" passed to student_task_drop(). Please inform an '
+        flash('Unknown action parameter "{param}" passed to mark_task_dropped(). Please inform an '
               'administrator.'.format(param=action), 'error')
 
     try:
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash('Could not change dropped status for this convenor student task due to a database error. '
+        flash('Could not change dropped status for this convenor task due to a database error. '
               'Please contact a system administrator.', 'error')
 
     return redirect(redirect_url())

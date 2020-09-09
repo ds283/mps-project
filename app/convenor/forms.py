@@ -10,15 +10,16 @@
 
 from flask_security.forms import Form
 from wtforms import SubmitField, DateField, IntegerField, StringField, BooleanField, TextAreaField, \
-    DateTimeField
+    DateTimeField, SelectField
 from wtforms.validators import InputRequired, Optional, Email, Length
 from wtforms_alchemy import QuerySelectField
 
-from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig
+from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig, ConvenorGenericTask
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
     GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses, GetAccommodatableMatchings
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodCommonMixin, \
     PeriodSelectorMixinFactory
+from ..shared.forms.wtf_validators import NotOptionalIf
 
 from functools import partial
 
@@ -243,7 +244,7 @@ class EditPeriodAttachmentForm(Form, PeriodAttachmentMixin, SaveChangesMixin):
     pass
 
 
-class ConvenorStudentTaskMixin():
+class ConvenorTaskMixin():
 
     description = StringField('Description', description='Briefly summarize the task',
                               validators=[InputRequired(), Length(max=DEFAULT_STRING_LENGTH)])
@@ -273,11 +274,39 @@ class ConvenorStudentTaskMixin():
                              validators=[Optional()])
 
 
-class AddConvenorStudentTask(Form, ConvenorStudentTaskMixin):
+class ConvenorGenericTaskMixin():
+
+    repeat = BooleanField('Repeat task')
+
+    repeat_interval = SelectField('Repeat interval', choices=ConvenorGenericTask.repeat_options, coerce=int)
+
+    repeat_frequency = IntegerField('Repeat frequency', validators=[NotOptionalIf('repeat')])
+
+    repeat_from_due_date = BooleanField('Repeat from due date',
+                                        description='Select if the due and defer dates of a repeating task '
+                                                    'should be calculated from the due date of the '
+                                                    'predecessor task, or from its actual completion date.')
+
+    rollover = BooleanField('Rollover with academic year',
+                            description='Select if this task should be retained (if not yet complete) when '
+                                        'rolling over between academic years.')
+
+
+class AddConvenorStudentTask(Form, ConvenorTaskMixin):
 
     submit = SubmitField('Create new task')
 
 
-class EditConvenorStudentTask(Form, ConvenorStudentTaskMixin, SaveChangesMixin):
+class EditConvenorStudentTask(Form, ConvenorTaskMixin, SaveChangesMixin):
+
+    pass
+
+
+class AddConvenorGenericTask(Form, ConvenorTaskMixin, ConvenorGenericTaskMixin):
+
+    submit = SubmitField('Create new task')
+
+
+class EditConvenorGenericTask(Form, ConvenorTaskMixin, ConvenorGenericTaskMixin, SaveChangesMixin):
 
     pass

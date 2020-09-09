@@ -10,6 +10,7 @@
 
 
 from datetime import date, datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from functools import partial
 from pathlib import Path
 
@@ -31,7 +32,8 @@ from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, Ope
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
     EditSubmissionRecordForm, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
-    EditProjectConfigForm, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask
+    EditProjectConfigForm, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask, \
+    EditConvenorGenericTask
 from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
@@ -50,8 +52,9 @@ from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
-    build_enroll_submitter_candidates, build_submitters_data, get_count, redirect_url, get_convenor_todo_data, \
+    build_enroll_submitter_candidates, build_submitters_data, redirect_url, get_convenor_todo_data, \
     build_convenor_tasks_query, home_dashboard_url
+from ..shared.sqlalchemy import get_count, clone_model
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
 from ..student.actions import store_selection
@@ -2467,7 +2470,7 @@ def edit_generic_task(tid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    form = AddConvenorGenericTask(obj=task)
+    form = EditConvenorGenericTask(obj=task)
     url = request.args.get('url', None)
     if url is None:
         url = url_for('convenor.todo_list', id=config.pclass_id)
@@ -2483,7 +2486,7 @@ def edit_generic_task(tid):
         task.repeat = form.repeat.data
         task.repeat_interval = form.repeat_interval.data
         task.repeat_frequency = form.repeat_frequency.data
-        task.repeat_from_due_data = form.repeat_from_due_date.data
+        task.repeat_from_due_date = form.repeat_from_due_date.data
         task.rollover = form.rollover.data
         task.last_edit_id = current_user.id
         task.last_edit_timestamp = datetime.now()
@@ -8788,6 +8791,48 @@ def mark_task_complete(tid):
 
     if action == 'complete':
         task.complete = True
+
+        if hasattr(task, 'repeat') and task.repeat:
+            if task.repeat_interval == task.REPEAT_DAILY:
+                interval = relativedelta(days=task.repeat_frequency)
+            elif task.repeat_interval == task.REPEAT_MONTHLY:
+                interval = relativedelta(months=task.repeat_frequency)
+            elif task.repeat_interval == task.REPEAT_YEARLY:
+                interval = relativedelta(years=task.repeat_frequency)
+            else:
+                interval = None
+
+            if interval is not None:
+                new_task = clone_model(task)
+                new_task.complete = False
+
+                if task.repeat_from_due_date:
+                    if task.defer_date is not None:
+                        new_task.defer_date = new_task.defer_date + interval
+                    if task.due_date is not None:
+                        new_task.due_date = new_task.due_date + interval
+
+                else:
+                    now = datetime.now()
+
+                    if task.defer_date is not None:
+                        if task.due_date is not None:
+                            diff = task.due_date - task.defer_date
+                            new_task.defer_date = now + interval - diff
+                        else:
+                            new_task.defer_date = now + interval
+
+                    if task.due_date is not None:
+                        new_task.due_date = now + interval
+
+                try:
+                    obj.tasks.append(new_task)
+                    db.session.commit()
+                except SQLAlchemyError as e:
+                    db.session.rollback()
+                    flash('Could not generate repeat  task due to a database error. '
+                          'Please contact a system administrator.', 'error')
+
     elif action == 'active':
         task.complete = False
     else:

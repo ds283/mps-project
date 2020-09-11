@@ -31,12 +31,6 @@ _student_task = \
     {% if tk.blocking %}
         <span class="badge badge-warning"><i class="fas fa-hand-paper"></i> Blocking</span>
     {% endif %}
-    {% if tk.repeat %}
-        <span class="badge badge-info"><i class="fas fa-redo"></i> Repeat</span>
-    {% endif %}
-    {% if tk.rollover %}
-        <span class="badge badge-info"><i class="fas fa-arrow-alt-circle-right"> Rollover</span>
-    {% endif %}
 </div>
 {% if tk.notes and tk.notes|length > 0 %}
     <div class="text-muted">{{ tk.notes|truncate(150) }}</div>
@@ -51,6 +45,12 @@ _project_task = \
     <span class="badge badge-secondary">Project</span>
     {% if tk.blocking %}
         <span class="badge badge-warning"><i class="fas fa-hand-paper"></i> Blocking</span>
+    {% endif %}
+    {% if tk.repeat %}
+        <span class="badge badge-info"><i class="fas fa-redo"></i> Repeat</span>
+    {% endif %}
+    {% if tk.rollover %}
+        <span class="badge badge-info"><i class="fas fa-arrow-alt-circle-right"> Rollover</span>
     {% endif %}
 </div>
 {% if tk.notes and tk.notes|length > 0 %}

@@ -17,7 +17,7 @@ from ..database import db
 from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, \
     SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
     SubmissionRecord, SubmissionPeriodRecord, add_notification, EmailNotification, ProjectClass, Project, \
-    ProjectDescription, ConfirmRequest
+    ProjectDescription, ConfirmRequest, ConvenorGenericTask
 
 from ..task_queue import progress_update
 
@@ -483,8 +483,19 @@ def register_rollover_tasks(celery):
             for rec in old_config.periods:
                 rec.retired = True
 
-            # clear out list of go live notification recipients to keep associate table trim
+            # clear out list of go live notification recipients to keep association table trim
             rec.golive_notified = []
+
+            # move any tasks that are marked as rollover
+            rollover_tasks = set()
+            for tk in old_config.tasks:
+                tk: ConvenorGenericTask
+                if tk.rollover and not (tk.complete or tk.dropped):
+                    rollover_tasks.add(tk)
+
+            for tk in rollover_tasks:
+                old_config.tasks.remove(tk)
+                new_config.tasks.append(tk)
 
             db.session.commit()
         except SQLAlchemyError as e:

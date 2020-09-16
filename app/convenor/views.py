@@ -879,7 +879,8 @@ def enroll_selectors(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(redirect_url())
 
-    if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+    if not (current_user.has_role('admin') or current_user.has_role('root')) \
+            and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(redirect_url())
 
@@ -973,7 +974,8 @@ def enroll_selectors_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
-    if config.selection_closed:
+    if not (current_user.has_role('admin') or current_user.has_role('root')) \
+            and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
         return jsonify({})
 
     # get current year
@@ -1015,7 +1017,8 @@ def enroll_all_selectors(configid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+    if not (current_user.has_role('admin') or current_user.has_role('root')) \
+            and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(redirect_url())
 
@@ -1083,7 +1086,8 @@ def enroll_selector(sid, configid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+    if not (current_user.has_role('admin') or current_user.has_role('root')) \
+            and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(redirect_url())
 
@@ -4283,6 +4287,29 @@ def submit_student_selection(sel_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash('A database error occurred during submission. Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@convenor.route('/force_submit_selection/<int:sel_id>')
+@roles_accepted('admin', 'root')
+def force_submit_selection(sel_id):
+    # sel_id is a SelectingStudent
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sel_id)
+
+    if not sel.has_bookmarks:
+        flash('Selector "{name}" cannot be force-submit because they do not have '
+              'bookmarks.'.format(name=sel.student.user.name), 'info')
+        return redirect(redirect_url())
+
+    store_selection(sel)
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash('A database error occurred during forced submission. Please contact a system administrator.', 'error')
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())

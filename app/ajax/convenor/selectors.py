@@ -44,7 +44,8 @@ _menu = \
         {% endif %}
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Selections</div>
-        {% if student.is_valid_selection[0] %}
+        {% set is_valid = student.is_valid_selection[0] %}
+        {% if is_valid %}
             <a class="dropdown-item" href="{{ url_for('convenor.submit_student_selection', sel_id=student.id) }}">
                 <i class="fas fa-paper-plane fa-fw"></i> Submit selection
             </a>
@@ -53,6 +54,10 @@ _menu = \
         {% if student.has_submitted %}
             <a class="dropdown-item" href="{{ url_for('convenor.selector_choices', id=student.id) }}">
                 <i class="fas fa-eye fa-fw"></i> Show selection
+            </a>
+        {% elif (is_admin and not is_valid) %}
+            <a class="dropdown-item" href="{{ url_for('convenor.force_submit_selection', sel_id=student.id) }}">
+                <i class="fas fa-exclamation-triangle fa-fw"></i> Force submission
             </a>
         {% endif %}
         
@@ -66,13 +71,13 @@ _menu = \
             </a>
         {% endif %}
 
-        {% if student.has_bookmarks %}
-            <div role="separator" class="dropdown-divider"></div>
-            <div class="dropdown-header">Bookmarks</div>    
-            <a class="dropdown-item" href="{{ url_for('convenor.selector_bookmarks', id=student.id) }}">
-                <i class="fas fa-eye fa-fw"></i> Show bookmarks
-            </a>
+        <div role="separator" class="dropdown-divider"></div>
+        <div class="dropdown-header">Bookmarks</div>    
+        <a class="dropdown-item" href="{{ url_for('convenor.selector_bookmarks', id=student.id) }}">
+            <i class="fas fa-eye fa-fw"></i> Show bookmarks
+        </a>
 
+        {% if student.has_bookmarks %}
             {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                 <a class="dropdown-item" href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
                     <i class="fas fa-trash fa-fw"></i> Delete bookmarks

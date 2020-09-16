@@ -2,7 +2,7 @@
 
 {% block tabblock %}
     {% set lifecycle = config.selector_lifecycle %}
-    {% set show_manual_enroll = (lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
+    {% set show_manual_enroll = is_admin or (lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
     {% set show_selector_grid = (lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
     {% set show_confirmations = (lifecycle >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN) and (lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
     <ul class="nav nav-tabs dashboard-nav">

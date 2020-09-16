@@ -41,14 +41,14 @@ def upgrade():
     sa.Column('selector_id', sa.Integer(), nullable=False),
     sa.Column('tasks_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['selector_id'], ['selecting_students.id'], ),
-    sa.ForeignKeyConstraint(['tasks_id'], ['convenor_student_tasks.id'], ),
+    sa.ForeignKeyConstraint(['tasks_id'], ['convenor_tasks.id'], ),
     sa.PrimaryKeyConstraint('selector_id', 'tasks_id')
     )
     op.create_table('submitter_tasks',
     sa.Column('submitter_id', sa.Integer(), nullable=False),
     sa.Column('tasks_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['submitter_id'], ['submitting_students.id'], ),
-    sa.ForeignKeyConstraint(['tasks_id'], ['convenor_student_tasks.id'], ),
+    sa.ForeignKeyConstraint(['tasks_id'], ['convenor_tasks.id'], ),
     sa.PrimaryKeyConstraint('submitter_id', 'tasks_id')
     )
     # ### end Alembic commands ###

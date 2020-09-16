@@ -48,8 +48,7 @@ def year_groups(current_year, students):
     data = [{'name': render_template_string(_name, s=s, current_year=current_year),
              'programme': s.programme.label,
              'selecting': render_template_string(_selecting, s=s),
-             'submitting': render_template_string(_submitting, s=s),
-             'menu': "None"}
+             'submitting': render_template_string(_submitting, s=s)}
             for s in students]
 
     return data

@@ -32,7 +32,7 @@ _status = \
     {% if m.is_modified %}
         <span class="badge badge-warning">Modified</span>
     {% else %}
-        <span class="badge badge-success">Original</span>
+        <span class="badge badge-info">Original</span>
     {% endif %}
     <p></p>
     {% if m.solution_usable %}
@@ -51,14 +51,14 @@ _status = \
     {% endif %}
     <p></p>
     {% if m.published and current_user.has_role('root') %}
-        <span class="badge badge-primary">Published</span>
+        <span class="badge badge-info">Published</span>
     {% endif %}
     {% if m.selected %}
         <span class="badge badge-success">Selected</span>
     {% endif %}
 {% else %}
     {% if m.awaiting_upload %}
-        <span class="badge badge-success">Awaiting upload</span>
+        <span class="badge badge-info">Awaiting upload</span>
         {% if m.lp_file is not none %}
             <a href="{{ url_for('admin.download_generated_asset', asset_id=m.lp_file.id) }}">LP</a>
         {% endif %}
@@ -66,14 +66,14 @@ _status = \
             <a href="{{ url_for('admin.download_generated_asset', asset_id=m.mps_file.id) }}">MPS</a>
         {% endif %}
     {% else %}
-        <span class="badge badge-success">In progress</span>
+        <span class="badge badge-info">In progress</span>
     {% endif %}
 {% endif %}
 """
 
 _info = \
 """
-<span class="badge badge-primary">Supervisor <i class="fas fa-less-than-equal"></i> {{ m.supervising_limit }} CATS</span>
+<span class="badge badge-info">Supervisor <i class="fas fa-less-than-equal"></i> {{ m.supervising_limit }} CATS</span>
 <span class="badge badge-info">2nd mark <i class="fas fa-less-than-equal"></i> {{ m.marking_limit }} CATS</span>
 <span class="badge badge-info">Marker multiplicity <i class="fas fa-less-than-equal"></i> {{ m.max_marking_multiplicity }}</span>
 {% if m.ignore_per_faculty_limits %}
@@ -92,7 +92,7 @@ _info = \
     <span class="badge badge-secondary"><i class="fas fa-check"></i> All selectors</span>
 {% endif %}
 <div>
-    <span class="badge badge-success">Solver {{ m.solver_name }}</span>
+    <span class="badge badge-info">Solver {{ m.solver_name }}</span>
 </div>
 <div>
     <div>Matching</div>
@@ -219,8 +219,8 @@ _score = \
     <p></p>
     <span class="badge badge-info">&delta; max {{ m.delta_max }}</span>
     <span class="badge badge-info">&delta; min {{ m.delta_min }}</span>
-    <span class="badge badge-primary">CATS max {{ m.CATS_max }}</span>
-    <span class="badge badge-primary">CATS min {{ m.CATS_min }}</span>
+    <span class="badge badge-info">CATS max {{ m.CATS_max }}</span>
+    <span class="badge badge-info">CATS min {{ m.CATS_min }}</span>
 {% else %}
     <span class="badge badge-secondary">Invalid</span>
 {% endif %}
@@ -318,10 +318,10 @@ _menu = \
                 {% if m.selected or m.published %}
                     <div role="separator" class="dropdown-divider"></div>
                     <a class="dropdown-item" href="{{ url_for('admin.publish_matching_selectors', id=m.id) }}">
-                        <i class="fas fa-mail-bulk fa-fw"></i> Email to selectors
+                        <i class="fas fa-mail-bulk fa-fw"></i> {% if m.selected %}Final{% else %}Draft{% endif %} to selectors
                     </a>
                     <a class="dropdown-item" href="{{ url_for('admin.publish_matching_supervisors', id=m.id) }}">
-                        <i class="fas fa-mail-bulk fa-fw"></i> Email to supervisors
+                        <i class="fas fa-mail-bulk fa-fw"></i> {% if m.selected %}Final{% else %}Draft{% endif %} to supervisors
                     </a>
                 {% endif %}
             {% endif %}            

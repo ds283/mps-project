@@ -9657,7 +9657,7 @@ def _MatchingRecord_is_valid(id):
     if supervisor is not None:
         supervisor_enrolment: EnrollmentRecord = supervisor.get_enrollment_record(pclass)
         if supervisor_enrolment is None or supervisor_enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-            errors[('enrolment', 0)] = 'Supervisor for assignment project is not currently enrolled for this project class'
+            errors[('enrolment', 0)] = 'Supervisor for assigned project is not currently enrolled for this project class'
 
     # 6. PROJECT SHOULD NOT BE MULTIPLY ASSIGNED TO SAME SELECTOR BUT A DIFFERENT SUBMISSION PERIOD
     count = get_count(attempt.records.filter_by(selector_id=obj.selector_id,

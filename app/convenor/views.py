@@ -8077,16 +8077,7 @@ def force_convert_bookmarks(sel_id):
               'exist.'.format(name=sel.student.user.name), 'error')
         return redirect(redirect_url())
 
-    for item in sel.ordered_bookmarks.limit(sel.number_choices):
-        data = SelectionRecord(owner_id=item.owner_id,
-                               liveproject_id=item.liveproject_id,
-                               rank=item.rank,
-                               converted_from_bookmark=True,
-                               hint=SelectionRecord.SELECTION_HINT_NEUTRAL)
-        db.session.add(data)
-
-    sel.submission_time = datetime.now()
-    sel.submission_IP = None
+    store_selection(sel, converted=True, no_submit_IP=True)
 
     try:
         db.session.commit()

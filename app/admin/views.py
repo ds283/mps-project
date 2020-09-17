@@ -3876,8 +3876,8 @@ def do_match_compare_ajax(id1, id2):
 @admin.route('/merge_replace_records/<int:src_id>/<int:dest_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def merge_replace_records(src_id, dest_id):
-    source = MatchingRecord.query.get_or_404(src_id)
-    dest = MatchingRecord.query.get_or_404(dest_id)
+    source: MatchingRecord = MatchingRecord.query.get_or_404(src_id)
+    dest: MatchingRecord = MatchingRecord.query.get_or_404(dest_id)
 
     if not validate_match_inspector(source.matching_attempt) or not validate_match_inspector(dest.matching_attempt):
         return redirect(redirect_url())
@@ -3897,7 +3897,6 @@ def merge_replace_records(src_id, dest_id):
 
     try:
         dest.project_id = source.project_id
-        dest.supervisor_id = source.supervisor_id
         dest.marker_id = source.marker_id
         dest.rank = source.rank
 

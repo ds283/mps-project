@@ -1,0 +1,13 @@
+Dear {{ user.first_name }}
+
+Thank you for your efforts in preparing project descriptions and accommodating
+student meetings over the last term. The final project allocation is now
+available, and the good news is that we have not needed to allocate you any
+projects to supervise next year.
+
+There is some possibility that the allocation might need to be adjusted over
+the first few weeks of term. If that is the case, we will be in touch
+with you individually. Thank you for your patience during this process.
+
+Best wishes,
+the project convenors

@@ -35,20 +35,12 @@ _status = \
             <span class="badge badge-info">Original</span>
         {% endif %}
     </div>
-    {% if m.solution_usable %}
+    {% if m.finished %}
         <div class="mt-1">
-            {% if m.draft_to_selectors is not none %}
-                <p><strong>Draft to selectors</strong>: {{ m.draft_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</p>
-            {% endif %}
-            {% if m.draft_to_supervisors is not none %}
-                <p><strong>Draft to supervisors</strong>: {{ m.draft_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</p>
-            {% endif %}
-            {% if m.final_to_selectors is not none %}
-                <p><strong>Final to selectors</strong>: {{ m.final_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</p>
-            {% endif %}
-            {% if m.final_to_supervisors is not none %}
-                <p><strong>Final to supervisors</strong>: {{ m.final_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</p>
-            {% endif %}
+            <span class="badge badge-info">{{ m.records.count() }} selectors</span>
+            <span class="badge badge-info">{{ m.supervisors.count() }} supervisors</span>
+            <span class="badge badge-info">{{ m.markers.count() }} markers</span>
+            <span class="badge badge-info">{{ m.projects.count() }} projects</span>
         </div>
     {% endif %}
     <div class="mt-1">
@@ -98,19 +90,19 @@ _info = \
     <span class="badge badge-info">Solver {{ m.solver_name }}</span>
 </div>
 <div class="mt-1">
-    <div><strong>Matching</strong></div>
+    <strong class="mr-1">Matching</strong></div>
     <span class="badge badge-secondary">Programme {{ m.programme_bias }}</span>
     <span class="badge badge-secondary">Bookmarks {{ m.bookmark_bias }}</span>
 </div>
 <div class="mt-1">
-    <div><strong>Biases</strong></div>
+    <strong class="mr-1">Biases</strong>
     <span class="badge badge-secondary">Levelling {{ m.levelling_bias }}</span>
     <span class="badge badge-secondary">Group tension {{ m.intra_group_tension }}</span>
     <span class="badge badge-secondary">S pressure {{ m.supervising_pressure }}</span>
     <span class="badge badge-secondary">M pressure {{ m.marking_pressure }}</span>
 </div>
 <div class="mt-1">
-    <div><strong>Penalties</strong></div>
+    <strong class="mr-1">Penalties</strong>
     <span class="badge badge-secondary">CATS violation {{ m.CATS_violation_penalty }}</span>
     <span class="badge badge-secondary">No assignment {{ m.no_assignment_penalty }}</span>
 </div>
@@ -149,7 +141,7 @@ _info = \
         </div>
     {% endif %}
 {% endif %}
-<div style="padding-top: 5px;">
+<p class="mt-1">
     Created by
     <a href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
     on
@@ -158,54 +150,72 @@ _info = \
     {% else %}
         <span class="badge badge-secondary">Unknown</span>
     {% endif %}
-    {% if m.last_edited_by is not none %}
-        <p></p>
+</p>
+{% if m.last_edited_by is not none %}
+    <p class="mt-1">
         Last edited by 
         <a href="mailto:{{ m.last_edited_by.email }}">{{ m.last_edited_by.name }}</a>
         {% if m.last_edit_timestamp is not none %}
             {{ m.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
         {% endif %}
+    </p>
+{% endif %}
+{% if m.solution_usable %}
+    <div class="mt-1">
+        {% if m.draft_to_selectors is not none %}
+            <p><i class="fas fa-envelope"></i> <strong>Draft to selectors</strong>: {{ m.draft_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</p>
+        {% endif %}
+        {% if m.draft_to_supervisors is not none %}
+            <p><i class="fas fa-envelope"></i> <strong>Draft to supervisors</strong>: {{ m.draft_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</p>
+        {% endif %}
+        {% if m.final_to_selectors is not none %}
+            <p><i class="fas fa-envelope"></i> <strong>Final to selectors</strong>: {{ m.final_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</p>
+        {% endif %}
+        {% if m.final_to_supervisors is not none %}
+            <p><i class="fas fa-envelope"></i> <strong>Final to supervisors</strong>: {{ m.final_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</p>
+        {% endif %}
+    </div>
+{% endif %}
+<div class="mt-1">
+    {% set errors = m.errors %}
+    {% set warnings = m.warnings %}
+    {% if errors|length == 1 %}
+        <span class="badge badge-danger">1 error</span>
+    {% elif errors|length > 1 %}
+        <span class="badge badge-danger">{{ errors|length }} errors</span>
+    {% else %}
+        <span class="badge badge-success">0 errors</span>
+    {% endif %}
+    {% if warnings|length == 1 %}
+        <span class="badge badge-warning">1 warning</span>
+    {% elif warnings|length > 1 %}
+        <span class="badge badge-warning">{{ warnings|length }} warnings</span>
+    {% else %}
+        <span class="badge badge-success">0 warnings</span>
+    {% endif %}
+    {% if errors|length > 0 %}
+        <div class="error-block">
+            {% for item in errors %}
+                {% if loop.index <= 10 %}
+                    <p class="error-message">{{ item }}</p>
+                {% elif loop.index == 11 %}
+                    <p class="error-message">...</p>
+                {% endif %}            
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if warnings|length > 0 %}
+        <div class="error-block">
+            {% for item in warnings %}
+                {% if loop.index <= 10 %}
+                    <p class="error-message">Warning: {{ item }}</p>
+                {% elif loop.index == 11 %}
+                    <p class="error-message">...</p>
+                {% endif %}
+            {% endfor %}
+        </div>
     {% endif %}
 </div>
-<p></p>
-{% set errors = m.errors %}
-{% set warnings = m.warnings %}
-{% if errors|length == 1 %}
-    <span class="badge badge-danger">1 error</span>
-{% elif errors|length > 1 %}
-    <span class="badge badge-danger">{{ errors|length }} errors</span>
-{% else %}
-    <span class="badge badge-success">0 errors</span>
-{% endif %}
-{% if warnings|length == 1 %}
-    <span class="badge badge-warning">1 warning</span>
-{% elif warnings|length > 1 %}
-    <span class="badge badge-warning">{{ warnings|length }} warnings</span>
-{% else %}
-    <span class="badge badge-success">0 warnings</span>
-{% endif %}
-{% if errors|length > 0 %}
-    <div class="error-block">
-        {% for item in errors %}
-            {% if loop.index <= 10 %}
-                <p class="error-message">{{ item }}</p>
-            {% elif loop.index == 11 %}
-                <p class="error-message">...</p>
-            {% endif %}            
-        {% endfor %}
-    </div>
-{% endif %}
-{% if warnings|length > 0 %}
-    <div class="error-block">
-        {% for item in warnings %}
-            {% if loop.index <= 10 %}
-                <p class="error-message">Warning: {{ item }}</p>
-            {% elif loop.index == 11 %}
-                <p class="error-message">...</p>
-            {% endif %}
-        {% endfor %}
-    </div>
-{% endif %}
 """
 
 
@@ -351,13 +361,6 @@ _name = \
     {% set pclass = config.project_class %}
     {{ pclass.make_label(pclass.abbreviation)|safe }}
 {% endfor %}
-{% if m.finished %}
-    <p></p>
-    <span class="badge badge-info">{{ m.records.count() }} selectors</span>
-    <span class="badge badge-info">{{ m.supervisors.count() }} supervisors</span>
-    <span class="badge badge-info">{{ m.markers.count() }} markers</span>
-    <span class="badge badge-info">{{ m.projects.count() }} projects</span>
-{% endif %}
 {% set has_extra_matches = m.include_matches.first() is not none or m.base is not none %}
 {% if has_extra_matches %}
     <div class="mt-1">

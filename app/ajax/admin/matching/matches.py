@@ -90,7 +90,7 @@ _info = \
     <span class="badge badge-info">Solver {{ m.solver_name }}</span>
 </div>
 <div class="mt-1">
-    <strong class="mr-1">Matching</strong></div>
+    <strong class="mr-1">Matching</strong>
     <span class="badge badge-secondary">Programme {{ m.programme_bias }}</span>
     <span class="badge badge-secondary">Bookmarks {{ m.bookmark_bias }}</span>
 </div>
@@ -106,42 +106,44 @@ _info = \
     <span class="badge badge-secondary">CATS violation {{ m.CATS_violation_penalty }}</span>
     <span class="badge badge-secondary">No assignment {{ m.no_assignment_penalty }}</span>
 </div>
-<p></p>
-{% if m.use_hints %}
-    <span class="badge badge-info"><i class="fas fa-check"></i> Use hints</span>
-{% else %}
-    <span class="badge badge-warning"><i class="fas fa-times"></i> Ignore hints</span>
-{% endif %}
-<span class="badge badge-secondary">Encourage <i class="fas fa-times"></i> {{ m.encourage_bias }}</span>
-<span class="badge badge-secondary">Discourage <i class="fas fa-times"></i> {{ m.discourage_bias }}</span>
-<span class="badge badge-secondary">Strong encourage <i class="fas fa-times"></i> {{ m.strong_encourage_bias }}</span>
-<span class="badge badge-secondary">Strong discourage <i class="fas fa-times"></i> {{ m.strong_discourage_bias }}</span>
-<p></p>
-{% if not m.ignore_programme_prefs %}
-    {% set outcome = m.prefer_programme_status %}
-    {% if outcome is not none %}
-        {% set match, fail = outcome %}
-        {% set match_pl = 's' %}{% if match == 1 %}{% set match_pl = '' %}{% endif %}
-        {% set fail_pl = 's' %}{% if fail == 1 %}{% set fail_pl = '' %}{% endif %}
-        <div>
-            <span class="badge {% if match > 0 %}badge-success{% else %}badge-secondary{% endif %}">Matched {{ match }} programme pref{{ match_pl }}</span>
-            <span class="badge {% if fail > 0 %}badge-warning{% elif match > 0 %}badge-success{% else %}badge-secondary{% endif %}">Failed {{ fail }} programme pref{{ fail_pl }}</span>
-        </div>
+<div class="mt-1">
+    {% if m.use_hints %}
+        <span class="badge badge-info"><i class="fas fa-check"></i> Use hints</span>
+    {% else %}
+        <span class="badge badge-warning"><i class="fas fa-times"></i> Ignore hints</span>
     {% endif %}
-{% endif %}
-{% if m.use_hints %}
-    {% set outcome = m.hint_status %}
-    {% if outcome is not none %}
-        {% set satisfied, violated = outcome %}
-        {% set satisfied_pl = 's' %}{% if satisfied == 1 %}{% set satisfied_pl = '' %}{% endif %}
-        {% set violated_pl = 's' %}{% if violated == 1 %}{% set violated_pl = '' %}{% endif %}
-        <div>
-            <span class="badge {% if satisfied > 0 %}badge-success{% else %}badge-secondary{% endif %}">Satisfied {{ satisfied }} hint{{ satisfied_pl }}</span>
-            <span class="badge {% if violated > 0 %}badge-warning{% elif satisfied > 0 %}badge-success{% else %}badge-secondary{% endif %}">Violated {{ violated }} hint{{ violated_pl }}</span>
-        </div>
+    <span class="badge badge-secondary">Encourage <i class="fas fa-times"></i> {{ m.encourage_bias }}</span>
+    <span class="badge badge-secondary">Discourage <i class="fas fa-times"></i> {{ m.discourage_bias }}</span>
+    <span class="badge badge-secondary">Strong encourage <i class="fas fa-times"></i> {{ m.strong_encourage_bias }}</span>
+    <span class="badge badge-secondary">Strong discourage <i class="fas fa-times"></i> {{ m.strong_discourage_bias }}</span>
+</div>
+<div class="mt-1">
+    {% if not m.ignore_programme_prefs %}
+        {% set outcome = m.prefer_programme_status %}
+        {% if outcome is not none %}
+            {% set match, fail = outcome %}
+            {% set match_pl = 's' %}{% if match == 1 %}{% set match_pl = '' %}{% endif %}
+            {% set fail_pl = 's' %}{% if fail == 1 %}{% set fail_pl = '' %}{% endif %}
+            <div>
+                <span class="badge {% if match > 0 %}badge-success{% else %}badge-secondary{% endif %}">Matched {{ match }} programme pref{{ match_pl }}</span>
+                <span class="badge {% if fail > 0 %}badge-warning{% elif match > 0 %}badge-success{% else %}badge-secondary{% endif %}">Failed {{ fail }} programme pref{{ fail_pl }}</span>
+            </div>
+        {% endif %}
     {% endif %}
-{% endif %}
-<p class="mt-1">
+    {% if m.use_hints %}
+        {% set outcome = m.hint_status %}
+        {% if outcome is not none %}
+            {% set satisfied, violated = outcome %}
+            {% set satisfied_pl = 's' %}{% if satisfied == 1 %}{% set satisfied_pl = '' %}{% endif %}
+            {% set violated_pl = 's' %}{% if violated == 1 %}{% set violated_pl = '' %}{% endif %}
+            <div>
+                <span class="badge {% if satisfied > 0 %}badge-success{% else %}badge-secondary{% endif %}">Satisfied {{ satisfied }} hint{{ satisfied_pl }}</span>
+                <span class="badge {% if violated > 0 %}badge-warning{% elif satisfied > 0 %}badge-success{% else %}badge-secondary{% endif %}">Violated {{ violated }} hint{{ violated_pl }}</span>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+<div class="mt-1">
     Created by
     <a href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
     on
@@ -150,29 +152,29 @@ _info = \
     {% else %}
         <span class="badge badge-secondary">Unknown</span>
     {% endif %}
-</p>
+</div>
 {% if m.last_edited_by is not none %}
-    <p class="mt-1">
+    <div class="mt-1">
         Last edited by 
         <a href="mailto:{{ m.last_edited_by.email }}">{{ m.last_edited_by.name }}</a>
         {% if m.last_edit_timestamp is not none %}
             {{ m.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
         {% endif %}
-    </p>
+    </div>
 {% endif %}
 {% if m.solution_usable %}
     <div class="mt-1">
         {% if m.draft_to_selectors is not none %}
-            <p><i class="fas fa-envelope"></i> <strong>Draft to selectors</strong>: {{ m.draft_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</p>
+            <div><i class="fas fa-envelope"></i> <strong>Draft to selectors</strong>: {{ m.draft_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</div>
         {% endif %}
         {% if m.draft_to_supervisors is not none %}
-            <p><i class="fas fa-envelope"></i> <strong>Draft to supervisors</strong>: {{ m.draft_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</p>
+            <div><i class="fas fa-envelope"></i> <strong>Draft to supervisors</strong>: {{ m.draft_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</div>
         {% endif %}
         {% if m.final_to_selectors is not none %}
-            <p><i class="fas fa-envelope"></i> <strong>Final to selectors</strong>: {{ m.final_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</p>
+            <div><i class="fas fa-envelope"></i> <strong>Final to selectors</strong>: {{ m.final_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</div>
         {% endif %}
         {% if m.final_to_supervisors is not none %}
-            <p><i class="fas fa-envelope"></i> <strong>Final to supervisors</strong>: {{ m.final_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</p>
+            <div><i class="fas fa-envelope"></i> <strong>Final to supervisors</strong>: {{ m.final_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</div>
         {% endif %}
     </div>
 {% endif %}

@@ -6498,7 +6498,7 @@ def edit_submission_record(pid):
         return redirect(redirect_url())
 
     # check configuration is still current
-    if config.pclass.most_recent_config.id != config.id:
+    if config.project_class.most_recent_config.id != config.id:
         flash('It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} '
               'because it has been rolled over.'.format(yra=config.year, yrb=config.year+1), 'info')
         return redirect(redirect_url())

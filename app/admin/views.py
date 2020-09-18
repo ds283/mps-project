@@ -4122,15 +4122,15 @@ def match_faculty_view_ajax(id):
 @admin.route('/delete_match_record/<int:record_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def delete_match_record(record_id):
-    record = MatchingRecord.query.get_or_404(record_id)
+    record: MatchingRecord = MatchingRecord.query.get_or_404(record_id)
+    attempt: MatchingAttempt = record.matching_attempt
 
-    if not validate_match_inspector(record.matching_attempt):
+    if not validate_match_inspector(attempt):
         return redirect(redirect_url())
 
-    if record.matching_attempt.selected:
+    if attempt.selected:
         flash('Match "{name}" cannot be edited because an administrative user has marked it as '
-              '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
-              'info')
+              '"selected" for use during rollover of the academic year.'.format(name=attempt.name), 'info')
         return redirect(redirect_url())
 
     year = get_current_year()
@@ -4138,8 +4138,6 @@ def delete_match_record(record_id):
         flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(redirect_url())
-
-    attempt = record.matching_attempt
 
     try:
         # remove all matching records associated with this selector

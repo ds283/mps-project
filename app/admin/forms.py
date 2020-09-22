@@ -123,7 +123,20 @@ class DegreeProgrammeMixin():
 
     degree_type = QuerySelectField('Degree type', query_factory=GetActiveDegreeTypes, get_label='name')
 
-    show_type = BooleanField('Show degree type in name')
+    show_type = BooleanField('Show degree type in name', default=True,
+                             description="Select if the degree type, such as BSc (Hons) or MPhys, should be "
+                                         "included in the programme's full name")
+
+    foundation_year = BooleanField('Includes foundation year', default=False)
+
+    year_out = BooleanField('Includes year out', default=False,
+                            description="Select if this programme includes a year abroad, and industrial "
+                                        "placement year, or another type of year away from the University")
+
+    year_out_value = IntegerField("Year out", default=3,
+                                  description="Enter the numerical value of the year that should be regarded "
+                                              "as the year out. Ignored if the 'year out' flag is not set.",
+                                  validators=[NotOptionalIf('year_out')])
 
 
 class AddDegreeProgrammeForm(Form, DegreeProgrammeMixin):

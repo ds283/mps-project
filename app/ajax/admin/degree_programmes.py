@@ -72,13 +72,22 @@ _show_type = \
 _name = \
 """
 {{ p.name }} {{ p.short_label|safe }}
-<p></p>
-{% for level in levels %}
-    {% set num = p.number_level_modules(level.id) %} 
-    {% if num > 0 %}
-        {{ level.make_label(level.short_name + ' ' + num|string)|safe }} 
-    {% endif %}
-{% endfor %}
+{% if p.foundation_year %}
+    <span class="badge badge-info">Foundation year</span>
+{% endif %}
+{% if p.year_out %}
+    <span class="badge badge-info">Year out{%- if p.year_out_value %} Y{{ p.year_out_value}}{% endif %}</span>
+{% endif %}
+{% if levels|length > 0 %}
+    <div class="mt-3">
+        {% for level in levels %}
+            {% set num = p.number_level_modules(level.id) %} 
+            {% if num > 0 %}
+                {{ level.make_label(level.short_name + ' ' + num|string)|safe }} 
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endif %}
 """
 
 

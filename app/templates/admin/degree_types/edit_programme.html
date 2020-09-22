@@ -22,12 +22,20 @@
 
 {#        {{ wtf.form_errors(programme_form) }}#}
 
-        {{ wtf.render_field(programme_form.degree_type) }}
-        {{ wtf.render_field(programme_form.show_type) }}
-        <hr class="intro-divider">
         {{ wtf.render_field(programme_form.name) }}
         {{ wtf.render_field(programme_form.abbreviation) }}
         {{ wtf.render_field(programme_form.course_code) }}
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(programme_form.degree_type) }}
+            {{ wtf.render_field(programme_form.show_type) }}
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(programme_form.foundation_year) }}
+            {{ wtf.render_field(programme_form.year_out) }}
+            {{ wtf.render_field(programme_form.year_out_value) }}
+        </div>
 
         {{ wtf.render_field(programme_form.submit, button_map={'submit': 'primary'}) }}
 

@@ -3047,7 +3047,16 @@ class DegreeProgramme(db.Model, EditingMetadataMixin):
     abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
 
     # show degree type in name
-    show_type = db.Column(db.Boolean())
+    show_type = db.Column(db.Boolean(), default=True)
+
+    # includes foundation year
+    foundation_year = db.Column(db.Boolean(), default=False)
+
+    # includes year abroad or placement year
+    year_out = db.Column(db.Boolean(), default=False)
+
+    # which year is the year out?
+    year_out_value = db.Column(db.Integer())
 
     # active flag
     active = db.Column(db.Boolean())

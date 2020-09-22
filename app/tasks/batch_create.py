@@ -225,6 +225,7 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
                   'bsc physics with astrophysics': 'F3055U',
                   'bsc theoretical physics': 'F3016U',
                   'bsc phys and astro (fdn)': 'F3002U',
+                  'bsc physics and astronomy (with a foundation year)': 'F3002U',
                   'mphys astrophysics': 'F3029U',
                   'mphys physics': 'F3028U',
                   'mphys physics (rp)': 'F3011U',
@@ -262,13 +263,22 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
     raise SkipRow
 
 
-def _guess_year_data(cohort, year_of_course, current_year, fyear=None) -> (bool, int):
+def _guess_year_data(cohort: int, year_of_course: int, current_year: int, fyear: bool=None) -> (bool, int):
+    """
+    :param cohort: read (or previously stored) cohort for this student
+    :param year_of_course: read (or previously stored) year of course for this student
+    :param current_year: current academic year
+    :param fyear: hint whether foundation year was taken, or not
+    :return:
+    """
     # try to guess whether a given student has done foundation year or some number of
     # repeat years
     # of course, we don't really have enough information to work this out; what's here
     # is a simple minded guess
     #
     # return value: foundation_year(bool), repeat_years(int)
+
+    # validate input types
     if not isinstance(cohort, int):
         print('!! ERROR: expected cohort to be an integer, but received {type}'.format(type=type(cohort)))
         raise SkipRow

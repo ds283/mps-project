@@ -304,8 +304,13 @@ def add_degree_type():
                                  active=True,
                                  creator_id=current_user.id,
                                  creation_timestamp=datetime.now())
-        db.session.add(degree_type)
-        db.session.commit()
+
+        try:
+            db.session.add(degree_type)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_degree_types'))
 
@@ -333,7 +338,11 @@ def edit_degree_type(id):
         type.last_edit_id = current_user.id
         type.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_degree_types'))
 
@@ -351,7 +360,12 @@ def activate_degree_type(id):
 
     degree_type = DegreeType.query.get_or_404(id)
     degree_type.enable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -367,7 +381,12 @@ def deactivate_degree_type(id):
 
     degree_type = DegreeType.query.get_or_404(id)
     degree_type.disable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -392,13 +411,21 @@ def add_degree_programme():
         programme = DegreeProgramme(name=form.name.data,
                                     abbreviation=form.abbreviation.data,
                                     show_type=form.show_type.data,
+                                    foundation_year=form.foundation_year.data,
+                                    year_out=form.year_out.data,
+                                    year_out_value=form.year_out_value.data if form.year_out.data else None,
                                     course_code=form.course_code.data,
                                     active=True,
                                     type_id=degree_type.id,
                                     creator_id=current_user.id,
                                     creation_timestamp=datetime.now())
-        db.session.add(programme)
-        db.session.commit()
+
+        try:
+            db.session.add(programme)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_degree_programmes'))
 
@@ -414,8 +441,8 @@ def edit_degree_programme(id):
     :return:
     """
 
-    programme = DegreeProgramme.query.get_or_404(id)
-    form = EditDegreeProgrammeForm(obj=programme)
+    programme: DegreeProgramme = DegreeProgramme.query.get_or_404(id)
+    form: EditDegreeProgrammeForm = EditDegreeProgrammeForm(obj=programme)
 
     form.programme = programme
 
@@ -424,11 +451,18 @@ def edit_degree_programme(id):
         programme.abbreviation = form.abbreviation.data
         programme.show_type = form.show_type.data
         programme.course_code = form.course_code.data
+        programme.foundation_year = form.foundation_year.data
+        programme.year_out = form.year_out.data
+        programme.year_out_value = form.year_out_value.data if programme.year_out else None
         programme.type_id = form.degree_type.data.id
         programme.last_edit_id = current_user.id
         programme.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_degree_programmes'))
 
@@ -444,9 +478,14 @@ def activate_degree_programme(id):
     :param id:
     :return:
     """
-    programme = DegreeProgramme.query.get_or_404(id)
+    programme: DegreeProgramme = DegreeProgramme.query.get_or_404(id)
     programme.enable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -459,9 +498,14 @@ def deactivate_degree_programme(id):
     :param id:
     :return:
     """
-    programme = DegreeProgramme.query.get_or_404(id)
+    programme: DegreeProgramme = DegreeProgramme.query.get_or_404(id)
     programme.disable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -475,7 +519,7 @@ def attach_modules(id, level_id=None):
     :param id:
     :return:
     """
-    programme = DegreeProgramme.query.get_or_404(id)
+    programme: DegreeProgramme = DegreeProgramme.query.get_or_404(id)
 
     form = LevelSelectorForm(request.form)
 
@@ -514,12 +558,17 @@ def attach_module(prog_id, mod_id, level_id):
     :param mod_id:
     :return:
     """
-    programme = DegreeProgramme.query.get_or_404(prog_id)
-    module = Module.query.get_or_404(mod_id)
+    programme: DegreeProgramme = DegreeProgramme.query.get_or_404(prog_id)
+    module: Module = Module.query.get_or_404(mod_id)
 
     if module not in programme.modules:
         programme.modules.append(module)
-        db.session.commit()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url_for('admin.attach_modules', id=prog_id, level_id=level_id))
 
@@ -538,7 +587,12 @@ def detach_module(prog_id, mod_id, level_id):
 
     if module in programme.modules:
         programme.modules.remove(module)
-        db.session.commit()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url_for('admin.attach_modules', id=prog_id, level_id=level_id))
 
@@ -563,8 +617,12 @@ def add_level():
                            last_edit_id=None,
                            last_edit_timestamp=None)
 
-        db.session.add(level)
-        db.session.commit()
+        try:
+            db.session.add(level)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_levels'))
 
@@ -590,7 +648,11 @@ def edit_level(id):
         level.last_edit_id = current_user.id
         level.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_levels'))
 
@@ -607,7 +669,12 @@ def activate_level(id):
     """
     level = FHEQ_Level.query.get_or_404(id)
     level.enable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -622,7 +689,12 @@ def deactivate_level(id):
     """
     skill = FHEQ_Level.query.get_or_404(id)
     skill.disable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -654,8 +726,12 @@ def add_module():
                         last_edit_id=None,
                         last_edit_timestamp=None)
 
-        db.session.add(module)
-        db.session.commit()
+        try:
+            db.session.add(module)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_modules'))
 
@@ -688,7 +764,11 @@ def edit_module(id):
         module.last_edit_id = current_user.id
         module.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_modules'))
 
@@ -706,7 +786,12 @@ def retire_module(id):
     """
     module = Module.query.get_or_404(id)
     module.retire()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -721,7 +806,12 @@ def unretire_module(id):
     """
     module = Module.query.get_or_404(id)
     module.unretire()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -777,8 +867,13 @@ def add_skill():
                                   active=True,
                                   creator_id=current_user.id,
                                   creation_timestamp=datetime.now())
-        db.session.add(skill)
-        db.session.commit()
+
+        try:
+            db.session.add(skill)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_skills'))
 
@@ -808,7 +903,11 @@ def edit_skill(id):
         skill.last_edit_id = current_user.id
         skill.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_skills'))
 
@@ -829,7 +928,12 @@ def activate_skill(id):
 
     skill = TransferableSkill.query.get_or_404(id)
     skill.enable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -847,7 +951,12 @@ def deactivate_skill(id):
 
     skill = TransferableSkill.query.get_or_404(id)
     skill.disable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 

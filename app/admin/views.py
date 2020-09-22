@@ -93,7 +93,7 @@ def edit_groups():
     return render_template('admin/edit_groups.html')
 
 
-@admin.route('/groups_ajax')
+@admin.route('/groups_ajax', methods=['POST'])
 @roles_required('root')
 def groups_ajax():
     """
@@ -101,8 +101,30 @@ def groups_ajax():
     :return:
     """
 
-    groups = ResearchGroup.query.all()
-    return ajax.admin.groups_data(groups)
+    base_query = db.session.query(ResearchGroup)
+
+    abbrv = {'search': ResearchGroup.abbreviation,
+             'order': ResearchGroup.abbreviation,
+             'search_collation': 'utf8_general_ci'}
+    active = {'order': ResearchGroup.active}
+    name = {'search': ResearchGroup.name,
+            'order': ResearchGroup.name,
+            'search_collation': 'utf8_general_ci'}
+    colour = {'search': ResearchGroup.colour,
+              'order': ResearchGroup.colour,
+              'search_collation': 'utf8_general_ci'}
+    website = {'search': ResearchGroup.website,
+               'order': ResearchGroup.website,
+               'search_collation': 'utf8_general_ci'}
+
+    columns = {'abbrv': abbrv,
+               'active': active,
+               'name': name,
+               'colour': colour,
+               'website': website}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.admin.groups_data)
 
 
 @admin.route('/add_group', methods=['GET', 'POST'])

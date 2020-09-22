@@ -55,4 +55,4 @@ def groups_data(groups):
                  else '<span class="badge badge-secondary">None</span>',
              'menu': render_template_string(_groups_menu, group=g)} for g in groups]
 
-    return jsonify(data)
+    return data

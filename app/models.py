@@ -114,7 +114,7 @@ class EditingMetadataMixin():
 
 class ColouredLabelMixin():
     # colour
-    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    colour = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     def make_CSS_style(self):
         if self.colour is None:
@@ -624,10 +624,10 @@ class AssetExpiryMixin():
 
 class AssetDownloadDataMixin():
     # optional mimetype
-    mimetype = db.Column(db.String(DEFAULT_STRING_LENGTH), default=None)
+    mimetype = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), default=None)
 
     # target filename
-    target_name = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    target_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
 
 def AssetMixinFactory(acl_name, acr_name):
@@ -637,7 +637,7 @@ def AssetMixinFactory(acl_name, acr_name):
         timestamp = db.Column(db.DateTime(), index=True)
 
         # relative filename
-        filename = db.Column(db.String(DEFAULT_STRING_LENGTH))
+        filename = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
         # access control list: which users are authorized to view or download this file?
         @declared_attr
@@ -2748,6 +2748,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         years = set()
 
         for rec in self.selecting.filter_by(retired=True):
+            rec: SelectingStudent
             if rec.config is not None and rec.config.year is not None:
                 year = rec.config.year
                 years.add(year)
@@ -2757,6 +2758,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
                 selector_records[year].append(rec)
 
         for rec in self.submitting.filter_by(retired=True):
+            rec: SubmittingStudent
             if rec.config is not None and rec.config.year is not None:
                 year = rec.config.year
                 years.add(year)
@@ -4561,7 +4563,7 @@ class SubmissionPeriodRecord(db.Model):
 
     # alternative textual name for this period (eg. "Autumn Term", "Spring Term");
     # can be null if not used
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
 
     # PRESENTATION DATA, IF USED
@@ -11227,7 +11229,7 @@ class Building(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True, index=True)
 
     # active flag
     active = db.Column(db.Boolean())
@@ -11268,7 +11270,7 @@ class Room(db.Model, EditingMetadataMixin):
                                backref=db.backref('rooms', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # room name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True, index=True)
 
     # room capacity (currently not used)
     capacity = db.Column(db.Integer())
@@ -12256,10 +12258,10 @@ class Module(db.Model, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # unique course code
-    code = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+    code = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True, index=True)
 
     # course name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # FHEQ level
     level_id = db.Column(db.Integer(), db.ForeignKey('fheq_levels.id'))
@@ -12347,10 +12349,10 @@ class FHEQ_Level(db.Model, ColouredLabelMixin, EditingMetadataMixin):
 
 
     # name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
 
     # short version of name
-    short_name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+    short_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
 
     # corresponding academic year
     academic_year = db.Column(db.Integer(), unique=True)
@@ -12471,10 +12473,10 @@ class AssetLicense(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # license name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # abbreviation
-    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # short description
     description = db.Column(db.Text())
@@ -12483,10 +12485,10 @@ class AssetLicense(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     active = db.Column(db.Boolean())
 
     # license version
-    version = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    version = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # license URL
-    url = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    url = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # LICENSE PROPERTIES
 

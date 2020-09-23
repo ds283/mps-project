@@ -14,8 +14,8 @@ from collections import deque
 from datetime import date, datetime, timedelta
 from math import pi
 from pathlib import Path
-from urllib.parse import urlsplit
 from typing import List
+from urllib.parse import urlsplit
 
 from bokeh.embed import components
 from bokeh.plotting import figure
@@ -54,7 +54,6 @@ from .forms import AddResearchGroupForm, EditResearchGroupForm, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
     PublicScheduleFormFactory, CompareScheduleFormFactory, \
     AddAssetLicenseForm, EditAssetLicenseForm
-from ..tools import ServerSideHandler
 from ..cache import cache
 from ..database import db
 from ..limiter import limiter
@@ -79,6 +78,7 @@ from ..shared.utils import get_current_year, home_dashboard, get_matching_dashbo
 from ..shared.validators import validate_is_admin_or_convenor, validate_match_inspector, \
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..task_queue import register_task, progress_update
+from ..tools import ServerSideHandler
 from ..uploads import solution_files
 
 
@@ -89,7 +89,6 @@ def edit_groups():
     View function that handles listing of all registered research groups
     :return:
     """
-
     return render_template('admin/edit_groups.html')
 
 
@@ -100,7 +99,6 @@ def groups_ajax():
     Ajax data point for Edit Groups view
     :return:
     """
-
     base_query = db.session.query(ResearchGroup)
 
     abbrv = {'search': ResearchGroup.abbreviation,
@@ -134,7 +132,6 @@ def add_group():
     View function to add a new research group
     :return:
     """
-
     form = AddResearchGroupForm(request.form)
 
     if form.validate_on_submit():
@@ -150,8 +147,13 @@ def add_group():
                               active=True,
                               creator_id=current_user.id,
                               creation_timestamp=datetime.now())
-        db.session.add(group)
-        db.session.commit()
+
+        try:
+            db.session.add(group)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_groups'))
 
@@ -166,7 +168,6 @@ def edit_group(id):
     :param id:
     :return:
     """
-
     group = ResearchGroup.query.get_or_404(id)
     form = EditResearchGroupForm(obj=group)
 
@@ -185,7 +186,11 @@ def edit_group(id):
         group.last_edit_id = current_user.id
         group.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_groups'))
 
@@ -200,10 +205,14 @@ def activate_group(id):
     :param id:
     :return:
     """
-
     group = ResearchGroup.query.get_or_404(id)
     group.enable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -216,10 +225,14 @@ def deactivate_group(id):
     :param id:
     :return:
     """
-
     group = ResearchGroup.query.get_or_404(id)
     group.disable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -264,15 +277,35 @@ def edit_levels():
     return render_template('admin/degree_types/edit_levels.html', subpane='levels')
 
 
-@admin.route('/edit_levels_ajax')
+@admin.route('/edit_levels_ajax', methods=['POST'])
 @roles_required('root')
 def edit_levels_ajax():
     """
     AJAX data point for FHEQ levels table
     :return:
     """
-    levels = FHEQ_Level.query.all()
-    return ajax.admin.FHEQ_levels_data(levels)
+    base_query = db.session.query(FHEQ_Level)
+
+    name = {'search': FHEQ_Level.name,
+            'order': FHEQ_Level.name,
+            'search_collation': 'utf8_general_ci'}
+    short_name = {'search': FHEQ_Level.short_name,
+                  'order': FHEQ_Level.short_name,
+                  'search_collation': 'utf8_general_ci'}
+    colour = {'search': FHEQ_Level.colour,
+              'order': FHEQ_Level.colour,
+              'search_collation': 'utf8_general_ci'}
+    academic_year = {'order': FHEQ_Level.academic_year}
+    status = {'order': FHEQ_Level.active}
+
+    columns = {'name': name,
+               'short_name': short_name,
+               'colour': colour,
+               'academic_year': academic_year,
+               'status': status}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.admin.FHEQ_levels_data)
 
 
 @admin.route('/degree_types_ajax')

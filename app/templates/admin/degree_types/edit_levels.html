@@ -16,15 +16,30 @@
             $('#level-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/admin/edit_levels_ajax', dataSrc: '' },
+                serverSide: true,
+                ajax: { url: $SCRIPT_ROOT + '/admin/edit_levels_ajax',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'name' },
-                    { data: 'short_name' },
-                    { data: 'academic_year' },
-                    { data: 'colour' },
-                    { data: 'status' },
-                    { data: 'menu' }
+                    { data: 'name',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'short_name',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'academic_year',
+                      orderable: true,
+                      searchable: false },
+                    { data: 'colour',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'status',
+                      orderable: true,
+                      searchable: false },
+                    { data: 'menu',
+                      orderable: false,
+                      searchable: false }
                 ],
                 deferRender: true
             });

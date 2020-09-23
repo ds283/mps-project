@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string
 
 _groups_menu = \
 """

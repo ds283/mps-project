@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string
 
 _types_menu = \
 """
@@ -55,4 +54,4 @@ def FHEQ_levels_data(levels):
              'status': render_template_string(_status, l=l),
              'menu': render_template_string(_types_menu, l=l)} for l in levels]
 
-    return jsonify(data)
+    return data

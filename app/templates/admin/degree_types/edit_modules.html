@@ -16,14 +16,27 @@
             $('#module-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/admin/modules_ajax', dataSrc: '' },
+                serverSide: true,
+                ajax: { url: $SCRIPT_ROOT + '/admin/modules_ajax',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'code' },
-                    { data: 'name' },
-                    { data: 'level' },
-                    { data: 'status' },
-                    { data: 'menu' }
+                    { data: 'code',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'name',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'level',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'status',
+                      orderable: true,
+                      searchable: false },
+                    { data: 'menu',
+                      orderable: false,
+                      searchable: false}
                 ],
                 deferRender: true
             });

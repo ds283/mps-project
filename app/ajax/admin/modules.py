@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, render_template_string
+from flask import render_template_string
 
 
 _code = \
@@ -71,4 +71,4 @@ def modules_data(modules):
              'status': render_template_string(_status, m=m),
              'menu': render_template_string(_menu, m=m)} for m in modules]
 
-    return jsonify(data)
+    return data

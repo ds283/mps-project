@@ -378,15 +378,34 @@ def degree_programmes_ajax():
         return handler.build_payload(partial(ajax.admin.degree_programmes_data, levels))
 
 
-@admin.route('/modules_ajax')
+@admin.route('/modules_ajax', methods=['POST'])
 @roles_required('root')
 def modules_ajax():
     """
     Ajax data point for module table
     :return:
     """
-    modules = Module.query.all()
-    return ajax.admin.modules_data(modules)
+    base_query = db.session.query(Module) \
+        .join(FHEQ_Level, FHEQ_Level.id == Module.level_id)
+
+    code = {'search': Module.code,
+            'order': Module.code,
+            'search_collation': 'utf8_general_ci'}
+    name = {'search': Module.name,
+            'order': Module.name,
+            'search_collation': 'utf8_general_ci'}
+    level = {'search': FHEQ_Level.short_name,
+             'order': FHEQ_Level.short_name,
+             'search_collation': 'utf8_general_ci'}
+    status = {'order': Module.active}
+
+    columns = {'code': code,
+               'name': name,
+               'level': level,
+               'status': status}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.admin.modules_data)
 
 
 @admin.route('/add_type', methods=['GET', 'POST'])

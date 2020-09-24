@@ -26,8 +26,6 @@ def _element(user_id, current_user_id):
     u = db.session.query(User).filter_by(id=user_id).one()
     cu = db.session.query(User).filter_by(id=current_user_id).one()
 
-    year = get_current_year()
-
     return {'name': {
                 'display': render_template_string(name, u=u),
                 'sortstring': u.last_name + u.first_name},
@@ -35,8 +33,8 @@ def _element(user_id, current_user_id):
              'programme': s.programme.label,
              'cohort': s.cohort_label,
              'acadyear': {
-                 'display': s.academic_year_label(year, show_details=True),
-                 'sortvalue': s.academic_year(year)},
+                 'display': s.academic_year_label(show_details=True),
+                 'sortvalue': s.academic_year},
              'menu': render_template_string(menu, user=u, cuser=cu, pane='students')}
 
 

@@ -92,22 +92,10 @@ def validate_ajax():
 
     flag, year_value = is_integer(year_filter)
     if flag:
-        current_year = get_current_year()
-        nonf = records.filter(StudentData.foundation_year == False,
-                              current_year - StudentData.cohort + 1 - StudentData.repeated_years == year_value)
-        foun = records.filter(StudentData.foundation_year == True,
-                              current_year - StudentData.cohort - StudentData.repeated_years == year_value)
-
-        records = nonf.union(foun)
-
+        records = records.filter(StudentData.academic_year <= DegreeType.duration,
+                                 StudentData.academic_year == year_value)
     elif year_filter == 'grad':
-        current_year = get_current_year()
-        nonf = records.filter(StudentData.foundation_year == False,
-                              current_year - StudentData.cohort + 1 - StudentData.repeated_years > DegreeType.duration)
-        foun = records.filter(StudentData.foundation_year == True,
-                              current_year - StudentData.cohort - StudentData.repeated_years > DegreeType.duration)
-
-        records = nonf.union(foun)
+        records = records.filter(StudentData.academic_year > DegreeType.duration)
 
     record_ids = [r[0] for r in records.all()]
 
@@ -210,22 +198,10 @@ def correct_ajax():
 
     flag, year_value = is_integer(year_filter)
     if flag:
-        current_year = get_current_year()
-        nonf = records.filter(StudentData.foundation_year == False,
-                              current_year - StudentData.cohort + 1 - StudentData.repeated_years == year_value)
-        foun = records.filter(StudentData.foundation_year == True,
-                              current_year - StudentData.cohort - StudentData.repeated_years == year_value)
-
-        records = nonf.union(foun)
-
+        records = records.filter(StudentData.academic_year <= DegreeType.duration,
+                                 StudentData.academic_year == year_value)
     elif year_filter == 'grad':
-        current_year = get_current_year()
-        nonf = records.filter(StudentData.foundation_year == False,
-                              current_year - StudentData.cohort + 1 - StudentData.repeated_years > DegreeType.duration)
-        foun = records.filter(StudentData.foundation_year == True,
-                              current_year - StudentData.cohort - StudentData.repeated_years > DegreeType.duration)
-
-        records = nonf.union(foun)
+        records = records.filter(StudentData.academic_year > DegreeType.duration)
 
     record_ids = [r[0] for r in records.all()]
 

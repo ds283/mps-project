@@ -9,24 +9,24 @@
 #
 
 
+from typing import List
+
 from flask import redirect, url_for, flash, current_app, request
 from flask_security import current_user
-
 from sqlalchemy import and_, or_
-from sqlalchemy.sql import func
 from sqlalchemy.event import listens_for
 from sqlalchemy.orm import with_polymorphic
+from sqlalchemy.sql import func
 
+from .conversions import is_integer
+from .sqlalchemy import get_count
+from ..cache import cache
 from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, FilterRecord, StudentData, \
     MatchingAttempt, ProjectDescription, WorkflowMixin, DegreeProgramme, DegreeType, ConvenorTask, \
     selector_tasks, submitter_tasks, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask, project_tasks
 from ..models import project_assessors
-from ..cache import cache
-
-from .conversions import is_integer
-from .sqlalchemy import get_count
 
 
 def get_main_config():
@@ -1079,7 +1079,6 @@ def _build_generic_enroll_candidate(config, year_offset, StudentRecordType, disa
     # which year does the project run in, and for how long?
     start_year = config.start_year
     extent = config.extent
-    current_year = config.year
 
     # earliest year: academic year in which students can be selectors
     first_allowed_year = start_year + year_offset
@@ -1094,7 +1093,7 @@ def _build_generic_enroll_candidate(config, year_offset, StudentRecordType, disa
         allowed_programmes = None
 
     # build a list of eligible students who are not already attached as selectors
-    candidate_students = _build_candidates(allowed_programmes, current_year, first_allowed_year, last_allowed_year)
+    candidate_students = _build_candidates(allowed_programmes, first_allowed_year, last_allowed_year)
 
     # build a list of existing selecting students
     existing_students = db.session.query(StudentRecordType.student_id) \
@@ -1113,21 +1112,7 @@ def _build_generic_enroll_candidate(config, year_offset, StudentRecordType, disa
     return missing_students
 
 
-def _build_candidates(allowed_programmes, current_year, first_allowed_year, last_allowed_year):
-    nofyear_candidates = _build_candidate_basic(allowed_programmes, current_year, first_allowed_year,
-                                                last_allowed_year, False)
-    fyear_candidates = _build_candidate_basic(allowed_programmes, current_year, first_allowed_year+1,
-                                              last_allowed_year+1, True)
-
-    nofyear_candidates = nofyear_candidates.union(fyear_candidates)
-    return nofyear_candidates
-
-
-def _build_candidate_basic(allowed_programmes, current_year, first_allowed_year, last_allowed_year, fyear_status):
-    if not isinstance(fyear_status, bool):
-        raise RuntimeError('Unexpected type for fyear_status: expected bool, '
-                           'received {type}'.format(type=type(fyear_status)))
-
+def _build_candidates(allowed_programmes, first_allowed_year, last_allowed_year):
     candidates = db.session.query(StudentData) \
         .join(User, StudentData.id == User.id) \
         .filter(User.active == True)
@@ -1137,10 +1122,10 @@ def _build_candidate_basic(allowed_programmes, current_year, first_allowed_year,
 
     candidates = candidates.join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
-        .filter(current_year - StudentData.cohort + 1 - StudentData.repeated_years <= DegreeType.duration) \
-        .filter(StudentData.foundation_year == fyear_status,
-                current_year - StudentData.cohort + 1 - StudentData.repeated_years >= first_allowed_year,
-                current_year - StudentData.cohort + 1 - StudentData.repeated_years <= last_allowed_year)
+        .filter(or_(StudentData.academic_year == None,
+                    StudentData.academic_year <= DegreeType.duration,
+                    and_(StudentData.academic_year >= first_allowed_year,
+                         StudentData.academic_year <= last_allowed_year)))
 
     return candidates
 
@@ -1158,7 +1143,7 @@ def get_automatch_pclasses():
 
 def build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter):
     # build a list of live students submitting work for evaluation in this project class
-    submitters = config.submitting_students.filter_by(retired=False)
+    submitters: List[SubmittingStudent] = config.submitting_students.filter_by(retired=False)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
@@ -1202,7 +1187,7 @@ def build_submitters_data(config, cohort_filter, prog_filter, state_filter, year
         data = submitters.all()
 
     if year_flag:
-        data = [s for s in data if s.academic_year == year_value]
+        data = [s for s in data if (s.academic_year is None or s.academic_year == year_value)]
 
     return data
 

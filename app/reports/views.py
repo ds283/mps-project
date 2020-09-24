@@ -397,8 +397,6 @@ def year_groups_ajax():
     if year_filter not in ['all', '1', '2', '3', '4', 'twd']:
         year_filter = 'all'
 
-    current_year = get_current_year()
-
     flag, value = is_integer(year_filter)
 
     if year_filter == 'twd':
@@ -413,22 +411,17 @@ def year_groups_ajax():
             .join(User, User.id == StudentData.id) \
             .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
             .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
-            .filter(User.active,
-                    or_(and_(StudentData.foundation_year,
-                             current_year - StudentData.cohort - StudentData.repeated_years <= DegreeType.duration),
-                        and_(~StudentData.foundation_year,
-                             current_year - StudentData.cohort + 1 - StudentData.repeated_years <= DegreeType.duration)))
+            .filter(and_(User.active,
+                         StudentData.academic_year <= DegreeType.duration))
 
     else:
         base_query = db.session.query(StudentData) \
             .join(User, User.id == StudentData.id) \
-            .filter(User.active,
-                    or_(and_(StudentData.foundation_year,
-                             current_year - StudentData.cohort - StudentData.repeated_years == value),
-                        and_(~StudentData.foundation_year,
-                             current_year - StudentData.cohort + 1 - StudentData.repeated_years == value))) \
             .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
-            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
+            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+            .filter(and_(User.active,
+                         StudentData.academic_year <= DegreeType.duration,
+                         StudentData.academic_year == value))
 
     name = {'search': func.concat(User.first_name, ' ', User.last_name),
             'order': func.concat(User.last_name, User.first_name),
@@ -457,7 +450,7 @@ def year_groups_ajax():
             base_query = base_query.filter(DegreeType.id == value)
 
     with ServerSideHandler(request, base_query, columns) as handler:
-        return handler.build_payload(partial(ajax.reports.year_groups, current_year))
+        return handler.build_payload(ajax.reports.year_groups)
 
 
 @reports.route('/sabbaticals')

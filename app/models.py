@@ -2658,7 +2658,8 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     # exam number is needed for marking
     exam_number = db.Column(db.Integer(), index=True, unique=True)
 
-    # cohort identifies which project classes this student will be enrolled for
+    # cohort is used to compute this student's academic year, and
+    # identifies which project classes this student will be enrolled for
     cohort = db.Column(db.Integer(), index=True)
 
     # degree programme
@@ -2666,8 +2667,9 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     programme = db.relationship('DegreeProgramme', foreign_keys=[programme_id], uselist=False,
                                 backref=db.backref('students', lazy='dynamic'))
 
-    # did this student do a foundation year? if so, their admission cohort
-    # needs to be treated differently when calculating academic years
+    # did this student do a foundation year? This information is partially contained in the
+    # degree programme, but can become 'detached' if the programme is changed at a later point.
+    # We allow a separate per-student 'foundation_year' flag to catch cases like this
     foundation_year = db.Column(db.Boolean())
 
     # has this student had repeat years? If so, they also upset the academic year calculation
@@ -2676,11 +2678,165 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     # is this student currently intermitting?
     intermitting = db.Column(db.Boolean(), default=None)
 
+    # cache current academic year; introduced because the academic year calculation is now quite complex
+    # (eg. allowing for foundation year, repeated year, years out on industrial placement or year abroad).
+    # The calculation is too complex to write performant queries against.
+    # This field should not be set directly. It should be recalculated when the record is changed,
+    # or otherwise on a reasonably frequent basis as part of normal database maintenance
+    academic_year = db.Column(db.Integer(), default=None)
 
-    @validates('exam_number', 'cohort', 'programme_id', 'foundation_year', 'repeated_years')
+
+    def _get_provisional_year(self, cohort, repeat_years):
+        current_year = _get_current_year()
+
+        provisional_year = current_year - cohort + 1 - (1 if self.has_foundation_year else 0) - repeat_years
+
+        if self.programme.year_out:
+            year_out_value = self.programme.year_out_value
+            if provisional_year == year_out_value:
+                provisional_year = None
+
+            elif provisional_year > year_out_value:
+                provisional_year = provisional_year - 1
+
+        return provisional_year
+
+
+    @validates('exam_number')
     def _queue_for_validation(self, key, value):
         with db.session.no_autoflush:
             self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+
+        return value
+
+
+    @validates('foundation_year')
+    def _validate_foundation_year(self, key, value):
+        """
+        Adjust foundation_year value to correspond with assigned programme of study
+        :param key: name of edited attribute
+        :param value: new value
+        :return: value to be stored in named attribute
+        """
+        # if setting to false, assume user knows what they are doing
+        self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+
+        if value == False:
+            return False
+
+        # if programme already includes a foundation year, our own flag should be set to false
+        if self.programme.foundation_year:
+            value = False
+
+        # recalculate current academic year
+        provisional_year = self._get_provisional_year(self.cohort, self.repeated_years)
+        if provisional_year is not None and provisional_year < 0:
+            provisional_year = None
+
+        self.academic_year = provisional_year
+
+        # otherwise, return true
+        return value
+
+
+    @validates('cohort')
+    def _validate_cohort(self, key, value):
+        """
+        Adjust academic_year and repeated_years to match new value for cohort
+        :param key: name of edited attribute
+        :param value: new value
+        :return: value to be stored in named attribute
+        """
+        with db.session.no_autoflush:
+            self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+
+            provisional_year = self._get_provisional_year(value, self.repeated_years)
+
+            if provisional_year is not None and provisional_year < (0 if self.has_foundation_year else 1):
+                diff = self.repeated_years - abs(provisional_year)
+
+                if diff >= 0:
+                    self.repeated_years = self.repeated_years - diff
+                    provisional_year = provisional_year + diff
+                else:
+                    raise ValueError
+
+            self.academic_year = provisional_year
+
+        return value
+
+
+    @validates('academic_year')
+    def _validate_academic_year(self, key, value):
+        """
+        Adjust number of repeated years to match new value for academic year
+        :param key: name of edited attribute
+        :param value: new value
+        :return: value to be stored in named attribute
+        """
+        with db.session.no_autoflush:
+            self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+
+            provisional_year = self._get_provisional_year(self.cohort, self.repeated_years)
+
+            if provisional_year is not None and provisional_year != value:
+                if provisional_year > value:
+                    self.repeated_years = provisional_year - value
+
+                elif provisional_year < value:
+                    diff = self.repeated_years - abs(provisional_year)
+
+                    if diff >= 0:
+                        self.repeated_years = self.repeated_years - diff
+                    else:
+                        raise ValueError
+
+        return value
+
+
+    @validates('repeated_years')
+    def _validate_repeated_years(self, key, value):
+        """
+        Adjust academic year to match new value for repeated_years
+        :param key: name of edited attribute
+        :param value: new value
+        :return: value to be stored in named attribute
+        """
+        with db.session.no_autoflush:
+            self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+
+            if value < 0:
+                value = 0
+
+            provisional_year = self._get_provisional_year(self.cohort, value)
+
+            if provisional_year is not None and provisional_year < (0 if self.has_foundation_year else 1):
+                raise ValueError
+
+            self.academic_year = provisional_year
+
+        return value
+
+
+    @validates('programme_id')
+    def _validate_programme(self, key, value):
+        """
+        When changing programme, if old programme had foundation year but new programme does not,
+        set our local foundation_year_flag
+        :param key:
+        :param value:
+        :return:
+        """
+        with db.session.no_autoflush:
+            self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+
+            if not self.programme.foundation_year:
+                return value
+
+            programme: DegreeProgramme = db.session.query(DegreeProgramme).filter_by(id=value).first()
+
+            if not programme.foundation_year:
+                self.foundation_year = True
 
         return value
 
@@ -2690,39 +2846,66 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         return '<span class="badge badge-info">{c} cohort</span>'.format(c=self.cohort)
 
 
-    def academic_year(self, current_year):
+    @property
+    def has_foundation_year(self):
+        return self.programme.foundation_year or self.foundation_year
+
+
+    @property
+    def has_graduated(self):
+        if self.academic_year is None:
+            return None
+
+        diff = self.academic_year - self.programme.degree_type.duration - (1 if self.programme.year_out else 0)
+
+        if diff <= 0:
+            return False
+
+        return True
+
+
+    def compute_academic_year(self, desired_year, current_year=None):
         """
         Computes the academic year of a student, relative to a given year
-        :param current_year:
+        :param desired_year:
         :return:
         """
-        base_year = current_year - self.cohort + 1 - self.repeated_years
+        if self.academic_year is None:
+            return None
 
-        if self.foundation_year:
-            base_year -= 1
+        if current_year is None:
+            current_year = _get_current_year()
 
-        return base_year
+        diff = desired_year - current_year
+
+        return self.academic_year + diff
 
 
-    def academic_year_label(self, current_year, show_details=False):
-        academic_year = self.academic_year(current_year)
+    def academic_year_label(self, desired_year=None, show_details=False, current_year=None):
+        if desired_year is not None:
+            academic_year = self.compute_academic_year(desired_year, current_year=current_year)
+        else:
+            academic_year = self.academic_year
 
-        if academic_year < 0:
-            text = 'Error(<0)'
-            type = 'danger'
-        elif academic_year > self.programme.degree_type.duration:
+        if self.has_graduated:
             text = 'Graduated'
             type = 'primary'
+        elif academic_year is None:
+            text = 'Awaiting update...'
+            type = 'secondary'
+        elif academic_year < 0:
+            text = 'Error(<0)'
+            type = 'danger'
         else:
             text = 'Y{y}'.format(y=academic_year)
             type = 'info'
 
-        if show_details:
-            if self.foundation_year:
-                text += ' +F'
+            if show_details:
+                if self.has_foundation_year:
+                    text += ' F'
 
-            if self.repeated_years > 0:
-                text += ' +{n}'.format(n=self.repeated_years)
+                if self.repeated_years > 0:
+                    text += ' R{n}'.format(n=self.repeated_years)
 
         return '<span class="badge badge-{type}">{label}</span>'.format(label=text, type=type)
 
@@ -2784,6 +2967,41 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
             .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id) \
             .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id) \
             .order_by(ProjectClass.name.asc())
+
+
+    def maintenance(self):
+        edited = False
+
+        # repeated years should not be negative
+        if self.repeated_years < 0:
+            self.repeatead_years = 0
+            edited = True
+
+        # programme foundation year flag and local foundation year flag should not both be set; if they are, clear
+        # the local flag
+        if self.programme.foundation_year and self.foundation_year:
+            self.foundation_year = False
+            edited = True
+
+        # check current academic year
+        provisional_year = self._get_provisional_year(self.cohort, self.repeated_years)
+        if provisional_year != self.academic_year:
+
+            if provisional_year is not None:
+
+                if provisional_year < (0 if self.has_foundation_year else 1):
+                    diff = self.repeated_years - abs(provisional_year)
+
+                    if diff >= 0:
+                        self.repeated_years = self.repeated_years - diff
+                        provisional_year = provisional_year + diff
+                    else:
+                        provisional_year = None
+
+                self.academic_year = provisional_year
+                edited = True
+
+        return edited
 
 
 class StudentBatch(db.Model):
@@ -6892,11 +7110,11 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(selector_tasks, Conve
         Compute the current academic year for this student, relative to our ProjectClassConfig record
         :return:
         """
-        return self.student.academic_year(self.config.year)
+        return self.student.compute_academic_year(self.config.year)
 
 
-    def academic_year_label(self, show_details=False):
-        return self.student.academic_year_label(self.config.year, show_details=show_details)
+    def academic_year_label(self, current_year=None, show_details=False):
+        return self.student.academic_year_label(self.config.year, show_details=show_details, current_year=current_year)
 
 
     @property
@@ -7165,11 +7383,11 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(submitter_tasks, Con
         Compute the current academic year for this student, relative this ProjectClassConfig
         :return:
         """
-        return self.student.academic_year(self.config.year)
+        return self.student.compute_academic_year(self.config.year)
 
 
-    def academic_year_label(self, show_details=False):
-        return self.student.academic_year_label(self.config.year, show_details=show_details)
+    def academic_year_label(self, show_details=False, current_year=None):
+        return self.student.academic_year_label(self.config.year, show_details=show_details, current_year=current_year)
 
 
     def get_assignment(self, period=None):

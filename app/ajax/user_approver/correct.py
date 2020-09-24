@@ -40,15 +40,15 @@ _rejected = \
 
 
 @cache.memoize()
-def _element(record_id, current_year):
-    r = db.session.query(StudentData).filter_by(id=record_id).one()
+def _element(record_id):
+    r: StudentData = db.session.query(StudentData).filter_by(id=record_id).one()
 
     return {'name': {'display': r.user.name,
                       'sortstring': r.user.last_name + r.user.first_name},
              'email': r.user.email,
              'exam_number': r.exam_number,
              'programme': r.programme.full_name,
-             'year': r.academic_year_label(current_year, show_details=True),
+             'year': r.academic_year_label(show_details=True),
              'rejected_by': render_template_string(_rejected, s=r),
              'menu': render_template_string(_actions, s=r, url='REPURL', text='REPTEXT')}
 
@@ -56,27 +56,22 @@ def _element(record_id, current_year):
 @listens_for(StudentData, 'before_insert')
 def _StudentData_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        current_year = get_current_year()
-        cache.delete_memoized(_element, target.id, current_year)
+        cache.delete_memoized(_element, target.id)
 
 
 @listens_for(StudentData, 'before_update')
 def _StudentData_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        current_year = get_current_year()
-        cache.delete_memoized(_element, target.id, current_year)
+        cache.delete_memoized(_element, target.id)
 
 
 @listens_for(StudentData, 'before_delete')
 def _StudentData_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        current_year = get_current_year()
-        cache.delete_memoized(_element, target.id, current_year)
+        cache.delete_memoized(_element, target.id)
 
 
 def correction_data(record_ids, url='', text=''):
-    current_year = get_current_year()
-
     bleach = current_app.extensions['bleach']
 
     def urlencode(s):
@@ -91,6 +86,6 @@ def correction_data(record_ids, url='', text=''):
         d.update({'menu': d['menu'].replace('REPURL', url_enc, 1).replace('REPTEXT', text_enc, 1)})
         return d
 
-    data = [update(_element(r_id, current_year)) for r_id in record_ids]
+    data = [update(_element(r_id)) for r_id in record_ids]
 
     return jsonify(data)

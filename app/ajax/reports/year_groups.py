@@ -18,9 +18,7 @@ _name = \
 {% if s.intermitting %}
     <span class="badge badge-warning">TWD</span>
 {% endif %}
-{% if current_year is not none %}
-    {{ s.academic_year_label(current_year)|safe }}
-{% endif %}
+{{ s.academic_year_label()|safe }}
 {{ s.cohort_label|safe }}
 """
 
@@ -44,8 +42,8 @@ _submitting = \
 {% endfor %}
 """
 
-def year_groups(current_year, students):
-    data = [{'name': render_template_string(_name, s=s, current_year=current_year),
+def year_groups(students):
+    data = [{'name': render_template_string(_name, s=s),
              'programme': s.programme.label,
              'selecting': render_template_string(_selecting, s=s),
              'submitting': render_template_string(_submitting, s=s)}

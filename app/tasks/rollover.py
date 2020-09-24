@@ -607,7 +607,8 @@ def register_rollover_tasks(celery):
 
         else:
             try:
-                if selector.academic_year == config.start_year - 1:
+                if selector.academic_year is not None and not selector.student.has_graduated \
+                        and selector.academic_year == config.start_year - 1:
                     if config.selection_open_to_all:
                         # no allocation here means that the selector chose not to participate
                         pass
@@ -619,7 +620,8 @@ def register_rollover_tasks(celery):
                             self.update_state('FAILURE', meta='Unexpected missing selector allocation')
                             return new_config_id
 
-                elif selector.academic_year >= config.start_year:
+                elif selector.academic_year is not None and not selector.student.has_graduated \
+                        and selector.academic_year >= config.start_year:
                     if config.supervisor_carryover:
                         # if possible, we should carry over supervisor allocations from the previous year
                         prev_record = db.session.query(SubmittingStudent) \
@@ -694,8 +696,8 @@ def register_rollover_tasks(celery):
     def attach_records(self, new_config_id, old_config_id, sid, current_year):
         # get current configuration record
         try:
-            config = ProjectClassConfig.query.filter_by(id=new_config_id).first()
-            student = StudentData.query.filter_by(id=sid).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=new_config_id).first()
+            student: StudentData = StudentData.query.filter_by(id=sid).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -710,7 +712,7 @@ def register_rollover_tasks(celery):
             return new_config_id
 
         # compute current academic year for this student
-        academic_year = student.academic_year(current_year)
+        academic_year = student.compute_academic_year(current_year)
 
         try:
             # generate selector records for students:
@@ -744,6 +746,7 @@ def register_rollover_tasks(celery):
                     add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
 
             db.session.commit()
+
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

@@ -10,21 +10,22 @@
 
 
 from datetime import date, datetime, timedelta
-from dateutil.relativedelta import relativedelta
 from functools import partial
 from pathlib import Path
+from typing import List
 
 import parse
 from celery import chain
 from dateutil import parser
+from dateutil.relativedelta import relativedelta
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session, abort
 from flask_mail import Message
 from flask_security import roles_accepted, current_user
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from sqlalchemy.sql import func, literal_column
-from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.orm import with_polymorphic
+from sqlalchemy.orm.exc import StaleDataError
+from sqlalchemy.sql import func, literal_column
 
 import app.ajax as ajax
 from . import convenor
@@ -43,25 +44,24 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
-    SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Role, \
-    Bookmark, ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask
-from ..shared.forms.forms import SelectSubmissionRecordFormFactory
+    SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Bookmark, \
+    ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
+from ..shared.forms.forms import SelectSubmissionRecordFormFactory
+from ..shared.sqlalchemy import get_count, clone_model
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
     build_enroll_submitter_candidates, build_submitters_data, redirect_url, get_convenor_todo_data, \
     build_convenor_tasks_query, home_dashboard_url
-from ..shared.sqlalchemy import get_count, clone_model
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
 from ..student.actions import store_selection
 from ..task_queue import register_task
 from ..tools import ServerSideHandler
 from ..uploads import submitted_files
-
 
 STUDENT_TASKS_SELECTOR = SelectingStudent.polymorphic_identity()
 STUDENT_TASKS_SUBMITTER = SubmittingStudent.polymorphic_identity()
@@ -809,7 +809,7 @@ def selectors_ajax(id):
 def _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter, match_filter,
                          match_show):
     # build a list of live students selecting from this project class
-    selectors = config.selecting_students.filter_by(retired=False)
+    selectors: List[SelectingStudent] = config.selecting_students.filter_by(retired=False)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
@@ -846,7 +846,7 @@ def _build_selector_data(config, cohort_filter, prog_filter, state_filter, conve
         data = selectors.all()
 
     if year_flag:
-        data = [s for s in data if s.academic_year == year_value]
+        data = [s for s in data if (s.academic_year is None or s.academic_year == year_value)]
 
     if match_flag:
         match = config.published_matches.filter_by(id=match_value).first()
@@ -891,9 +891,6 @@ def enroll_selectors(id):
     if prog_filter is None and session.get('convenor_sel_enroll_prog_filter'):
         prog_filter = session['convenor_sel_enroll_prog_filter']
 
-    # get current academic year
-    current_year = get_current_year()
-
     candidates = \
         build_enroll_selector_candidates(config,
                                          disable_programme_filter=True if isinstance(prog_filter, str)
@@ -905,8 +902,9 @@ def enroll_selectors(id):
     programmes = set()
     for student in candidates:
         cohorts.add(student.cohort)
-        years.add(student.academic_year(current_year))
         programmes.add(student.programme_id)
+        if student.academic_year is not None:
+           years.add(student.academic_year)
 
     # build list of available programmes
     all_progs = db.session.query(DegreeProgramme) \
@@ -978,9 +976,6 @@ def enroll_selectors_ajax(id):
             and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
         return jsonify({})
 
-    # get current year
-    current_year = get_current_year()
-
     candidates = \
         build_enroll_selector_candidates(config,
                                          disable_programme_filter=True if isinstance(prog_filter, str)
@@ -998,7 +993,7 @@ def enroll_selectors_ajax(id):
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
     if year_flag:
-        candidates = [s for s in candidates.all() if s.academic_year(current_year) == year_value]
+        candidates = [s for s in candidates.all() if (s.academic_year is None or (not s.has_graduated and s.academic_year == year_value))]
     else:
         candidates = candidates.all()
 
@@ -1028,9 +1023,6 @@ def enroll_all_selectors(configid):
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
 
-    # get current year
-    current_year = get_current_year()
-
     candidates = \
         build_enroll_selector_candidates(config,
                                          disable_programme_filter=True if isinstance(prog_filter, str)
@@ -1048,7 +1040,7 @@ def enroll_all_selectors(configid):
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
     if year_flag:
-        candidates = [s for s in candidates.all() if s.academic_year(current_year) == year_value]
+        candidates = [s for s in candidates.all() if (s.academic_year is None or (not s.has_graduated and s.academic_year == year_value))]
     else:
         candidates = candidates.all()
 
@@ -1338,7 +1330,7 @@ def selector_grid_ajax(id):
         return jsonify({})
 
     # build a list of live students selecting from this project class
-    selectors = config.selecting_students.filter_by(retired=False)
+    selectors: List[SelectingStudent] = config.selecting_students.filter_by(retired=False)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
@@ -1360,7 +1352,7 @@ def selector_grid_ajax(id):
         selectors = selectors.filter(StudentData.programme_id == prog_value)
 
     if year_flag:
-        data = [s for s in selectors.all() if s.academic_year == year_value]
+        data = [s for s in selectors.all() if (s.academic_year is None or s.academic_year == year_value)]
     else:
         data = selectors.all()
 
@@ -1628,8 +1620,9 @@ def enroll_submitters(id):
     programmes = set()
     for student in candidates:
         cohorts.add(student.cohort)
-        years.add(student.academic_year(current_year))
         programmes.add(student.programme_id)
+        if student.academic_year is not None:
+            years.add(student.academic_year)
 
     # build list of available programmes
     all_progs = db.session.query(DegreeProgramme) \
@@ -1703,9 +1696,6 @@ def enroll_submitters_ajax(id):
     if config.selection_closed:
         return jsonify({})
 
-    # get current year
-    current_year = get_current_year()
-
     candidates = build_enroll_submitter_candidates(config)
 
     # filter by cohort and programme if required
@@ -1720,7 +1710,7 @@ def enroll_submitters_ajax(id):
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
     if year_flag:
-        candidates = [s for s in candidates.all() if s.academic_year(current_year) == year_value]
+        candidates = [s for s in candidates.all() if ((s.academic_year is None or (not s.has_graduated and s.academic_year == year_value)))]
     else:
         candidates = candidates.all()
 
@@ -1765,7 +1755,7 @@ def enroll_all_submitters(configid):
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
     if year_flag:
-        candidates = [s for s in candidates.all() if s.academic_year(current_year) == year_value]
+        candidates = [s for s in candidates.all() if (s.academic_year is None or s.academic_yea == year_value)]
     else:
         candidates = candidates.all()
 

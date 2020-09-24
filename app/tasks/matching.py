@@ -148,26 +148,27 @@ def _enumerate_selectors_primary(configs, include_only_submitted=False):
                     attach = False
 
                 else:
-                    if opt_in_type and \
-                            ((enroll_previous_year and item.academic_year == config.start_year - 1) or
-                             (enroll_any_year and config.start_year <= item.academic_year < config.start_year + config.extent)):
-                        # interpret failure to submit as lack of interest; no need to generate a match
-                        attach = False
+                    if item.academic_year is not None and not item.has_graduated:
+                        if opt_in_type and \
+                                ((enroll_previous_year and item.academic_year == config.start_year - 1) or
+                                 (enroll_any_year and config.start_year <= item.academic_year < config.start_year + config.extent)):
+                            # interpret failure to submit as lack of interest; no need to generate a match
+                            attach = False
 
-                    elif carryover and config.start_year <= item.academic_year < config.start_year + config.extent:
-                        # interpret failure to submit as evidence student is happy with existing allocation
+                        elif carryover and config.start_year <= item.academic_year < config.start_year + config.extent:
+                            # interpret failure to submit as evidence student is happy with existing allocation
 
-                        # TODO: in reality there is some overlap with the previous case, if both carryover and
-                        #  opt_in_type are set. In such a case, if a student has a previous SubmittingStudent instance
-                        #  and they don't respond, they probably mean to carryover. If they don't have a SubmittingStudent
-                        #  instance then they probably mean to indicate that they don't want to participate.
-                        #  I can't see any way to tell the difference using only data available in this method, but also
-                        #  it doesn't seem to be critical
-                        attach = False
+                            # TODO: in reality there is some overlap with the previous case, if both carryover and
+                            #  opt_in_type are set. In such a case, if a student has a previous SubmittingStudent instance
+                            #  and they don't respond, they probably mean to carryover. If they don't have a SubmittingStudent
+                            #  instance then they probably mean to indicate that they don't want to participate.
+                            #  I can't see any way to tell the difference using only data available in this method, but also
+                            #  it doesn't seem to be critical
+                            attach = False
 
-                    else:
-                        # otherwise, assume a match should be generated
-                        attach = True
+                        else:
+                            # otherwise, assume a match should be generated
+                            attach = True
 
             if attach:
                 sel_to_number[item.id] = number

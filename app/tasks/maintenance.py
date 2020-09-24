@@ -15,11 +15,13 @@ from celery import group
 from celery.exceptions import Ignore
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_
 
 from ..database import db
 from ..models import Project, LiveProject, AssessorAttendanceData, SubmitterAttendanceData, \
     PresentationAssessment, GeneratedAsset, TemporaryAsset, ScheduleEnumeration, ProjectDescription, \
-    MatchingEnumeration, SubmittedAsset, SubmissionRecord, ProjectClass, ProjectClassConfig
+    MatchingEnumeration, SubmittedAsset, SubmissionRecord, ProjectClass, ProjectClassConfig, StudentData, \
+    DegreeProgramme, DegreeType
 from ..shared.asset_tools import canonical_generated_asset_filename, canonical_temporary_asset_filename, \
     canonical_submitted_asset_filename
 from ..shared.utils import get_current_year, get_count
@@ -35,6 +37,8 @@ def register_maintenance_tasks(celery):
         liveprojects_maintenance(self)
 
         project_descriptions_maintenance(self)
+
+        students_data_maintenance(self)
 
         assessor_attendance_maintenance(self)
         submitter_attendance_maintenance(self)
@@ -88,6 +92,25 @@ def register_maintenance_tasks(celery):
         task.apply_async()
 
 
+    def students_data_maintenance(self):
+        try:
+            # to prevent this job growing unboundedly with the databse, restrict calculation
+            # to current students and those who graduated up to last year,
+            # or those without a currently calculated value
+            records = db.session.query(StudentData) \
+                .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
+                .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+                .filter(StudentData.active,
+                        or_(StudentData.academic_year <= DegreeType.duration + 1,
+                            StudentData.academic_year == None)).all()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        task = group(student_data_maintenance.s(p.id) for p in records)
+        task.apply_async()
+
+
     def liveprojects_maintenance(self):
         task = None
 
@@ -133,6 +156,28 @@ def register_maintenance_tasks(celery):
 
         task = group(matching_enumeration_record_maintenance.s(r.id) for r in records)
         task.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def student_data_maintenance(self, sid):
+        try:
+            record = db.session.query(StudentData).filter_by(id=sid).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if record is None:
+            raise Ignore()
+
+        if record.maintenance():
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+        self.update_state(state='SUCCESS')
 
 
     @celery.task(bind=True, default_retry_delay=30)

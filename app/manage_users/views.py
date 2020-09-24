@@ -460,22 +460,10 @@ def users_students_ajax():
 
     flag, year_value = is_integer(year_filter)
     if flag:
-        current_year = get_current_year()
-        nonf = data.filter(StudentData.foundation_year == False,
-                           current_year - StudentData.cohort + 1 - StudentData.repeated_years == year_value)
-        foun = data.filter(StudentData.foundation_year == True,
-                           current_year - StudentData.cohort - StudentData.repeated_years == year_value)
-
-        data = nonf.union(foun)
-
+        data = data.filter(StudentData.academic_year <= DegreeType.duration,
+                           StudentData.academic_year == year_value)
     elif year_filter == 'grad':
-        current_year = get_current_year()
-        nonf = data.filter(StudentData.foundation_year == False,
-                           current_year - StudentData.cohort + 1 - StudentData.repeated_years > DegreeType.duration)
-        foun = data.filter(StudentData.foundation_year == True,
-                           current_year - StudentData.cohort - StudentData.repeated_years > DegreeType.duration)
-
-        data = nonf.union(foun)
+        data = data.filter(StudentData.academic_year > DegreeType.duration)
 
     student_ids = [s[0] for s in data.all()]
 

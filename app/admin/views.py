@@ -12,6 +12,7 @@ import json
 import re
 from collections import deque
 from datetime import date, datetime, timedelta
+from functools import partial
 from math import pi
 from pathlib import Path
 from typing import List
@@ -25,8 +26,8 @@ from flask import current_app, render_template, redirect, url_for, flash, reques
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 from numpy import histogram
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.sql import func
 from sqlalchemy.sql import cast
+from sqlalchemy.sql import func
 from sqlalchemy.types import String
 from werkzeug.datastructures import Headers
 from werkzeug.wrappers import Response
@@ -341,18 +342,40 @@ def degree_types_ajax():
         return handler.build_payload(ajax.admin.degree_types_data)
 
 
-@admin.route('/degree_programmes_ajax', methods=['GET', 'POST'])
+@admin.route('/degree_programmes_ajax', methods=['POST'])
 @roles_required('root')
 def degree_programmes_ajax():
     """
     Ajax data point for degree programmes tables
     :return:
     """
-    programmes = DegreeProgramme.query.all()
+    base_query = db.session.query(DegreeProgramme) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
 
-    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.academic_year.asc()).all()
+    name = {'search': DegreeProgramme.name,
+            'order': DegreeProgramme.name,
+            'search_collation': 'utf8_general_ci'}
+    type = {'search': DegreeType.name,
+            'order': DegreeType.name,
+            'search_collation': 'utf8_general_ci'}
+    show_type = {'order': DegreeProgramme.show_type}
+    course_code = {'search': DegreeProgramme.course_code,
+                   'order': DegreeProgramme.course_code,
+                   'search_collation': 'utf8_general_ci'}
+    active = {'order': DegreeProgramme.active}
 
-    return ajax.admin.degree_programmes_data(programmes, levels)
+    columns = {'name': name,
+               'type': type,
+               'show_type': show_type,
+               'course_code': course_code,
+               'active': active}
+
+    levels = db.session.query(FHEQ_Level) \
+        .filter_by(active=True) \
+        .order_by(FHEQ_Level.academic_year.asc()).all()
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(partial(ajax.admin.degree_programmes_data, levels))
 
 
 @admin.route('/modules_ajax')

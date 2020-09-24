@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string
 
 _menu = \
 """
@@ -91,7 +90,7 @@ _name = \
 """
 
 
-def degree_programmes_data(programmes, levels):
+def degree_programmes_data(levels, programmes):
 
     data = [{'name': render_template_string(_name, p=p, levels=levels),
              'type': p.degree_type.name,
@@ -100,4 +99,4 @@ def degree_programmes_data(programmes, levels):
              'active': render_template_string(_active, p=p),
              'menu': render_template_string(_menu, programme=p)} for p in programmes]
 
-    return jsonify(data)
+    return data

@@ -26,6 +26,8 @@ from flask_security import login_required, roles_required, roles_accepted, curre
 from numpy import histogram
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import func
+from sqlalchemy.sql import cast
+from sqlalchemy.types import String
 from werkzeug.datastructures import Headers
 from werkzeug.wrappers import Response
 
@@ -295,7 +297,9 @@ def edit_levels_ajax():
     colour = {'search': FHEQ_Level.colour,
               'order': FHEQ_Level.colour,
               'search_collation': 'utf8_general_ci'}
-    academic_year = {'order': FHEQ_Level.academic_year}
+    academic_year = {'order': FHEQ_Level.academic_year,
+                     'search': cast(FHEQ_Level.academic_year, String),
+                     'search_collation': 'utf8_general_ci'}
     status = {'order': FHEQ_Level.active}
 
     columns = {'name': name,
@@ -308,18 +312,36 @@ def edit_levels_ajax():
         return handler.build_payload(ajax.admin.FHEQ_levels_data)
 
 
-@admin.route('/degree_types_ajax')
+@admin.route('/degree_types_ajax', methods=['POST'])
 @roles_required('root')
 def degree_types_ajax():
     """
     Ajax data point for degree type table
     :return:
     """
-    types = DegreeType.query.all()
-    return ajax.admin.degree_types_data(types)
+    base_query = db.session.query(DegreeType)
+
+    name = {'search': DegreeType.name,
+            'order': DegreeType.name,
+            'search_collation': 'utf8_general_ci'}
+    duration = {'search': cast(DegreeType.duration, String),
+                'order': DegreeType.duration,
+                'search_collation': 'utf8_general_ci'}
+    colour = {'search': DegreeType.colour,
+              'order': DegreeType.colour,
+              'search_collation': 'utf8_general_ci'}
+    active = {'order': DegreeType.active}
+
+    columns = {'name': name,
+               'duration': duration,
+               'colour': colour,
+               'active': active}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.admin.degree_types_data)
 
 
-@admin.route('/degree_programmes_ajax')
+@admin.route('/degree_programmes_ajax', methods=['GET', 'POST'])
 @roles_required('root')
 def degree_programmes_ajax():
     """
@@ -327,7 +349,9 @@ def degree_programmes_ajax():
     :return:
     """
     programmes = DegreeProgramme.query.all()
+
     levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.academic_year.asc()).all()
+
     return ajax.admin.degree_programmes_data(programmes, levels)
 
 

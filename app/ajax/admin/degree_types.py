@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string
 
 _types_menu = \
 """
@@ -67,4 +66,4 @@ def degree_types_data(types):
              'colour': t.make_label(t.colour),
              'menu': render_template_string(_types_menu, type=t)} for t in types]
 
-    return jsonify(data)
+    return data

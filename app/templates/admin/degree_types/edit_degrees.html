@@ -16,16 +16,29 @@
             $('#type-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/admin/degree_types_ajax', dataSrc: '' },
+                serverSide: true,
+                ajax: { url: $SCRIPT_ROOT + '/admin/degree_types_ajax',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'name' },
-                    { data: 'duration' },
-                    { data: 'colour' },
-                    { data: 'active' },
-                    { data: 'menu' }
+                    { data: 'name',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'duration',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'colour',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'active',
+                      orderable: true,
+                      searchable: false },
+                    { data: 'menu',
+                      orderable: true,
+                      searchable: false }
                 ],
-                deferRender: true
+                order: [[0, 'asc']]
             });
         });
     </script>

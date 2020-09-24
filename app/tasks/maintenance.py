@@ -18,7 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_
 
 from ..database import db
-from ..models import Project, LiveProject, AssessorAttendanceData, SubmitterAttendanceData, \
+from ..models import User, Project, LiveProject, AssessorAttendanceData, SubmitterAttendanceData, \
     PresentationAssessment, GeneratedAsset, TemporaryAsset, ScheduleEnumeration, ProjectDescription, \
     MatchingEnumeration, SubmittedAsset, SubmissionRecord, ProjectClass, ProjectClassConfig, StudentData, \
     DegreeProgramme, DegreeType
@@ -98,9 +98,10 @@ def register_maintenance_tasks(celery):
             # to current students and those who graduated up to last year,
             # or those without a currently calculated value
             records = db.session.query(StudentData) \
+                .join(User, User.id == StudentData.id) \
                 .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
                 .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
-                .filter(StudentData.active,
+                .filter(User.active,
                         or_(StudentData.academic_year <= DegreeType.duration + 1,
                             StudentData.academic_year == None)).all()
         except SQLAlchemyError as e:

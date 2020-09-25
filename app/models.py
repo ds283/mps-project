@@ -5143,11 +5143,17 @@ class SubmissionPeriodRecord(db.Model):
 
     @property
     def all_markers_assigned(self):
+        if not self.config.uses_marker:
+            return True
+
         return self.submissions.filter_by(marker_id=None).first() is None
 
 
     @property
     def all_supervisors_assigned(self):
+        if not self.config.uses_supervisor:
+            return True
+
         return self.submissions.filter_by(project_id=None).first() is None
 
 

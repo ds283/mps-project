@@ -399,7 +399,7 @@ def edit_users_faculty():
                            groups=groups, pclasses=pclasses)
 
 
-@manage_users.route('/users_ajax')
+@manage_users.route('/users_ajax', methods=['POST'])
 @roles_accepted('manage_users', 'root')
 @limiter.limit('1000/day')
 def users_ajax():
@@ -410,27 +410,48 @@ def users_ajax():
     filter = request.args.get('filter')
 
     if filter == 'active':
-        users = db.session.query(User.id).filter_by(active=True).all()
+        base_query = db.session.query(User.id).filter_by(active=True)
     elif filter == 'inactive':
-        users = db.session.query(User.id).filter_by(active=False).all()
+        base_query = db.session.query(User.id).filter_by(active=False)
     elif filter == 'student':
-        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'student')).all()
+        base_query = db.session.query(User.id).filter(User.roles.any(Role.name == 'student'))
     elif filter == 'faculty':
-        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'faculty')).all()
+        base_query = db.session.query(User.id).filter(User.roles.any(Role.name == 'faculty'))
     elif filter == 'office':
-        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'office')).all()
+        base_query = db.session.query(User.id).filter(User.roles.any(Role.name == 'office'))
     elif filter == 'reports':
-        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'reports')).all()
+        base_query = db.session.query(User.id).filter(User.roles.any(Role.name == 'reports'))
     elif filter == 'admin':
-        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'admin')).all()
+        base_query = db.session.query(User.id).filter(User.roles.any(Role.name == 'admin'))
     elif filter == 'root':
-        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'root')).all()
+        base_query = db.session.query(User.id).filter(User.roles.any(Role.name == 'root'))
     else:
-        users = db.session.query(User.id).all()
+        base_query = db.session.query(User.id)
 
-    user_ids = [u[0] for u in users]
+    name = {'search': func.concat(User.first_name, ' ', User.last_name),
+            'order': [User.last_name, User.first_name],
+            'search_collation': 'utf8_general_ci'}
+    user = {'search': User.username,
+            'order': User.username,
+            'search_collation': 'utf8_general_ci'}
+    email = {'search': User.email,
+             'order': User.email,
+             'search_collation': 'utf8_general_ci'}
+    confirm = {'search': func.date_format(User.confirmed_at, "%a %d %b %Y %H:%M:%S"),
+               'order': User.confirmed_at,
+               'search_collation': 'utf8_general_ci'}
+    active = {'order': User.active}
+    details = {'order': [User.last_active, User.current_login_at, User.last_login_at]}
 
-    return ajax.users.build_accounts_data(user_ids, current_user.id)
+    columns = {'name': name,
+               'user': user,
+               'email': email,
+               'confirm': confirm,
+               'active': active,
+               'details': details}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(partial(ajax.users.build_accounts_data, current_user.id))
 
 
 @manage_users.route('/users_students_ajax', methods=['POST'])

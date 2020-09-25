@@ -8,15 +8,14 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
-from ...database import db
-from ...models import User, Role
-from ...cache import cache
-
+from flask import render_template_string
 from sqlalchemy.event import listens_for
 
 from .shared import menu, name
+from ...cache import cache
+from ...database import db
+from ...models import User, Role
+from ...shared.utils import detuple
 
 
 _roles = \
@@ -65,25 +64,13 @@ def _element(user_id, current_user_id):
     u = db.session.query(User).filter_by(id=user_id).one()
     cu = db.session.query(User).filter_by(id=current_user_id).one()
 
-    return {'name': {
-                'display': render_template_string(name, u=u),
-                'sortvalue': u.last_name + u.first_name
-             },
+    return {'name': render_template_string(name, u=u),
              'user': u.username,
              'email': '<a href="mailto:{m}">{m}</a>'.format(m=u.email),
-             'confirm': {
-                 'display': u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S"),
-                 'timestamp': u.confirmed_at.timestamp()
-             } if u.confirmed_at is not None else {
-                 'display': '<span class="badge badge-warning">Not confirmed</span>',
-                 'timestamp': 0
-             },
+             'confirm': u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if u.confirmed_at is not None \
+                        else '<span class="badge badge-warning">Not confirmed</span>',
              'active': u.active_label,
-             'details': {
-                 'display': render_template_string(_status, u=u),
-                 'timestamp': u.last_active.timestamp() if u.last_active is not None
-                 else (u.last_login_at.timestamp() if u.last_login_at is not None else 0)
-             },
+             'details': render_template_string(_status, u=u),
              'role': render_template_string(_roles, user=u),
              'menu': render_template_string(menu, user=u, cuser=cu, pane='accounts')}
 
@@ -94,13 +81,11 @@ def _process(user_id, current_user_id):
     record = _element(user_id, current_user_id)
 
     name = record['name']
-    display = name['display']
     if u.currently_active:
-        display = display.replace('REPACTIVE', '<span class="badge badge-success">ACTIVE</span>', 1)
+        name = name.replace('REPACTIVE', '<span class="badge badge-success">ACTIVE</span>', 1)
     else:
-        display = display.replace('REPACTIVE', '', 1)
+        name = name.replace('REPACTIVE', '', 1)
 
-    name.update({'display': display})
     record.update({'name': name})
 
     return record
@@ -163,7 +148,7 @@ def _Role_delete_handler(mapper, connection, target):
         _delete_cache_entry_role_change(target)
 
 
-def build_accounts_data(user_ids, current_user_id):
-    data = [_process(u_id, current_user_id) for u_id in user_ids]
+def build_accounts_data(current_user_id, user_ids):
+    data = [_process(detuple(u_id), current_user_id) for u_id in user_ids]
 
-    return jsonify(data)
+    return data

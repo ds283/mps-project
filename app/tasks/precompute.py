@@ -186,7 +186,7 @@ def register_precompute_tasks(celery):
 
     @celery.task(bind=True)
     def cache_user_account(self, user_id, current_user_id):
-        ajax.users.build_accounts_data([user_id], current_user_id)
+        ajax.users.build_accounts_data(current_user_id, [user_id])
 
 
     @celery.task(bind=True)
@@ -196,7 +196,7 @@ def register_precompute_tasks(celery):
 
     @celery.task(bind=True)
     def cache_user_student(self, user_id, current_user_id):
-        ajax.users.build_student_data([user_id], current_user_id)
+        ajax.users.build_student_data(current_user_id, [user_id])
 
 
     @celery.task(bind=True)

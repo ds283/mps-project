@@ -424,7 +424,7 @@ def year_groups_ajax():
                          StudentData.academic_year == value))
 
     name = {'search': func.concat(User.first_name, ' ', User.last_name),
-            'order': func.concat(User.last_name, User.first_name),
+            'order': [User.last_name, User.first_name],
             'search_collation': 'utf8_general_ci'}
     programme = {'order': DegreeProgramme.name}
 
@@ -501,7 +501,7 @@ def sabbaticals_ajax():
     base_query = base_query.join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id)
 
     name = {'search': func.concat(User.first_name + ' ' + User.last_name),
-            'order': func.concat(User.last_name, User.first_name),
+            'order': [User.last_name, User.first_name],
             'search_collation': 'utf8_general_ci'}
     pclass = {'order': ProjectClass.name}
     exemptions = {'search': func.concat(EnrollmentRecord.supervisor_comment, EnrollmentRecord.marker_comment,

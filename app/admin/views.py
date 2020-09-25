@@ -2161,7 +2161,7 @@ def email_log_ajax():
 
     # set up columns for server-side processing
     recipient = {'search': func.concat(User.first_name, ' ', User.last_name),
-            'order': func.concat(User.last_name, User.first_name),
+            'order': [User.last_name, User.first_name],
             'search_collation': 'utf8_general_ci'}
     address = {'search': User.email,
                'order': User.email,

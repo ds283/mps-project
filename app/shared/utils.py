@@ -9,6 +9,7 @@
 #
 
 
+from collections import Iterable
 from typing import List
 
 from flask import redirect, url_for, flash, current_app, request
@@ -1041,8 +1042,8 @@ def get_convenor_filter_record(config):
     return record
 
 
-def _detuple(x):
-    while isinstance(x, list) or isinstance(x, tuple):
+def detuple(x):
+    while isinstance(x, Iterable):
         x = x[0]
 
     return x
@@ -1088,7 +1089,7 @@ def _build_generic_enroll_candidate(config, year_offset, StudentRecordType, disa
 
     if not disable_programme_filter and not config.selection_open_to_all:
         allowed_programmes = config.project_class.programmes.with_entities(DegreeProgramme.id).distinct().all()
-        allowed_programmes = set(_detuple(x) for x in allowed_programmes)
+        allowed_programmes = set(detuple(x) for x in allowed_programmes)
     else:
         allowed_programmes = None
 

@@ -10,6 +10,7 @@
 
 
 from datetime import datetime, date, timedelta
+from functools import partial
 from pathlib import Path
 
 from celery import chain, group
@@ -20,6 +21,8 @@ from flask_security.signals import user_registered
 from flask_security.utils import config_value, get_message, do_flash, send_mail
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.sql import cast
+from sqlalchemy.types import String
 from werkzeug.local import LocalProxy
 
 import app.ajax as ajax
@@ -40,6 +43,7 @@ from ..shared.sqlalchemy import func
 from ..shared.utils import get_current_year, get_main_config, home_dashboard_url, redirect_url
 from ..shared.validators import validate_is_convenor
 from ..task_queue import register_task, progress_update
+from ..tools import ServerSideHandler
 from ..uploads import batch_user_files
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
@@ -429,46 +433,64 @@ def users_ajax():
     return ajax.users.build_accounts_data(user_ids, current_user.id)
 
 
-@manage_users.route('/users_students_ajax')
+@manage_users.route('/users_students_ajax', methods=['POST'])
 @roles_accepted('manage_users', 'root')
 @limiter.limit('1000/day')
 def users_students_ajax():
-
     prog_filter = request.args.get('prog_filter')
     cohort_filter = request.args.get('cohort_filter')
     year_filter = request.args.get('year_filter')
     valid_filter = request.args.get('valid_filter')
 
-    data = db.session.query(StudentData.id, User) \
+    base_query = db.session.query(StudentData.id) \
         .join(User, User.id == StudentData.id) \
         .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
 
     flag, prog_value = is_integer(prog_filter)
     if flag:
-        data = data.filter(StudentData.programme_id == prog_value)
+        base_query = base_query.filter(StudentData.programme_id == prog_value)
 
     flag, cohort_value = is_integer(cohort_filter)
     if flag:
-        data = data.filter(StudentData.cohort == cohort_value)
+        base_query = base_query.filter(StudentData.cohort == cohort_value)
 
     if valid_filter == 'valid':
-        data = data.filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED)
+        base_query = base_query.filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED)
     elif valid_filter == 'not-valid':
-        data = data.filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED)
+        base_query = base_query.filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED)
     elif valid_filter == 'reject':
-        data = data.filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED)
+        base_query = base_query.filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED)
 
     flag, year_value = is_integer(year_filter)
     if flag:
-        data = data.filter(StudentData.academic_year <= DegreeType.duration,
-                           StudentData.academic_year == year_value)
+        base_query = base_query.filter(StudentData.academic_year <= DegreeType.duration,
+                                       StudentData.academic_year == year_value)
     elif year_filter == 'grad':
-        data = data.filter(StudentData.academic_year > DegreeType.duration)
+        base_query = base_query.filter(StudentData.academic_year > DegreeType.duration)
 
-    student_ids = [s[0] for s in data.all()]
+    name = {'search': func.concat(User.first_name, ' ', User.last_name),
+            'order': [User.last_name, User.first_name],
+            'search_collation': 'utf8_general_ci'}
+    active = {'order': User.active}
+    programme = {'search': DegreeProgramme.name,
+                 'order': DegreeProgramme.name,
+                 'search_collation': 'utf8_general_ci'}
+    cohort = {'search': cast(StudentData.cohort, String),
+              'order': StudentData.cohort,
+              'search_collation': 'utf8_general_ci'}
+    acadyear = {'search': cast(StudentData.academic_year, String),
+                'order': StudentData.academic_year,
+                'search_collation': 'utf8_general_ci'}
 
-    return ajax.users.build_student_data(student_ids, current_user.id)
+    columns = {'name': name,
+               'active': active,
+               'programme': programme,
+               'cohort': cohort,
+               'acadyear': acadyear}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(partial(ajax.users.build_student_data, current_user.id))
 
 
 @manage_users.route('/users_faculty_ajax')

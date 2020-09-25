@@ -8,16 +8,14 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from ...shared.utils import get_current_year
-from flask import render_template_string, jsonify
-
-from ...database import db
-from ...models import User, StudentData
-from ...cache import cache
-
+from flask import render_template_string
 from sqlalchemy.event import listens_for
 
 from .shared import menu, name
+from ...cache import cache
+from ...database import db
+from ...models import User, StudentData
+from ...shared.utils import detuple
 
 
 @cache.memoize()
@@ -26,15 +24,11 @@ def _element(user_id, current_user_id):
     u = db.session.query(User).filter_by(id=user_id).one()
     cu = db.session.query(User).filter_by(id=current_user_id).one()
 
-    return {'name': {
-                'display': render_template_string(name, u=u),
-                'sortstring': u.last_name + u.first_name},
+    return {'name': render_template_string(name, u=u),
              'active': u.active_label,
              'programme': s.programme.label,
              'cohort': s.cohort_label,
-             'acadyear': {
-                 'display': s.academic_year_label(show_details=True),
-                 'sortvalue': s.academic_year},
+             'acadyear': s.academic_year_label(show_details=True),
              'menu': render_template_string(menu, user=u, cuser=cu, pane='students')}
 
 
@@ -44,13 +38,11 @@ def _process(user_id, current_user_id):
     record = _element(user_id, current_user_id)
 
     name = record['name']
-    display = name['display']
     if u.currently_active:
-        display = display.replace('REPACTIVE', '<span class="badge badge-success">ACTIVE</span>', 1)
+        name = name.replace('REPACTIVE', '<span class="badge badge-success">ACTIVE</span>', 1)
     else:
-        display = display.replace('REPACTIVE', '', 1)
+        name = name.replace('REPACTIVE', '', 1)
 
-    name.update({'display': display})
     record.update({'name': name})
 
     return record
@@ -106,7 +98,7 @@ def _StudentData_delete_handler(mapper, connection, target):
             cache.delete_memoized(_element, target.id, id[0])
 
 
-def build_student_data(student_ids, current_user_id):
-    data = [_process(s_id, current_user_id) for s_id in student_ids]
+def build_student_data(current_user_id, student_ids):
+    data = [_process(detuple(s_id), current_user_id) for s_id in student_ids]
 
-    return jsonify(data)
+    return data

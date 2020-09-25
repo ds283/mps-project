@@ -32,26 +32,32 @@
             $('#edit-students').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/manage_users/users_students_ajax?prog_filter={{ prog_filter }}&cohort_filter={{ cohort_filter }}&year_filter={{ year_filter }}&valid_filter={{ valid_filter }}', dataSrc: '' },
+                serverSide: true,
+                ajax: { url: $SCRIPT_ROOT + '/manage_users/users_students_ajax?prog_filter={{ prog_filter }}&cohort_filter={{ cohort_filter }}&year_filter={{ year_filter }}&valid_filter={{ valid_filter }}',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
-                      render: {
-                        _: 'display',
-                        sort: 'sortstring'
-                      } },
-                    { data: 'active' },
-                    { data: 'programme' },
-                    { data: 'cohort' },
+                      searchable: true,
+                      orderable: true },
+                    { data: 'active',
+                      searchable: false,
+                      orderable: true },
+                    { data: 'programme',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'cohort',
+                      searchable: true,
+                      orderable: true },
                     { data: 'acadyear',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'
-                      } },
-                    { data: 'menu' }
+                      searchable: true,
+                      orderable: true },
+                    { data: 'menu',
+                      searchable: false,
+                      orderable: false }
                 ],
-                deferRender: true
+                order: [[0, "asc"]]
             });
         });
     </script>

@@ -2506,7 +2506,7 @@ def past_feedback(student_id):
     generic_text = 'student feedback'
     return_url = url_for('faculty.past_feedback', student_id=data.id, text=text, url=url)
 
-    return render_template('student/timeline.html', data=data, years=years,
+    return render_template('student/timeline.html', data=data, user=user, years=years,
                            selector_records={}, submitter_records=submitter_records,
                            roles=roles, text=text, url=url,
                            student_text=student_text, generic_text=generic_text, return_url=return_url)

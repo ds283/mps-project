@@ -102,11 +102,13 @@ def _create_record(item, user_id) -> int:
                        foundation_year=item.foundation_year,
                        repeated_years=item.repeated_years,
                        creator_id=user_id,
-                       creation_timestamp=datetime.now(),
-                       workflow_state=StudentData.WORKFLOW_APPROVAL_VALIDATED)
+                       creation_timestamp=datetime.now())
 
     # exceptions will be caught in parent
     db.session.add(data)
+    db.session.flush()
+
+    data.workflow_state = StudentData.WORKFLOW_APPROVAL_VALIDATED
 
     return OUTCOME_CREATED
 

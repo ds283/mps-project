@@ -493,27 +493,38 @@ def users_students_ajax():
         return handler.build_payload(partial(ajax.users.build_student_data, current_user.id))
 
 
-@manage_users.route('/users_faculty_ajax')
+@manage_users.route('/users_faculty_ajax', methods=['POST'])
 @roles_accepted('manage_users', 'root')
 @limiter.limit('1000/day')
 def users_faculty_ajax():
     group_filter = request.args.get('group_filter')
     pclass_filter = request.args.get('pclass_filter')
 
-    data = db.session.query(FacultyData.id) \
+    base_query = db.session.query(FacultyData.id) \
         .join(User, User.id == FacultyData.id)
 
     flag, group_value = is_integer(group_filter)
     if flag:
-        data = data.filter(FacultyData.affiliations.any(id=group_value))
+        base_query = base_query.filter(FacultyData.affiliations.any(id=group_value))
 
     flag, pclass_value = is_integer(pclass_filter)
     if flag:
-        data = data.filter(FacultyData.enrollments.any(pclass_id=pclass_value))
+        base_query = base_query.filter(FacultyData.enrollments.any(pclass_id=pclass_value))
 
-    faculty_ids = [f[0] for f in data.all()]
+    name = {'search': func.concat(User.first_name, ' ', User.last_name),
+            'order': [User.last_name, User.first_name],
+            'search_collation': 'utf8_general_ci'}
+    active = {'order': User.active}
+    office = {'search': FacultyData.office,
+              'order': FacultyData.office,
+              'search_collation': 'utf8_general_ci'}
 
-    return ajax.users.build_faculty_data(faculty_ids, current_user.id)
+    columns = {'name': name,
+               'active': active,
+               'office': office}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(partial(ajax.users.build_faculty_data, current_user.id))
 
 
 @manage_users.route('/batch_create_users', methods=['GET', 'POST'])

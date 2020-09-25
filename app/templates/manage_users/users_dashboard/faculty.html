@@ -24,22 +24,35 @@
             $('#edit-faculty').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/manage_users/users_faculty_ajax?pclass_filter={{ pclass_filter }}&group_filter={{ group_filter }}', dataSrc: '' },
+                serverSide: true,
+                ajax: { url: $SCRIPT_ROOT + '/manage_users/users_faculty_ajax?pclass_filter={{ pclass_filter }}&group_filter={{ group_filter }}',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
-                      render: {
-                        _: 'display',
-                        sort: 'sortstring'
-                      } },
-                    { data: 'active' },
-                    { data: 'office' },
-                    { data: 'settings' },
-                    { data: 'affiliation' },
-                    { data: 'enrolled' },
-                    { data: 'menu' }
+                      searchable: true,
+                      orderable: true },
+                    { data: 'active',
+                      searchable: false,
+                      orderable: true },
+                    { data: 'office',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'settings',
+                      searchable: false,
+                      orderable: false },
+                    { data: 'affiliation',
+                      searchable: false,
+                      orderable: false },
+                    { data: 'enrolled',
+                      searchable: false,
+                      orderable: false },
+                    { data: 'menu',
+                      searchable: false,
+                      orderable: false }
                 ],
-                deferRender: true
+                order: [[0, "asc"]]
             });
         });
     </script>

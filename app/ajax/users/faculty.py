@@ -8,15 +8,14 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
-from ...database import db
-from ...models import User, FacultyData, EnrollmentRecord
-from ...cache import cache
-
+from flask import render_template_string
 from sqlalchemy.event import listens_for
 
 from .shared import menu, name
+from ...cache import cache
+from ...database import db
+from ...models import User, FacultyData, EnrollmentRecord
+from ...shared.utils import detuple
 
 
 _affiliation = \
@@ -73,9 +72,7 @@ def _element(user_id, current_user_id):
     u = db.session.query(User).filter_by(id=user_id).one()
     cu = db.session.query(User).filter_by(id=current_user_id).one()
 
-    return {'name': {
-                'display': render_template_string(name, u=u, f=f),
-                'sortstring': u.last_name + u.first_name},
+    return {'name': render_template_string(name, u=u, f=f),
              'active': u.active_label,
              'office': f.office,
              'settings': render_template_string(_settings, f=f),
@@ -90,13 +87,11 @@ def _process(user_id, current_user_id):
     record = _element(user_id, current_user_id)
 
     name = record['name']
-    display = name['display']
     if u.currently_active:
-        display = display.replace('REPACTIVE', '<span class="badge badge-success">ACTIVE</span>', 1)
+        name = name.replace('REPACTIVE', '<span class="badge badge-success">ACTIVE</span>', 1)
     else:
-        display = display.replace('REPACTIVE', '', 1)
+        name = name.replace('REPACTIVE', '', 1)
 
-    name.update({'display': display})
     record.update({'name': name})
 
     return record
@@ -174,7 +169,7 @@ def _EnrollmentRecord_delete_handler(mapper, connection, target):
         _delete_cache_entry(target.owner_id)
 
 
-def build_faculty_data(faculty_ids, current_user_id):
-    data = [_process(f_id, current_user_id) for f_id in faculty_ids]
+def build_faculty_data(current_user_id, faculty_ids):
+    data = [_process(detuple(f_id), current_user_id) for f_id in faculty_ids]
 
-    return jsonify(data)
+    return data

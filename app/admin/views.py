@@ -2101,30 +2101,32 @@ def perform_global_rollover():
     try:
         new_year = MainConfig(year=next_year)
         db.session.add(new_year)
-
-        unused_attempts = db.session.query(MatchingAttempt).filter_by(year=current_year, selected=False).all()
-        for attempt in unused_attempts:
-            # null any references to this attempt as a base
-            descendants = db.session.query(MatchingAttempt).filter_by(year=current_year, base_id=attempt.id).all()
-            for item in descendants:
-                item.base_id = None
-
-            attempt.config_members = []
-            attempt.include_matches = []
-
-            attempt.supervisors = []
-            attempt.markers = []
-            attempt.projects = []
-
-            db.session.flush()
-            db.session.delete(attempt)
-
         db.session.commit()
-
     except SQLAlchemyError as e:
         flash('Could not complete rollover due to database error. Please check the logs.', 'error')
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
+
+    tk_name = 'Perform global rollover to academic year {yra}-{yrb}'.format(yra=next_year, yrb=next_year+1)
+    tk_description = 'Perform global rollover'
+    uuid = register_task(tk_name, owner=current_user, description=tk_description)
+
+    celery = current_app.extensions['celery']
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    prune_matches = celery.tasks['app.tasks.rollover.prune_matches']
+
+    # need to perform a maintenance cycle to update students academic years
+    maintenance_cycle = celery.tasks['app.tasks.maintenance.maintenance']
+
+    seq = chain(init.si(uuid, tk_name),
+                prune_matches.si(uuid, current_year, current_user.id),
+                maintenance_cycle.si(),
+                final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
+    seq.apply_async(task_id=uuid)
 
     return home_dashboard()
 

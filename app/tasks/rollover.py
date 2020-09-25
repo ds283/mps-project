@@ -9,30 +9,65 @@
 #
 
 
+from datetime import datetime
+from typing import List
+
+from celery import chain, group
+from dateutil.relativedelta import relativedelta
 from flask import current_app
-from sqlalchemy import func, or_
+from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, \
-    SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
-    SubmissionRecord, SubmissionPeriodRecord, add_notification, EmailNotification, ProjectClass, Project, \
+from ..models import User, TaskRecord, ProjectClassConfig, \
+    SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, SubmissionRecord, \
+    SubmissionPeriodRecord, add_notification, EmailNotification, ProjectClass, Project, \
     ProjectDescription, ConfirmRequest, ConvenorGenericTask
-
-from ..task_queue import progress_update
-
-from ..shared.utils import get_current_year
 from ..shared.convenor import add_selector, add_blank_submitter
 from ..shared.sqlalchemy import get_count
-
-from celery import chain, group
-from celery.exceptions import Ignore
-
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
+from ..shared.utils import get_current_year
+from ..task_queue import progress_update
 
 
 def register_rollover_tasks(celery):
+
+    @celery.task(bind=True)
+    def prune_matches(self, task_id, current_year, admin_id):
+        progress_update(task_id, TaskRecord.RUNNING, 10, "Pruning uneeded matching attempts...",
+                        autocommit=True)
+
+        # try to prune unused matching attempts from the database, to keep things tidy
+        unused_attempts = db.session.query(MatchingAttempt).filter_by(year=current_year, selected=False).all()
+
+        try:
+            for attempt in unused_attempts:
+                accomodating: List[ProjectClassConfig] = attempt.accommodations.all()
+                for item in accomodating:
+                    item.accommodate_matching_id = None
+
+                # null any references to this attempt as a base
+                descendants: List[MatchingAttempt] = \
+                    db.session.query(MatchingAttempt).filter_by(year=current_year, base_id=attempt.id).all()
+                for item in descendants:
+                    item.base_id = None
+
+                attempt.config_members = []
+                attempt.include_matches = []
+
+                attempt.supervisors = []
+                attempt.markers = []
+                attempt.projects = []
+
+                db.session.flush()
+                db.session.delete(attempt)
+
+            db.session.commit()
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
 
     @celery.task(bind=True)
     def pclass_rollover(self, task_id, use_markers, current_id, convenor_id):
@@ -714,43 +749,44 @@ def register_rollover_tasks(celery):
         # compute current academic year for this student
         academic_year = student.compute_academic_year(current_year)
 
-        try:
-            # generate selector records for students:
-            #  - if student is an an appropriate academic year, either the year before the project first runs
-            #    or any year for the extent of the project, depending what auto-enroll settings are in force
-            #  - the student is on an appropriate programme or selection is open to all
-            if (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
-                    and academic_year == config.start_year - 1) \
-                or (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ANY_YEAR
-                        and config.start_year <= academic_year <= config.start_year + config.extent - 1):
+        if academic_year is not None:
+            try:
+                # generate selector records for students:
+                #  - if student is an an appropriate academic year, either the year before the project first runs
+                #    or any year for the extent of the project, depending what auto-enroll settings are in force
+                #  - the student is on an appropriate programme or selection is open to all
+                if (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
+                        and academic_year == config.start_year - 1) \
+                    or (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ANY_YEAR
+                            and config.start_year <= academic_year <= config.start_year + config.extent - 1):
 
-                if config.selection_open_to_all or (student.programme in config.programmes):
-                    # check whether a SelectingStudent has already been generated for this student
-                    # (eg. could happen if the task is accidentally run twice)
-                    count = get_count(student.selecting.filter_by(retired=False, config_id=new_config_id))
-                    if count == 0:
-                        add_selector(student, new_config_id, autocommit=False)
+                    if config.selection_open_to_all or (student.programme in config.programmes):
+                        # check whether a SelectingStudent has already been generated for this student
+                        # (eg. could happen if the task is accidentally run twice)
+                        count = get_count(student.selecting.filter_by(retired=False, config_id=new_config_id))
+                        if count == 0:
+                            add_selector(student, new_config_id, autocommit=False)
 
 
-            # generate submitter records for students, only if no existing submitter record exists
-            # (eg. generated by conversion from a previous SelectingStudent record)
-            if config.start_year <= academic_year < config.start_year + config.extent \
-                    and student.programme in config.programmes:
+                # generate submitter records for students, only if no existing submitter record exists
+                # (eg. generated by conversion from a previous SelectingStudent record)
+                if config.start_year <= academic_year < config.start_year + config.extent \
+                        and student.programme in config.programmes:
 
-                # check whether a SubmittingStudent has already been generated for this student
-                count_sub = get_count(student.submitting.filter_by(retired=False, config_id=new_config_id))
-                # check whether there is a SelectingStudent that has been marked to disable
-                count_disable = get_count(student.selecting.filter_by(retired=False, config_id=old_config_id,
-                                                                      convert_to_submitter=False))
-                if count_sub == 0 and count_disable == 0:
-                    add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
+                    # check whether a SubmittingStudent has already been generated for this student
+                    count_sub = get_count(student.submitting.filter_by(retired=False, config_id=new_config_id))
+                    # check whether there is a SelectingStudent that has been marked to disable
+                    count_disable = get_count(student.selecting.filter_by(retired=False, config_id=old_config_id,
+                                                                          convert_to_submitter=False))
+                    if count_sub == 0 and count_disable == 0:
+                        add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
 
-            db.session.commit()
+                db.session.commit()
 
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
 
         self.update_state(state='SUCCESS')
         return new_config_id

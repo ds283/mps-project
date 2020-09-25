@@ -4156,7 +4156,8 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
 
     # should we accommodate an existing matching when offering projects?
     accommodate_matching_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'))
-    accommodate_matching = db.relationship('MatchingAttempt', uselist=False, foreign_keys=[accommodate_matching_id])
+    accommodate_matching = db.relationship('MatchingAttempt', uselist=False, foreign_keys=[accommodate_matching_id],
+                                           backref=db.backref('accommodations', lazy='dynamic'))
 
     # if an existing match is being accommodated, the maximum number of CATS a supervisor can carry
     # before they are regarded as "full"
@@ -4557,12 +4558,25 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
 
     @property
     def has_blocking_tasks(self):
-        return get_count(self.selectors.tasks.any(~ConvenorTask.complete,
-                                                  ~ConvenorTask.dropped,
-                                                  ConvenorTask.blocking)) > 0 \
-               or get_count(self.submitters.tasks.any(~ConvenorTask.complete,
-                                                      ~ConvenorTask.dropped,
-                                                      ConvenorTask.blocking)) > 0
+        selector_blocking = \
+            get_count(self.selecting_students \
+                      .filter(SelectingStudent.tasks.any(and_(~ConvenorTask.complete, ~ConvenorTask.dropped,
+                                                              ConvenorTask.blocking))))
+
+        if selector_blocking > 0:
+            return True
+
+        submitter_blocking = \
+            get_count(self.submitting_students \
+                      .filter(SubmittingStudent.tasks.any(and_(~ConvenorTask.complete, ~ConvenorTask.dropped,
+                                                               ConvenorTask.blocking))))
+
+        if submitter_blocking > 0:
+            return True
+
+        project_blocking = get_count(self.tasks.filter(~ConvenorTask.complete, ~ConvenorTask.dropped, ConvenorTask.blocking))
+
+        return project_blocking > 0
 
 
     @property

@@ -32,11 +32,16 @@
 
         <div class="card mt-3 mb-3 card-body bg-well">
             {{ wtf.render_field(form.exam_number) }}
+            {{ wtf.render_field(form.registration_number) }}
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.programme) }}
             {{ wtf.render_field(form.cohort) }}
+            <hr class="intro-divider">
             {{ wtf.render_field(form.repeated_years) }}
             {{ wtf.render_field(form.foundation_year) }}
             {{ wtf.render_field(form.intermitting) }}
-            {{ wtf.render_field(form.programme) }}
         </div>
 
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}

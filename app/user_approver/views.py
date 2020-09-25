@@ -20,7 +20,7 @@ from . import user_approver
 from ..database import db
 from ..models import StudentData, DegreeProgramme, DegreeType, WorkflowMixin
 
-from ..shared.utils import get_current_year
+from ..shared.utils import get_current_year, redirect_url
 from ..shared.conversions import is_integer
 
 import app.ajax as ajax

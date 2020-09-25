@@ -36,6 +36,7 @@ def _element(record_id):
                       'sortstring': r.user.last_name + r.user.first_name},
              'email': r.user.email,
              'exam_number': r.exam_number,
+             'registration_number': r.registration_number,
              'programme': r.programme.full_name,
              'year': r.academic_year_label(show_details=True),
              'menu': render_template_string(_actions, s=r, url='REPURL', text='REPTEXT')}

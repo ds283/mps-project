@@ -8,30 +8,28 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app
-
-from celery import group, chain
-from celery.exceptions import Ignore
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import or_
-from sqlalchemy.sql.functions import func
-
-from ..database import db
-from ..models import TemporaryAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData
-from ..task_queue import progress_update
-from ..shared.asset_tools import canonical_temporary_asset_filename
-
-from app.manage_users.actions import register_user
-
 import csv
 from datetime import datetime
-from dateutil.parser import parse
 
+from celery import group
+from celery.exceptions import Ignore
+from dateutil.parser import parse
+from flask import current_app
+from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from sqlalchemy.sql.functions import func
+
+from app.manage_users.actions import register_user
+from ..database import db
+from ..models import TemporaryAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData
+from ..shared.asset_tools import canonical_temporary_asset_filename
+from ..task_queue import progress_update
 
 OUTCOME_CREATED = 0
 OUTCOME_MERGED = 1
 OUTCOME_FAILED = 3
 OUTCOME_IGNORED = 4
+OUTCOME_ERROR = 5
 
 BATCH_IMPORT_LIFETIME_SECONDS = 24*60*60
 
@@ -40,38 +38,47 @@ class SkipRow(Exception):
     """Report an exception associated with processing a single row"""
 
 
-def _overwrite_record(item) -> int:
+def _overwrite_record(item: StudentBatchItem) -> int:
     student_record: StudentData = item.existing_record
     user_record: User = student_record.user
 
-    if user_record.first_name != item.first_name:
+    # disable validation so that the order in which we set fields does not matter
+    student_record.disable_validate = True
+
+    if item.first_name is not None and user_record.first_name != item.first_name:
         user_record.first_name = item.first_name
 
-    if user_record.last_name != item.last_name:
+    if item.last_name is not None and user_record.last_name != item.last_name:
         user_record.last_name = item.last_name
 
-    if user_record.username != item.user_id:
+    if item.user_id is not None and user_record.username != item.user_id:
         user_record.username = item.user_id
 
-    if user_record.email != item.email:
+    if item.email is not None and user_record.email != item.email:
         user_record.email = item.email
 
-    if student_record.exam_number != item.exam_number:
+    if item.exam_number is not None and student_record.exam_number != item.exam_number:
         student_record.exam_number = item.exam_number
 
-    if student_record.cohort != item.cohort:
+    if item.registration_number is not None and student_record.registration_number != item.registration_number:
+        student_record.registration_number = item.registration_number
+
+    if item.cohort is not None and student_record.cohort != item.cohort:
         student_record.cohort = item.cohort
 
-    if student_record.foundation_year != item.foundation_year:
+    if item.foundation_year is not None and student_record.foundation_year != item.foundation_year:
         student_record.foundation_year = item.foundation_year
 
-    if student_record.repeated_years != item.repeated_years:
+    if item.repeated_years is not None and student_record.repeated_years != item.repeated_years:
         student_record.repeated_years = item.repeated_years
 
-    if student_record.programme_id != item.programme_id:
+    if item.programme_id is not None and student_record.programme_id != item.programme_id:
         student_record.programme_id = item.programme_id
 
     student_record.workflow_state = StudentData.WORKFLOW_APPROVAL_VALIDATED
+
+    # delete validation sentinel
+    del student_record.disable_validate
 
     return OUTCOME_MERGED
 
@@ -88,6 +95,7 @@ def _create_record(item, user_id) -> int:
     # create new student record and mark it as automatically validated
     data = StudentData(id=user.id,
                        exam_number=item.exam_number,
+                       registration_number=item.registration_number,
                        intermitting=item.intermitting,
                        cohort=item.cohort,
                        programme_id=item.programme_id,
@@ -169,8 +177,7 @@ def _get_intermitting(row, current_line) -> bool:
     if 'status' in row:
         return (row['status'].lower() == 'intermitting')
 
-    print('## skipping row {row} because could not extract intermitting status'.format(row=current_line))
-    raise SkipRow
+    return None
 
 
 def _get_registration_number(row, current_line) -> int:
@@ -180,8 +187,14 @@ def _get_registration_number(row, current_line) -> int:
     if 'registration no.' in row:
         return int(row['registration no.'])
 
-    print('## skipping row {row} because could not extract student registration number'.format(row=current_line))
-    raise SkipRow
+    return None
+
+
+def _get_exam_number(row, current_line) -> int:
+    if 'exam number' in row:
+        return int(row['exam number'])
+
+    return None
 
 
 def _get_email(row, current_line) -> str:
@@ -223,6 +236,7 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
                   'bsc physics (with an industrial placement year)': 'M3045U',
                   'bsc physics (ip)': 'M3045U',
                   'bsc physics with astrophysics': 'F3055U',
+                  'bsc physics (with a study abroad year)': 'F3067U',
                   'bsc theoretical physics': 'F3016U',
                   'bsc phys and astro (fdn)': 'F3002U',
                   'bsc physics and astronomy (with a foundation year)': 'F3002U',
@@ -237,7 +251,8 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
                   'mphys physics with astrophysics (research placement)': 'F3046U',
                   'mphys theoretical physics (research placement)': 'F3062U',
                   'mphys physics (with a study abroad year)': 'F3027U',
-                  'mphys physics with astrophysics (with a study abroad year)': 'F3069U'}
+                  'mphys physics with astrophysics (with a study abroad year)': 'F3069U',
+                  'mphys theoretical physics (with a study abroad year)': 'F3050U'}
 
     programme = None
 
@@ -263,12 +278,14 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
     raise SkipRow
 
 
-def _guess_year_data(cohort: int, year_of_course: int, current_year: int, fyear: bool=None) -> (bool, int):
+def _guess_year_data(cohort: int, year_of_course: int, current_year: int, programme: DegreeProgramme,
+                     fyear_hint: bool = None) -> (bool, int):
     """
+    :param programme:
     :param cohort: read (or previously stored) cohort for this student
     :param year_of_course: read (or previously stored) year of course for this student
     :param current_year: current academic year
-    :param fyear: hint whether foundation year was taken, or not
+    :param fyear_hint: hint whether foundation year was taken, or not
     :return:
     """
     # try to guess whether a given student has done foundation year or some number of
@@ -292,38 +309,38 @@ def _guess_year_data(cohort: int, year_of_course: int, current_year: int, fyear:
         print('!! ERROR: expected current_year to be an integer, but received {type}'.format(type=type(current_year)))
         raise SkipRow
 
-    if fyear is not None and not isinstance(fyear, bool):
-        print('!! ERROR: expected fyear to be a bool, but received {type}'.format(type=type(fyear)))
+    if fyear_hint is not None and not isinstance(fyear_hint, bool):
+        print('!! ERROR: expected fyear to be a bool, but received {type}'.format(type=type(fyear_hint)))
         raise SkipRow
 
-    fyear_shift = 1 if fyear is True else 0
-
+    fyear_shift = 1 if programme.foundation_year else 0
     estimated_year_of_course = current_year - cohort + 1 - fyear_shift
+
+    if programme.year_out:
+        if estimated_year_of_course > programme.year_out_value:
+            estimated_year_of_course = estimated_year_of_course - 1
+
     if estimated_year_of_course < 0:
-        estimated_year_of_course = 0
+        print('!! ERROR: estimated year of course is negative: current_year={cy}, cohort={ch}, '
+              'FY={fy}'.format(cy=current_year, ch=cohort, fy=fyear_shift))
+        raise SkipRow
 
     difference = estimated_year_of_course - year_of_course
 
     if difference < 0:
         print('## estimated course year was earlier than imported value '
-              '(current_year={cy}, cohort={ch}, fyear_shift={fs}, '
+              '(current_year={cy}, cohort={ch}, FY={fs}, '
               'estimated={es}, imported={im}, diff={df}'.format(cy=current_year, ch=cohort, fs=fyear_shift,
                                                                 es=estimated_year_of_course, im=year_of_course,
                                                                 df=difference))
+        raise SkipRow
 
-        if difference == -1 and fyear:
-            fyear = False
-            difference = 0
-        else:
-            raise SkipRow
+    if difference >= 1 and fyear_shift == 0 and fyear_hint:
+        difference = difference - 1
+    else:
+        fyear_hint = False
 
-    # if a foundation year has not been specified, split the difference between a foundation year
-    # and some number of repeated years
-    if fyear is None:
-        return False, difference
-
-    # can assume fyear is a bool
-    return fyear, difference
+    return fyear_hint, difference
 
 
 def _match_existing_student(username, email, current_line) -> (bool, StudentData):
@@ -396,6 +413,7 @@ def register_batch_create_tasks(celery):
                 first_name = None
                 last_name = None
                 username = None
+                year_of_course = None
 
                 try:
                     # username and email are first things to extract
@@ -414,25 +432,35 @@ def register_batch_create_tasks(celery):
                     first_name, last_name = _get_name(row, current_line)
                     intermitting = _get_intermitting(row, current_line)
                     registration_number = _get_registration_number(row, current_line)
+                    exam_number = _get_exam_number(row, current_line)
                     year_of_course = _get_course_year(row, current_line)
+                    programme = _get_course_code(row, current_line)
+
+                    if year_of_course == 0 and record.ignore_Y0:
+                        print('## skipping row "{user}" because Y0 students are being ignored'.format(user=username))
+                        raise SkipRow
 
                     # attempt to deduce whether a foundation year or repeated years have been involved
                     if existing_record is None:
                         cohort = _get_cohort(row, current_line)
-                        foundation_year, repeated_years = _guess_year_data(cohort, year_of_course, current_year)
+                        fyear_hint = None
                     else:
                         if not record.trust_cohort and existing_record.cohort is not None:
                             cohort = existing_record.cohort
                         else:
                             cohort = _get_cohort(row, current_line)
-                        foundation_year, repeated_years = _guess_year_data(cohort, year_of_course, current_year,
-                                                                           fyear=existing_record.foundation_year)
 
-                    programme = _get_course_code(row, current_line)
+                        fyear_hint = existing_record.foundation_year
 
-                    if existing_record is not None and not record.trust_exams and \
-                            existing_record.exam_number is not None:
-                        registration_number = existing_record.exam_number
+                    foundation_year, repeated_years = \
+                        _guess_year_data(cohort, year_of_course, current_year, programme, fyear_hint=fyear_hint)
+
+                    if existing_record is not None:
+                        if not record.trust_exams and existing_record.exam_number is not None:
+                            exam_number = existing_record.exam_number
+
+                        if not record.trust_registration and existing_record.registration_number is not None:
+                            registration_number = existing_record.registration_number
 
                     item = StudentBatchItem(parent_id=record.id,
                                             existing_id=existing_record.id if existing_record is not None else None,
@@ -440,7 +468,8 @@ def register_batch_create_tasks(celery):
                                             first_name=first_name,
                                             last_name=last_name,
                                             email=email,
-                                            exam_number=registration_number,
+                                            exam_number=exam_number,
+                                            registration_number=registration_number,
                                             cohort=cohort,
                                             programme_id=programme.id if programme is not None else None,
                                             foundation_year=foundation_year,
@@ -449,13 +478,26 @@ def register_batch_create_tasks(celery):
                                             dont_convert=dont_convert)
 
                     interpreted_lines += 1
-                    db.session.add(item)
 
-                    if item.academic_year != year_of_course:
-                        print('!! ERROR: computed academic year {yr} for {first} {last} does not match imported '
-                              'value {imp}'.format(yr=item.academic_year, first=first_name, last=last_name,
-                                                   imp=year_of_course))
+                    try:
+                        db.session.add(item)
+                    except SQLAlchemyError as e:
                         raise SkipRow
+
+                    if item.academic_year is None:
+                        if not item.programme.year_out or year_of_course != item.programme.year_out_value:
+                            print('!! ERROR: computed academic year is None, but imported year of course '
+                                  'does not match year out value for this programme')
+                            raise SkipRow
+                    else:
+                        if item.academic_year != year_of_course:
+                            print('!! ERROR: computed academic year {yr} for {first} {last} does not match imported '
+                                  'value {imp} (current_year={cy}, cohort={ch}, FY={fy}, '
+                                  'repeated_years={ry})'.format(yr=item.academic_year, first=first_name, last=last_name,
+                                                                imp=year_of_course, cy=current_year, ch=cohort,
+                                                                fy=1 if item.has_foundation_year else 0,
+                                                                ry=repeated_years))
+                            raise SkipRow
 
                 except SkipRow:
                     if username is None:
@@ -463,10 +505,10 @@ def register_batch_create_tasks(celery):
 
                     else:
                         if first_name is not None and last_name is not None:
-                            skip_info = '{user} ({first} {last})'.format(user=username, first=first_name,
-                                                                         last=last_name)
+                            skip_info = '{user} ({first} {last} Y{yr})'.format(user=username, first=first_name,
+                                                                               last=last_name, yr=year_of_course)
                         else:
-                            skip_info = '{user}'.format(user=username)
+                            skip_info = '{user} Y{yr}'.format(user=username, yr=year_of_course)
 
                     ignored_lines.append(skip_info)
                     print('>> SUMMARY: skipped line {info}'.format(info=skip_info))
@@ -497,7 +539,7 @@ def register_batch_create_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def import_batch_item(self, item_id, user_id):
         try:
-            item = db.session.query(StudentBatchItem).filter_by(id=item_id).first()
+            item: StudentBatchItem = db.session.query(StudentBatchItem).filter_by(id=item_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -515,12 +557,22 @@ def register_batch_create_tasks(celery):
             else:
                 result = _create_record(item, user_id)
 
+            # delete this record
+            item.parent.items.remove(item)
+            db.session.delete(item)
+
             db.session.commit()
 
-        except SQLAlchemyError as e:
+        except (SQLAlchemyError, IntegrityError) as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
+
+        except ValueError as e:
+            # encountered a validation error while merging or creating a record
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            return OUTCOME_ERROR
 
         return result
 
@@ -528,8 +580,8 @@ def register_batch_create_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def import_finalize(self, result_data, record_id, user_id):
         try:
-            record = db.session.query(StudentBatch).filter_by(id=record_id).first()
-            user = db.session.query(User).filter_by(id=user_id).first()
+            record: StudentBatch = db.session.query(StudentBatch).filter_by(id=record_id).first()
+            user: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -542,13 +594,17 @@ def register_batch_create_tasks(celery):
         num_merged = sum([1 for x in result_data if x == OUTCOME_MERGED])
         num_failed = sum([1 for x in result_data if x == OUTCOME_FAILED])
         num_ignored = sum([1 for x in result_data if x == OUTCOME_IGNORED])
+        num_errors = sum([1 for x in result_data if x == OUTCOME_ERROR])
 
-        user.post_message('Batch import is complete: {created} created, {merged} merged, {failed} '
-                          'failed, {ignored} ignored'.format(created=num_created, merged=num_merged,
-                                                             failed=num_failed, ignored=num_ignored),
-                          'info' if num_failed == 0 else 'error', autocommit=False)
+        user.post_message('Batch import is complete: {created} created, {merged} merged, '
+                          '{errors} errors, {failed} failed, '
+                          '{ignored} ignored'.format(created=num_created, merged=num_merged, failed=num_failed,
+                                                     ignored=num_ignored, errors=num_errors),
+                          'info' if num_failed == 0 and num_errors == 0 else 'error', autocommit=False)
 
-        record.converted = True
+        if num_errors == 0 and num_failed == 0:
+            record.converted = True
+
         try:
             db.session.commit()
         except SQLAlchemyError as e:

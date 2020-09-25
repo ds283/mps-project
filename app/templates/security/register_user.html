@@ -73,10 +73,13 @@
 
         {# STUDENT FIELDS #}
 
-        {% if user_form.foundation_year is defined or user_form.exam_number is defined or user_form.cohort is defined or user_form.repeated_years is defined or user_form.programme is defined %}
+        {% if user_form.foundation_year is defined or user_form.exam_number is defined or user_form.cohort is defined or user_form.repeated_years is defined or user_form.programme is defined or user_form.registration_number is defined %}
             <div class="card mt-3 mb-3 card-body bg-well">
                 {% if user_form.exam_number is defined %}
                     {{ wtf.render_field(user_form.exam_number) }}
+                {% endif %}
+                {% if user_form.registration_number is defined %}
+                    {{ wtf.render_field(user_form.registration_number) }}
                 {% endif %}
                 {% if user_form.cohort is defined %}
                     {{ wtf.render_field(user_form.cohort) }}

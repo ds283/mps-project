@@ -234,6 +234,7 @@ def create_student(role):
         ry = rep_years if rep_years is not None and rep_years >= 0 else 0
         data = StudentData(id=user.id,
                            exam_number=form.exam_number.data,
+                           registration_number=form.registration_number.data,
                            intermitting=form.intermitting.data,
                            cohort=form.cohort.data,
                            programme_id=form.programme.data.id,
@@ -267,8 +268,8 @@ def create_student(role):
 
             form.random_password.data = True
 
-            license = db.session.query(AssetLicense).filter_by(
-                abbreviation=current_app.config['STUDENT_DEFAULT_LICENSE']).first()
+            license = db.session.query(AssetLicense) \
+                .filter_by(abbreviation=current_app.config['STUDENT_DEFAULT_LICENSE']).first()
             form.default_license.data = license
 
     return render_template('security/register_user.html', user_form=form, role=role, pane=pane,
@@ -504,7 +505,9 @@ def batch_create_users():
 
             trust_cohort = form.trust_cohort.data
             trust_exams = form.trust_exams.data
+            trust_registration = form.trust_registration.data
             current_year = form.current_year.data
+            ignore_Y0 = form.ignore_Y0.data
 
             # generate new filename for upload
             incoming_filename = Path(batch_file.filename)
@@ -569,6 +572,8 @@ def batch_create_users():
         if request.method == 'GET':
             form.trust_cohort.data = False
             form.trust_exams.data = False
+            form.trust_registration.data = False
+            form.ignore_Y0.data = True
             form.current_year.data = get_current_year()
 
     batches = db.session.query(StudentBatch).all()
@@ -745,7 +750,7 @@ def view_batch_data_ajax(batch_id):
 @manage_users.route('/edit_batch_item/<int:item_id>', methods=['GET', 'POST'])
 @roles_accepted('manage_users', 'root')
 def edit_batch_item(item_id):
-    record = StudentBatchItem.query.get_or_404(item_id)
+    record: StudentBatchItem = StudentBatchItem.query.get_or_404(item_id)
 
     EditStudentBatchItemForm = EditStudentBatchItemFormFactory(record)
     form = EditStudentBatchItemForm(obj=record)
@@ -757,6 +762,7 @@ def edit_batch_item(item_id):
         record.last_name = form.last_name.data
         record.first_name = form.first_name.data
         record.exam_number = form.exam_number.data
+        record.registration_number = form.registration_number.data
         record.cohort = form.cohort.data
         record.programme_id = form.programme.data.id
         record.foundation_year = form.foundation_year.data
@@ -767,7 +773,8 @@ def edit_batch_item(item_id):
             .join(StudentData, StudentData.id == User.id) \
             .filter(or_(func.lower(User.email) == func.lower(record.email),
                         func.lower(User.username) == func.lower(record.user_id),
-                        StudentData.exam_number == record.exam_number)).first()
+                        StudentData.exam_number == record.exam_number,
+                        StudentData.registration_number == record.registration_number)).first()
 
         record.existing_id = existing_record.id if existing_record is not None else None
 
@@ -1132,12 +1139,12 @@ def edit_faculty(id):
 @roles_accepted('manage_users', 'root')
 def edit_student(id):
 
-    user = User.query.get_or_404(id)
-    form = EditStudentForm(obj=user)
+    user: User = User.query.get_or_404(id)
+    form: EditStudentForm = EditStudentForm(obj=user)
 
     form.user = user
 
-    data = StudentData.query.get_or_404(id)
+    data: StudentData = StudentData.query.get_or_404(id)
 
     pane = request.args.get('pane', default=None)
     url = request.args.get('url', default=None)
@@ -1160,6 +1167,7 @@ def edit_student(id):
         data.foundation_year = form.foundation_year.data
         data.intermitting = form.intermitting.data
         data.exam_number = form.exam_number.data
+        data.registration_number = form.registration_number.data
         data.cohort = form.cohort.data
         data.repeated_years = ry
         data.programme_id = form.programme.data.id
@@ -1193,6 +1201,7 @@ def edit_student(id):
         if request.method == 'GET':
             form.foundation_year.data = data.foundation_year
             form.exam_number.data = data.exam_number
+            form.registration_number.data = data.registration_number
             form.cohort.data = data.cohort
             form.repeated_years.data = data.repeated_years
             form.programme.data = data.programme

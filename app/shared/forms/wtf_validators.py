@@ -240,8 +240,8 @@ def unique_or_original_role(form, field):
 def globally_unique_exam_number(form, field):
     rec = StudentData.query.filter_by(exam_number=field.data).first()
     if rec is not None:
-        raise ValidationError('Exam number {n} is already associated with student {name}'.format(n=rec.exam_number,
-                                                                                                 name=rec.user.name))
+        raise ValidationError('Exam number {n} is already associated with student '
+                              '{name}'.format(n=rec.exam_number, name=rec.user.name))
 
 
 def unique_or_original_exam_number(form, field):
@@ -249,6 +249,20 @@ def unique_or_original_exam_number(form, field):
         return
 
     return globally_unique_exam_number(form, field)
+
+
+def globally_unique_registration_number(form, field):
+    rec = StudentData.query.filter_by(registration_number=field.data).first()
+    if rec is not None:
+        raise ValidationError('Registration number {n} is already associated with student '
+                              '{name}'.format(n=rec.registration_number, name=rec.user.name))
+
+
+def unique_or_original_registration_number(form, field):
+    if field.data == form.user.student_data.registration_number:
+        return
+
+    return globally_unique_registration_number(form, field)
 
 
 def globally_unique_matching_name(year, form, field):
@@ -475,6 +489,19 @@ def unique_or_original_batch_item_exam_number(batch_id, form, field):
         return
 
     return globally_unique_batch_item_exam_number(batch_id, form, field)
+
+
+def globally_unique_batch_item_registration_number(batch_id, form, field):
+    if StudentBatchItem.query.filter_by(parent_id=batch_id, registration_number=field.data).first():
+        return ValidationError('{name} is already used as a registration number for this batch '
+                               'import'.format(name=field.data))
+
+
+def unique_or_original_batch_item_registration_number(batch_id, form, field):
+    if field.data == form.batch_item.registration_number:
+        return
+
+    return globally_unique_batch_item_registration_number(batch_id, form, field)
 
 
 def valid_json(form, field):

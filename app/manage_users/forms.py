@@ -25,7 +25,9 @@ from app.shared.forms.queries import GetActiveDegreeProgrammes, BuildDegreeProgr
 from app.shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_email, \
     OptionalIf, password_strength, value_is_nonnegative, globally_unique_exam_number, unique_or_original_exam_number, \
     unique_or_original_batch_item_userid, unique_or_original_batch_item_email, \
-    unique_or_original_batch_item_exam_number, globally_unique_role, unique_or_original_role
+    unique_or_original_batch_item_exam_number, globally_unique_role, unique_or_original_role, \
+    globally_unique_registration_number, unique_or_original_registration_number, \
+    unique_or_original_batch_item_registration_number
 
 
 class UniqueUserNameMixin():
@@ -136,16 +138,31 @@ class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixinFact
         self.submit.label.text = 'Next: Research group affiliations'
 
 
-class RegisterStudentForm(RegisterOfficeForm, StudentDataMixin):
+class CreateStudentNumbersMixin():
 
-    exam_number = IntegerField('Exam number', validators=[InputRequired(message="Exam number is required"),
-                                                          globally_unique_exam_number])
+    exam_number = IntegerField('Exam number', validators=[Optional(), globally_unique_exam_number])
+
+    registration_number = IntegerField('Registration number',
+                                       validators=[Optional(), globally_unique_registration_number])
 
 
-class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin):
+class EditStudentNumbersMixin():
 
-    exam_number = IntegerField('Exam number', validators=[InputRequired(message="Exam number is required"),
-                                                          globally_unique_exam_number])
+    exam_number = IntegerField('Exam number', validators=[Optional(), globally_unique_exam_number])
+
+    registration_number = IntegerField('Registration number',
+                                       validators=[InputRequired(message="Registraton number is required"),
+                                                   unique_or_original_registration_number])
+
+
+class RegisterStudentForm(RegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin):
+
+    pass
+
+
+class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin):
+
+    pass
 
 
 class EditOfficeForm(Form, SaveChangesMixin, EditUserNameMixin, AskConfirmEditFormMixin, ThemeMixin,
@@ -159,10 +176,9 @@ class EditFacultyForm(EditOfficeForm, FacultyDataMixinFactory(admin=True)):
     pass
 
 
-class EditStudentForm(EditOfficeForm, StudentDataMixin):
+class EditStudentForm(EditOfficeForm, StudentDataMixin, EditStudentNumbersMixin):
 
-    exam_number = IntegerField('Exam number', validators=[InputRequired(message="Exam number is required"),
-                                                          unique_or_original_exam_number])
+    pass
 
 
 class ResearchGroupMixin():
@@ -175,11 +191,22 @@ class ResearchGroupMixin():
 
 class UploadBatchCreateForm(Form):
 
-    trust_cohort = BooleanField('Trust imported cohort information')
+    trust_cohort = BooleanField('Trust imported cohort information', default=False,
+                                description="Select this option if imported cohort years should be considered authoritative. "
+                                            "Otherwise, existing cohort data will be retained where they exist.")
 
-    trust_exams = BooleanField('Trust imported exam numbers')
+    trust_exams = BooleanField('Trust imported exam numbers', default=False,
+                               description="Select this option if imported exam numbers should be considered authoritative. "
+                                           "Otherwise, existing exam numbers will be retained where they exist.")
 
-    current_year = IntegerField('Academic year data is valid for year commencing in',
+    trust_registration = BooleanField('Trust imported registration numbers', default=False,
+                                      description="Select this option if imported registration numbers should be considered authoritative. "
+                                                  "Otherwise, existing registration numbers will be retained where they exist.")
+
+    ignore_Y0 = BooleanField('Ignore Y0 students', default=True,
+                             description="Select if Y0 students should not be imported")
+
+    current_year = IntegerField('Enter the academic year for which the imported data is valid.',
                                 validators=[InputRequired('An reference academic year is required')])
 
     submit = SubmitField('Upload user list')
@@ -203,8 +230,13 @@ def EditStudentBatchItemFormFactory(batch):
         first_name = StringField('First name', validators=[InputRequired('First name is required'),
                                                            Length(max=DEFAULT_STRING_LENGTH)])
 
-        exam_number = IntegerField('Exam number', validators=[InputRequired('Exam number is required'),
-                                                              partial(unique_or_original_batch_item_exam_number, batch.id)])
+        exam_number = \
+            IntegerField('Exam number',
+                         validators=[Optional(), partial(unique_or_original_batch_item_exam_number, batch.id)])
+
+        registration_number = \
+            IntegerField('Registration number',
+                         validators=[Optional(), partial(unique_or_original_batch_item_registration_number, batch.id)])
 
         cohort = IntegerField('Cohort', validators=[InputRequired('Cohort is required')])
 

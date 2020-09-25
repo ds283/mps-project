@@ -25,8 +25,11 @@
 
                         <hr class="intro-divider">
                         {{ wtf.render_field(form.current_year) }}
+                        {{ wtf.render_field(form.ignore_Y0) }}
+                        <hr class="intro-divider">
                         {{ wtf.render_field(form.trust_cohort) }}
                         {{ wtf.render_field(form.trust_exams) }}
+                        {{ wtf.render_field(form.trust_registration) }}
                         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>
                 </div>
@@ -79,7 +82,15 @@
                                 {% if batch.trust_exams %}
                                     <span class="badge badge-success"><i class="fas fa-check"></i> Trust exam numbers</span>
                                 {% else %}
-                                    <span class="badge badge-secondary"><i class="fas fa-times"></i> Do not trust exam numbers </span>
+                                    <span class="badge badge-secondary"><i class="fas fa-times"></i> Do not trust exam numbers</span>
+                                {% endif %}
+                                {% if batch.trust_registration %}
+                                    <span class="badge badge-success"><i class="fas fa-check"></i> Trust registration numbers</span>
+                                {% else %}
+                                    <span class="badge badge-secondary"><i class="fas fa-times"></i> Do not trust registration numbers</span>
+                                {% endif %}
+                                {% if batch.ignore_Y0 %}
+                                    <span class="badge badge-info"><i class="fas fa-times"></i> Do not import Y0 students</span>
                                 {% endif %}
                             </div>
                         </div>

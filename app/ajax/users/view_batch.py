@@ -22,7 +22,10 @@ _name = \
 <div>
     {{ item.first_name }} {{ item.last_name }}
     {% if item.exam_number is not none %}
-        <span class="badge badge-primary">{{ item.exam_number }}</span>
+        <span class="badge badge-info">Exam #{{ item.exam_number }}</span>
+    {% endif %}
+    {% if item.registration_number is not none %}
+        <span class="badge badge-info">Registration #{{ item.registration_number }}</span>
     {% endif %}
     {% set warnings = item.warnings %}
     {% set w_length = warnings|length %}
@@ -38,7 +41,7 @@ _name = \
         {% endif %}
     {% endif %}
 </div>
-<div>
+<div class="mt-1">
     {% if item.existing_record is not none %}
         <span class="badge badge-success"><i class="fas fa-check"></i> Matches {{ item.existing_record.user.name }} {{ item.existing_record.cohort }}</span>
     {% endif %}

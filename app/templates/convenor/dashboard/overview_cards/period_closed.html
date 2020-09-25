@@ -35,7 +35,7 @@
                             <span class="badge badge-secondary badge-pill">{{ not_pushed }}/{{ total }}</span>
                         </div>
                         <div>
-                            {% if not pushed > 0 %}
+                            {% if not_pushed > 0 %}
                                 <a href="{{ url_for('convenor.push_feedback', id=period.id) }}" class="btn btn-success btn-sm">Push feedback</a>
                             {% endif %}
                         </div>

@@ -148,11 +148,10 @@ class CreateStudentNumbersMixin():
 
 class EditStudentNumbersMixin():
 
-    exam_number = IntegerField('Exam number', validators=[Optional(), globally_unique_exam_number])
+    exam_number = IntegerField('Exam number', validators=[Optional(), unique_or_original_exam_number])
 
     registration_number = IntegerField('Registration number',
-                                       validators=[InputRequired(message="Registraton number is required"),
-                                                   unique_or_original_registration_number])
+                                       validators=[Optional(), unique_or_original_registration_number])
 
 
 class RegisterStudentForm(RegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin):

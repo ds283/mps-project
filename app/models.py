@@ -2690,7 +2690,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
 
 
     def _get_raw_provisional_year(self, cohort, repeat_years):
-        if cohort is None or repeat_years is None:
+        if cohort is None:
             return None
 
         current_year = _get_current_year()
@@ -2700,22 +2700,25 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         if cohort > current_year:
             return None
 
+        if repeat_years is None:
+            repeat_years = 0
+
         return current_year - cohort + 1 - (1 if self.has_foundation_year else 0) - repeat_years
 
 
     def _get_provisional_year(self, cohort, repeat_years):
         provisional_year = self._get_raw_provisional_year(cohort, repeat_years)
 
-        current_programme = self.programme
+        current_programme: DegreeProgramme = self.programme
         if current_programme is None and self.programme_id is not None:
-            current_programme = db.session.query(DegreeProgramme) \
+            current_programme: DegreeProgramme = db.session.query(DegreeProgramme) \
                 .filter_by(id=self.programme_id).first()
 
         if current_programme is not None and current_programme.year_out:
             year_out_value = current_programme.year_out_value
+
             if provisional_year == year_out_value:
                 provisional_year = None
-
             elif provisional_year > year_out_value:
                 provisional_year = provisional_year - 1
 
@@ -2757,7 +2760,9 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         if provisional_year is not None and provisional_year < 0:
             provisional_year = None
 
+        self.disable_validate = True
         self.academic_year = provisional_year
+        del self.disable_validate
 
         # otherwise, return true
         return value
@@ -2789,7 +2794,9 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
                 else:
                     raise ValueError
 
+            self.disable_validate = True
             self.academic_year = provisional_year
+            del self.disable_validate
 
         return value
 
@@ -2811,6 +2818,8 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
 
             provisional_year = self._get_provisional_year(self.cohort, self.repeated_years)
 
+            self.disable_validate = True
+
             if provisional_year is not None and provisional_year != value:
                 if provisional_year > value:
                     self.repeated_years = provisional_year - value
@@ -2822,6 +2831,8 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
                         self.repeated_years = self.repeated_years - diff
                     else:
                         raise ValueError
+
+            del self.disable_validate
 
         return value
 
@@ -2849,7 +2860,9 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
             if provisional_year is not None and provisional_year < (0 if self.has_foundation_year else 1):
                 raise ValueError
 
+            self.disable_validate = True
             self.academic_year = provisional_year
+            del self.disable_validate
 
         return value
 
@@ -2887,7 +2900,9 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
             programme: DegreeProgramme = db.session.query(DegreeProgramme).filter_by(id=value).first()
 
             if not programme.foundation_year:
+                self.disable_validate = True
                 self.foundation_year = True
+                del self.disable_validate
 
         return value
 
@@ -2946,14 +2961,17 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         else:
             academic_year = self.academic_year
 
-        if self.has_graduated:
+        if not self.user.active:
+            text = 'Inactive'
+            type = 'secondary'
+        elif self.has_graduated:
             text = 'Graduated'
             type = 'primary'
         elif academic_year is None:
             text = None
             type = None
 
-            if self.cohort is not None and self.repeated_years is not None:
+            if self.cohort is not None:
                 current_year = _get_current_year()
 
                 if self.cohort > current_year:
@@ -2963,12 +2981,12 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
                 elif self.programme is not None and self.programme.year_out:
                     check_year = self._get_raw_provisional_year(self.cohort, self.repeated_years)
 
-                    if check_year == self.programme.year_out:
+                    if check_year == self.programme.year_out_value:
                         text = 'Year out'
                         type = 'info'
 
             if text is None:
-                text = 'Awating update...'
+                text = 'Awaiting update...'
                 type = 'secondary'
         elif academic_year < 0:
             text = 'Error(<0)'

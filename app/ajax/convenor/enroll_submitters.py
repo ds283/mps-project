@@ -37,7 +37,7 @@ def enroll_submitters_data(students: List[StudentData], config):
                  'sortvalue': s.cohort
              },
              'acadyear': {
-                 'display': s.academic_year_label(desired_year=config.year, show_details=True, current_year=current_yera),
+                 'display': s.academic_year_label(desired_year=config.year, show_details=True, current_year=current_year),
                  'sortvalue': s.compute_academic_year(desired_year=config.year, current_year=current_year)
              },
              'actions': render_template_string(_enroll_action, s=s, config=config)} for s in students]

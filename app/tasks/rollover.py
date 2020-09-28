@@ -33,7 +33,7 @@ def register_rollover_tasks(celery):
 
     @celery.task(bind=True)
     def prune_matches(self, task_id, current_year, admin_id):
-        progress_update(task_id, TaskRecord.RUNNING, 10, "Pruning uneeded matching attempts...",
+        progress_update(task_id, TaskRecord.RUNNING, 10, "Pruning unneeded matching attempts...",
                         autocommit=True)
 
         # try to prune unused matching attempts from the database, to keep things tidy

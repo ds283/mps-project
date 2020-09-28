@@ -673,7 +673,11 @@ def selectors(id):
     programmes = set()
     for sel in selectors:
         cohorts.add(sel.student.cohort)
-        years.add(sel.academic_year)
+
+        academic_year = sel.academic_year
+        if academic_year is not None:
+            years.add(academic_year)
+
         programmes.add(sel.student.programme_id)
 
     # build list of available programmes
@@ -903,8 +907,10 @@ def enroll_selectors(id):
     for student in candidates:
         cohorts.add(student.cohort)
         programmes.add(student.programme_id)
-        if student.academic_year is not None:
-           years.add(student.academic_year)
+
+        academic_year = student.academic_year
+        if academic_year is not None:
+           years.add(academic_year)
 
     # build list of available programmes
     all_progs = db.session.query(DegreeProgramme) \
@@ -1218,7 +1224,11 @@ def selector_grid(id):
     years = set()
     for sel in selectors:
         cohorts.add(sel.student.cohort)
-        years.add(sel.academic_year)
+
+        academic_year = sel.academic_year
+        if academic_year is not None:
+            years.add(academic_year)
+
         programmes.add(sel.student.programme_id)
 
     # build list of available programmes
@@ -1473,7 +1483,11 @@ def submitters(id):
     programmes = set()
     for sub in submitters:
         cohorts.add(sub.student.cohort)
-        years.add(sub.academic_year)
+
+        academic_year = sub.academic_year
+        if academic_year is not None:
+            years.add(academic_year)
+
         programmes.add(sub.student.programme_id)
 
     # build list of available programmes
@@ -1621,8 +1635,10 @@ def enroll_submitters(id):
     for student in candidates:
         cohorts.add(student.cohort)
         programmes.add(student.programme_id)
-        if student.academic_year is not None:
-            years.add(student.academic_year)
+
+        academic_year = student.academic_year
+        if academic_year is not None:
+            years.add(academic_year)
 
     # build list of available programmes
     all_progs = db.session.query(DegreeProgramme) \

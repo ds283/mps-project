@@ -1,0 +1,68 @@
+{% extends "base_app.html" %}
+
+{% block scripts %}
+    {{ super() }}
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css">
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#scheduled-emails').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],  stateSave: true,
+                serverSide: true,
+                ajax: { url: $SCRIPT_ROOT + '/admin/scheduled_email_ajax',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                columns: [
+                    { data: 'recipient',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'timestamp',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'type',
+                      orderable: true,
+                      searchable: false },
+                    { data: 'details',
+                      orderable: false,
+                      searchable: false },
+                    { data: 'menu',
+                      orderable: false,
+                      searchable: false }
+                ],
+                order: [[0, 'asc']]
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Email log
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="card mt-3 mb-3">
+        <div class="card-header bg-primary text-white">Email log</div>
+        <div class="card-body">
+        <table id="scheduled-emails" class="table table-striped table-bordered">
+            <thead>
+            <tr>
+                <th width="15%"> Recipient</th>
+                <th width="15%"> Timestamp</th>
+                <th width="15%"> Type</th>
+                <th width="40%"> Details</th>
+                <th width="15%"> Actions</th>
+            </tr>
+            </thead>
+        </table>
+        </div>
+    </div>
+{% endblock %}

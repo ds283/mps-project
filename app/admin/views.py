@@ -67,7 +67,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset, \
-    AssetLicense, DownloadRecord, SelectingStudent
+    AssetLicense, DownloadRecord, SelectingStudent, EmailNotification
 from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
     canonical_submitted_asset_filename
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
@@ -2131,7 +2131,7 @@ def perform_global_rollover():
     return home_dashboard()
 
 
-@admin.route('/email_log', methods=['GET', 'POST'])
+@admin.route('/email_log')
 @roles_accepted('root', 'view_email')
 def email_log():
     """
@@ -2163,8 +2163,8 @@ def email_log_ajax():
 
     # set up columns for server-side processing
     recipient = {'search': func.concat(User.first_name, ' ', User.last_name),
-            'order': [User.last_name, User.first_name],
-            'search_collation': 'utf8_general_ci'}
+                 'order': [User.last_name, User.first_name],
+                 'search_collation': 'utf8_general_ci'}
     address = {'search': User.email,
                'order': User.email,
                'search_collation': 'utf8_general_ci'}
@@ -2182,6 +2182,42 @@ def email_log_ajax():
 
     with ServerSideHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.site.email_log_data)
+
+
+@admin.route('/scheduled_email')
+@roles_accepted('root', 'view_email')
+def scheduled_email():
+    """
+    Display scheduled outgoing email
+    :return:
+    """
+    return render_template('admin/scheduled_email.html')
+
+
+@admin.route('/scheduled_email_ajax', methods=['POST'])
+@roles_accepted('root', 'view_email')
+def scheduled_email_ajax():
+    """
+    AJAX data point for scheduled email list
+    :return:
+    """
+    base_query = db.session.query(EmailNotification) \
+        .join(User, User.id == EmailNotification.owner_id)
+
+    recipient = {'search': func.concat(User.first_name, ' ', User.last_name),
+                 'order': [User.last_name, User.first_name],
+                 'search_collation': 'utf8_general_ci'}
+    timestamp = {'search': func.date_format(EmailNotification.timestamp, "%a %d %b %Y %H:%M:%S"),
+                 'order': EmailNotification.timestamp,
+                 'search_collation': 'utf8_general_ci'}
+    type = {'order': EmailNotification.event_type}
+
+    columns = {'recipient': recipient,
+               'timestamp': timestamp,
+               'type': type}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.site.scheduled_email)
 
 
 @admin.route('/display_email/<int:id>')

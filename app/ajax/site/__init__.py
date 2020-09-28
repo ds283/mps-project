@@ -9,6 +9,7 @@
 #
 
 from .email_log import email_log_data
+from .scheduled_email import scheduled_email
 from .scheduled_tasks import scheduled_task_data
 from .backups import backups_data
 from .background_tasks import background_task_data

@@ -1615,8 +1615,28 @@ class EmailNotification(db.Model):
     FACULTY_REENROLL_MARKER = 9
     FACULTY_REENROLL_PRESENTATIONS = 10
 
+    _events = {CONFIRMATION_REQUEST_CREATED: ('primary', 'Create confirm request'),
+               CONFIRMATION_REQUEST_CANCELLED: ('danger', 'Confirm request cancel'),
+               CONFIRMATION_REQUEST_DELETED: ('danger', 'Confirm request deleted'),
+               CONFIRMATION_GRANT_DELETED: ('warning', 'Confirmation deleted'),
+               CONFIRMATION_DECLINE_DELETED: ('secondary', 'Confirm decline deleted'),
+               CONFIRMATION_GRANTED: ('success', 'Confirm granted'),
+               CONFIRMATION_DECLINED: ('ddanger', 'Confirm declined'),
+               CONFIRMATION_TO_PENDING: ('secondary', 'Confirm request pending'),
+               FACULTY_REENROLL_SUPERVISOR: ('secondary', 'Re-enroll as supervisor'),
+               FACULTY_REENROLL_MARKER: ('secondary', 'Re-enroll as marker'),
+               FACULTY_REENROLL_PRESENTATIONS: ('secondary', 'Re-enroll as assessor')}
+
     # notification type
     event_type = db.Column(db.Integer())
+
+    @property
+    def event_label(self):
+        if self.event_type in self._events:
+            type, label = self._events[self.event_type]
+            return '<span class="badge badge-{type}">{label}</span>'.format(type=type, label=label)
+
+        return '<span class="badge badge-danger">Unknown type</span>'
 
     # index
     # the meaning of these fields varies depending on the notification type

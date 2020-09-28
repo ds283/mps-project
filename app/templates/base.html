@@ -461,6 +461,9 @@
                                 </a>
                             {% endif %}
                             {% if is_root or is_view_email %}
+                                <a class="dropdown-item" href="{{ url_for('admin.scheduled_email') }}">
+                                    <i class="fas fa-wrench fa-fw"></i> Scheduled email...
+                                </a>
                                 <a class="dropdown-item" href="{{ url_for('admin.email_log') }}">
                                     <i class="fas fa-wrench fa-fw"></i> Email log...
                                 </a>

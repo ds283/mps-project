@@ -8,42 +8,37 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from datetime import datetime, date
+from typing import List, Dict
+
 from flask import render_template, redirect, url_for, flash, request, session, jsonify, current_app
 from flask_security import roles_required, roles_accepted, current_user
+from sqlalchemy import and_, or_
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.exc import StaleDataError
 from werkzeug.local import LocalProxy
 
-from ..database import db
-from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
-    TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
-    EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord, PresentationAssessment, \
-    PresentationSession, ScheduleSlot, User, PresentationFeedback, Module, FHEQ_Level, DescriptionComment, \
-    WorkflowMixin, ProjectDescriptionWorkflowHistory
-
 import app.ajax as ajax
-
 from . import faculty
-
 from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionFormFactory, MoveDescriptionFormFactory, \
     FacultyPreviewFormFactory, SupervisorFeedbackForm, MarkerFeedbackForm, PresentationFeedbackForm, \
     SupervisorResponseForm, FacultySettingsFormFactory, AvailabilityFormFactory
 from ..admin.forms import LevelSelectorForm
-
+from ..database import db
+from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
+    TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
+    EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord, PresentationAssessment, \
+    PresentationSession, ScheduleSlot, User, PresentationFeedback, Module, FHEQ_Level, DescriptionComment, \
+    WorkflowMixin, ProjectDescriptionWorkflowHistory, StudentData, SubmittingStudent
+from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
+from ..shared.conversions import is_integer
 from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_assessors, \
     get_current_year, get_count, get_approvals_data, allow_approvals, redirect_url
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable, \
     validate_assessment, validate_using_assessment, validate_presentation_assessor, \
     validate_is_convenor, validate_edit_description
-from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
-from ..shared.conversions import is_integer
-
-from sqlalchemy import and_, or_
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm.exc import StaleDataError
-
-from datetime import datetime, date
-
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -2467,7 +2462,7 @@ def past_feedback(student_id):
     :param student_id:
     :return:
     """
-    user = User.query.get_or_404(student_id)
+    user: User = User.query.get_or_404(student_id)
 
     if not user.has_role('student'):
         flash('It is only possible to view past feedback for a student account.', 'info')
@@ -2478,7 +2473,7 @@ def past_feedback(student_id):
               'StudentData record is missing.', 'error')
         return redirect(redirect_url())
 
-    data = user.student_data
+    data: StudentData = user.student_data
 
     if not data.has_previous_submissions:
         flash('This student does not yet have any past feedback. Feedback will be available to view once '
@@ -2489,16 +2484,27 @@ def past_feedback(student_id):
     text = request.args.get('text', None)
 
     # collate retired selector and submitter records for this student
+    years: List[int]
+    selector_records: Dict[List[SelectingStudent]]
+    submitter_records: Dict[List[SubmittingStudent]]
     years, selector_records, submitter_records = data.collect_student_records()
 
     # check roles for logged-in user, to determine whether they are permitted to view the student's feedback
     roles = {}
     for year in submitter_records:
-        submissions = submitter_records[year]
+        submissions: List[SubmittingStudent] = submitter_records[year]
+
         for sub in submissions:
+            sub: SubmittingStudent
+
             for record in sub.ordered_assignments:
+                record: SubmissionRecord
+
+                # convenor can always view feedback and documents
                 if validate_is_convenor(sub.config.project_class, message=False):
                     roles[record.id] = 'convenor'
+
+                # otherwise perform usual check
                 elif validate_submission_viewable(record, message=False):
                     roles[record.id] = 'faculty'
 

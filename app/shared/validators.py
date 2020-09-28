@@ -227,12 +227,10 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool=True):
     :param record:
     :return:
     """
-
     # check project is assigned
-    if record.period is not None:
-        # if project is assigned, supervisor can view feedback
-        if current_user.id == record.project.owner_id:
-            return True
+    # if project is assigned, supervisor can view feedback
+    if record.project is not None and current_user.id == record.project.owner_id:
+        return True
 
     # assigned marker van view feedback
     if record.marker_id is not None and record.marker_id == current_user.id:
@@ -247,12 +245,12 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool=True):
                 return True
 
     # allow this student's current supervisors to view feedback from previous projects
-    owner_query = db.session.query(SubmissionRecord) \
+    owner_query = db.session.query(SubmissionRecord.id) \
         .filter(SubmissionRecord.retired == False) \
+        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
+        .filter(SubmittingStudent.student_id == record.owner.student_id) \
         .join(LiveProject, LiveProject.id == SubmissionRecord.project_id) \
-        .filter(LiveProject.owner_id == current_user.id) \
-        .join(SubmittingStudent, SubmittingStudent.student_id == SubmissionRecord.owner_id) \
-        .filter(SubmittingStudent.student_id == record.owner.student_id)
+        .filter(LiveProject.owner_id == current_user.id)
 
     if get_count(owner_query) > 0:
         return True
@@ -262,7 +260,6 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool=True):
     # project convenors, and admin users, can view
     if current_user.allow_roles(['convenor', 'admin', 'root', 'exam_board', 'external_examiner']):
         return True
-
 
     if message:
         flash('Only current supervisors, 2nd markers and presentation assessors can perform this operation', 'error')

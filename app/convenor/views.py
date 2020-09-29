@@ -7413,7 +7413,7 @@ def manual_assign():
         new_config: ProjectClassConfig = rec.period.config
 
     # construct selector form, except that at this stage we might not know what the intended
-    # submission record is -- we'll ahave to reconstruct later to be sure we get it right
+    # submission record is -- we'll have to reconstruct later to be sure we get it right
     is_admin = validate_is_convenor(new_config.project_class, message=False)
     AssignMarkerForm = AssignMarkerFormFactory(rec.project if rec is not None else None, new_config.uses_marker,
                                                new_config, is_admin)
@@ -7464,7 +7464,13 @@ def manual_assign():
             modified = True
 
         if modified:
-            db.session.commit()
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                flash('Could not reassign this submitter due to a database error. '
+                      'Please contact a system administrator', 'error')
 
     else:
         if request.method == 'GET':
@@ -7486,11 +7492,11 @@ def manual_assign():
                            allow_reassign_project=not (rec.period.is_feedback_open or rec.student_engaged))
 
 
-@convenor.route('/manual_assign_ajax/<int:id>')
+@convenor.route('/manual_assign_ajax/<int:id>', methods=['POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def manual_assign_ajax(id):
     # id is a SubmissionRecord
-    rec = SubmissionRecord.query.get_or_404(id)
+    rec: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
     config = rec.previous_config
@@ -7501,9 +7507,22 @@ def manual_assign_ajax(id):
     if not validate_is_convenor(config.project_class):
         return jsonify({})
 
-    data = config.live_projects.all()
+    base_query = config.live_projects \
+        .join(FacultyData, FacultyData.id == LiveProject.owner_id) \
+        .join(User, User.id == FacultyData.id)
 
-    return ajax.convenor.manual_assign_data(data, rec)
+    project = {'search': LiveProject.name,
+               'order': LiveProject.name,
+               'search_collation': 'utf8_general_ci'}
+    supervisor = {'search': func.concat(User.first_name, ' ', User.last_name),
+                  'order': [User.last_name, User.first_name],
+                  'search_collation': 'utf8_general_ci'}
+
+    columns = {'project': project,
+               'supervisor': supervisor}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(partial(ajax.convenor.manual_assign_data, rec))
 
 
 @convenor.route('/assign_revert/<int:id>')
@@ -9076,5 +9095,69 @@ def mark_task_dropped(tid):
         db.session.rollback()
         flash('Could not change dropped status for this convenor task due to a database error. '
               'Please contact a system administrator.', 'error')
+
+    return redirect(redirect_url())
+
+
+@convenor.route('/inject_liveproject/<int:pid>/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def inject_liveproject(pid, pclass_id):
+    project: Project = Project.query.get_or_404(pid)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
+
+    config: ProjectClassConfig = pclass.most_recent_config
+    if config is None:
+        flash('Could not inject project "{proj}" into project classs "{pcl}" because the '
+              'current configuration record could not be '
+              'found'.format(proj=project.name, pcl=config.name), 'info')
+        return redirect(redirect_url())
+
+    # check user is convenor for this project class, or an administrator
+    if not validate_is_convenor(config.project_class, message=True):
+        return redirect(redirect_url())
+
+    # check project is attached to this project class
+    if config.project_class not in project.project_classes:
+        flash('Could not inject project "{proj}" into project class "{pcl}" because this project '
+              'is not attached to that class.'.format(proj=project.name, pcl=config.name), 'info')
+        return redirect(redirect_url())
+
+    # check a counterpart LiveProject does not already exist
+    prior = project.prior_counterpart(config)
+    if prior is not None:
+        flash('Ignored request to inject project "{proj}" into project class "{pcl}" for '
+              'academic year {yra}-{yrb} because counterpart LiveProject already '
+              'exists.'.format(proj=project.name, pcl=config.name, yra=config.year-1, yrb=config.year),
+              'info')
+        return redirect(redirect_url())
+
+    previous_config = config.previous_config
+    if previous_config is None:
+        flash('Ignored request to inject project "{proj}" into project class "{pcl}" for '
+              'academic year {yra}-{yrb} because the prior configuration record does not '
+              'exist.'.format(proj=project.name, pcl=config.name, yra=config.year-1, yrb=config.year),
+              'info')
+        return redirect(redirect_url())
+
+    tk_name = 'Manually insert LiveProject'
+    tk_description = 'Insert project "{proj}" into project class "{pcl}" for academic year ' \
+                     '{yra}-{yrb}'.format(proj=project.name, pcl=config.name,
+                                          yra=config.year-1, yrb=config.year)
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    celery = current_app.extensions['celery']
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    attach = celery.tasks['app.tasks.go_live.project_golive']
+
+    number = get_count(previous_config.live_projects)+1
+
+    seq = chain(init.si(task_id, tk_name),
+                attach.si(number, pid, previous_config.id),
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
 
     return redirect(redirect_url())

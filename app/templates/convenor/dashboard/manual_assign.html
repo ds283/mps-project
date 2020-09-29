@@ -19,24 +19,26 @@
             $('#manual-assign-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/manual_assign_ajax/{{ rec.id }}', dataSrc: '' },
+                serverSide: true,
+                ajax: { url: $SCRIPT_ROOT + '/convenor/manual_assign_ajax/{{ rec.id }}',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'project' },
+                    { data: 'project',
+                      searchable: true,
+                      orderable: true },
                     { data: 'supervisor',
-                      render: {
-                        _: 'display',
-                        sort: 'sortstring' }
-                    },
+                      searchable :true,
+                      orderable: true },
                     { data: 'workload',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'}
-                    },
-                    { data: 'menu' }
+                      searchable: false,
+                      orderable: false },
+                    { data: 'menu',
+                      searchable: false,
+                      orderable: false }
                 ],
-                deferRender: true
+                order: [[0, 'asc']]
             });
         });
     </script>

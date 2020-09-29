@@ -243,6 +243,11 @@ _convenor_menu = \
         <a class="dropdown-item" href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=pclass_id) }}">
             <i class="fas fa-cogs fa-fw"></i> Degree programmes...
         </a>
+        {% if not in_current %}
+            <a class="dropdown-item" href="{{ url_for('convenor.inject_liveproject', pid=project.id, pclass_id=pclass_id) }}">
+                <i class="fas fa-cogs fa-fw"></i> Generate LiveProject...
+            </a>
+        {% endif %}
 
         <div role="separator" class="dropdown-divider"></div>
 
@@ -344,7 +349,7 @@ _pclass_proxy_str = str(_pclass_proxy)
 
 
 @cache.memoize()
-def _element(project_id, menu_template, is_running, is_live, name_labels):
+def _element(project_id, menu_template, is_running, is_live, in_current, name_labels):
     p = db.session.query(Project).filter_by(id=project_id).one()
 
     menu_string = _menus[menu_template]
@@ -357,12 +362,12 @@ def _element(project_id, menu_template, is_running, is_live, name_labels):
              'status': render_template_string(_project_status, project=p),
              'pclasses': render_template_string(_project_pclasses, project=p),
              'meeting': render_template_string(_project_meetingreqd, project=p),
-             'group': p.group.make_label() if p.group is not None else '<span class="badge badge-warning">Missing '
-                                                                       'research group</span>',
+             'group': p.group.make_label() if p.group is not None \
+                 else '<span class="badge badge-warning">Missing research group</span>',
              'prefer': render_template_string(_project_prefer, project=p),
              'skills': render_template_string(_project_skills, skills=p.ordered_skills),
              'menu': render_template_string(menu_string, project=p, config_id=_config_proxy, pclass_id=_pclass_proxy,
-                                            text='REPTEXT', url='REPURL')}
+                                            in_current=in_current, text='REPTEXT', url='REPURL')}
 
 
 def _process(project_id, enrollment_id, current_user_id, menu_template, config, text_enc, url_enc, name_labels,
@@ -376,9 +381,10 @@ def _process(project_id, enrollment_id, current_user_id, menu_template, config, 
 
     is_running = (p.running_counterpart(config.id) is not None) if config is not None else False
     is_live = (p.live_counterpart(config.id) is not None) if config is not None else False
+    in_current = (p.prior_counterpart(config.id) is not None) if config is not None else False
 
     # _element is cached
-    record = _element(project_id, menu_template, is_running, is_live, name_labels)
+    record = _element(project_id, menu_template, is_running, is_live, in_current, name_labels)
 
     # need to replace text and url in 'name' field
     # need to replace text, url, config_id and pclass_id in 'menu' field

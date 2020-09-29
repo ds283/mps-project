@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string
 
 _name = \
 """
@@ -38,25 +37,12 @@ _action = \
 </div>
 """
 
-def _compute_total_workload(fac):
-    supv = 0
-    mark = 0
-    pres = 0
-    for record in fac.enrollments:
-        s, m, p = fac.CATS_assignment(record.pclass)
-        supv += s
-        mark += m
-        pres += p
 
-    return supv, mark, pres, (supv+mark+pres)
-
-def manual_assign_data(liveprojects, rec):
+def manual_assign_data(rec, liveprojects):
     data = [{'project': render_template_string(_name, p=p, r=rec),
-             'supervisor': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=p.owner.user.email,
+             'supervisor': '<a href="mailto:{email}">{name}</a>'.format(email=p.owner.user.email,
                                                                                     name=p.owner.user.name),
-                            'sortstring': p.owner.user.last_name + p.owner.user.first_name},
-             'workload': {'display': render_template_string(_workload, data=p.owner.total_CATS_assignment()),
-                          'sortvalue': sum(p.owner.total_CATS_assignment())},
+             'workload': render_template_string(_workload, data=p.owner.total_CATS_assignment()),
              'menu': render_template_string(_action, rec=rec, p=p)} for p in liveprojects]
 
-    return jsonify(data)
+    return data

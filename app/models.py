@@ -4634,6 +4634,16 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
         return self.live and not self.selection_closed
 
 
+    @property
+    def _previous_config_query(self):
+        return db.session.query(ProjectClassConfig).filter_by(year=self.year-1, pclass_id=self.pclass_id)
+
+
+    @property
+    def previous_config(self):
+        return self._previous_config_query.first()
+
+
     SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED = 1
     SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS = 2
     SELECTOR_LIFECYCLE_READY_GOLIVE = 3
@@ -5882,30 +5892,50 @@ class Project(db.Model, EditingMetadataMixin,
         return get_count(self.descriptions)
 
 
-    def live_counterpart(self, config_id):
+    def live_counterpart(self, config):
         """
         :param config_id: current ProjectClassConfig instance
         :return:
         """
+        if isinstance(config, int):
+            config_id = config
+        elif isinstance(config, ProjectClassConfig):
+            config_id = config.id
+        else:
+            raise RuntimeError('Unexpected type for "config" in Project.live_counterpart()')
+
         return self.live_projects.filter_by(config_id=config_id).first()
 
 
-    def running_counterpart(self, config_id):
+    def _prior_counterpart_query(self, cfg):
+        config: ProjectClassConfig
+        if isinstance(cfg, int):
+            config = db.session.query(ProjectClassConfig).filter_by(id=cfg).first()
+        elif isinstance(cfg, ProjectClassConfig):
+            config = cfg
+        else:
+            raise RuntimeError('Unexpected type for "config" in Project.prior_counterpart()')
+
+        if config is None:
+            return None
+
+        previous_config = config.previous_config
+        if previous_config is None:
+            return None
+
+        return self.live_projects.filter_by(config_id=previous_config.id)
+
+
+    def prior_counterpart(self, cfg):
+        return self._prior_counterpart_query(cfg).first()
+
+
+    def running_counterpart(self, config):
         """
         :param config_id: current ProjectClassConfig instance
         :return:
         """
-        current_config: ProjectClassConfig = db.session.query(ProjectClassConfig) \
-            .filter_by(id=config_id).first()
-        if current_config is None:
-            return None
-
-        previous_config: ProjectClassConfig = db.session.query(ProjectClassConfig) \
-            .filter_by(year=current_config.year-1, pclass_id=current_config.pclass_id).first()
-        if previous_config is None:
-            return None
-
-        project = self.live_projects.filter_by(config_id=previous_config.id).first()
+        project = self.prior_counterpart(config)
         if project is None:
             return None
 
@@ -8207,13 +8237,12 @@ class SubmissionRecord(db.Model):
 
     @property
     def previous_config(self):
+        # return cached value if we have it
         if self.selection_config:
             return self.selection_config
 
         current_config: ProjectClassConfig = self.owner.config
-        config: ProjectClassConfig = current_config.pclass.get_config(current_config.year-1)
-
-        return config
+        return current_config.previous_config
 
 
     @property

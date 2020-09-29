@@ -58,7 +58,7 @@
                                             {% endif %}
                                             {% if rec.number_custom_offers > 0%}
                                                 <p><strong>Custom offers</strong></p>
-                                                {{ custom_offers_table(sel, sel.ordered_custom_offers, true) }}
+                                                {{ custom_offers_table(sel, rec.ordered_custom_offers, true) }}
                                             {% endif %}
                                         </div>
                                     {% else %}

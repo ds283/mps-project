@@ -14,7 +14,7 @@
             element: document.getElementById('description'),
             autosave: {
                 enabled: true,
-                uniqueId: "desc-{{ desc.id }}",
+                uniqueId: {%  if desc %}"desc-{{ desc.id }}"{% else %}"desc-new"{% endif %},
                 text: 'Autosaved: ',
                 timeFormat: {
                     locale: 'en-GB',
@@ -34,7 +34,7 @@
             element: document.getElementById('reading'),
             autosave: {
                 enabled: true,
-                uniqueId: "reading-{{ desc.id }}",
+                uniqueId: {% if desc %}"reading-{{ desc.id }}"{% else %}"reading-new{% endif %}",
                 text: 'Autosaved: ',
                 timeFormat: {
                     locale: 'en-GB',

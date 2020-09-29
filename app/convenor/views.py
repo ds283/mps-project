@@ -1885,6 +1885,80 @@ def do_delete_submitter(sid):
         db.session.rollback()
         flash('Could not delete submitter due to a database error ("{n}"). Please contact a system '
               'administrator.'.format(n=e), 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(url)
+
+
+@convenor.route('/delete_all_submitters/<int:configid>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_all_submitters(configid):
+    """
+    Delete all submitters -- confirmation step
+    :param configid:
+    :return:
+    """
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
+        flash('Manual deletion of submitters is only possible during normal project activity', 'error')
+        return redirect(redirect_url())
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = redirect_url()
+
+    title = 'Delete all submitters'
+    panel_title = 'Delete all submitters'
+
+    action_url = url_for('convenor.do_delete_all_submitters', configid=configid, url=url)
+    message = '<p>Are you sure that you wish to delete <strong>all submitters</strong>?' \
+              '<p>This action cannot be undone.</p>'
+    submit_label = 'Delete all submitters'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@convenor.route('/do_delete_all_submitters/<int:configid>')
+@roles_accepted('faculty', 'admin', 'root')
+def do_delete_all_submitters(configid):
+    """
+    Delete all submitters -- action step
+    :param sid:
+    :return:
+    """
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
+        flash('Manual deletion of submitters is only possible during normal project activity', 'error')
+        return redirect(redirect_url())
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = redirect_url()
+
+    try:
+        submitter_list = config.submitting_students
+
+        for item in submitter_list:
+            item.detach_records()
+            db.session.delete(item)
+
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash('Could not delete all submitters due to a database error ("{n}"). Please contact a system '
+              'administrator.'.format(n=e), 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
 

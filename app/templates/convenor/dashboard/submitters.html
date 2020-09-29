@@ -206,6 +206,9 @@
                         <a href="{{ url_for('convenor.remove_markers', configid=config.id) }}" class="btn btn-secondary top-row-button">
                             <i class="fas fa-wrench"></i> Remove markers
                         </a>
+                        <a href="{{ url_for('convenor.delete_all_submitters', configid=config.id) }}" class="btn btn-secondary top-row-button">
+                            <i class="fas fa-trash"></i> Delete all
+                        </a>
                         {% if pclass.publish %}
                             <a href="{{ url_for('convenor.mark_all_started', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}" class="btn btn-secondary top-row-button">
                                 Mark all started

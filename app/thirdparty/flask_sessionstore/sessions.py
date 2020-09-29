@@ -436,10 +436,10 @@ class SqlAlchemySessionInterface(SessionInterface):
         class Session(self.db.Model):
             __tablename__ = table
 
-            id = self.db.Column(self.db.Integer, primary_key=True)
+            id = self.db.Column(self.db.Integer(), primary_key=True)
             session_id = self.db.Column(self.db.String(255), unique=True)
-            data = self.db.Column(self.db.Text)
-            expiry = self.db.Column(self.db.DateTime)
+            data = self.db.Column(self.db.Text())
+            expiry = self.db.Column(self.db.DateTime())
 
             def __init__(self, session_id, data, expiry):
                 self.session_id = session_id

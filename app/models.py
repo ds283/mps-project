@@ -4082,7 +4082,7 @@ class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
     period = db.Column(db.Integer())
 
     # optional start date - purely for UI purposes
-    start_date = db.Column(db.Date)
+    start_date = db.Column(db.Date())
 
     # alternative textual name; can be left null if not used
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
@@ -4954,8 +4954,11 @@ class SubmissionPeriodRecord(db.Model):
     # note this does not directly link to SubmissionPeriodDefinition
     submission_period = db.Column(db.Integer(), index=True)
 
-    # optional start date - purely for UI purposes
-    start_date = db.Column(db.Date)
+    # optional start date
+    start_date = db.Column(db.Date())
+
+    # optiona hand-in date
+    hand_in_date = db.column(db.Date())
 
     # alternative textual name for this period (eg. "Autumn Term", "Spring Term");
     # can be null if not used

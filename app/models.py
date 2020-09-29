@@ -1420,6 +1420,11 @@ class User(db.Model, UserMixin):
         return False
 
 
+    @property
+    def unheld_email_notifications(self):
+        return self.email_notifications.filter_by(held=False).order_by(EmailNotification.timestamp)
+
+
 @listens_for(User.roles, 'remove')
 def _User_role_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
@@ -1647,6 +1652,9 @@ class EmailNotification(db.Model):
     # timestamp
     timestamp = db.Column(db.DateTime())
 
+    # is this notification marked has held?
+    held = db.Column(db.Boolean(), default=False)
+
 
     # set up dispatch table of methods to handle each notification type
 
@@ -1765,10 +1773,10 @@ class EmailNotification(db.Model):
             return '<missing database row>'
 
         return 'You have been automatically re-enrolled as a supervisor for the project class "{proj}". ' \
-               'This has probably happened because you were previously marked as "on sabbatical", and you are ' \
-               'expected to return from sabbatical in the *next* academic year. If you wish to offer projects, ' \
+               'This has occurred because you previously had a buyout or sabbatical arrangement, ' \
+               'but according to our records it is expected that you will become available for normal ' \
+               'activities in the *next* academic year. If you wish to offer projects, ' \
                'you will need to do so in the next selection cycle.'.format(proj=record.pclass.name)
-
 
     @assign(str_operations, FACULTY_REENROLL_MARKER)
     def _request_reenroll_marker(self):
@@ -1776,9 +1784,10 @@ class EmailNotification(db.Model):
         if record is None:
             return '<missing database row>'
 
-        return 'You have been automatically re-enrolled as a 2nd-marker for the project class "{proj}". ' \
-               'This has probably happened because you were previously marked as "on sabbatical", and you are ' \
-               'expected to return from sabbatical in the next project cycle.'.format(proj=record.pclass.name)
+        return 'You have been automatically re-enrolled as an examiner (second marker) for the project class "{proj}". ' \
+               'This has occurred because you previously had a buyout or sabbatical arrangement, ' \
+               'but according to our records it is expected that you will become available for normal ' \
+               'activities in the *next* academic year.'.format(proj=record.pclass.name)
 
 
     @assign(str_operations, FACULTY_REENROLL_PRESENTATIONS)
@@ -1788,8 +1797,9 @@ class EmailNotification(db.Model):
             return '<missing database row>'
 
         return 'You have been automatically re-enrolled as a presentation assessor for the project class "{proj}". ' \
-               'This has probably happened because you were previously marked as "on sabbatical", and you are ' \
-               'expected to return from sabbatical in the next project cycle.'.format(proj=record.pclass.name)
+               'This has occurred because you previously had a buyout or sabbatical arrangement, ' \
+               'but according to our records it is expected that you will become available for normal ' \
+               'activities in the *next* academic year.'.format(proj=record.pclass.name)
 
 
     @assign(subject_operations, CONFIRMATION_REQUEST_CREATED)
@@ -1942,7 +1952,7 @@ def add_notification(user, event, object_1, object_2=None, autocommit=True, noti
 
     # insert new notification
     obj = EmailNotification(owner_id=user_id, data_1=object_1_id, data_2=object_2_id, event_type=event,
-                            timestamp=datetime.now())
+                            timestamp=datetime.now(), held=False)
     db.session.add(obj)
 
     # send immediately if we are not grouping notifications into summaries

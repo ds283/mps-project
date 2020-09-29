@@ -34,7 +34,7 @@ def _get_outstanding_faculty_confirmation_requests(user):
     # build list of ConfirmRequest instances used in these notifications, and compute any outstanding
     # ConfirmRequests that have this user as a project supervisor.
 
-    crqs = user.email_notifications \
+    crqs = user.unheld_email_notifications \
         .filter(or_(EmailNotification.event_type == EmailNotification.CONFIRMATION_REQUEST_CREATED,
                     EmailNotification.event_type == EmailNotification.CONFIRMATION_TO_PENDING)).subquery()
 
@@ -187,7 +187,7 @@ def register_email_notification_tasks(celery):
 
         # create snapshot of notifications list; this is what we use *everywhere* to decide which notifications
         # to process, in order to avoid race conditions with other threads adding notifications to the database
-        raw_list = [(n.id, n.event_type) for n in user.email_notifications]
+        raw_list = [(n.id, n.event_type) for n in user.unheld_email_notifications]
 
         # strip out all notification ids, no matter what type of event we are dealing with
         n_ids = [x[0] for x in raw_list]
@@ -269,7 +269,7 @@ def register_email_notification_tasks(celery):
 
         # create snapshot of notifications list; this is what we use *everywhere* to decide which notifications
         # to process, in order to avoid race conditions with other threads adding notifications to the database
-        n_ids = [n.id for n in user.email_notifications]
+        n_ids = [n.id for n in user.unheld_email_notifications]
 
         # if we are not grouping notifications into summaries for this user,
         # generate a task to send each email in the queue
@@ -422,6 +422,9 @@ def register_email_notification_tasks(celery):
         if user is None or notification is None:
             self.update_state('FAILURE', meta='Could not read database records')
             raise Ignore()
+
+        if notification.held:
+            return
 
         outstanding_crqs = _get_outstanding_faculty_confirmation_requests(user)
 

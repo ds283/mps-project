@@ -2184,42 +2184,6 @@ def email_log_ajax():
         return handler.build_payload(ajax.site.email_log_data)
 
 
-@admin.route('/scheduled_email')
-@roles_accepted('root', 'view_email')
-def scheduled_email():
-    """
-    Display scheduled outgoing email
-    :return:
-    """
-    return render_template('admin/scheduled_email.html')
-
-
-@admin.route('/scheduled_email_ajax', methods=['POST'])
-@roles_accepted('root', 'view_email')
-def scheduled_email_ajax():
-    """
-    AJAX data point for scheduled email list
-    :return:
-    """
-    base_query = db.session.query(EmailNotification) \
-        .join(User, User.id == EmailNotification.owner_id)
-
-    recipient = {'search': func.concat(User.first_name, ' ', User.last_name),
-                 'order': [User.last_name, User.first_name],
-                 'search_collation': 'utf8_general_ci'}
-    timestamp = {'search': func.date_format(EmailNotification.timestamp, "%a %d %b %Y %H:%M:%S"),
-                 'order': EmailNotification.timestamp,
-                 'search_collation': 'utf8_general_ci'}
-    type = {'order': EmailNotification.event_type}
-
-    columns = {'recipient': recipient,
-               'timestamp': timestamp,
-               'type': type}
-
-    with ServerSideHandler(request, base_query, columns) as handler:
-        return handler.build_payload(ajax.site.scheduled_email)
-
-
 @admin.route('/display_email/<int:id>')
 @roles_accepted('root', 'view_email')
 def display_email(id):
@@ -2242,8 +2206,15 @@ def delete_email(id):
     :return:
     """
     email = EmailLog.query.get_or_404(id)
-    db.session.delete(email)
-    db.session.commit()
+
+    try:
+        db.session.delete(email)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not delete email because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url_for('admin.email_log'))
 
@@ -2352,6 +2323,137 @@ def delete_email_cutoff(cutoff):
     seq.apply_async(task_id=task_id)
 
     return redirect(url_for('admin.email_log'))
+
+
+@admin.route('/scheduled_email')
+@roles_accepted('root', 'view_email')
+def scheduled_email():
+    """
+    Display scheduled outgoing email
+    :return:
+    """
+    return render_template('admin/scheduled_email.html')
+
+
+@admin.route('/scheduled_email_ajax', methods=['POST'])
+@roles_accepted('root', 'view_email')
+def scheduled_email_ajax():
+    """
+    AJAX data point for scheduled email list
+    :return:
+    """
+    base_query = db.session.query(EmailNotification) \
+        .join(User, User.id == EmailNotification.owner_id)
+
+    recipient = {'search': func.concat(User.first_name, ' ', User.last_name),
+                 'order': [User.last_name, User.first_name],
+                 'search_collation': 'utf8_general_ci'}
+    timestamp = {'search': func.date_format(EmailNotification.timestamp, "%a %d %b %Y %H:%M:%S"),
+                 'order': EmailNotification.timestamp,
+                 'search_collation': 'utf8_general_ci'}
+    type = {'order': EmailNotification.event_type}
+
+    columns = {'recipient': recipient,
+               'timestamp': timestamp,
+               'type': type}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.site.scheduled_email)
+
+
+@admin.route('/hold_notification/<int:eid>')
+@roles_accepted('root', 'view_email')
+def hold_notification(eid):
+    """
+    Mark an outgoing notification as held
+    :return:
+    """
+    notification: EmailNotification = EmailNotification.query.get_or_404(eid)
+
+    notification.held = True
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not mark notification as held because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@admin.route('/release_notification/<int:eid>')
+@roles_accepted('root', 'view_email')
+def release_notification(eid):
+    """
+    Mark an outgoing notification as not held (released)
+    :return:
+    """
+    notification: EmailNotification = EmailNotification.query.get_or_404(eid)
+
+    notification.held = False
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not mark notification as released because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@admin.route('/delete_notification/<int:eid>')
+@roles_accepted('root', 'view_email')
+def delete_notification(eid):
+    """
+    Mark an outgoing notification as held
+    :return:
+    """
+    notification: EmailNotification = EmailNotification.query.get_or_404(eid)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = redirect_url()
+
+    title = 'Confirm delete'
+    panel_title = 'Confirm delete scheduled notification'
+
+    action_url = url_for('admin.do_delete_notification', eid=eid)
+    message = '<p>Please confirm that you wish to delete a scheduled email notification to ' \
+              '<i class="fas fa-user"></i> <strong>{name}</strong></p>' \
+              '<p>This action cannot be undone.</p>'.format(name=notification.owner.name)
+    submit_label = 'Delete'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label, url=url)
+
+
+@admin.route('/do_delete_notification/<int:eid>')
+@roles_accepted('root', 'view_email')
+def do_delete_notification(eid):
+    """
+    Delete an email notification
+    :return:
+    """
+    notification: EmailNotification = EmailNotification.query.get_or_404(eid)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('admin.scheduled_email')
+
+    try:
+        db.session.delete(notification)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not delete notification because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(url)
 
 
 @admin.route('/edit_messages')

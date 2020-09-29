@@ -824,7 +824,7 @@ def register_rollover_tasks(celery):
     def reenroll_faculty(self, new_config_id, rec_id, current_year):
         # get faculty enrollment record
         try:
-            record = db.session.query(EnrollmentRecord).filter_by(id=rec_id).first()
+            record: EnrollmentRecord = db.session.query(EnrollmentRecord).filter_by(id=rec_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -832,6 +832,9 @@ def register_rollover_tasks(celery):
         if record is None:
             self.update_state('FAILURE', meta='Could not load EnrollmentRecord')
             return new_config_id
+
+        if not record.owner.user.active:
+            return
 
         # supervisors re-enroll in the year *before* they come off sabbatical, so they can offer
         # projects during the selection cycle

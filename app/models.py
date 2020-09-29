@@ -5064,6 +5064,15 @@ class SubmissionPeriodRecord(db.Model):
         return self.feedback_open
 
 
+    @property
+    def time_to_hand_in(self):
+        if self.hand_in_date is None:
+            return '<invalid>'
+
+        delta = self.hand_in_date - date.today()
+        return format_readable_time(delta)
+
+
     def get_supervisor_records(self, fac):
         if isinstance(fac, int):
             fac_id = fac
@@ -5233,6 +5242,9 @@ class SubmissionPeriodRecord(db.Model):
 
         if self.start_date is None:
             messages.append('A start date for this submission period has not yet been configured')
+
+        if self.hand_in_date is None:
+            messages.append('A hand-in date for this submission period has not yet been configured')
 
         if self.name is None or len(self.name) == 0:
             messages.append('A unique name for this submission period has not yet been configured')

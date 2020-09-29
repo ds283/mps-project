@@ -100,8 +100,15 @@
                                 {% endif %}
                             </div>
                             <div class="col-4">
-                                {% if p.start_date %}
-                                    <p>Commences {{ p.start_date.strftime("%a %d %b %Y") }}</p>
+                                {% if p.start_date or p.hand_in_date %}
+                                    <div class="mb-3">
+                                        {% if p.start_date %}
+                                            <div>Commences <strong>{{ p.start_date.strftime("%a %d %b %Y") }}</strong>.</div>
+                                        {% endif %}
+                                        {% if p.hand_in_date %}
+                                            <div>Hand-in <strong>{{ p.hand_in_date.strftime("%a %d %b %Y") }}</strong>.</div>
+                                        {% endif %}
+                                    </div>
                                 {% endif %}
                                 {% if p.feedback_open %}
                                     {% if p.closed %}
@@ -112,16 +119,16 @@
                                         {% if p.closed_id %}
                                             <span class="badge badge-info">Closed by {{ p.closed_by.name }}{% if p.closed_timestamp %} at {{ p.closed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}{% endif %}</span>
                                         {% endif %}
-                                    {% endif %}
-                                {% else %}
-                                    <span class="badge badge-primary"><i class="fas fa-check"></i> Feedback open</span>
-                                    {% if p.feedback_id %}
-                                        <p>
-                                            Opened by {{ p.feedback_by.name }}
-                                            {% if p.feedback_timestamp %}
-                                                at {{ p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-                                            {% endif %}
-                                        </p>
+                                    {% else %}
+                                        <span class="badge badge-primary"><i class="fas fa-check"></i> Feedback open</span>
+                                        {% if p.feedback_id %}
+                                            <p>
+                                                Opened by {{ p.feedback_by.name }}
+                                                {% if p.feedback_timestamp %}
+                                                    at {{ p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                                                {% endif %}
+                                            </p>
+                                        {% endif %}
                                     {% endif %}
                                 {% endif %}
                             </div>

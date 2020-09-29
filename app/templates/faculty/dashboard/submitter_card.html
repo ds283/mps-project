@@ -74,10 +74,18 @@
                         {% if period.submission_period > config.submission_period %}
                             <p>Activity for this period has not yet commenced.</p>
                         {% elif period.submission_period == config.submission_period %}
-                            {% if period.start_date and period.start_date > today %}
-                                <p>This period will begin on {{ period.start_date.strftime("%a %d %b %Y") }}</p>
+                            {% if period.start_date %}
+                                {% if period.start_date > today %}
+                                    <p>This submission period will begin on <strong>{{ period.start_date.strftime("%a %d %b %Y") }}</strong></p>
+                                {% else %}
+                                    <p>This submission period commenced on <strong>{{ period.start_date.strftime("%a %d %b %Y") }}</strong></p>
+                                {% endif %}
                             {% else %}
                                 <p>Normal project activity is underway.</p>
+                            {% endif %}
+                            {% if period.hand_in_date %}
+                                <p>The hand-in date for this period is <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
+                                ({{ period.time_to_hand_in }} from now)</p>
                             {% endif %}
                         {% else %}
                             <span class="badge badge-danger">Error: Submission period lifecycle inconsistent</span>

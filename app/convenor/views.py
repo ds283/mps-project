@@ -6697,6 +6697,7 @@ def edit_submission_record(pid):
 
     if edit_form.validate_on_submit():
         record.start_date = edit_form.start_date.data
+        record.hand_in_date = edit_form.hand_in_date.data
 
         record.has_presentation = edit_form.has_presentation.data
 

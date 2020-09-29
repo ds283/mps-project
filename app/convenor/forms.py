@@ -156,7 +156,13 @@ class CustomCATSLimitForm(Form, SaveChangesMixin):
 
 class SubmissionRecordMixin():
 
-    start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()])
+    start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
+                           description="Enter an optional start date for this submission period.")
+
+    hand_in_date = DateField('Hand-in date', format='%d/%m/%Y', validators=[Optional()],
+                             description="Enter an optional hand-in date for this submission period. If present, "
+                                         "this is used to show students how much time remains.")
+
 
 
 class EditSubmissionRecordForm(Form, SubmissionRecordMixin, SubmissionPeriodCommonMixin, SaveChangesMixin):

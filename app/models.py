@@ -1422,7 +1422,9 @@ class User(db.Model, UserMixin):
 
     @property
     def unheld_email_notifications(self):
-        return self.email_notifications.filter_by(held=False).order_by(EmailNotification.timestamp)
+        return self.email_notifications.filter(or_(EmailNotification.held == False,
+                                                   EmailNotification.held == None)) \
+            .order_by(EmailNotification.timestamp)
 
 
 @listens_for(User.roles, 'remove')

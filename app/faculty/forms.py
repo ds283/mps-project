@@ -133,7 +133,7 @@ def DescriptionMixinFactory(query_factory):
                                                 r'You may use displayed or inline mathematics. '
                                                 r'You may also use Markdown syntax to format your description. '
                                                 r'<strong>Please preview your project to check it renders correctly.</strong>',
-                                    validators=[InputRequired(message='A project description is required')])
+                                    validators=[Optional()])
 
         reading = TextAreaField('Suggested resources', render_kw={"rows": 7},
                                 description='Optional. The same styling and LaTeX options are available. '

@@ -13,6 +13,7 @@ from datetime import date, datetime, timedelta
 from functools import partial
 from pathlib import Path
 from typing import List
+from uuid import uuid4
 
 import parse
 from celery import chain
@@ -2905,7 +2906,7 @@ def add_description(pid, pclass_id):
         return redirect(url_for('convenor.edit_descriptions', id=pid, pclass_id=pclass_id, create=create))
 
     return render_template('faculty/edit_description.html', project=proj, form=form, pclass_id=pclass_id,
-                           title='Add new description', create=create)
+                           title='Add new description', create=create, unique_id=uuid4())
 
 
 @convenor.route('/edit_description/<int:did>/<int:pclass_id>', methods=['GET', 'POST'])

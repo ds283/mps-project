@@ -10,6 +10,7 @@
 
 from datetime import datetime, date
 from typing import List, Dict
+from uuid import uuid4
 
 from flask import render_template, redirect, url_for, flash, request, session, jsonify, current_app
 from flask_security import roles_required, roles_accepted, current_user
@@ -587,7 +588,7 @@ def add_description(pid):
             form.capacity.data = proj.owner.project_capacity
 
     return render_template('faculty/edit_description.html', project=proj, form=form, title='Add new description',
-                           create=create)
+                           create=create, unique_id=uuid4())
 
 
 @faculty.route('/edit_description/<int:did>', methods=['GET', 'POST'])

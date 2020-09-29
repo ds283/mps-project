@@ -3,56 +3,6 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
 
-{% block scripts %}
-    {{ super() }}
-
-    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
-    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
-
-    <script>
-        var description_MDE = new EasyMDE({
-            element: document.getElementById('description'),
-            autosave: {
-                enabled: true,
-                uniqueId: {% if desc %}"desc-{{ desc.id }}"{% elif unique_id %}"desc-{{ unique_id }}"{% else %}"desc-new"{% endif %},
-                text: 'Autosaved: ',
-                timeFormat: {
-                    locale: 'en-GB',
-                    format: {
-                        year: 'numeric',
-                        month: 'long',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                    }
-                }
-            },
-            hideIcons: ['image']
-        });
-        var reading_MDE = new EasyMDE({
-            element: document.getElementById('reading'),
-            autosave: {
-                enabled: true,
-                uniqueId: {% if desc %}"reading-{{ desc.id }}"{% elif unique_id %}"reading-{{ unique_id }}"{% else %}"reading-new{% endif %}",
-                text: 'Autosaved: ',
-                timeFormat: {
-                    locale: 'en-GB',
-                    format: {
-                        year: 'numeric',
-                        month: 'long',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                    }
-                }
-            },
-            hideIcons: ['image']
-        });
-    </script>
-{% endblock %}
-
 {% block title %}
     {{ title }}
 {% endblock %}
@@ -118,25 +68,21 @@
         </div>
 
         <hr class="intro-divider">
-        {{ wtf.render_field(form.aims) }}
-        {{ wtf.render_field(form.description) }}
-
-        <hr class="intro-divider">
         {{ wtf.render_field(form.review_only) }}
-        <div class="help-block">
-            <p>Projects marked as literature reviews are marked in the same way as conventional projects.
+        <div class="form-text text-muted">
+            <small>Projects marked as literature reviews are marked in the same way as conventional projects.
                 An outstanding original literature review should attract the same credit as any other
                 outstanding project.
                 However, it may be more challenging for students to attain the required level.
                 Note that marks for literature reviews are <strong>not capped</strong>
-                as a matter of principle.</p>
+                as a matter of principle.</small>
 
-            <p>This setting is visible to students in order to help them gauge their likelihood of
-                success with the project.</p>
+            <small>This setting is visible to students in order to help them gauge their likelihood of
+                success with the project.</small>
         </div>
-
         <hr class="intro-divider">
-        {{ wtf.render_field(form.reading) }}
+
+        {{ wtf.render_field(form.aims) }}
 
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
     </form>

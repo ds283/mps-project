@@ -108,9 +108,9 @@ def EditProjectFormFactory(convenor_editing=False):
     return EditProjectForm
 
 
-def DescriptionMixinFactory(query_factory):
+def DescriptionSettingsMixinFactory(query_factory):
 
-    class DescriptionMixin():
+    class DescriptionSettingsMixin():
 
         # allow the project_class list to be empty (but then the project is not offered)
         project_classes = CheckboxQuerySelectMultipleField('Project classes', query_factory=query_factory, get_label='name')
@@ -126,20 +126,6 @@ def DescriptionMixinFactory(query_factory):
         team = CheckboxQuerySelectMultipleField('Supervisory team',
                                                 query_factory=GetSupervisorRoles, get_label='name')
 
-        description = TextAreaField('Text description of project', render_kw={"rows": 10},
-                                    description=r'Enter a description of your project. '
-                                                r'The LaTeX mathematics environments are supported, as are common LaTeX commands. '
-                                                r'The amsmath, amsthm, and amssymb packages are included. '
-                                                r'You may use displayed or inline mathematics. '
-                                                r'You may also use Markdown syntax to format your description. '
-                                                r'<strong>Please preview your project to check it renders correctly.</strong>',
-                                    validators=[Optional()])
-
-        reading = TextAreaField('Suggested resources', render_kw={"rows": 7},
-                                description='Optional. The same styling and LaTeX options are available. '
-                                            'To embed internet links, use the Markdown syntax [link text](URL).',
-                                validators=[Optional()])
-
         aims = TextAreaField('Aims', render_kw={'rows': 7},
                              description='Optional, but strongly recommended. Enter a concise summary of what should '
                                          'be achieved during the project. This information is not visible to students, '
@@ -149,12 +135,29 @@ def DescriptionMixinFactory(query_factory):
 
         review_only = BooleanField('This project is a literature review')
 
-    return DescriptionMixin
+    return DescriptionSettingsMixin
+
+
+class DescriptionContentMixin():
+
+    description = TextAreaField('Text description of project', render_kw={"rows": 10},
+                                description=r'Enter a description of your project. '
+                                            r'The LaTeX mathematics environments are supported, as are common LaTeX commands. '
+                                            r'The amsmath, amsthm, and amssymb packages are included. '
+                                            r'You may use displayed or inline mathematics. '
+                                            r'You may also use Markdown syntax to format your description. '
+                                            r'<strong>Please preview your project to check it renders correctly.</strong>',
+                                validators=[Optional()])
+
+    reading = TextAreaField('Suggested resources', render_kw={"rows": 7},
+                            description='Optional. The same styling and LaTeX options are available. '
+                                        'To embed internet links, use the Markdown syntax [link text](URL).',
+                            validators=[Optional()])
 
 
 def AddDescriptionFormFactory(project_id):
 
-    Mixin = DescriptionMixinFactory(partial(AvailableProjectDescriptionClasses, project_id, None))
+    Mixin = DescriptionSettingsMixinFactory(partial(AvailableProjectDescriptionClasses, project_id, None))
 
     class AddDescriptionForm(Form, Mixin):
 
@@ -170,9 +173,9 @@ def AddDescriptionFormFactory(project_id):
     return AddDescriptionForm
 
 
-def EditDescriptionFormFactory(project_id, desc_id):
+def EditDescriptionSettingsFormFactory(project_id, desc_id):
 
-    Mixin = DescriptionMixinFactory(partial(AvailableProjectDescriptionClasses, project_id, desc_id))
+    Mixin = DescriptionSettingsMixinFactory(partial(AvailableProjectDescriptionClasses, project_id, desc_id))
 
     class EditDescriptionForm(Form, Mixin, SaveChangesMixin):
 
@@ -184,6 +187,10 @@ def EditDescriptionFormFactory(project_id, desc_id):
                                         'The label will not be visible to students.')
 
     return EditDescriptionForm
+
+class EditDescriptionContentForm(Form, DescriptionContentMixin, SaveChangesMixin):
+
+    pass
 
 
 def MoveDescriptionFormFactory(user_id, project_id, pclass_id=None):

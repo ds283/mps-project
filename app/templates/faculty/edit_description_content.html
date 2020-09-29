@@ -1,0 +1,84 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% block scripts %}
+    {{ super() }}
+
+    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+
+    <script>
+        var description_MDE = new EasyMDE({
+            element: document.getElementById('description'),
+            autosave: {
+                enabled: true,
+                uniqueId: {% if desc %}"desc-{{ desc.id }}"{% elif unique_id %}"desc-{{ unique_id }}"{% else %}"desc-new"{% endif %},
+                text: 'Autosaved: ',
+                timeFormat: {
+                    locale: 'en-GB',
+                    format: {
+                        year: 'numeric',
+                        month: 'long',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    }
+                }
+            },
+            hideIcons: ['image']
+        });
+        var reading_MDE = new EasyMDE({
+            element: document.getElementById('reading'),
+            autosave: {
+                enabled: true,
+                uniqueId: {% if desc %}"reading-{{ desc.id }}"{% elif unique_id %}"reading-{{ unique_id }}"{% else %}"reading-new"{% endif %},
+                text: 'Autosaved: ',
+                timeFormat: {
+                    locale: 'en-GB',
+                    format: {
+                        year: 'numeric',
+                        month: 'long',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    }
+                }
+            },
+            hideIcons: ['image']
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    Edit description <strong>{{ desc.label }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    {% if pclass_id is defined %}
+        <form action="{{ url_for('convenor.edit_description_content', did=desc.id, pclass_id=pclass_id, create=create) }}" method="POST" name="form">
+    {% else %}
+        <form action="{{ url_for('faculty.edit_description_content', did=desc.id, create=create) }}" method="POST" name="form">
+    {% endif %}
+
+            {{ form.hidden_tag() }}
+
+    {#        {{ wtf.form_errors(form) }}#}
+
+            {{ wtf.render_field(form.description) }}
+            {{ wtf.render_field(form.reading) }}
+
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(desc) }}
+{% endblock %}

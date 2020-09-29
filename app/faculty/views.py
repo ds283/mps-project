@@ -22,9 +22,9 @@ from werkzeug.local import LocalProxy
 import app.ajax as ajax
 from . import faculty
 from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
-    AddDescriptionFormFactory, EditDescriptionFormFactory, MoveDescriptionFormFactory, \
+    AddDescriptionFormFactory, EditDescriptionSettingsFormFactory, MoveDescriptionFormFactory, \
     FacultyPreviewFormFactory, SupervisorFeedbackForm, MarkerFeedbackForm, PresentationFeedbackForm, \
-    SupervisorResponseForm, FacultySettingsFormFactory, AvailabilityFormFactory
+    SupervisorResponseForm, FacultySettingsFormFactory, AvailabilityFormFactory, EditDescriptionContentForm
 from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
@@ -177,6 +177,9 @@ _desc_menu = \
         <div class="dropdown-header">Edit description</div>
 
         <a class="dropdown-item" href="{{ url_for('faculty.edit_description', did=d.id, create=create) }}">
+            <i class="fas fa-pencil-alt fa-fw"></i> Settings...
+        </a>
+        <a class="dropdown-item" href="{{ url_for('faculty.edit_description_content', did=d.id, create=create) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit content...
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.description_modules', did=d.id, create=create) }}">
@@ -565,8 +568,8 @@ def add_description(pid):
         data = ProjectDescription(parent_id=pid,
                                   label=form.label.data,
                                   project_classes=form.project_classes.data,
-                                  description=form.description.data,
-                                  reading=form.reading.data,
+                                  description=None,
+                                  reading=None,
                                   aims=form.aims.data,
                                   team=form.team.data,
                                   confirmed=False,
@@ -578,8 +581,14 @@ def add_description(pid):
                                   creator_id=current_user.id,
                                   creation_timestamp=datetime.now())
 
-        db.session.add(data)
-        db.session.commit()
+        try:
+            db.session.add(data)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add new description due to a database error. Please contact a system administrator',
+                  'error')
 
         return redirect(url_for('faculty.edit_descriptions', id=pid, create=create))
 
@@ -588,7 +597,7 @@ def add_description(pid):
             form.capacity.data = proj.owner.project_capacity
 
     return render_template('faculty/edit_description.html', project=proj, form=form, title='Add new description',
-                           create=create, unique_id=uuid4())
+                           create=create)
 
 
 @faculty.route('/edit_description/<int:did>', methods=['GET', 'POST'])
@@ -602,7 +611,7 @@ def edit_description(did):
 
     create = request.args.get('create', default=None)
 
-    EditDescriptionForm = EditDescriptionFormFactory(desc.parent_id, did)
+    EditDescriptionForm = EditDescriptionSettingsFormFactory(desc.parent_id, did)
     form = EditDescriptionForm(obj=desc)
     form.project_id = desc.parent_id
     form.desc = desc
@@ -610,8 +619,6 @@ def edit_description(did):
     if form.validate_on_submit():
         desc.label = form.label.data
         desc.project_classes = form.project_classes.data
-        desc.description = form.description.data
-        desc.reading = form.reading.data
         desc.aims = form.aims.data
         desc.team = form.team.data
         desc.capacity = form.capacity.data
@@ -621,11 +628,48 @@ def edit_description(did):
 
         desc.validate_modules()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not edit project description due to a database error. '
+                  'Please contact a system administrator', 'error')
 
         return redirect(url_for('faculty.edit_descriptions', id=desc.parent_id, create=create))
 
     return render_template('faculty/edit_description.html', project=desc.parent, desc=desc, form=form,
+                           title='Edit description', create=create)
+
+
+@faculty.route('/edit_description_content/<int:did>', methods=['GET', 'POST'])
+@roles_required('faculty')
+def edit_description_content(did):
+    desc = ProjectDescription.query.get_or_404(did)
+
+    # if project owner is not logged-in user, object
+    if not validate_edit_description(desc):
+        return redirect(redirect_url())
+
+    create = request.args.get('create', default=None)
+
+    form = EditDescriptionContentForm(obj=desc)
+
+    if form.validate_on_submit():
+        desc.description = form.description.data
+        desc.reading = form.reading.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not edit project description due to a database error. '
+                  'Please contact a system administrator', 'error')
+
+        return redirect(url_for('faculty.edit_descriptions', id=desc.parent_id, create=create))
+
+    return render_template('faculty/edit_description_content.html', project=desc.parent, desc=desc, form=form,
                            title='Edit description', create=create)
 
 
@@ -715,8 +759,14 @@ def delete_description(did):
     if not validate_edit_description(desc):
         return redirect(redirect_url())
 
-    db.session.delete(desc)
-    db.session.commit()
+    try:
+        db.session.delete(desc)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not delete project description due to a database error. '
+              'Please contact a system administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -759,8 +809,14 @@ def duplicate_description(did):
                               creator_id=current_user.id,
                               creation_timestamp=datetime.now())
 
-    db.session.add(data)
-    db.session.commit()
+    try:
+        db.session.add(data)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not duplicate project description due to a database error. '
+              'Please contact a system administrator', 'error')
 
     return redirect(redirect_url())
 

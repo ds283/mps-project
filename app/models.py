@@ -4958,7 +4958,7 @@ class SubmissionPeriodRecord(db.Model):
     start_date = db.Column(db.Date())
 
     # optiona hand-in date
-    hand_in_date = db.column(db.Date())
+    hand_in_date = db.Column(db.Date())
 
     # alternative textual name for this period (eg. "Autumn Term", "Spring Term");
     # can be null if not used

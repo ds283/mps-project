@@ -39,8 +39,9 @@ from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, Ope
 from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
-    AddDescriptionFormFactory, EditDescriptionFormFactory, MoveDescriptionFormFactory, \
-    PresentationFeedbackForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm
+    AddDescriptionFormFactory, EditDescriptionSettingsFormFactory, MoveDescriptionFormFactory, \
+    PresentationFeedbackForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm, \
+    EditDescriptionContentForm
 from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
@@ -205,6 +206,9 @@ _desc_menu = \
                 <div class="dropdown-header">Edit description</div>
     
                 <a class="dropdown-item" href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
+                    <i class="fas fa-pencil-alt fa-fw"></i> Settings...
+                </a>
+                <a class="dropdown-item" href="{{ url_for('convenor.edit_description_content', did=d.id, pclass_id=pclass_id, create=create) }}">
                     <i class="fas fa-pencil-alt fa-fw"></i> Edit content...
                 </a>
                 <a class="dropdown-item" href="{{ url_for('convenor.description_modules', did=d.id, pclass_id=pclass_id, create=create) }}">
@@ -2698,8 +2702,14 @@ def add_project(pclass_id):
         # ensure that list of preferred degree programmes is consistent
         data.validate_programmes()
 
-        db.session.add(data)
-        db.session.commit()
+        try:
+            db.session.add(data)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add new project due to a database error. '
+                  'Please contact a system administrator', 'error')
 
         # auto-enroll if implied by current project class associations
         owner = data.owner
@@ -2789,13 +2799,20 @@ def edit_project(id, pclass_id):
         # ensure that list of preferred degree programmes is now consistent
         data.validate_programmes()
 
-        db.session.commit()
+        try:
+            db.session.commit()
 
-        # auto-enroll if implied by current project class associations
-        for pclass in data.project_classes:
-            if not data.owner.is_enrolled(pclass):
-                data.owner.add_enrollment(pclass)
-                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.user.name, pclass=pclass.name))
+            # auto-enroll if implied by current project class associations
+            for pclass in data.project_classes:
+                if not data.owner.is_enrolled(pclass):
+                    data.owner.add_enrollment(pclass)
+                    flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.user.name, pclass=pclass.name))
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes to project due to a database error. '
+                  'Please contact a system administrator', 'error')
 
         return redirect(url_for('convenor.attached', id=pclass_id))
 
@@ -2824,7 +2841,13 @@ def activate_project(id, pclass_id):
             return redirect(redirect_url())
 
     proj.enable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not activate project due to a database error. Please contact a system administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -2853,7 +2876,13 @@ def deactivate_project(id, pclass_id):
         return redirect(redirect_url())
 
     proj.disable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not deactivate project due to a database error. Please contact a system administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -2887,8 +2916,8 @@ def add_description(pid, pclass_id):
         data = ProjectDescription(parent_id=pid,
                                   label=form.label.data,
                                   project_classes=form.project_classes.data,
-                                  description=form.description.data,
-                                  reading=form.reading.data,
+                                  description=None,
+                                  reading=None,
                                   aims=form.aims.data,
                                   team=form.team.data,
                                   capacity=form.capacity.data,
@@ -2900,8 +2929,14 @@ def add_description(pid, pclass_id):
                                   creator_id=current_user.id,
                                   creation_timestamp=datetime.now())
 
-        db.session.add(data)
-        db.session.commit()
+        try:
+            db.session.add(data)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add new project description due to a database error. '
+                  'Please contact a system administrator', 'error')
 
         return redirect(url_for('convenor.edit_descriptions', id=pid, pclass_id=pclass_id, create=create))
 
@@ -2925,7 +2960,7 @@ def edit_description(did, pclass_id):
 
     create = request.args.get('create', default=None)
 
-    EditDescriptionForm = EditDescriptionFormFactory(desc.parent_id, did)
+    EditDescriptionForm = EditDescriptionSettingsFormFactory(desc.parent_id, did)
     form = EditDescriptionForm(obj=desc)
     form.project_id = desc.parent_id
     form.desc = desc
@@ -2933,8 +2968,6 @@ def edit_description(did, pclass_id):
     if form.validate_on_submit():
         desc.label = form.label.data
         desc.project_classes = form.project_classes.data
-        desc.description = form.description.data
-        desc.reading = form.reading.data
         desc.aims = form.aims.data
         desc.team = form.team.data
         desc.capacity = form.capacity.data
@@ -2942,11 +2975,53 @@ def edit_description(did, pclass_id):
         desc.last_edit_id = current_user.id
         desc.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not edit project description due to a database error. '
+                  'Please contact a system administrator', 'error')
 
         return redirect(url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create))
 
     return render_template('faculty/edit_description.html', project=desc.parent, desc=desc, form=form,
+                           pclass_id=pclass_id, title='Edit description', create=create)
+
+
+@convenor.route('/edit_description_content/<int:did>/<int:pclass_id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_description_content(did, pclass_id):
+    desc = ProjectDescription.query.get_or_404(did)
+
+    if pclass_id == 0:
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(redirect_url())
+
+    else:
+        if not validate_edit_description(desc):
+            return redirect(redirect_url())
+
+    create = request.args.get('create', default=None)
+
+    form = EditDescriptionContentForm(obj=desc)
+
+    if form.validate_on_submit():
+        desc.description = form.description.data
+        desc.reading = form.reading.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not edit project description due to a database error. '
+                  'Please contact a system administrator', 'error')
+
+        return redirect(url_for('faculty.edit_descriptions', id=desc.parent_id, create=create))
+
+    return render_template('faculty/edit_description_content.html', project=desc.parent, desc=desc, form=form,
                            pclass_id=pclass_id, title='Edit description', create=create)
 
 
@@ -3060,8 +3135,14 @@ def delete_description(did, pclass_id):
         if not validate_edit_description(desc):
             return redirect(redirect_url())
 
-    db.session.delete(desc)
-    db.session.commit()
+    try:
+        db.session.delete(desc)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not delete project description due to a database error. '
+              'Please contact a system administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -3110,8 +3191,14 @@ def duplicate_description(did, pclass_id):
                               creator_id=current_user.id,
                               creation_timestamp=datetime.now())
 
-    db.session.add(data)
-    db.session.commit()
+    try:
+        db.session.add(data)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not duplicate project description due to a database error. '
+              'Please contact a system administrator', 'error')
 
     return redirect(redirect_url())
 

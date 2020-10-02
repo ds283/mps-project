@@ -3112,8 +3112,8 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
 
         # check current academic year
         provisional_year = self._get_provisional_year(self.cohort, self.repeated_years)
-        if provisional_year != self.academic_year and provisional_year is not None:
-            if provisional_year < (0 if self.has_foundation_year else 1):
+        if provisional_year != self.academic_year:
+            if provisional_year is not None and  provisional_year < (0 if self.has_foundation_year else 1):
                 diff = self.repeated_years - abs(provisional_year)
 
                 if diff >= 0:

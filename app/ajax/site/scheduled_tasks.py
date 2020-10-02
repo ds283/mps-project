@@ -34,7 +34,7 @@ _scheduled_menu_template = \
                 </a>
             {% endif %}
             <a class="dropdown-item" href="{{ url_for('admin.launch_scheduled_task', id=task.id) }}">
-                <i class="fas fa-angle-double-right fa-fw"></i> Run now
+                <i class="fas fa-running fa-fw"></i> Run now...
             </a>
     </div>
 </div>

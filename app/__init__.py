@@ -457,4 +457,7 @@ def create_app():
     from .services import services as services_blueprint
     app.register_blueprint(services_blueprint, url_prefix='/services')
 
+    from .projecthub import projecthub as projecthub_blueprint
+    app.register_blueprint(projecthub_blueprint, url_prefix='/projecthub')
+
     return app, celery

@@ -135,7 +135,7 @@ menu = \
             </a>
         {% endif %}
         
-        {% if cuser_is_rot and not cuser_is_strudent %}
+        {% if cuser_is_root and not cuser_is_student %}
             <div role="separator" class="dropdown-divider"></div>
             <div class="dropdown-header">Superuser functions</div>
             <a class="dropdown-item" href="{{ url_for('admin.login_as', id=user.id) }}">

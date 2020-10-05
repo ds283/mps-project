@@ -1,6 +1,6 @@
 alembic==1.4.3
 amply==0.1.2
-amqp==2.6.1
+amqp==5.0.1
 appnope==0.1.0
 asn1crypto==1.4.0
 attrs==20.2.0
@@ -14,11 +14,13 @@ bleach-whitelist==0.0.11
 blinker==1.4
 bokeh==2.1.1
 cachetools==4.1.1
-celery==4.4.7
+celery==5.0.0
 certifi==2020.6.20
 cffi==1.14.3
 chardet==3.0.4
 click==7.1.2
+click-didyoumean==0.0.3
+click-repl==0.1.6
 colour==0.1.5
 convertdate==2.2.2
 cryptography==3.1.1
@@ -69,7 +71,7 @@ itsdangerous==1.1.0
 jedi==0.17.2
 Jinja2==2.11.2
 jsmin==2.2.2
-kombu==4.6.11
+kombu==5.0.2
 korean-lunar-calendar==0.2.1
 latex2markdown==0.2.1
 limits==1.5.1

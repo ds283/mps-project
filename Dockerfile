@@ -1,4 +1,4 @@
-FROM pypy:3.6-slim-jessie
+FROM pypy:3.6-slim-buster
 
 RUN apt-get update && apt-get install -qq -y build-essential gcc mariadb-client mysqltuner libssl-dev libjpeg-dev zlib1g-dev libglpk-dev glpk-utils coinor-cbc git --no-install-recommends
 

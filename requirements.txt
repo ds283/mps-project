@@ -86,7 +86,7 @@ packaging==20.4
 parse==1.18.0
 parso==0.8.0
 passlib==1.7.2
-pdf-redactor==0.0.1
+git+git://github.com/JoshData/pdf-redactor#egg=pdf-redactor
 pdfrw==0.4
 pexpect==4.8.0
 pickleshare==0.7.5

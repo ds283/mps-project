@@ -202,7 +202,7 @@ def AssignMarkerFormFactory(live_project: LiveProject, uses_marker: bool,
         if uses_marker:
             # 2nd marker
             marker = QuerySelectField('Assign 2nd marker', query_factory=partial(MarkerQuery, live_project),
-                                      get_label=BuildMarkerLabel)
+                                      get_label=BuildMarkerLabel, allow_blank=True)
 
     return AssignMarkerForm
 

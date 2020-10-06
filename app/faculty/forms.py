@@ -39,28 +39,51 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
         keywords = StringField('Keywords', validators=[Length(max=DEFAULT_STRING_LENGTH)],
                                description='Optional. Separate with commas or semicolons.')
 
-        group = QuerySelectField('Research group', query_factory=group_qf, get_label='name')
+        group = QuerySelectField('Research group', query_factory=group_qf, get_label='name',
+                                 description='Projects are organized by research group when offered to students. '
+                                             'Use this to indicate to students the approximate area in which they '
+                                             'will be working.')
 
         # allow the project_class list to be empty (but then the project is not offered)
-        project_classes = QuerySelectMultipleField('Select the project classes for which this project should be made available',
-                                                   query_factory=project_classes_qf, get_label='name')
+        project_classes = QuerySelectMultipleField('Select the project classes for which you wish to offer this project',
+                                                   query_factory=project_classes_qf, get_label='name',
+                                                   description='Set up descriptions for the different "flavours" of '
+                                                               'this project in the "Descriptions" view.')
 
         # project options
 
-        meeting_options = [(Project.MEETING_REQUIRED, "Meeting required"), (Project.MEETING_OPTIONAL, "Meeting optional"),
+        meeting_options = [(Project.MEETING_REQUIRED, "Meeting required"),
+                           (Project.MEETING_OPTIONAL, "Meeting optional"),
                            (Project.MEETING_NONE, "Prefer not to meet")]
         meeting_reqd = SelectField('Meeting required?', choices=meeting_options, coerce=int)
 
-        enforce_capacity = BooleanField('Enforce maximum capacity', default=True)
+        enforce_capacity = BooleanField('Enforce maximum capacity', default=True,
+                                        description='Select if you wish to prevent the automated matching algorithm '
+                                                    'allocating more students to this project than a specified '
+                                                    'maximum. You can specify a different maximum capacity for each '
+                                                    'flavour of this project that you offer. The different flavours '
+                                                    'are listed in the "Descriptions" view, and the maximum '
+                                                    'capacity for each flavour should be specified in the settings for '
+                                                    'the corresponding description.')
 
-        dont_clash_presentations = BooleanField("Don't schedule presentation with other students taking "
+        dont_clash_presentations = BooleanField("Prevent co-scheduling presentation with multiple students taking "
                                                 "the same project", default=True,
-                                                description='Please consider disabling this setting if possible. '
-                                                            'This makes scheduling presentations easier.')
+                                                description='Select if you wish to prevent multiple students taking '
+                                                            'this project from being scheduled to give presentations '
+                                                            'in the same session. Students often prefer this '
+                                                            'arrangement, but please consider disabling this setting '
+                                                            'if possible because it makes scheduling presentations '
+                                                            'significantly simpler.')
 
         # popularity display
 
-        show_popularity = BooleanField('Show popularity estimate', default=True)
+        show_popularity = BooleanField('Show popularity estimate', default=True,
+                                       description='The popularity score is determined by a weighted '
+                                                   'combination of the number '
+                                                   'of selections, the number of bookmarks, and the number of '
+                                                   'page views for a given project. It is intended to give students '
+                                                   'a rough sense of the relative popularity of individual '
+                                                   'projects.')
 
         show_bookmarks = BooleanField('Show number of bookmarks', default=True)
 

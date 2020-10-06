@@ -1047,7 +1047,6 @@ def edit_user(id):
     :param id:
     :return:
     """
-
     user = User.query.get_or_404(id)
 
     pane = request.args.get('pane', None)

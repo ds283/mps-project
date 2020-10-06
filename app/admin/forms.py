@@ -50,7 +50,6 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules, \
     BuildPossibleOfficeContacts, BuildOfficeContactName
 
-from ..shared.forms.fields import CheckboxQuerySelectMultipleField
 from ..shared.forms.mixins import SaveChangesMixin, SubmissionPeriodCommonMixin
 
 from ..models import BackupConfiguration, ScheduleAttempt, extent_choices, \
@@ -331,9 +330,9 @@ class ProjectClassMixin():
     auto_enroll_years = RadioField('Auto enroll students as selectors in which years?',
                                    choices=auto_enroll_year_choices, coerce=int)
 
-    programmes = CheckboxQuerySelectMultipleField('Auto-enroll students from degree programmes',
-                                                  query_factory=GetActiveDegreeProgrammes,
-                                                  get_label=BuildDegreeProgrammeName)
+    programmes = QuerySelectMultipleField('Auto-enroll students from degree programmes',
+                                          query_factory=GetActiveDegreeProgrammes,
+                                          get_label=BuildDegreeProgrammeName)
 
     @staticmethod
     def validate_programmes(form, field):
@@ -470,8 +469,8 @@ def MessageMixinFactory(query_factory, convenor_editing):
         body = TextAreaField('Message', render_kw={"rows": 5},
                              validators=[InputRequired(message='You must enter a message, however short')])
 
-        project_classes = CheckboxQuerySelectMultipleField('Display to users enrolled for',
-                                                           query_factory=query_factory, get_label='name')
+        project_classes = QuerySelectMultipleField('Display to users enrolled for',
+                                                   query_factory=query_factory, get_label='name')
 
     return MessageMixin
 
@@ -697,9 +696,8 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                            validators=[InputRequired(message='Please supply a unique name'),
                                        Length(max=DEFAULT_STRING_LENGTH)])
 
-        pclasses_to_include = CheckboxQuerySelectMultipleField('Include which project classes',
-                                                               query_factory=pclasses_query,
-                                                               get_label='name')
+        pclasses_to_include = QuerySelectMultipleField('Select project classes to include in this match',
+                                                       query_factory=pclasses_query, get_label='name')
 
         if base_match is None or base_match.include_only_submitted is True:
             include_only_submitted = BooleanField('Include only selectors who submitted preferences')
@@ -870,9 +868,9 @@ def PresentationAssessmentMixinFactory(query_factory):
                            validators=[InputRequired(message='Please supply a unique name'),
                                        Length(max=DEFAULT_STRING_LENGTH)])
 
-        submission_periods = CheckboxQuerySelectMultipleField('Select the submission periods for which project '
-                                                              'presentations will be given',
-                                                              query_factory=query_factory, get_label=BuildSubmissionPeriodName)
+        submission_periods = QuerySelectMultipleField('Select those submission periods for which project '
+                                                      'presentations will be given',
+                                                      query_factory=query_factory, get_label=BuildSubmissionPeriodName)
 
     return PresentationAssessmentMixin
 
@@ -912,7 +910,8 @@ class SessionMixin():
 
     session_type = SelectField('Session type', choices=session_choices, coerce=int)
 
-    rooms = CheckboxQuerySelectMultipleField('Available rooms', query_factory=GetAllRooms, get_label=BuildRoomLabel)
+    rooms = QuerySelectMultipleField('Select the rooms that are available for this session',
+                                     query_factory=GetAllRooms, get_label=BuildRoomLabel)
 
 
 class AddSessionForm(Form, SessionMixin):

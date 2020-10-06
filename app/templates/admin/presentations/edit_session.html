@@ -1,7 +1,7 @@
+{% extends "security/index.html" %}
+
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, date_field %}
-
-{% extends "security/index.html" %}
 
 {% block scripts %}
     {{ super() }}
@@ -18,6 +18,14 @@
         <script src="{{ ASSET_URL }}"></script>
     {% endassets %}
 
+    {% assets filters="cssutils", output="gen/component-chosen.min.css", "css/component-chosen.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/chosen.jquery.min.js", "js/chosen.jquery.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
@@ -25,6 +33,9 @@
             $('#datetimepicker1').datetimepicker({
                 format: 'DD/MM/YYYY',
                 allowInputToggle: true
+            });
+            $('#rooms').chosen({
+                placeholder_text_multiple: 'Select all available rooms...'
             });
         });
     </script>
@@ -60,22 +71,7 @@
 
         {{ date_field(form.date, 'datetimepicker1') }}
         {{ wtf.render_field(form.session_type) }}
-
-        <div class="card mt-3 mb-3 card-body {% if form.rooms.errors %}has-error{% endif %}">
-            <p>Select the rooms that are available for this session</p>
-            {% for widget in form.rooms %}
-                {{ wtf.render_field(widget) }}
-            {% else %}
-                <div class="has-error">
-                    <p class="help-block">No rooms are available</p>
-                </div>
-            {% endfor %}
-            {% if form.rooms.errors %}
-                {% for error in form.rooms.errors %}
-                    <p class="help-block">{{ error }}</p>
-                {% endfor %}
-            {% endif %}
-        </div>
+        {{ wtf.render_field(form.rooms) }}
 
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 

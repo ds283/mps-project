@@ -3,6 +3,28 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
 
+{% block scripts %}
+    {{ super() }}
+
+    {% assets filters="cssutils", output="gen/component-chosen.min.css", "css/component-chosen.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/chosen.jquery.min.js", "js/chosen.jquery.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#theme').chosen();
+            $('#default_license').chosen();
+            $('#academic_title').chosen();
+        });
+    </script>
+{% endblock %}
+
 {% block title %}
     Settings
 {% endblock %}

@@ -1,5 +1,27 @@
 {% extends "admin/matching/nav.html" %}
 
+{% block scripts %}
+    {{ super() }}
+
+    {% assets filters="cssutils", output="gen/component-chosen.min.css", "css/component-chosen.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/chosen.jquery.min.js", "js/chosen.jquery.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#pclasses_to_include').chosen({
+                placeholder_text_multiple: 'Select one or more project classes...'
+            });
+        });
+    </script>
+{% endblock %}
+
 {% block title %}
     Create new match
 {% endblock %}
@@ -54,24 +76,14 @@
                             {% if form.include_only_submitted is defined %}
                                 {{ wtf.render_field(form.include_only_submitted) }}
                             {% endif %}
-                            <p>Select project classes to include in this match</p>
-                            {% for widget in form.pclasses_to_include %}
-                                {{ wtf.render_field(widget) }}
-                            {% else %}
-                                <span class="badge badge-danger">No project classes currently available</span>
-                            {% endfor %}
-                            {% if form.pclasses_to_include.errors %}
-                                {% for error in form.pclasses_to_include.errors %}
-                                    <p class="help-block">{{ error }}</p>
-                                {% endfor %}
-                            {% endif %}
+                            {{ wtf.render_field(form.pclasses_to_include) }}
                             {% if have_base %}
-                                <p>
+                                <div class="form-text text-muted mt-3 mb-3">
                                     {% for pcl in base_match.config_members -%}
                                         {% if loop.index > 1 %}, {% endif %}<strong>{{ pcl.name }}</strong>
                                     {%- endfor %}
                                     included from base "<strong>{{ base_match.name }}</strong>"
-                                </p>
+                                </div>
                             {% endif %}
                             {% if form.base_bias is defined %}
                                 {{ wtf.render_field(form.base_bias) }}

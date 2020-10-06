@@ -128,7 +128,7 @@
 {% endmacro %}
 
 {% macro date_field(field, id_tag) %}
-    {% if field.flags.required and not required in kwargs %}
+    {% if field.flags.required and not 'required' in kwargs %}
         {% set x = kwargs.__setitem__('required', True) %}
     {% endif %}
     {% set x = kwargs.__setitem__('data-target', '#'+id_tag) %}

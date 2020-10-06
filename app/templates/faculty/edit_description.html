@@ -3,6 +3,31 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
 
+{% block scripts %}
+    {{ super() }}
+
+    {% assets filters="cssutils", output="gen/component-chosen.min.css", "css/component-chosen.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/chosen.jquery.min.js", "js/chosen.jquery.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#project_classes').chosen({
+                placeholder_text_multiple: 'Select one or more project classes...'
+            });
+            $('#team').chosen({
+                placeholder_text_multiple: 'Select one or more supervision team members...'
+            });
+        });
+    </script>
+{% endblock %}
+
 {% block title %}
     {{ title }}
 {% endblock %}
@@ -37,51 +62,22 @@
         {{ wtf.render_field(form.label) }}
         {{ wtf.render_field(form.capacity) }}
 
-        <div class="card mt-3 mb-3 card-body bg-well {% if form.project_classes.errors %}has-error{% endif %}">
-            <p>Select the project classes for which this description should be made available</p>
-            {% for widget in form.project_classes %}
-                {{ wtf.render_field(widget) }}
-            {% else %}
-                <div class="has-error">
-                    <p class="help-block">All available project classes have already been assigned</p>
-                </div>
-            {% endfor %}
-            {% if form.project_classes.errors %}
-                {% for error in form.project_classes.errors %}
-                    <p class="help-block">{{ error }}</p>
-                {% endfor %}
-            {% endif %}
-        </div>
-
-        <div class="card mt-3 mb-3 card-body bg-well {% if form.team.errors %}has-error{% endif %}">
-            <p>Who will be part of the supervisory team?</p>
-            {% for widget in form.team %}
-                {{ wtf.render_field(widget) }}
-            {% else %}
-                <span class="badge badge-danger">No supervisory roles currently available</span>
-            {% endfor %}
-            {% if form.team.errors %}
-                {% for error in form.team.errors %}
-                    <p class="help-block">{{ error }}</p>
-                {% endfor %}
-            {% endif %}
-        </div>
+        {{ wtf.render_field(form.project_classes) }}
+        {{ wtf.render_field(form.team) }}
 
         <hr class="intro-divider">
         {{ wtf.render_field(form.review_only) }}
-        <div class="form-text text-muted">
-            <small>Projects marked as literature reviews are marked in the same way as conventional projects.
-                An outstanding original literature review should attract the same credit as any other
-                outstanding project.
-                However, it may be more challenging for students to attain the required level.
-                Note that marks for literature reviews are <strong>not capped</strong>
-                as a matter of principle.</small>
+        <div class="form-text text-muted mb-3">
+            Projects marked as literature reviews are marked in the same way as conventional projects.
+            An outstanding original literature review should attract the same credit as any other
+            outstanding project.
+            However, it may be more challenging for students to attain the required level.
+            Note that marks for literature reviews are <strong>not capped</strong>
+            as a matter of principle.
 
-            <small>This setting is visible to students in order to help them gauge their likelihood of
-                success with the project.</small>
+            This setting is visible to students in order to help them gauge their likelihood of
+            success with the project.
         </div>
-        <hr class="intro-divider">
-
         {{ wtf.render_field(form.aims) }}
 
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}

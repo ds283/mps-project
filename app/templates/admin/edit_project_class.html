@@ -13,12 +13,36 @@
         <script src="{{ ASSET_URL }}"></script>
     {% endassets %}
 
+    {% assets filters="cssutils", output="gen/component-chosen.min.css", "css/component-chosen.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/chosen.jquery.min.js", "js/chosen.jquery.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
     <script>
-        $(function () {
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#programmes').chosen({
+                placeholder_text_multiple: 'Select one or more degree programmes...'
+            })
+            $('#convenor').chosen()
+            $('#coconvenors').chosen({
+                placeholder_text_multiple: 'Select zero or more faculty members...'
+            })
+            $('#office_contacts').chosen({
+                placeholder_text_multiple: 'Select zero or more office staff...'
+            })
+
             $('#colour-group').colorpicker({
                 format: 'hex',
                 useAlpha: false
             });
+        });
+
+        $(function () {
         });
     </script>
 {% endblock %}
@@ -62,8 +86,19 @@
 
         <div class="card mt-3 mb-3 card-body bg-well">
             <p>Configuration</p>
+            {{ wtf.render_field(pclass_form.programmes) }}
             {{ wtf.render_field(pclass_form.start_level) }}
             {{ wtf.render_field(pclass_form.extent) }}
+            <hr class="intro-divider">
+            <div class="checkbox">
+                <label>
+                    {{ pclass_form.selection_open_to_all()|safe }} {{ pclass_form.selection_open_to_all.label.text|safe }}
+                </label>
+            </div>
+            {% if pclass_form.selection_open_to_all.description %}
+                <div class="form-text text-muted mb-3">{{ pclass_form.selection_open_to_all.description }}</div>
+            {% endif %}
+            {{ wtf.render_field(pclass_form.auto_enroll_years) }}
 
             <p>Staff requirements</p>
             {{ wtf.render_field(pclass_form.uses_supervisor) }}
@@ -84,29 +119,6 @@
             <p>Automated matching</p>
             {{ wtf.render_field(pclass_form.do_matching) }}
             {{ wtf.render_field(pclass_form.number_assessors) }}
-        </div>
-
-        <div class="card mt-3 mb-3 card-body bg-well {% if pclass_form.programmes.errors %}has-error{% endif %}">
-            <p>Select degree programmes to which this project class applies</p>
-            {% for widget in pclass_form.programmes %}
-                {{ wtf.render_field(widget) }}
-            {% endfor %}
-            {% if pclass_form.programmes.errors %}
-                {% for error in pclass_form.programmes.errors %}
-                    <p class="help-block">{{ error }}</p>
-                {% endfor %}
-            {% endif %}
-
-            <hr class="intro-divider">
-            {% if pclass_form.selection_open_to_all.description %}
-                <div>{{ pclass_form.selection_open_to_all.description }}</div>
-            {% endif %}
-            <div class="checkbox">
-                <label>
-                    {{ pclass_form.selection_open_to_all()|safe }} {{ pclass_form.selection_open_to_all.label.text|safe }}
-                </label>
-            </div>
-            {{ wtf.render_field(pclass_form.auto_enroll_years) }}
         </div>
 
         <div class="card mt-3 mb-3 card-body bg-well">

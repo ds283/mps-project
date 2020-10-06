@@ -1,7 +1,32 @@
+{% extends "security/index.html" %}
+
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
 
-{% extends "security/index.html" %}
+{% block scripts %}
+    {{ super() }}
+
+    {% assets filters="cssutils", output="gen/component-chosen.min.css", "css/component-chosen.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/chosen.jquery.min.js", "js/chosen.jquery.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#mask_roles').chosen({
+                placeholder_text_multiple: 'Select one or more roles...'
+            });
+            $('#theme').chosen();
+            $('#default_license').chosen();
+            $('#academic_title').chosen();
+        });
+    </script>
+{% endblock %}
 
 {% block title %}
     Settings
@@ -19,16 +44,29 @@
 {#        {{ wtf.form_errors(settings_form) }}#}
 
     <div class="card mt-3 mb-3 card-body bg-well">
-        {{ wtf.render_field(settings_form.username) }}
-        {{ wtf.render_field(settings_form.first_name) }}
-        {{ wtf.render_field(settings_form.last_name) }}
+        <div class="row">
+            <div class="col-6">
+                {{ wtf.render_field(settings_form.username) }}
+            </div>
+            <div class="col-6">
+                {{ wtf.render_field(settings_form.office) }}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-6">
+                {{ wtf.render_field(settings_form.first_name) }}
+            </div>
+            <div class="col-6">
+                {{ wtf.render_field(settings_form.last_name) }}
+            </div>
+        </div>
 
-        {{ wtf.render_field(settings_form.office) }}
+        <hr class="intro-divider">
         {{ wtf.render_field(settings_form.theme) }}
-    </div>
-
-    <div class="card mt-3 mb-3 card-body bg-well">
         {{ wtf.render_field(settings_form.default_license) }}
+        {% if settings_form.mask_roles %}
+            {{ wtf.render_field(settings_form.mask_roles) }}
+        {% endif %}
     </div>
 
     <div class="card mt-3 mb-3 card-body bg-well">
@@ -51,22 +89,6 @@
         {{ wtf.render_field(settings_form.show_popularity) }}
         {{ wtf.render_field(settings_form.dont_clash_presentations) }}
     </div>
-
-    {% if settings_form.mask_roles %}
-        <div class="card mt-3 mb-3 card-body bg-well">
-            <p>Temporarily mask roles</p>
-            {% for widget in settings_form.mask_roles %}
-                {{ wtf.render_field(widget) }}
-            {% else %}
-                <span class="badge badge-danger">No roles currently available</span>
-            {% endfor %}
-            {% if settings_form.mask_roles.errors %}
-                {% for error in settings_form.mask_roles.errors %}
-                    <p class="help-block">{{ error }}</p>
-                {% endfor %}
-            {% endif %}
-        </div>
-    {% endif %}
 
     {{ wtf.render_field(settings_form.submit, button_map={'submit': 'primary'}) }}
 

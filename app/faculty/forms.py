@@ -11,11 +11,10 @@
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, SubmitField, TextAreaField, BooleanField
 from wtforms.validators import InputRequired, Optional, Length
-from wtforms_alchemy.fields import QuerySelectField
+from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..models import Project
 
-from ..shared.forms.fields import CheckboxQuerySelectMultipleField
 from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLastNameMixin, ThemeMixin, \
     FacultyDataMixinFactory, FeedbackMixin, EmailSettingsMixin, DefaultLicenseMixin
 from ..shared.forms.wtf_validators import globally_unique_project, unique_or_original_project, project_unique_label, \
@@ -43,8 +42,8 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
         group = QuerySelectField('Research group', query_factory=group_qf, get_label='name')
 
         # allow the project_class list to be empty (but then the project is not offered)
-        project_classes = CheckboxQuerySelectMultipleField('Project classes',
-                                                           query_factory=project_classes_qf, get_label='name')
+        project_classes = QuerySelectMultipleField('Select the project classes for which this project should be made available',
+                                                   query_factory=project_classes_qf, get_label='name')
 
         # project options
 
@@ -113,7 +112,8 @@ def DescriptionSettingsMixinFactory(query_factory):
     class DescriptionSettingsMixin():
 
         # allow the project_class list to be empty (but then the project is not offered)
-        project_classes = CheckboxQuerySelectMultipleField('Project classes', query_factory=query_factory, get_label='name')
+        project_classes = QuerySelectMultipleField('Select the project classes for which this description should be made available',
+                                                   query_factory=query_factory, get_label='name')
 
         capacity = IntegerField('Maximum student capacity',
                                 description='Optional. Used only if the option to enforce capacity '
@@ -123,8 +123,8 @@ def DescriptionSettingsMixinFactory(query_factory):
                                 validators=[Optional()])
 
         # allow team to be empty (but then the project is not offered)
-        team = CheckboxQuerySelectMultipleField('Supervisory team',
-                                                query_factory=GetSupervisorRoles, get_label='name')
+        team = QuerySelectMultipleField('Who will be part of the supervisory team?',
+                                        query_factory=GetSupervisorRoles, get_label='name')
 
         aims = TextAreaField('Aims', render_kw={'rows': 7},
                              description='Optional, but strongly recommended. Enter a concise summary of what should '
@@ -289,9 +289,8 @@ def FacultySettingsFormFactory(user=None):
                               DefaultLicenseMixin):
 
         if user is not None and user.has_role('root', skip_mask=True):
-            mask_roles = CheckboxQuerySelectMultipleField('Temporarily mask roles',
-                                                          query_factory=partial(GetMaskableRoles, user.id),
-                                                          get_label='name')
+            mask_roles = QuerySelectMultipleField('Temporarily mask roles',
+                                                  query_factory=partial(GetMaskableRoles, user.id), get_label='name')
 
 
     return FacultySettingsForm

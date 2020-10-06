@@ -2,6 +2,29 @@
 
 {% import "bootstrap/form.html" as wtf %}
 
+{% block scripts %}
+    {{ super() }}
+
+    {% assets filters="cssutils", output="gen/component-chosen.min.css", "css/component-chosen.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/chosen.jquery.min.js", "js/chosen.jquery.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#theme').chosen();
+            $('#programme').chosen();
+            $('#academic_title').chosen();
+            $('#default_license').chosen();
+        });
+    </script>
+{% endblock %}
+
 {% block title %}
     {{ title }}
 {% endblock %}
@@ -38,19 +61,31 @@
 {#        {{ wtf.form_errors(user_form) }}#}
 
         <div class="card mt-3 mb-3 card-body bg-well">
-            {{ wtf.render_field(user_form.email) }}
-            {% if user_form.ask_confirm %}
-                {{ wtf.render_field(user_form.ask_confirm) }}
-            {% endif %}
-            {{ wtf.render_field(user_form.username) }}
-            {{ wtf.render_field(user_form.theme) }}
-        </div>
-
-        {% if user_form.default_license is defined %}
-            <div class="card mt-3 mb-3 card-body bg-well">
-                {{ wtf.render_field(user_form.default_license) }}
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(user_form.email) }}
+                    {% if user_form.ask_confirm %}
+                        {{ wtf.render_field(user_form.ask_confirm) }}
+                    {% endif %}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(user_form.username) }}
+                </div>
             </div>
-        {% endif %}
+            <div class="row">
+                <div class="col-6">
+                    {{ wtf.render_field(user_form.first_name) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(user_form.last_name) }}
+                </div>
+            </div>
+            <hr class="intro-divider">
+            {{ wtf.render_field(user_form.theme) }}
+            {% if user_form.default_license is defined %}
+                {{ wtf.render_field(user_form.default_license) }}
+            {% endif %}
+        </div>
 
         {% if user_form.password is defined or user_form.password_confirm is defined or user_form.random_password is defined %}
             <div class="card mt-3 mb-3 card-body bg-well">
@@ -65,11 +100,6 @@
                 {% endif %}
             </div>
         {% endif %}
-
-        <div class="card mt-3 mb-3 card-body bg-well">
-            {{ wtf.render_field(user_form.first_name) }}
-            {{ wtf.render_field(user_form.last_name) }}
-        </div>
 
         {# STUDENT FIELDS #}
 

@@ -57,12 +57,13 @@ name = \
 
 menu = \
 """
-{% set user_is_student = user.has_role('student') %}
-{% set user_is_faculty = user.has_role('faculty') %}
-{% set user_is_admin   = user.has_role('admin') %}
-{% set user_is_root    = user.has_role('root') %}
-{% set cuser_is_admin  = cuser.has_role('admin') %}
-{% set cuser_is_root   = cuser.has_role('root') %}
+{% set user_is_student  = user.has_role('student') %}
+{% set user_is_faculty  = user.has_role('faculty') %}
+{% set user_is_admin    = user.has_role('admin') %}
+{% set user_is_root     = user.has_role('root') %}
+{% set cuser_is_admin   = cuser.has_role('admin') %}
+{% set cuser_is_root    = cuser.has_role('root') %}
+{% set cuser_is_student = cuser.has_role('student') %}
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions

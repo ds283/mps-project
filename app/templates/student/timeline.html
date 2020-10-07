@@ -21,9 +21,8 @@
             {% endif %}
 
             {% if not is_student %}
-                <div class="card mt-3 mb-4 card-body bg-info text-white">
-                    <span class="h2">Timeline for {{ user.name }}</span>
-                </div>
+                <span class="h2">Student history for <i class="fas fa-user"></i> {{ user.name }}</span>
+                <hr class="intro-divider mb-5">
             {% endif %}
 
             {% for year in years %}

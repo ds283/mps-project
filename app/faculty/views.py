@@ -2201,7 +2201,50 @@ def mark_started(id):
         return redirect(redirect_url())
 
     rec.student_engaged = True
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not mark student as "engaged" due to a database error. '
+              'Please contact a system administrator', 'error')
+
+    return redirect(redirect_url())
+
+
+@faculty.route('/mark_waiting/<int:id>')
+@roles_accepted('faculty')
+def mark_waiting(id):
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # reject if logged-in user is not a convenor for the project class associated with this submission record
+    if not validate_submission_supervisor(rec):
+        return redirect(redirect_url())
+
+    if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late change engagement status for this submission period', 'error')
+        return redirect(redirect_url())
+
+    if rec.submission_period > rec.owner.config.submission_period:
+        flash('Cannot change engagement status for this submission period because it is not yet open', 'error')
+        return redirect(redirect_url())
+
+    if not rec.owner.published:
+        flash('Cannot change engagement status for this submission period because it is not published '
+              'to the submitter', 'error')
+        return redirect(redirect_url())
+
+    rec.student_engaged = False
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not mark student as "not engaged" due to a database error. '
+              'Please contact a system administrator', 'error')
 
     return redirect(redirect_url())
 

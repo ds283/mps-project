@@ -74,13 +74,15 @@
                                 </div>
                             </div>
                             <div class="col-4">
-                                <div style="text-align: right;" class="float-right">
+                                <div class="d-flex flex-row justify-content-end">
+                                    <a class="btn btn-outline-primary btn-sm mr-2" href="{{ url_for('projecthub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}">Go to project hub...</a>
                                     <div class="dropdown">
-                                        <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                        <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
                                             Actions
                                         </button>
                                         <div class="dropdown-menu dropdown-menu-right">
-                                            <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ record.number_attachments_student }})...</a>
+{#                                            <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ record.number_attachments_student }})...</a>#}
+                                            <a class="dropdown-item" href="{{ url_for('projecthub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fab fa-hubspot fa-fw"></i> Project hub...</a>
                                             {% if record.has_feedback %}
                                                 <a class="dropdown-item" href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}"><i class="fas fa-search fa-fw"></i> View feedback...</a>
                                             {% endif %}

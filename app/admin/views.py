@@ -157,6 +157,8 @@ def add_group():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add this research group because of a database error. Please contact a system '
+                  'administrator', 'error')
 
         return redirect(url_for('admin.edit_groups'))
 
@@ -194,6 +196,8 @@ def edit_group(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes because of a database error. Please contact a system '
+                  'administrator', 'error')
 
         return redirect(url_for('admin.edit_groups'))
 
@@ -216,6 +220,8 @@ def activate_group(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -236,6 +242,8 @@ def deactivate_group(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -432,6 +440,8 @@ def add_degree_type():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add a degree type because of a database error. Please contact a system '
+                  'administrator', 'error')
 
         return redirect(url_for('admin.edit_degree_types'))
 
@@ -464,6 +474,8 @@ def edit_degree_type(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes because of a database error. Please contact a system '
+                  'administrator', 'error')
 
         return redirect(url_for('admin.edit_degree_types'))
 
@@ -487,6 +499,8 @@ def activate_degree_type(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -508,6 +522,8 @@ def deactivate_degree_type(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -547,6 +563,8 @@ def add_degree_programme():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add a degree programme because of a database error. Please contact a system '
+                  'administrator', 'error')
 
         return redirect(url_for('admin.edit_degree_programmes'))
 
@@ -584,6 +602,8 @@ def edit_degree_programme(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes because of a database error. Please contact a system '
+                  'administrator', 'error')
 
         return redirect(url_for('admin.edit_degree_programmes'))
 
@@ -607,6 +627,8 @@ def activate_degree_programme(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -627,6 +649,8 @@ def deactivate_degree_programme(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -690,6 +714,8 @@ def attach_module(prog_id, mod_id, level_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes because of a database error. Please contact a system '
+                  'administrator', 'error')
 
     return redirect(url_for('admin.attach_modules', id=prog_id, level_id=level_id))
 
@@ -714,6 +740,8 @@ def detach_module(prog_id, mod_id, level_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes because of a database error. Please contact a system '
+                  'administrator', 'error')
 
     return redirect(url_for('admin.attach_modules', id=prog_id, level_id=level_id))
 
@@ -744,6 +772,8 @@ def add_level():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could add a FHEQ level because of a database error. Please contact a system '
+                  'administrator', 'error')
 
         return redirect(url_for('admin.edit_levels'))
 
@@ -774,6 +804,8 @@ def edit_level(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes because of a database error. Please contact a system '
+                  'administrator', 'error')
 
         return redirect(url_for('admin.edit_levels'))
 
@@ -796,6 +828,8 @@ def activate_level(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -816,6 +850,8 @@ def deactivate_level(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -853,6 +889,8 @@ def add_module():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add a module because of a database error. Please contact a system '
+                  'administrator', 'error')
 
         return redirect(url_for('admin.edit_modules'))
 
@@ -890,6 +928,8 @@ def edit_module(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes because of a database error. Please contact a system '
+                  'administrator', 'error')
 
         return redirect(url_for('admin.edit_modules'))
 
@@ -913,6 +953,8 @@ def retire_module(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -933,6 +975,8 @@ def unretire_module(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -995,6 +1039,8 @@ def add_skill():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add a skill group because of a database error. Please contact a system '
+                  'administrator', 'error')
 
         return redirect(url_for('admin.edit_skills'))
 
@@ -1029,6 +1075,8 @@ def edit_skill(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes because of a database error. Please contact a system '
+                  'administrator', 'error')
 
         return redirect(url_for('admin.edit_skills'))
 
@@ -1055,6 +1103,8 @@ def activate_skill(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -1078,6 +1128,8 @@ def deactivate_skill(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -1313,6 +1365,7 @@ def activate_license(lid):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
+        db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash('Could not activate license "{name}" due to a database error. '
               'Please contact a system administrator'.format(name=license.name), 'error')
@@ -1334,6 +1387,7 @@ def deactivate_license(lid):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
+        db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash('Could not deactivate license "{name}" due to a database error. '
               'Please contact a system administrator'.format(name=license.name), 'error')
@@ -8359,6 +8413,7 @@ def upload_schedule(schedule_id):
                         db.session.add(asset)
                         db.session.commit()
                     except SQLAlchemyError as e:
+                        db.session.rollback()
                         flash('Could not upload offline solution due to a database issue. '
                               'Please contact an administrator.', 'error')
                         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -8426,6 +8481,7 @@ def upload_match(match_id):
                         db.session.add(asset)
                         db.session.commit()
                     except SQLAlchemyError as e:
+                        db.session.rollback()
                         flash('Could not upload offline solution due to a database issue. '
                               'Please contact an administrator.', 'error')
                         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

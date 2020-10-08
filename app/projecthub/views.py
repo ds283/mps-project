@@ -102,8 +102,8 @@ def hub(subid):
         used_time: timedelta = now - period.start_date
         used_time_days: int = used_time.days
 
-        burnt = float(used_time_days) / float(total_time_days)
-        angle = 2*pi * burnt
+        burnt_time = float(used_time_days) / float(total_time_days)
+        angle = 2*pi * burnt_time
         start_angle = pi/2.0
         end_angle = pi/2.0 - angle if angle < pi/2.0 else 5.0*pi/2.0 - angle
 
@@ -123,7 +123,7 @@ def hub(subid):
         plot.toolbar.active_drag = None
 
         annotation = Label(x=0, y=0, x_units='data', y_units='data',
-                           text='{p:.2g}%'.format(p=burnt * 100), render_mode='css',
+                           text='{p:.2g}%'.format(p=burnt_time * 100), render_mode='css',
                            background_fill_alpha=0.0, text_align='center',
                            text_baseline='middle', text_font_style='bold')
         plot.add_layout(annotation)

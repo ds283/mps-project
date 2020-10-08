@@ -20,6 +20,7 @@ from urllib.parse import urlsplit
 
 from bokeh.embed import components
 from bokeh.plotting import figure
+from bokeh.models import Label
 from celery import chain, group
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, \
     stream_with_context, send_file, abort
@@ -3126,11 +3127,11 @@ def backups_overview():
         start_angle = pi/2.0
         end_angle = pi/2.0 - angle if angle < pi/2.0 else 5.0*pi/2.0 - angle
 
-        gauge = figure(width=250, height=250, toolbar_location=None)
+        gauge = figure(width=150, height=150, toolbar_location=None)
         gauge.sizing_mode = 'scale_width'
-        gauge.annular_wedge(x=0, y=0, inner_radius=0.6, outer_radius=1, direction='clock', line_color=None,
+        gauge.annular_wedge(x=0, y=0, inner_radius=0.75, outer_radius=1, direction='clock', line_color=None,
                             start_angle=start_angle, end_angle=end_angle, fill_color='red')
-        gauge.annular_wedge(x=0, y=0, inner_radius=0.6, outer_radius=1, direction='clock', line_color=None,
+        gauge.annular_wedge(x=0, y=0, inner_radius=0.75, outer_radius=1, direction='clock', line_color=None,
                             start_angle=end_angle, end_angle=start_angle, fill_color='grey')
         gauge.axis.visible = False
         gauge.xgrid.visible = False
@@ -3140,6 +3141,12 @@ def backups_overview():
         gauge.background_fill_color = None
         gauge.outline_line_color = None
         gauge.toolbar.active_drag = None
+
+        annotation = Label(x=0, y=0, x_units='data', y_units='data',
+                           text='{p:.2g}%'.format(p=how_full * 100), render_mode='css',
+                           background_fill_alpha=0.0, text_align='center',
+                           text_baseline='middle', text_font_style='bold')
+        gauge.add_layout(annotation)
 
         gauge_script, gauge_div = components(gauge)
 
@@ -3151,7 +3158,6 @@ def backups_overview():
                            backup_size=size, backup_count=backup_count, last_change=last_change,
                            archive_script=archive_script, archive_div=archive_div,
                            backup_script=backup_script, backup_div=backup_div,
-                           capacity='{p:.2g}%'.format(p=how_full*100),
                            last_batch=last_batch, gauge_script=gauge_script, gauge_div=gauge_div)
 
 

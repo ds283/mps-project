@@ -1,16 +1,11 @@
 {% extends "admin/backup_dashboard/nav.html" %}
 
 {% from "macros.html" import on_click_selector_field %}
+{% from "bokeh.html" import import_bokeh %}
 
 {% block scripts %}
     {{ super() }}
-    <link href="https://cdn.pydata.org/bokeh/release/bokeh-2.1.1.min.css" rel="stylesheet" type="text/css">
-    {#    <link href="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.css" rel="stylesheet" type="text/css">#}
-    {#    <link href="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.css" rel="stylesheet" type="text/css">#}
-
-    <script src="https://cdn.pydata.org/bokeh/release/bokeh-2.1.1.min.js"></script>
-    {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>#}
-    {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.js"></script>#}
+    {{ import_bokeh() }}
 
     {% if archive_div is defined and archive_div is not none and archive_script is defined and archive_script is not none %}
         {{ archive_script|safe }}
@@ -79,7 +74,7 @@
                         </table>
                     </div>
                 </div>
-                <div class="row">
+                <div class="row vertical-align">
                     <div class="col-8">
                         {% if backup_div is defined and backup_div is not none and backup_script is defined and backup_script is not none %}
                             {{ backup_div|safe }}
@@ -89,18 +84,15 @@
                     </div>
                     <div class="col-4">
                         <div class="row">
-                            <div class="col-1"></div>
-                            <div class="col-10">
+                            <div class="col-2"></div>
+                            <div class="col-8">
                                 {% if gauge_div is defined and gauge_div is not none and gauge_script is defined and gauge_script is not none %}
-                                    <div style="text-align: center;">
-                                        <strong>Space used {{ capacity }}</strong>
-                                    </div>
                                     {{ gauge_div|safe }}
                                 {% else %}
                                     <span class="badge badge-warning">Capacity gauge could not be generated</span>
                                 {% endif %}
                             </div>
-                            <div class="col-1"></div>
+                            <div class="col-2"></div>
                         </div>
                     </div>
                 </div>

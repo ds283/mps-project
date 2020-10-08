@@ -1450,7 +1450,6 @@ class ConvenorTask(db.Model, EditingMetadataMixin):
     """
     Record a to-do item for the convenor, and can be attached either to a SelectingStudent or a SubmittingStudent
     """
-
     __tablename__ = 'convenor_tasks'
 
 
@@ -13438,6 +13437,75 @@ class ProjectHubLayout(db.Model):
     # last recorded timestamp, to ensure we only store layouts in order: ie., we should not overwrite
     # a later layout with the details of an earlier one
     timestamp = db.Column(db.BigInteger())
+
+
+class FormattedArticle(db.Model, EditingMetadataMixin):
+    """
+    Base class for generic HTML-like formatted page of text
+    """
+    __tablename__ = 'formatted_articles'
+
+
+    # unique ID for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # polymorphic identifier
+    type = db.Column(db.Integer(), default=0, nullable=False)
+
+    # formatted text (usually held in HTML format, but doesn't have to be)
+    article = db.Column(db.Text())
+
+    # has this article been published? The exact meaning of 'published' might vary among derived models
+    publish = db.Column(db.Boolean(), default=False)
+
+    # optionally schedule this article for automated publiation
+    publish_on = db.Column(db.DateTime())
+
+
+    __mapper_args__ = {'polymorphic_identity': 0,
+                       'polymorphic_on': 'type'}
+
+
+class ConvenorSubmitterArticle(FormattedArticle):
+    """
+    Represents a formatted article written by a convenor and made available to all submitters attached to
+    a particular ProjectClassConfig instance
+    """
+    __tablename__ = 'submitter_convenor_articles'
+
+
+    # primary key links to base table
+    id = db.Column(db.Integer(), db.ForeignKey('formatted_articles.id'), primary_key=True)
+
+    # owning ProjectClassConfig
+    config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
+    config = db.relationship('ProjectClassConfig', foreign_keys=[config_id], uselist=False,
+                             backref=db.backref('articles', lazy='dynamic',
+                                                cascade='all, delete, delete-orphan'))
+
+
+    __mapper_args__ = {'polymorphic_identity': 1}
+
+
+class ProjectSubmitterArticle(FormattedArticle):
+    """
+    Represents a formatted article written by a member of the supervision team and made available just to a single
+    SubmissionRecord instance
+    """
+    __tablename__ = 'submitter_project_articles'
+
+
+    # primary key links to base table
+    id = db.Column(db.Integer(), db.ForeignKey('formatted_articles.id'), primary_key=True)
+
+    # owning SubmissionRecord
+    record_id = db.Column(db.Integer(), db.ForeignKey('submission_records.id'))
+    record = db.relationship('SubmissionRecord', foreign_keys=[record_id], uselist=False,
+                             backref=db.backref('articles', lazy='dynamic',
+                                                cascade='all, delete, delete-orphan'))
+
+
+    __mapper_args__ = {'polymorphic_identity': 2}
 
 
 # ############################

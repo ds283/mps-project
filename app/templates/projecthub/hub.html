@@ -7,12 +7,42 @@
     <script src="https://cdn.jsdelivr.net/npm/gridstack@2.0.1/dist/gridstack.all.js"></script>
 
     <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
         $(document).ready(function () {
-           var grid = GridStack.init({
-               draggable: {
-                   handle: '.drag-handle'
-               }
-           });
+            function sendAjax(payload) {
+                $.ajax({
+                    url: $SCRIPT_ROOT + "/projecthub/save_hub_layout",
+                    type: "POST",
+                    data: JSON.stringify({
+                        'payload': payload,
+                        'record_id': {{ record.id }},
+                        'user_id': {{ current_user.id }},
+                        'timestamp': Date.now()
+                    }),
+                    contentType: "application/json; charset=utf-8"
+                });
+            }
+
+            let grid = GridStack.init({
+                draggable: {
+                    handle: '.drag-handle'
+                }
+            });
+
+            grid.on('change', function (event, items) {
+                let payload = [];
+                items.forEach(function (item) {
+                    payload.push({
+                        widget: item.el.id,
+                        x: item.x,
+                        y: item.y,
+                        w: item.width,
+                        h: item.height
+                    });
+                });
+                sendAjax(payload);
+            });
         });
     </script>
 {% endblock %}
@@ -98,21 +128,24 @@
 
             {# Populate dashboard widgets #}
             <div class="grid-stack">
-                <div class="grid-stack-item" id="resources-widget" data-gs-x="0" data-gs-y="0" data-gs-width="6" data-gs-height="4">
+                {% set data = layout['resources-widget'] %}
+                <div class="grid-stack-item" id="resources-widget" data-gs-x="{{ data['x'] }}" data-gs-y="{{ data['y'] }}" data-gs-width="{{ data['w'] }}" data-gs-height="{{ data['h'] }}">
                     <div class="grid-stack-item-content bg-well p-3">
                         <i class="fas fa-bars drag-handle"></i> <span class="h5">Resources</span>
                         <hr class="intro-divider">
                         Content
                     </div>
                 </div>
-                <div class="grid-stack-item" id="news-widget" data-gs-x="6" data-gs-y="0" data-gs-width="6" data-gs-height="4">
+                {% set data = layout['news-widget'] %}
+                <div class="grid-stack-item" id="news-widget" data-gs-x="{{ data['x'] }}" data-gs-y="{{ data['y'] }}" data-gs-width="{{ data['w'] }}" data-gs-height="{{ data['h'] }}">
                     <div class="grid-stack-item-content bg-well p-3">
                         <i class="fas fa-bars drag-handle"></i> <span class="h5">News and articles</span>
                         <hr class="intro-divider">
                         Content
                     </div>
                 </div>
-                <div class="grid-stack-item" id="journal-widget" data-gs-x="0" data-gs-y="4" data-gs-width="6" data-gs-height="4">
+                {% set data = layout['journal-widget'] %}
+                <div class="grid-stack-item" id="journal-widget" data-gs-x="{{ data['x'] }}" data-gs-y="{{ data['y'] }}" data-gs-width="{{ data['w'] }}" data-gs-height="{{ data['h'] }}">
                     <div class="grid-stack-item-content bg-well p-3">
                         <i class="fas fa-bars drag-handle"></i> <span class="h5">Notes and journal</span>
                         <hr class="intro-divider">

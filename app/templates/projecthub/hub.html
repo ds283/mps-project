@@ -88,6 +88,15 @@
                         </div>
                     </div>
                 </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="mt-2 mb-2">
+                            <a class="btn btn-sm btn-outline-info" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('projecthub.hub', subid=record.id), text='project hub') }}">
+                                <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
+                            </a>
+                        </div>
+                    </div>
+                </div>
                 <hr class="intro-divider mb-5">
             {% else %}
                 <div class="h3 mb-2">Project hub for <i class="fas fa-user"></i> {{ student.user.name }}</div>
@@ -111,18 +120,19 @@
                 </div>
                 <div class="row">
                     <div class="col-12">
+                        <div class="mt-2 mb-2">
                         {% if submitter.published and record.submission_period <= config.submission_period %}
                             {% if record.student_engaged %}
-                                <div class="mt-2 mb-2">
-                                    <i class="fa fa-check"></i> <strong>Student engaged</strong>
-                                    <a class="btn btn-sm btn-outline-danger ml-2" href="{{ url_for('faculty.mark_waiting', id=record.id) }}"> Mark as not engaged</a>
-                                </div>
+                                <i class="fa fa-check"></i> <strong>Student engaged</strong>
+                                <a class="btn btn-sm btn-outline-danger ml-2" href="{{ url_for('faculty.mark_waiting', id=record.id) }}"> Mark as not engaged</a>
                             {% else %}
-                                <div class="mt-2 mb-2">
-                                    <a class="btn btn-sm btn-outline-success" href="{{ url_for('faculty.mark_started', id=record.id) }}"> Mark student as engaged</a>
-                                </div>
+                                <a class="btn btn-sm btn-outline-success" href="{{ url_for('faculty.mark_started', id=record.id) }}"> Mark student as engaged</a>
                             {% endif %}
                         {% endif %}
+                            <a class="btn btn-sm btn-outline-info" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('projecthub.hub', subid=record.id), text='project hub') }}">
+                                <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
+                            </a>
+                        </div>
                     </div>
                 </div>
                 <hr class="intro-divider mb-5">

@@ -73,7 +73,8 @@
                             </div>
                         </td>
                         <td>
-                            <div style="text-align: right;" class="float-right">
+                            <div class="d-flex flex-row justify-content-end">
+                                <a class="btn btn-outline-secondary btn-sm mr-2" href="{{ url_for('projecthub.hub', subid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}">Go to hub...</a>
                                 <div class="dropdown">
                                     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                                         Actions

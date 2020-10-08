@@ -1,12 +1,18 @@
 {% extends "base_app.html" %}
 
+{% from "bokeh.html" import import_bokeh %}
 {% from "projecthub/resources.html" import resources_widget %}
 
 {% block scripts %}
     {{ super() }}
+    {{ import_bokeh() }}
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@2.0.1/dist/gridstack.min.css"/>
     <script src="https://cdn.jsdelivr.net/npm/gridstack@2.0.1/dist/gridstack.all.js"></script>
+
+    {% if burndown_div is defined and burndown_div is not none and burndown_script is defined and burndown_script is not none %}
+        {{ burndown_script|safe }}
+    {% endif %}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -69,22 +75,29 @@
                 <div class="h3 mb-2">{{ pclass.name }}</div>
                 <div class="row vertical-top">
                     <div class="col-8">
-                        <div class="text-muted">
-                            {{ project.name }}
+                        <div class="d-flex flex-column">
+                            <div class="text-muted">
+                                {{ project.name }}
+                            </div>
+                            {% if period.hand_in_date %}
+                                <small class="text-muted">
+                                    Hand-in <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
+                                    ({{ period.time_to_hand_in }} from now)
+                                </small>
+                            {% endif %}
+                            {% if burndown_div is defined and burndown_div is not none and burndown_script is defined and burndown_script is not none %}
+                                {{ burndown_div|safe }}
+                            {% endif %}
                         </div>
-                        {% if period.hand_in_date %}
-                            <small class="text-muted">
-                                Hand-in <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
-                                ({{ period.time_to_hand_in }} from now)
-                            </small>
-                        {% endif %}
                     </div>
                     <div class="col-4">
-                        <div class="float-right">
-                            Supervisor: <a href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
-                        </div>
-                        <div class="float-right">
-                            Convenor: <a href="mailto:{{ config.convenor.user.email }}">{{ config.convenor.user.name }}</a>
+                        <div class="d-flex flex-column align-items-end">
+                            <div>
+                                Supervisor: <a href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
+                            </div>
+                            <div>
+                                Convenor: <a href="mailto:{{ config.convenor.user.email }}">{{ config.convenor.user.name }}</a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -107,15 +120,20 @@
                         </div>
                     </div>
                     <div class="col-4">
-                        <div class="float-right">
-                            {{ pclass.make_label()|safe }}
+                        <div class="d-flex flex-column align-items-end">
+                            <div>
+                                {{ pclass.make_label()|safe }}
+                            </div>
+                            {% if period.hand_in_date %}
+                                <small class="text-muted text-right">
+                                    Hand-in <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
+                                    ({{ period.time_to_hand_in }} from now)
+                                </small>
+                            {% endif %}
+                            {% if burndown_div is defined and burndown_div is not none and burndown_script is defined and burndown_script is not none %}
+                                {{ burndown_div|safe }}
+                            {% endif %}
                         </div>
-                        {% if period.hand_in_date %}
-                            <small class="text-muted float-right">
-                                Hand-in <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
-                                ({{ period.time_to_hand_in }} from now)
-                            </small>
-                        {% endif %}
                     </div>
                 </div>
                 <div class="row">

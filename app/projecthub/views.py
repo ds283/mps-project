@@ -9,10 +9,15 @@
 #
 
 import json
+from datetime import date, timedelta
+from math import pi
 
 from flask import render_template, redirect, flash, request, jsonify, current_app
 from flask_security import current_user, roles_accepted, login_required
 from sqlalchemy.exc import SQLAlchemyError
+from bokeh.embed import components
+from bokeh.plotting import figure
+from bokeh.models import Label
 
 from . import projecthub
 
@@ -87,9 +92,51 @@ def hub(subid):
     if saved_layout is not None:
         layout.update(json.loads(saved_layout.serialized_layout))
 
+    # generate burn-down doughnut chart if we can
+    now = date.today()
+    if not record.retired and period.start_date and now >= period.start_date \
+            and period.hand_in_date and now <= period.hand_in_date:
+        total_time: timedelta = period.hand_in_date - period.start_date
+        total_time_days: int = total_time.days
+
+        used_time: timedelta = now - period.start_date
+        used_time_days: int = used_time.days
+
+        burnt = float(used_time_days) / float(total_time_days)
+        angle = 2*pi * burnt
+        start_angle = pi/2.0
+        end_angle = pi/2.0 - angle if angle < pi/2.0 else 5.0*pi/2.0 - angle
+
+        plot = figure(width=80, height=80, toolbar_location=None)
+        plot.sizing_mode = 'fixed'
+        plot.annular_wedge(x=0, y=0, inner_radius=0.75, outer_radius=1, direction='clock', line_color=None,
+                           start_angle=start_angle, end_angle=end_angle, fill_color='tomato')
+        plot.annular_wedge(x=0, y=0, inner_radius=0.75, outer_radius=1, direction='clock', line_color=None,
+                           start_angle=end_angle, end_angle=start_angle, fill_color='palegreen')
+        plot.axis.visible = False
+        plot.xgrid.visible = False
+        plot.ygrid.visible = False
+        plot.border_fill_color = None
+        plot.toolbar.logo = None
+        plot.background_fill_color = None
+        plot.outline_line_color = None
+        plot.toolbar.active_drag = None
+
+        annotation = Label(x=0, y=0, x_units='data', y_units='data',
+                           text='{p:.2g}%'.format(p=burnt * 100), render_mode='css',
+                           background_fill_alpha=0.0, text_align='center',
+                           text_baseline='middle', text_font_style='bold')
+        plot.add_layout(annotation)
+
+        burndown_script, burndown_div = components(plot)
+
+    else:
+        burndown_script = None
+        burndown_div = None
+
     return render_template("projecthub/hub.html", text=text, url=url, submitter=submitter, student=student,
                            config=config, pclass=pclass, project=project, record=record, period=period,
-                           layout=layout)
+                           layout=layout, burndown_div=burndown_div, burndown_script=burndown_script)
 
 
 @projecthub.route('/save_hub_layout', methods=['POST'])

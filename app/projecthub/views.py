@@ -77,9 +77,9 @@ def hub(subid):
     text = request.args.get('text', None)
     url = request.args.get('url', None)
 
-    layout = {'resources-widget': {'x': 0, 'y': 0, 'w': 6, 'h': 4},
-              'news-widget': {'x': 6, 'y': 0, 'w': 6, 'h': 4},
-              'journal-widget': {'x': 0, 'y': 4, 'w': 6, 'h': 4}}
+    layout = {'resources-widget': {'x': 5, 'y': 3, 'w': 7, 'h': 5},
+              'news-widget': {'x': 0, 'y': 0, 'w': 12, 'h': 3},
+              'journal-widget': {'x': 0, 'y': 3, 'w': 5, 'h': 5}}
 
     saved_layout: ProjectHubLayout = db.session.query(ProjectHubLayout) \
         .filter_by(owner_id=subid, user_id=current_user.id).first()
@@ -96,8 +96,6 @@ def hub(subid):
 @login_required
 def save_hub_layout():
     data = request.get_json()
-
-    print(data)
 
     # discard notification if ill-formed
     if 'payload' not in data or 'record_id' not in data or 'user_id' not in data or 'timestamp' not in data:

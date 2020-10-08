@@ -45,8 +45,8 @@ YEAR_LENGTH = 4
 # length of database string for password hash field, if used
 PASSWORD_HASH_LENGTH = 255
 
-# length of project description fields
-DESCRIPTION_STRING_LENGTH = 8000
+# length of string for serialized project hub layout storage
+SERIALIZED_LAYOUT_LENGTH = 2048
 
 
 # labels and keys for 'year' field; it's not possible to join in Y1; treat students as
@@ -13042,6 +13042,34 @@ class MatchingEnumeration(db.Model):
     matching_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'))
     matching = db.relationship('MatchingAttempt', foreign_keys=[matching_id], uselist=False,
                                backref=db.backref('enumerations', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+
+class ProjectHubLayout(db.Model):
+    """
+    Serialize stored layout for project hub widgets
+    """
+    __tablename__ = 'project_hub_layout'
+
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # link to SubmissionRecord to which this hub layout applies
+    owner_id = db.Column(db.Integer(), db.ForeignKey('submission_records.id'))
+    owner = db.relationship('SubmissionRecord', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('saved_layouts', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+    # link to User for which this hub layout applies
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    user = db.relationship('User', foreign_keys=[user_id], uselist=False,
+                           backref=db.backref('saved_layouts', lazy='dynamic'))
+
+    # serialized content
+    serialized_layout = db.Column(db.String(SERIALIZED_LAYOUT_LENGTH, collation='utf8_bin'))
+
+    # last recorded timestamp, to ensure we only store layouts in order: ie., we should not overwrite
+    # a later layout with the details of an earlier one
+    timestamp = db.Column(db.BigInteger())
 
 
 # ############################

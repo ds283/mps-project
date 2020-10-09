@@ -13084,14 +13084,18 @@ class FormattedArticle(db.Model, EditingMetadataMixin):
     # polymorphic identifier
     type = db.Column(db.Integer(), default=0, nullable=False)
 
+    # title
+    title = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
     # formatted text (usually held in HTML format, but doesn't have to be)
     article = db.Column(db.Text())
 
     # has this article been published? The exact meaning of 'published' might vary among derived models
-    publish = db.Column(db.Boolean(), default=False)
+    published = db.Column(db.Boolean(), default=False)
 
-    # optionally schedule this article for automated publiation
-    publish_on = db.Column(db.DateTime())
+    # either record the time of publication, for articles that are already published, or schedule publication
+    # for a specific time
+    publication_timestamp = db.Column(db.DateTime())
 
 
     __mapper_args__ = {'polymorphic_identity': 0,
@@ -13110,8 +13114,8 @@ class ConvenorSubmitterArticle(FormattedArticle):
     id = db.Column(db.Integer(), db.ForeignKey('formatted_articles.id'), primary_key=True)
 
     # owning ProjectClassConfig
-    config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
-    config = db.relationship('ProjectClassConfig', foreign_keys=[config_id], uselist=False,
+    period_id = db.Column(db.Integer(), db.ForeignKey('submission_periods.id'))
+    period = db.relationship('SubmissionPeriodRecord', foreign_keys=[period_id], uselist=False,
                              backref=db.backref('articles', lazy='dynamic',
                                                 cascade='all, delete, delete-orphan'))
 

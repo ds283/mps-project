@@ -12,9 +12,10 @@ import json
 from datetime import date, timedelta
 from math import pi
 
-from flask import render_template, redirect, flash, request, jsonify, current_app
+from flask import render_template, redirect, flash, request, jsonify, current_app, url_for
 from flask_security import current_user, roles_accepted, login_required
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.sql import func
 from bokeh.embed import components
 from bokeh.plotting import figure
 from bokeh.models import Label
@@ -23,10 +24,13 @@ from . import projecthub
 
 from .utils import validate_project_hub
 
+import app.ajax as ajax
 from ..database import db
 from ..models import SubmissionRecord, SubmittingStudent, StudentData, ProjectClassConfig, ProjectClass, LiveProject, \
-    SubmissionPeriodRecord, ProjectHubLayout
+    SubmissionPeriodRecord, ProjectHubLayout, ConvenorSubmitterArticle
 from ..shared.utils import redirect_url
+from ..shared.validators import validate_is_convenor
+from ..tools import ServerSideHandler
 
 
 @projecthub.route('/hub/<int:subid>')
@@ -208,3 +212,52 @@ def save_hub_layout():
                 return jsonify({'status': 'database_error'})
 
     return jsonify({'status': 'ok'})
+
+
+@projecthub.route('/edit_submission_record_articles/<int:pid>')
+@roles_accepted('faculty', 'admin', 'root')
+def edit_submission_record_articles(pid):
+    # pid is a SubmissionPeriodRecord
+    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    # reject if user is not a convenor for the project owning this submission period
+    if not validate_is_convenor(record.config.project_class):
+        return redirect(redirect_url())
+
+    return render_template('projecthub/articles/article_list.html', text=text, url=url,
+                           title='Edit submission period articles',
+                           panel_title='Edit articles for submission period {name}'.format(name=record.display_name),
+                           ajax_endpoint=url_for('projecthub.edit_submission_record_articles_ajax', pid=pid))
+
+
+@projecthub.route('/edit_submission_record_articles_ajax/<int:pid>', methods=['POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_submission_record_articles_ajax(pid):
+    # pid is a SubmissionPeriodRecord
+    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+
+    # reject if user is not a convenor for the project owning this submission period
+    if not validate_is_convenor(record.config.project_class):
+        return jsonify({})
+
+    base_query = record.articles
+
+    title = {'search': ConvenorSubmitterArticle.title,
+             'order': ConvenorSubmitterArticle.title,
+             'search_collation': 'utf8_general_ci'}
+    published = {'search': func.date_format(ConvenorSubmitterArticle.publication_timestamp, "%a %d %b %Y %H:%M:%S"),
+                 'order': ConvenorSubmitterArticle.publication_timestamp,
+                 'search_collation': 'utf8_general_ci'}
+    last_edit = {'search': func.date_format(ConvenorSubmitterArticle.last_edit_timestamp, "%a %d %b %Y %H:%M:%S"),
+                 'order': ConvenorSubmitterArticle.last_edit_timestamp,
+                 'search_collation': 'utf8_general_ci'}
+
+    columns = {'title': title,
+               'published': published,
+               'last_edit': last_edit}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.projecthub.article_list_data)

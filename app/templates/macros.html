@@ -304,3 +304,29 @@
         </div>
     </div>
 {% endmacro %}
+
+{% macro submission_period_configure_button(period, config, small=false, dropup=false) %}
+    <div class="btn-group {% if dropup %}dropup{% endif %}">
+        <a role="button" class="btn {% if small %}btn-sm{% endif %} btn-outline-secondary"
+           href="{{ url_for('convenor.edit_submission_record_settings', pid=period.id) }}">Configure...
+        </a>
+        <button type="button" class="btn {% if small %}btn-sm{% endif %} btn-secondary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <span class="sr-only">Toggle Dropdown</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-right">
+            <a class="dropdown-item" href="{{ url_for('convenor.edit_submission_record_settings', pid=period.id) }}">
+                Settings...
+            </a>
+            <a class="dropdown-item" href="{{ url_for('convenor.edit_submission_record_presentation', pid=period.id) }}">
+                Presentation...
+            </a>
+            <a class="dropdown-item" href="{{ url_for('projecthub.edit_submission_record_articles', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='convenor overview dashboard') }}">
+                Articles and news...
+            </a>
+            <a class="dropdown-item"
+               href="{{ url_for('convenor.submission_period_documents', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='convenor overview dashboard') }}">
+                Manage documents ({{ period.number_attachments }})...
+            </a>
+        </div>
+    </div>
+{% endmacro %}

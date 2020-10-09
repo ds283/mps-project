@@ -1,5 +1,7 @@
 {% extends "convenor/dashboard/nav.html" %}
 
+{% from "macros.html" import submission_period_configure_button %}
+
 {% from "convenor/dashboard/overview_cards/rollover.html" import rollover_card %}
 {% from "convenor/dashboard/overview_cards/issue_confirmations.html" import issue_confirmations %}
 {% from "convenor/dashboard/overview_cards/waiting_confirmations.html" import waiting_confirmations %}
@@ -137,30 +139,7 @@
                             <div class="col-4">
                                 <div class="float-right">
                                     {% if not p.is_feedback_open %}
-                                        <div class="btn-group">
-                                            <a role="button" class="btn btn-sm btn-outline-secondary"
-                                               href="{{ url_for('convenor.edit_submission_record_settings', pid=p.id) }}">Configure...
-                                            </a>
-                                            <button type="button"
-                                                    class="btn btn-sm btn-secondary dropdown-toggle dropdown-toggle-split"
-                                                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                <span class="sr-only">Toggle Dropdown</span>
-                                            </button>
-                                            <div class="dropdown-menu dropdown-menu-right">
-                                                <a class="dropdown-item"
-                                                   href="{{ url_for('convenor.edit_submission_record_settings', pid=p.id) }}">
-                                                    Settings...
-                                                </a>
-                                                <a class="dropdown-item"
-                                                   href="{{ url_for('convenor.edit_submission_record_presentation', pid=p.id) }}">
-                                                    Presentation...
-                                                </a>
-                                                <a class="dropdown-item"
-                                                   href="{{ url_for('convenor.submission_period_documents', pid=p.id, url=url_for('convenor.overview', id=config.project_class.id), text='overview') }}">
-                                                    Manage documents ({{ p.number_attachments }})...
-                                                </a>
-                                            </div>
-                                        </div>
+                                        {{ submission_period_configure_button(p, config, small=true) }}
                                     {% endif %}
                                 </div>
                             </div>

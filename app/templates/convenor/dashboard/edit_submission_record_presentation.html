@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block form_content %}
-    <form action="{{ url_for('convenor.edit_submission_record_presentation', pid=record.id) }}" method="POST" name="edit_form">
+    <form action="{{ url_for('convenor.edit_subpd_record_presentation', pid=record.id) }}" method="POST" name="edit_form">
 
         {{ form.hidden_tag() }}
 

@@ -9,7 +9,7 @@
 #
 
 import json
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from math import pi
 
 from flask import render_template, redirect, flash, request, jsonify, current_app, url_for
@@ -23,6 +23,7 @@ from bokeh.models import Label
 from . import projecthub
 
 from .utils import validate_project_hub
+from .forms import AddFormatterArticleForm, EditFormattedArticleForm
 
 import app.ajax as ajax
 from ..database import db
@@ -230,7 +231,8 @@ def edit_subpd_record_articles(pid):
     return render_template('projecthub/articles/article_list.html', text=text, url=url,
                            title='Edit submission period articles',
                            panel_title='Edit articles for submission period {name}'.format(name=record.display_name),
-                           ajax_endpoint=url_for('projecthub.edit_subpd_record_articles_ajax', pid=pid))
+                           ajax_endpoint=url_for('projecthub.edit_subpd_record_articles_ajax', pid=pid),
+                           add_endpoint=url_for('projecthub.add_subpd_record_article', pid=pid))
 
 
 @projecthub.route('/edit_subpd_record_articles_ajax/<int:pid>', methods=['POST'])
@@ -261,3 +263,85 @@ def edit_subpd_record_articles_ajax(pid):
 
     with ServerSideHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.projecthub.article_list_data)
+
+
+@projecthub.route('add_subpd_record_article/<int:pid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'route')
+def add_subpd_record_article(pid):
+    # pid is a SubmissionPeriodRecord
+    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+
+    # reject if user is not a convenor for the project owning this submission period
+    if not validate_is_convenor(record.config.project_class):
+        return redirect(redirect_url())
+
+    form = AddFormatterArticleForm(request.form)
+
+    if form.validate_on_submit():
+        article = ConvenorSubmitterArticle(title=form.title.data,
+                                           period_id=record.id,
+                                           article=form.article.data,
+                                           published=form.published.data,
+                                           publication_timestamp=form.publication_timestamp.data,
+                                           creation_timestamp=datetime.now(),
+                                           creator_id=current_user.id,
+                                           last_edit_timestamp=None,
+                                           last_edit_id=None)
+
+        try:
+            db.session.add(article)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add new article because of a database error. Please contact a system '
+                  'administrator', 'error')
+
+        return redirect(url_for('projecthub.edit_subpd_record_articles', pid=pid))
+
+    return render_template('projecthub/articles/edit_article.html', form=form, record=record,
+                           title='Add new article',
+                           panel_title='Add new article or news story to period <strong>{pname}</strong> '
+                                       '({yra}&ndash;{yrb})'.format(pname=record.display_name,
+                                                                    yra=record.config.year, yrb=record.config.year+1),
+                           action_url=url_for('projecthub.add_subpd_record_article', pid=pid))
+
+
+@projecthub.route('edit_subpd_record_article/<int:aid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'route')
+def edit_subpd_record_article(aid):
+    # pid is a SubmissionPeriodRecord
+    article: ConvenorSubmitterArticle = ConvenorSubmitterArticle.query_get_or_404(aid)
+    record: SubmissionPeriodRecord = article.period
+
+    # reject if user is not a convenor for the project owning this submission period
+    if not validate_is_convenor(record.config.project_class):
+        return redirect(redirect_url())
+
+    form = EditFormattedArticleForm(obj=article)
+
+    if form.validate_on_submit():
+        article.title = form.title.data
+        article.period_id = record.id
+        article.article = form.article.data
+        article.published = form.published.data
+
+        article.last_edit_timestamp = datetime.now()
+        article.last_edit_id = current_user.id
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes to this article because of a database error. Please contact a system '
+                  'administrator', 'error')
+
+        return redirect(url_for('projecthub.edit_subpd_record_articles', pid=record.id))
+
+    return render_template('projecthub/articles/edit_article.html', form=form, article=article, record=record,
+                           title='Edit article',
+                           panel_title='Edit article in period <strong>{pname}</strong> '
+                                       '({yra}&ndash;{yrb})'.format(pname=record.display_name,
+                                                                    yra=record.config.year, yrb=record.config.year+1),
+                           action_url=url_for('projecthub.edit_subpd_record_article', aid=aid))

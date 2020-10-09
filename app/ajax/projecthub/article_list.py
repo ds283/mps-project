@@ -19,9 +19,9 @@ _published = \
 """
 {% if a.publication_timestamp %}
     {{ a.publication_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-    by <i class="fas fa-user"> <a href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}"</a>
+    by <i class="fas fa-user"></i> <a href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}"</a>
 {% else %}
-    <span class="badge badge-default">Not published</span>
+    <span class="badge badge-warning">Not published</span>
 {% endif %}
 """
 
@@ -30,10 +30,10 @@ _last_edit = \
 """
 {% if a.last_edit_timestamp %}
     {{ a.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-    by <i class="fas fa-user"> <a href="mailto:{{ a.last_edited_by.email }}">{{ a.last_edited_by.name }}"</a>
+    by <i class="fas fa-user"></i> <a href="mailto:{{ a.last_edited_by.email }}">{{ a.last_edited_by.name }}"</a>
 {% elif a.creation_timestamp %}
     {{ a.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-    by <i class="fas fa-user"> <a href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}"</a>
+    by <i class="fas fa-user"></i> <a href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}"</a>
 {% else %}
     <span class="badge badge-danger">None</span>
 {% endif %}

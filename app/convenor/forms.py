@@ -154,7 +154,7 @@ class CustomCATSLimitForm(Form, SaveChangesMixin):
                                      validators=[Optional()])
 
 
-class SubmissionRecordSettingsMixin():
+class SubPeriodRecordSettingsMixin():
 
     start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
                            description="Enter an optional start date for this submission period.")
@@ -166,12 +166,12 @@ class SubmissionRecordSettingsMixin():
     collect_project_feedback = BooleanField('Collect project feedback online')
 
 
-class EditSubmissionRecordSettingsForm(Form, SubmissionRecordSettingsMixin, SaveChangesMixin):
+class EditSubPeriodRecordSettingsForm(Form, SubPeriodRecordSettingsMixin, SaveChangesMixin):
 
     pass
 
 
-class EditSubmissionRecordPresentationsForm(Form, SubmissionPeriodPresentationsMixin, SaveChangesMixin):
+class EditSubPeriodRecordPresentationsForm(Form, SubmissionPeriodPresentationsMixin, SaveChangesMixin):
 
     pass
 

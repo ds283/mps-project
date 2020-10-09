@@ -32,10 +32,10 @@ import app.ajax as ajax
 from . import convenor
 from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
-    EditSubmissionRecordSettingsForm, UploadPeriodAttachmentForm, \
+    EditSubPeriodRecordSettingsForm, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
     EditProjectConfigForm, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask, \
-    EditConvenorGenericTask, EditSubmissionRecordPresentationsForm
+    EditConvenorGenericTask, EditSubPeriodRecordPresentationsForm
 from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
@@ -6818,9 +6818,9 @@ def _validate_submission_period(record: SubmissionPeriodRecord, config: ProjectC
     return True
 
 
-@convenor.route('/edit_submission_record_settings/<int:pid>', methods=['GET', 'POST'])
+@convenor.route('/edit_subpd_record_settings/<int:pid>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def edit_submission_record_settings(pid):
+def edit_subpd_record_settings(pid):
     # pid is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
     config: ProjectClassConfig = record.config
@@ -6828,7 +6828,7 @@ def edit_submission_record_settings(pid):
     if not _validate_submission_period(record, config):
         return redirect(redirect_url())
 
-    edit_form = EditSubmissionRecordSettingsForm(obj=record)
+    edit_form = EditSubPeriodRecordSettingsForm(obj=record)
 
     if edit_form.validate_on_submit():
         record.start_date = edit_form.start_date.data
@@ -6849,9 +6849,9 @@ def edit_submission_record_settings(pid):
     return render_template('convenor/dashboard/edit_submission_record_settings.html', form=edit_form, record=record)
 
 
-@convenor.route('/edit_submission_record_presentation/<int:pid>', methods=['GET', 'POST'])
+@convenor.route('/edit_subpd_record_presentation/<int:pid>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def edit_submission_record_presentation(pid):
+def edit_subpd_record_presentation(pid):
     # pid is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
     config: ProjectClassConfig = record.config
@@ -6859,7 +6859,7 @@ def edit_submission_record_presentation(pid):
     if not _validate_submission_period(record, config):
         return redirect(redirect_url())
 
-    edit_form = EditSubmissionRecordPresentationsForm(obj=record)
+    edit_form = EditSubPeriodRecordPresentationsForm(obj=record)
 
     if edit_form.validate_on_submit():
         record.has_presentation = edit_form.has_presentation.data

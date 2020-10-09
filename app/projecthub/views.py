@@ -214,9 +214,9 @@ def save_hub_layout():
     return jsonify({'status': 'ok'})
 
 
-@projecthub.route('/edit_submission_record_articles/<int:pid>')
+@projecthub.route('/edit_subpd_record_articles/<int:pid>')
 @roles_accepted('faculty', 'admin', 'root')
-def edit_submission_record_articles(pid):
+def edit_subpd_record_articles(pid):
     # pid is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
 
@@ -230,12 +230,12 @@ def edit_submission_record_articles(pid):
     return render_template('projecthub/articles/article_list.html', text=text, url=url,
                            title='Edit submission period articles',
                            panel_title='Edit articles for submission period {name}'.format(name=record.display_name),
-                           ajax_endpoint=url_for('projecthub.edit_submission_record_articles_ajax', pid=pid))
+                           ajax_endpoint=url_for('projecthub.edit_subpd_record_articles_ajax', pid=pid))
 
 
-@projecthub.route('/edit_submission_record_articles_ajax/<int:pid>', methods=['POST'])
+@projecthub.route('/edit_subpd_record_articles_ajax/<int:pid>', methods=['POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def edit_submission_record_articles_ajax(pid):
+def edit_subpd_record_articles_ajax(pid):
     # pid is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
 

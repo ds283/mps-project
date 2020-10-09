@@ -120,7 +120,7 @@ class FeedbackMixin():
     save_feedback = SubmitField('Save changes')
 
 
-class SubmissionPeriodCommonMixin():
+class SubmissionPeriodPresentationsMixin():
 
     has_presentation = BooleanField('This submission period includes a presentation assessment')
 
@@ -150,8 +150,6 @@ class SubmissionPeriodCommonMixin():
                                           Length(max=DEFAULT_STRING_LENGTH)])
 
     collect_presentation_feedback = BooleanField('Collect presentation feedback online')
-
-    collect_project_feedback = BooleanField('Collect project feedback online')
 
 
 def PeriodSelectorMixinFactory(config: ProjectClassConfig, is_admin: bool):

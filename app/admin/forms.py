@@ -50,7 +50,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules, \
     BuildPossibleOfficeContacts, BuildOfficeContactName
 
-from ..shared.forms.mixins import SaveChangesMixin, SubmissionPeriodCommonMixin
+from ..shared.forms.mixins import SaveChangesMixin, SubmissionPeriodPresentationsMixin
 
 from ..models import BackupConfiguration, ScheduleAttempt, extent_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices, auto_enroll_year_choices, \
@@ -385,7 +385,7 @@ class EditProjectTextForm(Form, SaveChangesMixin):
                                                     render_kw={"rows": 5}, validators=[Optional()])
 
 
-class SubmissionPeriodMixin():
+class SubmissionPeriodSettingsMixin():
 
     name = StringField('Name', description='Optional. Enter an alternative text name for this submission '
                                            'period, such as "Autumn Term"',
@@ -394,13 +394,15 @@ class SubmissionPeriodMixin():
     start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
                            description='The year will increment when a rollover takes place')
 
+    collect_project_feedback = BooleanField('Collect project feedback online')
 
-class AddSubmissionPeriodForm(Form, SubmissionPeriodMixin, SubmissionPeriodCommonMixin):
+
+class AddSubmissionPeriodForm(Form, SubmissionPeriodSettingsMixin, SubmissionPeriodPresentationsMixin):
 
     submit = SubmitField('Add new submission period')
 
 
-class EditSubmissionPeriodForm(Form, SubmissionPeriodMixin, SubmissionPeriodCommonMixin, SaveChangesMixin):
+class EditSubmissionPeriodForm(Form, SubmissionPeriodSettingsMixin, SubmissionPeriodPresentationsMixin, SaveChangesMixin):
 
     pass
 

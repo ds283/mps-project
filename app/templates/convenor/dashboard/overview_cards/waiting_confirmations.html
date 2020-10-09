@@ -39,10 +39,10 @@
                 <div class="row">
                     <div class="col-12">
                         <div class="float-right">
-                            <a href="{{ url_for('convenor.confirmation_reminder', id=config.id) }}" class="btn btn-secondary">
+                            <a href="{{ url_for('convenor.confirmation_reminder', id=config.id) }}" class="btn btn-outline-secondary">
                                 Send reminders
                             </a>
-                            {{ wtf.render_field(issue_form.submit_button, button_map={'submit_button': 'secondary'}) }}
+                            {{ wtf.render_field(issue_form.submit_button, button_map={'submit_button': 'outline-secondary'}) }}
                         </div>
                     </div>
                 </div>

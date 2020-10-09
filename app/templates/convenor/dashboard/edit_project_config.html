@@ -46,17 +46,21 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        <div class="card mt-3 mb-3 card-body bg-well">
-            {{ wtf.render_field(form.skip_matching) }}
-            {{ wtf.render_field(form.requests_skipped) }}
-            <hr class="intro-divider">
-            {{ wtf.render_field(form.full_CATS) }}
-        </div>
+        {{ wtf.render_field(form.skip_matching) }}
+        {{ wtf.render_field(form.requests_skipped) }}
+        {{ wtf.render_field(form.full_CATS) }}
+        <hr class="intro-divider">
 
-        <div class="card mt-3 mb-3 card-body bg-well">
-            {{ show_default_field(form.CATS_supervision, config.project_class.CATS_supervision) }}
-            {{ show_default_field(form.CATS_marking, config.project_class.CATS_marking) }}
-            {{ show_default_field(form.CATS_presentation, config.project_class.CATS_presentation) }}
+        <div class="row">
+            <div class="col-4">
+                {{ show_default_field(form.CATS_supervision, config.project_class.CATS_supervision) }}
+            </div>
+            <div class="col-4">
+                {{ show_default_field(form.CATS_marking, config.project_class.CATS_marking) }}
+            </div>
+            <div class="col-4">
+                {{ show_default_field(form.CATS_presentation, config.project_class.CATS_presentation) }}
+            </div>
         </div>
 
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}

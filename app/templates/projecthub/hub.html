@@ -1,14 +1,16 @@
 {% extends "base_app.html" %}
 
 {% from "bokeh.html" import import_bokeh %}
+{% from "gridstack.html" import import_gridstack %}
+{% from "datatables.html" import import_datatables %}
 {% from "projecthub/resources.html" import resources_widget %}
+{% from "projecthub/articles.html" import articles_widget %}
 
 {% block scripts %}
     {{ super() }}
     {{ import_bokeh() }}
-
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@2.0.1/dist/gridstack.min.css"/>
-    <script src="https://cdn.jsdelivr.net/npm/gridstack@2.0.1/dist/gridstack.all.js"></script>
+    {{ import_gridstack() }}
+    {{ import_datatables() }}
 
     {% if burndown_div is defined and burndown_div is not none and burndown_script is defined and burndown_script is not none %}
         {{ burndown_script|safe }}
@@ -50,6 +52,26 @@
                     });
                 });
                 sendAjax(payload);
+            });
+
+            $('#article-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: '<f<t>>',
+                stateSave: true, serverSide: true, paging: false,
+                ajax: { url: $SCRIPT_ROOT + '/projecthub/article_widget_ajax/{{ record.id }}',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
+                columns: [
+                    { data: 'title',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'published',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'author',
+                      orderable: true,
+                      searchable: true }
+                ],
+                order: [[1, 'desc']]
             });
         });
     </script>
@@ -176,7 +198,7 @@
                             <i class="fas fa-bars drag-handle"></i> News and articles
                         </div>
                         <div class="card-body bg-well">
-                            Content
+                            {{ articles_widget(submitter, student, config, pclass, project, record, period) }}
                         </div>
                     </div>
                 </div>

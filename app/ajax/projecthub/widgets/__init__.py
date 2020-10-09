@@ -8,6 +8,4 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from .article_list import article_list_data
-
-from . import widgets
+from .articles import articles

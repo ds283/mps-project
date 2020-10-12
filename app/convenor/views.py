@@ -987,10 +987,8 @@ def enroll_selectors_ajax(id):
             and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
         return jsonify({})
 
-    candidates = \
-        build_enroll_selector_candidates(config,
-                                         disable_programme_filter=True if isinstance(prog_filter, str)
-                                                                  and prog_filter.lower() == 'off' else False)
+    disable = True if (isinstance(prog_filter, str) and prog_filter.lower() == 'off') else False
+    candidates = build_enroll_selector_candidates(config, disable_programme_filter=disable)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
@@ -1002,6 +1000,8 @@ def enroll_selectors_ajax(id):
 
     if prog_flag:
         candidates = candidates.filter(StudentData.programme_id == prog_value)
+    elif prog_filter.lower() == 'all':
+        candidates = candidates.filter(or_(StudentData.programme_id == p.id for p in pclass.programmes))
 
     if year_flag:
         candidates = [s for s in candidates.all() if (s.academic_year is None or (not s.has_graduated and s.academic_year == year_value))]

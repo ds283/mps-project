@@ -285,3 +285,8 @@ p.copyright {
     color: #e9322d;
     margin-bottom: 0.5rem;
 }
+
+.form-group-heading {
+    font-size: 1rem;
+    font-weight: bolder;
+}

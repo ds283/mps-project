@@ -56,9 +56,9 @@
                                                 <p><strong>Project selection</strong></p>
                                                 {{ ranked_selection(rec, rec.ordered_selections, generic_text, return_url, show_hint=false, show_delete=false) }}
                                             {% endif %}
-                                            {% if rec.number_custom_offers > 0%}
+                                            {% if rec.number_custom_offers > 0 %}
                                                 <p><strong>Custom offers</strong></p>
-                                                {{ custom_offers_table(sel, rec.ordered_custom_offers, true) }}
+                                                {{ custom_offers_table(sel, rec.ordered_custom_offers, false) }}
                                             {% endif %}
                                         </div>
                                     {% else %}

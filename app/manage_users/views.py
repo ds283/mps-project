@@ -1224,6 +1224,7 @@ def edit_student(id):
         data.cohort = form.cohort.data
         data.repeated_years = ry
         data.programme_id = form.programme.data.id
+
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
 
@@ -1253,6 +1254,7 @@ def edit_student(id):
         # distinguished by the method being 'GET' rather than 'POST'
         if request.method == 'GET':
             form.foundation_year.data = data.foundation_year
+            form.intermitting.data = data.intermitting
             form.exam_number.data = data.exam_number
             form.registration_number.data = data.registration_number
             form.cohort.data = data.cohort

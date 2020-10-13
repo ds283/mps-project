@@ -22,7 +22,7 @@ from ..database import db
 from ..models import User, TaskRecord, ProjectClassConfig, \
     SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, SubmissionRecord, \
     SubmissionPeriodRecord, add_notification, EmailNotification, ProjectClass, Project, \
-    ProjectDescription, ConfirmRequest, ConvenorGenericTask
+    ProjectDescription, ConfirmRequest, ConvenorGenericTask, MatchingRecord
 from ..shared.convenor import add_selector, add_blank_submitter
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import get_current_year
@@ -81,8 +81,8 @@ def register_rollover_tasks(celery):
 
         # get database records for this project class
         try:
-            config = ProjectClassConfig.query.filter_by(id=current_id).first()
-            convenor = User.query.filter_by(id=convenor_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=current_id).first()
+            convenor: User = User.query.filter_by(id=convenor_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -130,13 +130,13 @@ def register_rollover_tasks(celery):
                 self.update_state('FAILURE', meta='Could not find selected MatchingAttempt record')
                 raise self.replace(rollover_fail.s(task_id, convenor_id))
 
-        # build group of tasks to convert SelectingStudent instances from the current config into
+        # build task group to convert SelectingStudent instances from the current config into
         # SubmittingStudent instances for next year's config
         convert_selectors = group(convert_selector.s(current_id, s.id,
                                                      match.id if match is not None else None, use_markers)
                                   for s in config.selecting_students)
 
-        # build group of tasks to perform attachment of new records;
+        # build task group to perform attachment of new records;
         # these will attach all new SelectingStudent instances, and mop up any eligible
         # SubmittingStudent instances that weren't automatically created by conversion of
         # SelectingStudent instances
@@ -547,20 +547,28 @@ def register_rollover_tasks(celery):
         if not isinstance(use_markers, bool):
             use_markers = bool(int(use_markers))
 
+        # no need to check if ProjectClass.do_matching or ProjectClassConfig.skip_matching flags are set,
+        # since match_id will be None if these flags imply that we should ignore any MatchingAttempt
         match = None
 
         # get current configuration records
         try:
-            config = ProjectClassConfig.query.filter_by(id=new_config_id).first()
-            selector = SelectingStudent.query.filter_by(id=sel_id).first()
+            new_config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=new_config_id).first()
+            old_config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=old_config_id).first()
+            selector: SelectingStudent = SelectingStudent.query.filter_by(id=sel_id).first()
             if match_id is not None:
-                match = MatchingAttempt.query.filter_by(id=match_id).first()
+                match: MatchingAttempt = MatchingAttempt.query.filter_by(id=match_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if config is None:
+        if new_config is None:
             self.update_state('FAILURE', meta='Could not load rolled-over ProjectClassConfig record '
+                                              'while converting selector records')
+            return new_config_id
+
+        if old_config is None:
+            self.update_state('FAILURE', meta='Could not load previous ProjectClassConfig record '
                                               'while converting selector records')
             return new_config_id
 
@@ -575,19 +583,18 @@ def register_rollover_tasks(celery):
             self.update_state('FAILURE', meta='Could not load MatchingAttempt record while converting selector records')
             return new_config_id
 
-        if match is not None:
-            if selector.config.project_class not in match.available_pclasses:
-                self.update_state('FAILURE', meta='Supplied match is not appropriate for the SelectingStudent')
-                return new_config_id
+        if match is not None and selector.config.project_class not in match.available_pclasses:
+            self.update_state('FAILURE', meta='Supplied match is not appropriate for the SelectingStudent')
+            return new_config_id
 
-        if int(selector.config.year) != int(config.year)-int(1):
+        if int(selector.config.year) != int(new_config.year)-int(1):
             self.update_state('FAILURE', meta='Inconsistent arrangement of years in configuration records')
             return new_config_id
 
         # get list of match records, if one exists
         match_records = None
         if match is not None:
-            match_records = match.records.filter_by(selector_id=sel_id).all()
+            match_records: List[MatchingRecord] = match.records.filter_by(selector_id=sel_id).all()
 
             if len(match_records) == 0:
                 match_records = None
@@ -595,122 +602,160 @@ def register_rollover_tasks(celery):
         # if a match has been assigned, use this to generate a SubmittingStudent record
         if match_records is not None:
             try:
-                student_record = SubmittingStudent(config_id=new_config_id,
-                                                   student_id=selector.student_id,
-                                                   selector_id=selector.id,
-                                                   published=False,
-                                                   retired=False)
-                db.session.add(student_record)
+                new_submitter = SubmittingStudent(config_id=new_config_id,
+                                                  student_id=selector.student_id,
+                                                  selector_id=selector.id,
+                                                  published=False,
+                                                  retired=False)
+                db.session.add(new_submitter)
                 db.session.flush()
 
-                for rec in match_records:
-                    period = config.get_period(rec.submission_period)
-                    sub_record = SubmissionRecord(period_id=period.id,
-                                                  retired=False,
-                                                  owner_id=student_record.id,
-                                                  project_id=rec.project_id,
-                                                  marker_id=rec.marker_id if use_markers else None,
-                                                  selection_config_id=old_config_id,
-                                                  matching_record_id=rec.id,
-                                                  student_engaged=False,
-                                                  report_id=None,
-                                                  report_exemplar=False,
-                                                  email_to_supervisor=False,
-                                                  email_to_marker=False,
-                                                  supervisor_positive=None,
-                                                  supervisor_negative=None,
-                                                  supervisor_submitted=False,
-                                                  supervisor_timestamp=None,
-                                                  marker_positive=None,
-                                                  marker_negative=None,
-                                                  marker_submitted=False,
-                                                  marker_timestamp=None,
-                                                  student_feedback=None,
-                                                  student_feedback_submitted=False,
-                                                  student_feedback_timestamp=None,
-                                                  acknowledge_feedback=False,
-                                                  faculty_response=None,
-                                                  faculty_response_submitted=False,
-                                                  faculty_response_timestamp=None)
-                    db.session.add(sub_record)
+                for match_rec in match_records:
+                    match_rec: MatchingRecord
+                    new_period = new_config.get_period(match_rec.submission_period)
+                    new_rec = SubmissionRecord(period_id=new_period.id,
+                                               retired=False,
+                                               owner_id=new_submitter.id,
+                                               project_id=match_rec.project_id,
+                                               marker_id=match_rec.marker_id if use_markers else None,
+                                               selection_config_id=old_config_id,
+                                               matching_record_id=match_rec.id,
+                                               student_engaged=False,
+                                               report_id=None,
+                                               report_exemplar=False,
+                                               email_to_supervisor=False,
+                                               email_to_marker=False,
+                                               supervisor_positive=None,
+                                               supervisor_negative=None,
+                                               supervisor_submitted=False,
+                                               supervisor_timestamp=None,
+                                               marker_positive=None,
+                                               marker_negative=None,
+                                               marker_submitted=False,
+                                               marker_timestamp=None,
+                                               student_feedback=None,
+                                               student_feedback_submitted=False,
+                                               student_feedback_timestamp=None,
+                                               acknowledge_feedback=False,
+                                               faculty_response=None,
+                                               faculty_response_submitted=False,
+                                               faculty_response_timestamp=None)
+
+                    db.session.add(new_rec)
 
                 db.session.commit()
+
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 return self.retry()
 
         else:
+            print('## Converting selector "{name}" without a MatchingRecord list'.format(name=selector.student.user.name))
+
             try:
+
                 if selector.academic_year is not None and not selector.student.has_graduated \
-                        and selector.academic_year == config.start_year - 1:
-                    if config.selection_open_to_all:
-                        # no allocation here means that the selector chose not to participate
-                        pass
+                        and selector.academic_year == new_config.start_year - 1:
+
+                    print('##    selector is in first year of project')
+
+                    if new_config.selection_open_to_all:
+                        # interpret no allocation to mean that the selector chose not to participate
+                        print('##    dropping selector: assume has elected not to participate')
+
                     else:
-                        if not config.do_matching:
+
+                        if not new_config.do_matching:
                             # allocation is being done manually; generate an empty submitter
+                            print('##    allocation is being done manually: creating blank submitter')
                             add_blank_submitter(selector.student, old_config_id, new_config_id, autocommit=False)
                         else:
                             self.update_state('FAILURE', meta='Unexpected missing selector allocation')
                             return new_config_id
 
                 elif selector.academic_year is not None and not selector.student.has_graduated \
-                        and selector.academic_year >= config.start_year:
-                    if config.supervisor_carryover:
+                        and selector.academic_year >= new_config.start_year:
+
+                    print('##    selector is in year {yr} of '
+                          'project'.format(yr=selector.academic_year - new_config.start_year + 1))
+
+                    if new_config.supervisor_carryover:
+                        print('##    new submitter should carry over project from previous year')
                         # if possible, we should carry over supervisor allocations from the previous year
-                        prev_record = db.session.query(SubmittingStudent) \
+                        old_submitter: SubmittingStudent = db.session.query(SubmittingStudent) \
                             .filter(SubmittingStudent.config_id == selector.config_id,
                                     SubmittingStudent.student_id == selector.student_id).first()
 
-                        if prev_record is not None:
-                            student_record = SubmittingStudent(config_id=new_config_id,
-                                                               student_id=selector.student_id,
-                                                               selector_id=selector.id,
-                                                               published=False,
-                                                               retired=False)
-                            db.session.add(student_record)
+                        if old_submitter is not None:
+                            print('##    located previous submitter record')
+                            new_submitter = SubmittingStudent(config_id=new_config_id,
+                                                              student_id=selector.student_id,
+                                                              selector_id=selector.id,
+                                                              published=False,
+                                                              retired=False)
+                            db.session.add(new_submitter)
                             db.session.flush()
 
-                            for rec in prev_record.records:
-                                period = config.get_period(rec.submission_period)
-                                sub_record = SubmissionRecord(period_id=period.id,
-                                                              retired=False,
-                                                              owner_id=student_record.id,
-                                                              project_id=rec.project_id,
-                                                              marker_id=rec.marker_id,
-                                                              selection_config_id=old_config_id,
-                                                              matching_record_id=None,
-                                                              student_engaged=False,
-                                                              report_id=None,
-                                                              report_exemplar=False,
-                                                              email_to_supervisor=False,
-                                                              email_to_marker=False,
-                                                              supervisor_positive=None,
-                                                              supervisor_negative=None,
-                                                              supervisor_submitted=False,
-                                                              supervisor_timestamp=None,
-                                                              marker_positive=None,
-                                                              marker_negative=None,
-                                                              marker_submitted=False,
-                                                              marker_timestamp=None,
-                                                              student_feedback=None,
-                                                              student_feedback_submitted=False,
-                                                              student_feedback_timestamp=None,
-                                                              acknowledge_feedback=False,
-                                                              faculty_response=None,
-                                                              faculty_response_submitted=False,
-                                                              faculty_response_timestamp=None)
-                                db.session.add(sub_record)
+                            for old_rec in old_submitter.records:
+                                print('##    converting previous submission record "{pdname}" for project '
+                                      '"{proj}"'.format(pdname=old_rec.period.display_name,
+                                                        proj=old_rec.project.name if old_rec.project is not None else "<unset>"))
+                                old_rec: SubmissionRecord
+
+                                new_period = new_config.get_period(old_rec.submission_period)
+
+                                new_project = None
+                                if old_rec.project is not None:
+                                    new_project = old_config.live_projects.filter_by(parent_id=old_rec.project.parent_id).first()
+                                print('##    located new counterpart project '
+                                      '"{proj}"'.format(proj=new_project.name if new_project is not None else "<unset>"))
+
+                                new_rec = SubmissionRecord(period_id=new_period.id,
+                                                           retired=False,
+                                                           owner_id=new_submitter.id,
+                                                           project_id=new_project.id if new_project is not None else None,
+                                                           marker_id=old_rec.marker_id,
+                                                           selection_config_id=old_config_id,
+                                                           matching_record_id=None,
+                                                           student_engaged=False,
+                                                           report_id=None,
+                                                           report_exemplar=False,
+                                                           email_to_supervisor=False,
+                                                           email_to_marker=False,
+                                                           supervisor_positive=None,
+                                                           supervisor_negative=None,
+                                                           supervisor_submitted=False,
+                                                           supervisor_timestamp=None,
+                                                           marker_positive=None,
+                                                           marker_negative=None,
+                                                           marker_submitted=False,
+                                                           marker_timestamp=None,
+                                                           student_feedback=None,
+                                                           student_feedback_submitted=False,
+                                                           student_feedback_timestamp=None,
+                                                           acknowledge_feedback=False,
+                                                           faculty_response=None,
+                                                           faculty_response_submitted=False,
+                                                           faculty_response_timestamp=None)
+
+                                db.session.add(new_rec)
+
+                            db.session.commit()
+
                         else:
+                            print('!!     failed to locate previous submitter record')
                             # previous record is missing, for whatever reason, so generate a blank
                             add_blank_submitter(selector.student, old_config_id, new_config_id, autocommit=False)
 
                     else:
-                        if not config.do_matching:
+
+                        if not new_config.do_matching:
                             # allocation is being done manually; generate an empty selector
                             add_blank_submitter(selector.student, old_config_id, new_config_id, autocommit=False)
+
                         else:
+                            print('!! Unxpeted missing selector allocation')
                             self.update_state('FAILURE', meta='Unexpected missing selector allocation')
                             return new_config_id
 
@@ -756,8 +801,8 @@ def register_rollover_tasks(celery):
                 #    or any year for the extent of the project, depending what auto-enroll settings are in force
                 #  - the student is on an appropriate programme or selection is open to all
                 if (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
-                        and academic_year == config.start_year - 1) \
-                    or (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ANY_YEAR
+                    and academic_year == config.start_year - 1) \
+                        or (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ANY_YEAR
                             and config.start_year <= academic_year <= config.start_year + config.extent - 1):
 
                     if config.selection_open_to_all or (student.programme in config.programmes):

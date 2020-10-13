@@ -1805,7 +1805,7 @@ def enroll_submitter(sid, configid):
     :param configid:
     :return:
     """
-    config = ProjectClassConfig.query.get_or_404(configid)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(redirect_url())
@@ -1818,7 +1818,7 @@ def enroll_submitter(sid, configid):
         flash('Manual enrollment of submitters is only possible during normal project activity', 'error')
         return redirect(redirect_url())
 
-    old_config: ProjectClassConfig = config.pclass.get_config(config.year-1)
+    old_config: ProjectClassConfig = config.project_class.get_config(config.year-1)
 
     add_blank_submitter(sid, old_config.id if old_config is not None else None, configid, autocommit=True)
 

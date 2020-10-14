@@ -69,7 +69,7 @@ def register_precompute_tasks(celery):
 
         # request generation of table data for this selector id and project_id
         # will force it to be generated and cached if not already present
-        ajax.student.liveprojects_data(sel_id, [proj_id])
+        ajax.student.selector_liveprojects_data(sel_id, [proj_id])
 
 
     @celery.task(bind=True)

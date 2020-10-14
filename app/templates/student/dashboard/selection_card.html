@@ -118,7 +118,7 @@
     <div class="row vertical-top">
         <div class="col-12" style="text-align: right;">
             <div class="float-right">
-                <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-success student-dashboard-button">Show available projects...</a>
+                <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-success student-dashboard-button">Show available projects...</a>
                 {% if sel.has_submission_list %}
                     <a class="btn btn-secondary student-dashboard-button" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
                         Clear submission
@@ -177,12 +177,8 @@
         {% endif %}
     {% endif %}
 
-    <div class="row" style="padding-top: 8px;">
-        <div class="col-12">
-            <div class="float-right">
-                <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-outline-success student-dashboard-button">View the project list...</a>
-            </div>
-        </div>
+    <div class="d-flex justify-content-end mt-1">
+        <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-outline-success student-dashboard-button">View project list...</a>
     </div>
 {% endmacro %}
 
@@ -198,7 +194,7 @@
                     <span id="ranking" class="badge {% if loop.index <= sel.number_choices %}badge-success{% else %}badge-danger{% endif %}">#{{ loop.index }}</span>
                 </div>
                 <div class="col-3">
-                    <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
+                    <a href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id) }}">
                         <strong>{{ project.name }}</strong>
                     </a>
                     {% if not sel.satisfies_recommended(project) %}

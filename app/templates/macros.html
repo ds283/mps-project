@@ -198,13 +198,13 @@
     </div>
 {% endmacro %}
 
-{% macro filter_block(config, groups, skill_groups, skill_list, clear_group, add_group, remove_group, clear_skill, add_skill, remove_skill) %}
+{% macro filter_block(sel, groups, skill_groups, skill_list, clear_group, add_group, remove_group, clear_skill, add_skill, remove_skill) %}
     <div id="accordion">
         <div class="card mt-3 mb-3">
             <div class="card-header">
                 <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseFilter">
                     Filters
-                    {% if config.group_filters.first() or config.skill_filters.first() %}
+                    {% if sel.group_filters.first() or sel.skill_filters.first() %}
                         [active]
                     {% endif %}
                     <i class="indicator fas fa-chevron-up float-right"></i>
@@ -218,18 +218,18 @@
                                 <div class="col-9"><span class="filter-title">Research group filters</span></div>
                                 <div class="col-3">
                                     {% set enabled = true %}
-                                    {% if not config.group_filters.first() %}{% set enabled = false %}{% endif %}
+                                    {% if not sel.group_filters.first() %}{% set enabled = false %}{% endif %}
                                     <div class="float-right">
                                         <a class="btn btn-sm btn-secondary {% if not enabled %}disabled{% endif %}"
-                                           {% if enabled %}href="{{ url_for(clear_group, id=config.id) }}"{% endif %}>
+                                           {% if enabled %}href="{{ url_for(clear_group, id=sel.id) }}"{% endif %}>
                                             Clear all
                                         </a>
                                     </div>
                                 </div>
                             </div>
                             {% for group in groups %}
-                                {% if group in config.group_filters %}
-                                    <a href="{{ url_for(remove_group, id=config.id, gid=group.id) }}"
+                                {% if group in sel.group_filters %}
+                                    <a href="{{ url_for(remove_group, id=sel.id, gid=group.id) }}"
                                        class="badge badge-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
                                         <i class="fas fa-times"></i>
                                         {{ group.name }}
@@ -239,8 +239,8 @@
                         </div>
                         <div class="card-footer">
                             {% for group in groups %}
-                                {% if group not in config.group_filters %}
-                                    <a href="{{ url_for(add_group, id=config.id, gid=group.id) }}"
+                                {% if group not in sel.group_filters %}
+                                    <a href="{{ url_for(add_group, id=sel.id, gid=group.id) }}"
                                        class="badge badge-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
                                         <i class="fas fa-plus"></i>
                                         {{ group.name }}
@@ -255,10 +255,10 @@
                                 <div class="col-9"><span class="filter-title">Transferable skill filters</span></div>
                                 <div class="col-3">
                                     {% set enabled = true %}
-                                    {% if not config.skill_filters.first() %}{% set enabled = false %}{% endif %}
+                                    {% if not sel.skill_filters.first() %}{% set enabled = false %}{% endif %}
                                     <div class="float-right">
                                         <a class="btn btn-sm btn-secondary {% if not enabled %}disabled{% endif %}"
-                                           {% if enabled %}href="{{ url_for(clear_skill, id=config.id) }}"{% endif %}>
+                                           {% if enabled %}href="{{ url_for(clear_skill, id=sel.id) }}"{% endif %}>
                                             Clear all
                                         </a>
                                     </div>
@@ -268,8 +268,8 @@
                                 {% set skills = skill_list[sgroup] %}
                                 <div class="skills-filter-container">
                                     {% for skill in skills  %}
-                                        {% if skill in config.skill_filters %}
-                                            <a href="{{ url_for(remove_skill, id=config.id, skill_id=skill.id) }}"
+                                        {% if skill in sel.skill_filters %}
+                                            <a href="{{ url_for(remove_skill, id=sel.id, skill_id=skill.id) }}"
                                                class="badge badge-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
                                                 <i class="fas fa-times"></i>
                                                 {{ skill.name }}
@@ -287,8 +287,8 @@
                                         {{ sgroup }}
                                     </div>
                                     {% for skill in skills %}
-                                        {% if skill not in config.skill_filters %}
-                                            <a href="{{ url_for(add_skill, id=config.id, skill_id=skill.id) }}"
+                                        {% if skill not in sel.skill_filters %}
+                                            <a href="{{ url_for(add_skill, id=sel.id, skill_id=skill.id) }}"
                                                class="badge badge-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
                                                 <i class="fas fa-plus"></i>
                                                 {{ skill.name }}

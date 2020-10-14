@@ -8,4 +8,4 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from .liveprojects import liveprojects_data
+from .liveprojects import selector_liveprojects_data, submitter_liveprojects_data

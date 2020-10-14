@@ -11,87 +11,29 @@
 
 import re
 from datetime import datetime, date
+from functools import partial
 
 import parse
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session
 from flask_mail import Message
 from flask_security import current_user, roles_required, roles_accepted
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from sqlalchemy.sql import func, or_
 from sqlalchemy.orm.exc import StaleDataError
 
 import app.ajax as ajax
 from . import student
 from .actions import store_selection
 from .forms import StudentFeedbackForm, StudentSettingsForm
+from .utils import verify_submitter, verify_selector, verify_view_project, verify_open, verify_submission_record
 from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, LiveProject, \
     Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SubmissionRecord, TransferableSkill, \
-    User, EmailNotification, add_notification, CustomOffer
+    User, EmailNotification, add_notification, CustomOffer, Project, SubmittingStudent
 from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects, get_count, redirect_url
 from ..shared.validators import validate_is_convenor, validate_submission_viewable
 from ..task_queue import register_task
-
-
-def _verify_submitter(rec):
-    if rec.owner.student_id != current_user.id:
-        flash('You do not have permission to view feedback for this user. '
-              'If you believe this is incorrect, contract the system administrator.', 'error')
-        return False
-
-    return True
-
-
-def _verify_selector(sel):
-    """
-    Validate that the logged in user is allowed to perform operations on a particular SelectingStudent
-    :param sel:
-    :return:
-    """
-    # verify the logged-in user is allowed to perform operations for this SelectingStudent
-    if sel.student_id != current_user.id and not current_user.has_role('admin') and not current_user.has_role('root'):
-        flash('You do not have permission to perform operations for this user. '
-              'If you believe this is incorrect, contract the system administrator.', 'error')
-        return False
-
-    return True
-
-
-def _verify_view_project(sel, project):
-    """
-    Validate that a particular SelectingStudent is allowed to perform operations on a given LiveProject
-    :param sel:
-    :param project:
-    :return:
-    """
-    if get_count(sel.config.live_projects.filter_by(id=project.id)) == 0:
-        flash('You are not able to view or bookmark this project because it is not attached to your student '
-              'record for this type of project. Return to the dashboard and try to access the project from there. '
-              'If problems persist, contact the system administrator.', 'error')
-        return False
-
-    return True
-
-
-def _verify_open(config, state=None, strict=False):
-    """
-    Validate that a particular ProjectClassConfig is open for student selections
-    :param config:
-    :return:
-    """
-    if state is None:
-        state = config.selector_lifecycle
-
-    if strict and state != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-        flash('It is not possible to perform this operations because selections for '
-              '"{proj}" are not open.'.format(proj=config.name), 'error')
-        return False
-
-    if not strict and state < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-        flash('It is not possible to perform this operations because selections for '
-              '"{proj}" are not yet open.'.format(proj=config.name), 'error')
-        return False
-
-    return True
+from ..tools import ServerSideHandler
 
 
 @student.route('/dashboard')
@@ -192,23 +134,24 @@ def dashboard():
                            has_submissions=has_submissions)
 
 
-@student.route('/browse_projects/<int:id>')
+@student.route('/selector_browse_projects/<int:id>')
 @roles_accepted('student')
-def browse_projects(id):
+def selector_browse_projects(id):
     """
-    Browse the live project table for a particular ProjectClassConfig
+    Browse the live project table for a particular selecting student instance
     :param id:
     :return:
     """
     # id is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(id)
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(id)
+    config: ProjectClassConfig = sel.config
 
     # verify the logged-in user is allowed to view this SelectingStudent
-    if not _verify_selector(sel):
-        return redirect(url_for('student.dashboard'))
+    if not verify_selector(sel, message=True):
+        return redirect(redirect_url())
 
-    state = sel.config.selector_lifecycle
-    if not _verify_open(sel.config, state=state):
+    state = config.selector_lifecycle
+    if not verify_open(config, state=state, message=True):
         return redirect(redirect_url())
 
     # supply list of transferable skill groups and research groups that can be filtered against
@@ -227,34 +170,118 @@ def browse_projects(id):
         skill_list[skill.group.name].append(skill)
 
     is_live = state < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
-    return render_template('student/browse_projects.html', sel=sel, config=sel.config, is_live=is_live,
-                           groups=groups, skill_groups=sorted(skill_list.keys()), skill_list=skill_list)
+    endpoint = url_for('student.selector_projects_ajax', id=id)
+    return render_template('student/browse_projects.html', sel=sel, config=config, is_live=is_live,
+                           groups=groups, skill_groups=sorted(skill_list.keys()), skill_list=skill_list,
+                           ajax_endpoint=endpoint)
 
 
-@student.route('/projects_ajax/<int:id>')
+@student.route('/selector_projects_ajax/<int:id>', methods=['POST'])
 @roles_accepted('student')
-def projects_ajax(id):
+def selector_projects_ajax(id):
     """
     Ajax data point for live projects table
     :param id:
     :return:
     """
     # id is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(id)
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(id)
+    config: ProjectClassConfig = sel.config
+    state = config.selector_lifecycle
 
     # verify the logged-in user is allowed to view this SelectingStudent
-    if not _verify_selector(sel):
+    if not verify_selector(sel):
         return jsonify({})
-
-    state = sel.config.selector_lifecycle
-    if not _verify_open(sel.config, state=state):
-        return jsonify({})
-
-    projects = filter_projects(sel.config.live_projects.all(),
-                               sel.group_filters.all(), sel.skill_filters.all(), setter=lambda x: x.id)
 
     is_live = state < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
-    return ajax.student.liveprojects_data(sel.id, projects, is_live=is_live)
+    return _project_list_endpoint(sel.config, sel,
+                                  partial(ajax.student.selector_liveprojects_data, sel.id, is_live),
+                                  state=state)
+
+
+@student.route('/submitter_browse_projects/<int:id>')
+@roles_accepted('student')
+def submitter_browse_projects(id):
+    """
+    Browse the live project table for a particular submitting student instance
+    :param id:
+    :return:
+    """
+    # id is a SelectingStudent
+    sub: SubmittingStudent = SubmittingStudent.query.get_or_404(id)
+    config: ProjectClassConfig = sub.selector_config
+
+    # verify the logged-in user is allowed to view this SelectingStudent
+    if not verify_submitter(sub, message=True):
+        return redirect(redirect_url())
+
+    state = config.selector_lifecycle
+    if not verify_open(config, state=state, message=True):
+        return redirect(redirect_url())
+
+    is_live = state < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+    endpoint = url_for('student.submitter_projects_ajax', id=id)
+    return render_template('student/browse_projects.html', sel=sub, config=config, is_live=is_live,
+                           groups=None, skill_groups=None, skill_list=None, ajax_endpoint=endpoint)
+
+
+@student.route('/submitter_projects_ajax/<int:id>', methods=['POST'])
+@roles_accepted('student')
+def submitter_projects_ajax(id):
+    """
+    Ajax data point for live projects table
+    :param id:
+    :return:
+    """
+    # id is a SubmittingStudent
+    sub: SubmittingStudent = SubmittingStudent.query.get_or_404(id)
+    config: ProjectClassConfig = sub.selector_config
+
+    # verify the logged-in user is allowed to view this SelectingStudent
+    if not verify_submitter(sub):
+        return jsonify({})
+
+    return _project_list_endpoint(config, None, partial(ajax.student.submitter_liveprojects_data, id))
+
+
+def _project_list_endpoint(config: ProjectClassConfig, sel: SelectingStudent, row_formatter, state=None):
+    # check that project is viewable for this ProjectClassConfig instance
+    if state is None:
+        state = config.selector_lifecycle
+
+    if not verify_open(config, state=state):
+        return jsonify({})
+
+    base_query = config.live_projects \
+        .join(Project, Project.id == LiveProject.parent_id) \
+        .join(User, User.id == Project.owner_id) \
+        .join(ResearchGroup, ResearchGroup.id == LiveProject.group_id)
+
+    if sel is not None:
+        if sel.group_filters.first():
+            base_query = base_query.filter(or_(ResearchGroup.id == g.id for g in sel.group_filters))
+
+        if sel.skill_filters.first():
+            base_query = base_query.filter(or_(LiveProject.skills.any(SkillGroup.id == s.id) for s in sel.skill_filters))
+
+    name = {'search': LiveProject.name,
+            'order': LiveProject.name,
+            'search_collation': 'utf8_general_ci'}
+    supervisor = {'search': func.concat(User.first_name, ' ', User.last_name),
+                  'order': [User.last_name, User.first_name],
+                  'search_collation': 'utf8_general_ci'}
+    group = {'search': ResearchGroup.name,
+             'order': ResearchGroup.name,
+             'search_collation': 'utf8_general_ci'}
+    meeting = {'order': LiveProject.meeting_reqd}
+
+    columns = {'name': name,
+               'supervisor': supervisor,
+               'group': group,
+               'meeting': meeting}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(row_formatter)
 
 
 @student.route('/add_group_filter/<id>/<gid>')
@@ -362,9 +389,9 @@ def clear_skill_filters(id):
     return redirect(redirect_url())
 
 
-@student.route('/view_project/<int:sid>/<int:pid>')
+@student.route('/selector_view_project/<int:sid>/<int:pid>')
 @roles_accepted('student', 'admin', 'root')
-def view_project(sid, pid):
+def selector_view_project(sid, pid):
     """
     View a specific project
     :param sid:
@@ -372,22 +399,23 @@ def view_project(sid, pid):
     :return:
     """
     # sid is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(sid)
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+    config: ProjectClassConfig = sel.config
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
-    if not _verify_selector(sel):
-        return redirect(url_for('student.dashboard'))
+    if not verify_selector(sel, message=True):
+        return redirect(redirect_url())
 
     # pid is the id for a LiveProject
-    project = LiveProject.query.get_or_404(pid)
+    project: LiveProject = LiveProject.query.get_or_404(pid)
 
     # verify student is allowed to view this live project
-    if not _verify_view_project(sel, project):
-        return redirect(url_for('student.dashboard'))
+    if not verify_view_project(config, project):
+        return redirect(redirect_url())
 
     # verify project is open
-    if not _verify_open(sel.config):
-        return redirect(url_for('student.dashboard'))
+    if not verify_open(config, message=True):
+        return redirect(redirect_url())
 
     # update page views
     if project.page_views is None:
@@ -415,7 +443,51 @@ def view_project(sid, pid):
 
     return render_template('student/show_project.html', title=project.name, sel=sel, project=project, desc=project,
                            keywords=keywords, text='project list',
-                           url=url_for('student.browse_projects', id=sel.id))
+                           url=url_for('student.selector_browse_projects', id=sel.id))
+
+
+@student.route('/submitter_view_project/<int:sid>/<int:pid>')
+@roles_accepted('student', 'admin', 'root')
+def submitter_view_project(sid, pid):
+    """
+    View a specific project
+    :param sid:
+    :param pid:
+    :return:
+    """
+    # sid is a SelectingStudent
+    sub: SubmittingStudent = SubmittingStudent.query.get_or_404(sid)
+    config: ProjectClassConfig = sub.selector_config
+
+    # verify the logged-in user is allowed to perform operations for this SubmittingStudent
+    if not verify_submitter(sub, message=True):
+        return redirect(redirect_url())
+
+    # pid is the id for a LiveProject
+    project: LiveProject = LiveProject.query.get_or_404(pid)
+
+    # verify student is allowed to view this live project
+    if not verify_view_project(config, project):
+        return redirect(redirect_url())
+
+    # verify project is open
+    if not verify_open(config, message=True):
+        return redirect(redirect_url())
+
+    # build list of keywords
+    if isinstance(project.keywords, str):
+        keywords = _extract_keywords(project.keywords)
+    elif project.keywords is None:
+        keywords = []
+    else:
+        try:
+            keywords = _extract_keywords(project.keywords.decode('utf-8'))
+        except AttributeError:
+            keywords = []
+
+    return render_template('student/show_project.html', title=project.name, sel=None, project=project, desc=project,
+                           keywords=keywords, text='project list', archived=True,
+                           url=url_for('student.submitter_browse_projects', id=sub.id))
 
 
 def _extract_keywords(field):
@@ -431,18 +503,18 @@ def add_bookmark(sid, pid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
-    if not _verify_selector(sel):
+    if not verify_selector(sel, message=True):
         return redirect(redirect_url())
 
     # pid is the id for a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
     # verify project is open
-    if not _verify_open(project.config, strict=True):
+    if not verify_open(project.config, strict=True, message=True):
         return redirect(redirect_url())
 
     # verify student is allowed to view this live project
-    if not _verify_view_project(sel, project):
+    if not verify_view_project(sel.config, project):
         return redirect(redirect_url())
 
     # add bookmark
@@ -462,18 +534,18 @@ def remove_bookmark(sid, pid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
-    if not _verify_selector(sel):
+    if not verify_selector(sel, message=True):
         return redirect(redirect_url())
 
     # pid is the id for a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
     # verify project is open
-    if not _verify_open(project.config, strict=True):
+    if not verify_open(project.config, strict=True, message=True):
         return redirect(redirect_url())
 
     # verify student is allowed to view this live project
-    if not _verify_view_project(sel, project):
+    if not verify_view_project(sel.config, project):
         return redirect(redirect_url())
 
     # remove bookmark
@@ -501,18 +573,18 @@ def request_confirmation(sid, pid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
-    if not _verify_selector(sel):
+    if not verify_selector(sel, message=True):
         return redirect(redirect_url())
 
     # pid is the id for a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
     # verify project is open
-    if not _verify_open(project.config, strict=True):
+    if not verify_open(project.config, strict=True, message=True):
         return redirect(redirect_url())
 
     # verify student is allowed to view this live project
-    if not _verify_view_project(sel, project):
+    if not verify_view_project(sel.config, project):
         return redirect(redirect_url())
 
     # check if confirmation has already been issued
@@ -547,18 +619,18 @@ def cancel_confirmation(sid, pid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
-    if not _verify_selector(sel):
+    if not verify_selector(sel, message=True):
         return redirect(redirect_url())
 
     # pid is the id for a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
     # verify project is open
-    if not _verify_open(project.config, strict=True):
+    if not verify_open(project.config, strict=True, message=True):
         return redirect(redirect_url())
 
     # verify student is allowed to view this live project
-    if not _verify_view_project(sel, project):
+    if not verify_view_project(sel.config, project):
         return redirect(redirect_url())
 
     # check if confirmation has already been issued
@@ -824,7 +896,7 @@ def view_selection(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
-    if not _verify_selector(sel):
+    if not verify_selector(sel, message=True):
         return redirect(redirect_url())
 
     return render_template('student/choices.html', sel=sel)
@@ -836,7 +908,7 @@ def view_feedback(id):
     # id identifies a SubmissionRecord
     record = SubmissionRecord.query.get_or_404(id)
 
-    if not _verify_submitter(record):
+    if not verify_submission_record(record, message=True):
         return redirect(redirect_url())
 
     url = request.args.get('url', None)
@@ -864,7 +936,7 @@ def edit_feedback(id):
     # id identifies a SubmissionRecord
     record = SubmissionRecord.query.get_or_404(id)
 
-    if not _verify_submitter(record):
+    if not verify_submission_record(record, message=True):
         return redirect(redirect_url())
 
     if record.retired:
@@ -911,7 +983,7 @@ def submit_feedback(id):
     # id identifies a SubmissionRecord
     record = SubmissionRecord.query.get_or_404(id)
 
-    if not _verify_submitter(record):
+    if not verify_submission_record(record, message=True):
         return redirect(redirect_url())
 
     if record.student_feedback_submitted:

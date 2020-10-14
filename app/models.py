@@ -7609,6 +7609,14 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(submitter_tasks, Con
 
 
     @property
+    def selector_config(self):
+        if self.selector is not None:
+            return self.selector.config
+
+        return self.config.previous_config
+
+
+    @property
     def academic_year(self):
         """
         Compute the current academic year for this student, relative this ProjectClassConfig

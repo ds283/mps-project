@@ -50,7 +50,7 @@ _project_task = \
         <span class="badge badge-info"><i class="fas fa-redo"></i> Repeat</span>
     {% endif %}
     {% if tk.rollover %}
-        <span class="badge badge-info"><i class="fas fa-arrow-alt-circle-right"> Rollover</span>
+        <span class="badge badge-info"><i class="fas fa-arrow-alt-circle-right"></i> Rollover</span>
     {% endif %}
 </div>
 {% if tk.notes and tk.notes|length > 0 %}

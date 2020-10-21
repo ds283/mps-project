@@ -1105,22 +1105,6 @@ submitted_acr = db.Table('acr_submitted',
                          db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True))
 
 
-# CONVENOR TASKS
-
-# tasks for selecting students
-selector_tasks = db.Table('selector_tasks',
-                          db.Column('selector_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True),
-                          db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True))
-
-submitter_tasks = db.Table('submitter_tasks',
-                           db.Column('submitter_id', db.Integer(), db.ForeignKey('submitting_students.id'), primary_key=True),
-                           db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True))
-
-project_tasks = db.Table('project_tasks',
-                         db.Column('config_id', db.Integer(), db.ForeignKey('project_class_config.id'), primary_key=True),
-                         db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True))
-
-
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
@@ -1448,7 +1432,8 @@ def _User_role_remove_handler(target, value, initiator):
 
 class ConvenorTask(db.Model, EditingMetadataMixin):
     """
-    Record a to-do item for the convenor, and can be attached either to a SelectingStudent or a SubmittingStudent
+    Record a to-do item for the convenor. Derived classes represent specific types of task, eg.,
+    associated with a specific selecting or submitting student, or a given project configuration
     """
     __tablename__ = 'convenor_tasks'
 
@@ -1510,19 +1495,49 @@ class ConvenorTask(db.Model, EditingMetadataMixin):
 
 
 class ConvenorSelectorTask(ConvenorTask):
-    __tablename__ = None
+    """
+    Derived from ConvenorTask. Represents a task record attached to a specific SelectingStudent
+    """
+    __tablename__ = "convenor_selector_tasks"
+
+
+    # primary key links to base table
+    id = db.Column(db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True)
+
+    # owner SelectingStudent
+    owner_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
+
 
     __mapper_args__ = {'polymorphic_identity': 1}
 
 
 class ConvenorSubmitterTask(ConvenorTask):
-    __tablename__ = None
+    """
+    Derived from ConvenorTask. Represents a task record attached to a specific SubmittingStudent
+    """
+
+    # primary key links to base table
+    id = db.Column(db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True)
+
+    # owner SelectingStudent
+    owner_id = db.Column(db.Integer(), db.ForeignKey('submitting_students.id'))
+
 
     __mapper_args__ = {'polymorphic_identity': 2}
 
 
 class ConvenorGenericTask(ConvenorTask):
-    __tablename__ = None
+    """
+    Derived from ConvenorTask. Represents a task record attached to a specific ProjectClassConfig
+    """
+    __tablename__ = 'convenor_generic_tasks'
+
+
+    # primary key links to base table
+    id = db.Column(db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True)
+
+    # owner SelectingStudent
+    owner_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
 
 
     # is this task repeating, ie. does it recur every year?
@@ -1535,7 +1550,7 @@ class ConvenorGenericTask(ConvenorTask):
     repeat_options = [(REPEAT_DAILY, 'Daily'),
                       (REPEAT_MONTHLY, 'Monthly'),
                       (REPEAT_YEARLY, 'Yearly')]
-    repeat_interval = db.Column(db.Boolean(), default=REPEAT_DAILY)
+    repeat_interval = db.Column(db.Integer(), default=REPEAT_DAILY)
 
     # repeat frequency
     repeat_frequency = db.Column(db.Integer())
@@ -1551,14 +1566,13 @@ class ConvenorGenericTask(ConvenorTask):
 
 
 
-def ConvenorTasksMixinFactory(association_table, subclass):
+def ConvenorTasksMixinFactory(subclass):
 
     class ConvenorTasksMixin():
 
         @declared_attr
         def tasks(cls):
-            return db.relationship(subclass, secondary=association_table, lazy='dynamic',
-                                   backref=db.backref('parent', uselist=False))
+            return db.relationship(subclass, lazy='dynamic', backref=db.backref('parent', uselist=False))
 
 
         @property
@@ -4277,7 +4291,7 @@ class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
         return 'Submission Period #{n}'.format(n=self.period)
 
 
-class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, ConvenorGenericTask)):
+class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask)):
     """
     Model current configuration options for each project class
     """
@@ -7389,7 +7403,7 @@ class ConfirmRequest(db.Model):
                 delete_notification(self.project.owner.user, EmailNotification.CONFIRMATION_REQUEST_CREATED, self)
 
 
-class SelectingStudent(db.Model, ConvenorTasksMixinFactory(selector_tasks, ConvenorSelectorTask)):
+class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)):
     """
     Model a student who is selecting a project in the current cycle
     """
@@ -7852,7 +7866,7 @@ def _SelectingStudent_update_handler(mapper, connection, target):
             _delete_MatchingRecord_cache(record.id, record.matching_id)
 
 
-class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(submitter_tasks, ConvenorSubmitterTask)):
+class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTask)):
     """
     Model a student who is submitting work for evaluation in the current cycle
     """

@@ -281,7 +281,7 @@ _menu = \
             </a>
         {% endif %}
         <a class="dropdown-item" href="{{ url_for('convenor.student_tasks', type=2, sid=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
-            <i class="fas fa-clipboard-check fa-fw"></i> Tasks...
+            <i class="fas fa-tasks fa-fw"></i> Tasks...
         </a>
         
         {% if sub.published and pclass.publish %}

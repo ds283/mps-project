@@ -1,6 +1,6 @@
-{% import "bootstrap/form.html" as wtf %}
+{% extends "base_form.html" %}
 
-{% extends "security/index.html" %}
+{% import "bootstrap/form.html" as wtf %}
 
 {% block title %}
     Test catch-up of email notifications for {{ config.name }}

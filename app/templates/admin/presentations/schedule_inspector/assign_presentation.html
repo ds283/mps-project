@@ -110,9 +110,9 @@
                                     <div class="has-error">
                                         {% for item in errors %}
                                             {% if loop.index <= 10 %}
-                                                <p class="help-block">{{ item }}</p>
+                                                <div class="invalid-feedback">{{ item }}</div>
                                             {% elif loop.index == 11 %}
-                                                <p class="help-block">...</p>
+                                                <div class="invalid-feedback">...</div>
                                             {% endif %}
                                         {% endfor %}
                                     </div>
@@ -121,9 +121,9 @@
                                     <div class="has-error">
                                         {% for item in warnings %}
                                             {% if loop.index <= 10 %}
-                                                <p class="help-block">Warning: {{ item }}</p>
+                                                <div class="invalid-feedback">Warning: {{ item }}</div>
                                             {% elif loop.index == 11 %}
-                                                <p class="help-block">...</p>
+                                                <div class="invalid-feedback">...</div>
                                             {% endif %}
                                         {% endfor %}
                                     </div>

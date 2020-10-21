@@ -1,4 +1,4 @@
-{% extends "security/index.html" %}
+{% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, date_field %}
@@ -78,5 +78,6 @@
 {% if task is defined %}
     {% block footer %}
         {{ edit_data(task) }}
+        {{ super() }}
     {% endblock %}
 {% endif %}

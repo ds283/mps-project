@@ -12,7 +12,7 @@ import os
 
 from flask import current_app, request, session, render_template, has_request_context
 from flask_migrate import Migrate
-from flask_security import current_user, SQLAlchemyUserDatastore, Security
+from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm
 from flask_login.signals import user_logged_in
 from .thirdparty.flask_bootstrap4 import Bootstrap
 from .thirdparty.flask_sessionstore import Session
@@ -58,6 +58,14 @@ from werkzeug.middleware.profiler import ProfilerMiddleware
 from dozer import Dozer
 
 from pathlib import Path
+
+
+class PatchedLoginForm(LoginForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.email.description = 'Your login name is your email address. Normally this will be your ' \
+                                 'university @sussex.ac.uk address.'
 
 
 def create_app():
@@ -183,9 +191,8 @@ def create_app():
 
     user_datastore = SQLAlchemyUserDatastore(db, models.User, models.Role)
 
-    # we don't override any of Security's internal forms, but we do replace its create user function
-    # that automatically uses our own replacements
-    security = Security(app, user_datastore)
+    # patch Flask-Security's login form to include some descriptive text on the email field
+    security = Security(app, user_datastore, login_form=PatchedLoginForm)
     if config_name == 'production':
         # set up more stringent limits for login view and forgot-password view
         # add to a particular view function.

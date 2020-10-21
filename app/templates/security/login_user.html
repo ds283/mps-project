@@ -1,6 +1,12 @@
-{% import "bootstrap/form.html" as wtf %}
-
 {% extends "security/index.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import message_card, show_prepend_field %}
+
+{% block scripts %}
+    {{ super() }}
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
+{% endblock %}
 
 {% block title %}
     Login
@@ -10,15 +16,35 @@
     Login
 {% endblock %}
 
+{% block margin_column %}col-3{% endblock %}
+{% block body_column %}col-6{% endblock %}
+{% block card_classes %}bg-light mb-5{% endblock %}
+{% block card_header %}{% endblock %}
+{% block card_body_classes %}{% endblock %}
+
+{% block header %}
+    <div class="d-flex justify-content-center">
+        <div class="login-box-title text-dark">Login</div>
+    </div>
+{% endblock %}
+
 {% block form_content %}
     <form action="{{ url_for('security.login') }}" method="POST" name="login_user_form">
         {{ login_user_form.hidden_tag() }}
 
 {#        {{ wtf.form_errors(login_user_form) }}#}
 
-        {{ wtf.render_field(login_user_form.email) }}
-        {{ wtf.render_field(login_user_form.password) }}
-        {{ wtf.render_field(login_user_form.submit, button_map={'submit': 'primary'}) }}
-
+        {{ show_prepend_field(login_user_form.email, '<i class="fas fa-user"></i>', show_label=false, placeholder='Email address') }}
+        {{ show_prepend_field(login_user_form.password, '<i class="fas fa-lock"></i>', show_label=false, placeholder='Password') }}
+        {{ wtf.render_field(login_user_form.submit, button_map={'submit': 'outline-success'}) }}
     </form>
+{% endblock %}
+
+{% block footer %}
+    <hr class="intro-divider">
+    {% if messages %}
+        {% for message in messages %}
+            {{ message_card(message, enrolled_classes) }}
+        {% endfor %}
+    {% endif %}
 {% endblock %}

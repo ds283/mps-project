@@ -1,7 +1,7 @@
+{% extends "base_form.html" %}
+
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, date_field %}
-
-{% extends "security/index.html" %}
 
 {% block scripts %}
     {{ super() }}
@@ -83,4 +83,5 @@
 
 {% block footer %}
     {{ edit_data(period) }}
+    {{ super() }}
 {% endblock %}

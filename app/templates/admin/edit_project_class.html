@@ -1,4 +1,4 @@
-{% extends "security/index.html" %}
+{% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, colour_field %}
@@ -148,4 +148,5 @@
 
 {% block footer %}
     {{ edit_data(pclass) }}
+    {{ super() }}
 {% endblock %}

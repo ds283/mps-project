@@ -91,7 +91,7 @@
                 <div class="col-9">
                     {% if nproj == 0 and not (is_sabbatical or is_exempt) %}
                         <div class="has-error">
-                            <div class="help-block">
+                            <div class="invalid-feedback">
                                 <strong>
                     {% endif %}
                     <p>{{ nproj }} active project{{ nproj_plural }} attached to this project class.</p>
@@ -139,11 +139,11 @@
                             </div>
                             {% if not available %}
                                 <div class="has-error">
-                                    <p class="help-block">
+                                    <div class="invalid-feedback">
                                         <i class="fas fa-exclamation-triangle" style="color:red;"></i>
                                         This project has validation errors that will prevent it from being published.
                                         <a href="{{ url_for('faculty.edit_projects') }}">Edit in library...</a>
-                                    </p>
+                                    </div>
                                 </div>
                             {% endif %}
                         </div>

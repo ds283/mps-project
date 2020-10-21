@@ -23,9 +23,9 @@
     {% endwith -%}
 {% endmacro -%}
 
-{% macro truncate(name) %}
-    {% if name|length > 20 %}
-        {{ name[0:20] }}...
+{% macro truncate(name, length=20) %}
+    {% if name|length > length %}
+        {{ name[0:length] }}...
     {% else %}
         {{ name }}
     {% endif %}
@@ -155,6 +155,64 @@
     </div>
 {% endmacro %}
 
+{% macro show_default_field(field, default_value) %}
+    {% if field.flags.required and not required in kwargs %}
+        {% set kwargs = dict(required=True, **kwargs) %}
+    {% endif %}
+
+    {% set extra_classes = ' ' + field.render_kw.class if field.render_kw.class else '' %}
+
+    <div class="form-group {%- if field.flags.required %} require{% endif -%}">
+        {{ field.label(class="control-label")|safe }}
+        <div class="input-group">
+            {% if field.errors %}
+                {{ field(class="form-control mb-2 mb-sm-0 is-invalid%s" % extra_classes, **kwargs)|safe }}
+            {% else %}
+                {{ field(class="form-control mb-2 mb-sm-0%s" % extra_classes, **kwargs)|safe }}
+            {% endif %}
+            <div class="input-group-append">
+                <span class="input-group-text">Current default&nbsp;<strong>{{ default_value }}</strong></span>
+            </div>
+        </div>
+        {% if field.errors %}
+            {% for error in field.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+        {% elif field.description %}
+            <small class="form-text text-muted">{{ field.description|safe }}</small>
+        {% endif %}
+    </div>
+{% endmacro %}
+
+{% macro show_prepend_field(field, label, show_label=true) %}
+    {% if field.flags.required and not required in kwargs %}
+        {% set kwargs = dict(required=True, **kwargs) %}
+    {% endif %}
+
+    {% set extra_classes = ' ' + field.render_kw.class if field.render_kw.class else '' %}
+
+    <div class="form-group {%- if field.flags.required %} require{% endif -%}">
+        {% if show_label %}{{ field.label(class="control-label")|safe }}{% endif %}
+        <div class="input-group">
+            <div class="input-group-prepend">
+                <span class="input-group-text">{{ label|safe }}</span>
+            </div>
+            {% if field.errors %}
+                {{ field(class="form-control mb-2 mb-sm-0 is-invalid%s" % extra_classes, **kwargs)|safe }}
+            {% else %}
+                {{ field(class="form-control mb-2 mb-sm-0%s" % extra_classes, **kwargs)|safe }}
+            {% endif %}
+        </div>
+        {% if field.errors %}
+            {% for error in field.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+        {% elif field.description %}
+            <small class="form-text text-muted">{{ field.description|safe }}</small>
+        {% endif %}
+    </div>
+{% endmacro %}
+
 {% macro on_click_selector_field(field, show_label) %}
     <div class="form-group {% if field.errors %} has-error{% endif -%}
                                {%- if field.flags.required %} required{% endif -%}">
@@ -164,7 +222,7 @@
         {{ field(class="form-control", onchange="this.form.submit()")|safe }}
         {% if field.errors %}
             {% for error in field.errors %}
-                <p class="invalid-feedback">{{ error }}</p>
+                <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}
         {% endif %}
     </div>

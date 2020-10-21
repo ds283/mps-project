@@ -1,35 +1,7 @@
+{% extends "base_form.html" %}
+
 {% import "bootstrap/form.html" as wtf %}
-
-{% extends "security/index.html" %}
-
-{% macro show_default_field(field, default_value) %}
-    {% if field.flags.required and not required in kwargs %}
-        {% set kwargs = dict(required=True, **kwargs) %}
-    {% endif %}
-
-    {% set extra_classes = ' ' + field.render_kw.class if field.render_kw.class else '' %}
-
-    <div class="form-group {%- if field.flags.required %} require{% endif -%}">
-        {{ field.label(class="control-label")|safe }}
-        <div class="input-group">
-            {% if field.errors %}
-                {{ field(class="form-control mb-2 mb-sm-0 is-invalid%s" % extra_classes, **kwargs)|safe }}
-            {% else %}
-                {{ field(class="form-control mb-2 mb-sm-0%s" % extra_classes, **kwargs)|safe }}
-            {% endif %}
-            <div class="input-group-append">
-                <span class="input-group-text">Current default&nbsp;<strong>{{ default_value }}</strong></span>
-            </div>
-        </div>
-        {% if field.errors %}
-            {% for error in field.errors %}
-                <p class="help-block">{{ error }}</p>
-            {% endfor %}
-        {% elif field.description %}
-            <p class="help-block">{{ field.description|safe }}</p>
-        {% endif %}
-    </div>
-{% endmacro %}
+{% from "macros.html" import show_default_field %}
 
 {% block title %}
     Edit project configuration

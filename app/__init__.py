@@ -48,7 +48,6 @@ from mdx_smartypants import makeExtension
 import latex2markdown
 from urllib import parse
 
-from os import path, makedirs
 from datetime import datetime
 
 from pymongo import MongoClient

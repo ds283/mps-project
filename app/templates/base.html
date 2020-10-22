@@ -393,20 +393,24 @@
                             Admin
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
+                            {% set needs_divider = false %}
                             {% if is_manage_users or is_root %}
                                 <a class="dropdown-item" href="{{ url_for('manage_users.edit_users') }}">
                                     <i class="fas fa-users fa-fw"></i> Manage users...
                                 </a>
-                                <div role="separator" class="dropdown-divider"></div>
+                                {% set needs_divider = true %}
                             {% endif %}
                             {% if is_admin or is_root or is_convenor %}
-                                <div class="dropdown-header">Tools</div>
                                 <a class="dropdown-item" href="{{ url_for('admin.edit_messages') }}">
-                                    <i class="fas fa-comment fa-fw"></i> Messages...
+                                    <i class="fas fa-comments fa-fw"></i> Messages...
                                 </a>
+                                {% set needs_divider = true %}
                             {% endif %}
                             {% if is_admin or is_root or is_edit_tags %}
-                                <div role="separator" class="dropdown-divider"></div>
+                                {% if needs_divider %}
+                                    <div role="separator" class="dropdown-divider"></div>
+                                    {% set needs_divider = false %}
+                                {% endif %}
                                 <div class="dropdown-header">Project components</div>
                                 <a class="dropdown-item" href="{{ url_for('admin.edit_skills') }}">
                                     <i class="fas fa-cogs fa-fw"></i> Transferable skills...
@@ -414,9 +418,13 @@
                                 <a class="dropdown-item" href="{{ url_for('admin.edit_supervisors') }}">
                                     <i class="fas fa-cogs fa-fw"></i> Supervisory team...
                                 </a>
+                                {% set needs_divider = true %}
                             {% endif %}
                             {% if is_root %}
-                                <div role="separator" class="dropdown-divider"></div>
+                                {% if needs_divider %}
+                                    <div role="separator" class="dropdown-divider"></div>
+                                    {% set needs_divider = false %}
+                                {% endif %}
                                 <div class="dropdown-header">Sysadmin only</div>
                                 {% if matching_ready %}
                                     <a class="dropdown-item" href="{{ url_for('admin.manage_matching') }}">

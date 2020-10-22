@@ -472,7 +472,7 @@ def MessageMixinFactory(query_factory, convenor_editing):
         title = StringField('Title', validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
                             description='Optional. Briefly summarize your message.')
 
-        body = TextAreaField('Message', render_kw={"rows": 5},
+        body = TextAreaField('Message', render_kw={"rows": 10},
                              validators=[InputRequired(message='You must enter a message, however short')])
 
         project_classes = QuerySelectMultipleField('Display to users enrolled for',

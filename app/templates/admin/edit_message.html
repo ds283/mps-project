@@ -2,9 +2,11 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
+{% from "summernote.html" import import_summernote %}
 
 {% block scripts %}
     {{ super() }}
+    {{ import_summernote() }}
 
     {% assets filters="cssutils", output="gen/component-chosen.min.css", "css/component-chosen.css" -%}
         <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
@@ -21,6 +23,7 @@
             $('#project_classes').chosen({
                 placeholder_text_multiple: 'Leave blank to broadcast to all users'
             });
+            $('#body').summernote();
         });
     </script>
 {% endblock %}

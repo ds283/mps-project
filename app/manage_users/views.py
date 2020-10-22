@@ -106,7 +106,7 @@ def create_office(role):
 
     if form.validate_on_submit():
         # convert field values to a dictionary
-        field_data = form.to_dict()
+        field_data = form.to_dict(True)
         field_data['roles'] = [role]
 
         user = register_user(**field_data)
@@ -148,14 +148,12 @@ def create_faculty(role):
 
     if form.validate_on_submit():
         # convert field values to a dictionary
-        field_data = form.to_dict()
+        field_data = form.to_dict(True)
         field_data['roles'] = [role]
 
         user = register_user(**field_data)
-        form.user = user
 
         # insert extra data for faculty accounts
-
         data = FacultyData(id=user.id,
                            academic_title=form.academic_title.data,
                            use_academic_title=form.use_academic_title.data,
@@ -226,7 +224,7 @@ def create_student(role):
 
     if form.validate_on_submit():
         # convert field values to a dictionary
-        field_data = form.to_dict()
+        field_data = form.to_dict(True)
         field_data['roles'] = [role]
 
         user = register_user(**field_data)

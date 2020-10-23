@@ -3870,6 +3870,9 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin):
 
     # PRACTICAL DATA
 
+    # enable project hub by default?
+    use_project_hub = db.Column(db.Boolean(), default=True)
+
     # in which academic year/FHEQ level does this project class begin?
     start_level_id = db.Column(db.Integer(), db.ForeignKey('fheq_levels.id'))
     start_level = db.relationship('FHEQ_Level', foreign_keys=[start_level_id], uselist=False,
@@ -4343,6 +4346,12 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     display_presentations = db.Column(db.Boolean())
 
 
+    # SETTINGS
+
+    # enable project hub (inherited from ProjectClass, but can be set on a per-configuration basis)
+    use_project_hub = db.Column(db.Boolean(), default=True)
+
+
     # SELECTOR LIFECYCLE MANAGEMENT
 
     # are faculty requests to confirm projects open?
@@ -4688,6 +4697,16 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     @property
     def abbreviation(self):
         return self.project_class.abbreviation
+
+
+    @property
+    def uses_project_hub(self):
+        # if we have a locally override, use that setting; otherwise, we inherit our setting from our parent
+        # ProjectClass
+        if self.use_project_hub is not None:
+            return self.use_project_hub
+
+        return self.project_class.use_project_hub
 
 
     @property

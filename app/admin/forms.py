@@ -231,6 +231,12 @@ class ProjectClassMixin():
                                                 'sufficient flexibility during matching.',
                                     validators=[NotOptionalIf('do_matching')])
 
+    use_project_hub = BooleanField('Use Project Hub',
+                                   description='The Project Hub is a simple learning management system that '
+                                               'allows resources to be published to students, and provides a journal '
+                                               'and to-do list. It is a central '
+                                               'location to manage projects.')
+
     start_level = QuerySelectField('Starts in academic year',
                                    description='Select the academic year in which students join the project.',
                                    query_factory=GetFHEQLevels, get_label=BuildFHEQYearLabel)

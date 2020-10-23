@@ -6621,8 +6621,7 @@ def edit_project_config(pid):
     if edit_form.validate_on_submit():
         now = datetime.now()
 
-        if edit_form.skip_matching.data != config.skip_matching:
-            config.skip_matching = edit_form.skip_matching.data
+        config.skip_matching = edit_form.skip_matching.data
 
         if edit_form.requests_skipped.data != config.requests_skipped:
             config.requests_skipped = edit_form.requests_skipped.data
@@ -6634,8 +6633,8 @@ def edit_project_config(pid):
                 config.requests_skipped_by = None
                 config.requests_skipped_timestamp = None
 
-        if edit_form.full_CATS.data != config.full_CATS:
-            config.full_CATS = edit_form.full_CATS.data
+        config.use_project_hub = edit_form.use_project_hub.data
+        config.full_CATS = edit_form.full_CATS.data
 
         config.CATS_supervision = edit_form.CATS_supervision.data
         config.CATS_marking = edit_form.CATS_marking.data

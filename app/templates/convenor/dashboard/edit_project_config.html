@@ -18,11 +18,25 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        {{ wtf.render_field(form.skip_matching) }}
-        {{ wtf.render_field(form.requests_skipped) }}
+        <p class="form-group-heading">Settings</p>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(form.skip_matching) }}
+            </div>
+            <div class="col-6">
+                {{ wtf.render_field(form.requests_skipped) }}
+            </div>
+        </div>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(form.use_project_hub) }}
+            </div>
+            <div class="col-6"></div>
+        </div>
         {{ wtf.render_field(form.full_CATS) }}
         <hr class="intro-divider">
 
+        <p class="form-group-heading">Workload model support</p>
         <div class="row">
             <div class="col-4">
                 {{ show_default_field(form.CATS_supervision, config.project_class.CATS_supervision) }}

@@ -1572,6 +1572,7 @@ def edit_pclass(id):
 
         data.name = form.name.data
         data.abbreviation = form.abbreviation.data
+        data.use_project_hub = form.use_project_hub.data
         data.start_level = form.start_level.data
         data.colour = form.colour.data
         data.do_matching = form.do_matching.data

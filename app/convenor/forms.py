@@ -185,10 +185,18 @@ class EditProjectConfigForm(Form, SaveChangesMixin):
                                     description='Disable confirmation of project descriptions for '
                                                 'this academic year')
 
-    full_CATS = IntegerField('CAT threshold for supervisors to be full',
+    use_project_hub = BooleanField('Use Project Hubs',
+                                   description='This setting is inherited from the project configuration, '
+                                               'but can be overridden in any academic year. '
+                                               'The Project Hub is a lightweight learning management system '
+                                               'that allows you to publish resources to students and '
+                                               'offers some project management tools.')
+
+    full_CATS = IntegerField('CATs threshold for supervisors to be full',
                              description='If a partial match is being accommodated, this is the maximum '
                                          'number of CATS a supervisor can carry before they are regarded '
-                                         'as full for the purposes of further allocation.')
+                                         'as full for the purposes of further allocation.',
+                             validators=[Optional()])
 
     CATS_supervision = IntegerField('CATS awarded for project supervision',
                                     validators=[InputRequired(message='Please enter an integer value')])

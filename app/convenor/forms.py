@@ -186,6 +186,10 @@ class EditProjectConfigForm(Form, SaveChangesMixin):
                                                 'this academic year')
 
     uses_supervisor = BooleanField('Projects are supervised by a named faculty member',
+                                   description='This setting is inherited from the project configuration, '
+                                               'but can be overridden in any academic year. '
+                                               'The Project Hub is a lightweight learning management system '
+                                               'that allows you to publish resources to students and '
                                    default=True)
 
     uses_marker = BooleanField('Submissions are second-marked')
@@ -195,6 +199,13 @@ class EditProjectConfigForm(Form, SaveChangesMixin):
     display_marker = BooleanField('Include second marker information')
 
     display_presentations = BooleanField('Include presentation assessment information')
+
+    use_project_hub = BooleanField('Use Project Hubs',
+                                   description='This setting is inherited from the project configuration, '
+                                               'but can be overridden in any academic year. '
+                                               'The Project Hub is a lightweight learning management system '
+                                               'that allows you to publish resources to students and '
+                                               'offers some project management tools.')
 
     full_CATS = IntegerField('CAT threshold for supervisors to be full',
                              description='Optional. If a partial match is being accommodated, this is the maximum '

@@ -6758,6 +6758,9 @@ def edit_project_config(pid):
         if form.full_CATS.data != config.full_CATS:
             config.full_CATS = form.full_CATS.data
 
+        if form.use_project_hub.data != config.use_project_hub:
+            config.use_project_hub = edit_form.use_project_hub.data
+
         config.uses_supervisor = form.uses_supervisor.data
         config.uses_marker = form.uses_marker.data
         config.uses_presentations = form.uses_presentations.data

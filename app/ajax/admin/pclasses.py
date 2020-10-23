@@ -82,7 +82,10 @@ _options = \
 {% if p.colour and p.colour is not none %}
   {{ p.make_label(p.colour)|safe }}
 {% else %}
-  <span class="badge badge-secondary">None</span>'
+  <span class="badge badge-secondary">No colour</span>'
+{% endif %}
+{% if p.use_project_hub %}
+    <span class="badge badge-secondary">Project Hubs</span>
 {% endif %}
 {% if p.do_matching %}
     <span class="badge badge-secondary">Auto-match</span>
@@ -217,7 +220,7 @@ _name = \
 """
 
 
-def pclasses_data(classes):
+def pclasses_data(pclasses):
     data = [{'name': render_template_string(_name, p=p),
              'options': render_template_string(_options, p=p),
              'timing': render_template_string(_timing, p=p),
@@ -226,6 +229,6 @@ def pclasses_data(classes):
              'popularity': render_template_string(_popularity, p=p),
              'personnel': render_template_string(_personnel, p=p),
              'programmes': render_template_string(_programmes, pcl=p),
-             'menu': render_template_string(_menu, pcl=p)} for p in classes]
+             'menu': render_template_string(_menu, pcl=p)} for p in pclasses]
 
     return jsonify(data)

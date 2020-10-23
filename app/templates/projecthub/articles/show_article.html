@@ -13,24 +13,26 @@
         </div>
     {% endif %}
 
-    <div class="row mt-3">
+    <div class="row mt-3 mb-3">
         <div class="col-2"></div>
         <div class="col-8">
             <div class="card card-body bg-well border-secondary">
                 <div class="h3 mt-2 mb-3">{{ article.title }}</div>
-                {% if article.creation_timestamp %}
-                    <div class="text-muted">
-                        <small><p>Created by <i class="fas fa-user"></i> {{ article.created_by.name }} {{ article.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</p></small>
-                    </div>
-                {% endif %}
-                {% if article.last_edit_timestamp %}
-                    <div class="text-muted">
-                        <small><p>Last edit by <i class="fas fa-user"></i> {{ article.last_edited_by.name }} {{ article.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</p></small>
-                    </div>
-                {% endif %}
+                <div class="d-flex justify-content-between">
+                    {% if article.creation_timestamp %}
+                        <div class="text-muted">
+                            <small>Created by <i class="fas fa-user"></i> <a href="mailto:{{ article.created_by.email }}">{{ article.created_by.name }}</a> {{ article.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</small>
+                        </div>
+                    {% endif %}
+                    {% if article.last_edit_timestamp %}
+                        <div class="text-muted">
+                            <small>Last edit by <i class="fas fa-user"></i> <a href="mailto:{{ article.last_edited_by.email }}">{{ article.last_edited_by.name }}</a> {{ article.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</small>
+                        </div>
+                    {% endif %}
+                </div>
                 {% if article.published and article.publication_timestamp %}
                     <div class="text-muted">
-                        <small><p>Published at {{ article.publication_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</p></small>
+                        <small>Published on <strong>{{ article.publication_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</strong></small>
                     </div>
                 {% endif %}
                 <hr class="intro-divider">

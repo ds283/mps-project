@@ -479,6 +479,7 @@ def register_rollover_tasks(celery):
                                             requests_skipped=False,
                                             requests_skipped_id=None,
                                             requests_skipped_timestamp=None,
+                                            use_project_hub=old_config.use_project_hub,
                                             live=False,
                                             live_deadline=None,
                                             selection_closed=False,

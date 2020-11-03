@@ -55,7 +55,7 @@ _name = \
 {% if w_length > 0 %}
     <div class="error-block">
         {% for w in warnings %}
-            <p class="error-message">{{ w }}</p>
+            <div class="error-message">{{ w }}</div>
         {% endfor %}
     </div>
 {% endif %}

@@ -199,9 +199,9 @@ _info = \
         <div class="error-block">
             {% for item in errors %}
                 {% if loop.index <= 10 %}
-                    <p class="error-message">{{ item }}</p>
+                    <div class="error-message">{{ item }}</div>
                 {% elif loop.index == 11 %}
-                    <p class="error-message">...</p>
+                    <div class="error-message">Further errors suppressed...</div>
                 {% endif %}            
             {% endfor %}
         </div>
@@ -210,9 +210,9 @@ _info = \
         <div class="error-block">
             {% for item in warnings %}
                 {% if loop.index <= 10 %}
-                    <p class="error-message">Warning: {{ item }}</p>
+                    <div class="error-message">Warning: {{ item }}</div>
                 {% elif loop.index == 11 %}
-                    <p class="error-message">...</p>
+                    <div class="error-message">Further errors suppressed...</div>
                 {% endif %}
             {% endfor %}
         </div>

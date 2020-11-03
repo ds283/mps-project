@@ -138,9 +138,9 @@ _desc_label = \
         <div class="error-block">
             {% for item in errors %}
                 {% if loop.index <= 5 %}
-                    <p class="error-message">{{ item }}</p>
+                    <div class="error-message">{{ item }}</div>
                 {% elif loop.index == 6 %}
-                    <p class="error-message">...</p>
+                    <div class="error-message">Further errors suppressed...</div>
                 {% endif %}            
             {% endfor %}
         </div>
@@ -149,9 +149,9 @@ _desc_label = \
         <div class="error-block">
             {% for item in warnings %}
                 {% if loop.index <= 5 %}
-                    <p class="error-message">Warning: {{ item }}</p>
+                    <div class="error-message">Warning: {{ item }}</div>
                 {% elif loop.index == 6 %}
-                    <p class="error-message">...</p>
+                    <div class="error-message">Further errors suppressed...</div>
                 {% endif %}
             {% endfor %}
         </div>
@@ -914,7 +914,7 @@ def make_default_description(pid, did=None):
     proj = Project.query.get_or_404(pid)
 
     # if project owner is not logged-in user, object
-    if not validate_edit_description(desc):
+    if not validate_edit_project(proj):
         return redirect(redirect_url())
 
     if did is not None:

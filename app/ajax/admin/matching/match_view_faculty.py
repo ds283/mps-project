@@ -137,7 +137,7 @@ _projects = \
 {% if err_msgs|length > 0 %}
     <div class="error-block">
         {% for msg in err_msgs %}
-            <p class="error-message">{{ msg }}</p>
+            <div class="error-message">{{ msg }}</div>
         {% endfor %}
     </div>
 {% endif %}
@@ -180,7 +180,7 @@ _marking = \
 {% if err_msgs|length > 0 %}
     <div class="error-block">
         {% for msg in err_msgs %}
-            <p class="error-message">{{ msg }}</p>
+            <div class="error-message">{{ msg }}</div>
         {% endfor %}
     </div>
 {% endif %}

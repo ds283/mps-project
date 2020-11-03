@@ -41,7 +41,7 @@ _project_name = \
     {% set num = project.num_descriptions %}
     {% if num > 0 %}
         {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
-        <span class="badge badge-info">{{ num }} description{{ pl }}</span>
+        <span class="badge badge-info">{{ num }} variant{{ pl }}</span>
     {% endif %}
 </div>
 {% if name_labels %}
@@ -78,9 +78,9 @@ _project_name = \
         <div class="error-block">
             {% for item in errors %}
                 {% if loop.index <= 5 %}
-                    <p class="error-message">{{ item }}</p>
+                    <div class="error-message">{{ item }}</div>
                 {% elif loop.index == 6 %}
-                    <p class="error-message">...</p>
+                    <div class="error-message">Further errors suppressed...</div>
                 {% endif %}            
             {% endfor %}
         </div>
@@ -89,9 +89,9 @@ _project_name = \
         <div class="error-block">
             {% for item in warnings %}
                 {% if loop.index <= 5 %}
-                    <p class="error-message">Warning: {{ item }}</p>
+                    <div class="error-message">Warning: {{ item }}</div>
                 {% elif loop.index == 6 %}
-                    <p class="error-message">...</p>
+                    <div class="error-message">Further errors suppressed...</div>
                 {% endif %}
             {% endfor %}
         </div>
@@ -177,7 +177,7 @@ _faculty_menu = \
             <i class="fas fa-cogs fa-fw"></i> Settings...
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.edit_descriptions', id=project.id) }}">
-            <i class="fas fa-pencil-alt fa-fw"></i> Descriptions...
+            <i class="fas fa-pencil-alt fa-fw"></i> Variants...
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.attach_assessors', id=project.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Assessors...
@@ -232,7 +232,7 @@ _convenor_menu = \
             <i class="fas fa-cogs fa-fw"></i> Settings...
         </a>
         <a class="dropdown-item" href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=pclass_id) }}">
-            <i class="fas fa-pencil-alt fa-fw"></i> Descriptions...
+            <i class="fas fa-pencil-alt fa-fw"></i> Variants...
         </a>
         <a class="dropdown-item" href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=pclass_id, url=url_for('convenor.attached', id=pclass_id), text='convenor dashboard') }}">
             <i class="fas fa-cogs fa-fw"></i> Assessors...
@@ -283,7 +283,7 @@ _unofferable_menu = \
             <i class="fas fa-cogs fa-fw"></i> Settings...
         </a>
         <a class="dropdown-item" href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=0) }}">
-            <i class="fas fa-pencil-alt fa-fw"></i> Descriptions...
+            <i class="fas fa-pencil-alt fa-fw"></i> Variants...
         </a>
         <a class="dropdown-item" href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=0, url=url_for('convenor.attached', id=0), text='convenor dashboard') }}">
             <i class="fas fa-cogs fa-fw"></i> Assessors...

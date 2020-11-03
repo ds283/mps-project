@@ -6,9 +6,15 @@
 
 {% block bodyblock %}
     <div class="row">
+        <div class="{% block header_margin_column %}col-1{% endblock %}"></div>
+        <div class="{% block header_body_column %}col-10{% endblock %}">
+            {% block header %}{% endblock %}
+        </div>
+        <div class="{{ self.header_margin_column() }}"></div>
+    </div>
+    <div class="row">
         <div class="{% block margin_column %}col-1{% endblock %}"></div>
         <div class="{% block body_column %}col-10{% endblock %}">
-            {% block header %}{% endblock %}
             <div class="card mt-3 mb-3 {% block card_classes %}border-primary{% endblock %}">
                 {% block card_header %}<div class="card-header {% block card_header_classes %}bg-primary text-white{% endblock %}">{% block formtitle %}{% endblock %}</div>{% endblock %}
                 <div class="card-body {% block card_body_classes %}{% endblock %}">

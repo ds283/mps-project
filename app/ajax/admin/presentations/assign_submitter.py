@@ -15,7 +15,7 @@ from flask import render_template_string, jsonify
 _name = \
 """
 {{ s.session.label|safe }}
-{% if not s.is_valid %}
+{% if s.has_issues %}
     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 """
@@ -85,7 +85,7 @@ _talks = \
         <i class="fas fa-exclamation-triangle" style="color:red;"></i>
     {% endif %}
 {% endfor %}
-{% if not s.is_valid %}
+{% if s.has_issues %}
     <p></p>
     {% set errors = s.errors %}
     {% set warnings = s.warnings %}

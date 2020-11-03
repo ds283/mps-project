@@ -20,7 +20,7 @@ _name = \
 {% else %}
     <a href="{{ url_for('admin.assessment_manage_sessions', id=a.id) }}">{{ a.name }}</a>
 {% endif %}
-{% if not a.is_valid %}
+{% if a.has_issues %}
     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 <p></p>
@@ -98,7 +98,7 @@ _sessions = \
         {{ session.label|safe }}
     {% endif %}
 {% endfor %}
-{% if not a.is_valid %}
+{% if a.has_issues %}
     <p></p>
     {% set errors = a.errors %}
     {% set warnings = a.warnings %}

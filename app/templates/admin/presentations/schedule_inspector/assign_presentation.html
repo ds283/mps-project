@@ -84,12 +84,12 @@
                                 {{ slot.session.session_type_string }}
                                 &ndash;
                                 <strong>{{ slot.room_full_name }}</strong>
-                                {% if not slot.is_valid %}
+                                {% if slot.has_issues %}
                                     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
                                 {% endif %}
                                 {{ talk.project.config.project_class.make_label()|safe }}
                             </p>
-                            {% if not slot.is_valid %}
+                            {% if slot.has_issues %}
                                 {% set errors = slot.errors %}
                                 {% set warnings = slot.warnings %}
                                 {% if errors|length == 1 %}

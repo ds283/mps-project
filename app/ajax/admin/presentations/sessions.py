@@ -17,7 +17,7 @@ import calendar
 _date = \
 """
 {{ s.date_as_string }}
-{% if not s.is_valid %}
+{% if s.has_issues %}
     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
     <p></p>
     {% set errors = s.errors %}

@@ -16,7 +16,7 @@ from ....models import PresentationSession
 _name = \
 """
 {{ s.session.label|safe }}
-{% if not s.is_valid %}
+{% if s.has_issues %}
     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 """

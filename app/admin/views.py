@@ -5976,7 +5976,7 @@ def create_assessment_schedule(id):
               'info')
         return redirect(redirect_url())
 
-    if not data.is_valid and len(data.errors) > 0:
+    if not data.is_valid:
         flash('It is not possible to generate a schedule for an assessment that contains validation errors. '
               'Correct any indicated errors before attempting to try again.', 'info')
         return redirect(redirect_url())
@@ -6082,7 +6082,7 @@ def adjust_assessment_schedule(id):
               'info')
         return redirect(redirect_url())
 
-    if not schedule.owner.is_valid and len(schedule.owner.errors) > 0:
+    if not schedule.owner.is_valid:
         flash('It is not possible to adjust a schedule for an assessment that contains validation errors. '
               'Correct any indicated errors before attempting to try again.', 'info')
         return redirect(redirect_url())
@@ -6151,7 +6151,7 @@ def perform_adjust_assessment_schedule(id):
               'info')
         return redirect(redirect_url())
 
-    if not old_schedule.owner.is_valid and len(old_schedule.owner.errors) > 0:
+    if not old_schedule.owner.is_valid:
         flash('It is not possible to adjust a schedule for an assessment that contains validation errors. '
               'Correct any indicated errors before attempting to try again.', 'info')
         return redirect(redirect_url())

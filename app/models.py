@@ -5609,7 +5609,7 @@ def _Project_is_offerable(pid):
             errors[('descriptions', desc.id)] = \
                 'Description "{label}" has validation errors'.format(label=desc.label)
 
-    if len(errors) > 0 or len(warnings) > 0:
+    if len(errors) > 0:
         return False, errors, warnings
 
     return True, errors, warnings
@@ -5758,16 +5758,23 @@ class Project(db.Model, EditingMetadataMixin,
 
 
     @property
-    def errors(self):
+    def has_issues(self):
         if not self._validated:
             check = self.is_valid
+        return len(self._errors) > 0 or len(self._warnings) > 0
+
+
+    @property
+    def errors(self):
+        if not self._validated:
+            check = self.is_offerable
         return self._errors.values()
 
 
     @property
     def warnings(self):
         if not self._validated:
-            check = self.is_valid
+            check = self.is_offerable
         return self._warnings.values()
 
 
@@ -6109,7 +6116,11 @@ def _ProjectDescription_is_valid(id):
             errors[('module', module.id)] = 'Tagged recommended module "{name}" is not available for this ' \
                                             'description'.format(name=module.name)
 
-    if len(errors) > 0 or len(warnings) > 0:
+    # CONSTRAINT 4 - Aims should be specified
+    if obj.aims is None or len(obj.aims) == 0:
+        warnings['aims'] = 'Project aims are not specified'
+
+    if len(errors) > 0:
         return False, errors, warnings
 
     return True, errors, warnings
@@ -6231,6 +6242,13 @@ class ProjectDescription(db.Model, EditingMetadataMixin,
         self._validated = True
 
         return flag
+
+
+    @property
+    def has_issues(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._errors) > 0 or len(self._warnings) > 0
 
 
     @property
@@ -9284,7 +9302,8 @@ def _MatchingAttempt_is_valid(id):
                     = '{name}/{abbv}: {msg}'.format(msg=msg, name=record.selector.student.user.name,
                                                     abbv=record.selector.config.project_class.abbreviation)
 
-            student_issues = True
+            if len(record_errors) > 0:
+                student_issues = True
 
     # 2. EACH PARTICIPATING PROJECT SHOULD NOT BE OVERASSIGNED
     for project in obj.projects:
@@ -9298,12 +9317,12 @@ def _MatchingAttempt_is_valid(id):
     for fac in obj.faculty:
         data = obj.is_supervisor_overassigned(fac, include_matches=True)
         if data['flag']:
-            warnings[('supervising', fac.id)] = data['error_message']
+            errors[('supervising', fac.id)] = data['error_message']
             faculty_issues = True
 
         data = obj.is_marker_overassigned(fac, include_matches=True)
         if data['flag']:
-            warnings[('marking', fac.id)] = data['error_message']
+            errors[('marking', fac.id)] = data['error_message']
             faculty_issues = True
 
         # 4. FOR EACH INCLUDED PROJECT CLASS, FACULTY ASSIGNMENTS SHOULD RESPECT ANY CUSTOM CATS LIMITS
@@ -9314,20 +9333,20 @@ def _MatchingAttempt_is_valid(id):
                 sup, mark = obj.get_faculty_CATS(fac, pclass_id=config.pclass_id)
 
                 if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
-                    warnings[('custom_sup', fac.id)] = 'Assignment to {name} violates their custom supervising CATS ' \
+                    errors[('custom_sup', fac.id)] = 'Assignment to {name} violates their custom supervising CATS ' \
                                                        'limit {n}'.format(name=fac.user.name, n=rec.CATS_supervision)
                     faculty_issues = True
 
                 if rec.CATS_marking is not None and mark > rec.CATS_marking:
-                    warnings[('custom_mark', fac.id)] = 'Assignment to {name} violates their custom marking CATS ' \
+                    errors[('custom_mark', fac.id)] = 'Assignment to {name} violates their custom marking CATS ' \
                                                         'limit {n}'.format(name=fac.user.name, n=rec.CATS_marking)
                     faculty_issues = True
 
     is_valid = (not student_issues) and (not faculty_issues)
 
-    if not is_valid and (len(errors) == 0 and len(warnings) == 0):
+    if not is_valid and len(errors) == 0:
         current_app.logger.info('** Internal inconsistency in _MatchingAttempt_is_valid: not valid, but '
-                                'len(errors) ==0 and len(warnings) == 0')
+                                'len(errors) == 0')
 
     return is_valid, student_issues, faculty_issues, errors, warnings
 
@@ -9890,6 +9909,13 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
 
     @property
+    def has_issues(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._errors) > 0 or len(self._warnings) > 0
+
+
+    @property
     def errors(self):
         if not self._validated:
             check = self.is_valid
@@ -10122,7 +10148,7 @@ def _MatchingRecord_is_valid(id):
 
     # 2. IF THERE IS A SUBMISSION LIST, WARN IF ASSIGNED SUPERVISOR IS NOT ON THIS LIST
     if obj.selector.has_submission_list and obj.selector.project_rank(obj.project_id) is None:
-        warnings[('assignment', 0)] = "Assigned project does not appear in this selector's choices"
+        errors[('assignment', 0)] = "Assigned project does not appear in this selector's choices"
 
     # 3. IF THERE WAS AN ACCEPTED CUSTOM OFFER, WARN IF ASSIGNED SUPERVISOR IS NOT THE ONE IN THE OFFER
     if obj.selector.has_accepted_offer:
@@ -10130,7 +10156,7 @@ def _MatchingRecord_is_valid(id):
         offer_project = offer.liveproject if offer is not None else None
 
         if offer_project is not None and project.id != offer_project.id:
-            warnings[('assignment', 1)] = 'This selector accepted a custom offer for project "{name}", ' \
+            errors[('assignment', 1)] = 'This selector accepted a custom offer for project "{name}", ' \
                                           'but their assigned project is different'.format(name=project.name)
 
     # 4. ASSIGNED PROJECT MUST BE PART OF THIS PROJECT CLASS
@@ -10155,7 +10181,7 @@ def _MatchingRecord_is_valid(id):
             .order_by(MatchingRecord.submission_period.asc()).first()
 
         if lo_rec is not None and lo_rec.submission_period == obj.submission_period:
-            warnings[('assignment', 2)] = 'Project "{name}" is duplicated in multiple submission ' \
+            errors[('assignment', 2)] = 'Project "{name}" is duplicated in multiple submission ' \
                                           'periods'.format(name=project.name)
 
     # 7. ASSIGNED MARKER SHOULD BE COMPATIBLE WITH ASSIGNED PROJECT
@@ -10187,7 +10213,7 @@ def _MatchingRecord_is_valid(id):
             warnings[('conversion', 1)] = 'Selector "{name}" is not marked for conversion to submitter, ' \
                                           'but is included in this matching'.format(name=obj.selector.student.user.name)
 
-    is_valid = (len(errors) == 0 and len(warnings) == 0)
+    is_valid = (len(errors) == 0)
     return is_valid, errors, warnings
 
 
@@ -10258,6 +10284,13 @@ class MatchingRecord(db.Model):
             return None
 
         return flag
+
+
+    @property
+    def has_issues(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._errors) > 0 or len(self._warnings) > 0
 
 
     @property
@@ -10476,7 +10509,7 @@ def _PresentationAssessment_is_valid(id):
             and (obj.number_not_attending > obj.number_talks):
         errors[('presentations', 2)] = 'Number of non-attending students exceeds or equals total number'
 
-    if len(errors) > 0 or len(warnings) > 0:
+    if len(errors) > 0:
         return False, errors, warnings
 
     return True, errors, warnings
@@ -10626,6 +10659,13 @@ class PresentationAssessment(db.Model, EditingMetadataMixin):
         self._validated = True
 
         return flag
+
+
+    @property
+    def has_issues(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._errors) > 0 or len(self._warnings) > 0
 
 
     @property
@@ -10911,7 +10951,7 @@ def _PresentationSession_is_valid(id):
 
     # CONSTRAINT 1 - sessions should be scheduled on a weekday
     if obj.date.weekday() >= 5:
-        warnings['weekday'] = 'Session scheduled on a weekend'
+        errors['weekday'] = 'Session scheduled on a weekend'
 
 
     # CONSTRAINT 2 - only one session should be scheduled per morning/afternoon on a fixed date
@@ -10931,7 +10971,7 @@ def _PresentationSession_is_valid(id):
                 errors['duplicate'] = 'This session is a duplicate'
 
 
-    if len(errors) > 0 or len(warnings) > 0:
+    if len(errors) > 0:
         return False, errors, warnings
 
     return True, errors, warnings
@@ -11457,6 +11497,13 @@ class PresentationSession(db.Model, EditingMetadataMixin):
 
 
     @property
+    def has_issues(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._errors) > 0 or len(self._warnings) > 0
+
+
+    @property
     def has_errors(self):
         if not self._validated:
             check = self.is_valid
@@ -11825,7 +11872,7 @@ def _ScheduleAttempt_is_valid(id):
 
     # CONSTRAINT 3. CATS LIMITS SHOULD BE RESPECTED, FROM FacultyData AND EnrollmentRecords MODELS
 
-    if len(errors) > 0 or len(warnings) > 0:
+    if len(errors) > 0:
         return False, errors, warnings
 
     return True, errors, warnings
@@ -12024,6 +12071,13 @@ class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
 
     @property
+    def has_issues(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._errors) > 0 or len(self._warnings) > 0
+
+
+    @property
     def has_errors(self):
         if not self._validated:
             check = self.is_valid
@@ -12179,7 +12233,7 @@ def _ScheduleSlot_is_valid(id):
 
         for talk in obj.talks:
             if talk.period_id != period_id:
-                warnings[('period', talk.id)] = 'Submitter "{name}" is drawn from a mismatching project class ' \
+                errors[('period', talk.id)] = 'Submitter "{name}" is drawn from a mismatching project class ' \
                                                 '({pclass_a} vs. {pclass_b})'.format(name=talk.owner.student.user.name,
                                                                                      pclass_a=talk.period.config.project_class.name,
                                                                                      pclass_b=tk.period.config.project_class.name)
@@ -12321,7 +12375,7 @@ def _ScheduleSlot_is_valid(id):
                                                                session=slot.session_type_string,
                                                                room=slot.room_full_name)
 
-    if len(errors) > 0 or len(warnings) > 0:
+    if len(errors) > 0:
         return False, errors, warnings
 
     return True, errors, warnings
@@ -12396,6 +12450,13 @@ class ScheduleSlot(db.Model):
         self._validated = True
 
         return flag
+
+
+    @property
+    def has_issues(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._errors) > 0 or len(self._warnings) > 0
 
 
     @property

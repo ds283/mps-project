@@ -75,17 +75,13 @@ _desc_label = \
                     text='description list view') }}">
     {{ d.label }}
 </a>
-{% if not d.is_valid %}
+{% set valid = not d.has_issues %}
+{% if not valid %}
     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 <div>
     {% if d.review_only %}
-        <span class="badge badge-info">REVIEW</span>
-    {% endif %}
-    {% if d.aims is not none and d.aims|length > 0 %}
-        <span class="badge badge-success"><i class="fas fa-check"></i> Aims specified</span>
-    {% else %}
-        <span class="badge badge-warning"><i class="fas fa-times"></i> Aims not specified</span>
+        <span class="badge badge-info">Review project</span>
     {% endif %}
 </div>
 {% set state = d.workflow_state %}
@@ -118,46 +114,47 @@ _desc_label = \
         </div>
     {% endif %}
 </div>
-{% if not d.is_valid %}
-    <p></p>
-    {% set errors = d.errors %}
-    {% set warnings = d.warnings %}
-    {% if errors|length == 1 %}
-        <span class="badge badge-danger">1 error</span>
-    {% elif errors|length > 1 %}
-        <span class="badge badge-danger">{{ errors|length }} errors</span>
-    {% else %}
-        <span class="badge badge-success">0 errors</span>
-    {% endif %}
-    {% if warnings|length == 1 %}
-        <span class="badge badge-warning">1 warning</span>
-    {% elif warnings|length > 1 %}
-        <span class="badge badge-warning">{{ warnings|length }} warnings</span>
-    {% else %}
-        <span class="badge badge-success">0 warnings</span>
-    {% endif %}
-    {% if errors|length > 0 %}
-        <div class="error-block">
-            {% for item in errors %}
-                {% if loop.index <= 5 %}
-                    <div class="error-message">{{ item }}</div>
-                {% elif loop.index == 6 %}
-                    <div class="error-message">Further errors suppressed...</div>
-                {% endif %}            
-            {% endfor %}
-        </div>
-    {% endif %}
-    {% if warnings|length > 0 %}
-        <div class="error-block">
-            {% for item in warnings %}
-                {% if loop.index <= 5 %}
-                    <div class="error-message">Warning: {{ item }}</div>
-                {% elif loop.index == 6 %}
-                    <div class="error-message">Further errors suppressed...</div>
-                {% endif %}
-            {% endfor %}
-        </div>
-    {% endif %}
+{% if not valid %}
+    <div class="mt-2">
+        {% set errors = d.errors %}
+        {% set warnings = d.warnings %}
+        {% if errors|length == 1 %}
+            <span class="badge badge-danger">1 error</span>
+        {% elif errors|length > 1 %}
+            <span class="badge badge-danger">{{ errors|length }} errors</span>
+        {% else %}
+            <span class="badge badge-success">0 errors</span>
+        {% endif %}
+        {% if warnings|length == 1 %}
+            <span class="badge badge-warning">1 warning</span>
+        {% elif warnings|length > 1 %}
+            <span class="badge badge-warning">{{ warnings|length }} warnings</span>
+        {% else %}
+            <span class="badge badge-success">0 warnings</span>
+        {% endif %}
+        {% if errors|length > 0 %}
+            <div class="error-block">
+                {% for item in errors %}
+                    {% if loop.index <= 5 %}
+                        <div class="error-message">{{ item }}</div>
+                    {% elif loop.index == 6 %}
+                        <div class="error-message">Further errors suppressed...</div>
+                    {% endif %}            
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if warnings|length > 0 %}
+            <div class="error-block">
+                {% for item in warnings %}
+                    {% if loop.index <= 5 %}
+                        <div class="error-message">Warning: {{ item }}</div>
+                    {% elif loop.index == 6 %}
+                        <div class="error-message">Further errors suppressed...</div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
 {% endif %}
 """
 

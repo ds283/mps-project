@@ -109,7 +109,7 @@ _name = \
     {% if s.finished and s.solution_usable %}
         <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">{{ s.name }}</a>
         <span class="badge badge-secondary">{{ s.tag }}</span>
-        {% if not s.is_valid %}
+        {% if s.has_issues %}
             <i class="fas fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}
     {% else %}
@@ -159,7 +159,7 @@ _info = \
 {% endif %}
 <p><p>
 <span class="badge badge-success">Solver {{ s.solver_name }}</span>
-{% if not s.is_valid %}
+{% if s.has_issues %}
     <p></p>
     {% set errors = s.errors %}
     {% set warnings = s.warnings %}

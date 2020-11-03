@@ -236,7 +236,7 @@ def student_view_data(selector_data):
 
     data = [{'student': {
                 'display': render_template_string(_student, sel=r[0].selector, record_id=r[0].id,
-                                                  valid=all([rc.is_valid and
+                                                  valid=all([not rc.has_issues and
                                                              not rc.is_project_overassigned for rc in r])),
                 'sortvalue': r[0].selector.student.user.last_name + r[0].selector.student.user.first_name
              },

@@ -65,7 +65,7 @@ _sessions = \
                 </div>
             </div>
             {{ slot.room.label|safe }}
-            {% if not slot.is_valid %}
+            {% if slot.has_issues %}
                 <i class="fas fa-exclamation-triangle" style="color:red;"></i>
                 <p></p>
                 {% set errors = slot.errors %}
@@ -104,7 +104,7 @@ _sessions = \
                     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
                 {% endif %}
             {% endfor %}
-            {% if not slot.is_valid %}
+            {% if slot.has_issues %}
                 <p></p>
                 {% set errors = slot.errors %}
                 {% set warnings = slot.warnings %}

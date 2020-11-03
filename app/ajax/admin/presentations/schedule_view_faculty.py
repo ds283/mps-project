@@ -48,7 +48,7 @@ _sessions = \
             </div>
         </div>
         {{ slot.room.label|safe }}
-        {% if not slot.is_valid %}
+        {% if slot.has_issues %}
             <i class="fas fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}
         &emsp;

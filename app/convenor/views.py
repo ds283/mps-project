@@ -103,12 +103,7 @@ _desc_label = \
 {% endif %}
 <div>
     {% if d.review_only %}
-        <span class="badge badge-info">REVIEW</span>
-    {% endif %}
-    {% if d.aims is not none and d.aims|length > 0 %}
-        <span class="badge badge-success"><i class="fas fa-check"></i> Includes aims</span>
-    {% else %}
-        <span class="badge badge-warning"><i class="fas fa-times"></i> Aims not specified</span>
+        <span class="badge badge-info">Review project</span>
     {% endif %}
     {% set state = d.workflow_state %}
     {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
@@ -144,6 +139,12 @@ _desc_label = \
     {% endif %}
     {% if d.has_new_comments(current_user) %}
         <span class="badge badge-warning">New comments</span>
+    {% endif %}
+    {# consider replacing with proper validation method that can flag multiple errors/warnings #}
+    {% if d.aims is none or d.aims|length == 0 %}
+        <div class="error-block">
+            <div class="error-message">Warning: Aims not specified</div>
+        </div>
     {% endif %}
 </div>
 {% if not d.is_valid %}

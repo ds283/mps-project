@@ -12,6 +12,7 @@ from flask import render_template_string, jsonify
 from ....models import PresentationSession
 
 
+# language=jinja2
 _name = \
 """
 {{ s.session.label|safe }}
@@ -21,6 +22,7 @@ _name = \
 """
 
 
+# language=jinja2
 _assessors = \
 """
 {% for assessor in s.assessors %}
@@ -45,6 +47,7 @@ _assessors = \
 """
 
 
+# language=jinja2
 _talks = \
 """
 {% set ns = namespace(count=0) %}
@@ -109,6 +112,7 @@ _talks = \
 """
 
 
+# language=jinja2
 _room = \
 """
 {% set style = s.room.building.make_CSS_style() %}

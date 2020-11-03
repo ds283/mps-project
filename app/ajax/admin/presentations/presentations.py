@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _name = \
 """
 {% set state = a.availability_lifecycle %}
@@ -54,6 +55,7 @@ _name = \
 """
 
 
+# language=jinja2
 _periods = \
 """
 {% for period in a.submission_periods %}
@@ -80,6 +82,7 @@ _periods = \
 """
 
 
+# language=jinja2
 _sessions = \
 """
 {% set sessions = a.ordered_sessions.all() %}
@@ -139,6 +142,7 @@ _sessions = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">

@@ -17,6 +17,7 @@ from ...cache import cache
 from sqlalchemy.event import listens_for
 
 
+# language=jinja2
 _meeting = \
 """
 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
@@ -37,6 +38,7 @@ _meeting = \
 """
 
 
+# language=jinja2
 _status = \
 """
 {% if sel %}
@@ -58,6 +60,7 @@ _status = \
 {% endif %} 
 """
 
+# language=jinja2
 _bookmarks = \
 """
 {% if sel %}
@@ -77,6 +80,7 @@ _bookmarks = \
 {% endif %} 
 """
 
+# language=jinja2
 _selector_menu = \
 """
 <div class="dropdown">
@@ -121,6 +125,7 @@ _selector_menu = \
 """
 
 
+# language=jinja2
 _submitter_menu = \
 """
 <div class="dropdown">
@@ -137,6 +142,7 @@ _submitter_menu = \
 """
 
 
+# language=jinja2
 _project_prefer = \
 """
 {% for programme in project.programmes %}
@@ -146,6 +152,7 @@ _project_prefer = \
 {% endfor %}
 """
 
+# language=jinja2
 _project_skills = \
 """
 {% for skill in skills %}
@@ -163,6 +170,7 @@ _project_skills = \
 """
 
 
+# language=jinja2
 _project_group = \
 """
 {% if sel %}
@@ -172,6 +180,7 @@ _project_group = \
 """
 
 
+# language=jinja2
 _not_live = \
 """
 <span class="badge badge-secondary">Not live</span>

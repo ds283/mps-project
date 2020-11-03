@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _supervisors_menu = \
 """
 <div class="dropdown">
@@ -36,6 +37,7 @@ _supervisors_menu = \
 """
 
 
+# language=jinja2
 _active = \
 """
 {% if r.active %}
@@ -46,12 +48,14 @@ _active = \
 """
 
 
+# language=jinja2
 _colour = \
 """
 {{ r.make_label(r.colour)|safe }}
 """
 
 
+# language=jinja2
 _name = \
 """
 {{ r.name }} {{ r.make_label()|safe }}

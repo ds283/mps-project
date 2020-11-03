@@ -13,6 +13,7 @@ from flask import jsonify, render_template_string
 from ....shared.utils import get_count
 
 
+# language=jinja2
 _name = \
 """
 <a href="mailto:{{ f.user.email }}">{{ f.user.name }}</a>
@@ -77,6 +78,7 @@ _name = \
 """
 
 
+# language=jinja2
 _projects = \
 """
 {% macro project_tag(r) %}
@@ -144,6 +146,7 @@ _projects = \
 """
 
 
+# language=jinja2
 _marking = \
 """
 {% macro marker_tag(r) %}
@@ -187,6 +190,7 @@ _marking = \
 """
 
 
+# language=jinja2
 _workload = \
 """
 <span class="badge {% if sup_overassigned %}badge-danger{% else %}badge-info{% endif %}">S {{ sup }}</span>

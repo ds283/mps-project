@@ -21,6 +21,7 @@ from ...shared.utils import get_current_year
 from urllib import parse
 
 
+# language=jinja2
 _actions = \
 """
 <a href="{{ url_for('user_approver.approve', id=s.id, url=url, text=text) }}" class="btn btn-sm btn-success btn-table-block">Approve</a>

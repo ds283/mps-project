@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">
@@ -42,6 +43,7 @@ _menu = \
 """
 
 
+# language=jinja2
 _active = \
 """
 {% if r.active %}
@@ -52,6 +54,7 @@ _active = \
 """
 
 
+# language=jinja2
 _info = \
 """
 <span class="badge badge-primary">Capacity {{ r.capacity }}</span>

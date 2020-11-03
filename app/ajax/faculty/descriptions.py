@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _pclasses = \
 """
 {% set ns = namespace(count=0) %}
@@ -36,6 +37,7 @@ _pclasses = \
 """
 
 
+# language=jinja2
 _team = \
 """
 {% for sup in d.team %}

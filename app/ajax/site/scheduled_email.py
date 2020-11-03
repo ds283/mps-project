@@ -14,12 +14,14 @@ from typing import List
 from ...models import EmailNotification
 
 
+# language=jinja2
 _name = \
 """
 <a href="{{ user.email }}">{{ user.name }}</a>
 """
 
 
+# language=jinja2
 _type = \
 """
 {{ e.event_label|safe }}
@@ -29,6 +31,7 @@ _type = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">

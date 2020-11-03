@@ -21,6 +21,7 @@ from ...shared.utils import get_count
 from urllib import parse
 
 
+# language=jinja2
 _project_name = \
 """
 {% set offerable = project.is_offerable %}
@@ -100,6 +101,7 @@ _project_name = \
 """
 
 
+# language=jinja2
 _project_status = \
 """
 {% if project.is_offerable %}
@@ -116,6 +118,7 @@ _project_status = \
 """
 
 
+# language=jinja2
 _project_pclasses = \
 """
 {% for pclass in project.project_classes %}
@@ -125,6 +128,7 @@ _project_pclasses = \
 """
 
 
+# language=jinja2
 _project_meetingreqd = \
 """
 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
@@ -139,6 +143,7 @@ _project_meetingreqd = \
 """
 
 
+# language=jinja2
 _project_prefer = \
 """
 {% for programme in project.ordered_programmes %}
@@ -149,6 +154,7 @@ _project_prefer = \
 """
 
 
+# language=jinja2
 _project_skills = \
 """
 {% for skill in skills %}
@@ -159,6 +165,7 @@ _project_skills = \
 """
 
 
+# language=jinja2
 _faculty_menu = \
 """
 <div class="dropdown">
@@ -214,6 +221,7 @@ _faculty_menu = \
 """
 
 
+# language=jinja2
 _convenor_menu = \
 """
 <div class="dropdown">
@@ -265,6 +273,7 @@ _convenor_menu = \
 """
 
 
+# language=jinja2
 _unofferable_menu = \
 """
 <div class="dropdown">
@@ -311,6 +320,7 @@ _unofferable_menu = \
 """
 
 
+# language=jinja2
 _attach_button = \
 """
 <a href="{{ url_for('convenor.manual_attach_project', id=project.id, configid=config_id) }}" class="btn btn-warning btn-sm">
@@ -319,6 +329,7 @@ _attach_button = \
 """
 
 
+# language=jinja2
 _attach_other_button = \
 """
 <a href="{{ url_for('convenor.manual_attach_other_project', id=project.id, configid=config_id) }}" class="btn btn-warning btn-sm">

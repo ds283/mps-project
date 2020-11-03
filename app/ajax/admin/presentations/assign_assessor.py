@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _name = \
 """
 <a href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
@@ -39,6 +40,7 @@ _name = \
 """
 
 
+# language=jinja2
 _sessions = \
 """
 {% macro truncate_name(name) %}
@@ -137,6 +139,7 @@ _sessions = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="float-right">

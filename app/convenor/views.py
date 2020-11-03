@@ -69,6 +69,7 @@ STUDENT_TASKS_SELECTOR = SelectingStudent.polymorphic_identity()
 STUDENT_TASKS_SUBMITTER = SubmittingStudent.polymorphic_identity()
 
 
+# language=jinja2
 _marker_menu = \
 """
 {% if proj.is_assessor(f.id) %}
@@ -89,6 +90,7 @@ _marker_menu = \
 """
 
 
+# language=jinja2
 _desc_label = \
 """
 <a href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=desc_pclass_id,
@@ -188,6 +190,7 @@ _desc_label = \
 """
 
 
+# language=jinja2
 _desc_menu = \
 """
     <div class="dropdown">

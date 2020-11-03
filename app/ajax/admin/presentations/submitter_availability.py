@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify, url_for
 
 
+# language=jinja2
 _pclass = \
 """
 {% set style = pclass.make_CSS_style() %}
@@ -18,6 +19,7 @@ _pclass = \
 """
 
 
+# language=jinja2
 _submitter_actions = \
 """
 <div style="text-align: right;">
@@ -46,6 +48,7 @@ _submitter_actions = \
 """
 
 
+# language=jinja2
 _session_actions = \
 """
 <div style="text-align: right;">
@@ -62,6 +65,7 @@ _session_actions = \
 """
 
 
+# language=jinja2
 _global_name = \
 """
 <a href="mailto:{{ s.submitter.owner.student.user.email }}">{{ s.submitter.owner.student.user.name }}</a>
@@ -73,6 +77,7 @@ _global_name = \
 """
 
 
+# language=jinja2
 _project_name = \
 """
 {% if p is none %}

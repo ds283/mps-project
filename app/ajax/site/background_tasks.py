@@ -10,6 +10,7 @@
 
 from flask import render_template_string, jsonify
 
+# language=jinja2
 _state = \
 """
 {% if state == 0 %}
@@ -24,6 +25,7 @@ _state = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">

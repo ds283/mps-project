@@ -11,12 +11,14 @@
 from flask import render_template_string
 
 
+# language=jinja2
 _code = \
 """
 <a href="{{ url_for('admin.edit_module', id=m.id) }}">{{ m.code }}</span>
 """
 
 
+# language=jinja2
 _status = \
 """
 {% if m.active %}
@@ -30,6 +32,7 @@ _status = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">
@@ -57,6 +60,7 @@ _menu = \
 """
 
 
+# language=jinja2
 _level = \
 """
 {{ m.level_label|safe }}

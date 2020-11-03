@@ -11,6 +11,7 @@
 from flask import jsonify, render_template_string
 
 
+# language=jinja2
 _student = \
 """
 <a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
@@ -32,6 +33,7 @@ _student = \
 """
 
 
+# language=jinja2
 _pclass = \
 """
 {% set pclass = sel.config.project_class %}
@@ -44,6 +46,7 @@ _pclass = \
 """
 
 
+# language=jinja2
 _cohort = \
 """
 {{ sel.student.programme.short_label|safe }}
@@ -52,6 +55,7 @@ _cohort = \
 """
 
 
+# language=jinja2
 _project = \
 """
 {% macro project_tag(r, show_period) %}
@@ -155,6 +159,7 @@ _project = \
 """
 
 
+# language=jinja2
 _marker = \
 """
 {% macro marker_tag(r, show_period) %}
@@ -189,6 +194,7 @@ _marker = \
 """
 
 
+# language=jinja2
 _rank = \
 """
 {% if recs|length == 1 %}
@@ -204,6 +210,7 @@ _rank = \
 """
 
 
+# language=jinja2
 _scores = \
 """
 {% if recs|length == 1 %}

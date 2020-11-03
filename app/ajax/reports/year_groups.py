@@ -12,6 +12,7 @@
 from flask import render_template_string
 
 
+# language=jinja2
 _name = \
 """
 <a href="mailto:{{ s.user.email }}">{{ s.user.name }}</a>
@@ -23,6 +24,7 @@ _name = \
 """
 
 
+# language=jinja2
 _selecting = \
 """
 {% for sel in s.ordered_selecting %}
@@ -33,6 +35,7 @@ _selecting = \
 """
 
 
+# language=jinja2
 _submitting = \
 """
 {% for sub in s.ordered_submitting %}

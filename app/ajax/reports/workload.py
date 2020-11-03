@@ -18,6 +18,7 @@ from ...shared.sqlalchemy import get_count
 from ...shared.utils import get_current_year
 
 
+# language=jinja2
 _name = \
 """
 <a href="mailto:{{ f.user.email }}">{{ f.user.name }}</a>
@@ -27,6 +28,7 @@ _name = \
 """
 
 
+# language=jinja2
 _groups = \
 """
 {% for g in f.affiliations %}
@@ -37,6 +39,7 @@ _groups = \
 """
 
 
+# language=jinja2
 _full_enrollments = \
 """
 {% for record in f.ordered_enrollments %}
@@ -68,6 +71,7 @@ _full_enrollments = \
 """
 
 
+# language=jinja2
 _simple_enrollments = \
 """
 {% for record in f.ordered_enrollments %}
@@ -89,6 +93,7 @@ _simple_enrollments = \
 """
 
 
+# language=jinja2
 _full_workload = \
 """
 {% for record in f.ordered_enrollments %}
@@ -101,12 +106,14 @@ _full_workload = \
 """
 
 
+# language=jinja2
 _simple_workload = \
 """
 <span class="badge badge-primary">{{ tot }}</span>
 """
 
 
+# language=jinja2
 _availability = \
 """
 {% if u %}
@@ -117,6 +124,7 @@ _availability = \
 """
 
 
+# language=jinja2
 _full_assignments = \
 """
 {% for record in f.ordered_enrollments %}
@@ -129,6 +137,7 @@ _full_assignments = \
 """
 
 
+# language=jinja2
 _simple_assignments = \
 """
 <span class="badge badge-primary">Total {{ total }}</span>

@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _status = \
 """
 {% if s.finished %}
@@ -68,6 +69,7 @@ _status = \
 """
 
 
+# language=jinja2
 _timestamp = \
 """
 Created by
@@ -89,6 +91,7 @@ on
 """
 
 
+# language=jinja2
 _score = \
 """
 {% if s.solution_usable %}
@@ -99,6 +102,7 @@ _score = \
 """
 
 
+# language=jinja2
 _name = \
 """
 <div>
@@ -125,6 +129,7 @@ _name = \
 """
 
 
+# language=jinja2
 _info = \
 """
 <span class="badge badge-info">Max assignment {{ s.assessor_assigned_limit }}</span>
@@ -197,6 +202,7 @@ _info = \
 {% endif %}
 """
 
+# language=jinja2
 _menu = \
 """
 {% set valid = s.is_valid %}
@@ -311,6 +317,7 @@ _menu = \
 """
 
 
+# language=jinja2
 _periods = \
 """
 {{ a.name }}

@@ -17,6 +17,7 @@ from ...cache import cache
 from sqlalchemy.event import listens_for
 
 
+# language=jinja2
 _name = \
 """
 <div>
@@ -62,6 +63,7 @@ _name = \
 """
 
 
+# language=jinja2
 _programme = \
 """
 {% if p is not none %}
@@ -72,6 +74,7 @@ _programme = \
 """
 
 
+# language=jinja2
 _cohort = \
 """
 <div>
@@ -88,6 +91,7 @@ _cohort = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">

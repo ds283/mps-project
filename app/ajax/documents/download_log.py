@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _name = \
 """
 <a href="mailto:{{ u.email }}">{{ u.name }}</a>

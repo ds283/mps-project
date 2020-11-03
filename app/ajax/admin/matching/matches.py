@@ -11,6 +11,7 @@
 from flask import jsonify, render_template_string
 
 
+# language=jinja2
 _status = \
 """
 {% if m.finished %}
@@ -66,6 +67,7 @@ _status = \
 {% endif %}
 """
 
+# language=jinja2
 _info = \
 """
 <span class="badge badge-info">Supervisor <i class="fas fa-less-than-equal"></i> {{ m.supervising_limit }} CATS</span>
@@ -221,6 +223,7 @@ _info = \
 """
 
 
+# language=jinja2
 _score = \
 """
 {% if m.solution_usable %}
@@ -242,6 +245,7 @@ _score = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">
@@ -346,6 +350,7 @@ _menu = \
 """
 
 
+# language=jinja2
 _name = \
 """
 <div>

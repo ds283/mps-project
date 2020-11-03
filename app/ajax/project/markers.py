@@ -10,6 +10,7 @@
 
 from flask import render_template_string, jsonify
 
+# language=jinja2
 _affiliations = \
 """
 {% for group in f.affiliations %}
@@ -19,6 +20,7 @@ _affiliations = \
 {% endfor %}
 """
 
+# language=jinja2
 _status = \
 """
 {% if proj.is_assessor(f.id) %}
@@ -28,6 +30,7 @@ _status = \
 {% endif %}
 """
 
+# language=jinja2
 _enrollments = \
 """
 {% set ns = namespace(count=0) %}
@@ -54,6 +57,7 @@ _enrollments = \
 """
 
 
+# language=jinja2
 _attached = \
 """
 <span class="badge badge-secondary">{{ f.number_assessor }}</span>

@@ -12,6 +12,7 @@ from flask import render_template_string, jsonify
 from ...models import ProjectClassConfig
 
 
+# language=jinja2
 _cohort = \
 """
 {{ sub.student.programme.short_label|safe }}
@@ -20,6 +21,7 @@ _cohort = \
 """
 
 
+# language=jinja2
 _projects = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
@@ -122,6 +124,7 @@ _projects = \
 """
 
 
+# language=jinja2
 _markers = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
@@ -183,6 +186,7 @@ _markers = \
 """
 
 
+# language=jinja2
 _presentations = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
@@ -256,6 +260,7 @@ _presentations = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 {% set config = sub.config %}
@@ -321,6 +326,7 @@ _menu = \
 """
 
 
+# language=jinja2
 _name = \
 """
 {% set pclass = sub.config.project_class %}

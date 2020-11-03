@@ -11,12 +11,14 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _cohort = \
 """
 {{ sel.student.cohort_label|safe }}
 {{ sel.academic_year_label(show_details=True)|safe }}
 """
 
+# language=jinja2
 _selections = \
 """
 {% if sel.has_submitted %}
@@ -74,6 +76,7 @@ _selections = \
 {% endif %}
 """
 
+# language=jinja2
 _name = \
 """
 <a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>

@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _name = \
 """
 {{ s.session.label|safe }}
@@ -20,6 +21,7 @@ _name = \
 """
 
 
+# language=jinja2
 _assessors = \
 """
 {% set rec = s.owner %}
@@ -54,6 +56,7 @@ _assessors = \
 """
 
 
+# language=jinja2
 _talks = \
 """
 {% macro truncate_name(name) %}
@@ -126,6 +129,7 @@ _talks = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="float-right">

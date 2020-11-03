@@ -16,6 +16,7 @@ from flask import render_template_string, jsonify
 from ...models import StudentData
 from ...shared.utils import get_current_year
 
+# language=jinja2
 _enroll_action = \
 """
 <a href="{{ url_for('convenor.enroll_submitter', sid=s.id, configid=config.id) }}" class="btn btn-warning btn-sm">

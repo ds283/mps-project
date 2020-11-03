@@ -17,12 +17,14 @@ from flask_security import current_user
 from ...models import EnrollmentRecord
 
 
+# language=jinja2
 _name = \
 """
 <a href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
 """
 
 
+# language=jinja2
 _exemptions = \
 """
 {% macro display(state, sabbatical_state, exempt_state, reenroll, comment) %}
@@ -59,6 +61,7 @@ _exemptions = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">

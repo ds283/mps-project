@@ -13,12 +13,14 @@ from flask import jsonify, render_template_string
 from ....database import db
 from ....models import MatchingRecord
 
+# language=jinja2
 _student = \
 """
 <a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 """
 
 
+# language=jinja2
 _cohort = \
 """
 {{ sel.student.programme.short_label|safe }}
@@ -27,6 +29,7 @@ _cohort = \
 """
 
 
+# language=jinja2
 _records = \
 """
 {% if r.project_id != c.project_id %}
@@ -46,6 +49,7 @@ _records = \
 """
 
 
+# language=jinja2
 _delta = \
 """
 <span class="badge {% if r.hi_ranked %}badge-success{% elif r.lo_ranked %}badge-warning{% else %}badge-info{% endif %}">{{ r.rank }}</span>
@@ -53,6 +57,7 @@ _delta = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">

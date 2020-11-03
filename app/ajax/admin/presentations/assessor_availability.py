@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify, url_for
 
 
+# language=jinja2
 _session_actions = \
 """
 {% set available = s.faculty_available(f.id) %}
@@ -53,6 +54,7 @@ _session_actions = \
 """
 
 
+# language=jinja2
 _confirmed = \
 """
 {% if rec.confirmed %}
@@ -66,6 +68,7 @@ _confirmed = \
 """
 
 
+# language=jinja2
 _assessor_actions = \
 """
 <div class="dropdown">
@@ -92,6 +95,7 @@ _assessor_actions = \
 """
 
 
+# language=jinja2
 _comment = \
 """
 {% if rec.comment is not none and rec.comment|length > 0 %}
@@ -102,6 +106,7 @@ _comment = \
 """
 
 
+# language=jinja2
 _availability = \
 """
 <span class="badge badge-success">{{ rec.number_available }}</span>
@@ -110,6 +115,7 @@ _availability = \
 """
 
 
+# language=jinja2
 _name = \
 """
 <a href="mailto:{{ rec.faculty.user.email }}">{{ rec.faculty.user.name }}</a>

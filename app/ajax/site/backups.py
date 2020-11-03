@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _manage_backups_menu = \
 """
 <div class="dropdown">

@@ -11,6 +11,7 @@
 from flask import jsonify, render_template_string
 
 
+# language=jinja2
 _source = \
 """
 {% macro slot_id(slot) %}
@@ -61,6 +62,7 @@ _source = \
 """
 
 
+# language=jinja2
 _target = \
 """
 {% macro slot_id(slot) %}
@@ -110,6 +112,7 @@ _target = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">

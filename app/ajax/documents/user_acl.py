@@ -11,12 +11,14 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _name = \
 """
 <a href="mailto:{{ u.email }}">{{ u.name }}</a>
 """
 
 
+# language=jinja2
 _role = \
 """
 {% for role in role_list %}
@@ -27,6 +29,7 @@ _role = \
 """
 
 
+# language=jinja2
 _access = \
 """
 {% set in_user_acl = asset.in_user_acl(user) %}
@@ -45,6 +48,7 @@ _access = \
 """
 
 
+# language=jinja2
 _actions = \
 """
 {% set in_user_acl = asset.in_user_acl(user) %}

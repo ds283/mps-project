@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _project = \
 """
 <a href="{{ url_for('faculty.live_project', pid=proj.id, url=url_for('convenor.selector_choices', id=sel.id), text='selector bookmarks') }}">
@@ -19,6 +20,7 @@ _project = \
 """
 
 
+# language=jinja2
 _owner = \
 """
 <a href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
@@ -26,6 +28,7 @@ _owner = \
 """
 
 
+# language=jinja2
 _actions = \
 """
 <div class="float-right">

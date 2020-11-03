@@ -13,12 +13,14 @@ from flask import jsonify, render_template_string
 from datetime import datetime
 
 
+# language=jinja2
 _student = \
 """
 <a href="mailto:{{ req.owner.student.user.email }}">{{ req.owner.student.user.name }}</a>
 """
 
 
+# language=jinja2
 _project = \
 """
 <a href="{{ url_for('faculty.live_project', pid=req.project.id, text='outstanding confirmations', url=url_for('convenor.show_confirmations', id=pclass_id)) }}">
@@ -27,12 +29,14 @@ _project = \
 """
 
 
+# language=jinja2
 _supervisor = \
 """
 <a href="mailto:{{ req.project.owner.user.email }}">{{ req.project.owner.user.name }}</a>
 """
 
 
+# language=jinja2
 _timestamps = \
 """
 {% if req.request_timestamp is not none %}
@@ -56,6 +60,7 @@ _timestamps = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">

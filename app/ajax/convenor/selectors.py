@@ -12,6 +12,7 @@ from flask import render_template_string, jsonify
 from flask_security import current_user
 
 
+# language=jinja2
 _menu = \
 """
 {% set pclass = student.config.project_class %}
@@ -127,6 +128,7 @@ _menu = \
 </div>
 """
 
+# language=jinja2
 _cohort = \
 """
 {{ sel.student.programme.label|safe }}
@@ -134,6 +136,7 @@ _cohort = \
 {{ sel.academic_year_label(show_details=True)|safe }}
 """
 
+# language=jinja2
 _bookmarks = \
 """
 {% set count = sel.number_bookmarks %}
@@ -147,6 +150,7 @@ _bookmarks = \
 {% endif %}
 """
 
+# language=jinja2
 _submitted = \
 """
 {% if sel.has_submitted %}
@@ -178,6 +182,7 @@ _submitted = \
 {% endif %}
 """
 
+# language=jinja2
 _confirmations = \
 """
 {% set pending = sel.number_pending %}
@@ -205,6 +210,7 @@ _confirmations = \
 """
 
 
+# language=jinja2
 _name = \
 """
 <a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>

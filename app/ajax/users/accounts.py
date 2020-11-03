@@ -18,6 +18,7 @@ from ...models import User, Role
 from ...shared.utils import detuple
 
 
+# language=jinja2
 _roles = \
 """
 {% for r in user.roles %}
@@ -28,6 +29,7 @@ _roles = \
 """
 
 
+# language=jinja2
 _status = \
 """
 {% if u.login_count is not none %}

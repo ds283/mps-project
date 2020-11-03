@@ -16,6 +16,7 @@ from ...models import StudentData
 from ...shared.utils import get_current_year
 
 
+# language=jinja2
 _enroll_action = \
 """
 <div class="dropdown">

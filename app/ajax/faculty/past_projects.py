@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify, url_for
 
 
+# language=jinja2
 _project_menu = \
 """
 <div class="dropdown">
@@ -25,6 +26,7 @@ _project_menu = \
 </div>
 """
 
+# language=jinja2
 _pclass = \
 """
 {% set style = config.project_class.make_CSS_style() %}
@@ -34,6 +36,7 @@ _pclass = \
 """
 
 
+# language=jinja2
 _name = \
 """
 {% from "faculty/macros.html" import project_metadata %}
@@ -46,6 +49,7 @@ _name = \
 """
 
 
+# language=jinja2
 _metadata = \
 """
 {% from "faculty/macros.html" import project_selection_data, project_rank_data %}

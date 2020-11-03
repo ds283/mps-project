@@ -21,11 +21,13 @@ from ...shared.utils import get_current_year
 from urllib import parse
 
 
+# language=jinja2
 _actions = \
 """
 <a href="{{ url_for('manage_users.edit_student', id=s.id, url=url_for('user_approver.correct', url=url, text=text)) }}" class="btn btn-sm btn-secondary">Edit record...</a>
 """
 
+# language=jinja2
 _rejected = \
 """
 {% if s.validated_by is not none %}

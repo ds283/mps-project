@@ -11,6 +11,7 @@
 from flask import jsonify, render_template_string
 
 
+# language=jinja2
 _projects = \
 """
 <div class="outstanding-confirm-group">
@@ -83,6 +84,7 @@ _projects = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">
@@ -101,6 +103,7 @@ _menu = \
 """
 
 
+# language=jinja2
 _name = \
 """
 <a href="mailto:{{ u.email }}">{{ u.name }}</a>

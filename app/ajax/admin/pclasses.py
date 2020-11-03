@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _programmes = \
 """
 {% for programme in pcl.programmes %}
@@ -18,6 +19,7 @@ _programmes = \
 {% endfor %}
 """
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">
@@ -74,6 +76,7 @@ _menu = \
 </div>
 """
 
+# language=jinja2
 _options = \
 """
 {% if p.colour and p.colour is not none %}
@@ -98,6 +101,7 @@ _options = \
 {% endif %}
 """
 
+# language=jinja2
 _workload = \
 """
 {% if p.uses_supervisor %}
@@ -111,6 +115,7 @@ _workload = \
 {% endif %}
 """
 
+# language=jinja2
 _popularity = \
 """
 {% set hourly_pl = 's' %}
@@ -121,6 +126,7 @@ _popularity = \
 <span class="badge badge-secondary">Daily: {{ p.keep_daily_popularity }} week{{ daily_pl }}</span>
 """
 
+# language=jinja2
 _personnel = \
 """
 <div class="personnel-container">
@@ -151,6 +157,7 @@ _personnel = \
 {% endif %}
 """
 
+# language=jinja2
 _submissions = \
 """
 <span class="badge badge-primary">{{ p.submissions }}/yr</span>
@@ -167,6 +174,7 @@ _submissions = \
 """
 
 
+# language=jinja2
 _timing = \
 """
 {% if p.start_level is not none %}
@@ -190,6 +198,7 @@ _timing = \
 """
 
 
+# language=jinja2
 _name = \
 """
 {{ p.name }} {{ p.make_label(p.abbreviation)|safe }}

@@ -14,6 +14,7 @@ from flask import render_template_string
 from ...models import ConvenorTask
 
 
+# language=jinja2
 _task = \
 """
 {{ tk.description }}
@@ -23,6 +24,7 @@ _task = \
 """
 
 
+# language=jinja2
 _status = \
 """
 {% if tk.dropped %}
@@ -39,6 +41,7 @@ _status = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">

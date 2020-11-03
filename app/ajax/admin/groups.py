@@ -10,6 +10,7 @@
 
 from flask import render_template_string
 
+# language=jinja2
 _groups_menu = \
 """
 <div class="dropdown">
@@ -34,6 +35,7 @@ _groups_menu = \
 </div>
 """
 
+# language=jinja2
 _active = \
 """
 {% if g.active %}

@@ -15,6 +15,7 @@ from flask import render_template_string, url_for
 from ...models import ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask
 
 
+# language=jinja2
 _student_task = \
 """
 <strong>{{ tk.description }}</strong>
@@ -38,6 +39,7 @@ _student_task = \
 """
 
 
+# language=jinja2
 _project_task = \
 """
 <strong>{{ tk.description }}</strong>
@@ -59,6 +61,7 @@ _project_task = \
 """
 
 
+# language=jinja2
 _status = \
 """
 {% if tk.dropped %}
@@ -75,6 +78,7 @@ _status = \
 """
 
 
+# language=jinja2
 _student_menu = \
 """
 <div class="dropdown">
@@ -103,6 +107,7 @@ _student_menu = \
 """
 
 
+# language=jinja2
 _project_menu = \
 """
 <div class="dropdown">

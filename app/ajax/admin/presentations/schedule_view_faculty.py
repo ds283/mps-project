@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _name = \
 """
 <a href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
@@ -30,6 +31,7 @@ _name = \
 """
 
 
+# language=jinja2
 _sessions = \
 """
 {% for slot in slots %}
@@ -73,6 +75,7 @@ _sessions = \
 """
 
 
+# language=jinja2
 _availability = \
 """
 <span class="badge badge-success">{{ a.number_available }}</span>

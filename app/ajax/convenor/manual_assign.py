@@ -10,6 +10,7 @@
 
 from flask import render_template_string
 
+# language=jinja2
 _name = \
 """
 <a href="{{ url_for('faculty.live_project', pid=p.id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=r.id)) }}">
@@ -17,6 +18,7 @@ _name = \
 </a>
 """
 
+# language=jinja2
 _workload = \
 """
 {% set s, m, p = data %}
@@ -28,6 +30,7 @@ _workload = \
 </div>
 """
 
+# language=jinja2
 _action = \
 """
 <div class="float-right">

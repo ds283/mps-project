@@ -13,6 +13,7 @@ from flask import render_template_string, jsonify
 import calendar
 
 
+# language=jinja2
 _date = \
 """
 {{ s.date_as_string }}
@@ -61,6 +62,7 @@ _date = \
 """
 
 
+# language=jinja2
 _rooms = \
 """
 {% for room in s.ordered_rooms %}
@@ -71,6 +73,7 @@ _rooms = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">
@@ -100,6 +103,7 @@ _menu = \
 """
 
 
+# language=jinja2
 _faculty = \
 """
 {% if s.owner.availability_lifecycle > s.owner.AVAILABILITY_NOT_REQUESTED %}

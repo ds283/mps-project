@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _projects = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
@@ -88,6 +89,7 @@ _projects = \
 """
 
 
+# language=jinja2
 _marking = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
@@ -144,6 +146,7 @@ _marking = \
 """
 
 
+# language=jinja2
 _presentations = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
@@ -197,6 +200,7 @@ _presentations = \
 """
 
 
+# language=jinja2
 _workload = \
 """
 {% if config.uses_supervisor %}

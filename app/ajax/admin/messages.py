@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify, url_for
 
 
+# language=jinja2
 _messages_pclasses = \
 """
 {% for pclass in message.project_classes %}
@@ -20,6 +21,7 @@ _messages_pclasses = \
 {% endfor %}
 """
 
+# language=jinja2
 _messages_menu = \
 """
 <div class="dropdown">

@@ -11,6 +11,7 @@
 from flask import render_template_string
 
 
+# language=jinja2
 _email_log_menu = \
 """
 <div class="dropdown">
@@ -29,6 +30,7 @@ _email_log_menu = \
 """
 
 
+# language=jinja2
 _name = \
 """
 {% if e.user is not none %}
@@ -39,6 +41,7 @@ _name = \
 """
 
 
+# language=jinja2
 _address = \
 """
 {% if e.user is not none %}
@@ -50,6 +53,7 @@ _address = \
 {% endif %}
 """
 
+# language=jinja2
 _subject = \
 """
 <a href="{{ url_for('admin.display_email', id=e.id) }}">{{ e.subject }}</a>

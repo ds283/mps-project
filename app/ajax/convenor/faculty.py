@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _faculty_menu = \
 """
 <div class="dropdown">
@@ -39,6 +40,7 @@ _faculty_menu = \
 </div>
 """
 
+# language=jinja2
 _golive = \
 """
 {% if config.require_confirm %}
@@ -69,6 +71,7 @@ _golive = \
 {% endif %}
 """
 
+# language=jinja2
 _projects = \
 """
 {{ d.projects_offered_label(pclass)|safe }}
@@ -76,11 +79,13 @@ _projects = \
 {{ d.marker_label|safe }}
 """
 
+# language=jinja2
 _name = \
 """
 <a href="mailto:{{ u.email }}">{{ u.name }}</a>
 """
 
+# language=jinja2
 _enrollments = \
 """
 {% set f = d.get_enrollment_record(pclass_id) %}

@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _student = \
 """
 <a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
@@ -24,6 +25,7 @@ _student = \
 """
 
 
+# language=jinja2
 _project = \
 """
 <a href="{{ url_for('faculty.live_project', pid=proj.id, url=url_for('convenor.selector_custom_offers', sel_id=sel.id), text='selector custom offers') }}">
@@ -32,6 +34,7 @@ _project = \
 """
 
 
+# language=jinja2
 _owner = \
 """
 <a href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
@@ -39,6 +42,7 @@ _owner = \
 """
 
 
+# language=jinja2
 _status = \
 """
 {% set status = offer.status %}
@@ -53,6 +57,7 @@ _status = \
 {% endif %}
 """
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">
@@ -86,6 +91,7 @@ _menu = \
 """
 
 
+# language=jinja2
 _selector_offers = \
 """
 {% for offer in record.custom_offers_accepted %}
@@ -100,6 +106,7 @@ _selector_offers = \
 """
 
 
+# language=jinja2
 _project_offers = \
 """
 {% for offer in record.custom_offers_accepted %}
@@ -114,6 +121,7 @@ _project_offers = \
 """
 
 
+# language=jinja2
 _sel_actions = \
 """
 <div class="float-right">
@@ -125,6 +133,7 @@ _sel_actions = \
 """
 
 
+# language=jinja2
 _proj_actions = \
 """
 <div class="float-right">

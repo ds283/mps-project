@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _access = \
 """
 {% if asset.in_role_acl(role) %}
@@ -21,6 +22,7 @@ _access = \
 """
 
 
+# language=jinja2
 _actions = \
 """
 <div style="text-align: right;">

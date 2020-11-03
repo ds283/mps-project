@@ -18,6 +18,7 @@ from ...models import User, FacultyData, EnrollmentRecord
 from ...shared.utils import detuple
 
 
+# language=jinja2
 _affiliation = \
 """
 {% for group in f.affiliations %}
@@ -26,6 +27,7 @@ _affiliation = \
 """
 
 
+# language=jinja2
 _enrolled = \
 """
 {% for record in f.enrollments %}
@@ -35,6 +37,7 @@ _enrolled = \
 """
 
 
+# language=jinja2
 _settings = \
 """
 {% if f.sign_off_students %}

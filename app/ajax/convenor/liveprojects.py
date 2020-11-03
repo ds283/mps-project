@@ -13,6 +13,7 @@ from flask import render_template_string, jsonify, url_for
 from ...models import ProjectClassConfig
 
 
+# language=jinja2
 _bookmarks = \
 """
 {% set bookmarks = project.number_bookmarks %}
@@ -26,6 +27,7 @@ _bookmarks = \
 {% endif %}
 """
 
+# language=jinja2
 _selections = \
 """
 {% set selections = project.number_selections %}
@@ -49,6 +51,7 @@ _selections = \
 {% endif %}
 """
 
+# language=jinja2
 _confirmations = \
 """
 {% set pending = project.number_pending %}
@@ -77,6 +80,7 @@ _confirmations = \
 {% endif %}
 """
 
+# language=jinja2
 _popularity = \
 """
 {% set R = project.popularity_rank(live=require_live) %}
@@ -95,6 +99,7 @@ _popularity = \
 {% endif %}
 """
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">

@@ -11,6 +11,7 @@
 from flask import render_template_string, jsonify
 
 
+# language=jinja2
 _name = \
 """
 <div>
@@ -25,6 +26,7 @@ _name = \
 """
 
 
+# language=jinja2
 _properties = \
 """
 {% if l.url is not none %}
@@ -58,6 +60,7 @@ _properties = \
 """
 
 
+# language=jinja2
 _active = \
 """
 {% if l.active %}
@@ -68,6 +71,7 @@ _active = \
 """
 
 
+# language=jinja2
 _menu = \
 """
 <div class="dropdown">

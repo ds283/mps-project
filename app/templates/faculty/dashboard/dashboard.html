@@ -25,7 +25,7 @@
                 </a>
             </li>
         {% endif %}
-        {%- set approve_total = approvals_data['total'] -%}
+        {%- set approve_total = approvals_data.get('total') -%}
         {%- set user_num_rejected = approvals_data.get('approval_user_rejected') -%}
         {%- set project_num_rejected = approvals_data.get('approval_project_rejected') -%}
         {%- set user_warning = (user_num_rejected > 0) if user_num_rejected is not none else false -%}
@@ -46,6 +46,7 @@
         {% if enrollments %}
             {% for item in enrollments %}
                 {% set config = item['config'] %}
+                {% set num_assignments = config.number_supervisor_records(current_user.id) %}
                 <li class="nav-item endif %}">
                     <a class="nav-link {% if pane == config.id|string %}active{% endif %}" href="{{ url_for('faculty.dashboard', pane=config.id) }}">
                         {% set selector_state = config.selector_lifecycle %}
@@ -57,6 +58,9 @@
                             <i class="fas fa-exclamation-triangle"></i>
                         {% endif %}
                         {{ config.name }}
+                        {% if num_assignments %}
+                            <span class="badge badge-pill badge-light">{{ num_assignments }}</span>
+                        {% endif %}
                     </a>
                 </li>
             {% endfor %}

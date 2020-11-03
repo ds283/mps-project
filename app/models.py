@@ -4949,6 +4949,10 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
         return all([p.all_supervisors_assigned for p in self.periods])
 
 
+    def number_supervisor_records(self, faculty):
+        return sum([p.number_supervisor_records(faculty) for p in self.periods])
+
+
 class SubmissionPeriodRecord(db.Model):
     """
     Capture details about a submission period
@@ -5085,22 +5089,35 @@ class SubmissionPeriodRecord(db.Model):
         return format_readable_time(delta)
 
 
-    def get_supervisor_records(self, fac):
+    def _unordered_supervisor_records_query(self, fac):
         if isinstance(fac, int):
             fac_id = fac
         elif isinstance(fac, FacultyData) or isinstance(fac, User):
             fac_id = fac.id
         else:
-            raise RuntimeError('Unknown faculty id type passed to get_supervisor_records()')
+            raise RuntimeError('Unknown faculty id type "{typ}" passed to '
+                               'SubmissionPeriodRecord.get_supervisor_records'.format(typ=type(fac)))
 
         return self.submissions \
             .join(LiveProject, LiveProject.id == SubmissionRecord.project_id) \
-            .filter(LiveProject.owner_id == fac_id) \
+            .filter(LiveProject.owner_id == fac_id)
+
+
+    def _ordered_supervisor_records_query(self, fac):
+        return self._unordered_supervisor_records_query(fac) \
             .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
             .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
             .join(User, User.id == SubmittingStudent.student_id) \
             .order_by(SubmissionPeriodRecord.submission_period.asc(),
-                      User.last_name.asc(), User.first_name.asc()).all()
+                      User.last_name.asc(), User.first_name.asc())
+
+
+    def number_supervisor_records(self, fac):
+        return get_count(self._unordered_supervisor_records_query(fac))
+
+
+    def get_supervisor_records(self, fac):
+        return self._ordered_supervisor_records_query(fac).all()
 
 
     def get_marker_records(self, fac):

@@ -1420,7 +1420,7 @@ def dashboard():
             else:
                 pane = None
     else:
-        if not pane in valid_panes:
+        if pane not in valid_panes:
             if len(valid_panes) > 0:
                 pane = valid_panes[0]
             else:

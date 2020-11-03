@@ -1,3 +1,5 @@
+{% from "icon_block.html" import icon_block %}
+
 {% macro prelive_capacity(data, sel_count) %}
     {% set groups = data['data'] %}
     {% set total_projects = data['projects'] %}
@@ -73,10 +75,10 @@
     {% if total_capacity >= sel_count %}
         {% if total_faculty >= sel_count %}
             <div class="alert alert-info">
-                Approximate allocation is less than one project per faculty member.
-                <p>
-                    <strong>Warning.</strong> This estimate does not account for constraints.
-                </p>
+                {% call icon_block("info-circle") %}
+                    <div>Approximate allocation is less than one project per faculty member.</div>
+                    <div class="mt-1"><strong>Warning.</strong> This estimate does not account for constraints.</div>
+                {% endcall %}
             </div>
         {% else %}
             {% set alloc = sel_count / total_faculty %}

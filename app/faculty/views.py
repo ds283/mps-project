@@ -177,7 +177,7 @@ _desc_menu = \
         <div class="dropdown-header">Edit description</div>
 
         <a class="dropdown-item" href="{{ url_for('faculty.edit_description', did=d.id, create=create) }}">
-            <i class="fas fa-pencil-alt fa-fw"></i> Settings...
+            <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.edit_description_content', did=d.id, create=create) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit content...
@@ -324,7 +324,10 @@ def edit_descriptions(id):
 
     create = request.args.get('create', default=None)
 
-    return render_template('faculty/edit_descriptions.html', project=project, create=create)
+    missing_aims = [x for x in project.descriptions if x.has_warning('aims')]
+
+    return render_template('faculty/edit_descriptions.html', project=project, create=create,
+                           missing_aims=missing_aims)
 
 
 @faculty.route('/descriptions_ajax/<int:id>')

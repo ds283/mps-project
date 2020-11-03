@@ -57,6 +57,23 @@
                     Unless you wish to do so, there is no need to generate a separate variant for each programme.
                 {% endcall %}
             </div>
+            {% if missing_aims and missing_aims|length > 0 %}
+                {% set num_missing = missing_aims|length %}
+                {% set pl = '' if num_missing == 1 else 's' %}
+                {% set isare = 'is' if num_missing == 1 else 'are'  %}
+                <div class="alert alert-danger mt-1 mb-3">
+                    {% call icon_block("exclamation-circle") %}
+                        The following description{{ pl }} {{ isare }} missing a statement of aims:
+                        <ul>
+                            {% for desc in missing_aims %}
+                                <li>{{ desc.label }}</li>
+                            {% endfor %}
+                        </ul>
+                        To help improve our support for robust project marking,
+                        please consider providing a suitable statement for these descriptions.
+                    {% endcall %}
+                </div>
+            {% endif %}
             <table id="descriptions-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>

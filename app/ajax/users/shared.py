@@ -71,7 +71,7 @@ menu = \
     <div class="dropdown-menu dropdown-menu-right">
         <div class="dropdown-header">Edit</div>
         <a class="dropdown-item" href="{{ url_for('manage_users.edit_user', id=user.id, pane=pane) }}">
-            <i class="fas fa-cogs fa-fw"></i> Account settings...
+            <i class="fas fa-sliders-h fa-fw"></i> Account settings...
         </a>
         {% if user_is_faculty %}
             <a class="dropdown-item" href="{{ url_for('manage_users.edit_affiliations', id=user.id, pane=pane) }}">

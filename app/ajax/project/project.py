@@ -24,11 +24,11 @@ from urllib import parse
 # language=jinja2
 _project_name = \
 """
-{% set offerable = project.is_offerable %}
+{% set has_issues = project.has_issues %}
 <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
     {{ project.name }}
 </a>
-{% if not offerable %}
+{% if has_issues %}
     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 <div>
@@ -57,46 +57,47 @@ _project_name = \
         {% endfor %}
     </div>
 {% endif %}
-{% if not offerable %}
-    <p></p>
-    {% set errors = project.errors %}
-    {% set warnings = project.warnings %}
-    {% if errors|length == 1 %}
-        <span class="badge badge-danger">1 error</span>
-    {% elif errors|length > 1 %}
-        <span class="badge badge-danger">{{ errors|length }} errors</span>
-    {% else %}
-        <span class="badge badge-success">0 errors</span>
-    {% endif %}
-    {% if warnings|length == 1 %}
-        <span class="badge badge-warning">1 warning</span>
-    {% elif warnings|length > 1 %}
-        <span class="badge badge-warning">{{ warnings|length }} warnings</span>
-    {% else %}
-        <span class="badge badge-success">0 warnings</span>
-    {% endif %}
-    {% if errors|length > 0 %}
-        <div class="error-block">
-            {% for item in errors %}
-                {% if loop.index <= 5 %}
-                    <div class="error-message">{{ item }}</div>
-                {% elif loop.index == 6 %}
-                    <div class="error-message">Further errors suppressed...</div>
-                {% endif %}            
-            {% endfor %}
-        </div>
-    {% endif %}
-    {% if warnings|length > 0 %}
-        <div class="error-block">
-            {% for item in warnings %}
-                {% if loop.index <= 5 %}
-                    <div class="error-message">Warning: {{ item }}</div>
-                {% elif loop.index == 6 %}
-                    <div class="error-message">Further errors suppressed...</div>
-                {% endif %}
-            {% endfor %}
-        </div>
-    {% endif %}
+{% if has_issues %}
+    <div class="mt-1">
+        {% set errors = project.errors %}
+        {% set warnings = project.warnings %}
+        {% if errors|length == 1 %}
+            <span class="badge badge-danger">1 error</span>
+        {% elif errors|length > 1 %}
+            <span class="badge badge-danger">{{ errors|length }} errors</span>
+        {% else %}
+            <span class="badge badge-success">0 errors</span>
+        {% endif %}
+        {% if warnings|length == 1 %}
+            <span class="badge badge-warning">1 warning</span>
+        {% elif warnings|length > 1 %}
+            <span class="badge badge-warning">{{ warnings|length }} warnings</span>
+        {% else %}
+            <span class="badge badge-success">0 warnings</span>
+        {% endif %}
+        {% if errors|length > 0 %}
+            <div class="error-block">
+                {% for item in errors %}
+                    {% if loop.index <= 5 %}
+                        <div class="error-message">{{ item }}</div>
+                    {% elif loop.index == 6 %}
+                        <div class="error-message">Further errors suppressed...</div>
+                    {% endif %}            
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if warnings|length > 0 %}
+            <div class="error-block">
+                {% for item in warnings %}
+                    {% if loop.index <= 5 %}
+                        <div class="error-message">Warning: {{ item }}</div>
+                    {% elif loop.index == 6 %}
+                        <div class="error-message">Further errors suppressed...</div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
 {% endif %}
 """
 
@@ -181,10 +182,10 @@ _faculty_menu = \
         <div class="dropdown-header">Edit project</div>
 
         <a class="dropdown-item" href="{{ url_for('faculty.edit_project', id=project.id) }}">
-            <i class="fas fa-cogs fa-fw"></i> Settings...
+            <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.edit_descriptions', id=project.id) }}">
-            <i class="fas fa-pencil-alt fa-fw"></i> Variants...
+            <i class="fas fa-tools fa-fw"></i> Variants...
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.attach_assessors', id=project.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Assessors...
@@ -237,10 +238,10 @@ _convenor_menu = \
         <div class="dropdown-header">Edit project</div>
 
         <a class="dropdown-item" href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=pclass_id) }}">
-            <i class="fas fa-cogs fa-fw"></i> Settings...
+            <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
         <a class="dropdown-item" href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=pclass_id) }}">
-            <i class="fas fa-pencil-alt fa-fw"></i> Variants...
+            <i class="fas fa-tools fa-fw"></i> Variants...
         </a>
         <a class="dropdown-item" href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=pclass_id, url=url_for('convenor.attached', id=pclass_id), text='convenor dashboard') }}">
             <i class="fas fa-cogs fa-fw"></i> Assessors...
@@ -289,10 +290,10 @@ _unofferable_menu = \
         <div class="dropdown-header">Edit project</div>
 
         <a class="dropdown-item" href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0) }}">
-            <i class="fas fa-cogs fa-fw"></i> Settings...
+            <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
         <a class="dropdown-item" href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=0) }}">
-            <i class="fas fa-pencil-alt fa-fw"></i> Variants...
+            <i class="fas fa-tools fa-fw"></i> Variants...
         </a>
         <a class="dropdown-item" href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=0, url=url_for('convenor.attached', id=0), text='convenor dashboard') }}">
             <i class="fas fa-cogs fa-fw"></i> Assessors...

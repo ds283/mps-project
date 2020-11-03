@@ -5605,9 +5605,13 @@ def _Project_is_offerable(pid):
 
     # CONSTRAINT 4. All attached project descriptions should validate individually
     for desc in project.descriptions:
-        if not desc.is_valid:
-            errors[('descriptions', desc.id)] = \
-                'Description "{label}" has validation errors'.format(label=desc.label)
+        if desc.has_issues:
+            if not desc.is_valid:
+                errors[('descriptions', desc.id)] = \
+                    'Description "{label}" has validation errors'.format(label=desc.label)
+            else:
+                warnings[('descriptions', desc.id)] = \
+                    'Description "{label}" has validation warnings'.format(label=desc.label)
 
     if len(errors) > 0:
         return False, errors, warnings
@@ -5760,7 +5764,7 @@ class Project(db.Model, EditingMetadataMixin,
     @property
     def has_issues(self):
         if not self._validated:
-            check = self.is_valid
+            check = self.is_offerable
         return len(self._errors) > 0 or len(self._warnings) > 0
 
 
@@ -6265,6 +6269,30 @@ class ProjectDescription(db.Model, EditingMetadataMixin,
         return self._warnings.values()
 
 
+    def has_error(self, key):
+        if not self._validated:
+            check = self.is_valid
+        return key in self._errors
+
+
+    def has_warning(self, key):
+        if not self._validated:
+            check = self.is_valid
+        return key in self._warnings
+
+
+    def get_error(self, key):
+        if not self._validated:
+            check = self.is_valid
+        return self._errors.get(key, None)
+
+
+    def get_warning(self, key):
+        if not self._validated:
+            check = self.is_valid
+        return self._warnings.get(key, None)
+
+
     def remove_project_class(self, pclass):
         self.project_classes.remove(pclass)
 
@@ -6363,16 +6391,15 @@ class ProjectDescription(db.Model, EditingMetadataMixin,
         if len(removed) > 0:
             modified = True
 
-        if self.confirmed:
-            if not self.is_valid:
-                self.confirmed = False
-                self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+        if self.confirmed and self.has_issues:
+            self.confirmed = False
+            self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
 
-                current_app.logger.info('Regular maintenance: reset confirmation state for project description '
-                                        '"{proj}/{desc}" since this description has validation '
-                                        'errors.'.format(proj=self.parent.name, desc=self.label))
+            current_app.logger.info('Regular maintenance: reset confirmation state for project description '
+                                    '"{proj}/{desc}" since this description has validation '
+                                    'issues.'.format(proj=self.parent.name, desc=self.label))
 
-                modified = True
+            modified = True
 
         return modified
 
@@ -10468,7 +10495,7 @@ def _PresentationAssessment_is_valid(id):
     # CONSTRAINT 1 - sessions should satisfy their own consistency rules
     for sess in obj.sessions:
         # check whether each session validates individually
-        if not sess.is_valid:
+        if sess.has_issues:
             if sess.has_errors:
                 errors[('sessions', sess.id)] = \
                     'Session {date} has validation errors'.format(date=sess.short_date_as_string)
@@ -10482,7 +10509,7 @@ def _PresentationAssessment_is_valid(id):
     if all([not s.is_valid for s in obj.scheduling_attempts]):
         for schedule in obj.scheduling_attempts:
             # check whether each schedule validates individually
-            if not schedule.is_valid:
+            if schedule.has_issues:
                 if schedule.has_errors:
                     warnings[('scheduling', schedule.id)] = \
                         'Schedule {name} has validation errors'.format(name=schedule.name)
@@ -11843,7 +11870,7 @@ def _ScheduleAttempt_is_valid(id):
     # CONSTRAINT 1. SLOTS SHOULD SATISFY THEIR OWN CONSISTENCY RULES
     for slot in obj.slots:
         # check whether each slot validates individually
-        if not slot.is_valid:
+        if slot.has_issues:
             for n, e in enumerate(slot.errors):
                 errors[('slots', (slot.id, n))] = \
                     '{date} {session} {room}: {err}'.format(date=slot.short_date_as_string,

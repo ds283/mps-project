@@ -2,6 +2,7 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import skill_groups_key %}
+{% from "icon_block.html" import icon_block %}
 
 {% if not pclass_filter or pclass_filter is none %}
     {% set pclass_filter = 'all' %}
@@ -54,6 +55,24 @@
    <div class="card mt-3 mb-3">
         <div class="card-header bg-primary text-white">Projects for which I am in the assessor pool</div>
         <div class="card-body">
+            <div class="card card-body bg-well mt-1 mb-3">
+                {% call icon_block("info-circle") %}
+                    <div>
+                        <strong>This list shows the projects for which you are listed as an assessor.</strong>
+                    </div>
+                    <div class="mt-1">
+                        This means that you could be allocated as a marker or presentation assessor for any
+                        of these projects.
+                        The projects should be in a subject area that you feel comfortable assessing.
+                    </div>
+                    <div class="mt-1">
+                        If you see any projects for which you would not be comfortable to act as an assessor,
+                        please contact the appropriate project convenor.
+                        We are actively trying to improve the metadata held for the projects in our database,
+                        so we appreciate you bringing these instances to our attention.
+                    </div>
+                {% endcall %}
+            </div>
             {% if pclasses is not none and pclasses|length > 0 %}
                 <div class="card mt-3 mb-3 card-body bg-well">
                     <div class="row">

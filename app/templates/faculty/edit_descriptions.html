@@ -50,11 +50,15 @@
         <div class="card-body">
             <div class="card card-body bg-well mt-1 mb-3">
                 {% call icon_block("info-circle") %}
-                    Variants are different &ldquo;flavours&rdquo; of the same project that can be offered to
-                    students depending on their programme. Typical examples are <strong>MPhys</strong>
-                    and <strong>BSc (Hons)</strong> versions of the same project.
-                    The same variant can be offered to students belonging to multiple programmes.
-                    Unless you wish to do so, there is no need to generate a separate variant for each programme.
+                    <div>
+                        Variants are different &ldquo;flavours&rdquo; of the same project that can be offered to
+                        students depending on their programme. Typical examples are <strong>MPhys</strong>
+                        and <strong>BSc (Hons)</strong> versions of the same project.
+                        The same variant can be offered to students belonging to multiple programmes.
+                    </div>
+                    <div class="mt-1">
+                        There is no need to generate a separate variant for each programme unless you wish to do so.
+                    </div>
                 {% endcall %}
             </div>
             {% if missing_aims and missing_aims|length > 0 %}

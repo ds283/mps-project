@@ -1,0 +1,9 @@
+{% macro import_chosen() %}
+    {% assets filters="cssutils", output="gen/component-chosen.min.css", "css/component-chosen.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/chosen.jquery.min.js", "js/chosen.jquery.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+{% endmacro %}

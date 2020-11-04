@@ -2,9 +2,11 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, date_field %}
+{% from "chosen.html" import import_chosen %}
 
 {% block scripts %}
     {{ super() }}
+    {{ import_chosen() }}
 
     {% assets filters="cssmin", output="gen/tempusdominus-bootstrap-4.min.css", "css/tempusdominus-bootstrap-4.css" -%}
         <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
@@ -15,14 +17,6 @@
     {% endassets %}
 
     {% assets filters="jsmin", output="gen/tempusdominus-bootstrap-4.min.js", "js/tempusdominus-bootstrap-4.js" -%}
-        <script src="{{ ASSET_URL }}"></script>
-    {% endassets %}
-
-    {% assets filters="cssutils", output="gen/component-chosen.min.css", "css/component-chosen.css" -%}
-        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
-    {% endassets %}
-
-    {% assets filters="jsmin", output="gen/chosen.jquery.min.js", "js/chosen.jquery.js" -%}
         <script src="{{ ASSET_URL }}"></script>
     {% endassets %}
 

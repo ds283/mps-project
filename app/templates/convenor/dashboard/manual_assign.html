@@ -1,20 +1,13 @@
 {% extends "base_app.html" %}
 
 {% from "macros.html" import on_click_selector_field %}
-
 {% from "datatables.html" import import_datatables %}
+{% from "chosen.html" import import_chosen %}
 
 {% block scripts %}
     {{ super() }}
     {{ import_datatables() }}
-
-    {% assets filters="cssutils", output="gen/component-chosen.min.css", "css/component-chosen.css" -%}
-        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
-    {% endassets %}
-
-    {% assets filters="jsmin", output="gen/chosen.jquery.min.js", "js/chosen.jquery.js" -%}
-        <script src="{{ ASSET_URL }}"></script>
-    {% endassets %}
+    {{ import_chosen() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};

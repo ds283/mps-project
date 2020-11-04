@@ -25,26 +25,28 @@
             </div>
             <div class="card-body">
                 {% if period.closed %}
-                    <p>Activity for this submission period is now closed.</p>
+                    <div>Activity for this submission period is now closed.</div>
                 {% else %}
                     {% if period.is_feedback_open %}
-                        <p>Marking and feedback for this submission period is now underway.</p>
+                        <div><strong>Marking and feedback for this submission period is now underway.</strong></div>
                     {% else %}
                         {% if period.submission_period > config.submission_period %}
-                            <p>Activity for this submission period has not yet commenced.</p>
+                            <div>Activity for this submission period has not yet commenced.</div>
                         {% elif period.submission_period == config.submission_period %}
                             {% if period.start_date %}
                                 {% if period.start_date > today %}
-                                    <p>This submission period will begin on <strong>{{ period.start_date.strftime("%a %d %b %Y") }}</strong></p>
+                                    <div>This submission period will begin on <strong>{{ period.start_date.strftime("%a %d %b %Y") }}</strong></div>
                                 {% else %}
-                                    <p>This submission period commenced on <strong>{{ period.start_date.strftime("%a %d %b %Y") }}</strong></p>
+                                    <div>This submission period commenced on <strong>{{ period.start_date.strftime("%a %d %b %Y") }}</strong></div>
                                 {% endif %}
                             {% else %}
-                                <p>Normal project activity is underway.</p>
+                                <div>Normal project activity is underway.</div>
                             {% endif %}
                             {% if period.hand_in_date %}
-                                <p>The hand-in date for this period is <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
-                                ({{ period.time_to_hand_in }} from now)</p>
+                                <div class="text-muted mt-1">
+                                    The hand-in date for this period is <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
+                                    ({{ period.time_to_hand_in }} from now)
+                                </div>
                             {% endif %}
                         {% else %}
                             <span class="badge badge-danger">Error: Submission period lifecycle inconsistent</span>

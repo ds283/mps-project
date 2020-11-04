@@ -76,16 +76,16 @@
                 <div class="row vertical-bottom">
                     <div class="col-9">
                         {% if config.request_deadline %}
-                            <p>
+                            <div class="mt-1 text-secondary">
                                 The project convenor has set a deadline of
                                 <strong>{{ config.request_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
                                 <strong>{{ config.time_to_request_deadline }}</strong> from now.
-                            </p>
-                            <p class="text-secondary">
+                            </div>
+                            <div class="mt-1 text-secondary">
                                 The project list is made available
                                 to students when the confirmation period has ended.
                                 You will be notified by email when the list is published.
-                            </p>
+                            </div>
                         {% endif %}
                     </div>
                     <div class="col-3">
@@ -98,17 +98,25 @@
             {% endif %}
 
             {# show basic details about this project class #}
-            <div class="row vertical-align">
+            <div class="row vertical-bottom">
                 <div class="col-9">
                     {% if nproj == 0 and not (is_sabbatical or is_exempt) %}
                         <div class="error-block">
                             <div class="error-message">
                                 <strong>
                     {% endif %}
-                    <p>{{ nproj }} active project{{ nproj_plural }} attached to this project class.</p>
+                    <div>{{ nproj }} active project{{ nproj_plural }} attached to this project class.</div>
                     {% if nproj == 0 and not (is_sabbatical or is_exempt) %}
                                 </strong>
                             </div>
+                        </div>
+                    {% endif %}
+                    {% if nproj > 0 and sel_state <= config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                        <div class="mt-1 mb-2 text-muted">
+                            Projects that appear here will be offered to students when the project list is
+                            published.
+                            To remove a project, use the Actions menu and select
+                            &ldquo;Don't offer this project&rdquo;.
                         </div>
                     {% endif %}
                 </div>

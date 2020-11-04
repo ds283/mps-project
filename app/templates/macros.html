@@ -87,8 +87,10 @@
             <hr class="intro-divider">
             <div class="row">
                 <div class="col-9">
-                    Posted by <a href="mailto:{{ message.user.email }}">{{ message.user.name }}</a>
-                    on {{ message.issue_date.strftime("%a %d %b %Y %H:%M:%S") }}
+                    <div class="text-secondary">
+                        Posted by <a href="mailto:{{ message.user.email }}">{{ message.user.name }}</a>
+                        on {{ message.issue_date.strftime("%a %d %b %Y %H:%M:%S") }}
+                    </div>
                 </div>
                 <div class="col-3">
                     {% if message.dismissible %}

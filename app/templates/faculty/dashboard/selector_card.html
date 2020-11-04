@@ -142,7 +142,7 @@
                         <div class="mt-2">
                             To add a statement use the warning messages in the list below to identify
                             which project{{ pl }} {{ isare }} missing data, and select the
-                            &ldquo;Fix...&rdquo; link.
+                            &ldquo;Fix this...&rdquo; link.
                         </div>
                         {% if not confirm_required %}
                             <div class="mt-2">
@@ -186,23 +186,23 @@
                             </div>
                             {% if not available %}
                                 <div class="error-block mt-1">
-                                    {% call icon_block("exclamation-circle") %}
-                                        <div class="error-message">
+                                    <div class="error-message">
+                                        {% call icon_block("exclamation-circle") %}
                                             This project has validation errors that will prevent it from being published.
                                             <a href="{{ url_for('faculty.edit_projects') }}">Edit in library...</a>
-                                        </div>
-                                    {% endcall %}
+                                        {% endcall %}
+                                    </div>>
                                 </div>
                             {% elif desc.has_warning('aims') %}
                                 <div class="error-block mt-1">
-                                    {% call icon_block("exclamation-circle") %}
-                                        <div class="error-message">
+                                    <div class="error-message">
+                                        {% call icon_block("exclamation-circle") %}
                                             This project variant does not have a statement of aims.
                                             Please consider adding a statement
                                             to help support robust marking.
-                                            <a href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url, focus_aims=1) }}">Fix...</a>
-                                        </div>
-                                    {% endcall %}
+                                            <a href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url, focus_aims=1) }}">Fix this...</a>
+                                        {% endcall %}
+                                    </div>
                                 </div>
                             {% endif %}
                         </div>
@@ -220,7 +220,8 @@
                                     {% endif %}
                                     <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown">Actions</button>
                                     <div class="dropdown-menu dropdown-menu-right">
-                                        <a class="dropdown-item" href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}"><i class="fas fa-trash fa-fw"></i> Don't offer</a>
+                                        <a class="dropdown-item" href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}"><i class="fas fa-times fa-fw"></i> Don't offer this project</a>
+                                        <div class="dropdown-divider" role="separator"></div>
                                         <a class="dropdown-item" href="{{ url_for('faculty.edit_project', id=project.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-sliders-h fa-fw"></i> Project settings...</a>
                                         <a class="dropdown-item" href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-sliders-h fa-fw"></i> Variant settings...</a>
                                         <a class="dropdown-item" href="{{ url_for('faculty.edit_description_content', did=desc.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit content...</a>

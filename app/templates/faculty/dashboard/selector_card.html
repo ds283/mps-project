@@ -240,13 +240,15 @@
                                             {% endif %}
                                         {% endif %}
                                     {% endif %}
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown">Actions</button>
-                                    <div class="dropdown-menu dropdown-menu-right">
-                                        <a class="dropdown-item" href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}"><i class="fas fa-times fa-fw"></i> Don't offer this project</a>
-                                        <div class="dropdown-divider" role="separator"></div>
-                                        <a class="dropdown-item" href="{{ url_for('faculty.edit_project', id=project.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-sliders-h fa-fw"></i> Project settings...</a>
-                                        <a class="dropdown-item" href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-sliders-h fa-fw"></i> Variant settings...</a>
-                                        <a class="dropdown-item" href="{{ url_for('faculty.edit_description_content', did=desc.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit content...</a>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown">Actions</button>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <a class="dropdown-item" href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}"><i class="fas fa-times fa-fw"></i> Don't offer this project</a>
+                                            <div class="dropdown-divider" role="separator"></div>
+                                            <a class="dropdown-item" href="{{ url_for('faculty.edit_project', id=project.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-sliders-h fa-fw"></i> Project settings...</a>
+                                            <a class="dropdown-item" href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-sliders-h fa-fw"></i> Variant settings...</a>
+                                            <a class="dropdown-item" href="{{ url_for('faculty.edit_description_content', did=desc.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit content...</a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

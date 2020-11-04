@@ -118,7 +118,7 @@
                     </span>
                 </div>
             </div>
-            {% if variants_missing_aims and variants_missing_aims|length > 0 %}
+            {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and variants_missing_aims and variants_missing_aims|length > 0 %}
                 {% set num_missing_aims = variants_missing_aims|length %}
                 {% set pl = '' if num_missing_aims == 1 else 's' %}
                 {% set dodoes = 'does' if num_missing_aims == 1 else 'do' %}

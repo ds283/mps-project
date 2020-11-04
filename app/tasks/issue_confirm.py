@@ -79,9 +79,9 @@ def register_issue_confirm_tasks(celery):
             .select_from(EnrollmentRecord) \
             .filter(EnrollmentRecord.pclass_id == config.pclass_id,
                     EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED) \
-            .join(User, User.id == EnrollmentRecord.owner_id) \
-            .filter(User.active == True) \
             .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id) \
+            .join(User, User.id == FacultyData.id) \
+            .filter(User.active == True) \
             .distinct()
 
         faculty = set()
@@ -89,6 +89,8 @@ def register_issue_confirm_tasks(celery):
             if data.id not in faculty:
                 faculty.add(data.id)
 
+        # build a task group to mark individual faculty as needing to provide confirmation of their
+        # project descriptions
         issue_group = group(issue_confirm.si(d, config_id) for d in faculty if d is not None)
 
         # get backup task from celery instance
@@ -212,7 +214,7 @@ def register_issue_confirm_tasks(celery):
             self.update_state('FAILURE', meta='Could not load database records')
             raise Ignore()
 
-        if not config.is_confirmation_required(data):
+        if not config.require_confirm:
             return None
 
         try:

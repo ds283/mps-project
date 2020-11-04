@@ -70,15 +70,15 @@ _marker_menu = \
 # language=jinja2
 _desc_label = \
 """
+{% set valid = not d.has_issues %}
+{% if not valid %}
+    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+{% endif %}
 <a href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=desc_pclass_id,
                     url=url_for('faculty.edit_descriptions', id=d.parent.id, create=create),
                     text='description list view') }}">
     {{ d.label }}
 </a>
-{% set valid = not d.has_issues %}
-{% if not valid %}
-    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
-{% endif %}
 <div>
     {% if d.review_only %}
         <span class="badge badge-info">Review project</span>

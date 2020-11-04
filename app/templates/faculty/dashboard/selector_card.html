@@ -1,4 +1,5 @@
 {% from "faculty/macros.html" import project_metadata, project_rank_data, project_selection_data %}
+{% from "icon_block.html" import icon_block %}
 
 {% macro selector_card(data, sel_state, current_user) %}
     {% set config = data['config'] %}
@@ -11,14 +12,15 @@
 
     {% set confirm_required = config.is_confirmation_required(current_user.faculty_data) %}
 
-    {% set offered_projects = current_user.faculty_data.projects_offered(pclass) %}
-    {% set nproj = offered_projects|length %}
+    {% set offered_variants = current_user.faculty_data.variants_offered(pclass) %}
+    {% set variants_missing_aims = current_user.faculty_data.variants_offered(pclass, filter_warnings='aims') %}
+    {% set nproj = offered_variants|length %}
     {% if nproj == 1 %}
         {% set nproj_plural = '' %}
     {% else %}
         {% set nproj_plural = 's' %}
     {% endif %}
-    <div class="card mt-3 mb-3">
+    <div class="card mt-3 mb-3 {% if nproj == 0 or sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}border-danger{% endif %}">
         <div class="card-header
             {% if is_sabbatical or is_exempt %}
                 {# no markup required; formerly panel-default #}
@@ -30,7 +32,7 @@
                 {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
                     {# no markup required; formerly panel-default #}
                 {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
-                    bg-warning text-white
+                    bg-danger text-white
                 {% else %}
                     bg-info text-white
                 {% endif %}
@@ -90,8 +92,8 @@
             <div class="row vertical-align">
                 <div class="col-9">
                     {% if nproj == 0 and not (is_sabbatical or is_exempt) %}
-                        <div class="has-error">
-                            <div class="invalid-feedback">
+                        <div class="error-block">
+                            <div class="error-message">
                                 <strong>
                     {% endif %}
                     <p>{{ nproj }} active project{{ nproj_plural }} attached to this project class.</p>
@@ -107,10 +109,38 @@
                     </span>
                 </div>
             </div>
+            {% if variants_missing_aims and variants_missing_aims|length > 0 %}
+                <div class="alert alert-danger mt-2 mb-4">
+                    {% call icon_block("info-circle") %}
+                        <div>
+                            We are trying to improve the metadata we hold for projects in our database.
+                            The following projects you offer do not have a statement of aims:
+                            <ul>
+                                {% for desc in variants_missing_aims %}
+                                    <li>{{ desc.parent.name }} &ndash; variant {{ desc.label }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div>
+                            We would like to ask you, if possible, to supply a statement of aims for these
+                            projects. Aims will be provided to project markers to help them assess
+                            students' progress.
+                        </div>
+                        <div class="mt-2">
+                            To add a statement, find the project is the list below.
+                            It will be flagged with a warning message.
+                            Use the &ldquo;Edit in library...&rdquo; link
+                            to open your project library, then use the drop-down menu
+                            to select &ldquo;Variants...&rdquo; for the corresponding
+                            project.
+                        </div>
+                    {% endcall %}
+                </div>
+            {% endif %}
             {% if nproj > 0 and sel_state < config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                {% for project in offered_projects %}
+                {% for desc in offered_variants %}
+                    {% set project = desc.parent %}
                     {% set available = project.is_offerable %}
-                    {% set desc = project.get_description(pclass.id) %}
                     <div class="row vertical-top fac-project-table">
                         <div class="col-1">
                             <strong>{{ loop.index }}</strong>
@@ -138,12 +168,24 @@
                                 {% endif %}
                             </div>
                             {% if not available %}
-                                <div class="has-error">
-                                    <div class="invalid-feedback">
-                                        <i class="fas fa-exclamation-triangle" style="color:red;"></i>
-                                        This project has validation errors that will prevent it from being published.
-                                        <a href="{{ url_for('faculty.edit_projects') }}">Edit in library...</a>
-                                    </div>
+                                <div class="error-block mt-1">
+                                    {% call icon_block("exclamation-circle") %}
+                                        <div class="error-message">
+                                            This project has validation errors that will prevent it from being published.
+                                            <a href="{{ url_for('faculty.edit_projects') }}">Edit in library...</a>
+                                        </div>
+                                    {% endcall %}
+                                </div>
+                            {% elif desc.has_warning('aims') %}
+                                <div class="error-block mt-1">
+                                    {% call icon_block("exclamation-circle") %}
+                                        <div class="error-message">
+                                            This project variant does not have a statement of aims.
+                                            Please consider adding a statement
+                                            to help support robust marking.
+                                            <a href="{{ url_for('faculty.edit_projects') }}">Edit in library...</a>
+                                        </div>
+                                    {% endcall %}
                                 </div>
                             {% endif %}
                         </div>
@@ -154,7 +196,7 @@
                                         {% if desc.confirmed %}
                                             <a class="btn btn-sm btn-success btn-table-block disabled">Confirmed</a>
                                         {% else %}
-                                            <a href="{{ url_for('faculty.confirm_description', did=desc.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-danger btn-table-block">Confirm</a>
+                                            <a href="{{ url_for('faculty.confirm_description', did=desc.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-outline-danger btn-table-block">Confirm</a>
                                         {% endif %}
                                     {% endif %}
                                 {% else %}

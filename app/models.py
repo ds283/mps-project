@@ -2124,11 +2124,13 @@ class FacultyData(db.Model, EditingMetadataMixin):
         elif isinstance(pclass, int):
             pclass_id = pclass
         else:
-            raise RuntimeError('Could not interpret pclass parameter')
+            raise RuntimeError('Could not interpret pclass parameter of type {typ} in '
+                               'FacultyData._projects_offered_query'.format(typ=type(pclass)))
 
-        return Project.query.filter(Project.active,
-                                    Project.owner_id == self.id,
-                                    Project.project_classes.any(id=pclass_id))
+        return db.session.query(Project) \
+            .filter(Project.active == True,
+                    Project.owner_id == self.id,
+                    Project.project_classes.any(id=pclass_id))
 
 
     def projects_offered(self, pclass):
@@ -2145,7 +2147,49 @@ class FacultyData(db.Model, EditingMetadataMixin):
         if n == 0:
             return '<span class="badge badge-danger"><i class="fas fa-times"></i> 0 available</span>'
 
-        return '<span class="badge badge-info"><i class="fas fa-check"></i> {n} available</span>'.format(n=n)
+        return '<span class="badge badge-success"><i class="fas fa-check"></i> {n} available</span>'.format(n=n)
+
+
+    def _variants_offered_query(self, pclass):
+        if isinstance(pclass, ProjectClass):
+            pclass_id = pclass.id
+        elif isinstance(pclass, int):
+            pclass_id = pclass
+        else:
+            raise RuntimeError('Could not interpret pclass parameter of type {typ} in '
+                               'FacultyData._variants_offered_query'.format(typ=type(pclass)))
+
+        return db.session.query(ProjectDescription) \
+            .join(Project, Project.id == ProjectDescription.parent_id) \
+            .filter(Project.active == True,
+                    Project.owner_id == self.id,
+                    ProjectDescription.project_classes.any(id=pclass_id))
+
+
+    def variants_offered(self, pclass, filter_warnings=None, filter_errors=None):
+        vs = self._variants_offered_query(pclass).all()
+
+        if filter_warnings is not None:
+            if isinstance(filter_warnings, str):
+                vs = [v for v in vs if v.has_warning(filter_warnings)]
+            elif isinstance(filter_warnings, Iterable):
+                for w in filter_warnings:
+                    vs = [v for v in vs if v.has_warning(w)]
+            else:
+                raise RuntimeError('Could not interpret parameter filter_warnings of type {typ} in '
+                                   'FacultyData.variants_offered'.format(type=type(filter_warnings)))
+
+        if filter_errors is not None:
+            if isinstance(filter_errors, str):
+                vs = [v for v in vs if v.has_error(filter_errors)]
+            elif isinstance(filter_errors, Iterable):
+                for e in filter_errors:
+                    vs = [v for v in vs if v.has_error(e)]
+            else:
+                raise RuntimeError('Could not interpret parameter filter_errors of type {typ} in '
+                                   'FacultyData.variants_offered'.format(type=type(filter_errors)))
+
+        return vs
 
 
     @property

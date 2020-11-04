@@ -107,23 +107,23 @@
                                     <span class="badge badge-success">0 warnings</span>
                                 {% endif %}
                                 {% if errors|length > 0 %}
-                                    <div class="has-error">
+                                    <div class="error-block">
                                         {% for item in errors %}
                                             {% if loop.index <= 10 %}
-                                                <div class="invalid-feedback">{{ item }}</div>
+                                                <div class="error-message">{{ item }}</div>
                                             {% elif loop.index == 11 %}
-                                                <div class="invalid-feedback">...</div>
+                                                <div class="error-message">...</div>
                                             {% endif %}
                                         {% endfor %}
                                     </div>
                                 {% endif %}
                                 {% if warnings|length > 0 %}
-                                    <div class="has-error">
+                                    <div class="error-block">
                                         {% for item in warnings %}
                                             {% if loop.index <= 10 %}
-                                                <div class="invalid-feedback">Warning: {{ item }}</div>
+                                                <div class="error-message">Warning: {{ item }}</div>
                                             {% elif loop.index == 11 %}
-                                                <div class="invalid-feedback">...</div>
+                                                <div class="error-message">...</div>
                                             {% endif %}
                                         {% endfor %}
                                     </div>

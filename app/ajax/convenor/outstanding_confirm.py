@@ -14,10 +14,6 @@ from flask import jsonify, render_template_string
 # language=jinja2
 _projects = \
 """
-<div class="outstanding-confirm-group">
-    {{ f.projects_offered_label(pclass)|safe }}
-    {{ f.projects_unofferable_label|safe }}
-</div>
 {% for p in config.project_confirmations_outstanding(f) %}
     {% set offerable = p.is_offerable %}
     <div class="outstanding-confirm-group">
@@ -33,9 +29,9 @@ _projects = \
         <div class="outstanding-confirm-row">
             {% if offerable %}
                 {% if p.active %}
-                    <span class="badge badge-success"><i class="fas fa-check"></i> Project active</span>
+                    <span class="badge badge-success"><i class="fas fa-check"></i> Active</span>
                 {% else %}
-                    <span class="badge badge-warning"><i class="fas fa-times"></i> Project inactive</span>
+                    <span class="badge badge-warning"><i class="fas fa-times"></i> Inactive</span>
                 {% endif %}
                 {% set enrollment = f.get_enrollment_record(pclass.id) %}
                 {% if enrollment %}
@@ -95,7 +91,7 @@ _menu = \
         <a class="dropdown-item" href="{{ url_for('convenor.force_confirm', id=config.id, uid=f.id) }}">
             <i class="fas fa-check fa-fw"></i> Force confirm all
         </a>
-        <a hclass="dropdown-item" ref="{{ url_for('convenor.confirmation_reminder_individual', fac_id=f.id, config_id=config.id) }}">
+        <a class="dropdown-item" href="{{ url_for('convenor.confirmation_reminder_individual', fac_id=f.id, config_id=config.id) }}">
             <i class="fas fa-envelope fa-fw"></i> Send reminder
         </a>
     </div>
@@ -117,12 +113,16 @@ _name = \
         <span class="badge badge-warning">No last seen time</span>
     {% endif %}
 </div>
+<div class="mt-1">
+    {{ f.projects_offered_label(pclass)|safe }}
+    {{ f.projects_unofferable_label|safe }}
+</div>
 """
 
 
 def outstanding_confirm_data(config, url=None, text=None):
 
-    data = [{'name': {'display': render_template_string(_name, u=f.user, f=f, config=config),
+    data = [{'name': {'display': render_template_string(_name, u=f.user, f=f, config=config, pclass=config.project_class),
                       'sortstring': f.user.last_name + f.user.first_name},
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=f.user.email),
              'projects': render_template_string(_projects, f=f, config=config, pclass=config.project_class,

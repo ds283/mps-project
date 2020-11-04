@@ -124,14 +124,10 @@ p.copyright {
 }
 
 .outstanding-confirm-group + .outstanding-confirm-group {
-    margin-top: 12px;
+    margin-top: 1rem;
 }
 
 .outstanding-confirm-row {
-}
-
-.outstanding-confirm-row + .outstanding-confirm-row {
-    margin-top: 4px;
 }
 
 .filter-btn {

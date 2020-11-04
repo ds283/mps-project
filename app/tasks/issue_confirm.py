@@ -75,13 +75,14 @@ def register_issue_confirm_tasks(celery):
 
         # select faculty that are enrolled on this particular project class
         # (will exclude faculty that are eg. on sabbatical)
-        eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id) \
-            .filter_by(pclass_id=config.pclass_id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED).subquery()
-
         fd = db.session.query(FacultyData) \
-            .join(User, User.id == eq.c.owner_id) \
-            .join(FacultyData, FacultyData.id == eq.c.owner_id) \
-            .filter(User.active == True)
+            .select_from(EnrollmentRecord) \
+            .filter(EnrollmentRecord.pclass_id == config.pclass_id,
+                    EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED) \
+            .join(User, User.id == EnrollmentRecord.owner_id) \
+            .filter(User.active == True) \
+            .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id) \
+            .distinct()
 
         faculty = set()
         for data in fd:

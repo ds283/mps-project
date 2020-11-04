@@ -67,14 +67,14 @@
                 {% set isare = 'is' if num_missing == 1 else 'are'  %}
                 <div class="alert alert-danger mt-1 mb-3">
                     {% call icon_block("exclamation-circle") %}
-                        <strong>The following description{{ pl }} {{ isare }} missing a statement of aims:</strong>
+                        <strong>The following variant{{ pl }} {{ isare }} missing a statement of aims:</strong>
                         <ul>
                             {% for desc in missing_aims %}
                                 <li>{{ desc.label }}</li>
                             {% endfor %}
                         </ul>
                         To help improve our support for robust project marking,
-                        please consider providing a suitable statement for these descriptions.
+                        please consider providing a suitable statement for these variants.
                         You can do so using the &ldquo;Settings...&rdquo; option available from the
                         drop-down actions menu for each variant.
                     {% endcall %}

@@ -206,12 +206,12 @@ _desc_menu = \
                 <div class="dropdown-header">Edit description</div>
     
                 <a class="dropdown-item" href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create,
-                                                          url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create),
+                                                          url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create,
                                                           text='project variants list') }}">
                     <i class="fas fa-sliders-h fa-fw"></i> Settings...
                 </a>
                 <a class="dropdown-item" href="{{ url_for('convenor.edit_description_content', did=d.id, pclass_id=pclass_id, create=create,
-                                                          url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create),
+                                                          url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create,
                                                           text='project variants list') }}">
                     <i class="fas fa-pencil-alt fa-fw"></i> Edit content...
                 </a>

@@ -1,7 +1,7 @@
 {% from "faculty/macros.html" import project_metadata, project_rank_data, project_selection_data %}
 {% from "icon_block.html" import icon_block %}
 
-{% macro selector_card(data, sel_state, current_user) %}
+{% macro selector_card(data, sel_state, current_user, home_dashboard_url) %}
     {% set config = data['config'] %}
     {% set record = data['record'] %}
     {% set live_projects = data['projects'] %}
@@ -20,7 +20,7 @@
     {% else %}
         {% set nproj_plural = 's' %}
     {% endif %}
-    <div class="card mt-3 mb-3 {% if nproj == 0 or sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}border-danger{% endif %}">
+    <div class="card mt-3 mb-3 {% if nproj == 0 or (sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required) %}border-danger{% endif %}">
         <div class="card-header
             {% if is_sabbatical or is_exempt %}
                 {# no markup required; formerly panel-default #}
@@ -66,22 +66,31 @@
         <div class="card-body">
             {# show confirmation request if one is active #}
             {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
-                <p>Please review your projects to ensure the descriptions are up-to-date,
-                and those you wish to offer next year are active and attached to
-                the correct project classes.</p>
+                <p>
+                    <strong>
+                        Please review your projects to ensure the descriptions are up-to-date,
+                        and those you wish to offer next year are active and attached to
+                        the correct project classes.
+                    </strong>
+                </p>
                 <div class="row vertical-bottom">
                     <div class="col-9">
                         {% if config.request_deadline %}
-                            <p>The project convenor has set a deadline of
+                            <p>
+                                The project convenor has set a deadline of
                                 <strong>{{ config.request_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
                                 <strong>{{ config.time_to_request_deadline }}</strong> from now.
                             </p>
-                            <p>After the deadline, projects will be made available to students for selection.</p>
+                            <p class="text-secondary">
+                                The project list is made available
+                                to students when the confirmation period has ended.
+                                You will be notified by email when the list is published.
+                            </p>
                         {% endif %}
                     </div>
                     <div class="col-3">
                         <div class="float-right">
-                            <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-danger">Confirm</a>
+                            <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-success">Confirm all projects</a>
                         </div>
                     </div>
                 </div>
@@ -118,23 +127,30 @@
                 <div class="alert alert-danger mt-2 mb-4">
                     {% call icon_block("info-circle") %}
                         <div>
-                            We are trying to improve the metadata we hold for projects in our database.
-                            According to our records, {{ num_missing_aims }} project{{ pl }}
-                            that you offer {{ dodoes }} not have a statement of aims.
+                            <strong>
+                                We are trying to improve the metadata for projects in our database.
+                                According to our records, {{ num_missing_aims }} project{{ pl }}
+                                that you offer {{ dodoes }} not have a statement of aims.
+                            </strong>
                         </div>
                         <div class="mt-2">
-                            We would like to ask you, if possible, to supply a statement of aims for {{ thisthese }}
-                            project{{ pl }}. Aims will be provided to project markers to help them assess
-                            students' progress.
+                            If possible,
+                            we would like to ask you to supply a short statement of aims for {{ thisthese }}
+                            project{{ pl }}. The aims you specify will be provided to project markers to help them
+                            assess students' progress.
                         </div>
                         <div class="mt-2">
-                            To add a statement, use the warning messages in the list below to identify
-                            which project{{ pl }} {{ isare }} missing data.
-                            Use the &ldquo;Edit in library...&rdquo; link
-                            to open your project library, then use the drop-down menu
-                            to select &ldquo;Variants...&rdquo; for the corresponding
-                            project.
+                            To add a statement use the warning messages in the list below to identify
+                            which project{{ pl }} {{ isare }} missing data, and select the
+                            &ldquo;Fix...&rdquo; link.
                         </div>
+                        {% if not confirm_required %}
+                            <div class="mt-2">
+                                You can still add a statement even if you have confirmed your project,
+                                because the database does not go live until it is published to students
+                                at the end of the confirmation period.
+                            </div>
+                        {% endif %}
                     {% endcall %}
                 </div>
             {% endif %}
@@ -184,7 +200,7 @@
                                             This project variant does not have a statement of aims.
                                             Please consider adding a statement
                                             to help support robust marking.
-                                            <a href="{{ url_for('faculty.edit_projects') }}">Edit in library...</a>
+                                            <a href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url, focus_aims=1) }}">Fix...</a>
                                         </div>
                                     {% endcall %}
                                 </div>
@@ -192,19 +208,24 @@
                         </div>
                         <div class="col-3">
                             <div class="float-right">
-                                {% if desc %}
-                                    {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and config.project_class.require_confirm %}
-                                        {% if desc.confirmed %}
-                                            <a class="btn btn-sm btn-success btn-table-block disabled">Confirmed</a>
-                                        {% else %}
-                                            <a href="{{ url_for('faculty.confirm_description', did=desc.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-outline-danger btn-table-block">Confirm</a>
+                                <div class="btn-group btn-table-block">
+                                    {% if desc %}
+                                        {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and config.project_class.require_confirm %}
+                                            {% if desc.confirmed %}
+                                                <a class="btn btn-sm btn-success disabled">Confirmed</a>
+                                            {% else %}
+                                                <a href="{{ url_for('faculty.confirm_description', did=desc.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-outline-success">Confirm</a>
+                                            {% endif %}
                                         {% endif %}
                                     {% endif %}
-                                {% else %}
-                                    <span class="badge badge-warning">Unknown description</span>
-                                {% endif %}
-                                <a href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-outline-secondary btn-table-block">Remove</a>
-                                <a href="{{ url_for('faculty.edit_project', id=project.id) }}" class="btn btn-sm btn-outline-secondary btn-table-block">Edit</a>
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown">Actions</button>
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        <a class="dropdown-item" href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}"><i class="fas fa-trash fa-fw"></i> Don't offer</a>
+                                        <a class="dropdown-item" href="{{ url_for('faculty.edit_project', id=project.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-sliders-h fa-fw"></i> Project settings...</a>
+                                        <a class="dropdown-item" href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-sliders-h fa-fw"></i> Variant settings...</a>
+                                        <a class="dropdown-item" href="{{ url_for('faculty.edit_description_content', did=desc.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit content...</a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -244,7 +265,7 @@
                                     {{ project_selection_data(project) }}
                                 </div>
                                 <div style="margin-top: 6px;">
-                                    {{ project_rank_data(project, url_for('faculty.dashboard', pane=config.id), text='faculty dashboard', live=true) }}
+                                    {{ project_rank_data(project, url_for('faculty.dashboard', pane=config.id), text='home dashboard', live=true) }}
                                 </div>
                             </div>
                             <div class="col-3 faculty-confirm-area">

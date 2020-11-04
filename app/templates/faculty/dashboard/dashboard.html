@@ -112,7 +112,7 @@
                         {% if pane == config.id|string %}
                             {% set live_projects = item['projects'] %}
                             {% set record = item['record'] %}
-                            {{ pclass_card(item, today) }}
+                            {{ pclass_card(item, today, home_dashboard_url) }}
                         {% endif %}
                     {% endfor %}
                 {% else %}

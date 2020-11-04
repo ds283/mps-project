@@ -63,7 +63,7 @@
                 {% set isare = 'is' if num_missing == 1 else 'are'  %}
                 <div class="alert alert-danger mt-1 mb-3">
                     {% call icon_block("exclamation-circle") %}
-                        The following description{{ pl }} {{ isare }} missing a statement of aims:
+                        <strong>The following description{{ pl }} {{ isare }} missing a statement of aims:</strong>
                         <ul>
                             {% for desc in missing_aims %}
                                 <li>{{ desc.label }}</li>

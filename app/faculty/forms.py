@@ -71,7 +71,8 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
                                                 description='Select if you wish to prevent multiple students taking '
                                                             'this project from being scheduled to give presentations '
                                                             'in the same session. Students often prefer this '
-                                                            'arrangement, but please consider disabling this setting '
+                                                            'arrangement, so by default it is usually enabled. '
+                                                            'However, please consider disabling this setting '
                                                             'if possible because it makes scheduling presentations '
                                                             'significantly simpler.')
 

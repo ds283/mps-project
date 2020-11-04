@@ -62,10 +62,12 @@
 {% endblock %}
 
 {% block form_content %}
+    {% if url is not defined %}{% set url = none %}{% endif %}
+    {% if text is not defined %}{% set text = none %}{% endif %}
     {% if pclass_id is defined %}
-        <form action="{{ url_for('convenor.edit_description_content', did=desc.id, pclass_id=pclass_id, create=create) }}" method="POST" name="form">
+        <form action="{{ url_for('convenor.edit_description_content', did=desc.id, pclass_id=pclass_id, create=create, url=url, text=text) }}" method="POST" name="form">
     {% else %}
-        <form action="{{ url_for('faculty.edit_description_content', did=desc.id, create=create) }}" method="POST" name="form">
+        <form action="{{ url_for('faculty.edit_description_content', did=desc.id, create=create, url=url, text=text) }}" method="POST" name="form">
     {% endif %}
 
             {{ form.hidden_tag() }}

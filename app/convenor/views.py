@@ -205,10 +205,14 @@ _desc_menu = \
                 <div role="separator" class="dropdown-divider"></div>
                 <div class="dropdown-header">Edit description</div>
     
-                <a class="dropdown-item" href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
+                <a class="dropdown-item" href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create,
+                                                          url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create),
+                                                          text='project variants list') }}">
                     <i class="fas fa-sliders-h fa-fw"></i> Settings...
                 </a>
-                <a class="dropdown-item" href="{{ url_for('convenor.edit_description_content', did=d.id, pclass_id=pclass_id, create=create) }}">
+                <a class="dropdown-item" href="{{ url_for('convenor.edit_description_content', did=d.id, pclass_id=pclass_id, create=create,
+                                                          url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create),
+                                                          text='project variants list') }}">
                     <i class="fas fa-pencil-alt fa-fw"></i> Edit content...
                 </a>
                 <a class="dropdown-item" href="{{ url_for('convenor.description_modules', did=d.id, pclass_id=pclass_id, create=create) }}">
@@ -2771,6 +2775,12 @@ def edit_project(id, pclass_id):
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+    if url is None:
+        url = url_for('convenor.attached', id=pclass_id)
+        text = 'attached projects view'
+
     # set up form
     data = Project.query.get_or_404(id)
 
@@ -2814,9 +2824,10 @@ def edit_project(id, pclass_id):
             flash('Could not save changes to project due to a database error. '
                   'Please contact a system administrator', 'error')
 
-        return redirect(url_for('convenor.attached', id=pclass_id))
+        return redirect(url)
 
-    return render_template('faculty/edit_project.html', project_form=form, project=data, pclass_id=pclass_id, title='Edit project details')
+    return render_template('faculty/edit_project.html', project_form=form, project=data, pclass_id=pclass_id, title='Edit project details',
+                           url=url, text=text)
 
 
 @convenor.route('/activate_project/<int:id>/<int:pclass_id>')
@@ -2959,6 +2970,11 @@ def edit_description(did, pclass_id):
             return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+    if url is None:
+        url = url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create)
+        text = 'project variants list'
 
     EditDescriptionForm = EditDescriptionSettingsFormFactory(desc.parent_id, did)
     form = EditDescriptionForm(obj=desc)
@@ -2983,10 +2999,11 @@ def edit_description(did, pclass_id):
             flash('Could not edit project description due to a database error. '
                   'Please contact a system administrator', 'error')
 
-        return redirect(url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create))
+        return redirect(url)
 
     return render_template('faculty/edit_description.html', project=desc.parent, desc=desc, form=form,
-                           pclass_id=pclass_id, title='Edit description', create=create)
+                           pclass_id=pclass_id, title='Edit description', create=create,
+                           url=url, text=text)
 
 
 @convenor.route('/edit_description_content/<int:did>/<int:pclass_id>', methods=['GET', 'POST'])
@@ -3004,6 +3021,11 @@ def edit_description_content(did, pclass_id):
             return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+    if url is None:
+        url = url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create)
+        text = 'project variants list'
 
     form = EditDescriptionContentForm(obj=desc)
 
@@ -3022,7 +3044,8 @@ def edit_description_content(did, pclass_id):
         return redirect(url_for('faculty.edit_descriptions', id=desc.parent_id, create=create))
 
     return render_template('faculty/edit_description_content.html', project=desc.parent, desc=desc, form=form,
-                           pclass_id=pclass_id, title='Edit description', create=create)
+                           pclass_id=pclass_id, title='Edit description', create=create,
+                           url=url, text=text)
 
 
 @convenor.route('/description_modules/<int:did>/<int:pclass_id>/<int:level_id>', methods=['GET', 'POST'])

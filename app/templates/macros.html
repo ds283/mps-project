@@ -38,20 +38,20 @@
             <div class="card-header">History</div>
             <div class="card-body">
                 {% if item.created_by %}
-                    <p>
+                    <div class="text-muted">
                         Created by {{ item.created_by.name_and_username }}
                         {% if item.creation_timestamp %}
                             on {{ item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
                         {% endif %}
-                    </p>
+                    </div>
                 {% endif %}
                 {% if item.last_edited_by %}
-                    <p>
+                    <div class="text-muted">
                         Last edited by {{ item.last_edited_by.name_and_username }}
                         {% if item.last_edit_timestamp %}
                             on {{ item.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
                         {% endif %}
-                    </p>
+                    </div>
                 {% endif %}
             </div>
         </div>

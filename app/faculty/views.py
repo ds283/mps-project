@@ -176,10 +176,14 @@ _desc_menu = \
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Edit description</div>
 
-        <a class="dropdown-item" href="{{ url_for('faculty.edit_description', did=d.id, create=create) }}">
+        <a class="dropdown-item" href="{{ url_for('faculty.edit_description', did=d.id, create=create,
+                                                  url=url_for('faculty.edit_descriptions', id=d.parent_id, create=create),
+                                                  text='project variants list') }}">
             <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
-        <a class="dropdown-item" href="{{ url_for('faculty.edit_description_content', did=d.id, create=create) }}">
+        <a class="dropdown-item" href="{{ url_for('faculty.edit_description_content', did=d.id, create=create,
+                                                  url=url_for('faculty.edit_descriptions', id=d.parent_id, create=create),
+                                                  text='project variants list') }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit content...
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.description_modules', did=d.id, create=create) }}">
@@ -310,7 +314,7 @@ def marking_ajax():
 
     data = [(p.id, None) for p in pq.all()]
 
-    return ajax.project.build_data(data, current_user.id, show_approvals=False)
+    return ajax.project.build_data(data, current_user.id, show_approvals=False, show_errors=False)
 
 
 @faculty.route('/edit_descriptions/<int:id>')
@@ -414,6 +418,12 @@ def edit_project(id):
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+    if url is None:
+        url = url_for('faculty.edit_projects')
+        text = 'project library'
+
     EditProjectForm = EditProjectFormFactory(convenor_editing=False)
     form = EditProjectForm(obj=proj)
     form.project = proj
@@ -437,12 +447,12 @@ def edit_project(id):
         db.session.commit()
 
         if form.save_and_preview.data:
-            return redirect(url_for('faculty.project_preview', id=id,
-                                    text='project list', url=url_for('faculty.edit_projects')))
+            return redirect(url_for('faculty.project_preview', id=id, text=text, url=url))
         else:
-            return redirect(url_for('faculty.edit_projects'))
+            return redirect(url)
 
-    return render_template('faculty/edit_project.html', project_form=form, project=proj, title='Edit project settings')
+    return render_template('faculty/edit_project.html', project_form=form, project=proj, title='Edit project settings',
+                           url=url, text=text)
 
 
 @faculty.route('/remove_project_pclass/<int:proj_id>/<int:pclass_id>')
@@ -613,11 +623,24 @@ def edit_description(did):
         return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
+    focus_aims = bool(int(request.args.get('focus_aims', 0)))
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+    if url is None:
+        url = url_for('faculty.edit_descriptions', id=desc.parent_id, create=create)
+        text = 'project variants list'
 
     EditDescriptionForm = EditDescriptionSettingsFormFactory(desc.parent_id, did)
     form = EditDescriptionForm(obj=desc)
     form.project_id = desc.parent_id
     form.desc = desc
+
+    if focus_aims:
+        if not hasattr(form.aims, 'errors') or form.aims.errors is None:
+            form.aims.errors = tuple()
+
+        form.aims.errors = (*form.aims.errors, 'Thank you for helping to improve our database. '
+                                               'Please enter your statement of aims and save changes.')
 
     if form.validate_on_submit():
         desc.label = form.label.data
@@ -639,10 +662,10 @@ def edit_description(did):
             flash('Could not edit project description due to a database error. '
                   'Please contact a system administrator', 'error')
 
-        return redirect(url_for('faculty.edit_descriptions', id=desc.parent_id, create=create))
+        return redirect(url)
 
     return render_template('faculty/edit_description.html', project=desc.parent, desc=desc, form=form,
-                           title='Edit description', create=create)
+                           title='Edit description', create=create, url=url, text=text)
 
 
 @faculty.route('/edit_description_content/<int:did>', methods=['GET', 'POST'])
@@ -655,6 +678,11 @@ def edit_description_content(did):
         return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+    if url is None:
+        url = url_for('faculty.edit_descriptions', id=desc.parent_id, create=create)
+        text = 'project variants list'
 
     form = EditDescriptionContentForm(obj=desc)
 
@@ -670,10 +698,10 @@ def edit_description_content(did):
             flash('Could not edit project description due to a database error. '
                   'Please contact a system administrator', 'error')
 
-        return redirect(url_for('faculty.edit_descriptions', id=desc.parent_id, create=create))
+        return redirect(url)
 
     return render_template('faculty/edit_description_content.html', project=desc.parent, desc=desc, form=form,
-                           title='Edit description', create=create)
+                           title='Edit description', create=create, url=url, text=text)
 
 
 @faculty.route('/description_modules/<int:did>/<int:level_id>', methods=['GET', 'POST'])

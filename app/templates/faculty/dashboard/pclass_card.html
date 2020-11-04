@@ -1,7 +1,7 @@
 {% from "faculty/dashboard/selector_card.html" import selector_card %}
 {% from "faculty/dashboard/submitter_card.html" import submitter_card %}
 
-{% macro pclass_card(data, today) %}
+{% macro pclass_card(data, today, home_dashboard_url) %}
 
     {% set config = data['config'] %}
     {% set pclass = config.project_class %}
@@ -68,7 +68,7 @@
         {% endif %}
 
         {% if pclass.uses_supervisor %}
-            {{ selector_card(data, sel_state, current_user) }}
+            {{ selector_card(data, sel_state, current_user, home_dashboard_url) }}
         {% endif %}
 
         {% for n in range(config.submissions) %}

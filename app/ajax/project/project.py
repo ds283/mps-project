@@ -24,13 +24,10 @@ from urllib import parse
 # language=jinja2
 _project_name = \
 """
-{% set has_issues = project.has_issues %}
+REPERRORSYMBOL
 <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
     {{ project.name }}
 </a>
-{% if has_issues %}
-    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
-{% endif %}
 <div>
     {{ 'REPNEWCOMMENTS'|safe }}
     {% if is_live %}
@@ -57,48 +54,53 @@ _project_name = \
         {% endfor %}
     </div>
 {% endif %}
-{% if has_issues %}
-    <div class="mt-1">
-        {% set errors = project.errors %}
-        {% set warnings = project.warnings %}
-        {% if errors|length == 1 %}
-            <span class="badge badge-danger">1 error</span>
-        {% elif errors|length > 1 %}
-            <span class="badge badge-danger">{{ errors|length }} errors</span>
-        {% else %}
-            <span class="badge badge-success">0 errors</span>
-        {% endif %}
-        {% if warnings|length == 1 %}
-            <span class="badge badge-warning">1 warning</span>
-        {% elif warnings|length > 1 %}
-            <span class="badge badge-warning">{{ warnings|length }} warnings</span>
-        {% else %}
-            <span class="badge badge-success">0 warnings</span>
-        {% endif %}
-        {% if errors|length > 0 %}
-            <div class="error-block">
-                {% for item in errors %}
-                    {% if loop.index <= 5 %}
-                        <div class="error-message">{{ item }}</div>
-                    {% elif loop.index == 6 %}
-                        <div class="error-message">Further errors suppressed...</div>
-                    {% endif %}            
-                {% endfor %}
-            </div>
-        {% endif %}
-        {% if warnings|length > 0 %}
-            <div class="error-block">
-                {% for item in warnings %}
-                    {% if loop.index <= 5 %}
-                        <div class="error-message">Warning: {{ item }}</div>
-                    {% elif loop.index == 6 %}
-                        <div class="error-message">Further errors suppressed...</div>
-                    {% endif %}
-                {% endfor %}
-            </div>
-        {% endif %}
-    </div>
-{% endif %}
+REPERRORBLOCK
+"""
+
+
+# language=jinja2
+_project_error_block = \
+"""
+<div class="mt-1">
+    {% set errors = project.errors %}
+    {% set warnings = project.warnings %}
+    {% if errors|length == 1 %}
+        <span class="badge badge-danger">1 error</span>
+    {% elif errors|length > 1 %}
+        <span class="badge badge-danger">{{ errors|length }} errors</span>
+    {% else %}
+        <span class="badge badge-success">0 errors</span>
+    {% endif %}
+    {% if warnings|length == 1 %}
+        <span class="badge badge-warning">1 warning</span>
+    {% elif warnings|length > 1 %}
+        <span class="badge badge-warning">{{ warnings|length }} warnings</span>
+    {% else %}
+        <span class="badge badge-success">0 warnings</span>
+    {% endif %}
+    {% if errors|length > 0 %}
+        <div class="error-block">
+            {% for item in errors %}
+                {% if loop.index <= 5 %}
+                    <div class="error-message">{{ item }}</div>
+                {% elif loop.index == 6 %}
+                    <div class="error-message">Further errors suppressed...</div>
+                {% endif %}            
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if warnings|length > 0 %}
+        <div class="error-block">
+            {% for item in warnings %}
+                {% if loop.index <= 5 %}
+                    <div class="error-message">Warning: {{ item }}</div>
+                {% elif loop.index == 6 %}
+                    <div class="error-message">Further errors suppressed...</div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
 """
 
 
@@ -181,7 +183,7 @@ _faculty_menu = \
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Edit project</div>
 
-        <a class="dropdown-item" href="{{ url_for('faculty.edit_project', id=project.id) }}">
+        <a class="dropdown-item" href="{{ url_for('faculty.edit_project', id=project.id, text=text, url=url) }}">
             <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
         <a class="dropdown-item" href="{{ url_for('faculty.edit_descriptions', id=project.id) }}">
@@ -237,7 +239,7 @@ _convenor_menu = \
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Edit project</div>
 
-        <a class="dropdown-item" href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=pclass_id) }}">
+        <a class="dropdown-item" href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=pclass_id, text=text, url=url) }}">
             <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
         <a class="dropdown-item" href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=pclass_id) }}">
@@ -289,7 +291,7 @@ _unofferable_menu = \
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Edit project</div>
 
-        <a class="dropdown-item" href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0) }}">
+        <a class="dropdown-item" href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0, text=text, url=url) }}">
             <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
         <a class="dropdown-item" href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=0) }}">
@@ -383,7 +385,7 @@ def _element(project_id, menu_template, is_running, is_live, in_current, name_la
 
 
 def _process(project_id, enrollment_id, current_user_id, menu_template, config, text_enc, url_enc, name_labels,
-             show_approvals):
+             show_approvals, show_errors):
     p = db.session.query(Project).filter_by(id=project_id).one()
 
     if enrollment_id is not None:
@@ -409,6 +411,7 @@ def _process(project_id, enrollment_id, current_user_id, menu_template, config, 
     name = name.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
 
     status = replace_enrollment_text(e, status)
+    name = replace_error_block(p, show_errors, name)
     name = replace_comment_notification(current_user_id, name, p)
     status = replace_approval_tags(p, show_approvals, config, status)
     menu = replace_menu_anchor(text_enc, url_enc, config, menu)
@@ -417,8 +420,20 @@ def _process(project_id, enrollment_id, current_user_id, menu_template, config, 
     return record
 
 
-def replace_menu_anchor(text_enc, url_enc, config, menu):
-    menu = menu.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
+def replace_error_block(p: Project, show_errors: bool, name: str):
+    block = ''
+    symbol = ''
+
+    if show_errors and p.has_issues:
+        block = render_template_string(_project_error_block, project=p)
+        symbol = '<i class="fas fa-exclamation-triangle" style="color:red;"></i>'
+
+    name = name.replace('REPERRORBLOCK', block, 1).replace('REPERRORSYMBOL', symbol, 1)
+    return name
+
+
+def replace_menu_anchor(text_enc: str, url_enc: str, config: ProjectClassConfig, menu: str):
+    menu = menu.replace('REPTEXT', text_enc, 2).replace('REPURL', url_enc, 2)
 
     if config is not None:
         menu = menu.replace(_config_proxy_str, str(config.id), 1).replace(_pclass_proxy_str, str(config.pclass_id), 8)
@@ -773,7 +788,7 @@ def _DegreeType_delete_handler(mapper, connection, target):
 
 
 def build_data(projects, current_user_id=None, menu_template=None, config=None, text=None, url=None, name_labels=False,
-               show_approvals=True):
+               show_approvals=True, show_errors=True):
     bleach = current_app.extensions['bleach']
 
     def urlencode(s):
@@ -784,7 +799,7 @@ def build_data(projects, current_user_id=None, menu_template=None, config=None, 
     url_enc = urlencode(url) if url is not None else ''
     text_enc = urlencode(text) if text is not None else ''
 
-    data = [_process(p_id, e_id, current_user_id, menu_template, config, text_enc, url_enc, name_labels, show_approvals)
-            for p_id, e_id in projects]
+    data = [_process(p_id, e_id, current_user_id, menu_template, config, text_enc, url_enc, name_labels,
+                     show_approvals, show_errors) for p_id, e_id in projects]
 
     return jsonify(data)

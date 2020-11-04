@@ -114,7 +114,7 @@
                 </div>
                 <div class="col-3">
                     <span class="float-right">
-                        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-sm {% if nproj==0 %}btn-danger{% else %}btn-outline-primary{% endif %} mb-3">Edit my projects</a>
+                        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-sm {% if nproj==0 %}btn-danger{% else %}btn-outline-secondary{% endif %} mb-3">Go to project library</a>
                     </span>
                 </div>
             </div>
@@ -134,7 +134,8 @@
                             </strong>
                         </div>
                         <div class="mt-2">
-                            If possible,
+                            We know that everyone is very busy.
+                            However, if you have time and are able,
                             we would like to ask you to supply a short statement of aims for {{ thisthese }}
                             project{{ pl }}. The aims you specify will be provided to project markers to help them
                             assess students' progress.

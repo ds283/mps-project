@@ -5652,10 +5652,10 @@ def _Project_is_offerable(pid):
         if desc.has_issues:
             if not desc.is_valid:
                 errors[('descriptions', desc.id)] = \
-                    'Description "{label}" has validation errors'.format(label=desc.label)
+                    'Variant "{label}" has validation errors'.format(label=desc.label)
             else:
                 warnings[('descriptions', desc.id)] = \
-                    'Description "{label}" has validation warnings'.format(label=desc.label)
+                    'Variant "{label}" has validation warnings'.format(label=desc.label)
 
     if len(errors) > 0:
         return False, errors, warnings

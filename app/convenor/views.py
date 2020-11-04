@@ -3195,7 +3195,7 @@ def duplicate_description(did, pclass_id):
         suffix += 1
 
     if suffix >= 100:
-        flash('Could not duplicate description "{label}" because a new unique label could not '
+        flash('Could not duplicate variant "{label}" because a new unique label could not '
               'be generated'.format(label=desc.label), 'error')
         return redirect(redirect_url())
 
@@ -3298,15 +3298,15 @@ def move_description(did, pclass_id):
 
             try:
                 db.session.commit()
-                flash('Description "{name}" successfully moved to project '
+                flash('Variant "{name}" successfully moved to project '
                       '"{pname}"'.format(name=desc.label, pname=new_project.name), 'info')
             except SQLAlchemyError as e:
                 db.session.rollback()
-                flash('Description "{name}" could not be moved due to a database error'.format(name=desc.label),
+                flash('Variant "{name}" could not be moved due to a database error'.format(name=desc.label),
                       'error')
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         else:
-            flash('Description "{name}" could not be moved because its parent project is '
+            flash('Variant "{name}" could not be moved because its parent project is '
                   'missing'.format(name=desc.label), 'error')
 
         if create:

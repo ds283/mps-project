@@ -19,10 +19,12 @@ if you could confirm your projects before then.
 
 To check your projects, please log in to the project management web app
 at https://mpsprojects.sussex.ac.uk and select 'My projects/My project library...'
-from the drop-down menu in the menubar. All active projects associated
-with this project type will be published to the students. If you wish
-to withdraw a project from this year's selection, please deactivate the
-project using the 'Actions/Make inactive' menu option.
+from the drop-down menu in the menubar. Alternatively, list of active
+projects associated with each project type is shown in the appropriate
+tab on your dashboard. This shows which projects will be published to
+the students. If you wish to withdraw a project, use the Action menu
+shown in the list and choose 'Dont offer this project'. You can also
+deactivate the project entirely from the library view.
 
 {% if number_projects == 0 -%}
 Please note that you currently have no projects in your library that are
@@ -40,15 +42,15 @@ You currently have {{ number_projects }} project{{ pl }} eligible for this proje
 When you are satisfied that your project descriptions are up-to-date,
 return to your dashboard and select the "{{ pclass.name }}" tab.
 An information request box labelled "Selections: Confirmation of projects
-required" should appear highlighted in yellow at the top of the page.
-Please click the red 'Confirm' button to indicate that your projects are
-ready to go.
+required" should appear highlighted in red at the top of the page.
+You can confirm projects individually, or use the green 'Confirm all projects'
+button if everything is ready to go.
 
 If you have already reviewed your projects, please log in again and ensure
-you have clicked the 'Confirm' button. This will ensure that you do not
-receive further unnecessary reminder emails. Please note that you need to
-provide separate confirmation for each project type in which you are
-enrolled.
+you have confirmed them all. This will ensure that you do not
+receive further unnecessary reminder emails. Please note that if your
+project has variants for different project types then you may need
+to confirm them individually from the appropriate tab on your dashboard.
 
 Thank you for your help,
 {{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})

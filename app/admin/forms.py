@@ -251,6 +251,10 @@ class ProjectClassMixin():
 
     uses_presentations = BooleanField('Includes one or more assessed presentations')
 
+    display_marker = BooleanField('Include second marker information')
+
+    display_presentations = BooleanField('Include presentation assessment information')
+
     reenroll_supervisors_early = BooleanField('Re-enroll supervisors one year before end of sabbatical/buyout',
                                               default=True)
 

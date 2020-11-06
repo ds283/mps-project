@@ -3774,8 +3774,14 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     # are the submissions second marked?
     uses_marker = db.Column(db.Boolean())
 
+    # display second marker information in UI?
+    display_marker = db.Column(db.Boolean())
+
     # are there presentations?
     uses_presentations = db.Column(db.Boolean())
+
+    # display presentation information in UI?
+    display_presentations = db.Column(db.Boolean())
 
     # how many initial_choices should students make?
     initial_choices = db.Column(db.Integer())
@@ -4551,6 +4557,16 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
 
 
     @property
+    def display_marker(self):
+        return self.project_class.display_marker
+
+
+    @property
+    def display_presentations(self):
+        return self.project_class.display_presentations
+
+
+    @property
     def do_matching(self):
         return self.project_class.do_matching and not self.skip_matching
 
@@ -5185,9 +5201,24 @@ class SubmissionPeriodRecord(db.Model):
         return schedule.get_faculty_slots(fac).all()
 
 
+    @property
+    def uses_supervisor_feedback(self):
+        return self.collect_project_feedback and self.config.uses_supervisor
+
+
     def get_student_presentation_slot(self, student):
         schedule = self.deployed_schedule
         return schedule.get_student_slot(student).first()
+
+
+    @property
+    def uses_marker_feedback(self):
+        return self.collect_project_feedback and self.config.uses_marker and self.config.display_marker
+
+
+    @property
+    def uses_presentation_feedback(self):
+        return self.has_presentation and self.collect_presentation_feedback and self.config.display_presentations
 
 
     @property
@@ -8181,17 +8212,17 @@ class SubmissionRecord(db.Model):
 
     @property
     def uses_supervisor_feedback(self):
-        return self.period.collect_project_feedback and self.period.config.uses_supervisor
+        return self.period.uses_supervisor_feedback
 
 
     @property
     def uses_marker_feedback(self):
-        return self.period.collect_project_feedback and self.period.config.uses_marker
+        return self.period.uses_marker_feedback
 
 
     @property
     def uses_presentation_feedback(self):
-        return self.period.has_presentation and self.period.collect_presentation_feedback
+        return self.period.uses_presentation_feedback
 
 
     @property
@@ -9264,10 +9295,10 @@ def _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id):
     for item in obj.get_marker_records(fac_id).all():
         config = item.project.config
 
-        if pclass_id is None or config.pclass_id == pclass_id:
-            if config.uses_marker:
-                if config.CATS_marking is not None and config.CATS_marking > 0:
-                    CATS += config.CATS_marking
+        if pclass_id is None or config.pclass_id == pclass_id \
+                and config.uses_marker \
+                and config.CATS_marking is not None and config.CATS_marking > 0:
+            CATS += config.CATS_marking
 
     return CATS
 

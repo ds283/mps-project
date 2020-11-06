@@ -104,12 +104,13 @@
                 {% endif %}
 
                 {# show marker assignments #}
-                {% if config.uses_marker %}
+                {% if period.uses_marker_feedback %}
                     <span class="dashboard-subtitle">2nd marking</span>
                     {{ marker_assignments(period, current_user, mark_sabbatical, mark_exempt, record.marker_reenroll) }}
                 {% endif %}
 
-                {% if period.has_presentation %}
+                {# show assigned presentation assessments #}
+                {% if period.uses_presentation_feedback %}
                     {{ presentation_assignments(period, current_user.id, pres_sabbatical, pres_exempt, record.presentations_reenroll) }}
                 {% endif %}
             </div>

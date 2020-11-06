@@ -7,8 +7,12 @@
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th width="20%">Name</th>
-                    <th width="20%">Marker</th>
+                    {% if period.config.display_marker %}
+                        <th width="20%">Name</th>
+                        <th width="20%">Marker</th>
+                    {% else %}
+                        <th width="40%">Name</th>
+                    {% endif %}
                     <th width="40%">Project</th>
                     <th width="20%"></th>
                 </tr>
@@ -33,17 +37,19 @@
                                 </div>
                             {% endif %}
                         </td>
-                        <td>
-                            {% if rec.period.config.uses_marker %}
-                                {% if rec.marker is not none %}
-                                    <a href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
+                        {% if period.config.display_marker %}
+                            <td>
+                                {% if period.config.uses_marker %}
+                                    {% if rec.marker is not none %}
+                                        <a href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
+                                    {% else %}
+                                        <span class="badge badge-warning">Marker not yet assigned</span>
+                                    {% endif %}
                                 {% else %}
-                                    <span class="badge badge-warning">Marker not yet assigned</span>
+                                    <span class="badge badge-secondary">Not used</span>
                                 {% endif %}
-                            {% else %}
-                                <span class="badge badge-secondary">Not used</span>
-                            {% endif %}
-                        </td>
+                            </td>
+                        {% endif %}
                         <td>
                             <a href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
                                 {{ rec.project.name }} (No. {{ rec.project.number }})

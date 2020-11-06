@@ -121,59 +121,26 @@
 
             <p class="form-group-heading">Supervision and assessment</p>
             <div class="row vertical-top">
-                <div class="col-4">
+                <div class="col-6">
                     {{ wtf.render_field(pclass_form.uses_supervisor) }}
                 </div>
-                <div class="col-4">
+                <div class="col-6">
                     {{ wtf.render_field(pclass_form.uses_marker) }}
                 </div>
-                <div class="col-4">
+            </div>
+            <div class="row vertical-top">
+                <div class="col-6">
                     {{ wtf.render_field(pclass_form.uses_presentations) }}
                 </div>
-            </div>
-            <div class="row vertical-top">
-                <div class="col-4">
+                <div class="col-6">
                     {{ wtf.render_field(pclass_form.include_available) }}
                 </div>
-                <div class="col-4"></div>
-                <div class="col-4"></div>
             </div>
             <div class="row vertical-top">
-                <div class="col-12">
+                <div class="col-6">
                     {{ wtf.render_field(pclass_form.number_assessors) }}
                 </div>
-            </div>
-            <p class="form-group-heading">Rollover</p>
-            <div class="row vertical-top">
-                <div class="col-4">
-                    {{ wtf.render_field(pclass_form.reenroll_supervisors_early) }}
-                </div>
-                <div class="col-4">
-                    {{ wtf.render_field(pclass_form.supervisor_carryover) }}
-                </div>
-                <div class="col-4">
-                </div>
-            </div>
-            <p class="form-group-heading">Project lifecycle</p>
-            <div class="row vertical-top">
-                <div class="col-4">
-                    {{ wtf.render_field(pclass_form.require_confirm) }}
-                </div>
-                <div class="col-4">
-                    {{ wtf.render_field(pclass_form.do_matching) }}
-                </div>
-                <div class="col-4">
-                </div>
-            </div>
-            <p class="form-group-heading">Popularity data</p>
-            <div class="row vertical-top">
-                <div class="col-4">
-                    {{ wtf.render_field(pclass_form.keep_hourly_popularity) }}
-                </div>
-                <div class="col-4">
-                    {{ wtf.render_field(pclass_form.keep_daily_popularity) }}
-                </div>
-                <div class="col-4">
+                <div class="col-6">
                 </div>
             </div>
             <p class="form-group-heading">Student selections</p>
@@ -188,6 +155,48 @@
                     {{ wtf.render_field(pclass_form.faculty_maximum) }}
                 </div>
             </div>
+            <p class="form-group-heading">Rollover</p>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.reenroll_supervisors_early) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.supervisor_carryover) }}
+                </div>
+            </div>
+            <p class="form-group-heading">Project lifecycle</p>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.require_confirm) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.do_matching) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <p class="form-group-heading">Faculty dashboards</p>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.display_marker) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.display_presentations) }}
+                </div>
+            </div>
+            <p class="form-group-heading">Popularity data</p>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.keep_hourly_popularity) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.keep_daily_popularity) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p class="form-group-heading">Workload model support</p>
             <div class="row vertical-top">
                 <div class="col-4">

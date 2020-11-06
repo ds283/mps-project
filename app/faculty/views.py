@@ -1385,8 +1385,10 @@ def dashboard():
             include = False
 
             if (pclass.uses_supervisor and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED) \
-                    or (pclass.uses_marker and record.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
-                    or (pclass.uses_presentations and record.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED):
+                    or (pclass.uses_marker and pclass.display_marker
+                        and record.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
+                    or (pclass.uses_presentations and pclass.display_presentations
+                        and record.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED):
                 include = True
 
             else:
@@ -1399,8 +1401,8 @@ def dashboard():
                         if (period.has_presentation and period.has_deployed_schedule) else []
 
                     if (pclass.uses_supervisor and len(supv_records) > 0) \
-                            or (pclass.uses_marker and len(mark_records) > 0) \
-                            or (pclass.uses_presentations and len(pres_slots) > 0):
+                            or (pclass.uses_marker and pclass.display_marker and len(mark_records) > 0) \
+                            or (pclass.uses_presentations and pclass.display_presentations and len(pres_slots) > 0):
                         include = True
                         break
 

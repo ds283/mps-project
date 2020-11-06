@@ -1382,100 +1382,109 @@ def add_pclass():
         if form.convenor.data in coconvenors:
             coconvenors.remove(form.convenor.data)
 
-        # insert a record for this project class
-        data = ProjectClass(name=form.name.data,
-                            abbreviation=form.abbreviation.data,
-                            colour=form.colour.data,
-                            do_matching=form.do_matching.data,
-                            number_assessors=form.number_assessors.data,
-                            start_level=form.start_level.data,
-                            extent=form.extent.data,
-                            require_confirm=form.require_confirm.data,
-                            supervisor_carryover=form.supervisor_carryover.data,
-                            include_available=form.include_available.data,
-                            uses_supervisor=form.uses_supervisor.data,
-                            uses_marker=form.uses_marker.data,
-                            uses_presentations=form.uses_presentations.data,
-                            reenroll_supervisors_early=form.reenroll_supervisors_early.data,
-                            convenor=form.convenor.data,
-                            coconvenors=coconvenors,
-                            office_contacts=form.office_contacts.data,
-                            selection_open_to_all=form.selection_open_to_all.data,
-                            auto_enroll_years=form.auto_enroll_years.data,
-                            programmes=form.programmes.data,
-                            initial_choices=form.initial_choices.data,
-                            switch_choices=form.switch_choices.data,
-                            faculty_maximum=form.faculty_maximum.data,
-                            active=True,
-                            CATS_supervision=form.CATS_supervision.data,
-                            CATS_marking=form.CATS_marking.data,
-                            CATS_presentation=form.CATS_presentation.data,
-                            keep_hourly_popularity=form.keep_hourly_popularity.data,
-                            keep_daily_popularity=form.keep_daily_popularity.data,
-                            card_text_noninitial=None,
-                            card_text_normal=None,
-                            card_text_optional=None,
-                            email_text_draft_match_preamble=None,
-                            email_text_final_match_preamble=None,
-                            creator_id=current_user.id,
-                            creation_timestamp=datetime.now())
-        db.session.add(data)
-        db.session.flush()
-        data.convenor.add_convenorship(data)
+        try:
+            # insert a record for this project class
+            data = ProjectClass(name=form.name.data,
+                                abbreviation=form.abbreviation.data,
+                                colour=form.colour.data,
+                                do_matching=form.do_matching.data,
+                                number_assessors=form.number_assessors.data,
+                                start_level=form.start_level.data,
+                                extent=form.extent.data,
+                                require_confirm=form.require_confirm.data,
+                                supervisor_carryover=form.supervisor_carryover.data,
+                                include_available=form.include_available.data,
+                                uses_supervisor=form.uses_supervisor.data,
+                                uses_marker=form.uses_marker.data,
+                                uses_presentations=form.uses_presentations.data,
+                                display_marker=form.display_marker.data,
+                                display_presentations=form.display_presentations.data,
+                                reenroll_supervisors_early=form.reenroll_supervisors_early.data,
+                                convenor=form.convenor.data,
+                                coconvenors=coconvenors,
+                                office_contacts=form.office_contacts.data,
+                                selection_open_to_all=form.selection_open_to_all.data,
+                                auto_enroll_years=form.auto_enroll_years.data,
+                                programmes=form.programmes.data,
+                                initial_choices=form.initial_choices.data,
+                                switch_choices=form.switch_choices.data,
+                                faculty_maximum=form.faculty_maximum.data,
+                                active=True,
+                                CATS_supervision=form.CATS_supervision.data,
+                                CATS_marking=form.CATS_marking.data,
+                                CATS_presentation=form.CATS_presentation.data,
+                                keep_hourly_popularity=form.keep_hourly_popularity.data,
+                                keep_daily_popularity=form.keep_daily_popularity.data,
+                                card_text_noninitial=None,
+                                card_text_normal=None,
+                                card_text_optional=None,
+                                email_text_draft_match_preamble=None,
+                                email_text_final_match_preamble=None,
+                                creator_id=current_user.id,
+                                creation_timestamp=datetime.now())
+            db.session.add(data)
+            db.session.flush()
+            data.convenor.add_convenorship(data)
 
-        # generate a corresponding configuration record for the current academic year
-        current_year = get_current_year()
+            # generate a corresponding configuration record for the current academic year
+            current_year = get_current_year()
 
-        config = ProjectClassConfig(year=current_year,
-                                    pclass_id=data.id,
-                                    convenor_id=data.convenor_id,
-                                    requests_issued=False,
-                                    requests_issued_id=None,
-                                    requests_timestamp=None,
-                                    request_deadline=None,
-                                    requests_skipped=False,
-                                    requests_skipped_id=None,
-                                    requests_skipped_timestamp=None,
-                                    live=False,
-                                    selection_closed=False,
-                                    CATS_supervision=data.CATS_supervision,
-                                    CATS_marking=data.CATS_marking,
-                                    CATS_presentation=data.CATS_presentation,
-                                    creator_id=current_user.id,
-                                    creation_timestamp=datetime.now(),
-                                    submission_period=1)
-        db.session.add(config)
-        db.session.flush()
+            config = ProjectClassConfig(year=current_year,
+                                        pclass_id=data.id,
+                                        convenor_id=data.convenor_id,
+                                        requests_issued=False,
+                                        requests_issued_id=None,
+                                        requests_timestamp=None,
+                                        request_deadline=None,
+                                        requests_skipped=False,
+                                        requests_skipped_id=None,
+                                        requests_skipped_timestamp=None,
+                                        live=False,
+                                        selection_closed=False,
+                                        CATS_supervision=data.CATS_supervision,
+                                        CATS_marking=data.CATS_marking,
+                                        CATS_presentation=data.CATS_presentation,
+                                        creator_id=current_user.id,
+                                        creation_timestamp=datetime.now(),
+                                        submission_period=1)
+            db.session.add(config)
+            db.session.flush()
 
-        # generate submission period records, if any
-        # if this is a brand new project then we won't create anything -- that will have to be done
-        # later, when the submission periods are defined
-        for t in config.template_periods.all():
-            period = SubmissionPeriodRecord(config_id=config.id,
-                                            name=t.name,
-                                            start_date=t.start_date,
-                                            has_presentation=t.has_presentation,
-                                            lecture_capture=t.lecture_capture,
-                                            collect_presentation_feedback=t.collect_presentation_feedback,
-                                            collect_project_feedback=t.collect_project_feedback,
-                                            number_assessors=t.number_assessors,
-                                            max_group_size=t.max_group_size,
-                                            morning_session=t.morning_session,
-                                            afternoon_session=t.afternoon_session,
-                                            talk_format=t.talk_format,
-                                            retired=False,
-                                            submission_period=t.period,
-                                            feedback_open=False,
-                                            feedback_id=None,
-                                            feedback_timestamp=None,
-                                            feedback_deadline=None,
-                                            closed=False,
-                                            closed_id=None,
-                                            closed_timestamp=None)
-            db.session.add(period)
+            # generate submission period records, if any
+            # if this is a brand new project then we won't create anything -- that will have to be done
+            # later, when the submission periods are defined
+            for t in config.template_periods.all():
+                period = SubmissionPeriodRecord(config_id=config.id,
+                                                name=t.name,
+                                                start_date=t.start_date,
+                                                has_presentation=t.has_presentation,
+                                                lecture_capture=t.lecture_capture,
+                                                collect_presentation_feedback=t.collect_presentation_feedback,
+                                                collect_project_feedback=t.collect_project_feedback,
+                                                number_assessors=t.number_assessors,
+                                                max_group_size=t.max_group_size,
+                                                morning_session=t.morning_session,
+                                                afternoon_session=t.afternoon_session,
+                                                talk_format=t.talk_format,
+                                                retired=False,
+                                                submission_period=t.period,
+                                                feedback_open=False,
+                                                feedback_id=None,
+                                                feedback_timestamp=None,
+                                                feedback_deadline=None,
+                                                closed=False,
+                                                closed_id=None,
+                                                closed_timestamp=None)
+                db.session.add(period)
 
-        db.session.commit()
-        data.validate_presentations()
+            db.session.commit()
+            data.validate_presentations()
+
+        except SQLAlchemyError as e:
+            flash('Could not create new project class because of a database error. '
+                  'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_project_classes'))
 
@@ -1485,6 +1494,8 @@ def add_pclass():
             form.require_confirm.data = True
             form.uses_supervisor.data = True
             form.uses_marker.data = True
+            form.display_marker = True
+            form.display_presentations = True
             form.auto_enroll_years.data = ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
             form.do_matching.data = True
 
@@ -1526,6 +1537,8 @@ def edit_pclass(id):
         data.uses_supervisor = form.uses_supervisor.data
         data.uses_marker = form.uses_marker.data
         data.uses_presentations = form.uses_presentations.data
+        data.display_marker = form.display_marker.data
+        data.display_presentations = form.display_presentations.data
         data.reenroll_supervisors_early = form.reenroll_supervisors_early.data
         data.convenor = form.convenor.data
         data.coconvenors = coconvenors
@@ -1553,7 +1566,7 @@ def edit_pclass(id):
             data.validate_presentations()
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash('Could not save project class configuration because a database error occurred. '
+            flash('Could not save project class configuration because of a database error. '
                   'Please check the logs for further information.', 'error')
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -1570,6 +1583,10 @@ def edit_pclass(id):
                 form.uses_marker.data = True
             if form.uses_presentations.data is None:
                 form.uses_presentations.data = False
+            if form.display_marker.data is None:
+                form.display_marker.data = True
+            if form.display_presentations.data is None:
+                form.display_presentations = True
 
     return render_template('admin/edit_project_class.html', pclass_form=form, pclass=data,
                            title='Edit project class')

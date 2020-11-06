@@ -48,7 +48,7 @@
                     {% endif %}
                 {% endif %}
 
-                {% if record.period.config.uses_marker %}
+                {% if record.uses_marker_feedback %}
                     {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
                         <div class="card mt-3 mb-3">
                             <div class="card-header">Feedback from the project marker on your report</div>
@@ -73,7 +73,7 @@
                 </div>
             {% endif %}
 
-            {% if record.period.has_presentation and record.period.collect_presentation_feedback %}
+            {% if record.uses_presentation_feedback %}
                 {% set ns = namespace(count=0) %}
                 {% for feedback in record.presentation_feedback %}
                     {% if feedback.submitted or (feedback.positive or feedback.negative) and preview %}

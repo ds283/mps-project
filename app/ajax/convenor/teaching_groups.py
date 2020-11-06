@@ -26,7 +26,7 @@ def teaching_group_by_faculty(data, config, show_period):
     data = [{'faculty': {'display': f.user.name,
                          'sortvalue': f.user.last_name + f.user.first_name},
              'group': render_template_string(_group,
-                                             assignments=f.supervisor_assignments(config.pclass_id,
+                                             assignments=f.supervisor_assignments(config_id=config.id,
                                                                                   period=show_period).all())}
             for f in data]
 

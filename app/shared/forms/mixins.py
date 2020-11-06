@@ -74,19 +74,35 @@ def FacultyDataMixinFactory(admin=False):
                                                      'confirmation is needed before allowing students to sign up.')
 
         enforce_capacity = BooleanField('Enforce maximum capacity', default=True,
-                                        description='By default, enforce limits on project capacity during assignment')
+                                        description='Select if you wish to prevent the automated matching algorithm '
+                                                    'allocating more students to this project than a specified '
+                                                    'maximum. You can specify a different maximum capacity for each '
+                                                    'flavour of this project that you offer. The different flavours '
+                                                    'are listed in the "Descriptions" view, and the maximum '
+                                                    'capacity for each flavour should be specified in the settings for '
+                                                    'the corresponding description.')
 
         project_capacity = IntegerField('Default project capacity',
                                         description='Default number of students that can be assigned to a project',
                                         validators=[NotOptionalIf('enforce_capacity')])
 
         show_popularity = BooleanField('Show popularity indicators', default=True,
-                                       description='By default, show popularity indicators on project webpages')
+                                       description='The popularity score is determined by a weighted '
+                                                   'combination of the number '
+                                                   'of selections, the number of bookmarks, and the number of '
+                                                   'page views for a given project. It is intended to give students '
+                                                   'a rough sense of the relative popularity of individual '
+                                                   'projects.')
 
         dont_clash_presentations = BooleanField("Don't schedule presentations with other students taking "
                                                 "the same project", default=True,
-                                                description='Please consider disabling this setting if possible. '
-                                                            'This makes scheduling presentations easier.')
+                                                description='Select if you wish to prevent multiple students taking '
+                                                            'your projects from being scheduled to give presentations '
+                                                            'in the same session. Students often prefer this '
+                                                            'arrangement, so by default it is usually enabled. '
+                                                            'However, please consider disabling it '
+                                                            'if possible because it makes scheduling presentations '
+                                                            'significantly simpler.')
 
         office = StringField('Office', validators=[InputRequired(message='Please enter your office details to help '
                                                                          'students find you')])

@@ -746,7 +746,7 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
                 if marker not in inverse_mark_dict:
                     mark_dict[number_markers] = marker
                     inverse_mark_dict[marker] = number_markers
-                    mark_CATS_dict[number_markers] = marker.CATS_assignment(config.project_class)
+                    mark_CATS_dict[number_markers] = marker.CATS_assignment(config)
                     number_markers += 1
 
     return mark_dict, inverse_mark_dict, submit_dict, inverse_submit_dict, mark_CATS_dict
@@ -935,7 +935,9 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
         proj = lp_dict[j]
 
         # number of assigned students should equal number of assigned markers, or zero if no markers used
-        if proj.config.uses_marker:
+        # note we intentionally go out to the default ProjectClass.uses_marker setting, rather than using
+        # the current ProjectClassConfig.uses_marker value
+        if proj.config.project_class.uses_marker:
             prob += sum(X[(i, j)] for i in range(number_sel)) - \
                     sum(Y[(i, j)] for i in range(number_mark)) == 0, \
                     '_C{cfg}_{num}_mark_parity'.format(cfg=proj.config_id, num=proj.number)
@@ -1236,7 +1238,9 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
                 raise RuntimeError('Inconsistent project lookup when storing PuLP solution')
 
             # assign a marker if one is used
-            if project.config.uses_marker:
+            # note we intentionally go out to the default ProjectClass.uses_marker setting, rather than using
+            # the current ProjectClassConfig.uses_marker value
+            if project.config.project_class.uses_marker:
                 # pop a 2nd marker from the back of the stack associated with this project
                 if proj_id not in markers:
                     raise RuntimeError('PuLP solution error: marker stack unexpectedly empty or missing')

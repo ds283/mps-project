@@ -59,12 +59,8 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
 
         enforce_capacity = BooleanField('Enforce maximum capacity', default=True,
                                         description='Select if you wish to prevent the automated matching algorithm '
-                                                    'allocating more students to this project than a specified '
-                                                    'maximum. You can specify a different maximum capacity for each '
-                                                    'flavour of this project that you offer. The different flavours '
-                                                    'are listed in the "Descriptions" view, and the maximum '
-                                                    'capacity for each flavour should be specified in the settings for '
-                                                    'the corresponding description.')
+                                                    'allocating more students to your projects than a specified '
+                                                    'maximum.')
 
         dont_clash_presentations = BooleanField("Prevent co-scheduling presentation with multiple students taking "
                                                 "the same project", default=True,
@@ -72,7 +68,7 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
                                                             'this project from being scheduled to give presentations '
                                                             'in the same session. Students often prefer this '
                                                             'arrangement, so by default it is usually enabled. '
-                                                            'However, please consider disabling this setting '
+                                                            'However, please consider disabling it '
                                                             'if possible because it makes scheduling presentations '
                                                             'significantly simpler.')
 

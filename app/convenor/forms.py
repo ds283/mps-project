@@ -179,10 +179,24 @@ class EditProjectConfigForm(Form, SaveChangesMixin):
                                     description='Disable confirmation of project descriptions for '
                                                 'this academic year')
 
+    uses_supervisor = BooleanField('Projects are supervised by a named faculty member',
+                                   default=True)
+
+    uses_marker = BooleanField('Submissions are second-marked')
+
+    uses_presentations = BooleanField('Includes one or more assessed presentations')
+
+    display_marker = BooleanField('Include second marker information')
+
+    display_presentations = BooleanField('Include presentation assessment information')
+
     full_CATS = IntegerField('CAT threshold for supervisors to be full',
-                             description='If a partial match is being accommodated, this is the maximum '
+                             description='Optional. If a partial match is being accommodated, this is the maximum '
                                          'number of CATS a supervisor can carry before they are regarded '
-                                         'as full for the purposes of further allocation.')
+                                         'as full for the purposes of further allocation. If left blank, '
+                                         'the maximum number of CATS is taken from the settings for the '
+                                         'matching.',
+                             validators=[Optional()])
 
     CATS_supervision = IntegerField('CATS awarded for project supervision',
                                     validators=[InputRequired(message='Please enter an integer value')])

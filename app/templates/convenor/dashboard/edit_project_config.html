@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block formtitle %}
-    Edit project configuration for academic year <strong>{{ config.year }}&ndash;{{ config.year+1 }}</strong>
+    Edit <strong>{{ config.name }}</strong> configuration for academic year <strong>{{ config.year }}&ndash;{{ config.year+1 }}</strong>
 {% endblock %}
 
 {% block form_content %}
@@ -26,9 +26,45 @@
         </div>
 
         <div class="card mt-3 mb-3 card-body bg-well">
-            {{ show_default_field(form.CATS_supervision, config.project_class.CATS_supervision) }}
-            {{ show_default_field(form.CATS_marking, config.project_class.CATS_marking) }}
-            {{ show_default_field(form.CATS_presentation, config.project_class.CATS_presentation) }}
+            <p class="form-group-heading">Supervision and assessment</p>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(form.uses_supervisor) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(form.uses_marker) }}
+                </div>
+            </div>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(form.uses_presentations) }}
+                </div>
+                <div class="col-6">
+                </div>
+            </div>
+            <p class="form-group-heading">Faculty dashboards</p>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(form.display_marker) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(form.display_presentations) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <div class="row vertical-top">
+                <div class="col-4">
+                    {{ show_default_field(form.CATS_supervision, config.project_class.CATS_supervision) }}
+                </div>
+                <div class="col-4">
+                    {{ show_default_field(form.CATS_marking, config.project_class.CATS_marking) }}
+                </div>
+                <div class="col-4">
+                    {{ show_default_field(form.CATS_presentation, config.project_class.CATS_presentation) }}
+                </div>
+            </div>
         </div>
 
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}

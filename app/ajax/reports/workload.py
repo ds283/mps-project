@@ -160,14 +160,16 @@ def _element_base(faculty_id, enrollment_template, assignments_template, workloa
         CATS = sum(f.CATS_assignment(record.pclass))
         workload[record.pclass_id] = CATS
 
-        if record.pclass.uses_supervisor:
-            supervising[record.pclass_id] = get_count(f.supervisor_assignments(record.pclass_id))
+        config: ProjectClassConfig = record.pclass.most_recent_config
 
-        if record.pclass.uses_marker:
-            marking[record.pclass_id] = get_count(f.marker_assignments(record.pclass_id))
+        if config.uses_supervisor:
+            supervising[record.pclass_id] = get_count(f.supervisor_assignments(config_id=config.id))
 
-        if record.pclass.uses_presentations:
-            presentations[record.pclass_id] = get_count(f.presentation_assignments(record.pclass_id))
+        if config.uses_marker:
+            marking[record.pclass_id] = get_count(f.marker_assignments(config_id=config.id))
+
+        if config.uses_presentations:
+            presentations[record.pclass_id] = get_count(f.presentation_assignments(config_id=config.id))
 
         total_workload += CATS
 

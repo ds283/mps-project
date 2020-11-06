@@ -224,10 +224,10 @@ def faculty_workload_data(faculty, config):
     for u, d in faculty:
         count += 1
 
-        CATS_sup, CATS_mark, CATS_pres = d.CATS_assignment(config.project_class)
-        projects = d.supervisor_assignments(config.pclass_id).all()
-        marking = d.marker_assignments(config.pclass_id).all()
-        presentations = d.presentation_assignments(config.pclass_id).all()
+        CATS_sup, CATS_mark, CATS_pres = d.CATS_assignment(config)
+        projects = d.supervisor_assignments(config_id=config.id).all()
+        marking = d.marker_assignments(config_id=config.id).all()
+        presentations = d.presentation_assignments(config_id=config.id).all()
 
         data.append({'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
                               'sortvalue': u.last_name + u.first_name},

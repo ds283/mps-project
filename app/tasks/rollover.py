@@ -467,11 +467,17 @@ def register_rollover_tasks(celery):
                     t.start_date = t.start_date + relativedelta(years=1)
             db.session.flush()
 
+            pclass = old_config.project_class
             new_config = ProjectClassConfig(year=new_year,
                                             pclass_id=pclass_id,
-                                            convenor_id=old_config.project_class.convenor_id,
+                                            convenor_id=pclass.convenor_id,
                                             creator_id=convenor_id,
                                             creation_timestamp=datetime.now(),
+                                            uses_supervisor=pclass.uses_supervisor,
+                                            uses_marker=pclass.uses_marker,
+                                            uses_presentations=pclass.uses_presentations,
+                                            display_marker=pclass.display_marker,
+                                            display_presentations=pclass.display_presentations,
                                             requests_issued=False,
                                             requests_issued_id=None,
                                             requests_timestamp=None,
@@ -482,9 +488,9 @@ def register_rollover_tasks(celery):
                                             live=False,
                                             live_deadline=None,
                                             selection_closed=False,
-                                            CATS_supervision=old_config.project_class.CATS_supervision,
-                                            CATS_marking=old_config.project_class.CATS_marking,
-                                            CATS_presentation=old_config.project_class.CATS_presentation,
+                                            CATS_supervision=pclass.CATS_supervision,
+                                            CATS_marking=pclass.CATS_marking,
+                                            CATS_presentation=pclass.CATS_presentation,
                                             submission_period=1)
             db.session.add(new_config)
             db.session.flush()

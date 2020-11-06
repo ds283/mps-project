@@ -160,15 +160,15 @@ def get_matching_data(configs=None):
     return {'matching_ready': matching_ready}
 
 
-def get_assessment_data(pcs=None):
-    if pcs is None:
-        pcs = _get_pclass_list()
+def get_assessment_data(configs=None):
+    if configs is None:
+        configs = _get_pclass_config_list()
 
     presentation_assessments = False
 
     # loop through all active project classes
-    for pclass in pcs:
-        if pclass.uses_presentations:
+    for config in configs:
+        if config.uses_presentations:
             presentation_assessments = True
 
     return {'has_assessments': presentation_assessments}
@@ -178,7 +178,7 @@ def get_global_context_data():
     pcs = _get_pclass_list()
     configs = _get_pclass_config_list(pcs)
 
-    assessment = get_assessment_data(pcs)
+    assessment = get_assessment_data(configs)
     matching = get_matching_data(configs)
 
     assessment.update(matching)

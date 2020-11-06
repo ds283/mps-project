@@ -6639,16 +6639,16 @@ def edit_project_config(pid):
               'because it has been rolled over.'.format(yra=config.year, yrb=config.year+1), 'info')
         return redirect(redirect_url())
 
-    edit_form = EditProjectConfigForm(obj=config)
+    form = EditProjectConfigForm(obj=config)
 
-    if edit_form.validate_on_submit():
+    if form.validate_on_submit():
         now = datetime.now()
 
-        if edit_form.skip_matching.data != config.skip_matching:
-            config.skip_matching = edit_form.skip_matching.data
+        if form.skip_matching.data != config.skip_matching:
+            config.skip_matching = form.skip_matching.data
 
-        if edit_form.requests_skipped.data != config.requests_skipped:
-            config.requests_skipped = edit_form.requests_skipped.data
+        if form.requests_skipped.data != config.requests_skipped:
+            config.requests_skipped = form.requests_skipped.data
 
             if config.requests_skipped:
                 config.requests_skipped_id = current_user.id
@@ -6657,12 +6657,18 @@ def edit_project_config(pid):
                 config.requests_skipped_by = None
                 config.requests_skipped_timestamp = None
 
-        if edit_form.full_CATS.data != config.full_CATS:
-            config.full_CATS = edit_form.full_CATS.data
+        if form.full_CATS.data != config.full_CATS:
+            config.full_CATS = form.full_CATS.data
 
-        config.CATS_supervision = edit_form.CATS_supervision.data
-        config.CATS_marking = edit_form.CATS_marking.data
-        config.CATS_presentation = edit_form.CATS_presentation.data
+        config.uses_supervisor = form.uses_supervisor.data
+        config.uses_marker = form.uses_marker.data
+        config.uses_presentations = form.uses_presentations.data
+        config.display_marker = form.display_marker.data
+        config.display_presentations = form.display_presentations.data
+
+        config.CATS_supervision = form.CATS_supervision.data
+        config.CATS_marking = form.CATS_marking.data
+        config.CATS_presentation = form.CATS_presentation.data
 
         try:
             db.session.commit()
@@ -6674,7 +6680,7 @@ def edit_project_config(pid):
 
         return redirect(url_for('convenor.overview', id=config.project_class.id))
 
-    return render_template('convenor/dashboard/edit_project_config.html', form=edit_form, config=config)
+    return render_template('convenor/dashboard/edit_project_config.html', form=form, config=config)
 
 
 @convenor.route('/edit_submission_record/<int:pid>', methods=['GET', 'POST'])
@@ -7278,11 +7284,11 @@ def faculty_workload_ajax(id):
 
     # results from the 'faculty' query are (User, FacultyData) pairs, so the FacultyData record is rec[1]
     if state_filter == 'no-late-feedback':
-        data = [rec for rec in faculty.all() if not rec[1].has_late_feedback(pclass.id, rec[1].id)]
+        data = [rec for rec in faculty.all() if not rec[1].has_late_feedback(config.id, rec[1].id)]
     elif state_filter == 'late-feedback':
-        data = [rec for rec in faculty.all() if rec[1].has_late_feedback(pclass.id, rec[1].id)]
+        data = [rec for rec in faculty.all() if rec[1].has_late_feedback(config.id, rec[1].id)]
     elif state_filter == 'not-started':
-        data = [rec for rec in faculty.all() if rec[1].has_not_started_flags(pclass.id, rec[1].id)]
+        data = [rec for rec in faculty.all() if rec[1].has_not_started_flags(config.id, rec[1].id)]
     else:
         data = faculty.all()
 
@@ -7622,7 +7628,7 @@ def assign_from_selection(id, sel_id):
 
     markers = sel.liveproject.assessor_list
     if rec.marker not in markers:
-        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.project_class))[1])
+        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config))[1])
         rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
 
     db.session.commit()
@@ -7668,7 +7674,7 @@ def assign_liveproject(id, pid):
 
     markers = lp.assessor_list
     if rec.marker not in markers:
-        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.project_class))[1])
+        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config))[1])
         rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
 
     db.session.commit()

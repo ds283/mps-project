@@ -430,8 +430,11 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
         def _assessor_list_query(self, pclass):
             if isinstance(pclass, int):
                 pclass_id = pclass
-            else:
+            elif isinstance(pclass, ProjectClass):
                 pclass_id = pclass.id
+            else:
+                raise RuntimeError('Could not interpret parameter pclass of type {typ} in '
+                                   'ProjectConfigurationMixin._assessor_list_query'.format(typ=type(pclass)))
 
             fac_ids = db.session.query(assessor_mapped_column.label('faculty_id')) \
                 .filter(assessor_self_column == self.id).subquery()
@@ -2441,20 +2444,37 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return '<span class="badge badge-info"><i class="fas fa-check"></i> Assessor for {n}</span>'.format(n=num)
 
 
-    def supervisor_assignments(self, pclass_id, period=None):
+    def supervisor_assignments(self, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
         """
         Return a list of current SubmissionRecord instances for which we are supervisor
         :return:
         """
+        # at most one of config_id, config, pclass_id, pclass should be defined
+        items = sum([int(config_id is None), int(config is None), int(pclass_id is None), int(pclass is None)])
+        if items != 3:
+            raise RuntimeError('At most one project-class specifier should be passed to '
+                               'FacultyData.supervisor_assignments. Received types were:'
+                               'config_id={ty1}, config={ty2}, pclass_id={ty3}, '
+                               'pclass={ty4}'.format(ty1=type(config_id), ty2=type(config),
+                                                     ty3=type(pclass_id), ty4=type(pclass)))
+
         lp_query = self.live_projects.subquery()
 
         query = db.session.query(SubmissionRecord) \
             .join(lp_query, lp_query.c.id == SubmissionRecord.project_id) \
             .filter(SubmissionRecord.retired == False) \
             .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id) \
-            .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id) \
             .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id) \
-            .filter(ProjectClassConfig.pclass_id == pclass_id)
+            .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id)
+
+        if config_id is not None:
+            query = query.filter(ProjectClassConfig.id == config_id)
+        elif config is not None:
+            query = query.filter(ProjectClassConfig.id == config.id)
+        elif pclass_id is not None:
+            query = query.filter(ProjectClassConfig.pclass_id == pclass_id)
+        elif pclass is not None:
+            query = query.filter(ProjectClassConfig.pclass_id == pclass.id)
 
         if period is None:
             query = query.order_by(SubmissionPeriodRecord.submission_period.asc())
@@ -2466,17 +2486,34 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return query
 
 
-    def marker_assignments(self, pclass_id, period=None):
+    def marker_assignments(self, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
         """
         Return a list of current SubmissionRecord instances for which we are 2nd marker
         :return:
         """
+        # at most one of config_id, config, pclass_id, pclass should be defined
+        items = sum([int(config_id is None), int(config is None), int(pclass_id is None), int(pclass is None)])
+        if items != 3:
+            raise RuntimeError('At most one project-class specifier should be passed to '
+                               'FacultyData.marker_assignments. Received types were:'
+                               'config_id={ty1}, config={ty2}, pclass_id={ty3}, '
+                               'pclass={ty4}'.format(ty1=type(config_id), ty2=type(config),
+                                                     ty3=type(pclass_id), ty4=type(pclass)))
+
         query = db.session.query(SubmissionRecord) \
             .filter_by(retired=False, marker_id=self.id) \
             .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id) \
             .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id) \
-            .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id) \
-            .filter(ProjectClassConfig.pclass_id == pclass_id)
+            .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
+
+        if config_id is not None:
+            query = query.filter(ProjectClassConfig.id == config_id)
+        elif config is not None:
+            query = query.filter(ProjectClassConfig.id == config.id)
+        elif pclass_id is not None:
+            query = query.filter(ProjectClassConfig.pclass_id == pclass_id)
+        elif pclass is not None:
+            query = query.filter(ProjectClassConfig.pclass_id == pclass.id)
 
         if period is None:
             query = query.order_by(SubmissionPeriodRecord.submission_period.asc())
@@ -2488,7 +2525,16 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return query
 
 
-    def presentation_assignments(self, pclass_id, period=None):
+    def presentation_assignments(self, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
+        # at most one of config_id, config, pclass_id, pclass should be defined
+        items = sum([int(config_id is None), int(config is None), int(pclass_id is None), int(pclass is None)])
+        if items != 3:
+            raise RuntimeError('At most one project-class specifier should be passed to '
+                               'FacultyData.marker_assignments. Received types were:'
+                               'config_id={ty1}, config={ty2}, pclass_id={ty3}, '
+                               'pclass={ty4}'.format(ty1=type(config_id), ty2=type(config),
+                                                     ty3=type(pclass_id), ty4=type(pclass)))
+
         query = db.session.query(faculty_to_slots.c.slot_id).filter(faculty_to_slots.c.faculty_id == self.id).subquery()
 
         slot_query = db.session.query(ScheduleSlot) \
@@ -2510,8 +2556,18 @@ class FacultyData(db.Model, EditingMetadataMixin):
         elif period is not None:
             raise ValueError('Expected period identifier to be an integer')
 
-        filtered_ids = filtered_ids.join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id) \
-            .filter(ProjectClassConfig.pclass_id == pclass_id).distinct().subquery()
+        filtered_ids = filtered_ids.join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
+
+        if config_id is not None:
+            filtered_ids = filtered_ids.filter(ProjectClassConfig.id == config_id)
+        elif config is not None:
+            filtered_ids = filtered_ids.filter(ProjectClassConfig.id == config.id)
+        elif pclass_id is not None:
+            filtered_ids = filtered_ids.filter(ProjectClassConfig.pclass_id == pclass_id)
+        elif pclass is not None:
+            filtered_ids = filtered_ids.filter(ProjectClassConfig.pclass_id == pclass.id)
+
+        filtered_ids = filtered_ids.distinct().subquery()
 
         return db.session.query(ScheduleSlot) \
             .join(filtered_ids, filtered_ids.c.id == ScheduleSlot.id) \
@@ -2519,28 +2575,35 @@ class FacultyData(db.Model, EditingMetadataMixin):
             .order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc())
 
 
-    def CATS_assignment(self, pclass):
+    def CATS_assignment(self, config_proxy):
         """
         Return (supervising CATS, marking CATS) for the current year
         :return:
         """
+        if isinstance(config_proxy, ProjectClassConfig):
+            config = config_proxy
+        elif isinstance(config_proxy, ProjectClass):
+            config = config_proxy.most_recent_config
+        else:
+            raise RuntimeError('Could not interpret parameter config_proxy of type {typ} passed to '
+                               'FacultyData.CATS_assignment', typ=type(config_proxy))
 
-        if pclass.uses_supervisor:
-            supv = self.supervisor_assignments(pclass.id)
+        if config.uses_supervisor:
+            supv = self.supervisor_assignments(config_id=config.id)
             supv_CATS = [x.supervising_CATS for x in supv]
             supv_total = sum([x for x in supv_CATS if x is not None])
         else:
             supv_total = 0
 
-        if pclass.uses_marker:
-            mark = self.marker_assignments(pclass.id)
+        if config.uses_marker:
+            mark = self.marker_assignments(config_id=config.id)
             mark_CATS = [x.marking_CATS for x in mark]
             mark_total = sum([x for x in mark_CATS if x is not None])
         else:
             mark_total = 0
 
-        if pclass.uses_presentations:
-            pres = self.presentation_assignments(pclass.id)
+        if config.uses_presentations:
+            pres = self.presentation_assignments(config_id=config.id)
             pres_CATS = [x.assessor_CATS for x in pres]
             pres_total = sum([x for x in pres_CATS if x is not None])
         else:
@@ -2564,25 +2627,39 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return supv, mark, pres
 
 
-    def has_late_feedback(self, pclass_id, faculty_id):
+    def has_late_feedback(self, config_proxy, faculty_id):
+        if isinstance(config_proxy, ProjectClassConfig):
+            config_id = config_proxy.id
+        elif isinstance(config_proxy, ProjectClass):
+            config_id = config_proxy.most_recent_config.id
+        elif isinstance(config_proxy, int):
+            config_id = config_proxy
+
         supervisor_late = [x.supervisor_feedback_state == SubmissionRecord.FEEDBACK_LATE
-                           for x in self.supervisor_assignments(pclass_id)]
+                           for x in self.supervisor_assignments(config_id=config_id)]
 
-        marker_late = [x.supervisor_response_state == SubmissionRecord.FEEDBACK_LATE
-                       for x in self.supervisor_assignments(pclass_id)]
+        response_late = [x.supervisor_response_state == SubmissionRecord.FEEDBACK_LATE
+                         for x in self.supervisor_assignments(config_id=config_id)]
 
-        response_late = [x.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE
-                         for x in self.marker_assignments(pclass_id)]
+        marker_late = [x.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE
+                       for x in self.marker_assignments(config_id=config_id)]
 
         presentation_late = [x.feedback_state(faculty_id) == ScheduleSlot.FEEDBACK_LATE
-                             for x in self.presentation_assignments(pclass_id)]
+                             for x in self.presentation_assignments(config_id=config_id)]
 
         return any(supervisor_late) or any(marker_late) or any(response_late) or any(presentation_late)
 
 
-    def has_not_started_flags(self, pclass_id):
+    def has_not_started_flags(self, config_proxy):
+        if isinstance(config_proxy, ProjectClassConfig):
+            config_id = config_proxy.id
+        elif isinstance(config_proxy, ProjectClass):
+            config_id = config_proxy.most_recent_config.id
+        elif isinstance(config_proxy, int):
+            config_id = config_proxy
+
         not_started = [not x.student_engaged and x.submission_period <= x.owner.config.submission_period
-                       for x in self.supervisor_assignments(pclass_id)]
+                       for x in self.supervisor_assignments(config_id=config_id)]
 
         return any(not_started)
 
@@ -4212,6 +4289,27 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
     creation_timestamp = db.Column(db.DateTime())
 
 
+    # LOCAL CONFIGURATION
+
+    # these settings replicate settings in ProjectClass (for where they are inherited if nothing else is done),
+    # but we need local copies in case the display or marking settings change from year to year
+
+    # are projects supervised (or just marked?)
+    uses_supervisor = db.Column(db.Boolean())
+
+    # are the submissions second marked?
+    uses_marker = db.Column(db.Boolean())
+
+    # display second marker information in UI?
+    display_marker = db.Column(db.Boolean())
+
+    # are there presentations?
+    uses_presentations = db.Column(db.Boolean())
+
+    # display presentation information in UI?
+    display_presentations = db.Column(db.Boolean())
+
+
     # SELECTOR LIFECYCLE MANAGEMENT
 
     # are faculty requests to confirm projects open?
@@ -4540,30 +4638,6 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
     @property
     def abbreviation(self):
         return self.project_class.abbreviation
-
-
-    @property
-    def uses_supervisor(self):
-        return self.project_class.uses_supervisor
-
-
-    @property
-    def uses_marker(self):
-        return self.project_class.uses_marker
-
-    @property
-    def uses_presentations(self):
-        return self.project_class.uses_presentations
-
-
-    @property
-    def display_marker(self):
-        return self.project_class.display_marker
-
-
-    @property
-    def display_presentations(self):
-        return self.project_class.display_presentations
 
 
     @property

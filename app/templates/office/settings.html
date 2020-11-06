@@ -22,7 +22,7 @@
     {{ wtf.render_field(settings_form.default_license) }}
 
     <div class="card mt-3 mb-3 card-body bg-well">
-        <p>Email notifications</p>
+        <div class="form-group-heading">Email notifications</div>
         {{ wtf.render_field(settings_form.group_summaries) }}
         {{ wtf.render_field(settings_form.summary_frequency) }}
     </div>

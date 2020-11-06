@@ -2,6 +2,7 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
+{% from "icon_block.html" import icon_block %}
 
 {% block scripts %}
     {{ super() }}
@@ -70,24 +71,48 @@
     </div>
 
     <div class="card mt-3 mb-3 card-body bg-well">
-        <p>Titles</p>
+        <div class="form-group-heading">Titles</div>
         {{ wtf.render_field(settings_form.academic_title) }}
         {{ wtf.render_field(settings_form.use_academic_title) }}
     </div>
 
     <div class="card mt-3 mb-3 card-body bg-well">
-        <p>Email notifications</p>
+        <div class="form-group-heading">Email notifications</div>
         {{ wtf.render_field(settings_form.group_summaries) }}
         {{ wtf.render_field(settings_form.summary_frequency) }}
     </div>
 
     <div class="card mt-3 mb-3 card-body bg-well">
-        <p>Default settings for new projects</p>
-        {{ wtf.render_field(settings_form.sign_off_students) }}
-        {{ wtf.render_field(settings_form.project_capacity) }}
-        {{ wtf.render_field(settings_form.enforce_capacity) }}
-        {{ wtf.render_field(settings_form.show_popularity) }}
-        {{ wtf.render_field(settings_form.dont_clash_presentations) }}
+        <div class="form-group-heading">Default settings for new projects</div>
+        <div class="alert alert-warning mt-2 mb-3">
+            {% call icon_block("info-circle") %}
+                The settings in this section are defaults that are used to populate
+                newly created projects.
+                Changes made here do not immediately affect active projects.
+            {% endcall %}
+        </div>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(settings_form.sign_off_students) }}
+            </div>
+            <div class="col-6">
+                {{ wtf.render_field(settings_form.enforce_capacity) }}
+            </div>
+        </div>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(settings_form.show_popularity) }}
+            </div>
+            <div class="col-6">
+                {{ wtf.render_field(settings_form.dont_clash_presentations) }}
+            </div>
+        </div>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(settings_form.project_capacity) }}
+            </div>
+            <div class="col-6"></div>
+        </div>
     </div>
 
     {{ wtf.render_field(settings_form.submit, button_map={'submit': 'primary'}) }}

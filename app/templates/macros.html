@@ -37,22 +37,24 @@
         <div class="card mt-3 mb-3">
             <div class="card-header">History</div>
             <div class="card-body">
-                {% if item.created_by %}
-                    <div class="text-muted">
-                        Created by {{ item.created_by.name_and_username }}
-                        {% if item.creation_timestamp %}
-                            on {{ item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-                        {% endif %}
-                    </div>
-                {% endif %}
-                {% if item.last_edited_by %}
-                    <div class="text-muted">
-                        Last edited by {{ item.last_edited_by.name_and_username }}
-                        {% if item.last_edit_timestamp %}
-                            on {{ item.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-                        {% endif %}
-                    </div>
-                {% endif %}
+                <ul>
+                    {% if item.created_by %}
+                        <li class="text-muted">
+                            Created by {{ item.created_by.name_and_username }}
+                            {% if item.creation_timestamp %}
+                                on {{ item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                            {% endif %}
+                        </li>
+                    {% endif %}
+                    {% if item.last_edited_by %}
+                        <li class="text-muted">
+                            Last edited by {{ item.last_edited_by.name_and_username }}
+                            {% if item.last_edit_timestamp %}
+                                on {{ item.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                            {% endif %}
+                        </li>
+                    {% endif %}
+                </ul>
             </div>
         </div>
     {% endif %}

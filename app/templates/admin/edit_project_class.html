@@ -2,6 +2,7 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, colour_field %}
+{% from "icon_block.html" import icon_block %}
 
 {% block scripts %}
     {{ super() }}
@@ -108,17 +109,76 @@
                     {{ wtf.render_field(pclass_form.extent) }}
                 </div>
             </div>
-            <hr class="intro-divider">
-            <div class="checkbox">
-                <label>
-                    {{ pclass_form.selection_open_to_all()|safe }} {{ pclass_form.selection_open_to_all.label.text|safe }}
-                </label>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.selection_open_to_all) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.include_available) }}
+                </div>
             </div>
-            {% if pclass_form.selection_open_to_all.description %}
-                <div class="form-text text-muted mb-3">{{ pclass_form.selection_open_to_all.description }}</div>
-            {% endif %}
-            {{ wtf.render_field(pclass_form.auto_enroll_years) }}
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.number_assessors) }}
+                </div>
+            </div>
+        </div>
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <p class="form-group-heading">Project lifecycle</p>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.require_confirm) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.do_matching) }}
+                </div>
+            </div>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.auto_enroll_years) }}
+                </div>
+                <div class="col-6"></div>
+            </div>
+            <p class="form-group-heading">Rollover</p>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.reenroll_supervisors_early) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.supervisor_carryover) }}
+                </div>
+            </div>
+            <p class="form-group-heading">Student selections</p>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.initial_choices) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.switch_choices) }}
+                </div>
+            </div>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.faculty_maximum) }}
+                </div>
+                <div class="col-6">
+                </div>
+            </div>
+        </div>
 
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <div class="alert alert-warning mb-4">
+                {% call icon_block("info-circle") %}
+                    <div>
+                        The settings in this section are used as defaults, but do not affect the
+                        configuration of any active projects.
+                    </div>
+                    <div>
+                        To modify these settings for active projects, please use the configuration
+                        options available on the convenor dashboard.
+                    </div>
+                {% endcall %}
+            </div>
             <p class="form-group-heading">Supervision and assessment</p>
             <div class="row vertical-top">
                 <div class="col-6">
@@ -133,49 +193,8 @@
                     {{ wtf.render_field(pclass_form.uses_presentations) }}
                 </div>
                 <div class="col-6">
-                    {{ wtf.render_field(pclass_form.include_available) }}
                 </div>
             </div>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.number_assessors) }}
-                </div>
-                <div class="col-6">
-                </div>
-            </div>
-            <p class="form-group-heading">Student selections</p>
-            <div class="row vertical-top">
-                <div class="col-4">
-                    {{ wtf.render_field(pclass_form.initial_choices) }}
-                </div>
-                <div class="col-4">
-                    {{ wtf.render_field(pclass_form.switch_choices) }}
-                </div>
-                <div class="col-4">
-                    {{ wtf.render_field(pclass_form.faculty_maximum) }}
-                </div>
-            </div>
-            <p class="form-group-heading">Rollover</p>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.reenroll_supervisors_early) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.supervisor_carryover) }}
-                </div>
-            </div>
-            <p class="form-group-heading">Project lifecycle</p>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.require_confirm) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.do_matching) }}
-                </div>
-            </div>
-        </div>
-
-        <div class="card mt-3 mb-3 card-body bg-well">
             <p class="form-group-heading">Faculty dashboards</p>
             <div class="row vertical-top">
                 <div class="col-6">
@@ -185,6 +204,9 @@
                     {{ wtf.render_field(pclass_form.display_presentations) }}
                 </div>
             </div>
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p class="form-group-heading">Popularity data</p>
             <div class="row vertical-top">
                 <div class="col-6">

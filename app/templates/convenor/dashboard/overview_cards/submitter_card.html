@@ -1,6 +1,7 @@
 {% from "convenor/dashboard/overview_cards/period_closed.html" import period_closed %}
 {% from "convenor/dashboard/overview_cards/project_activity.html" import project_activity %}
 {% from "convenor/dashboard/overview_cards/feedback_marking.html" import feedback_marking %}
+{% from "icon_block.html" import icon_block %}
 
 {% macro submitter_card(config, n, today, feedback_form) %}
     {% set period = config.get_period(n+1) %}
@@ -32,11 +33,18 @@
                 {% if not period.closed and not period.is_feedback_open and (period.start_date is none or (period.start_date and period.start_date <= today)) %}
                     {% set validation_messages = period.validate %}
                     {% if validation_messages is not none and validation_messages|length > 0 %}
-                        <ul class="list-group mb-3">
-                            {% for msg in validation_messages %}
-                                <li class="list-group-item list-group-item-warning">{{ msg }}</li>
-                            {% endfor %}
-                        </ul>
+                        <div class="alert alert-warning mb-3">
+                            {% call icon_block("exclamation-circle") %}
+                                <div><strong>This submission period has validation warnings.</strong></div>
+                                <div class="mt-2">
+                                    <ul>
+                                        {% for msg in validation_messages %}
+                                            <li>{{ msg }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% endcall %}
+                        </div>
                     {% endif %}
                 {% endif %}
                 {% if period.submission_period < config.submission_period or period.closed %}

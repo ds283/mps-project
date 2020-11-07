@@ -1,138 +1,161 @@
-{% extends "base_form.html" %}
+{% extends "base_app.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
+{% from "icon_block.html" import icon_block %}
 
 {% block title %}
     Show enrollments
 {% endblock %}
 
-{% block formtitle %}
-    Show my current enrollments
-{% endblock %}
-
-{% block form_content %}
-    {% if data and data.enrollments and data.enrollments.first() %}
-        <p><strong>You are currently enrolled for the following project classes</strong></p>
-        {% for record in data.ordered_enrollments %}
-            {% if loop.index > 1 %}
-                <hr class="intro-divider">
+{% block bodyblock %}
+    <div class="row vertical-top">
+        <div class="col-2"></div>
+        <div class="col-8">
+            {% if url %}
+                <div class="top-return-link">
+                    <a href="{{ url }}">
+                        <i class="fas fa-backward"></i> Return to previous page
+                    </a>
+                </div>
             {% endif %}
-            {% set pclass = record.pclass %}
-            {% set style = pclass.make_CSS_style() %}
-            <div class="row vertical-top" style="margin-bottom: 5px;">
-                <div class="col-12">
-                    <h4>
-                        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block"
-                           {% if style %}style="{{ style }}"{% endif %}
-                           href="mailto:{{ pclass.convenor_email }}">
-                            {{ pclass.name }} ({{ pclass.convenor_name }})
-                        </a>
-                    </h4>
-                </div>
-            </div>
-            <div class="row vertical-top" style="margin-bottom: 5px;">
-                <div class="col-4">
-                    Supervising
-                </div>
-                <div class="col-4">
-                    2nd-marking
-                </div>
-                <div class="col-4">
-                    Presentation assessment
-                </div>
-            </div>
-            <div class="row vertical-top">
-                <div class="col-4">
-                    {% if record.pclass.uses_supervisor %}
-                        {% if record.supervisor_state == record.SUPERVISOR_ENROLLED  %}
-                            <span class="badge badge-primary"><i class="fas fa-check"></i> Enrolled</span>
-                        {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                            <span class="badge badge-info"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
-                            {% if record.supervisor_reenroll is not none %}
-                                <span class="badge badge-info">ends {{ record.supervisor_reenroll }}</span>
-                            {% else %}
-                                <span class="badge badge-warning">no end date</span>
-                            {% endif %}
-                        {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                            <span class="badge badge-warning"><i class="fas fa-times"></i> Exempt</span>
-                        {% else %}
-                            <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
-                        {% endif %}
-                    {% else %}
-                        <span class="badge badge-secondary">Not used</span>
-                    {% endif %}
-                </div>
-                <div class="col-4">
-                    {% if record.pclass.uses_marker %}
-                        {% if record.marker_state == record.MARKER_ENROLLED %}
-                            <span class="badge badge-primary"><i class="fas fa-check"></i> Enrolled</span>
-                        {% elif record.marker_state == record.MARKER_SABBATICAL %}
-                            <span class="badge badge-info"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
-                            {% if record.marker_reenroll is not none %}
-                                <span class="badge badge-info">ends {{ record.marker_reenroll }}</span>
-                            {% else %}
-                                <span class="badge badge-warning">no end date</span>
-                            {% endif %}
-                        {% elif record.marker_state == record.MARKER_EXEMPT %}
-                            <span class="badge badge-warning"><i class="fas fa-times"></i> Exempt</span>
-                        {% else %}
-                            <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
-                        {% endif %}
-                    {% else %}
-                        <span class="badge badge-secondary">Not used</span>
-                    {% endif %}
-                </div>
-                <div class="col-4">
-                    {% if record.pclass.uses_presentations %}
-                        {% if record.presentations_state == record.PRESENTATIONS_ENROLLED %}
-                            <span class="badge badge-primary"><i class="fas fa-check"></i> Enrolled</span>
-                        {% elif record.presentations_state == record.PRESENTATIONS_SABBATICAL %}
-                            <span class="badge badge-info"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
-                            {% if record.presentations_reenroll is not none %}
-                                <span class="badge badge-info">ends {{ record.presentations_reenroll }}</span>
-                            {% else %}
-                                <span class="badge badge-warning">no end date</span>
-                            {% endif %}
-                        {% elif record.presentations_state == record.PRESENTATIONS_EXEMPT %}
-                            <span class="badge badge-warning"><i class="fas fa-times"></i> Exempt</span>
-                        {% else %}
-                            <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
-                        {% endif %}
-                    {% else %}
-                        <span class="badge badge-secondary">Not used</span>
-                    {% endif %}
-                </div>
-            </div>
-        {% endfor %}
-        {% if data.enrollments.count() != project_classes.count() %}
-            <hr class="intro-divider">
-            <p>You are not currently enrolled for the following project classes</p>
-            <h3>
-                {% for pclass in current_user.all_project_classes %}
-                    {% if not data.is_enrolled(pclass) %}
-                        <a class="btn btn-secondary btn-table-block" href="mailto:{{ pclass.convenor_email }}">
-                            {{ pclass.name }} ({{ pclass.convenor_name }})
-                        </a>
-                    {% endif %}
+            {% if data.enrollments.first() %}
+                {% if data.number_enrollments != project_classes|length %}
+                    <div class="alert alert-info">
+                        {% call icon_block("info-circle") %}
+                            <div><strong>You are not currently enrolled for the following project classes.</strong></div>
+                            <div class="mt-1">
+                                If you believe you should be enrolled for one or more of these,
+                                please contact the appropriate convenor.
+                            </div>
+                            <ul class="mt-1">
+                                {% for pclass in current_user.all_project_classes %}
+                                    {% if not data.is_enrolled(pclass) %}
+                                        <li>
+                                            {{ pclass.name }} &ndash; convenor
+                                            <a href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor_name }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        {% endcall %}
+                    </div>
+                {% endif %}
+                {% for record in data.ordered_enrollments %}
+                    <div class="card card-body border-info mt-3 mb-3 bg-well">
+                        {% set pclass = record.pclass %}
+                        <div class="d-flex justify-content-between align-content-end">
+                            <div class="dashboard-subtitle">
+                                {{ pclass.name }}
+                            </div>
+                            <div class="text-secondary">
+                                Convenor:
+                                <a href="mailto:{{ pclass.convenor.user.email }}">{{ pclass.convenor.user.name }}</a>
+                            </div>
+                        </div>
+                        <hr class="intro-divider mb-2">
+                        <div class="row vertical-top mb-2">
+                            <div class="col-4">
+                                Supervising
+                            </div>
+                            <div class="col-4">
+                                2nd-marking
+                            </div>
+                            <div class="col-4">
+                                Presentation assessment
+                            </div>
+                        </div>
+                        <div class="row vertical-top">
+                            <div class="col-4">
+                                {% if record.pclass.uses_supervisor %}
+                                    {% if record.supervisor_state == record.SUPERVISOR_ENROLLED  %}
+                                        <span class="badge badge-info"><i class="fas fa-check"></i> Enrolled</span>
+                                    {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
+                                        <span class="badge badge-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
+                                        {% if record.supervisor_reenroll is not none %}
+                                            <span class="badge badge-secondary">ends {{ record.supervisor_reenroll }}</span>
+                                        {% else %}
+                                            <span class="badge badge-warning">no end date</span>
+                                        {% endif %}
+                                    {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
+                                        <span class="badge badge-warning"><i class="fas fa-times"></i> Exempt</span>
+                                    {% else %}
+                                        <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge badge-secondary">Not used</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-4">
+                                {% if record.pclass.uses_marker %}
+                                    {% if record.marker_state == record.MARKER_ENROLLED %}
+                                        <span class="badge badge-info"><i class="fas fa-check"></i> Enrolled</span>
+                                    {% elif record.marker_state == record.MARKER_SABBATICAL %}
+                                        <span class="badge badge-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
+                                        {% if record.marker_reenroll is not none %}
+                                            <span class="badge badge-secondary">ends {{ record.marker_reenroll }}</span>
+                                        {% else %}
+                                            <span class="badge badge-warning">no end date</span>
+                                        {% endif %}
+                                    {% elif record.marker_state == record.MARKER_EXEMPT %}
+                                        <span class="badge badge-warning"><i class="fas fa-times"></i> Exempt</span>
+                                    {% else %}
+                                        <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge badge-secondary">Not used</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-4">
+                                {% if record.pclass.uses_presentations %}
+                                    {% if record.presentations_state == record.PRESENTATIONS_ENROLLED %}
+                                        <span class="badge badge-info"><i class="fas fa-check"></i> Enrolled</span>
+                                    {% elif record.presentations_state == record.PRESENTATIONS_SABBATICAL %}
+                                        <span class="badge badge-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
+                                        {% if record.presentations_reenroll is not none %}
+                                            <span class="badge badge-secondary">ends {{ record.presentations_reenroll }}</span>
+                                        {% else %}
+                                            <span class="badge badge-warning">no end date</span>
+                                        {% endif %}
+                                    {% elif record.presentations_state == record.PRESENTATIONS_EXEMPT %}
+                                        <span class="badge badge-warning"><i class="fas fa-times"></i> Exempt</span>
+                                    {% else %}
+                                        <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge badge-secondary">Not used</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                 {% endfor %}
-            </h3>
-        {% endif %}
-    {% else %}
-        <p>You are not currently enrolled for any project classes.
-        The available classes are:</p>
-        <h3>
-            {% for pclass in project_classes %}
-                <a class="btn btn-secondary btn-table-block" href="mailto:{{ pclass.convenor_email }}">
-                    {{ pclass.name }} ({{ pclass.convenor_name }})
-                </a>
-            {% endfor %}
-        </h3>
-    {% endif %}
+            {% else %}
+                <div class="alert alert-warning">
+                    {% call icon_block("info-circle") %}
+                        <div><strong>You are not currently enrolled for any project classes.</strong></div>
+                        <div class="mt-1">
+                            If you believe you should be enrolled for any of these project types,
+                            please contact the appropriate convenor.
+                            The available classes are:
+                        </div>
+                        <ul class="mt-1">
+                            {% for pclass in project_classes %}
+                                <li>
+                                    {{ pclass.name }} &ndash;
+                                    <a href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor_name }}</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endcall %}
+                </div>
+            {% endif %}
 
-    {% if url %}
-        <a href="{{ url }}">
-            <i class="fas fa-backward"></i> Return to previous page
-        </a>
-    {% endif %}
+            {% if url %}
+                <a href="{{ url }}">
+                    <i class="fas fa-backward"></i> Return to previous page
+                </a>
+            {% endif %}
+        </div>
+        <div class="col-2"></div>
+    </div>
 {% endblock %}

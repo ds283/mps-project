@@ -2453,7 +2453,7 @@ def show_enrollments():
         if url is not None and 'show_enrollments' in url:
             url = None
 
-    pclasses = ProjectClass.query.filter_by(active=True)
+    pclasses = db.session.query(ProjectClass).filter_by(active=True, publish=True).all()
     return render_template('faculty/show_enrollments.html', data=data, url=url,
                            project_classes=pclasses)
 

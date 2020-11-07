@@ -2,6 +2,7 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
+{% from "icon_block.html" import icon_block %}
 
 {% block title %}
     Show workload
@@ -12,9 +13,18 @@
 {% endblock %}
 
 {% block form_content %}
-    <strong>CATS limits</strong>
+    <div class="alert alert-info mb-2">
+        {% call icon_block("info-circle") %}
+            <div>Most users will be marked <strong>Default</strong>.</div>
+            <div class="mt-1">
+                Users who have significant CATS commitments elsewhere can have their project CATS
+                capped, if approved by the head of department. If you need your CATS to be capped
+                in this way, please contact a system administrator.
+            </div>
+        {% endcall %}
+    </div>
 
-    <div class="row vertical-top" style="margin-bottom: 5px;">
+    <div class="row vertical-top">
         <div class="col-4">
             Supervising
         </div>
@@ -48,12 +58,9 @@
             {% endif %}
         </div>
     </div>
-    <hr class="intro-divider">
-    <p>Most users will be marked <strong>Default</strong>.</p>
-    <p>Users who have significant CATS commitments elsewhere can have their project CATS
-    capped, if approved by the head of department. If you need your CATS to be capped
-    in this way, please contact a system administrator.</p>
+{% endblock %}
 
+{% block footer %}
     {% if url %}
         <a href="{{ url }}">
             <i class="fas fa-backward"></i> Return to previous page

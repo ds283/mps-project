@@ -2355,6 +2355,11 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
 
     @property
+    def number_enrollments(self):
+        return get_count(self.enrollments)
+
+
+    @property
     def is_convenor(self):
         """
         Determine whether this faculty member is convenor for any projects

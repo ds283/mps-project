@@ -185,12 +185,7 @@ class EditProjectConfigForm(Form, SaveChangesMixin):
                                     description='Disable confirmation of project descriptions for '
                                                 'this academic year')
 
-    uses_supervisor = BooleanField('Projects are supervised by a named faculty member',
-                                   description='This setting is inherited from the project configuration, '
-                                               'but can be overridden in any academic year. '
-                                               'The Project Hub is a lightweight learning management system '
-                                               'that allows you to publish resources to students and '
-                                   default=True)
+    uses_supervisor = BooleanField('Projects are supervised by a named faculty member')
 
     uses_marker = BooleanField('Submissions are second-marked')
 

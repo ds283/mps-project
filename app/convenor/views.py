@@ -6759,7 +6759,7 @@ def edit_project_config(pid):
             config.full_CATS = form.full_CATS.data
 
         if form.use_project_hub.data != config.use_project_hub:
-            config.use_project_hub = edit_form.use_project_hub.data
+            config.use_project_hub = form.use_project_hub.data
 
         config.uses_supervisor = form.uses_supervisor.data
         config.uses_marker = form.uses_marker.data

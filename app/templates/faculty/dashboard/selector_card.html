@@ -68,9 +68,8 @@
             {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
                 <p>
                     <strong>
-                        Please review your projects to ensure the descriptions are up-to-date,
-                        and those you wish to offer next year are active and attached to
-                        the correct project classes.
+                        Please review your projects to ensure their descriptions are up-to-date,
+                        and those you wish to offer next year are listed below.
                     </strong>
                 </p>
                 <div class="row vertical-bottom">
@@ -80,11 +79,6 @@
                                 The project convenor has set a deadline of
                                 <strong>{{ config.request_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
                                 <strong>{{ config.time_to_request_deadline }}</strong> from now.
-                            </div>
-                            <div class="mt-1 text-secondary">
-                                The project list is made available
-                                to students when the confirmation period has ended.
-                                You will be notified by email when the list is published.
                             </div>
                         {% endif %}
                     </div>
@@ -113,7 +107,7 @@
                     {% endif %}
                     {% if nproj > 0 and sel_state <= config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
                         <div class="mt-1 mb-2 text-muted">
-                            Projects that appear here will be offered to students when the project list is
+                            Projects appearing here will be included when the project list is
                             published.
                             To remove a project, use the Actions menu and select
                             &ldquo;Don't offer this project&rdquo;.

@@ -65,46 +65,54 @@
         <div class="card-body">
             <div class="card mt-3 mb-3 card-body bg-well">
                 {% if programmes is not none and programmes|length > 0 %}
-                    <p>Filter by programme</p>
-                    <a href="{{ url_for('user_approver.validate', prog_filter='all', year_filter=year_filter, url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                        All
-                    </a>
-                    {% for prog in programmes %}
-                        <a href="{{ url_for('user_approver.validate', prog_filter=prog.id, year_filter=year_filter, url=url, text=text) }}"
-                           class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                            {{ prog.full_name }}
-                        </a>
-                    {% endfor %}
+                    <div class="row">
+                        <div class="col-12">
+                            <p>Filter by programme</p>
+                            <a href="{{ url_for('user_approver.validate', prog_filter='all', year_filter=year_filter, url=url, text=text) }}"
+                               class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                All
+                            </a>
+                            {% for prog in programmes %}
+                                <a href="{{ url_for('user_approver.validate', prog_filter=prog.id, year_filter=year_filter, url=url, text=text) }}"
+                                   class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    {{ prog.full_name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
                 {% endif %}
 
                 <hr class="intro-divider">
 
-                <p>Filter by academic year</p>
-                    <a href="{{ url_for('user_approver.validate', prog_filter=prog_filter, year_filter='all', url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if year_filter is none or year_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                        All
-                    </a>
-                    <a href="{{ url_for('user_approver.validate', prog_filter=prog_filter, year_filter='1', url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if year_filter == '1' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                        Y1
-                    </a>
-                    <a href="{{ url_for('user_approver.validate', prog_filter=prog_filter, year_filter='2', url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if year_filter == '2' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                        Y2
-                    </a>
-                    <a href="{{ url_for('user_approver.validate', prog_filter=prog_filter, year_filter='3', url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if year_filter == '3' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                        Y3
-                    </a>
-                    <a href="{{ url_for('user_approver.validate', prog_filter=prog_filter, year_filter='4', url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if year_filter == '4' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                        Y4
-                    </a>
-                    <a href="{{ url_for('user_approver.validate', prog_filter=prog_filter, year_filter='grad', url=url, text=text) }}"
-                       class="btn btn-sm filter-btn {% if year_filter == 'grad' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                        Graduated
-                    </a>
+                <div class="row">
+                    <div class="col-12">
+                        <p>Filter by academic year</p>
+                        <a href="{{ url_for('user_approver.validate', prog_filter=prog_filter, year_filter='all', url=url, text=text) }}"
+                           class="btn btn-sm filter-btn {% if year_filter is none or year_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            All
+                        </a>
+                        <a href="{{ url_for('user_approver.validate', prog_filter=prog_filter, year_filter='1', url=url, text=text) }}"
+                           class="btn btn-sm filter-btn {% if year_filter == '1' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Y1
+                        </a>
+                        <a href="{{ url_for('user_approver.validate', prog_filter=prog_filter, year_filter='2', url=url, text=text) }}"
+                           class="btn btn-sm filter-btn {% if year_filter == '2' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Y2
+                        </a>
+                        <a href="{{ url_for('user_approver.validate', prog_filter=prog_filter, year_filter='3', url=url, text=text) }}"
+                           class="btn btn-sm filter-btn {% if year_filter == '3' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Y3
+                        </a>
+                        <a href="{{ url_for('user_approver.validate', prog_filter=prog_filter, year_filter='4', url=url, text=text) }}"
+                           class="btn btn-sm filter-btn {% if year_filter == '4' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Y4
+                        </a>
+                        <a href="{{ url_for('user_approver.validate', prog_filter=prog_filter, year_filter='grad', url=url, text=text) }}"
+                           class="btn btn-sm filter-btn {% if year_filter == 'grad' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Graduated
+                        </a>
+                    </div>
+                </div>
             </div>
             <table id="validation-table" class="table table-striped table-bordered">
                 <thead>

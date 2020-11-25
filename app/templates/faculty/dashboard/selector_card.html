@@ -13,7 +13,7 @@
     {% set confirm_required = config.is_confirmation_required(current_user.faculty_data) %}
 
     {% set offered_variants = current_user.faculty_data.variants_offered(pclass) %}
-    {% set variants_missing_aims = current_user.faculty_data.variants_offered(pclass, filter_warnings='aims') %}
+{#    {% set variants_missing_aims = current_user.faculty_data.variants_offered(pclass, filter_warnings='aims') %}#}
     {% set nproj = offered_variants|length %}
     {% if nproj == 1 %}
         {% set nproj_plural = '' %}
@@ -120,48 +120,48 @@
                     </span>
                 </div>
             </div>
-            {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and variants_missing_aims and variants_missing_aims|length > 0 %}
-                {% set num_missing_aims = variants_missing_aims|length %}
-                {% set pl = '' if num_missing_aims == 1 else 's' %}
-                {% set dodoes = 'does' if num_missing_aims == 1 else 'do' %}
-                {% set thisthese = 'this' if num_missing_aims == 1 else 'these' %}
-                {% set isare = 'is' if num_missing_aims == 1 else 'are' %}
-                <div class="alert alert-danger mt-2 mb-4">
-                    {% call icon_block("info-circle") %}
-                        <div>
-                            <strong>
-                                We are trying to improve the metadata for projects in our database.
-                                According to our records, {{ num_missing_aims }} project{{ pl }}
-                                that you offer {{ dodoes }} not have a statement of aims.
-                            </strong>
-                        </div>
-                        <div class="mt-2">
-                            We know that everyone is very busy.
-                            However, if you have time and are able,
-                            we would like to ask you to supply a short statement of aims for {{ thisthese }}
-                            project{{ pl }}. The aims you specify will be provided to project markers to help them
-                            assess students' progress.
-                        </div>
-                        <div class="mt-2">
-                            To add a statement use the warning messages in the list below to identify
-                            which project{{ pl }} {{ isare }} missing data, and select the
-                            &ldquo;Fix this...&rdquo; link.
-                        </div>
-                        {% if not confirm_required %}
-                            <div class="mt-2">
-                                You can still add a statement even if you have confirmed your project,
-                                because the database does not go live until it is published to students
-                                at the end of the confirmation period.
-                            </div>
-                        {% else %}
-                            <div class="mt-2">
-                                If you are not able to provide a statement of aims this year,
-                                you can ignore the warning and confirm the project.
-                            </div>
-                        {% endif %}
-                    {% endcall %}
-                </div>
-            {% endif %}
+{#            {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and variants_missing_aims and variants_missing_aims|length > 0 %}#}
+{#                {% set num_missing_aims = variants_missing_aims|length %}#}
+{#                {% set pl = '' if num_missing_aims == 1 else 's' %}#}
+{#                {% set dodoes = 'does' if num_missing_aims == 1 else 'do' %}#}
+{#                {% set thisthese = 'this' if num_missing_aims == 1 else 'these' %}#}
+{#                {% set isare = 'is' if num_missing_aims == 1 else 'are' %}#}
+{#                <div class="alert alert-danger mt-2 mb-4">#}
+{#                    {% call icon_block("info-circle") %}#}
+{#                        <div>#}
+{#                            <strong>#}
+{#                                We are trying to improve the metadata for projects in our database.#}
+{#                                According to our records, {{ num_missing_aims }} project{{ pl }}#}
+{#                                that you offer {{ dodoes }} not have a statement of aims.#}
+{#                            </strong>#}
+{#                        </div>#}
+{#                        <div class="mt-2">#}
+{#                            We know that everyone is very busy.#}
+{#                            However, if you have time and are able,#}
+{#                            we would like to ask you to supply a short statement of aims for {{ thisthese }}#}
+{#                            project{{ pl }}. The aims you specify will be provided to project markers to help them#}
+{#                            assess students' progress.#}
+{#                        </div>#}
+{#                        <div class="mt-2">#}
+{#                            To add a statement use the warning messages in the list below to identify#}
+{#                            which project{{ pl }} {{ isare }} missing data, and select the#}
+{#                            &ldquo;Fix this...&rdquo; link.#}
+{#                        </div>#}
+{#                        {% if not confirm_required %}#}
+{#                            <div class="mt-2">#}
+{#                                You can still add a statement even if you have confirmed your project,#}
+{#                                because the database does not go live until it is published to students#}
+{#                                at the end of the confirmation period.#}
+{#                            </div>#}
+{#                        {% else %}#}
+{#                            <div class="mt-2">#}
+{#                                If you are not able to provide a statement of aims this year,#}
+{#                                you can ignore the warning and confirm the project.#}
+{#                            </div>#}
+{#                        {% endif %}#}
+{#                    {% endcall %}#}
+{#                </div>#}
+{#            {% endif %}#}
             {% if nproj > 0 and sel_state < config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                 {% for desc in offered_variants %}
                     {% set project = desc.parent %}
@@ -201,17 +201,17 @@
                                         {% endcall %}
                                     </div>>
                                 </div>
-                            {% elif desc.has_warning('aims') %}
-                                <div class="error-block mt-1">
-                                    <div class="error-message">
-                                        {% call icon_block("exclamation-circle") %}
-                                            This project variant does not have a statement of aims.
-                                            Please consider adding a statement
-                                            to help support robust marking.
-                                            <a href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url, focus_aims=1) }}">Fix this...</a>
-                                        {% endcall %}
-                                    </div>
-                                </div>
+{#                            {% elif desc.has_warning('aims') %}#}
+{#                                <div class="error-block mt-1">#}
+{#                                    <div class="error-message">#}
+{#                                        {% call icon_block("exclamation-circle") %}#}
+{#                                            This project variant does not have a statement of aims.#}
+{#                                            Please consider adding a statement#}
+{#                                            to help support robust marking.#}
+{#                                            <a href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url, focus_aims=1) }}">Fix this...</a>#}
+{#                                        {% endcall %}#}
+{#                                    </div>#}
+{#                                </div>#}
                             {% endif %}
                         </div>
                         <div class="col-3">

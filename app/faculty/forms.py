@@ -48,7 +48,7 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
         project_classes = QuerySelectMultipleField('Select the project classes for which you wish to offer this project',
                                                    query_factory=project_classes_qf, get_label='name',
                                                    description='Set up descriptions for the different "flavours" of '
-                                                               'this project in the "Descriptions" view.')
+                                                               'this project in the "Variants" view.')
 
         # project options
 

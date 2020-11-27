@@ -182,7 +182,7 @@ def all_projects_ajax():
     else:
         data = [(x.id, None) for x in data]
 
-    return ajax.project.build_data(data, current_user.id)
+    return ajax.project.build_data(data, current_user_id=current_user.id)
 
 
 _analyse_labels = {'popularity': ('Popularity rank', 'Popularity score'),

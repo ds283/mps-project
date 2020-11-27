@@ -216,7 +216,7 @@ def register_precompute_tasks(celery):
 
     @celery.task(bind=True)
     def cache_assessor_data(self, project_id, current_user_id):
-        ajax.project.build_data([(project_id, None)])
+        ajax.project.build_data([(project_id, None)], menu_template=None)
 
 
     @celery.task(bind=True)
@@ -262,4 +262,6 @@ def register_precompute_tasks(celery):
 
     @celery.task(bind=True)
     def cache_project(self, project_id):
-        ajax.project.build_data([(project_id, None)])
+        # we don't cache all possible menu configurations, only the 'None' configuration needed for the
+        # 'all projects' report
+        ajax.project.build_data([(project_id, None)], menu_template=None)

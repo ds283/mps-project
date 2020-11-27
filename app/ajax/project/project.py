@@ -8,17 +8,15 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, current_app, url_for
+from urllib import parse
 
+from flask import render_template_string, jsonify, current_app, url_for
 from sqlalchemy.event import listens_for
 
+from ...cache import cache
 from ...database import db
 from ...models import Project, EnrollmentRecord, ResearchGroup, SkillGroup, TransferableSkill, DegreeProgramme, \
     DegreeType, ProjectDescription, User, ProjectClassConfig
-from ...cache import cache
-from ...shared.utils import get_count
-
-from urllib import parse
 
 
 # language=jinja2
@@ -30,31 +28,32 @@ REPERRORSYMBOL
 </a>
 <div>
     {{ 'REPNEWCOMMENTS'|safe }}
-    {% if is_live %}
-        <span class="badge badge-success">LIVE</span>
-    {% endif %}
-    {% if is_running %}
-        <span class="badge badge-danger">RUNNING</span>
-    {% endif %}
+    REPISLIVE
+    REPISRUNNING
     {% set num = project.num_descriptions %}
     {% if num > 0 %}
         {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
         <span class="badge badge-info">{{ num }} variant{{ pl }}</span>
     {% endif %}
 </div>
-{% if name_labels %}
-    <div>
-        {% for pclass in project.project_classes %}
-            {% if pclass.active %}
-                {% set style = pclass.make_CSS_style() %}
-                <a class="badge badge-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
-            {% endif %}
-        {% else %}
-            <span class="badge badge-danger">No project classes</span>
-        {% endfor %}
-    </div>
-{% endif %}
+REPNAMELABELS
 REPERRORBLOCK
+"""
+
+
+# language=jinja2
+_project_name_labels = \
+"""
+<div>
+    {% for pclass in project.project_classes %}
+        {% if pclass.active %}
+            {% set style = pclass.make_CSS_style() %}
+            <a class="badge badge-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
+        {% endif %}
+    {% else %}
+        <span class="badge badge-danger">No project classes</span>
+    {% endfor %}
+</div>
 """
 
 
@@ -350,12 +349,6 @@ _menus = {'convenor': _convenor_menu,
           None: ''}
 
 
-_flags = [(False, False, False), (False, False, True),
-          (False, True, False), (False, True, True),
-          (True, False, False), (True, False, True),
-          (True, True, False), (True, True, True)]
-
-
 _config_proxy = 999999999
 _pclass_proxy = 888888888
 _config_proxy_str = str(_config_proxy)
@@ -363,13 +356,19 @@ _pclass_proxy_str = str(_pclass_proxy)
 
 
 @cache.memoize()
-def _element(project_id, menu_template, is_running, is_live, in_current, name_labels):
+def _name_labels(project_id):
+    p = db.session.query(Project).filter_by(id=project_id).one()
+
+    return render_template_string(_project_name_labels, project=p)
+
+
+@cache.memoize()
+def _element(project_id, menu_template, in_current):
     p = db.session.query(Project).filter_by(id=project_id).one()
 
     menu_string = _menus[menu_template]
 
-    return {'name': render_template_string(_project_name, project=p, is_running=is_running, is_live=is_live,
-                                           text='REPTEXT', url='REPURL', name_labels=name_labels),
+    return {'name': render_template_string(_project_name, project=p, text='REPTEXT', url='REPURL'),
              'owner': {
                  'display': '<a href="mailto:{em}">{nm}</a>'.format(em=p.owner.user.email, nm=p.owner.user.name),
                  'sortvalue': p.owner.user.last_name + p.owner.user.first_name},
@@ -398,7 +397,7 @@ def _process(project_id, enrollment_id, current_user_id, menu_template, config, 
     in_current = (p.prior_counterpart(config.id) is not None) if config is not None else False
 
     # _element is cached
-    record = _element(project_id, menu_template, is_running, is_live, in_current, name_labels)
+    record = _element(project_id, menu_template, in_current)
 
     # need to replace text and url in 'name' field
     # need to replace text, url, config_id and pclass_id in 'menu' field
@@ -409,6 +408,21 @@ def _process(project_id, enrollment_id, current_user_id, menu_template, config, 
     menu = record['menu']
 
     name = name.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
+
+    if name_labels:
+        name = name.replace('REPNAMELABELS', _project_name_labels(project_id), 1)
+    else:
+        name = name.replace('REPNAMELABELS', '', 1)
+
+    if is_running:
+        name = name.replace('REPISRUNNING', '<span class="badge badge-danger">RUNNING</span>', 1)
+    else:
+        name = name.replace('REPISRUNNING', '', 1)
+
+    if is_live:
+        name = name.replace('REPISLIVE', '<span class="badge badge-success">LIVE</span>', 1)
+    else:
+        name = name.replace('REPISLIVE', '', 1)
 
     status = replace_enrollment_text(e, status)
     name = replace_error_block(p, show_errors, name)
@@ -532,119 +546,95 @@ def replace_enrollment_text(e, status):
     return status
 
 
+def _invalidate_cache(project_id: int):
+    for t in _menus:
+        cache.delete_memoized(_element, project_id, t, True)
+        cache.delete_memoized(_element, project_id, t, False)
+    cache.delete_memoized(_name_labels, project_id)
+
+
 @listens_for(Project, 'before_update')
 def _Project_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, target.id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.id)
 
 
 @listens_for(Project, 'before_insert')
 def _Project_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, target.id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.id)
 
 
 @listens_for(Project, 'before_delete')
 def _Project_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, target.id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.id)
 
 
 @listens_for(Project.project_classes, 'append')
 def _Project_project_classes_append_handler(target, value, initiator):
     with db.session.no_autoflush:
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, target.id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.id)
 
 
 @listens_for(Project.project_classes, 'remove')
 def _Project_project_classes_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, target.id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.id)
 
 
 @listens_for(Project.skills, 'append')
 def _Project_skills_append_handler(target, value, initiator):
     with db.session.no_autoflush:
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, target.id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.id)
 
 
 @listens_for(Project.skills, 'remove')
 def _Project_skills_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, target.id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.id)
 
 
 @listens_for(Project.programmes, 'append')
 def _Project_programmes_append_handler(target, value, initiator):
     with db.session.no_autoflush:
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, target.id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.id)
 
 
 @listens_for(Project.programmes, 'remove')
 def _Project_programmes_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, target.id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.id)
 
 
 @listens_for(Project.assessors, 'append')
 def _Project_assessors_append_handler(target, value, initiator):
     with db.session.no_autoflush:
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, target.id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.id)
 
 
 @listens_for(Project.assessors, 'remove')
 def _Project_assessors_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, target.id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.id)
 
 
 @listens_for(ProjectDescription, 'before_insert')
 def _ProjectDescription_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        p_id = target.parent_id
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.parent_id)
 
 
 @listens_for(ProjectDescription, 'before_update')
 def _ProjectDescription_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        p_id = target.parent_id
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.parent_id)
 
 
 @listens_for(ProjectDescription, 'before_delete')
 def _ProjectDescription_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        p_id = target.parent_id
-        for t in _menus:
-            for f in _flags:
-                cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
+        _invalidate_cache(target.parent_id)
 
 
 @listens_for(EnrollmentRecord, 'before_update')
@@ -652,9 +642,7 @@ def _EnrollmentRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         p_ids = db.session.query(Project.id).filter_by(owner_id=target.owner_id).all()
         for p_id in p_ids:
-            for t in _menus:
-                for f in _flags:
-                    cache.delete_memoized(_element, p_id[0], t, f[0], f[1], f[2])
+            _invalidate_cache(p_id)
 
 
 @listens_for(EnrollmentRecord, 'before_insert')
@@ -662,9 +650,7 @@ def _EnrollmentRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         p_ids = db.session.query(Project.id).filter_by(owner_id=target.owner_id).all()
         for p_id in p_ids:
-            for t in _menus:
-                for f in _flags:
-                    cache.delete_memoized(_element, p_id[0], t, f[0], f[1], f[2])
+            _invalidate_cache(p_id)
 
 
 @listens_for(EnrollmentRecord, 'before_delete')
@@ -672,45 +658,35 @@ def _EnrollmentRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         p_ids = db.session.query(Project.id).filter_by(owner_id=target.owner_id).all()
         for p_id in p_ids:
-            for t in _menus:
-                for f in _flags:
-                    cache.delete_memoized(_element, p_id[0], t, f[0], f[1], f[2])
+            _invalidate_cache(p_id)
 
 
 @listens_for(ResearchGroup, 'before_update')
 def _ResearchGroup_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         for project in target.projects:
-            for t in _menus:
-                for f in _flags:
-                    cache.delete_memoized(_element, project.id, t, f[0], f[1], f[2])
+            _invalidate_cache(project.id)
 
 
 @listens_for(ResearchGroup, 'before_delete')
 def _ResearchGroup_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         for project in target.projects:
-            for t in _menus:
-                for f in _flags:
-                    cache.delete_memoized(_element, project.id, t, f[0], f[1], f[2])
+            _invalidate_cache(project.id)
 
 
 @listens_for(TransferableSkill, 'before_update')
 def _TransferableSkill_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         for project in target.projects:
-            for t in _menus:
-                for f in _flags:
-                    cache.delete_memoized(_element, project.id, t, f[0], f[1], f[2])
+            _invalidate_cache(project.id)
 
 
 @listens_for(TransferableSkill, 'before_delete')
 def _TransferableSkill_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         for project in target.projects:
-            for t in _menus:
-                for f in _flags:
-                    cache.delete_memoized(_element, project.id, t, f[0], f[1], f[2])
+            _invalidate_cache(project.id)
 
 
 @listens_for(SkillGroup, 'before_update')
@@ -722,9 +698,7 @@ def _SkillGroup_update_handler(mapper, connection, target):
                 p_ids.add(project.id)
 
         for p_id in p_ids:
-            for t in _menus:
-                for f in _flags:
-                    cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
+            _invalidate_cache(p_id)
 
 
 @listens_for(SkillGroup, 'before_delete')
@@ -736,27 +710,21 @@ def _SkillGroup_delete_handler(mapper, connection, target):
                 p_ids.add(project.id)
 
         for p_id in p_ids:
-            for t in _menus:
-                for f in _flags:
-                    cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
+            _invalidate_cache(p_id)
 
 
 @listens_for(DegreeProgramme, 'before_update')
 def _DegreeProgramme_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         for project in target.projects:
-            for t in _menus:
-                for f in _flags:
-                    cache.delete_memoized(_element, project.id, t, f[0], f[1], f[2])
+            _invalidate_cache(project.id)
 
 
 @listens_for(DegreeProgramme, 'before_delete')
 def _DegreeProgramme_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         for project in target.projects:
-            for t in _menus:
-                for f in _flags:
-                    cache.delete_memoized(_element, project.id, t, f[0], f[1], f[2])
+            _invalidate_cache(project.id)
 
 
 @listens_for(DegreeType, 'before_update')
@@ -768,9 +736,7 @@ def _DegreeType_update_handler(mapper, connection, target):
                 p_ids.add(project.id)
 
         for p_id in p_ids:
-            for t in _menus:
-                for f in _flags:
-                    cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
+            _invalidate_cache(p_id)
 
 
 @listens_for(DegreeType, 'before_delete')
@@ -782,12 +748,10 @@ def _DegreeType_delete_handler(mapper, connection, target):
                 p_ids.add(project.id)
 
         for p_id in p_ids:
-            for t in _menus:
-                for f in _flags:
-                    cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
+            _invalidate_cache(p_id)
 
 
-def build_data(projects, current_user_id=None, menu_template=None, config=None, text=None, url=None, name_labels=False,
+def build_data(projects, menu_template=None, current_user_id=None, config=None, text=None, url=None, name_labels=False,
                show_approvals=True, show_errors=True):
     bleach = current_app.extensions['bleach']
 

@@ -275,8 +275,8 @@ def projects_ajax():
     pq = db.session.query(Project.id).filter_by(owner_id=current_user.id).all()
     data = [(p[0], None) for p in pq]
 
-    return ajax.project.build_data(data, current_user.id, 'faculty', text='projects list',
-                                   url=url_for('faculty.edit_projects'))
+    return ajax.project.build_data(data, current_user_id=current_user.id, menu_template='faculty',
+                                   text='projects list', url=url_for('faculty.edit_projects'))
 
 
 @faculty.route('/assessor_for')
@@ -314,7 +314,7 @@ def marking_ajax():
 
     data = [(p.id, None) for p in pq.all()]
 
-    return ajax.project.build_data(data, current_user.id, show_approvals=False, show_errors=False)
+    return ajax.project.build_data(data, current_user_id=current_user.id, show_approvals=False, show_errors=False)
 
 
 @faculty.route('/edit_descriptions/<int:id>')

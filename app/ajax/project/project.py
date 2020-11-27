@@ -467,7 +467,7 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                 elif state == Project.APPROVALS_NOT_ACTIVE:
                     repapprove = ''
                 elif state == Project.APPROVALS_NOT_OFFERABLE:
-                    repapprove = '<span class="badge badge-danger">Approval: Not offerable/span>'
+                    repapprove = '<span class="badge badge-danger">Approval: Not offerable</span>'
                 else:
                     repapprove = '<span class="badge badge-danger">Unknown approval state</span>'
 

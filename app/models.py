@@ -4414,20 +4414,13 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
     CATS_presentation = db.Column(db.Integer())
 
 
-    def _outstanding_descriptions_generator(self, faculty):
-        if isinstance(faculty, User):
-            fac_data = faculty.faculty_data
-        elif isinstance(faculty, int):
-            fac_data = db.session.query(FacultyData).filter_by(id=faculty).first()
-        else:
-            fac_data = faculty
-
-        if not isinstance(fac_data, FacultyData) or fac_data is None:
+    def _outstanding_descriptions_generator(self, faculty: FacultyData):
+        if not isinstance(faculty, FacultyData) or faculty is None:
             raise RuntimeError('FacultyData object could not be loaded or interpreted')
 
         # have to use list of projects offered for the pclass and then the
         # get_description() method of Project in order to account for possible defaults
-        projects = fac_data.projects_offered(self.pclass_id)
+        projects = faculty.projects_offered(self.pclass_id)
 
         # express as generators so that the elements are not computed unless they are used
         descs = (p.get_description(self.pclass_id) for p in projects)
@@ -4471,6 +4464,18 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
 
 
     def number_confirmations_outstanding(self, faculty):
+        if isinstance(faculty, User):
+            fac_data = faculty.faculty_data
+        elif isinstance(faculty, int):
+            fac_data = db.session.query(FacultyData).filter_by(id=faculty).first()
+        else:
+            fac_data = faculty
+
+        # confirmation not required if faculty member is on sabbatical from this project type
+        record = fac_data.get_enrollment_record(self.pclass_id)
+        if record is not None and record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+            return 0
+
         # confirmation not required if project class doesn't use it
         if not self.project_class.require_confirm:
             return 0
@@ -4483,7 +4488,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
         if self.live or self.requests_skipped:
             return 0
 
-        return len(set(self._outstanding_descriptions_generator(faculty)))
+        return len(set(self._outstanding_descriptions_generator(fac_data)))
 
 
     def has_confirmations_outstanding(self, faculty):
@@ -4494,8 +4499,15 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
         :param faculty:
         :return:
         """
+        if isinstance(faculty, User):
+            fac_data = faculty.faculty_data
+        elif isinstance(faculty, int):
+            fac_data = db.session.query(FacultyData).filter_by(id=faculty).first()
+        else:
+            fac_data = faculty
+
         # confirmation not required if faculty member is on sabbatical from this project type
-        record = faculty.get_enrollment_record(self.pclass_id)
+        record = fac_data.get_enrollment_record(self.pclass_id)
         if record is not None and record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
             return False
 
@@ -4511,7 +4523,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
         if self.live or self.requests_skipped:
             return False
 
-        gen = self._outstanding_descriptions_generator(faculty)
+        gen = self._outstanding_descriptions_generator(fac_data)
         try:
             item = next(gen)
         except StopIteration:

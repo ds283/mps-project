@@ -4494,6 +4494,11 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
         :param faculty:
         :return:
         """
+        # confirmation not required if faculty member is on sabbatical from this project type
+        record = faculty.get_enrollment_record(self.pclass_id)
+        if record is not None and record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+            return False
+
         # confirmation not required if project class doesn't use it
         if not self.project_class.require_confirm:
             return False

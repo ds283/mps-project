@@ -39,9 +39,9 @@
             {% endif %}
         ">
             {% if is_sabbatical %}
-                Student selections: on sabbatical
+                Student selections: <strong>>on sabbatical</strong>> [no response required]
             {% elif is_exempt %}
-                Student selections: exempt
+                Student selections: <strong>exempt</strong> [no response required]
             {% else %}
                 <strong>
                     {% if sel_state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
@@ -218,7 +218,7 @@
                             <div class="float-right">
                                 <div class="btn-group btn-table-block">
                                     {% if desc %}
-                                        {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and config.project_class.require_confirm %}
+                                        {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
                                             {% if desc.confirmed %}
                                                 <a class="btn btn-sm btn-success disabled">Confirmed</a>
                                             {% else %}

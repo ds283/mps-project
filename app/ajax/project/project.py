@@ -410,7 +410,7 @@ def _process(project_id, enrollment_id, current_user_id, menu_template, config, 
     name = name.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
 
     if name_labels:
-        name = name.replace('REPNAMELABELS', _project_name_labels(project_id), 1)
+        name = name.replace('REPNAMELABELS', _name_labels(project_id), 1)
     else:
         name = name.replace('REPNAMELABELS', '', 1)
 

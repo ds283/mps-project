@@ -471,13 +471,13 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                 state = p.approval_state
 
                 if state == Project.DESCRIPTIONS_APPROVED:
-                    repapprove = '<span class="badge badge-success"><i class="fas fa-check"></i> Approval: All approved</span>'
+                    repapprove = '<span class="badge badge-success"><i class="fas fa-check"></i> Approved</span>'
                 elif state == Project.SOME_DESCRIPTIONS_QUEUED:
-                    repapprove = '<span class="badge badge-warning">Approval: Some queued</span>'
+                    repapprove = '<span class="badge badge-warning">Approval: Queued</span>'
                 elif state == Project.SOME_DESCRIPTIONS_REJECTED:
-                    repapprove = '<span class="badge badge-info">Approval: Some rejected</span>'
+                    repapprove = '<span class="badge badge-info">Approval: Rejected</span>'
                 elif state == Project.SOME_DESCRIPTIONS_UNCONFIRMED:
-                    repapprove = '<span class="badge badge-secondary">Approval: Some unconfirmed</span>'
+                    repapprove = '<span class="badge badge-secondary">Approval: Unconfirmed</span>'
                 elif state == Project.APPROVALS_NOT_ACTIVE:
                     repapprove = ''
                 elif state == Project.APPROVALS_NOT_OFFERABLE:

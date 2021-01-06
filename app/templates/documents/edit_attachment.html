@@ -31,6 +31,13 @@
                             {{ wtf.render_field(form.target_name) }}
                         {% endif %}
                         {{ wtf.render_field(form.license) }}
+                        {% if has_admin_rights %}
+                            {{ wtf.render_field(form.type) }}
+                            <hr class="intro-divider">
+                            {{ wtf.render_field(form.publish_to_students) }}
+                            {{ wtf.render_field(form.include_supervisor_emails) }}
+                            {{ wtf.render_field(form.include_marker_emails) }}
+                        {% endif %}
                         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>
                 </div>

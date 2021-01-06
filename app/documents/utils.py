@@ -169,3 +169,16 @@ def is_uploadable(record, message=False, allow_student=True, allow_faculty=True)
         flash('You do not have sufficient privileges to attach documents to this submission record.', 'info')
 
     return False
+
+
+def is_admin(current_user):
+    if current_user.has_role('root') or current_user.has_role('admin'):
+        return True
+
+    if current_user.has_role('office'):
+        return True
+
+    if current_user.has_role('faculty'):
+        return True
+
+    return False

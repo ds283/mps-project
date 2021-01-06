@@ -61,6 +61,17 @@
                     {{ attachment.description }}
                 </div>
             {% endif %}
+            <div>
+                {% if attachment.publish_to_students %}
+                    <span class="badge badge-info"><i class="fas fa-eye"></i> Publish</span>
+                {% endif %}
+                {% if attachment.include_marker_emails %}
+                    <span class="badge badge-info"><i class="fas fa-envelope"></i> Marker</span>
+                {% endif %}
+                {% if attachment.include_supervisor_emails %}
+                    <span class="badge badge-info"><i class="fas fa-envelope"></i> Supervisor</span>
+                {% endif %}
+            </div>
         </td>
         <td>
             <div>
@@ -69,17 +80,6 @@
                 {% endif %}
                 {% if asset.uploaded_by %}
                     <i class="fas fa-user"></i> {{ asset.uploaded_by.name }}
-                {% endif %}
-            </div>
-            <div>
-                {% if attachment.publish_to_students %}
-                    <span class="badge badge-success"><i class="fas fa-check"></i> Publish to students</span>
-                {% endif %}
-                {% if attachment.include_marker_emails %}
-                    <span class="badge badge-success"><i class="fas fa-check"></i> Include in notifications to marker</span>
-                {% endif %}
-                {% if attachment.include_supervisor_emails %}
-                    <span class="badge badge-success"><i class="fas fa-check"></i> Include in notifications to supervisor</span>
                 {% endif %}
             </div>
             <div>

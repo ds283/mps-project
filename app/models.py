@@ -8699,6 +8699,39 @@ class SubmissionAttachment(db.Model):
     # textual description of attachment
     description = db.Column(db.Text())
 
+    # publish to students
+    publish_to_students = db.Column(db.Boolean(), default=False)
+
+    # include in marking notification emails sent to examiners?
+    include_marker_emails = db.Column(db.Boolean(), default=False)
+
+    # include in marking notification emails sent to project supervisors?
+    include_supervisor_emails = db.Column(db.Boolean(), default=False)
+
+
+    ATTACHMENT_TYPE_UNSET = 0
+    ATTACHMENT_MARKING_REPORT = 1
+    ATTACHMENT_SIMILARITY_REPORT = 2
+    ATTACHMENT_OTHER = 3
+
+    _labels = {ATTACHMENT_TYPE_UNSET: 'Unset',
+               ATTACHMENT_MARKING_REPORT: 'Marking report',
+               ATTACHMENT_SIMILARITY_REPORT: 'Similarity report (such as Turnitin)',
+               ATTACHMENT_OTHER: 'Other'}
+
+    type = db.Column(db.Integer(), default=0, nullable=True)
+
+
+    def type_label(self):
+        if self.type is None:
+            return None
+
+        if self.type in self._labels:
+            return self._labels[self.type]
+
+        return None
+
+
 
 class PeriodAttachment(db.Model):
     """

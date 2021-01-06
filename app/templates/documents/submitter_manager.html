@@ -1,6 +1,7 @@
 {% extends "base_app.html" %}
 
 {% from "macros.html" import on_click_selector_field %}
+{% from "icon_block.html" import icon_block %}
 
 {% block title %}
     Manage documents for {{ record.student_identifier }}
@@ -26,11 +27,27 @@
                     {% endif %}
                 {% endif %}
             </div>
-            {% if attachment and attachment.description and attachment.description|length > 0 %}
-                <div style="padding-top: 3px;">
+            {% if attachment and attachment.type is defined and attachment.type is not none %}
+                <div class="mt-1">
+                    <strong>{{ attachment.type_label() }}</strong>
+                </div>
+            {% endif %}
+            {% if attachment and attachment.description is defined and attachment.description|length > 0 %}
+                <div class="mt-1">
                     {{ attachment.description }}
                 </div>
             {% endif %}
+            <div>
+                {% if attachment and attachment.publish_to_students is defined and attachment.publish_to_students %}
+                    <span class="badge badge-info"><i class="fas fa-eye"></i> Publish</span>
+                {% endif %}
+                {% if attachment and attachment.include_marker_emails is defined and attachment.include_marker_emails %}
+                    <span class="badge badge-info"><i class="fas fa-envelope"></i> Marker</span>
+                {% endif %}
+                {% if attachment and attachment.include_supervisor_emails is defined and attachment.include_supervisor_emails %}
+                    <span class="badge badge-info"><i class="fas fa-envelope"></i> Supervisor</span>
+                {% endif %}
+            </div>
         </td>
         <td>
             <div>
@@ -133,29 +150,30 @@
         <div class="card-header bg-primary text-white">Manage documents for <i class="fas fa-user"></i> <strong>{{ record.student_identifier }}</strong> {{ record.period.display_name }}</div>
         <div class="card-body">
             {% if admin_rights %}
-                <div class="row">
-                    <div class="col-1"></div>
-                    <div class="col-10">
-                        {% if period.closed %}
-                            <div class="alert alert-danger">
-                                You are viewing documents for the submission period "{{ record.period.display_name }}",
-                                for which feedback
-                                has already been closed. The uploaded documents form part of the audit record for this
-                                project submission. <strong>When making edits, please proceed with care.</strong>
+                {% if period.closed %}
+                    <div class="alert alert-danger">
+                        {% call icon_block("exclamation-circle") %}
+                            <div>
+                                <strong>
+                                    You are viewing documents for the submission period "{{ record.period.display_name }}",
+                                    for which feedback has already been closed. Please make edits only with great care.
+                                </strong>
                             </div>
-                        {% endif %}
-
-                        {% set validation_messages = record.validate %}
-                        {% if validation_messages is not none and validation_messages|length > 0 %}
-                            <ul class="list-group">
-                                {% for msg in validation_messages %}
-                                    <li class="list-group-item list-group-item-warning">{{ msg }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
+                            <div class="mt-1">
+                                The uploaded documents form part of the audit record for this
+                                project submission.
+                            </div>
+                        {% endcall %}
                     </div>
-                    <div class="col-1"></div>
-                </div>
+                {% endif %}
+                {% set validation_messages = record.validate %}
+                {% if validation_messages is not none and validation_messages|length > 0 %}
+                    <ul class="list-group">
+                        {% for msg in validation_messages %}
+                            <li class="list-group-item list-group-item-warning">{{ msg }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
             {% endif %}
 
             {# PERIOD ATTACHMENTS #}
@@ -237,6 +255,17 @@
             {# SUBMISSION ATTACHMENTS #}
             <div class="card mt-3 mb-3 card-body bg-well">
                 <span class="document-group-title mb-2">Attachments</span>
+                {% if is_faculty or is_office or is_admin %}
+                    <div class="card card-body bg-well mt-1 mb-3">
+                        {% call icon_block("info-circle") %}
+                            <div>
+                                <strong>
+                                    Students can only see attachments that are explicitly published.
+                                </strong>
+                            </div>
+                        {% endcall %}
+                    </div>
+                {% endif %}
                 {% if record.attachments.first() %}
                     <table class="table table-striped">
                         <thead>

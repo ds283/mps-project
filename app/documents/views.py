@@ -18,9 +18,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_
 
 from . import documents
-from .forms import UploadReportForm, UploadSubmitterAttachmentForm, EditReportForm, EditSubmitterAttachmentForm
+from .forms import UploadReportForm, UploadSubmitterAttachmentFormFactory, EditReportForm, \
+    EditSubmitterAttachmentFormFactory
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
-from .utils import is_editable, is_deletable, is_listable, is_uploadable
+from .utils import is_editable, is_deletable, is_listable, is_uploadable, is_admin
 
 from ..database import db
 from ..models import SubmissionRecord, SubmittedAsset, SubmissionAttachment, Role, SubmissionPeriodRecord, \
@@ -332,6 +333,8 @@ def edit_submitter_attachment(aid):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
+    has_admin_rights = is_admin(current_user)
+    EditSubmitterAttachmentForm = EditSubmitterAttachmentFormFactory(admin=has_admin_rights)
     form = EditSubmitterAttachmentForm(obj=attachment)
 
     if form.validate_on_submit():
@@ -339,6 +342,12 @@ def edit_submitter_attachment(aid):
 
         asset.license = form.license.data
         asset.target_name = form.target_name.data
+
+        if has_admin_rights:
+            attachment.type = form.type.data
+            attachment.publish_to_students = form.publish_to_students.data
+            attachment.include_supervisor_emails = form.include_supervisor_emails.data
+            attachment.include_marker_emails = form.include_marker_emails.data
 
         try:
             db.session.commit()
@@ -357,7 +366,7 @@ def edit_submitter_attachment(aid):
 
     action_url = url_for('documents.edit_submitter_attachment', aid=attachment.id, url=url, text=text)
     return render_template('documents/edit_attachment.html', form=form, record=record, attachment=attachment,
-                           asset=asset, action_url=action_url)
+                           asset=asset, action_url=action_url, has_admin_rights=has_admin_rights)
 
 
 @documents.route('/delete_submitter_attachment/<int:aid>')
@@ -458,6 +467,8 @@ def upload_submitter_attachment(sid):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
+    has_admin_rights = is_admin(current_user)
+    UploadSubmitterAttachmentForm = UploadSubmitterAttachmentFormFactory(admin=has_admin_rights)
     form = UploadSubmitterAttachmentForm(request.form)
 
     if form.validate_on_submit():
@@ -500,6 +511,23 @@ def upload_submitter_attachment(sid):
                                               attachment_id=asset.id,
                                               description=form.description.data)
 
+            if has_admin_rights:
+                attachment.type = form.type.data
+                attachment.publish_to_students = form.publish_to_students.data
+                attachment.include_supervisor_emails = form.include_supervisor_emails.data
+                attachment.include_marker_emails = form.include_marker_emails.data
+
+            else:
+                attachment.include_marker_emails = False
+                attachment.include_supervisor_emails = False
+                attachment.type = SubmissionAttachment.ATTACHMENT_OTHER
+
+                if current_user.has_role('student'):
+                    attachment.publish_to_students = True
+
+                else:
+                    attachment.publish_to_students = False
+
             # uploading user has access
             asset.grant_user(current_user)
 
@@ -532,7 +560,8 @@ def upload_submitter_attachment(sid):
         if request.method == 'GET':
             form.license.data = current_user.default_license
 
-    return render_template('documents/upload_attachment.html', record=record, form=form, url=url, text=text)
+    return render_template('documents/upload_attachment.html', record=record, form=form, url=url, text=text,
+                           has_admin_rights=has_admin_rights)
 
 
 def _get_attachment_asset(attach_type, attach_id):

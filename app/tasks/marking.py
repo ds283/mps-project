@@ -44,8 +44,10 @@ def register_marking_tasks(celery):
               '"{period}"'.format(proj=record.config.name, period=record.display_name))
         print('-- configuration: CC convenor = {cc}, max attachment '
               'total = {max} Mb'.format(cc=cc_convenor, max=max_attachment))
+
         if test_email is not None:
             print('-- working in test mode: emails being sent to sink={email}'.format(email=test_email))
+
         print('-- supplied deadline is {deadline}'.format(deadline=parser.parse(deadline).date()))
 
         email_group = group(dispatch_emails.s(s.id, cc_convenor, max_attachment, test_email, deadline)

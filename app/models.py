@@ -8578,6 +8578,13 @@ class SubmissionRecord(db.Model):
 
 
     @property
+    def ordered_record_attachments(self):
+        return self.attachments \
+            .join(SubmittedAsset, SubmittedAsset.id == SubmissionAttachment.attachment_id) \
+            .order_by(SubmissionAttachment.type.asc(), SubmittedAsset.target_name.asc()).all()
+
+
+    @property
     def number_attachments_student(self):
         """
         Get total number of attachments for this record that are visible to the student.
@@ -8716,7 +8723,7 @@ class SubmissionAttachment(db.Model):
 
     _labels = {ATTACHMENT_TYPE_UNSET: 'Unset',
                ATTACHMENT_MARKING_REPORT: 'Marking report',
-               ATTACHMENT_SIMILARITY_REPORT: 'Similarity report (such as Turnitin)',
+               ATTACHMENT_SIMILARITY_REPORT: 'Similarity report',
                ATTACHMENT_OTHER: 'Other'}
 
     type = db.Column(db.Integer(), default=0, nullable=True)

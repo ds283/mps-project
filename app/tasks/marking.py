@@ -18,7 +18,7 @@ from celery.exceptions import Ignore
 
 from ..database import db
 from ..models import SubmissionPeriodRecord, SubmissionRecord, User, SubmittedAsset, ProjectClassConfig, \
-    ProjectClass, FacultyData, SubmittingStudent, StudentData, PeriodAttachment
+    ProjectClass, FacultyData, SubmittingStudent, StudentData, PeriodAttachment, SubmissionAttachment
 
 from ..task_queue import register_task
 
@@ -238,6 +238,18 @@ def register_marking_tasks(celery):
         if role is not None:
             for attachment in record.period.ordered_attachments:
                 attachment: PeriodAttachment
+
+                if (role in ['marker'] and attachment.include_marker_emails) or \
+                    (role in ['supervisor'] and attachment.include_supervisor_emails):
+                    asset: SubmittedAsset = attachment.attachment
+
+                    # TODO: consider rationalizing how filenames work with assets. Currently it's a bit inconsistent.
+                    attachment_abs_path = asset_folder / submitted_subfolder / asset.filename
+                    attached_size = _attach_asset(msg, asset, attached_size, attached_documents, attachment_abs_path,
+                                                  max_attachment=max_attachment, description=attachment.description)
+
+            for attachment in record.ordered_record_attachments:
+                attachment: SubmissionAttachment
 
                 if (role in ['marker'] and attachment.include_marker_emails) or \
                     (role in ['supervisor'] and attachment.include_supervisor_emails):

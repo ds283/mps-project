@@ -105,72 +105,77 @@
                                                     <hr class="intro-divider">
                                                 {% endif %}
                                                 <div class="dashboard-subtitle" style="padding-bottom: 8px;">{{ record.period.display_name }}</div>
-                                                <div class="row vertical-top">
-                                                    <div class="col-3">
-                                                        <a href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }}</a>
-                                                    </div>
-                                                    <div class="col-5">
-                                                        {{ record.project.name }} (No. {{ record.project.number }})
-                                                        <div>
-                                                            {% if record.student_feedback_submitted and record.acknowledge_feedback %}
-                                                                {% if is_student %}
-                                                                    <span class="badge badge-success"><i class="fas fa-check"></i> Your feedback acknowledged</span>
-                                                                {% else %}
-                                                                    <span class="badge badge-success"><i class="fas fa-check"></i> Student feedback acknowledged</span>
-                                                                {% endif %}
-                                                            {% endif %}
-                                                            {% if record.faculty_response_submitted %}
-                                                                <span class="badge badge-success"><i class="fas fa-check"></i> Supervisor response</span>
-                                                            {% endif %}
+                                                {% if record.project %}
+                                                    <div class="row vertical-top">
+                                                        <div class="col-3">
+                                                            <a href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }}</a>
                                                         </div>
-                                                    </div>
-                                                    <div class="col-4">
-                                                        <div style="text-align: right;" class="float-right">
-                                                            <a href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=student_text if is_student else generic_text) }}" class="btn btn-sm btn-secondary btn-table-block">Documents ({{ record.number_attachments }})...</a>
-                                                            {% if record.has_feedback %}
-                                                                {% if record.id in roles %}
-                                                                    {% set role = roles[record.id] %}
-                                                                    {% if role == 'student' %}
-                                                                        <a href="{{ url_for('student.view_feedback', id=record.id, preview=1, text=student_text, url=return_url) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
-                                                                    {% elif role == 'faculty' %}
-                                                                        <a href="{{ url_for('faculty.view_feedback', id=record.id, preview=1, text=generic_text, url=return_url) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
-                                                                    {% elif role == 'convenor' %}
-                                                                        <a href="{{ url_for('convenor.view_feedback', id=record.id, text=generic_text, url=return_url) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
+                                                        <div class="col-5">
+                                                            {{ record.project.name }} (No. {{ record.project.number }})
+                                                            <div>
+                                                                {% if record.student_feedback_submitted and record.acknowledge_feedback %}
+                                                                    {% if is_student %}
+                                                                        <span class="badge badge-success"><i class="fas fa-check"></i> Your feedback acknowledged</span>
                                                                     {% else %}
-                                                                        <span class="badge badge-danger">Unknown role</span>
+                                                                        <span class="badge badge-success"><i class="fas fa-check"></i> Student feedback acknowledged</span>
                                                                     {% endif %}
-                                                                {% else %}
-                                                                    <a class="btn btn-sm btn-outline-secondary"><i class="fas fa-ban"></i> Feedback locked</a>
                                                                 {% endif %}
-                                                            {% endif %}
+                                                                {% if record.faculty_response_submitted %}
+                                                                    <span class="badge badge-success"><i class="fas fa-check"></i> Supervisor response</span>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <div style="text-align: right;" class="float-right">
+                                                                <a href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=student_text if is_student else generic_text) }}" class="btn btn-sm btn-secondary btn-table-block">Documents ({{ record.number_attachments }})...</a>
+                                                                {% if record.has_feedback %}
+                                                                    {% if record.id in roles %}
+                                                                        {% set role = roles[record.id] %}
+                                                                        {% if role == 'student' %}
+                                                                            <a href="{{ url_for('student.view_feedback', id=record.id, preview=1, text=student_text, url=return_url) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
+                                                                        {% elif role == 'faculty' %}
+                                                                            <a href="{{ url_for('faculty.view_feedback', id=record.id, preview=1, text=generic_text, url=return_url) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
+                                                                        {% elif role == 'convenor' %}
+                                                                            <a href="{{ url_for('convenor.view_feedback', id=record.id, text=generic_text, url=return_url) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
+                                                                        {% else %}
+                                                                            <span class="badge badge-danger">Unknown role</span>
+                                                                        {% endif %}
+                                                                    {% else %}
+                                                                        <a class="btn btn-sm btn-outline-secondary"><i class="fas fa-ban"></i> Feedback locked</a>
+                                                                    {% endif %}
+                                                                {% endif %}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
 
-                                                {# deal with presentation if this period has one #}
-                                                {% if period.has_presentation %}
-                                                    {% if period.has_deployed_schedule %}
-                                                        {% set schedule = period.deployed_schedule %}
-                                                        {% set slot = period.get_student_presentation_slot(rec.id) %}
-                                                        <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</div>
-                                                        {% if slot is not none %}
-                                                            <span class="badge badge-primary">{{ slot.date_as_string }}</span>
-                                                            <span class="badge badge-info">{{ slot.session_type_string }}</span>
-                                                            <span class="badge badge-info">{{ slot.room_full_name }}</span>
-                                                            {% for assessor in slot.assessors %}
-                                                                <span class="badge badge-secondary">{{ assessor.user.name }}</span>
+                                                    {# deal with presentation if this period has one #}
+                                                    {% if period.has_presentation %}
+                                                        {% if period.has_deployed_schedule %}
+                                                            {% set schedule = period.deployed_schedule %}
+                                                            {% set slot = period.get_student_presentation_slot(rec.id) %}
+                                                            <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</div>
+                                                            {% if slot is not none %}
+                                                                <span class="badge badge-primary">{{ slot.date_as_string }}</span>
+                                                                <span class="badge badge-info">{{ slot.session_type_string }}</span>
+                                                                <span class="badge badge-info">{{ slot.room_full_name }}</span>
+                                                                {% for assessor in slot.assessors %}
+                                                                    <span class="badge badge-secondary">{{ assessor.user.name }}</span>
+                                                                {% else %}
+                                                                    <span class="badge badge-danger">Assessor information missing</span>
+                                                                {% endfor %}
                                                             {% else %}
-                                                                <span class="badge badge-danger">Assessor information missing</span>
-                                                            {% endfor %}
+                                                                <span class="badge badge-warning">Did not attend</span>
+                                                            {% endif %}
                                                         {% else %}
-                                                            <span class="badge badge-warning">Did not attend</span>
+                                                            <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">Presentation assessment</div>
+                                                            <p>Schedule information is not available</p>
                                                         {% endif %}
-                                                    {% else %}
-                                                        <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">Presentation assessment</div>
-                                                        <p>Schedule information is not available</p>
                                                     {% endif %}
+                                                {% else %}
+                                                    {% call icon_block("exclamation-circle") %}
+                                                        <div><strong>No project has been set for this submission record.</strong></div>
+                                                    {% endcall %}
                                                 {% endif %}
-
                                             {% endif %}
                                         {% endfor %}
                                     {% else %}

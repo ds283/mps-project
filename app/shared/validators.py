@@ -19,15 +19,15 @@ from ..database import db
 from ..models import ProjectClassConfig, SubmittingStudent, SubmissionRecord, LiveProject
 
 
-def validate_is_administrator():
+def validate_is_administrator(message=True):
     """
     Ensure that user in an administrator
     :return:
     """
 
     if not current_user.has_role('admin') and not current_user.has_role('root'):
-
-        flash('Only administrative users can perform this operation.')
+        if message:
+            flash('Only administrative users can perform this operation.', 'error')
         return False
 
     return True
@@ -46,7 +46,7 @@ def validate_is_convenor(pclass, message=True):
             and not current_user.has_role('root'):
 
         if message:
-            flash('Convenor actions are available only to project convenors and administrative users.')
+            flash('Convenor actions are available only to project convenors and administrative users.', 'error')
         return False
 
     return True

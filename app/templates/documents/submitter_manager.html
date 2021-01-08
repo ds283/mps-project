@@ -256,15 +256,13 @@
             <div class="card mt-3 mb-3 card-body bg-well">
                 <span class="document-group-title mb-2">Attachments</span>
                 {% if is_faculty or is_office or is_admin %}
-                    <div class="card card-body bg-well mt-1 mb-3">
-                        {% call icon_block("info-circle") %}
-                            <div>
-                                <strong>
-                                    Students can only see attachments that are explicitly published.
-                                </strong>
-                            </div>
-                        {% endcall %}
-                    </div>
+                    {% call icon_block("info-circle") %}
+                        <div>
+                            <strong>
+                                Students can only see attachments that are explicitly published.
+                            </strong>
+                        </div>
+                    {% endcall %}
                 {% endif %}
                 {% if record.attachments.first() %}
                     <table class="table table-striped">

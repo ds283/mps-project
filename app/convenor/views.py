@@ -1815,17 +1815,22 @@ def enroll_submitter(sid, configid):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(redirect_url())
 
+    # return 404 if student does not exist
+    student: StudentData = StudentData.query.get_or_404(sid)
+
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
     if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
-        flash('Manual enrollment of submitters is only possible during normal project activity', 'error')
-        return redirect(redirect_url())
+        if not validate_is_administrator(message=False):
+            flash('Manual enrollment of submitters is only possible during normal project activity. '
+                  'Please contact an administrator to perform this operation.', 'error')
+            return redirect(redirect_url())
 
     old_config: ProjectClassConfig = config.project_class.get_config(config.year-1)
 
-    add_blank_submitter(sid, old_config.id if old_config is not None else None, configid, autocommit=True)
+    add_blank_submitter(student, old_config.id if old_config is not None else None, configid, autocommit=True)
 
     return redirect(redirect_url())
 

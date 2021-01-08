@@ -3,6 +3,7 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "convenor/macros.html" import ranked_selection %}
 {% from "student/macros.html" import custom_offers_table %}
+{% from "icon_block.html" import icon_block %}
 
 {% block title %}
     Timeline for {{ user.name }}
@@ -62,8 +63,10 @@
                                             {% endif %}
                                         </div>
                                     {% else %}
-                                        <div>
-                                            No submission list was received for this project class.
+                                        <div class="mt-2">
+                                            {% call icon_block("info-circle") %}
+                                                <div>No submission list was received for this project class.</div>
+                                            {% endcall %}
                                         </div>
                                     {% endif %}
                                 </div>
@@ -85,7 +88,14 @@
                                         </a>
                                         <hr class="intro-divider">
                                     </div>
-                                    {% if rec.published %}
+                                    {% if rec.published or is_root or is_admin or is_convenor %}
+                                        {% if not rec.published %}
+                                            <div class="alert alert-warning mt-1 mb-3">
+                                                {% call icon_block("exclamation-circle") %}
+                                                    <div><strong>This record was not published to the student.</strong></div>
+                                                {% endcall %}
+                                            </div>
+                                        {% endif %}
                                         {% set ns = namespace(count=0) %}
                                         {% for record in rec.ordered_assignments %}
                                             {% if record.retired %}
@@ -164,7 +174,9 @@
                                             {% endif %}
                                         {% endfor %}
                                     {% else %}
-                                        <div>This record was not published.</div>
+                                        {% call icon_block("info-circle") %}
+                                            <div>This record was not published.</div>
+                                        {% endcall %}
                                     {% endif %}
                                 </div>
                             </div>

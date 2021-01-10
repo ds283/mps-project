@@ -74,9 +74,18 @@ p.copyright {
     font-weight: lighter;
 }
 
+.timeline-page-title {
+    font-family: 'Roboto', sans-serif;
+    font-weight: bold;
+    font-size: 38px;
+    margin-bottom: 1rem;
+}
+
 .timeline-title {
+    font-family: 'Roboto', sans-serif;
     font-size: 32px;
     font-weight: lighter;
+    margin-bottom: 0.8rem;
 }
 
 .document-group-title {

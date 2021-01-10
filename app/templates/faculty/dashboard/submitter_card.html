@@ -2,6 +2,8 @@
 {% from "faculty/dashboard/assignments/marker.html" import marker_assignments %}
 {% from "faculty/dashboard/assignments/presentations.html" import presentation_assignments %}
 
+{% from "icon_block.html" import icon_block %}
+
 {% macro submitter_card(data, sub_state, n, current_user, today) %}
     {% set config = data['config'] %}
     {% set record = data['record'] %}
@@ -52,8 +54,10 @@
                         {% if period.collect_project_feedback %}
                             {% if not is_sabbatical or not is_exempt %}
                                 <div class="alert alert-warning">
-                                    Marking and feedback for this submission period is now underway.
-                                    Please enter feedback for each project you supervise or 2nd mark.
+                                    {% call icon_block("info-circle") %}
+                                        Marking and feedback for this submission period is now underway.
+                                        Please enter feedback for each project you supervise or 2nd mark.
+                                    {% endcall %}
                                 </div>
                                 {% if period.feedback_deadline %}
                                     <div class="text-muted">
@@ -65,10 +69,14 @@
                             {% endif %}
                         {% else %}
                             <div class="alert alert-warning">
-                                Marking and feedback for this submission period is now underway.
-                                These are not being collected on <strong>mpsprojects.sussex.ac.uk</strong>
-                                for this submission period.
-                                Please follow the convenor's instructions for each project you supervise or 2nd mark.
+                                {% call icon_block("info-block") %}
+                                    <div><strong>Marking and feedback for this submission period is now underway.</strong></div>
+                                    <div class="mt-1">
+                                        These are not being collected on <strong>mpsprojects.sussex.ac.uk</strong>
+                                        for this submission period.
+                                        Please follow the convenor's instructions for each project you supervise or 2nd mark.
+                                    </div>
+                                {% endcall %}
                             </div>
                         {% endif %}
                     {% else %}

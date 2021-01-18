@@ -2468,7 +2468,7 @@ def show_workload():
         url = redirect_url()
 
         # avoid circular references
-        if 'show_workload' in url:
+        if isinstance(url, str) and 'show_workload' in url:
             url = None
 
     return render_template('faculty/show_workload.html', data=data, url=url)

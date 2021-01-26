@@ -2,6 +2,7 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import on_click_selector_field %}
+{% from "icon_block.html" import icon_block %}
 
 {% block scripts %}
     {{ super() }}
@@ -268,24 +269,26 @@
                         </div>
 
                         {% if desc.review_only %}
-                            <div class="card mt-3 mb-3">
-                                <div class="card-header">
-                                    This project is a <strong>literature review</strong>
-                                </div>
-                                <div class="card-body">
-                                    <p>Literature reviews are marked in the same way as conventional projects.
-                                    An outstanding original literature review will attract the same credit
-                                    as any other outstanding project.</p>
-
-                                    <p>However,
-                                    depending on the technicality of the subject,
-                                    it may be more challenging to produce a review at the
-                                    required level.</p>
-
-                                    <p>Marks for literature
-                                    review projects are <strong>not capped</strong>
-                                    as a matter of principle.</p>
-                                </div>
+                            <div class="alert alert-info mt-3 mb-3">
+                                {% call icon_block("info-circle") %}
+                                    <div><strong>This project is a literature review.</strong></div>
+                                    <div class="mt-1">
+                                        Literature reviews are marked in the same way as conventional projects.
+                                        An outstanding original literature review will attract the same credit
+                                        as any other outstanding project.
+                                    </div>
+                                    <div class="mt-1">
+                                        However,
+                                        depending on the technicality of the subject,
+                                        it may be more challenging to produce a review at the
+                                        required level.
+                                    </div>
+                                    <div class="mt-1">
+                                        Marks for literature
+                                        review projects are <strong>not capped</strong>
+                                        as a matter of principle.
+                                    </div>
+                                {% endcall %}
                             </div>
                         {% endif %}
 
@@ -300,8 +303,12 @@
                             {% endif %}
                         {% else %}
                             <div class="alert alert-danger">
-                                This combination of project and project class has no assigned description.
-                                Please return to the description editor and generate a new description there.
+                                {% call icon_block("exclamation-circle") %}
+                                    <div><strong>This combination of project and project class has no assigned description.</strong></div>
+                                    <div class="mt-1">
+                                        Please return to the description editor and generate a new description there.
+                                    </div>
+                                {% endcall %}
                             </div>
                         {% endif %}
                     </div>
@@ -363,7 +370,16 @@
                     {% endif %}
                 {% endif %}
                 {% if show_comments %}
-                    <div class="card mt-3 mb-3 card-body bg-well" style="margin-top: 15px;">
+                    <div class="alert alert-info mt-1 mb-3">
+                        {% call icon_block("info-circle") %}
+                            <div><strong>Comments are not visible to students.</strong></div>
+                            <div class="mt-1">
+                                Any comments you enter are visible only to faculty, the convenor,
+                                and the approvals team.
+                            </div>
+                        {% endcall %}
+                    </div>
+                    <div class="card mt-3 mb-3 card-body bg-well mt-1 mb-1">
                         <div class="row">
                             <div class="col-12">
                                 <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=0, all_workflow=all_workflow|int) }}"
@@ -458,7 +474,7 @@
                             </div>
                         {% endif %}
                     {% endfor %}
-                    <div class="card mt-3 mb-3 card-body bg-well" style="margin-top: 15px;">
+                    <div class="card mt-3 mb-3 card-body bg-well mt-1">
                         {{ wtf.render_field(form.comment) }}
                         {% if is_approver %}
                             {{ wtf.render_field(form.limit_visibility) }}

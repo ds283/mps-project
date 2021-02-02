@@ -9,7 +9,7 @@ backcall==0.2.0
 bcrypt==3.2.0
 bdateutil==0.1
 billiard==3.6.3.0
-bleach==3.2.1
+bleach==3.3.0
 bleach-whitelist==0.0.11
 blinker==1.4
 bokeh==2.1.1

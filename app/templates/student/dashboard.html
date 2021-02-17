@@ -10,8 +10,40 @@
     {{ super() }}
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
-    <script type=text/javascript>
+    <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        var tag = document.createElement('script');
+
+        tag.src = "https://developers.panopto.com/scripts/embedapi.min.js"
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        var embedApi;
+
+        function onPanoptoEmbedApiReady() {
+            embedApi = new EmbedApi("player", {
+                width: "750",
+                height: "422",
+                serverName: "sussex.cloud.panopto.eu",
+                sessionId: "c2274660-a8f0-4f71-ba13-acd101735f7b",
+                events: {
+                    "onlframeReady": onPanoptolframeReady,
+                    "onReady": onPanoptoVideoReady,
+                    "onStateChange": onPanoptoStateUpdate
+                }
+            });
+        };
+
+        function onPanoptolframeReady() {
+            embedApi.loadVideo();
+        }
+
+        function onPanoptoVideoReady() {
+        }
+
+        function onPanoptoStateUpdate() {
+        }
 
         function sendAjax(ranking, configid, selid) {
             $.ajax({
@@ -94,6 +126,14 @@
                 });
             {% endif %}
         {% endfor %}
+
+        $(document).ready(function () {
+            $('#PanoptoModal').modal({
+                show: false
+            }).on('hidden.bs.modal', function() {
+                embedApi.pauseVideo();
+            });
+        });
     </script>
 {% endblock %}
 
@@ -173,7 +213,6 @@
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
-
             {% if messages %}
                 {% for message in messages %}
                     {{ message_card(message, enrolled_classes) }}
@@ -181,7 +220,6 @@
             {% endif %}
 
             {% set ns = namespace(display=0) %}
-
             {% if enrollments and enrollments|length > 0 %}
                 {% for config, sel, sub in enrollments %}
                     {% set pclass = config.project_class %}
@@ -260,6 +298,21 @@
 
         </div>
         <div class="col-1"></div>
-
+    </div>
+    <div class="modal fade" id="PanoptoModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered mw-100 w-75" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                </div>
+                <div class="modal-body">
+                    <div class="embed-responsive embed-responsive-16by9">
+                        <div id="player"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 {% endblock %}

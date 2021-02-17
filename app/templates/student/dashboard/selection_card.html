@@ -115,26 +115,23 @@
             </ul>
         </div>
     </div>
-    <div class="row vertical-top">
-        <div class="col-12" style="text-align: right;">
-            <div class="float-right">
-                <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-success student-dashboard-button">Show available projects...</a>
-                {% if sel.has_submission_list %}
-                    <a class="btn btn-secondary student-dashboard-button" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
-                        Clear submission
-                    </a>
-                {% endif %}
-                <a id="P{{ config.id }}-valid-button"
-                   class="btn btn-primary {% if not is_valid %}d-none{% endif %} student-dashboard-button"
-                   href="{{ url_for('student.submit', sid=sel.id) }}">
-                    {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
-                </a>
-                <a id="P{{ config.id }}-invalid-button"
-                   class="btn btn-primary disabled {% if is_valid %}d-none{% endif %} student-dashboard-button">
-                    {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
-                </a>
-            </div>
-        </div>
+    <div class="d-flex justify-content-end align-content-start w-100">
+        <button type="button" class="btn btn-outline-primary video-btn student-dashboard-button" data-toggle="modal" data-target="#PanoptoModal">Show video help</button>
+        <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-success student-dashboard-button">Show available projects...</a>
+        {% if sel.has_submission_list %}
+            <a class="btn btn-secondary student-dashboard-button" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
+                Clear submission
+            </a>
+        {% endif %}
+        <a id="P{{ config.id }}-valid-button"
+           class="btn btn-primary {% if not is_valid %}d-none{% endif %} student-dashboard-button"
+           href="{{ url_for('student.submit', sid=sel.id) }}">
+            {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
+        </a>
+        <a id="P{{ config.id }}-invalid-button"
+           class="btn btn-primary disabled {% if is_valid %}d-none{% endif %} student-dashboard-button">
+            {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
+        </a>
     </div>
 {% endmacro %}
 
@@ -321,9 +318,7 @@
                 {{ show_submission_status(config, sel) }}
 
             {% elif config.selection_closed %}
-
                 {{ closed_card(config, sel) }}
-
             {% else %}
                 <p>
                     Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}

@@ -6,6 +6,51 @@
 {% block scripts %}
     {{ super() }}
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
+
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }}
+
+        var tag = document.createElement('script');
+
+        tag.src = "https://developers.panopto.com/scripts/embedapi.min.js"
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        var embedApi;
+
+        function onPanoptoEmbedApiReady() {
+            embedApi = new EmbedApi("player", {
+                width: "750",
+                height: "422",
+                serverName: "sussex.cloud.panopto.eu",
+                sessionId: "c2274660-a8f0-4f71-ba13-acd101735f7b",
+                events: {
+                    "onlframeReady": onPanoptolframeReady,
+                    "onReady": onPanoptoVideoReady,
+                    "onStateChange": onPanoptoStateUpdate
+                }
+            });
+        };
+
+        function onPanoptolframeReady() {
+            embedApi.loadVideo();
+        }
+
+        function onPanoptoVideoReady() {
+        }
+
+        function onPanoptoStateUpdate() {
+        }
+
+        $(document).ready(function () {
+            $('#PanoptoModal').modal({
+                show: false
+            }).on('hidden.bs.modal', function() {
+                embedApi.pauseVideo();
+            });
+        });
+    </script>
 {% endblock %}
 
 {% block title %}
@@ -38,8 +83,31 @@
 
         {{ show_prepend_field(login_user_form.email, '<i class="fas fa-user"></i>', show_label=false, placeholder='Email address') }}
         {{ show_prepend_field(login_user_form.password, '<i class="fas fa-lock"></i>', show_label=false, placeholder='Password') }}
-        {{ wtf.render_field(login_user_form.submit, button_map={'submit': 'outline-success'}) }}
+        <div class="d-flex justify-content-between w-100">
+            <div>
+                {{ wtf.render_field(login_user_form.submit, button_map={'submit': 'outline-success'}) }}
+            </div>
+            <div>
+                <button type="button" class="btn btn-outline-primary video-btn" data-toggle="modal" data-target="#PanoptoModal">Help me!</button>
+            </div>
+        </div>
     </form>
+    <div class="modal fade" id="PanoptoModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered mw-100 w-75" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                </div>
+                <div class="modal-body">
+                    <div class="embed-responsive embed-responsive-16by9">
+                        <div id="player"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block footer %}

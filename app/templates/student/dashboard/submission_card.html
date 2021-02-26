@@ -1,3 +1,5 @@
+{% from "icon_block.html" import icon_block %}
+
 {% macro submission_card(config, sub, n, today) %}
     {% set period = config.get_period(n+1) %}
     {% if period %}
@@ -32,7 +34,7 @@
             </div>
             <div class="card-body">
                 {% if period.closed %}
-                    <div class="alert alert-info mt-1 mb-2">
+                    <div class="alert alert-secondary mt-1 mb-2">
                         {% call icon_block("info-circle") %}
                             <strong>Activity for this period is now closed.</strong>
                         {% endcall %}

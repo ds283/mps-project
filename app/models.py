@@ -6755,6 +6755,12 @@ class LiveProject(db.Model,
     number = db.Column(db.Integer())
 
 
+    # AVAILABILITY
+
+    # hidden?
+    hidden = db.Column(db.Boolean(), default=False)
+
+
     # METADATA
 
     # count number of page views
@@ -6770,6 +6776,10 @@ class LiveProject(db.Model,
         :param sel:
         :return:
         """
+        # if project is marked as hidden, it is not available
+        if self.hidden:
+            return False
+
         # if student doesn't satisfy recommended modules, sign-off is required by default whether or not
         # the project/owner settings require sign-off
         if not sel.satisfies_recommended(self) and not self.is_confirmed(sel):

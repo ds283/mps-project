@@ -253,6 +253,7 @@ def _project_list_endpoint(config: ProjectClassConfig, sel: SelectingStudent, ro
         return jsonify({})
 
     base_query = config.live_projects \
+        .filter(~LiveProject.hidden) \
         .join(Project, Project.id == LiveProject.parent_id) \
         .join(User, User.id == Project.owner_id) \
         .join(ResearchGroup, ResearchGroup.id == LiveProject.group_id)
@@ -513,6 +514,11 @@ def add_bookmark(sid, pid):
     if not verify_open(project.config, strict=True, message=True):
         return redirect(redirect_url())
 
+    if project.hidden:
+        flash('This project has been marked as unavailable by the convenor, '
+              'and cannot be bookmarked.', 'error')
+        return redirect(redirect_url())
+
     # verify student is allowed to view this live project
     if not verify_view_project(sel.config, project):
         return redirect(redirect_url())
@@ -585,6 +591,11 @@ def request_confirmation(sid, pid):
 
     # verify student is allowed to view this live project
     if not verify_view_project(sel.config, project):
+        return redirect(redirect_url())
+
+    if project.hidden:
+        flash('This project has been marked as unavailable by the convenor. '
+              'It cannot be selected.', 'error')
         return redirect(redirect_url())
 
     # check if confirmation has already been issued

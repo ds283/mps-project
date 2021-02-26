@@ -2198,6 +2198,95 @@ def perform_delete_live_project(pid):
     return redirect(url_for('convenor.liveprojects', id=config.pclass_id))
 
 
+@convenor.route('/hide_liveproject/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def hide_liveproject(id):
+    """
+    Mark a LiveProject as hidden, ie. not published in the global list
+    :param id:
+    :return:
+    """
+    # get LiveProject
+    project: LiveProject = LiveProject.query.get_or_404(id)
+
+
+    # get ProjectClassConfig that this LiveProject belongs to
+    config: ProjectClassConfig = project.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(redirect_url())
+
+    # not entirely clear that hiding/unhiding should be forbidden after selections close, but it has no
+    # meaning, so nothing seems lost by disallowing it.
+    # This also preserves the database record.
+    if config.selection_closed:
+        flash('Cannot hide LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
+              'because selections have already closed'.format(cls=config.name, yra=config.year, yrb=config.year+1),
+              'info')
+        return redirect(redirect_url())
+
+    try:
+        project.hidden = True
+        db.session.commit()
+
+    except SQLAlchemyError as e:
+        flash('Could not hide live project "{name}" because of a database error. '
+              'Please contact a system administrator.'.format(name=project.name), 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@convenor.route('/unhide_liveproject/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def unhide_liveproject(id):
+    """
+    Mark a LiveProject as hidden, ie. not published in the global list
+    :param id:
+    :return:
+    """
+    # get LiveProject
+    project: LiveProject = LiveProject.query.get_or_404(id)
+
+    # get ProjectClassConfig that this LiveProject belongs to
+    config: ProjectClassConfig = project.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(redirect_url())
+
+    # not entirely clear that hiding/unhiding should be forbidden after selections close, but it has no
+    # meaning, so nothing seems lost by disallowing it.
+    # This also preserves the database record.
+    if config.selection_closed:
+        flash('Cannot unhide LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
+              'because selections have already closed'.format(cls=config.name, yra=config.year, yrb=config.year + 1),
+              'info')
+        return redirect(redirect_url())
+
+    try:
+        project.hidden = False
+        db.session.commit()
+
+    except SQLAlchemyError as e:
+        flash('Could not unhide live project "{name}" because of a database error. '
+              'Please contact a system administrator.'.format(name=project.name), 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
 @convenor.route('/attach_liveproject/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def attach_liveproject(id):

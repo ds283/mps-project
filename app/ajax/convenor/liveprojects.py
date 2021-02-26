@@ -14,6 +14,18 @@ from ...models import ProjectClassConfig
 
 
 # language=jinja2
+_name = \
+"""
+<a href="{{ url_for('faculty.live_project', pid=project.id, text='live projects list', url=url_for('convenor.liveprojects', id=config.pclass_id)) }}">{{ project.name }}</a>
+{% if project.hidden %}
+    <div>
+        <span class="badge badge-danger"><i class="fas fa-eye-slash"></i> HIDDEN</span>
+    </div>
+{% endif %}
+"""
+
+
+# language=jinja2
 _bookmarks = \
 """
 {% set bookmarks = project.number_bookmarks %}
@@ -116,9 +128,16 @@ _menu = \
         <a class="dropdown-item" href="{{ url_for('convenor.delete_live_project', pid=project.id) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
-        
+        {% if project.hidden %}
+            <a class="dropdown-item" href="{{ url_for('convenor.unhide_liveproject', id=project.id) }}">
+                <i class="fas fa-eye fa-fw"></i> Unhide
+            </a>
+        {% else %}
+            <a class="dropdown-item" href="{{ url_for('convenor.hide_liveproject', id=project.id) }}">
+                <i class="fas fa-eye-slash fa-fw"></i> Hide
+            </a>
+        {% endif %}        
         <div role="separator" class="dropdown-divider">
-
         {% if project.number_bookmarks > 0 %}
             <a class="dropdown-item" href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
                 <i class="fas fa-cogs fa-fw"></i> Bookmarking students
@@ -203,12 +222,8 @@ def liveprojects_data(config: ProjectClassConfig, projects, url=None, text=None)
         return rank
 
     data = [{'number': '{c}'.format(c=p.number),
-             'name': '<a href="{url}">{name}</a>'.format(name=p.name,
-                                                         url=url_for('faculty.live_project', pid=p.id,
-                                                                     text='live projects list',
-                                                                     url=url_for('convenor.liveprojects', id=config.pclass_id))),
-             'owner': '<a href="mailto:{em}">{name}</a>'.format(em=p.owner.user.email,
-                                                                name=p.owner.user.name),
+             'name': render_template_string(_name, project=p, config=config),
+             'owner': '<a href="mailto:{em}">{name}</a>'.format(em=p.owner.user.email, name=p.owner.user.name),
              'group': p.group.make_label(),
              'bookmarks': {
                  'display': render_template_string(_bookmarks, project=p),

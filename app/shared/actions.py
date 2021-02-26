@@ -35,12 +35,17 @@ def render_project(data, desc, form=None, text=None, url=None, show_selector=Tru
         # if config attribute is missing, most likely reason is that data is a Project rather than a LiveProject
         archived = False
 
+    if hasattr(data, 'hidden'):
+        hidden = data.hidden
+    else:
+        hidden = False
+
     # without the sel variable, won't render any of the student-specific items
     return render_template('student/show_project.html', title=data.name, project=data, desc=desc, keywords=keywords,
                            form=form, text=text, url=url, show_selector=show_selector, allow_approval=allow_approval,
                            show_comments=show_comments, comments=comments, all_comments=all_comments,
                            all_workflow=all_workflow, pclass_id=pclass_id, workflow_history=workflow_history,
-                           archived=archived)
+                           archived=archived, hidden=hidden)
 
 
 

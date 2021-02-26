@@ -91,17 +91,36 @@
                 </div>
                 <hr class="intro-divider">
 
+                {% if hidden %}
+                    <div class="alert alert-danger mt-1 mb-1">
+                        {% call icon_block("exclamation-circle") %}
+                            <div><strong>
+                                This project is not available for selection.
+                            </strong></div>
+                            <div class="mt-1">
+                                This project has been marked as unavailable by the convenor.
+                                Please do not bookmark or select it.
+                            </div>
+                        {% endcall %}
+                    </div>
+                {% endif %}
+
                 {% if archived %}
-                    <div class="alert alert-warning">
-                        This is an <strong>archived description</strong> that refers to a project offered
-                        in
-                        {% if project.config is not none %}
-                            <strong>academic year {{ project.config.year }}&ndash;{{ project.config.year+1 }}</strong>.
-                        {% else %}
-                            a <strong>previous academic year</strong>.
-                        {% endif %}
-                        In the current academic year the project might no longer be offered,
-                        or its description and content may have changed.
+                    <div class="alert alert-warning mt-1 mb-1">
+                        {% call icon_block("info-circle") %}
+                            <div><strong>
+                                This is an archived description that refers to a project offered in
+                                {% if project.config is not none %}
+                                    academic year {{ project.config.year }}&ndash;{{ project.config.year+1 }}.
+                                {% else %}
+                                    a previous academic year.
+                                {% endif %}
+                            </strong></div>
+                            <div class="mt-1">
+                                In the current academic year the project might no longer be offered,
+                                or its description and content may have changed.
+                            </div>
+                        {% endcall %}
                     </div>
                 {% endif %}
 
@@ -115,7 +134,7 @@
                                         Key facts
                                     </div>
                                     <div class="col-8">
-                                        {% if sel and selections_open %}
+                                        {% if not hidden and sel and selections_open %}
                                             <div class="float-right">
                                                 {% if sel.bookmarks.filter_by(liveproject_id=project.id).first() %}
                                                     <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"

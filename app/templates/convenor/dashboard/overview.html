@@ -298,7 +298,7 @@
                     {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
                         {{ selection_closed(config, config.year < current_year) }}
                     {% else %}
-                        <div class="card mt-3 mb-3">
+                        <div class="card border-danger mt-3 mb-3">
                             <div class="card-header bg-danger text-white">Error</div>
                             <div class="card-body">
                                 <strong>Error:</strong>

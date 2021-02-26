@@ -732,6 +732,8 @@ def AssetMixinFactory(acl_name, acr_name):
                 if user_obj.has_role(role):
                     return True
 
+            return False
+
 
         def get_eligible_roles(self, user):
             user_obj = self._get_user(user)
@@ -2180,7 +2182,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
                     vs = [v for v in vs if v.has_warning(w)]
             else:
                 raise RuntimeError('Could not interpret parameter filter_warnings of type {typ} in '
-                                   'FacultyData.variants_offered'.format(type=type(filter_warnings)))
+                                   'FacultyData.variants_offered'.format(typ=type(filter_warnings)))
 
         if filter_errors is not None:
             if isinstance(filter_errors, str):
@@ -2190,7 +2192,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
                     vs = [v for v in vs if v.has_error(e)]
             else:
                 raise RuntimeError('Could not interpret parameter filter_errors of type {typ} in '
-                                   'FacultyData.variants_offered'.format(type=type(filter_errors)))
+                                   'FacultyData.variants_offered'.format(typ=type(filter_errors)))
 
         return vs
 
@@ -2310,11 +2312,15 @@ class FacultyData(db.Model, EditingMetadataMixin):
                                   presentations_state=EnrollmentRecord.PRESENTATIONS_ENROLLED,
                                   presentations_comment=None,
                                   presentations_reenroll=None,
+                                  CATS_supervision=None,
+                                  CATS_marking=None,
+                                  CATS_presentation=None,
                                   creator_id=current_user.id,
                                   creation_timestamp=datetime.now(),
                                   last_edit_id=None,
                                   last_edit_timestamp=None)
 
+        # allow uncaught exceptions to propagate; it's the caller's responsibility to catch these
         db.session.add(record)
         db.session.commit()
 
@@ -2968,29 +2974,28 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         :return: value to be stored in named attribute
         """
         # allow validation to be disabled during batch import
-        if hasattr(self, 'disable_validate'):
-            return value
+        if not hasattr(self, 'disable_validate'):
 
-        with db.session.no_autoflush:
-            self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+            with db.session.no_autoflush:
+                self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
 
-            provisional_year = self._get_provisional_year(self.cohort, self.repeated_years)
+                provisional_year = self._get_provisional_year(self.cohort, self.repeated_years)
 
-            self.disable_validate = True
+                self.disable_validate = True
 
-            if provisional_year is not None and provisional_year != value:
-                if provisional_year > value:
-                    self.repeated_years = provisional_year - value
+                if provisional_year is not None and provisional_year != value:
+                    if provisional_year > value:
+                        self.repeated_years = provisional_year - value
 
-                elif provisional_year < value:
-                    diff = self.repeated_years - abs(provisional_year)
+                    elif provisional_year < value:
+                        diff = self.repeated_years - abs(provisional_year)
 
-                    if diff >= 0:
-                        self.repeated_years = self.repeated_years - diff
-                    else:
-                        raise ValueError
+                        if diff >= 0:
+                            self.repeated_years = self.repeated_years - diff
+                        else:
+                            raise ValueError
 
-            del self.disable_validate
+                del self.disable_validate
 
         return value
 

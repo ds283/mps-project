@@ -2744,7 +2744,7 @@ def add_project(pclass_id):
     else:
         if request.method == 'GET':
             # use convenor's defaults
-            # This solution is arbitrary, but no less arbitrary than any other choice
+            # This solution is arbitrary, but no more arbitrary than any other choice
             owner = current_user.faculty_data
 
             if owner is not None:
@@ -3349,7 +3349,7 @@ def make_default_description(pid, pclass_id, did=None):
         desc = ProjectDescription.query.get_or_404(did)
 
         if desc.parent_id != pid:
-            flash('Cannot set default description (id={did)) for project (id={pid}) because this description '
+            flash('Cannot set default description (id={did}) for project (id={pid}) because this description '
                   'does not belong to the project'.format(pid=pid, did=did), 'error')
             return redirect(redirect_url())
 

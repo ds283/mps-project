@@ -1,14 +1,22 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import date_field %}
+{% from "icon_block.html" import icon_block %}
 
 {% macro project_activity(config, period, feedback_form, today) %}
     {% if period.start_date and period.start_date > today %}
-        <p>This period will begin on {{ period.start_date.strftime("%a %d %b %Y") }}</p>
+        <div class="alert alert-secondary mt-1 mb-3">
+            {% call icon_block("info-circle") %}
+                <div><strong>This period will begin on {{ period.start_date.strftime("%a %d %b %Y") }}.</strong></div>
+            {% endcall %}
+        </div>
     {% else %}
-        <p>Normal project activity is underway.</p>
+        <div class="alert alert-secondary mt-1 mb-3">
+            {% call icon_block("info-circle") %}
+                <div><strong>Normal project activity is underway.</strong></div>
+            {% endcall %}
+        </div>
     {% endif %}
     <form action="{{ url_for('convenor.open_feedback', id=config.id) }}" method="POST" name="feedback-form">
-        <hr class="intro-divider">
         {{ feedback_form.hidden_tag() }}
         {{ date_field(feedback_form.feedback_deadline, 'deadline_datetimepicker') }}
         {{ wtf.render_field(feedback_form.max_attachment) }}

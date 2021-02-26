@@ -36,10 +36,16 @@
             {% set textclass = 'text-white' %}
         {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
             {# no markup required; formerly panel-default #}
-        {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
-            {% set bgclass = 'bg-danger' %}
-            {% set borderclass = 'border-danger' %}
-            {% set textclass = 'text-white' %}
+        {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+            {% if confirm_required %}
+                {% set bgclass = 'bg-danger' %}
+                {% set borderclass = 'border-danger' %}
+                {% set textclass = 'text-white' %}
+            {% else %}
+                {% set bgclass = 'bg-info' %}
+                {% set borderclass = 'border-info' %}
+                {% set textclass = 'text-white' %}
+            {% endif %}
         {% else %}
             {% set bgclass = 'bg-info' %}
             {% set borderclass = 'border-info' %}
@@ -107,7 +113,7 @@
                 {% set bgclass = 'alert-danger' %}
                 {% set iconclass = 'exclamation-circle' %}
             {% endif %}
-            <div class="alert {{ bgclass }} mt-1 mb-2">
+            <div class="alert {{ bgclass }} mt-1 mb-3">
                 {% call icon_block(iconclass) %}
                     <div class="d-flex w-100 justify-content-between align-items-start">
                         <div>

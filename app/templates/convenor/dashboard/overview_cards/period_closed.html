@@ -1,22 +1,35 @@
+{% from "icon_block.html" import icon_block %}
+
 {% macro period_closed(config, period) %}
-    <p>Project activity for this period is now complete.</p>
+    {% set topclass = '' %}
+    <div class="alert alert-secondary mt-1">
+        {% call icon_block("info-circle") %}
+            <div><strong>Project activity for this period is now complete.</strong></div>
+        {% endcall %}
+    </div>
     {% set total = period.number_submitters %}
     {% set pushed = period.number_submitters_pushed_feedback %}
     {% set not_pushed = period.number_submitters_not_pushed %}
     {% set supv = period.number_submitters_supervisor_feedback %}
     {% set mark = period.number_submitters_marker_feedback %}
     {% if not period.collect_project_feedback %}
-        <div class="alert alert-warning">
-            Collection of project feedback was disabled for this submission period.
+        {% set topclass = '' %}
+        <div class="alert alert-warning mt-1">
+            {% call icon_block("info-circle") %}
+                </div><strong>Collection of project feedback was disabled for this submission period.</strong></div>
+            {% endcall %}
         </div>
     {% endif %}
     {% if period.has_presentation and not period.collect_presentation_feedback %}
-        <div class="alert alert-warning">
-            Collection of presentation feedback was disabled for this submission period.
+        {% set topclass = '' %}
+        <div class="alert alert-warning mt-1">
+            {% call icon_block("info-circle") %}
+                <div><strong>Collection of presentation feedback was disabled for this submission period.</strong></div>
+            {% endcall %}
         </div>
     {% endif %}
     {% set twocolumn = period.collect_project_feedback or (period.has_presentation and period.collect_presentation_feedback) %}
-    <div class="row vertical-top">
+    <div class="row vertical-top {{ topclass }}">
         <div class="col-1"></div>
         {% if twocolumn %}
             <div class="col-5">

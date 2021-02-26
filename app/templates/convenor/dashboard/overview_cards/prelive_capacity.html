@@ -6,7 +6,46 @@
     {% set total_faculty = data['faculty_offering'] %}
     {% set total_capacity = data['capacity'] %}
     {% set total_capacity_bounded = data['capacity_bounded'] %}
-    <div class="row vertical-align capacity-table">
+    {% set topclass = '' %}
+    {% if total_capacity >= sel_count %}
+        {% if total_faculty >= sel_count %}
+            {% set topclass = 'mt-3' %}
+            <div class="alert alert-info mt-1">
+                {% call icon_block("info-circle") %}
+                    <div><strong>Approximate allocation is less than one project per faculty member.</strong></div>
+                    <div class="mt-1">Note that this estimate does not account for constraints.</div>
+                {% endcall %}
+            </div>
+        {% else %}
+            {% set alloc = sel_count / total_faculty %}
+            {% set alloc_lo = alloc|round(1, 'floor') %}
+            {% set alloc_hi = alloc|round(1, 'ceil') %}
+            {% set topclass = 'mt-3' %}
+            <div class="alert alert-info mt-1">
+                {% call icon_block("info-circle") %}
+                    <div><strong>Approximate allocation is between {{ alloc_lo }} and {{ alloc_hi }} projects per faculty member.</strong></div>
+                    <div class="mt-1">Note that this estimate does not account for constraints.</div>
+                {% endcall %}
+            </div>
+        {% endif %}
+    {% endif %}
+    {% if total_capacity < sel_count %}
+        {% set topclass = 'mt-3' %}
+        <div class="alert alert-danger mt-1">
+            {% call icon_block("exclamation-circle") %}
+                <div><strong>There are fewer project places than selectors. More projects are required.</strong></div>
+            {% endcall %}
+        </div>
+    {% elif total_capacity < 1.15*sel_count %}
+        {% set topclass = 'mt-3' %}
+        <div class="alert alert-warning mt-1">
+            {% call icon_block("exclamation-circle") %}
+                <div><strong>Total capacity is no more than 15% above number of selectors.</strong></div>
+                <div class="mt-1">The project allocation is likely to be inflexible. Consider adding more projects.</div>
+            {% endcall %}
+        </div>
+    {% endif %}
+    <div class="row vertical-align capacity-table {{ topclass }}">
         <div class="col-4"><strong>Research group</strong></div>
         <div class="col-2"><strong>Projects offered</strong></div>
         <div class="col-2"><strong>Student capacity</strong></div>
@@ -59,38 +98,4 @@
         <div class="col-2"></div>
         <div class="col-2"></div>
     </div>
-    {% if total_capacity < sel_count %}
-        <div class="alert alert-danger">
-            <strong>Warning.</strong>
-            There are fewer project places than selectors. More projects are required.
-        </div>
-    {% elif total_capacity < 1.15*sel_count %}
-        <div class="alert alert-danger">
-            <strong>Warning.</strong>
-            Total capacity is no more than 15% above number of selectors.
-            The project allocation is likely to be inflexible.
-            Consider adding more projects.
-        </div>
-    {% endif %}
-    {% if total_capacity >= sel_count %}
-        {% if total_faculty >= sel_count %}
-            <div class="alert alert-info">
-                {% call icon_block("info-circle") %}
-                    <div>Approximate allocation is less than one project per faculty member.</div>
-                    <div class="mt-1"><strong>Warning.</strong> This estimate does not account for constraints.</div>
-                {% endcall %}
-            </div>
-        {% else %}
-            {% set alloc = sel_count / total_faculty %}
-            {% set alloc_lo = alloc|round(1, 'floor') %}
-            {% set alloc_hi = alloc|round(1, 'ceil') %}
-            <div class="alert alert-info">
-                Approximate allocation is between {{ alloc_lo }} and {{ alloc_hi }}
-                projects per faculty member.
-                <p>
-                    <strong>Warning.</strong> This estimate does not account for constraints.
-                </p>
-            </div>
-        {% endif %}
-    {% endif %}
 {% endmacro %}

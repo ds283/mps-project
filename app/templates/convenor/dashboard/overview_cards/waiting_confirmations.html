@@ -54,7 +54,10 @@
             </form>
         </div>
     </div>
-    <hr class="intro-divider">
-    <div class="dashboard-subtitle">Approximate student capacities</div>
-    {{ prelive_capacity(capacity_data, sel_count) }}
+    <div class="card border-info mt-3 mb-3">
+        <div class="card-header bg-info text-white">Approximate student capacities</div>
+        <div class="card-body">
+            {{ prelive_capacity(capacity_data, sel_count) }}
+        </div>
+    </div>
 {% endmacro %}

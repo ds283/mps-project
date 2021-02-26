@@ -22,9 +22,9 @@
                                 </a>
                             </div>
                         </div>
-                        <div>
+                        <div class="ml-3">
                             <a href="{{ url_for('convenor.force_confirm_all', id=config.id) }}"
-                               class="btn btn-sm btn-danger">
+                               class="btn btn-sm btn-danger text-nowrap">
                                 Force confirm all
                             </a>
                         </div>
@@ -44,7 +44,7 @@
                 <div class="row">
                     <div class="col-12">
                         <div class="float-right">
-                            <a href="{{ url_for('convenor.confirmation_reminder', id=config.id) }}" class="btn btn-secondary">
+                            <a href="{{ url_for('convenor.confirmation_reminder', id=config.id) }}" class="btn btn-secondary text-nowrap">
                                 Send reminders
                             </a>
                             {{ wtf.render_field(issue_form.submit_button, button_map={'submit_button': 'secondary'}) }}

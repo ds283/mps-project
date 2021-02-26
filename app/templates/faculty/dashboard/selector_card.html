@@ -98,8 +98,8 @@
                                     </div>
                                 {% endif %}
                             </div>
-                            <div>
-                                <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-sm btn-success">Confirm all projects</a>
+                            <div class="ml-3">
+                                <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-sm btn-success text-nowrap">Confirm all projects</a>
                             </div>
                         </div>
                     {% endcall %}
@@ -127,8 +127,8 @@
                                 </div>
                             {% endif %}
                         </div>
-                        <div>
-                            <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-sm {% if nproj==0 %}btn-danger{% else %}btn-outline-secondary{% endif %}">Go to project library</a>
+                        <div class="ml-3">
+                            <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-sm {% if nproj==0 %}btn-danger{% else %}btn-outline-secondary{% endif %} text-nowrap">Go to project library</a>
                         </div>
                     </div>
                 {% endcall %}

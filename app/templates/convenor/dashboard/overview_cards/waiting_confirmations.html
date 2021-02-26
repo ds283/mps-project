@@ -11,22 +11,27 @@
         <div class="card-body">
             <div class="alert alert-warning">
                 {% call icon_block("exclamation-circle") %}
-                    <div class="d-flex w-100 justify-content-between align-content-start">
+                    <div class="d-flex w-100 justify-content-between align-items-end">
                         <div>
-                            <div><strong>Confirmations are outstanding from {{ config.confirm_outstanding_count }}
-                                faculty</strong>.
+                            <div><strong>
+                                Confirmations are outstanding from {{ config.confirm_outstanding_count }}
+                                faculty.
+                            </strong></div>
+                            <div>
+                                <a href="{{ url_for('convenor.outstanding_confirm', id=config.id) }}">View outstanding responses...
+                                </a>
                             </div>
-                            <div><a href="{{ url_for('convenor.outstanding_confirm', id=config.id) }}">View outstanding
-                                responses...</a></div>
                         </div>
-                        <a href="{{ url_for('convenor.force_confirm_all', id=config.id) }}"
-                           class="btn btn-sm btn-danger">
-                            Force confirm all
-                        </a>
-                    <div>
+                        <div>
+                            <a href="{{ url_for('convenor.force_confirm_all', id=config.id) }}"
+                               class="btn btn-sm btn-danger">
+                                Force confirm all
+                            </a>
+                        </div>
+                    </div>
                 {% endcall %}
             </div>
-            <div class="row mt-1">
+            <div class="row mt-1 mb-2">
                 <div class="col-1"></div>
                 <div class="col-10">
                     {{ approvals_state(capacity_data) }}

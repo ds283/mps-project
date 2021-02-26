@@ -1,5 +1,6 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import date_field %}
+{% from "icon_block.html" import icon_block %}
 
 {% macro selection_open(config, change_form) %}
     <div class="card mt-3 mb-3">
@@ -55,66 +56,85 @@
                 <div class="col-12">
                     {% if submitted == total %}
                         <div class="alert alert-success m-3">
-                            <p>All students have submitted validated choices.</p>
-                            <p>
-                                It is safe to close selections.
-                                {% if total == 0 %}
-                                    <a class="btn btn-sm btn-outline-danger" href="{{ url_for('convenor.reverse_golive', config_id=config.id) }}" style="margin-left: 10px;">
-                                        Reverse Go Live to add more selectors
-                                    </a>
-                                {% endif %}
-                            </p>
+                            {% call icon_block("info-circle") %}
+                                <div><strong>All students have submitted validated choices.</strong></div>
+                                <div>
+                                    It is safe to close selections.
+                                    {% if total == 0 %}
+                                        <a class="btn btn-sm btn-outline-danger" href="{{ url_for('convenor.reverse_golive', config_id=config.id) }}" style="margin-left: 10px;">
+                                            Reverse Go Live to add more selectors
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            {% endcall %}
                         </div>
                     {% elif missing == 0 %}
                         <div class="alert alert-info mt-3 mb-3">
-                            Some students have not yet submitted a validated selection, but all students
-                            have bookmark data.
+                            {% call icon_block("info-circle") %}
+                                <div><strong>Please note</strong></div>
+                                <div class="mt-1">
+                                    Some students have not yet submitted a validated selection, but all students
+                                    have bookmark data.
+                                </div>
+                            {% endcall %}
                         </div>
                         {% if config.selection_open_to_all %}
                             <div class="alert alert-warning mt-3 mb-3">
-                                <p>
-                                    <strong>Selection for this project is available to all eligible students on an opt-in basis.</strong>
-                                </p>
-                                <p>
-                                    <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i></span>
-                                    If selections are closed now, students who have not submitted a validated selection
-                                    will be assumed not to have opted-in and will be ignored when performing
-                                    automatic matching.
-                                </p>
+                                {% call icon_block("exclamation-circle") %}
+                                    <div>
+                                        <strong>Selection for this project is available to all eligible students on an opt-in basis.</strong>
+                                    </div>
+                                    <div class="mt-1">
+                                        If selections are closed now, students who have not submitted a validated selection
+                                        will be assumed not to have opted-in and will be ignored when performing
+                                        automatic matching.
+                                    </div>
+                                {% endcall %}
                             </div>
                         {% else %}
                             <div class="alert alert-info mt-3 mb-3">
-                                If selections are closed now, bookmark data will be used when performing
-                                automatic matching for students who are missing a validated selection.
+                                {% call icon_block("info-circle") %}
+                                    <div><strong>Please note</strong></div>
+                                    <div class="mt-1">
+                                        If selections are closed now, bookmark data will be used when performing
+                                        automatic matching for students who are missing a validated selection.
+                                    </div>
+                                {% endcall %}
                             </div>
                         {% endif %}
                     {% else %}
                         <div class="alert alert-warning mt-3 mb-3">
-                            <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i></span>
-                            Some students are missing both a validated selection and bookmark data.
+                            {% call icon_black("exclamation-circle") %}
+                                <div><strong>Some students are missing both a validated selection and bookmark data.</strong></div>
+                            {% endcall %}
                         </div>
                         {% if config.selection_open_to_all %}
                             <div class="alert alert-warning mt-3 mb-3">
-                                <p>
-                                    <strong>Selection for this project is available to all eligible students on an opt-in basis.</strong>
-                                </p>
-                                <p>
-                                    <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i></span>
-                                    If selections are closed now, students who have not submitted a validated selection
-                                    will be assumed not to have opted-in and will be ignored when performing
-                                    automatic matching.
-                                </p>
+                                {% call icon_block("info-circle") %}
+                                    <div>
+                                        <strong>Selection for this project is available to all eligible students on an opt-in basis.</strong>
+                                    </div>
+                                    <div class="mt-1">
+                                        If selections are closed now, students who have not submitted a validated selection
+                                        will be assumed not to have opted-in and will be ignored when performing
+                                        automatic matching.
+                                    </div>
+                                {% endcall %}
                             </div>
                         {% else %}
                             <div class="alert alert-info mt-3 mb-3">
-                                If selections are closed now, bookmark data will be used when performing
-                                automatic matching for students who are missing a validated selection.
+                                {% call icon_block("info-circle") %}
+                                    <div><strong>Please note</strong></div>
+                                    <div class="mt-1">
+                                        If selections are closed now, bookmark data will be used when performing
+                                        automatic matching for students who are missing a validated selection.
+                                    </div>
+                                {% endcall %}
                             </div>
                         {% endif %}
                     {% endif %}
                 </div>
             </div>
-            <hr class="intro-divider">
             <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}" method="POST" name="adjust_selection_deadline">
                 {{ change_form.hidden_tag() }}
                 {{ date_field(change_form.live_deadline, 'live_datetimepicker') }}

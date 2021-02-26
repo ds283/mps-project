@@ -271,50 +271,45 @@
 
             {% if pclass.publish %}
                 {# SELECTING #}
-                <div class="card mt-3 mb-3 card-body bg-well">
-                    {# provide summary #}
-
-                    {% if config.has_auditable_schedules %}
-                        <div class="card mt-3 mb-3 border-danger">
-                            <div class="card-header bg-danger text-white">Proposed assessment schedules are available to view</div>
-                            <div class="card-body">
-                                <p>An administrator has published one or more proposed schedules for presentation assessments.</p>
-                                <a href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or edit proposed schedules...</a>
-                            </div>
+                {# provide summary #}
+                {% if config.has_auditable_schedules %}
+                    <div class="card mt-3 mb-3 border-danger">
+                        <div class="card-header bg-danger text-white">Proposed assessment schedules are available to view</div>
+                        <div class="card-body">
+                            <p>An administrator has published one or more proposed schedules for presentation assessments.</p>
+                            <a href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or edit proposed schedules...</a>
                         </div>
-                    {% endif %}
+                    </div>
+                {% endif %}
 
-                    {% set state = config.selector_lifecycle %}
-                    {% set sel_count = convenor_data['selectors'] %}
-                    {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-                        {{ issue_confirmations(config, issue_form, capacity_data, sel_count) }}
-                    {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                        {# if we get here then we can assume requests have been issued because of the outermost if #}
-                        {{ waiting_confirmations(config, issue_form, capacity_data, sel_count) }}
-                    {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                        {{ golive(config, golive_form, capacity_data, sel_count) }}
-                    {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                        {{ selection_open(config, change_form) }}
-                    {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
-                        {{ selection_closed(config, config.year < current_year) }}
-                    {% else %}
-                        <div class="card border-danger mt-3 mb-3">
-                            <div class="card-header bg-danger text-white">Error</div>
-                            <div class="card-body">
-                                <strong>Error:</strong>
-                                Unknown project lifecycle state {{ state }}
-                            </div>
+                {% set state = config.selector_lifecycle %}
+                {% set sel_count = convenor_data['selectors'] %}
+                {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                    {{ issue_confirmations(config, issue_form, capacity_data, sel_count) }}
+                {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                    {# if we get here then we can assume requests have been issued because of the outermost if #}
+                    {{ waiting_confirmations(config, issue_form, capacity_data, sel_count) }}
+                {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+                    {{ golive(config, golive_form, capacity_data, sel_count) }}
+                {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                    {{ selection_open(config, change_form) }}
+                {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
+                    {{ selection_closed(config, config.year < current_year) }}
+                {% else %}
+                    <div class="card border-danger mt-3 mb-3">
+                        <div class="card-header bg-danger text-white">Error</div>
+                        <div class="card-body">
+                            <strong>Error:</strong>
+                            Unknown project lifecycle state {{ state }}
                         </div>
-                    {% endif %}
-                </div>
+                    </div>
+                {% endif %}
 
                 {# SUBMITTING #}
-                <div class="card mt-3 mb-3 card-body bg-well">
-                    {% for n in range(config.submissions) %}
-                        <a id="submitter_card_{{ loop.index }}"></a>
-                        {{ submitter_card(config, n, today, feedback_form)  }}
-                    {% endfor %}
-                </div>
+                {% for n in range(config.submissions) %}
+                    <a id="submitter_card_{{ loop.index }}"></a>
+                    {{ submitter_card(config, n, today, feedback_form)  }}
+                {% endfor %}
             {% else %}
                 <div class="card mt-3 mb-3 card-body bg-well">
                     <p>

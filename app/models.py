@@ -4927,7 +4927,11 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
         if self.request_deadline is None:
             return '<invalid>'
 
-        delta = self.request_deadline - date.today()
+        today = date.today()
+        if today > self.request_deadline:
+            return 'in the past'
+
+        delta = self.request_deadline - today
         return format_readable_time(delta)
 
 
@@ -4936,7 +4940,11 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
         if self.live_deadline is None:
             return '<invalid>'
 
-        delta = self.live_deadline - date.today()
+        today = date.today()
+        if today > self.live_deadline:
+            return 'in the past'
+
+        delta = self.live_deadline - today
         return format_readable_time(delta)
 
 

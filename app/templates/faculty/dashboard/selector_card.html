@@ -20,24 +20,34 @@
     {% else %}
         {% set nproj_plural = 's' %}
     {% endif %}
-    <div class="card mt-3 mb-3 {% if nproj == 0 or (sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required) %}border-danger{% endif %}">
-        <div class="card-header
-            {% if is_sabbatical or is_exempt %}
-                {# no markup required; formerly panel-default #}
-            {% else %}
-                {% if nproj == 0 %}
-                    bg-danger text-white
-                {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                    bg-success text-white
-                {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
-                    {# no markup required; formerly panel-default #}
-                {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
-                    bg-danger text-white
-                {% else %}
-                    bg-info text-white
-                {% endif %}
-            {% endif %}
-        ">
+    {% set bgclass = '' %}
+    {% set borderclass = '' %}
+    {% set textclass = '' %}
+    {% if is_sabbatical or is_exempt %}
+        {# no markup required; formerly panel-default #}
+    {% else %}
+        {% if nproj == 0 %}
+            {% set bgclass = 'bg-danger' %}
+            {% set borderclass = 'border-danger' %}
+            {% set textclass = 'text-white' %}
+        {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+            {% set bgclass = 'bg-success' %}
+            {% set borderclass = 'border-success' %}
+            {% set textclass = 'text-white' %}
+        {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
+            {# no markup required; formerly panel-default #}
+        {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
+            {% set bgclass = 'bg-danger' %}
+            {% set borderclass = 'border-danger' %}
+            {% set textclass = 'text-white' %}
+        {% else %}
+            {% set bgclass = 'bg-info' %}
+            {% set borderclass = 'border-info' %}
+            {% set textclass = 'text-white' %}
+        {% endif %}
+    {% endif %}
+    <div class="card {{ borderclass }} mt-3 mb-3">
+        <div class="card-header {{ bgclass }} {{ textclass }}">
             {% if is_sabbatical %}
                 Student selections: <strong>on sabbatical</strong> [no response required]
             {% elif is_exempt %}
@@ -66,59 +76,56 @@
         <div class="card-body">
             {# show confirmation request if one is active #}
             {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
-                <p>
-                    <strong>
-                        Please review your projects to ensure their descriptions are up-to-date,
-                        and those you wish to offer next year are listed below.
-                    </strong>
-                </p>
-                <div class="row vertical-bottom">
-                    <div class="col-9">
-                        {% if config.request_deadline %}
-                            <div class="mt-1 text-secondary">
-                                The project convenor has set a deadline of
-                                <strong>{{ config.request_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
-                                <strong>{{ config.time_to_request_deadline }}</strong> from now.
+                <div class="alert alert-danger mt-1 mb-2">
+                    {% call icon_block('exclamation-circle') %}
+                        <div class="d-flex w-100 justify-content-between align-items-end">
+                            <div>
+                                <strong>
+                                    Please review your projects to ensure their descriptions are up-to-date,
+                                    and those you wish to offer next year are listed below.
+                                </strong>
+                                {% if config.request_deadline %}
+                                    <div class="mt-1">
+                                        The project convenor has set a deadline of
+                                        <strong>{{ config.request_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
+                                        <strong>{{ config.time_to_request_deadline }}</strong> from now.
+                                    </div>
+                                {% endif %}
                             </div>
-                        {% endif %}
-                    </div>
-                    <div class="col-3">
-                        <div class="float-right">
-                            <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-success">Confirm all projects</a>
+                            <div>
+                                <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-sm btn-success">Confirm all projects</a>
+                            </div>
                         </div>
-                    </div>
+                    {% endcall %}
                 </div>
-                <hr class="intro-divider">
             {% endif %}
 
             {# show basic details about this project class #}
-            <div class="row vertical-bottom">
-                <div class="col-9">
-                    {% if nproj == 0 and not (is_sabbatical or is_exempt) %}
-                        <div class="error-block">
-                            <div class="error-message">
-                                <strong>
-                    {% endif %}
-                    <div>{{ nproj }} active project{{ nproj_plural }} attached to this project class.</div>
-                    {% if nproj == 0 and not (is_sabbatical or is_exempt) %}
-                                </strong>
-                            </div>
+            {% set bgclass = 'alert-secondary' %}
+            {% set iconclass = 'info-circle' %}
+            {% if nproj == 0 and not (is_sabbatical or is_exempt) %}
+                {% set bgclass = 'alert-danger' %}
+                {% set iconclass = 'exclamation-circle' %}
+            {% endif %}
+            <div class="alert {{ bgclass }} mt-1 mb-2">
+                {% call icon_block(iconclass) %}
+                    <div class="d-flex w-100 justify-content-between align-items-start">
+                        <div>
+                            <strong>{{ nproj }} active project{{ nproj_plural }} attached to this project class.</strong>
+                            {% if nproj > 0 and sel_state <= config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                                <div class="mt-1">
+                                    Projects appearing here will be included when the project list is
+                                    published.
+                                    To remove a project, use the Actions menu and select
+                                    &ldquo;Don't offer this project&rdquo;.
+                                </div>
+                            {% endif %}
                         </div>
-                    {% endif %}
-                    {% if nproj > 0 and sel_state <= config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                        <div class="mt-1 mb-2 text-muted">
-                            Projects appearing here will be included when the project list is
-                            published.
-                            To remove a project, use the Actions menu and select
-                            &ldquo;Don't offer this project&rdquo;.
+                        <div>
+                            <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-sm {% if nproj==0 %}btn-danger{% else %}btn-outline-secondary{% endif %}">Go to project library</a>
                         </div>
-                    {% endif %}
-                </div>
-                <div class="col-3">
-                    <span class="float-right">
-                        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-sm {% if nproj==0 %}btn-danger{% else %}btn-outline-secondary{% endif %} mb-3">Go to project library</a>
-                    </span>
-                </div>
+                    </div>
+                {% endcall %}
             </div>
 {#            {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and variants_missing_aims and variants_missing_aims|length > 0 %}#}
 {#                {% set num_missing_aims = variants_missing_aims|length %}#}
@@ -249,9 +256,10 @@
                 {% set number_live_plural = 's' %}
             {% endif %}
             {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and live_projects.first() %}
-                <hr class="intro-divider">
-                <p>You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
-                    on the live system for students making selections for {{ config.year+1 }}&ndash;{{ config.year+2 }}.</p>
+                <div class="mt-1 mb-1">
+                    You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
+                    on the live system for students making selections for {{ config.year+1 }}&ndash;{{ config.year+2 }}.
+                </div>
                 <div class="container-fluid">
                     <div class="row fac-project-table">
                         <div class="col-3"><strong>Name</strong></div>

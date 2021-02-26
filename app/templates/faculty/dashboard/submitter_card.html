@@ -20,26 +20,28 @@
     {% set is_sabbatical = supv_sabbatical and mark_sabbatical and pres_sabbatical %}
     {% set is_exempt = supv_exempt and mark_exempt and pres_exempt %}
     {% if period %}
-        <div class="card mt-3 mb-3">
-            <div class="card-header
-                {% if is_sabbatical or is_exempt %}
-                    {# no markup required; formerly panel-default #}
-                {% else %}
-                    {% if n+1 == config.submission_period %}
-                        {% if period.closed %}
-                            {# no markup required; formerly panel-default #}
-                        {% elif period.is_feedback_open %}
-                            bg-danger text-white
-                        {% elif period.start_date and period.start_date > today %}
-                            {# no markup required; formerly panel-default #}
-                        {% else %}
-                            bg-success text-white
-                        {% endif %}
-                    {% else %}
-                        {# no markup required; formerly panel-default #}
-                    {% endif %}
-                {% endif %}
-            ">
+        {% set bgclass = '' %}
+        {% set borderclass = '' %}
+        {% set textclass = '' %}
+        {% if n+1 == config.submission_period %}
+            {% if period.closed %}
+                {# no markup required; formerly panel-default #}
+            {% elif period.is_feedback_open %}
+                {% set bgclass = 'bg-danger' %}
+                {% set borderclass = 'border-danger' %}
+                {% set textclass = 'text-white' %}
+            {% elif period.start_date and period.start_date > today %}
+                {# no markup required; formerly panel-default #}
+            {% else %}
+                {% set bgclass = 'bg-success' %}
+                {% set borderclass = 'border-success' %}
+                {% set textclass = 'text-white' %}
+            {% endif %}
+        {% else %}
+            {# no markup required; formerly panel-default #}
+        {% endif %}
+        <div class="card {{ borderclass }} mt-2 mb-2">
+            <div class="card-header {{ bgclass }} {{ textclass }}">
                 {% if period.submission_period == config.submission_period %}
                     <strong>{{ period.display_name|safe }}</strong>
                 {% else %}
@@ -48,27 +50,31 @@
             </div>
             <div class="card-body">
                 {% if period.closed %}
-                    <div>Activity for this submission period is now closed.</div>
+                    <div class="alert alert-secondary mt-1 mb-2">
+                        {% call icon_block("info-circle") %}
+                            <strong>Activity for this period is now closed.</strong>
+                        {% endcall %}
+                    </div>
                 {% else %}
                     {% if period.is_feedback_open %}
                         {% if period.collect_project_feedback %}
                             {% if not is_sabbatical or not is_exempt %}
-                                <div class="alert alert-warning">
+                                <div class="alert alert-warning mt-1 mb-2">
                                     {% call icon_block("info-circle") %}
-                                        Marking and feedback for this submission period is now underway.
-                                        Please enter feedback for each project you supervise or 2nd mark.
+                                        <div><strong>Marking and feedback for this submission period is now underway.</strong></div>
+                                        <div class="mt-1">Please enter feedback for each project you supervise or 2nd mark.</div>
+                                        {% if period.feedback_deadline %}
+                                            <div class="mt-1">
+                                                The project convenor has set a deadline of
+                                                <strong>{{ period.feedback_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
+                                                <strong>{{ period.time_to_feedback_deadline }}</strong> from now.
+                                            </div>
+                                        {% endif %}
                                     {% endcall %}
                                 </div>
-                                {% if period.feedback_deadline %}
-                                    <div class="text-muted">
-                                        The project convenor has set a deadline of
-                                        <strong>{{ period.feedback_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
-                                        <strong>{{ period.time_to_feedback_deadline }}</strong> from now.
-                                    </div>
-                                {% endif %}
                             {% endif %}
                         {% else %}
-                            <div class="alert alert-warning">
+                            <div class="alert alert-warning mt-1 mb-2">
                                 {% call icon_block("info-block") %}
                                     <div><strong>Marking and feedback for this submission period is now underway.</strong></div>
                                     <div class="mt-1">
@@ -81,21 +87,43 @@
                         {% endif %}
                     {% else %}
                         {% if period.submission_period > config.submission_period %}
-                            <div>Activity for this period has not yet commenced.</div>
+                            <div class="alert alert-info mt-1 mb-2">
+                                {% call icon_block("info-circle") %}
+                                    <strong>Activity for this period has not yet commenced.</strong>
+                                {% endcall %}
+                            </div>
                         {% elif period.submission_period == config.submission_period %}
                             {% if period.start_date %}
                                 {% if period.start_date > today %}
-                                    <div>This submission period will begin on <strong>{{ period.start_date.strftime("%a %d %b %Y") }}</strong></div>
+                                    <div class="alert alert-info mt-1 mb-2">
+                                        {% call icon_block("info-circle") %}
+                                            <strong>This submission period will begin on {{ period.start_date.strftime("%a %d %b %Y") }}</strong>
+                                        {% endcall %}
+                                    </div>
                                 {% else %}
-                                    <div>This submission period commenced on <strong>{{ period.start_date.strftime("%a %d %b %Y") }}</strong></div>
+                                    <div class="alert alert-secondary mt-1 mb-2">
+                                        {% call icon_block("info-circle") %}
+                                            <div><strong>This submission period commenced on {{ period.start_date.strftime("%a %d %b %Y") }}</strong></div>
+                                            {% if period.hand_in_date %}
+                                                <div class="mt-1">
+                                                    The hand-in date for this period is <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
+                                                    ({{ period.time_to_hand_in }} from now)
+                                                </div>
+                                            {% endif %}
+                                        {% endcall %}
+                                    </div>
                                 {% endif %}
                             {% else %}
-                                <div>Normal project activity is underway.</div>
-                            {% endif %}
-                            {% if period.hand_in_date %}
-                                <div class="text-muted mt-1">
-                                    The hand-in date for this period is <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
-                                    ({{ period.time_to_hand_in }} from now)
+                                <div class="alert alert-secondary mt-1 mb-2">
+                                    {% call icon_block("info-circle") %}
+                                        <div><strong>Normal project activity is underway.</strong></div>
+                                        {% if period.hand_in_date %}
+                                            <div class="mt-1">
+                                                The hand-in date for this period is <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
+                                                ({{ period.time_to_hand_in }} from now)
+                                            </div>
+                                        {% endif %}
+                                    {% endcall %}
                                 </div>
                             {% endif %}
                         {% else %}
@@ -103,7 +131,6 @@
                         {% endif %}
                     {% endif %}
                 {% endif %}
-                <hr class="intro-divider">
 
                 {# show supervisor assignments #}
                 {% if config.uses_supervisor %}

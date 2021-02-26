@@ -7,22 +7,28 @@
     {% set period = config.get_period(n+1) %}
 
     {% if period %}
-        <div class="card m-2">
-            <div class="card-header
-                {% if n+1 == config.submission_period %}
-                    {% if period.closed %}
-                        {# no markup required; formerly panel-default #}
-                    {% elif period.is_feedback_open %}
-                        bg-danger text-white
-                    {% elif period.start_date and period.start_date > today %}
-                        {# no markup required; formerly panel-default #}
-                    {% else %}
-                        bg-success text-white
-                    {% endif %}
-                {% else %}
-                    {# no markup required; formerly panel-default #}
-                {% endif %}
-            ">
+        {% set bgclass = '' %}
+        {% set borderclass = '' %}
+        {% set textclass = '' %}
+        {% if n+1 == config.submission_period %}
+            {% if period.closed %}
+                {# no markup required; formerly panel-default #}
+            {% elif period.is_feedback_open %}
+                {% set bgclass = 'bg-danger' %}
+                {% set borderclass = 'border-danger' %}
+                {% set textclass = 'text-white' %}
+            {% elif period.start_date and period.start_date > today %}
+                {# no markup required; formerly panel-default #}
+            {% else %}
+                {% set bgclass = 'bg-success' %}
+                {% set borderclass = 'border-success' %}
+                {% set textclass = 'text-white' %}
+            {% endif %}
+        {% else %}
+            {# no markup required; formerly panel-default #}
+        {% endif %}
+        <div class="card {{ borderclass }} mt-2 mb-2">
+            <div class="card-header {{ bgclass }} {{ textclass }}">
                 {% if period.submission_period == config.submission_period %}
                     <strong>{{ period.display_name|safe }}</strong>
                 {% else %}
@@ -50,7 +56,11 @@
                 {% if period.submission_period < config.submission_period or period.closed %}
                     {{ period_closed(config, period) }}
                 {% elif period.submission_period > config.submission_period %}
-                    <p>Activity for this period has not yet commenced.</p>
+                    <div class="alert alert-info mt-1 mb-2">
+                        {% call icon_block("info-circle") %}
+                            <strong>Activity for this period has not yet commenced.</strong>
+                        {% endcall %}
+                    </div>
                 {% else %}
                     <div class="card mb-3 mt-3 card-body bg-light">
                         <div class="row">

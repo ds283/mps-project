@@ -2,6 +2,17 @@
 {% from "icon_block.html" import icon_block %}
 
 {% macro open_card(config, sel) %}
+    {% set has_deadline = config.live_deadline is defined and config.live_deadline is not none %}
+    {% set deadline_text = '' %}
+    {% set time_to_deadline_text = '' %}
+    {% set deadline_is_past = false %}
+    {% if has_deadline %}
+        {% set deadline_text = config.live_deadline.strftime("%a %d %b (%Y)") %}
+        {% set time_to_deadline_text = config.time_to_live_deadline %}
+        {% if time_to_deadline_text == 'in the past' %}
+            {% set deadline_is_past = true %}
+        {% endif %}
+    {% endif %}
     <div class="alert alert-success">
         {% call icon_block("info-circle") %}
             <div><strong>
@@ -9,15 +20,19 @@
                 is now available.
             </strong></div>
             {# add data about deadline, if present #}
-            {% if config.live_deadline %}
-                <div class="mt-1">You can submit at any time up to the deadline
-                    {{ config.live_deadline.strftime("%a %d %b (%Y)") }}, which is
-                    {% set time = config.time_to_live_deadline %}
-                    {% if time == 'in the past' %}
+            {% if has_deadline %}
+                <div class="mt-1">You can submit your ranked preference list
+                    at any time up to the deadline
+                    {{ deadline_text }}, which is
+                    {% if deadline_is_past %}
                         in the past.
                     {% else %}
-                        {{ time }} from now.
+                        {{ time_to_deadline_text }} from now.
                     {% endif %}
+                </div>
+            {% else %}
+                <div class="mt-1">
+                    You can submit your ranked preference list at any time.
                 </div>
             {% endif %}
         {% endcall %}
@@ -33,7 +48,12 @@
                 <li>If you wish to participate, add bookmarks to keep track of the projects
                     in which you are interested.</li>
                 <li>Drag-and-drop your bookmarks using the drag handle to rank them in order of preference.</li>
-                <li>Submit your selection when you are finished.</li>
+                <li>
+                    Submit your ranked list when you are happy.
+                    {% if has_deadline and not deadline_is_past %}
+                        It will be possible to make changes up to {{ deadline_text }}.
+                    {% endif %}
+                </li>
                 <li>If you do not submit a selection by the deadline, we will
                     assume that you do not wish to participate.</li>
             </ul>
@@ -56,7 +76,12 @@
                     <li>Add bookmarks to keep track of the projects in which you are interested,
                         then drag-and-drop to rank them in order of preference.
                     </li>
-                    <li>Submit your selection when you are finished.</li>
+                    <li>
+                        Submit your ranked list when you are happy.
+                        {% if has_deadline and not deadline_is_past %}  {# can assume time has been set from above #}
+                            It will be possible to make changes up to {{ deadline_text }}.
+                        {% endif %}
+                    </li>
                     <li>Some projects may require the project supervisor to confirm that
                         a pre-selection meeting has taken place, or at least been arranged,
                         before the project becomes available.
@@ -155,41 +180,56 @@
 
 {% macro closed_card(config, sel) %}
     <div class="alert alert-warning mb-3">
-        Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
-        is now closed.
+        {% call icon_block("info-circle") %}
+            <div>
+                Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                is now closed.
+            </div>
+        {% endcall %}
     </div>
     {% if sel.has_submitted %}
-        <div>
+        <div class="mt-1">
             {% set f = sel.selections.first() %}
             {% if f.converted_from_bookmark %}
-                <div>
-                    You did not submit a valid selection before the deadline, but your bookmark data was
-                    used to build an approximate preference list.
-                </div>
+                <ul>
+                    <li>
+                        You did not submit a valid selection before the deadline, but your bookmark data was
+                        used to build an approximate preference list.
+                    </li>
+                </ul>
             {% else %}
                 {% if sel.submission_time %}
-                    <div class="mt-1">Your preferences were received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.</div>
+                    <ul>
+                        <li>
+                            Your preferences were received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.
+                            <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
+                        </li>
+                    </ul>
+                {% else %}
+                    <ul>
+                        <li>Your preferences have been received.</li>
+                    </ul>
                 {% endif %}
-                <span class="badge badge-success"><i class="fas fa-check"></i> Preferences received</span>
             {% endif %}
-            <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
         </div>
     {% else %}
         {% if config.selection_open_to_all %}
-            <div>This project was available on an <strong>opt-in basis</strong>.</div>
-            <div class="mt-1">
-                You did not submit a valid selection before the deadline,
-                so we have assumed
-                that you <strong>did not intend to apply</strong> to join this project.
-            </div>
+            <ul>
+                <li><strong>This project was available on an opt-in basis</strong></li>
+                <li>
+                    You did not submit a valid selection before the deadline,
+                    so we have assumed
+                    that you did not intend to apply to apply.
+                </li>
+            </ul>
         {% else %}
-            <div>
-                You did not submit a valid selection before the deadline. You will be allocated a project
-                after the main matching calculation has been performed.
-            </div>
+            <ul>
+                <li><strong>You did not submit a valid selection before the deadline.</strong></li>
+                <li>You will be allocated a project  after the main matching calculation has been performed.</li>
+            </ul>
         {% endif %}
     {% endif %}
-    <div class="d-flex justify-content-end mt-1">
+    <div class="d-flex justify-content-end mt-2">
         <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-outline-success student-dashboard-button">View project list...</a>
     </div>
 {% endmacro %}
@@ -303,7 +343,11 @@
                     {% if num_choices == 1 %}{% set numpl = '' %}{% endif %}
                     {% if sel.is_optional or sel.is_initial_selection %}
                         <li><strong>Select at least {{ num_choices }} project{{ numpl }}.</strong></li>
-                        <li>It is not possible to guarantee that you will be assigned your highest-priority choices.</li>
+                        <li>
+                            Although we make every effort,
+                            it is not possible to guarantee that you will be assigned
+                            your highest-ranked choices.
+                        </li>
                      {% else %}
                         <li>To change supervisor, select at least {{ num_choices }} project{{ numpl }}.</li>
                     {% endif %}

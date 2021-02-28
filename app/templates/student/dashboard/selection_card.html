@@ -349,7 +349,15 @@
                             your highest-ranked choices.
                         </li>
                      {% else %}
-                        <li>To change supervisor, select at least {{ num_choices }} project{{ numpl }}.</li>
+                        <li><strong>
+                            If you wish to continue with your existing supervisor,
+                            there is no need to do anything.
+                        </strong> </li>
+                        <li>
+                            To change supervisor, select at least {{ num_choices }} project{{ numpl }} and ensure
+                            your list is
+                            submitted before the deadline.
+                        </li>
                     {% endif %}
                 </ul>
                 {# render bookmarks #}

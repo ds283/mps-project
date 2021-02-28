@@ -7610,7 +7610,18 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(selector_tasks, Conve
         Determine whether this is the initial selection or a switch
         :return:
         """
-        return self.academic_year == self.config.start_year - 1
+        academic_year = self.academic_year
+
+        # if academic year is not None, we can do a simple numerical check
+        if academic_year is not None:
+            return self.academic_year == self.config.start_year - 1
+
+        # if it is none, check whether there are any SubmittingStudent instances for this project type
+        count = get_count(db.session.query(SubmittingStudent)
+                          .filter(SubmittingStudent.student_id == self.student_id)
+                          .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
+                          .filter(ProjectClassConfig.pclass_id == self.config.pclass_id))
+        return count == 0
 
 
     @property

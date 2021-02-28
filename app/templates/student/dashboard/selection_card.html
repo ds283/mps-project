@@ -1,17 +1,26 @@
 {% from "student/macros.html" import ranked_selection %}
+{% from "icon_block.html" import icon_block %}
 
 {% macro open_card(config, sel) %}
     <div class="alert alert-success">
-        <p>Project selection for <strong>{{ config.year+1 }}&ndash;{{ config.year+2 }}</strong>
-            is now available.</p>
-
-        {# add data about deadline, if present #}
-        {% if config.live_deadline %}
-        <p>You can adjust your selection until the deadline
-            <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
-            <strong>{{ config.time_to_live_deadline }}</strong> from now.
-        </p>
-        {% endif %}
+        {% call icon_block("info-circle") %}
+            <div><strong>
+                Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                is now available.
+            </strong></div>
+            {# add data about deadline, if present #}
+            {% if config.live_deadline %}
+                <div class="mt-1">You can submit at any time up to the deadline
+                    {{ config.live_deadline.strftime("%a %d %b (%Y)") }}, which is
+                    {% set time = config.time_to_live_deadline %}
+                    {% if time == 'in the past' %}
+                        in the past.
+                    {% else %}
+                        {{ time }} from now.
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endcall %}
     </div>
 
     {% if sel.is_optional %}
@@ -19,53 +28,51 @@
         {% if optional_text and optional_text|length > 0 %}
             {{ optional_text|markdown|bclean|blinkify|safe }}
         {% else %}
-            <p>
-                <span style="color: red; ">This project is <strong>optional</strong> for your degree programme.</span>
-                If you wish to participate, add bookmarks to keep track of the projects
-                in which you are interested. Drag-and-drop your bookmarks using the drag handle
-                to rank them in order of preference. Submit your selection when you are finished.
-            </p>
-
-            <p>
-                <span style="color: red; ">If you do not submit a selection by the deadline, we will
-                assume that you do not wish to participate.</span>
-            </p>
+            <ul>
+                <li style="color: red;"><strong>This project is optional for your degree programme.</strong></li>
+                <li>If you wish to participate, add bookmarks to keep track of the projects
+                    in which you are interested.</li>
+                <li>Drag-and-drop your bookmarks using the drag handle to rank them in order of preference.</li>
+                <li>Submit your selection when you are finished.</li>
+                <li>If you do not submit a selection by the deadline, we will
+                    assume that you do not wish to participate.</li>
+            </ul>
         {% endif %}
 
-        <p>
-            Some projects may require the project supervisor to confirm that
-            a pre-selection meeting has taken place, or at least been arranged,
-            before the project becomes available.
-        </p>
+        <ul>
+            <li>Some projects may require the project supervisor to confirm that
+                a pre-selection meeting has taken place, or at least been arranged,
+                before the project becomes available.
+            </li>
+        </ul>
     {% else %}
         {% if sel.is_initial_selection %}
             {% set normal_text = config.card_text_normal %}
             {% if normal_text and normal_text|length > 0 %}
                 {{ normal_text|markdown|bclean|blinkify|safe }}
             {% else %}
-                <p>
-                    This project is <strong>mandatory</strong> for your degree programme.
-                    Add bookmarks to keep track of the projects in which you are interested,
-                    then drag-and-drop to rank them in order of preference.
-                    Submit your selection when you are finished.
-                </p>
+                <ul>
+                    <li><strong>This project is mandatory for your degree programme.</strong></li>
+                    <li>Add bookmarks to keep track of the projects in which you are interested,
+                        then drag-and-drop to rank them in order of preference.
+                    </li>
+                    <li>Submit your selection when you are finished.</li>
+                    <li>Some projects may require the project supervisor to confirm that
+                        a pre-selection meeting has taken place, or at least been arranged,
+                        before the project becomes available.
+                    </li>
+                </ul>
             {% endif %}
-
-            <p>
-                Some projects may require the project supervisor to confirm that
-                a pre-selection meeting has taken place, or at least been arranged,
-                before the project becomes available.
-            </p>
         {% else %}
             {% set noninitial_text = config.card_text_noninitial %}
             {% if noninitial_text and noninitial_text|length > 0 %}
                 {{ noninitial_text|markdown|bclean|blinkify|safe }}
             {% else %}
-                <p>
-                    If you wish to <strong>switch supervisors</strong>,
-                    then add bookmarks for each project of interest.
-                    Drag-and-drop your bookmarks to indicate your order of preference.
-                </p>
+                <ul>
+                    <li><strong>If you wish to switch supervisors,
+                        then add bookmarks for each project of interest.</strong></li>
+                    <li>Drag-and-drop your bookmarks to indicate your order of preference.</li>
+                </ul>
             {% endif %}
         {% endif %}
     {% endif %}
@@ -74,46 +81,56 @@
 
 {% macro show_submission_status(config, sel) %}
     {% set is_valid, messages = sel.is_valid_selection %}
-    <div class="row vertical-top mt-3 mb-3">
-        <div class="col-12">
-            <ul class="list-group" id="P{{ config.id }}-status-list">
-                {% for message in messages %}
-                    <li class="list-group-item {% if is_valid %}list-group-item-success{% else %}list-group-item-danger{% endif %}">{{ message }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
-    <div class="row vertical-top mt-3 mb-3">
-        <div class="col-12">
-            <ul class="list-group">
-                <li class="list-group-item">
-                    {% if sel.has_submitted %}
-                        {% if sel.has_accepted_offer %}
-                            {% set offer = sel.accepted_offer %}
-                            {% set project = offer.liveproject %}
-                            {% if project is not none %}
-                                You have accepted a custom offer for the project
-                                <strong>{{ project.name }}</strong>
-                                supervised by
-                                <i class="fas fa-user"></i> {{ project.owner.user.name }}
-                            {% else %}
-                                <span class="badge badge-danger">MISSING ACCEPTED PROJECT</span>
-                                <p>This is an internal error. Please contact a system administrator.</p>
-                            {% endif %}
-                        {% else %}
-                            You have already submitted a valid list of project preferences,
-                            but you may continue to revise your list up to the deadline.
-                            <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
-                        {% endif %}
+    <div class="vertical-top mt-3 mb-3">
+        <ul class="list-group w-100" id="P{{ config.id }}-status-list">
+            {% for message in messages %}
+                <li class="list-group-item {% if is_valid %}list-group-item-success{% else %}list-group-item-danger{% endif %}">
+                    {% if not is_valid %}
+                        {% call icon_block("exclamation-circle") %}
+                            <div>{{ message }}</div>
+                        {% endcall %}
                     {% else %}
-                        You have not yet submitted your project preferences.
+                        {{ message }}
                     {% endif %}
                 </li>
-                {% if sel.has_sumission_list and sel.submission_time %}
-                    Last submission received at <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>.
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="alert alert-secondary mt-3 mb-3">
+        {% call icon_block("info-circle") %}
+            {% if sel.has_submitted %}
+                {% if sel.has_accepted_offer %}
+                    {% set offer = sel.accepted_offer %}
+                    {% set project = offer.liveproject %}
+                    {% if project is not none %}
+                        <div>
+                            <strong>You have accepted a custom offer for the project
+                                &ldquo;{{ project.name }}&rdquo;
+                                supervised by
+                                <i class="fas fa-user"></i> {{ project.owner.user.name }}.</strong>
+                        </div>
+                    {% else %}
+                        <span class="badge badge-danger">MISSING ACCEPTED PROJECT</span>
+                        <div>This is an internal error. Please contact a system administrator.</div>
+                    {% endif %}
+                {% else %}
+                    <div>
+                        You have already submitted a valid list of project preferences.
+                    </div>
+                    <div class="mt-1">
+                        You may continue to revise your list up to the deadline.
+                        <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
+                    </div>
                 {% endif %}
-            </ul>
-        </div>
+            {% else %}
+                <div>You have not yet submitted your project preferences.</div>
+            {% endif %}
+            {% if sel.has_sumission_list and sel.submission_time %}
+                <div class="mt-2">
+                    Last submission received at <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>.
+                </div>
+            {% endif %}
+        {% endcall %}
     </div>
     <div class="d-flex justify-content-end align-content-start w-100">
         <button type="button" class="btn btn-outline-primary video-btn student-dashboard-button" data-toggle="modal" data-target="#PanoptoModal">Show video help</button>
@@ -137,22 +154,21 @@
 
 
 {% macro closed_card(config, sel) %}
-    <div class="alert alert-warning">
+    <div class="alert alert-warning mb-3">
         Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
         is now closed.
     </div>
-
     {% if sel.has_submitted %}
         <div>
             {% set f = sel.selections.first() %}
             {% if f.converted_from_bookmark %}
-                <p>
+                <div>
                     You did not submit a valid selection before the deadline, but your bookmark data was
                     used to build an approximate preference list.
-                </p>
+                </div>
             {% else %}
                 {% if sel.submission_time %}
-                    <p>Your preferences were received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.</p>
+                    <div class="mt-1">Your preferences were received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.</div>
                 {% endif %}
                 <span class="badge badge-success"><i class="fas fa-check"></i> Preferences received</span>
             {% endif %}
@@ -160,20 +176,19 @@
         </div>
     {% else %}
         {% if config.selection_open_to_all %}
-            <p>This project was available on an <strong>opt-in basis</strong>.</p>
-            <p>
+            <div>This project was available on an <strong>opt-in basis</strong>.</div>
+            <div class="mt-1">
                 You did not submit a valid selection before the deadline,
                 so we have assumed
                 that you <strong>did not intend to apply</strong> to join this project.
-            </p>
+            </div>
         {% else %}
-            <p>
+            <div>
                 You did not submit a valid selection before the deadline. You will be allocated a project
                 after the main matching calculation has been performed.
-            </p>
+            </div>
         {% endif %}
     {% endif %}
-
     <div class="d-flex justify-content-end mt-1">
         <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-outline-success student-dashboard-button">View project list...</a>
     </div>
@@ -195,8 +210,11 @@
                         <strong>{{ project.name }}</strong>
                     </a>
                     {% if not sel.satisfies_recommended(project) %}
-                        <i class="fas fa-exclamation-triangle" style="color:red;"></i>
-                        <p>This project has recommended modules that are not available on your programme</p>
+                        <div class="alert alert-danger">
+                            {% call icon_block("exclamation-triangle") %}
+                                <div>This project has recommended modules that are not available on your programme</div>
+                            {% endcall %}
+                        </div>
                     {% endif %}
                 </div>
                 <div class="col-2">
@@ -254,16 +272,22 @@
 
 
 {% macro selection_card(config, sel) %}
-   <div class="card mt-3 mb-3">
-        <div class="card-header
-            {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                bg-primary text-white
-            {% elif config.selector_lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
-                bg-secondary text-white
-            {% else %}
-                {# no markup required; formerly panel-default #}
-            {% endif %}
-        ">
+    {% set bgclass = '' %}
+    {% set borderclass = '' %}
+    {% set textclass = '' %}
+    {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+        {% set bgclass = 'bg-primary' %}
+        {% set borderclass = 'border-primary' %}
+        {% set textclass = 'text-white' %}
+    {% elif config.selector_lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
+        {% set bgclass = 'bg-secondary' %}
+        {% set borderclass = 'border-secondary' %}
+        {% set textclass = 'text-white' %}
+    {% else %}
+        {# no markup required; formerly panel-default #}
+    {% endif %}
+   <div class="card {{ borderclass }} %}mt-3 mb-3">
+        <div class="card-header {{ bgclass }} {{ textclass }}">
             {% if sub %}
                 <strong>Request to switch projects</strong>
             {% else %}
@@ -272,33 +296,18 @@
         </div>
         <div class="card-body">
             {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-
                 {{ open_card(config, sel) }}
-
-                <hr class="intro-divider">
-                <div class="row vertical-top">
-                    <div class="col-12">
-                        {% set num_choices = sel.number_choices %}
-                        {% set numpl = 's' %}
-                        {% if num_choices == 1 %}{% set numpl = '' %}{% endif %}
-                        {% if sel.is_optional %}
-                            <p>
-                                Select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
-                                It is not possible to guarantee that you will be assigned your highest-priority choices.
-                            </p>
-                        {% elif sel.is_initial_selection %}
-                            <p>
-                                Select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
-                                It is not possible to guarantee that you will be assigned your highest-priority choices.
-                            </p>
-                         {% else %}
-                            <p>
-                                To change supervisor, select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
-                            </p>
-                        {% endif %}
-                    </div>
-                </div>
-
+                <ul>
+                    {% set num_choices = sel.number_choices %}
+                    {% set numpl = 's' %}
+                    {% if num_choices == 1 %}{% set numpl = '' %}{% endif %}
+                    {% if sel.is_optional or sel.is_initial_selection %}
+                        <li><strong>Select at least {{ num_choices }} project{{ numpl }}.</strong></li>
+                        <li>It is not possible to guarantee that you will be assigned your highest-priority choices.</li>
+                     {% else %}
+                        <li>To change supervisor, select at least {{ num_choices }} project{{ numpl }}.</li>
+                    {% endif %}
+                </ul>
                 {# render bookmarks #}
                 {% if sel.has_bookmarks %}
                     {{ render_bookmarks(config, sel) }}
@@ -316,16 +325,17 @@
                     </div>
                 {% endif %}
                 {{ show_submission_status(config, sel) }}
-
             {% elif config.selection_closed %}
                 {{ closed_card(config, sel) }}
             {% else %}
-                <p>
-                    Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
-                    is not yet available.
-                </p>
+                <div>
+                    {% call icon_block("info-circle") %}
+                        <div>
+                            Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }} is not yet available.
+                        </div>
+                    {% endcall %}
+                </div>
             {% endif %}
         </div>
     </div>
-
 {% endmacro %}

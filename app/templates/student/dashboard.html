@@ -81,8 +81,29 @@
                         let item = document.createElement("li");
                         item.classList.add('list-group-item');
                         item.classList.add(list_class);
+
+                        let block = document.createElement("div");
+                        block.classList.add('d-flex');
+                        block.classList.add('justify-content-between');
+                        block.classList.add('align-content-start');
+
+                        let icon = document.createElement("i");
+                        icon.classList.add('fas');
+                        icon.classList.add('fa-exclamation-circle');
+                        icon.classList.add('fa-lg');
+                        icon.classList.add('pt-1');
+                        icon.classList.add('mr-2');
+
+                        let textblock = document.createElement("div");
+                        textblock.classList.add('w-100');
+
                         let txt = document.createTextNode(messages[i]);
-                        item.appendChild(txt);
+                        textblock.appendChild(txt);
+
+                        block.appendChild(icon);
+                        block.appendChild(textblock);
+
+                        item.appendChild(block)
                         ul_group.append(item);
                     }
                 }

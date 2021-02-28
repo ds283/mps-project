@@ -142,7 +142,7 @@
                             <div class="col-6">
                                 <div class="float-right">
                                     {% if record.period.closed and not record.retired and not record.student_feedback_submitted %}
-                                        <a href="{{ url_for('student.edit_feedback', id=record.id, url=url_for('student.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-secondary btn-table-block">Edit my feedback</a>
+                                        <a href="{{ url_for('student.edit_feedback', id=record.id, url=url_for('student.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-outline-secondary btn-table-block">Edit my feedback</a>
                                     {% endif %}
                                 </div>
                             </div>

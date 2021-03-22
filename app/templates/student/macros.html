@@ -65,9 +65,7 @@
                 {% if show_actions %}
                     <div class="col-3">
                         {% if status == offer.OFFERED %}
-                            {% if sel and not sel.has_submitted %}
-                                <a href="{{ url_for('student.accept_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-secondary">Accept</a>
-                            {% endif %}
+                            <a href="{{ url_for('student.accept_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-secondary">Accept</a>
                             <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-secondary">Decline</a>
                         {% elif status == offer.ACCEPTED %}
                             <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-secondary">Decline</a>

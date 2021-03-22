@@ -66,14 +66,14 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-right">
         {% set status = offer.status %}
-        {% if status == offer.OFFERED and not offer.selector.has_submitted %}
+        {% if status == offer.OFFERED %}
             <a class="dropdown-item" href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">
                 <i class="fas fa-check fa-fw"></i> Accept
             </a>
             <a class="dropdown-item" href="{{ url_for('convenor.decline_custom_offer', offer_id=offer.id) }}">
                 <i class="fas fa-times fa-fw"></i> Decline
             </a>
-        {% elif status == offer.DECLINED and not offer.selector.has_submitted %}
+        {% elif status == offer.DECLINED %}
             <a class="dropdown-item" href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">
                 <i class="fas fa-check fa-fw"></i> Accept
             </a>

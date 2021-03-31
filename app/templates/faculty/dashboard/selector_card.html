@@ -31,9 +31,10 @@
             {% set borderclass = 'border-danger' %}
             {% set textclass = 'text-white' %}
         {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-            {% set bgclass = 'bg-success' %}
-            {% set borderclass = 'border-success' %}
-            {% set textclass = 'text-white' %}
+            {# no markup required; formerly bg-success #}
+{#            {% set bgclass = 'bg-success' %}#}
+{#            {% set borderclass = 'border-success' %}#}
+{#            {% set textclass = 'text-white' %}#}
         {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
             {# no markup required; formerly panel-default #}
         {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}

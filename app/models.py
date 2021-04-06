@@ -1484,6 +1484,9 @@ class ConvenorTask(db.Model, EditingMetadataMixin):
         if self.complete or self.dropped:
             return False
 
+        if self.due_date is None:
+            return False
+
         now = datetime.now()
         return self.due_date < now
 
@@ -5984,7 +5987,7 @@ class Project(db.Model, EditingMetadataMixin,
 
 
     @property
-    def available_degree_programmes(data):
+    def available_degree_programmes(self):
         """
         Computes the degree programmes available to this project, from knowing which project
         classes it is available to
@@ -5994,7 +5997,7 @@ class Project(db.Model, EditingMetadataMixin,
         # get list of active degree programmes relevant for our degree classes;
         # to do this we have to build a rather complex UNION query
         queries = []
-        for proj_class in data.project_classes:
+        for proj_class in self.project_classes:
             queries.append(
                 DegreeProgramme.query.filter(DegreeProgramme.active,
                                              DegreeProgramme.project_classes.any(id=proj_class.id)))
@@ -9329,7 +9332,7 @@ class Notification(db.Model):
 
 class PopularityRecord(db.Model):
 
-    __tablename = 'popularity'
+    __tablename__ = 'popularity_record'
 
 
     # unique id for this record

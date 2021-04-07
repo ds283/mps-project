@@ -23,7 +23,7 @@
                 {% if distribution_list is not none %}
                     <div>
                         {% for user in distribution_list %}
-                            <span class="btn btn-sm btn-secondary btn-table-block">{{ user.name }} ({{ user.email }})</span>
+                            <span class="btn btn-sm btn-outline-primary btn-table-block">{{ user.name }} ({{ user.email }})</span>
                         {% endfor %}
                     </div>
                 {% endif %}
@@ -31,7 +31,7 @@
                     <div class="row" style="margin-bottom: 5px;">
                         <div class="col-12">
                             <div class="float-right">
-                                {{ wtf.render_field(form.clear_recipients, button_map={'clear_recipients': 'secondary'}) }}
+                                {{ wtf.render_field(form.clear_recipients, button_map={'clear_recipients': 'outline-secondary'}) }}
                             </div>
                         </div>
                     </div>
@@ -41,8 +41,10 @@
             {{ wtf.render_field(form.notify_addrs) }}
             {{ wtf.render_field(form.subject) }}
 
-            <strong>Reply to</strong>
-            <span class="btn btn-sm btn-secondary btn-table-block">{{ current_user.name }} ({{ current_user.email }})</span>
+            <strong class="mt-3 mb-1">Reply to</strong>
+            <div>
+                <span class="btn btn-sm btn-outline-info btn-table-block">{{ current_user.name }} ({{ current_user.email }})</span>
+            </div>
         </div>
 
         {{ wtf.render_field(form.body) }}

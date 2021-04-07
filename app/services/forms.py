@@ -30,7 +30,7 @@ def SendEmailFormFactory(use_recipients=True):
         # notify field
         notify_addrs = StringField("Also notify", validators=[Optional()],
                                    description='Enter a list of comma-separated email addresses who will be '
-                                               'sent coppies of the email.')
+                                               'sent copies of the email.')
 
         # subject field
         subject = StringField("Subject", validators=[InputRequired()])

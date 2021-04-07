@@ -300,9 +300,23 @@ def migrate_lifetime_data(AssetRecord):
     db.session.commit()
 
 
+# used to fix any issues with User models having null passwords before switch to make password field not nullable
+def fix_null_passwords():
+    users = db.session.query(User).all()
+
+    from flask_security import hash_password
+    from app.manage_users.actions import _randompassword
+
+    for user in users:
+        if user.password is None:
+            user.password = hash_password(_randompassword())
+
+    db.session.commit()
+
+
 app, celery = create_app()
 
-# with app.app_context():
+with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -317,6 +331,7 @@ app, celery = create_app()
     # migrate_lifetime_data(GeneratedAsset)
     # migrate_lifetime_data(TemporaryAsset)
     # migrate_lifetime_data(SubmittedAsset)
+    fix_null_passwords()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

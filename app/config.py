@@ -11,6 +11,15 @@
 import os
 from datetime import timedelta
 
+from flask_security import uia_email_mapper
+from bleach import clean
+
+
+def uia_username_mapper(identity):
+    # we allow pretty much anything - but we bleach it.
+    return clean(identity, strip=True)
+
+
 # get absolute path of the directory containing this file;
 # used to locate a local database if we are using a backend
 # for which this is relevant, eg. SQLite
@@ -61,7 +70,8 @@ class Config(object):
 
     SECURITY_EMAIL_HTML = False       # disable HTML emails
 
-    SECURITY_USER_IDENTITY_ATTRIBUTES = ['email', 'username']
+    SECURITY_USER_IDENTITY_ATTRIBUTES = [{"email": {"mapper": uia_email_mapper, "case_insensitive": True}},
+                                         {"username'": {"mapper": uia_username_mapper}}]
 
     SECURITY_UNAUTHORIZED_VIEW = "home.homepage"
 

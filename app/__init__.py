@@ -12,11 +12,11 @@ import os
 
 from flask import current_app, request, session, render_template, has_request_context
 from flask_migrate import Migrate
-from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm
+from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm, MailUtil
 from flask_login.signals import user_logged_in
 from .thirdparty.flask_bootstrap4 import Bootstrap
 from .thirdparty.flask_sessionstore import Session
-from flask_mail import Mail
+from flask_mail import Mail, Message
 from flask_assets import Environment
 from app.flask_bleach import Bleach
 from flaskext.markdown import Markdown
@@ -32,6 +32,7 @@ from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
 from flask_rollbar import Rollbar
 from flask_qrcode import QRcode
+from flask_babelex import Babel
 
 from .config import app_config, site_revision, site_copyright_dates
 from .build_data import git_tag
@@ -48,7 +49,6 @@ from mdx_smartypants import makeExtension
 import latex2markdown
 from urllib import parse
 
-from os import path, makedirs
 from datetime import datetime
 
 from pymongo import MongoClient
@@ -66,6 +66,27 @@ class PatchedLoginForm(LoginForm):
         super().__init__(*args, **kwargs)
         self.email.description = 'Your login name is your email address. Normally this will be your ' \
                                  'university @sussex.ac.uk address.'
+
+
+class PatchedMailUtil(MailUtil):
+
+    # make Flask-Security use Celery deferred email sender
+    def send_mail(self, template, subject, recipient, sender, body, html, user, **kwargs):
+        # get send-log-email celery task
+        celery = current_app.extensions['celery']
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+
+        msg = Message(subject=subject,
+                      sender=sender,
+                      recipients=[recipient],
+                      body=body,
+                      html=html)
+
+        # register a new task in the database
+        task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
+
+        # queue Celery task to send the email
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
 
 def create_app():
@@ -104,6 +125,7 @@ def create_app():
     md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
     rb = Rollbar(app)
     qr = QRcode(app)
+    bbl = Babel(app)
 
     session_store = Session(app)
 
@@ -192,7 +214,7 @@ def create_app():
     user_datastore = SQLAlchemyUserDatastore(db, models.User, models.Role)
 
     # patch Flask-Security's login form to include some descriptive text on the email field
-    security = Security(app, user_datastore, login_form=PatchedLoginForm)
+    security = Security(app, user_datastore, login_form=PatchedLoginForm, mail_util_cls=PatchedMailUtil)
     if config_name == 'production':
         # set up more stringent limits for login view and forgot-password view
         # add to a particular view function.
@@ -237,20 +259,6 @@ def create_app():
     tasks.register_marking_tasks(celery)
     tasks.register_services_tasks(celery)
     tasks.register_test_tasks(celery)
-
-
-    # make Flask-Security use deferred email sender
-    @security.send_mail_task
-    def delay_flask_security_mail(msg):
-        # get send-log-email celery task
-        celery = current_app.extensions['celery']
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-
-        # register a new task in the database
-        task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
-
-        # queue Celery task to send the email
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
 
     @security.login_context_processor

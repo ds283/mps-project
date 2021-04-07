@@ -25,7 +25,7 @@
 
         $(document).ready(function () {
             $('#manual-assign-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],stateSave: true,
                 serverSide: true,
                 ajax: { url: $SCRIPT_ROOT + '/convenor/manual_assign_ajax/{{ rec.id }}',

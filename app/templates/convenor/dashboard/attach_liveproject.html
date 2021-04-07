@@ -8,7 +8,7 @@
 
         $(document).ready(function () {
             $('#add-liveproject-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { url: $SCRIPT_ROOT + '/convenor/attach_liveproject_ajax/{{ pclass.id }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
@@ -32,7 +32,7 @@
 
             {% if current_user.has_role('admin') or current_user.has_role('root') %}
                 $('#other-pclasses-table').DataTable({
-                    responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                    responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                     buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                     ajax: { url: $SCRIPT_ROOT + '/convenor/attach_liveproject_other_ajax/{{ pclass.id }}', dataSrc: '' },
                     "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },

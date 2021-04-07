@@ -17,7 +17,7 @@
 
             $(document).ready(function () {
                 $('#user-acl-table').DataTable({
-                    responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                    responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                     buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                     ajax: { 'url': $SCRIPT_ROOT + '/documents/acl_user_ajax/{{ type }}/{{ attachment.id }}?state_filter={{ state_filter }}', dataSrc: '' },
                     "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
@@ -42,7 +42,7 @@
 
             $(document).ready(function () {
                 $('#role-acl-table').DataTable({
-                    responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                    responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                     buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                     ajax: { 'url': $SCRIPT_ROOT + '/documents/acl_role_ajax/{{ type }}/{{ attachment.id }}?state_filter={{ state_filter }}', dataSrc: '' },
                     "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },

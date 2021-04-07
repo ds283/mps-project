@@ -10,7 +10,7 @@
 
         $(document).ready(function () {
             $('#teaching-groups-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { url: $SCRIPT_ROOT + '/convenor/teaching_groups_ajax/{{ pclass.id }}?organize_by={{ organize_by }}&show_period={{ show_period }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },

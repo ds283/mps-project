@@ -17,7 +17,7 @@
 
         $(document).ready(function () {
             $('#match_faculty').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/admin/match_faculty_view_ajax/{{ record.id }}?pclass_filter={{ pclass_filter }}&show_includes={{ show_includes }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },

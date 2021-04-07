@@ -22,7 +22,7 @@
 
         $(document).ready(function () {
             $('#attendee-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/admin/manage_attendees_ajax/{{ assessment.id }}?pclass_filter={{ pclass_filter }}&attend_filter={{ attend_filter }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },

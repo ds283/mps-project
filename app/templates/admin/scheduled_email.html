@@ -14,7 +14,7 @@
 
         $(document).ready(function () {
             $('#scheduled-emails').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],  stateSave: true,
                 serverSide: true,
                 ajax: { url: $SCRIPT_ROOT + '/admin/scheduled_email_ajax',

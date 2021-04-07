@@ -33,7 +33,7 @@
 
         $(document).ready(function () {
             $('#all-projects-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/reports/all_projects_ajax?pclass_filter={{ pclass_filter }}&valid_filter={{ valid_filter }}&state_filter={{ state_filter }}&active_filter={{ active_filter }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },

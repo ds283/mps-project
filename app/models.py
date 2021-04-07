@@ -1173,22 +1173,29 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True, unique=True)
 
     username = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True, unique=True)
-    password = db.Column(db.String(PASSWORD_HASH_LENGTH, collation='utf8_bin'))
+    password = db.Column(db.String(PASSWORD_HASH_LENGTH, collation='utf8_bin'), nullable=False)
 
     first_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
     last_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
 
-    active = db.Column(db.Boolean())
+    active = db.Column(db.Boolean(), nullable=False)
 
 
     # FLASK-SECURITY USER MODEL: TRACKING FIELDS
 
     confirmed_at = db.Column(db.DateTime())
+
     last_login_at = db.Column(db.DateTime())
+
     current_login_at = db.Column(db.DateTime())
+
     last_login_ip = db.Column(db.String(IP_LENGTH))
+
     current_login_ip = db.Column(db.String(IP_LENGTH))
+
     login_count = db.Column(db.Integer())
+
+    fs_uniquifier = db.Column(db.String(64), unique=True, nullable=False)
 
 
     # ROLES

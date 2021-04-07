@@ -316,7 +316,7 @@ def fix_null_passwords():
 
 app, celery = create_app()
 
-with app.app_context():
+# with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -331,7 +331,7 @@ with app.app_context():
     # migrate_lifetime_data(GeneratedAsset)
     # migrate_lifetime_data(TemporaryAsset)
     # migrate_lifetime_data(SubmittedAsset)
-    fix_null_passwords()
+    # fix_null_passwords()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

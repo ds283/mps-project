@@ -605,7 +605,8 @@ def register_rollover_tasks(celery):
             if len(match_records) == 0:
                 match_records = None
 
-        # if a match has been assigned, use this to generate a SubmittingStudent record
+        # if a match has been assigned, use this to generate a SubmittingStudent record and populate its
+        # SubmissionRecord list
         if match_records is not None:
             try:
                 new_submitter = SubmittingStudent(config_id=new_config_id,
@@ -761,7 +762,7 @@ def register_rollover_tasks(celery):
                             add_blank_submitter(selector.student, old_config_id, new_config_id, autocommit=False)
 
                         else:
-                            print('!! Unxpeted missing selector allocation')
+                            print('!! Unexpected missing selector allocation')
                             self.update_state('FAILURE', meta='Unexpected missing selector allocation')
                             return new_config_id
 

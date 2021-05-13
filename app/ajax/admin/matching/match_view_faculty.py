@@ -154,7 +154,7 @@ _marking = \
     {% set style = pclass.make_CSS_style() %}
     <div class="dropdown match-assign-button" style="display: inline-block;">
         <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown"
-            role="button" aria-haspopup="true" aria-expanded="false">
+            href="" role="button" aria-haspopup="true" aria-expanded="false">
             #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})
         </a>
         <div class="dropdown-menu">

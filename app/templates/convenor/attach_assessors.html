@@ -102,7 +102,7 @@
                                 {% set running_counterpart = data.running_counterpart(config.id) %}
                                 {% if running_counterpart is not none %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
-                                        <a class="badge badge-danger dropdown-toggle" data-toggle="dropdown">
+                                        <a class="badge badge-danger dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                             RUNNING {{ running_counterpart.number_assessors }}
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-right">
@@ -114,7 +114,7 @@
                                 {% endif %}
                                 {% if live_counterpart is not none %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
-                                        <a href="#" class="badge badge-success dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                        <a class="badge badge-success dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                             LIVE {{ live_counterpart.number_assessors }}
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-right">
@@ -129,11 +129,11 @@
                                 {% for marker in project_assessor_list %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
                                         {% if running_counterpart is not none and running_counterpart.is_assessor(marker.id) %}
-                                            <a class="badge badge-danger dropdown-toggle" data-toggle="dropdown"∏ role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                            <a class="badge badge-danger dropdown-toggle" data-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% elif live_counterpart is not none and live_counterpart.is_assessor(marker.id) %}
-                                            <a class="badge badge-success dropdown-toggle" data-toggle="dropdown"∏ role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                            <a class="badge badge-success dropdown-toggle" data-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% else %}
-                                            <a class="badge badge-secondary dropdown-toggle" data-toggle="dropdown"∏ role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                            <a class="badge badge-secondary dropdown-toggle" data-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% endif %}
                                         <div class="dropdown-menu dropdown-menu-right">
                                             <div class="dropdown-header">Attached to library version</div>

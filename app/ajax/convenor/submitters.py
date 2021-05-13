@@ -48,7 +48,7 @@ _projects = \
             <div class="dropdown assignment-label">
                 <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle"
                         {% if style %}style="{{ style }}"{% endif %}
-                        role="button" aria-haspopup="true" aria-expanded="false"
+                        href="" role="button" aria-haspopup="true" aria-expanded="false"
                         data-toggle="dropdown">{% if show_period %}#{{ r.submission_period }}: {% endif %}
                     {% if r.project.name|length < 35 %}
                         {{ r.project.name }}
@@ -69,7 +69,7 @@ _projects = \
             {% if sub.published %}
                 <div class="dropdown assignment-label">
                     <a class="badge {% if r.student_engaged %}badge-success{% else %}badge-warning{% endif %} btn-table-block dropdown-toggle"
-                        role="button" aria-haspopup="true" aria-expanded="false"
+                        href="" role="button" aria-haspopup="true" aria-expanded="false"
                         data-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}</a>
                     <div class="dropdown-menu">
                         {% if r.submission_period > r.owner.config.submission_period %}

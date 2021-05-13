@@ -35,7 +35,7 @@ _projects = \
     {% set style = pclass.make_CSS_style() %}
     <div>
         <div class="dropdown assignment-label">
-            <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown"  role="button" aria-haspopup="true" aria-expanded="false">
+            <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {{ r.owner.student.user.name }}
                 #{{ r.owner.student.exam_number }}
@@ -56,7 +56,7 @@ _projects = \
         {% if r.owner.published %}
             <div class="dropdown assignment-label">
                 <a class="badge {% if r.student_engaged %}badge-success{% else %}badge-warning{% endif %} btn-table-block dropdown-toggle"
-                     role="button" aria-haspopup="true" aria-expanded="false"
+                    href="" role="button" aria-haspopup="true" aria-expanded="false"
                     data-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}
                 <div class="dropdown-menu">
                     {% if r.submission_period > r.owner.config.submission_period %}
@@ -114,7 +114,7 @@ _marking = \
     <div>
         <div class="dropdown assignment-label">
             <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %}
-                 role="button" aria-haspopup="true" aria-expanded="false" data-toggle="dropdown">
+                href="" role="button" aria-haspopup="true" aria-expanded="false" data-toggle="dropdown">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {{ r.owner.student.user.name }}
                 #{{ r.owner.student.exam_number }}

@@ -107,7 +107,7 @@
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-right">
                                             <a class="dropdown-item" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=running_counterpart.id) }}">
-                                                <i class="fas fa-refresh fa-fw"></i> Sync with library version
+                                                <i class="fas fa-sync fa-fw"></i> Sync with library version
                                             </a>
                                         </div>
                                     </div>
@@ -119,7 +119,7 @@
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-right">
                                             <a class="dropdown-item" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=live_counterpart.id) }}">
-                                                <i class="fas fa-refresh fa-fw"></i> Sync with library version
+                                                <i class="fas fa-sync fa-fw"></i> Sync with library version
                                             </a>
                                         </div>
                                     </div>
@@ -156,11 +156,11 @@
                                             {% else %}
                                                 {% if live_counterpart.is_assessor(marker.id) %}
                                                     <a class="dropdown-item" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
-                                                        <i class="fas fa-trash"></i> Remove from live project
+                                                        <i class="fas fa-trash fa-fw"></i> Remove from live project
                                                     </a>
                                                 {% else %}
                                                     <a class="dropdown-item" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
-                                                        <i class="fas fa-plus"></i> Attach to live project
+                                                        <i class="fas fa-plus fa-fw"></i> Attach to live project
                                                     </a>
                                                 {% endif %}
                                             {% endif %}

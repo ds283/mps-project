@@ -1,6 +1,7 @@
 {% extends "base_app.html" %}
 
 {% from "convenor/macros.html" import selecting_students %}
+{% from "icon_block.html" import icon_block %}
 
 {% block title %}
     View selecting students for {{ project.name }}
@@ -19,7 +20,9 @@
                 <div class="card-body">
                     {% if lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING %}
                         <div class="alert alert-info">
-                            Selection hinting will become available once student selections are closed.
+                            {% call icon_block("info-circle") %}
+                                <div>Selection hinting will become available once student selections are closed.</div>
+                            {% endcall %}
                         </div>
                     {% endif %}
                     {{ selecting_students(project, project.selections, lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING) }}

@@ -1,6 +1,7 @@
 {% extends "convenor/dashboard/nav.html" %}
 
 {% from "macros.html" import skill_groups_key, filter_block %}
+{% from "icon_block.html" import icon_block %}
 
 {% if not valid_filter or valid_filter is none %}
     {% set valid_filter = 'all' %}
@@ -66,15 +67,11 @@
 
 {% block bodyblock %}
     {% if config.live %}
-        <div class="row">
-            <div class="col-1"></div>
-            <div class="col-10">
-                <div class="alert alert-danger">
-                    <p>This project class has already gone live for the current academic year.</p>
-                    <p>Edits made in this section will not be reflected in the live project database this year.</p>
-                </div>
-            </div>
-            <div class="col-1"></div>
+        <div class="alert alert-danger">
+            {% call icon_block("exclamation-circle") %}
+                <div><strong>This project class has already gone live for the current academic year.</strong></div>
+                <div>Edits made in this section will not be reflected in the live project database this year.</div>
+            {% endcall %}
         </div>
     {% endif %}
 

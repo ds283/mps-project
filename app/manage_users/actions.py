@@ -9,6 +9,7 @@
 #
 import random
 import string
+import uuid
 from datetime import datetime
 
 from flask import current_app
@@ -43,6 +44,7 @@ def register_user(**kwargs):
     roles_step1 = [db.session.query(Role).filter_by(name=r).first() for r in roles]
     roles_step2 = [x for x in roles_step1 if x is not None]
     kwargs['roles'] = roles_step2
+    kwargs['fs_uniquifier'] = uuid.uuid4().hex
 
     user = User(**kwargs)
 

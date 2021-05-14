@@ -52,15 +52,16 @@
             });
 
             let filter_state = localStorage.getItem('mps-project-filter-open');
+            let accordion = $('#accordion');
             if (filter_state === 'false') {
-                let icon = $('#accordion').find("i.indicator");
+                let icon = accordion.find("i.indicator");
                 icon.toggleClass('fa-chevron-down fa-chevron-up');    // switch state; it's open by default
 
                 $('#collapseFilter').removeClass('show');
             }
 
-            $('#accordion').on('hidden.bs.collapse', toggleFilterState);
-            $('#accordion').on('shown.bs.collapse', toggleFilterState);
+            accordion.on('hidden.bs.collapse', toggleFilterState);
+            accordion.on('shown.bs.collapse', toggleFilterState);
         });
     </script>
 {% endblock %}

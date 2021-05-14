@@ -115,7 +115,7 @@
                                 {% if live_counterpart is not none %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
                                         <a class="badge badge-success dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                            LIVE {{ live_counterpart.number_assessors }}
+                                            SELECTING {{ live_counterpart.number_assessors }}
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-right">
                                             <a class="dropdown-item" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=live_counterpart.id) }}">
@@ -136,7 +136,7 @@
                                             <a class="badge badge-secondary dropdown-toggle" data-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% endif %}
                                         <div class="dropdown-menu dropdown-menu-right">
-                                            <div class="dropdown-header">Attached to library version</div>
+                                            <div class="dropdown-header">Attached assessor</div>
                                             {% if running_counterpart is none %}
                                                 <a class="dropdown-item disabled"><i class="fas fa-times"></i> No running project</a>
                                             {% else %}

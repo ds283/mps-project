@@ -36,7 +36,7 @@ def valid_username(form, field):
 
 
 def globally_unique_username(form, field):
-    if _datastore.get_user(field.data) is not None:
+    if _datastore.find_user(username=field.data) is not None:
         raise ValidationError('{name} is already associated with an account'.format(name=field.data))
 
 
@@ -48,7 +48,7 @@ def unique_or_original_username(form, field):
 
 
 def existing_username(form, field):
-    user = _datastore.get_user(field.data)
+    user = _datastore.find_user(username=field.data)
 
     if user is None:
         raise ValidationError('userid {name} is not an existing user'.format(name=field.data))
@@ -60,7 +60,7 @@ def unique_or_original_email(form, field):
     if field.data == form.user.email:
         return
 
-    if _datastore.get_user(field.data) is not None:
+    if _datastore.find_user(email=field.data) is not None:
         raise ValidationError('{name} is already associated with an account'.format(name=field.data))
 
 

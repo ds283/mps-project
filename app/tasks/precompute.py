@@ -18,7 +18,7 @@ from celery.exceptions import Ignore
 
 from ..database import db
 from ..models import User, FacultyData, StudentData, SelectingStudent, Project, LiveProject, WorkflowMixin, \
-    ProjectDescription
+    ProjectDescription, ProjectClassConfig
 
 import app.ajax as ajax
 
@@ -27,7 +27,7 @@ def register_precompute_tasks(celery):
 
     @celery.task(bind=True)
     def student_liveprojects(self, user_id):
-        # find all current selecting students
+        # find all current SelectingStudent instances that belong to this student
         try:
             data = db.session.query(StudentData).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
@@ -52,12 +52,15 @@ def register_precompute_tasks(celery):
         if sel is None:
             raise Ignore()
 
-        task = group(cache_liveproject.si(sel_id, proj.id) for proj in sel.config.live_projects.all())
+        state = sel.config.selector_lifecycle
+        is_live = state < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+
+        task = group(cache_liveproject.si(sel_id, is_live, proj.id) for proj in sel.config.live_projects.all())
         task.apply_async()
 
 
     @celery.task(bind=True)
-    def cache_liveproject(self, sel_id, proj_id):
+    def cache_liveproject(self, sel_id, is_live, proj_id):
         try:
             proj = db.session.query(LiveProject).filter_by(id=proj_id).first()
         except SQLAlchemyError as e:
@@ -69,7 +72,7 @@ def register_precompute_tasks(celery):
 
         # request generation of table data for this selector id and project_id
         # will force it to be generated and cached if not already present
-        ajax.student.selector_liveprojects_data(sel_id, [proj_id])
+        ajax.student.selector_liveprojects_data(sel_id, is_live, [proj_id])
 
 
     @celery.task(bind=True)

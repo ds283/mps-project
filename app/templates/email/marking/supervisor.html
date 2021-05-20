@@ -6,7 +6,7 @@
 
 <p>Title: {{ project.name }}
 {% if marker -%}
-<br></br>Marker: {{ marker.user.name }} <{{ marker.user.email }}>
+<br>Marker: {{ marker.user.name }} <{{ marker.user.email }}>
 {%- else -%}
 <br>Marker: no marker has yet been assigned
 {%- endif %}

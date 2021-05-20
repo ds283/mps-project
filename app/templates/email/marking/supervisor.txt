@@ -1,5 +1,8 @@
 Dear {{ supervisor.user.first_name }}
 
+This email is automated. Please do not reply to it directly, because
+email to the sending address is not monitored.
+
 Please find attached the marking materials for your {{ pclass.abbreviation }} student
 {{ student.user.first_name }} {{ student.user.last_name }} (candidate number {{ student.exam_number }}). You should ensure
 that only the candidate number is used to identify this project when
@@ -20,35 +23,40 @@ considerably when marking the project report.
 {% endif -%}
 {% if project.review_only -%}
 You have marked this project as "review only". Please be aware that
-the marks for such projects are *not* capped, and a very good
-review (for example, synthesizing a subject area which has not yet
-been reviewed in the literature) should attract the same credit as any
-other good report.
+the marks for such projects are *not* capped, and a very good review
+(for example, synthesizing a subject area which has not yet been reviewed
+in the literature) should attract the same credit as any other good report.
 
 {% endif -%}
 The submitted report (or a link to download it) is attached to this email.
 If a link is provided then after following it your download will begin
-immediately if you are logged in to mpsprojects.sussex.ac.uk. If not, you will be
-redirected to a login page. The download will begin automatically once you
+immediately if you are logged in to mpsprojects.sussex.ac.uk. If not, you will
+be redirected to a login page. The download will begin automatically once you
 log in successfully. Alternatively, you can download the report from your
-dashboard on https://mpsprojects.sussex.ac.uk. The convenor has requested that
+dashboard at https://mpsprojects.sussex.ac.uk. The convenor has requested that
 marking and feedback be completed by midnight
 on {{ deadline.strftime("%a %d %b %Y") }}.
 
+The marking materials (see manifest below) include a similarity report.
+Please be aware that the report is intended to help you to establish if
+there is a concern regarding academic misconduct that needs to be investigated.
+A concern regarding academic misconduct should be raised based on your academic
+judgement and not on the similarity score along. Please refer to the FAQs for
+markers provided at:
+http://www.sussex.ac.uk/adqe/standards/examsandassessment/esubmission
+
 When you have formed your opinion of the report, please complete
-the attached marksheet. Please do not forget that the exam board requires
-a short justification of the mark you assign in each category.
-When the sheet is complete you will need to agree a final mark with
-the second marker. This can be done by email, or in person if you prefer.
-Your mark schemes are different and there is no expectation that your
-marks will agree, or be related to each other in a simple way. However, if
-your marks are more than 10% different, you should record a brief rationale
-for the relative weighting you adopt in order to assist the exam board
-with their work.
+the attached marksheet. The exam board requires a short justification of
+the mark you assign in each category. When the sheet is complete you will
+need to agree a final mark with the second marker. Your mark schemes are
+different and there is no expectation that your marks will agree, or be
+related to each other in a simple way. However, if your marks are more
+than 10% different, you should record a brief rationale for the relative
+weighting you adopt in order to assist the exam board with their work.
 
 Both supervisor and marker sheets should be returned to the project
 convenor ({{ config.convenor_email }}), together with the agreed
-mark and its rationale. (Only one copy of this is needed.)
+mark and its rationale. Only one copy of this is needed.
 
 Please also enter your feedback for the student online at
 https://mpsprojects.sussex.ac.uk using the 'Edit feedback' button for this
@@ -61,9 +69,6 @@ via search.
 
 If you have any questions, please direct these to the project convenor:
 {{ config.convenor_name }} <{{ config.convenor_email }}>
-
-This email is automated. Please do not reply to it directly, because
-email to the sending address is not monitored.
 
 ATTACHMENT MANIFEST
 {% for attached, manifest_entry, description in attached_documents %}

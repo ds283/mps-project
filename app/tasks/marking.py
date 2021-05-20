@@ -162,6 +162,10 @@ def register_marking_tasks(celery):
                                        period=period, marker=marker, supervisor=supervisor, submitter=submitter,
                                        project=record.project, student=student, record=record,
                                        deadline=deadline, attached_documents=attached_documents)
+            msg.html = render_template('email/marking/supervisor.html', config=config, pclass=pclass,
+                                       period=period, marker=marker, supervisor=supervisor, submitter=submitter,
+                                       project=record.project, student=student, record=record,
+                                       deadline=deadline, attached_documents=attached_documents)
 
             # register a new task in the database
             task_id = register_task(msg.subject,
@@ -193,6 +197,10 @@ def register_marking_tasks(celery):
             attached_documents = _attach_documents(msg, record, filename, max_attachment, role='marker')
 
             msg.body = render_template('email/marking/marker.txt', config=config, pclass=pclass,
+                                       period=period, marker=marker, supervisor=supervisor, submitter=submitter,
+                                       project=record.project, student=student, record=record,
+                                       deadline=deadline, attached_documents=attached_documents)
+            msg.html = render_template('email/marking/marker.html', config=config, pclass=pclass,
                                        period=period, marker=marker, supervisor=supervisor, submitter=submitter,
                                        project=record.project, student=student, record=record,
                                        deadline=deadline, attached_documents=attached_documents)

@@ -1,5 +1,7 @@
 {% extends "convenor/dashboard/selector_nav.html" %}
 
+{% from "icon_block.html" import icon_block %}
+
 {% if cohort_filter is none %}{% set cohort_filter = 'all' %}{% endif %}
 {% if prog_filter is none %}{% set prog_filter = 'all' %}{% endif %}
 {% if year_filter is none %}{% set year_filter = 'all' %}{% endif %}
@@ -45,14 +47,10 @@
 
 {% block bodyblock %}
     {% if config.selection_closed %}
-        <div class="row">
-            <div class="col-1"></div>
-            <div class="col-10">
-                <div class="alert alert-danger">
-                    Student selections have already closed for the current academic year.
-                </div>
-            </div>
-            <div class="col-1"></div>
+        <div class="alert alert-danger">
+            {% call icon_block("exclamation-circle") %}
+                <div><strong>Student selections have already closed for the current academic year.</strong></div>
+            {% endcall %}
         </div>
     {% endif %}
 

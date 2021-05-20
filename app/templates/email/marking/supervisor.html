@@ -1,8 +1,8 @@
 <p>Dear {{ supervisor.user.first_name }}</p>
 
-<p><strong>This email is automated. Please do not reply to it directly, because email to the sending address is not monitored.</strong></p>
+<p><strong>This email is automated. Please do not reply to it directly, because email to the sending address is not monitored.</strong> If you have any questions, please direct these to the project convenor: {{ config.convenor_name }} ({{ config.convenor_email }})</p>
 
-<p>Please find attached the marking materials for your {{ pclass.abbreviation }} student {{ student.user.first_name }} {{ student.user.last_name }} (candidate number {{ student.exam_number }}). You should ensure that only the candidate number is used to identify this project when discussing an agreed mark with the second marker.</p>
+<p>Please find attached the marking materials for your {{ pclass.abbreviation }} student {{ student.user.first_name }} {{ student.user.last_name }} (candidate number {{ student.exam_number }}). You should ensure that only the candidate number is used to identify this project if you need to discuss an agreed mark with the examiner (second marker).</p>
 
 <p>Title: {{ project.name }}
 {% if marker -%}
@@ -21,21 +21,29 @@
 been reviewed in the literature) should attract the same credit as any other good report.</p>
 {% endif -%}
 
-<p>The submitted report (or a link to download it) is attached to this email. After following the link, your download will begin immediately if you are logged in to <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a>. If not, you will be redirected to a login page and the download will begin automatically once you log in.</p>
+<p>Please download the report and the supporting marking materials using the links at the bottom of this email. If you are currently logged in to <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a> then your download will start immediately; otherwise, you will be prompted to login and your download should begin immediately after. You can also download these documents from your project dashboard on <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a>.</p>
 
-<p>Alternatively, you can download the report from your dashboard at <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a>. The convenor has requested that marking and feedback be completed by midnight on {{ deadline.strftime("%a %d %b %Y") }}.</p>
+<p>The convenor ({{ config.convenor_name}}) has requested that marking and feedback be completed as soon as possible, and no later than 4pm on Friday 28th 2021. You may need to take part in the next stage (agreeing a final mark and moderation), so please let her know if you going to be away the week commencing May 31st.</p>
+
+<p>If you are supervising other projects, and/or have projects to examine, those will be covered in separate emails from this account.</p>
 
 <p>The marking materials (see manifest below) include a similarity report. Please be aware that the report is intended to help you to establish if there is a concern regarding academic misconduct that needs to be investigated. A concern regarding academic misconduct should be raised based on your academic judgement and not on the similarity score alone. Please refer to the FAQs for markers <a href="http://www.sussex.ac.uk/adqe/standards/examsandassessment/esubmission">provided by ADQE</a>.</p>
 
-<p>When you have formed your opinion of the report, please complete the attached marksheet. The exam board requires a short justification of the mark you assign in each category. When the sheet is complete you will need to agree a final mark with the second marker. Your mark schemes are different and there is no expectation that your marks will agree, or be related to each other in a simple way. However, if your marks are more than 10% different, you should record a brief rationale for the relative weighting you adopt in order to assist the exam board with their work.</p>
+<p>There are four, equally weighted, criteria against which you are asked to grade the report:</p>
+<ol style="line-height: 100%">
+    <li>Understanding of Scientific Principles</li>
+    <li>Conscientiousness and Time Management</li>
+    <li>Technical Skills</li>
+    <li>Student's Contribution (in terms of Initiative & Originality)</li>
+</ol>
 
-<p>Both supervisor and marker sheets should be returned to the project convenor (<a href="mailto:{{ config.convenor_email }}">{{ config.convenor_email }}</a>), together with the agreed mark and its rationale. Only one copy of this is needed.</p>
+<p>Please record your grades for those criteria, your justification of those grades, and your feedback for the student and external examiners using the Qualtrics form linked <a href="https://docs.google.com/document/d/1NWuG2HWoU85_tNpy_wzKOCOdiBk0mgzHSGDfLzniHAs/edit?usp=sharing">here</a>.</p>
 
-<p>Please also enter your feedback for the student online at <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a> using the <em>Edit feedback</em> button for this project visible on your dashboard. By capturing your feedback electronically we ensure that it is pushed directly to the student by email.</p>
+<p>You will need to be able to access the Sussex University institutional Google account to open that link.</p>
 
-<p>If you have been assigned further projects to mark, they will be delivered in separate emails to help with identifying the required marking materials via search.</p>
+<p>The page also includes links to instructions, and to a Google Docs version of the Qualtrics form. You can use copies of the Google Docs version to draft your answers for this and other students you are supervising. This option was added after feedback from faculty last year.</p>
 
-<p>If you have any questions, please direct these to the project convenor: {{ config.convenor_name }} (<a href="mailto::{{ config.convenor_email }}">{{ config.convenor_email }}</a>).
+<p>There is an equivalent Qualtrics form for the examiner.</p>
 
 <p><strong>ATTACHMENT MANIFEST</strong></p>
 {% for attached, manifest_entry, description in attached_documents %}

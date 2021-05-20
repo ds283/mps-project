@@ -1,13 +1,17 @@
 Dear {{ marker.user.first_name }}
 
-This email is automated. Please do not reply to it directly, because
-email to the sending address is not monitored.
+[This email is automated. Please do not reply to it directly, because email
+to the sending address is not monitored. If you have any questions, please
+direct these to the project convenor:
+{{ config.convenor_name }} <{{ config.convenor_email }}>]
 
-You have been assigned as second marker for a {{ pclass.abbreviation }} student
+You have been assigned as the examiner (second marker) for a {{ pclass.abbreviation }} student
 (candidate number {{ student.exam_number }}).
 
 Title: {{ project.name }}
 Supervisor: {{ supervisor.user.name }} <{{ supervisor.user.email }}>
+
+Note that the project title may well be different from the title of the submitted report.
 
 {% if project.aims and project.aims|length > 0 -%}
 The supervisor has given the following statement of aims,
@@ -15,9 +19,6 @@ which you may wish to bear in mind when forming your opinion of the report.
 
 AIMS:
 {{ project.aims|wordwrap(79) }}
-
-{% else -%}
-The supervisor has not yet given a statement of aims for this project.
 
 {% endif -%}
 {% if project.review_only -%}
@@ -30,14 +31,20 @@ The marks for "review only" projects are *not* capped, and a very good review
 in the literature) should attract the same credit as any other good report.
 
 {% endif -%}
-The submitted report (or a link to download it) is attached to this email.
-After following the link, your download will begin immediately if you are
-logged in to mpsprojects.sussex.ac.uk. If not, you will be redirected to a
-login page and the download will begin automatically once you log in
+Please download the report and the supporting marking materials using the links
+at the bottom of this email. If you are currently logged in to
+https://mpsprojects.sussex.ac.uk then your download will start immediately;
+otherwise, you will be prompted to login and your download should begin
+immediately after. You can also download these documents from your project
+dashboard on https://mpsprojects.sussex.ac.uk.
 
-Alternatively, you can download the report from your dashboard at
-https://mpsprojects.sussex.ac.uk. The convenor has requested that marking and
-feedback be completed by midnight on {{ deadline.strftime("%a %d %b %Y") }}.
+The convenor ({{ config.convenor_name}}) has requested that marking and feedback be completed
+as soon as possible, and no later than 4pm on Friday 28th 2021. You may need to
+take part in the next stage (agreeing a final mark and moderation), so please
+let her know if you going to be away the week commencing May 31st.
+
+If you are supervising other projects, and/or have projects to examine, those
+will be covered in separate emails from this account.
 
 The marking materials (see manifest below) include a similarity report.
 Please be aware that the report is intended to help you to establish if
@@ -47,30 +54,30 @@ judgement and not on the similarity score alone. Please refer to the FAQs for
 markers provided at:
 http://www.sussex.ac.uk/adqe/standards/examsandassessment/esubmission
 
-When you have formed your opinion of the report, please complete
-the attached marksheet. The exam board requires a short justification of
-the mark you assign in each category. When the sheet is complete you will
-need to agree a final mark with the second marker. Your mark schemes are
-different and there is no expectation that your marks will agree, or be
-related to each other in a simple way. However, if your marks are more
-than 10% different, you should record a brief rationale for the relative
-weighting you adopt in order to assist the exam board with their work.
+There are four criteria against which you are asked to grade the report:
 
-Both supervisor and marker sheets should be returned to the project
-convenor ({{ config.convenor_email }}), together with the agreed
-mark and its rationale. Only one copy of this is needed.
+1. Basic Structure and Presentation (10%). Please grade that aspect before
+   properly reading the report (the relevant questions can be answered just
+   by flicking through it).
+2. Scientific Presentation (30%)
+3. Scientific Investigation (30%)
+4. Results and their Significance (30%)
 
-Please also enter your feedback for the student online at
-https://mpsprojects.sussex.ac.uk using the 'Edit feedback' button for this
-project visible on your dashboard. By capturing your feedback electronically
-we ensure that it is pushed directly to the student by email.
+Please record your grades for those criteria, your justification of those
+grades, and your feedback for the student and external examiners using the
+Qualtrics form linked from this page:
 
-If you have been assigned further projects to mark, they will be delivered
-in separate emails to help with identifying the required marking materials
-via search.
+https://docs.google.com/document/d/1NWuG2HWoU85_tNpy_wzKOCOdiBk0mgzHSGDfLzniHAs/edit?usp=sharing
 
-If you have any questions, please direct these to the project convenor:
-{{ config.convenor_name }} <{{ config.convenor_email }}>
+You will need to be able to access the Sussex University institutional Google
+account to open that link.
+
+The page also includes links to instructions, and to a Google Docs version of
+the Qualtrics form. You can use copies of the Google Docs version to draft your
+answers for this and other students you are examining. This option was added
+after feedback from faculty last year.
+
+There is an equivalent Qualtrics form for the supervisor.
 
 ATTACHMENT MANIFEST
 {% for attached, manifest_entry, description in attached_documents %}

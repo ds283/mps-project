@@ -1,12 +1,12 @@
 <p>Dear {{ supervisor.user.first_name }}</p>
 
-<p><strong>This email is automated. Please do not reply to it directly, because email to the sending address is not monitored.</strong> If you have any questions, please direct these to the project convenor: {{ config.convenor_name }} ({{ config.convenor_email }})</p>
+<p><strong>This email is automated. Please do not reply to it directly, because email to the sending address is not monitored.</strong> If you have any questions, please direct these to the project convenor: <a href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a>.</p>
 
 <p>Please find attached the marking materials for your {{ pclass.abbreviation }} student {{ student.user.first_name }} {{ student.user.last_name }} (candidate number {{ student.exam_number }}). You should ensure that only the candidate number is used to identify this project if you need to discuss an agreed mark with the examiner (second marker).</p>
 
 <p>Title: {{ project.name }}
 {% if marker -%}
-<br>Marker: {{ marker.user.name }} ({{ marker.user.email }})
+<br>Marker: <a href="mailto:{{ marker.user.email }}">{{ marker.user.name }}</a>
 {%- else -%}
 <br>Marker: no marker has yet been assigned
 {%- endif %}

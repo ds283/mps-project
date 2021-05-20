@@ -1,11 +1,11 @@
 <p>Dear {{ marker.user.first_name }}</p>
 
-<p><strong>This email is automated. Please do not reply to it directly, because email to the sending address is not monitored.</strong> If you have any questions, please direct these to the project convenor: {{ config.convenor_name }} ({{ config.convenor_email }})</p>
+<p><strong>This email is automated. Please do not reply to it directly, because email to the sending address is not monitored.</strong> If you have any questions, please direct these to the project convenor: <a href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a>.</p>
 
 <p>You have been assigned as second marker for a {{ pclass.abbreviation }} student (candidate number {{ student.exam_number }}).</p>
 
 <p>Title: {{ project.name }}
-<br>Supervisor: {{ supervisor.user.name }} ({{ supervisor.user.email }})</p>
+<br>Supervisor: <a href="mailto:{{ supervisor.user.email }}">{{ supervisor.user.name }}</a></p>
 
 <p>Note that the project title may well be different from the title of the submitted report.</p>
 

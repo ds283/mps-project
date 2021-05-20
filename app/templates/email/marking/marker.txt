@@ -31,19 +31,19 @@ in the literature) should attract the same credit as any other good report.
 
 {% endif -%}
 The submitted report (or a link to download it) is attached to this email.
-If a link is provided then after following it your download will begin
-immediately if you are logged in to mpsprojects.sussex.ac.uk. If not, you will
-be redirected to a login page. The download will begin automatically once you
-log in successfully. Alternatively, you can download the report from your
-dashboard at https://mpsprojects.sussex.ac.uk. The convenor has requested that
-marking and feedback be completed by midnight
-on {{ deadline.strftime("%a %d %b %Y") }}.
+After following the link, your download will begin immediately if you are
+logged in to mpsprojects.sussex.ac.uk. If not, you will be redirected to a
+login page and the download will begin automatically once you log in
+
+Alternatively, you can download the report from your dashboard at
+https://mpsprojects.sussex.ac.uk. The convenor has requested that marking and
+feedback be completed by midnight on {{ deadline.strftime("%a %d %b %Y") }}.
 
 The marking materials (see manifest below) include a similarity report.
 Please be aware that the report is intended to help you to establish if
 there is a concern regarding academic misconduct that needs to be investigated.
 A concern regarding academic misconduct should be raised based on your academic
-judgement and not on the similarity score along. Please refer to the FAQs for
+judgement and not on the similarity score alone. Please refer to the FAQs for
 markers provided at:
 http://www.sussex.ac.uk/adqe/standards/examsandassessment/esubmission
 

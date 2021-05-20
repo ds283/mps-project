@@ -21,10 +21,11 @@
 been reviewed in the literature) should attract the same credit as any other good report.</p>
 {% endif -%}
 
-<p>The submitted report (or a link to download it) is attached to this email. If a link is provided then after following it your download will begin immediately if you are logged in to <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a>. If not, you will be redirected to a login page. The download will begin automatically once you log in successfully. Alternatively, you can download the report from your dashboard at <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a>. The convenor has requested that marking and feedback be completed by midnight on {{ deadline.strftime("%a %d %b %Y") }}.</p>
+<p>The submitted report (or a link to download it) is attached to this email. After following the link, your download will begin immediately if you are logged in to <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a>. If not, you will be redirected to a login page and the download will begin automatically once you log in.</p>
 
+<p></p>Alternatively, you can download the report from your dashboard at <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a>. The convenor has requested that marking and feedback be completed by midnight on {{ deadline.strftime("%a %d %b %Y") }}.</p>
 
-<p>The marking materials (see manifest below) include a similarity report. Please be aware that the report is intended to help you to establish if there is a concern regarding academic misconduct that needs to be investigated. A concern regarding academic misconduct should be raised based on your academic judgement and not on the similarity score along. Please refer to the FAQs for markers <a href="http://www.sussex.ac.uk/adqe/standards/examsandassessment/esubmission">provided by ADQE</a>.</p>
+<p>The marking materials (see manifest below) include a similarity report. Please be aware that the report is intended to help you to establish if there is a concern regarding academic misconduct that needs to be investigated. A concern regarding academic misconduct should be raised based on your academic judgement and not on the similarity score alone. Please refer to the FAQs for markers <a href="http://www.sussex.ac.uk/adqe/standards/examsandassessment/esubmission">provided by ADQE</a>.</p>
 
 <p>When you have formed your opinion of the report, please complete the attached marksheet. The exam board requires a short justification of the mark you assign in each category. When the sheet is complete you will need to agree a final mark with the second marker. Your mark schemes are different and there is no expectation that your marks will agree, or be related to each other in a simple way. However, if your marks are more than 10% different, you should record a brief rationale for the relative weighting you adopt in order to assist the exam board with their work.</p>
 
@@ -40,10 +41,10 @@ been reviewed in the literature) should attract the same credit as any other goo
 {% for attached, manifest_entry, description in attached_documents %}
 <p>{{ loop.index }}. {{ manifest_entry }}
 {%- if description and description|length > 0 %}
-<ul><li>{{ description }}</li></ul>
+<ul style="line-height: 100%"><li>{{ description }}</li></ul>
 {%- endif -%}
 {%- if not attached %}
-<ul><li>Please download using the link provided.</li></ul>
+<ul style="line-height: 100%"><li>Please download using the link provided.</li></ul>
 {%- endif %}
 </p>
 {%- else -%}

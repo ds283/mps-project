@@ -35,7 +35,7 @@ login page and the download will begin automatically once you log in.
 
 Alternatively, you can download the report from your dashboard at
 https://mpsprojects.sussex.ac.uk. The convenor has requested that marking and
-feedback be completed by midnight on {{ deadline.strftime("%a %d %b %Y") }}.
+feedback be completed by noon on {{ deadline.strftime("%a %d %b %Y") }}.
 
 The marking materials (see manifest below) include a similarity report.
 Please be aware that the report is intended to help you to establish if

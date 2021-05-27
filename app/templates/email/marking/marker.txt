@@ -39,9 +39,9 @@ immediately after. You can also download these documents from your project
 dashboard on https://mpsprojects.sussex.ac.uk.
 
 The convenor ({{ config.convenor_name}}) has requested that marking and feedback be completed
-as soon as possible, and no later than 4pm on Friday 28th 2021. You may need to
-take part in the next stage (agreeing a final mark and moderation), so please
-let her know if you going to be away the week commencing May 31st.
+as soon as possible, and no later than noon on Tuesday June 1st 2021. You may
+need to take part in the next stage (agreeing a final mark and moderation),
+so please let her know if you going to be away the week commencing May 31st.
 
 If you are supervising other projects, and/or have projects to examine, those
 will be covered in separate emails from this account.

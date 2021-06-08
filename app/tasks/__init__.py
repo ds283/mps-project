@@ -18,6 +18,7 @@ from .close_selection import register_close_selection_tasks
 from .user_launch import register_user_launch_tasks
 from .popularity import register_popularity_tasks
 from .matching import register_matching_tasks
+from .matching_emails import register_matching_email_tasks
 from .availability import register_availability_tasks
 from .scheduling import register_scheduling_tasks
 from .maintenance import register_maintenance_tasks

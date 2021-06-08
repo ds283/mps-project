@@ -4667,7 +4667,7 @@ def publish_matching_selectors(id):
                             description='Email details of match "{name}" to submitters'.format(name=record.name))
 
     celery = current_app.extensions['celery']
-    task = celery.tasks['app.tasks.matching.publish_to_selectors']
+    task = celery.tasks['app.tasks.matching_emails.publish_to_selectors']
 
     task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
 
@@ -4706,7 +4706,7 @@ def publish_matching_supervisors(id):
                             description='Email details of match "{name}" to supervisors'.format(name=record.name))
 
     celery = current_app.extensions['celery']
-    task = celery.tasks['app.tasks.matching.publish_to_supervisors']
+    task = celery.tasks['app.tasks.matching_emails.publish_to_supervisors']
 
     task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
 

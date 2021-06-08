@@ -1,0 +1,33 @@
+<p>Dear {{ user.first_name }}</p>
+
+<p><strong>This email is sent from an automated address. Please don't reply to it directly, because your email won't reach us.</strong> If you have  questions, please contact the projects convenor: <a href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor.user.name }}</a></p>
+
+{% set text = pclass.email_text_final_matching_preamble -%}
+{%- if text is not none and text|length > 0 -%}
+<p>{{ text }}</p>
+{%- else -%}
+<p>You are receiving this email because we expect you will undertake a project of type "{{ config.name }}" in academic year {{ config.year+1 }}-{{ config.year+2 }}. Please let us know as soon as possible if you believe this is not correct.</p>
+
+<p>The final project allocation is now available. Unless you have already been contacted to discuss changes, there should be no variation compared to the draft allocation of which you have already been notified.</p>
+{%- endif %}
+
+{% if number == 1 -%}
+<p>You have been allocated the following project:</p>
+{% elif number > 1 -%}
+<p>You have been allocated the following projects:</p>
+{% endif -%}
+<ol>
+{% for item in matches %}
+{% if number > 1 -%}
+{%- set period = pclass.get_period(item.submission_period) -%}
+<li>{{ period.display_name(config.year+1) }}: <strong>{{ item.project.name }}</strong> (<a href="mailto:{{ item.project.owner.user.email }}">{{ item.project.owner.user.name }}</a>, rank {{ item.rank|string }})</li>
+{%- else -%}
+<li><strong>{{ item.project.name }}</strong> (<a href="mailto:{{ item.project.owner.user.email }}">{{ item.project.owner.user.name }}</a>, rank {{ item.rank|string }})</li>{%- endif %}
+{%- endfor %}
+</ol>
+
+<p>If you believe there has been an error in the allocation, please contact the project convenor as soon as possible.</p>
+
+<p>Best wishes<br>
+<a href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor.user.name }} {{ pclass.convenor.user.last_name }}</a> (the project convenor)
+</p>

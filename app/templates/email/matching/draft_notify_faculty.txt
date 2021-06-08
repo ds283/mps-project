@@ -1,5 +1,8 @@
 Dear {{ user.first_name }}
 
+This email is sent from an automated address. Please don't reply to
+it directly, because your email won't reach us.
+
 Thank you for your efforts in preparing project descriptions and accommodating
 student meetings over the last term. We now have a draft of the student
 project allocation for next academic year, {{ attempt.year+1 }}-{{ attempt.year+2 }}.

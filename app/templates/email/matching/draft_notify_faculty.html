@@ -1,0 +1,34 @@
+<p>Dear {{ user.first_name }}</p>
+
+<p><strong>This email is sent from an automated address. Please don't reply to it directly, because your email won't reach us.</strong></p>
+
+<p>Thank you for your efforts in preparing project descriptions and accommodating student meetings over the last term. We now have a draft of the student project allocation for next academic year, {{ attempt.year+1 }}-{{ attempt.year+2 }}.</p>
+
+<ul>
+{% for key in matches %}
+{%- set match_list = matches[key] -%}
+{%- set config = match_list[0].selector.config %}
+<li><strong>{{ config.name }}</strong> convenor <a href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a>
+<ol>
+{% for item in match_list %}
+{% if config.project_class.submissions > 1 -%}
+{%- set period = config.project_class.get_period(item.submission_period) -%}
+<li>{{ period.display_name(config.year+1) }}: <a href="mailto:{{ item.selector.student.user.email }}">{{ item.selector.student.user.name }}</a> (<em>{{ item.project.name }}</em>)</li>
+{%- else -%}
+<li><a href="mailto:{{ item.selector.student.user.email }}">{{ item.selector.student.user.name }}</a> (<em>{{ item.project.name }}</em>)</li>
+{%- endif -%}
+{%- endfor %}
+</ol>
+</li>
+{% endfor %}
+</ul>
+
+<p>If you anticipate any problems with this allocation, please let the appropriate project convenor know as soon as possible.</p>
+
+<p>Best wishes
+{% for convenor in convenors -%}
+<br><a href="mailto:{{ convenor.user.email }}">{{ convenor.user.first_name }} {{ convenor.user.last_name }}</a>
+{% endfor -%}
+{%- set pl = 's' -%}
+{%- if convenors|length == 1 -%}{%- set pl = '' -%}{%- endif -%}
+<br>(the project convenor{{ pl }})</p>

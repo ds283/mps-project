@@ -1,13 +1,17 @@
 Dear {{ user.first_name }}
 
+This email is sent from an automated address. Please don't reply to
+it directly, because your email won't reach us. If you have
+questions, please contact the projects convenor:
+{{ pclass.convenor.user.name }} <{{ pclass.convenor_email }}>
+
 {% set text = pclass.email_text_final_matching_preamble -%}
 {%- if text is not none and text|length > 0 -%}
 {{ text|wordwrap(79) }}
 {%- else -%}
 You are receiving this email because we expect you will undertake a project
 of type "{{ config.name }}" in academic year {{ config.year+1 }}-{{ config.year+2 }}.
-If you believe this is incorrect, please advise the project convenor
-(contact details are given below).
+Please let us know as soon as possible if you believe this is not correct.
 
 The final project allocation is now available. Unless you have already
 been contacted to discuss changes, there should be no variation compared
@@ -33,9 +37,6 @@ You have been allocated the following projects:
 If you believe there has been an error in the allocation, please contact
 the project convenor as soon as possible.
 
-This is an automated email. Please do not reply to it directly, because
-messages sent to this mailbox are not monitored or answered.
-
-Best wishes,
+Best wishes
 {{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} <{{ pclass.convenor_email }}>
 (the project convenor)

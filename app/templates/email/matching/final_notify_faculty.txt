@@ -1,5 +1,8 @@
 Dear {{ user.first_name }}
 
+This email is sent from an automated address. Please don't reply to
+it directly, because your email won't reach us.
+
 Thank you for your efforts in preparing project descriptions and accommodating
 student meetings over the last term.  The final project allocation is now
 available. Unless you have already been contacted to discuss changes, there

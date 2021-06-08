@@ -244,6 +244,7 @@ def create_app():
     tasks.register_user_launch_tasks(celery)
     tasks.register_popularity_tasks(celery)
     tasks.register_matching_tasks(celery)
+    tasks.register_matching_email_tasks(celery)
     tasks.register_availability_tasks(celery)
     tasks.register_scheduling_tasks(celery)
     tasks.register_maintenance_tasks(celery)

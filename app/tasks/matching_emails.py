@@ -43,7 +43,7 @@ def register_matching_email_tasks(celery):
 
         notify = celery.tasks['app.tasks.utilities.email_notification']
 
-        task = chain(group(publish_email_to_selector.si(id, sel_id, not bool(record.selected)) for sel_id in recipients),
+        task = chain(group(publish_email_to_selector.si(match_id, sel_id, not bool(record.selected)) for sel_id in recipients),
                      notify.s(user_id, '{n} email notification{pl} issued', 'info'),
                      publish_to_selectors_finalize.si(match_id, task_id))
 
@@ -81,14 +81,14 @@ def register_matching_email_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def publish_email_to_selector(self, attempt_id, sel_id, is_draft):
+    def publish_email_to_selector(self, match_id, sel_id, is_draft):
         if isinstance(is_draft, str):
             is_draft = strtobool(is_draft)
 
         try:
-            record = db.session.query(MatchingAttempt).filter_by(id=attempt_id).first()
+            record = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
             matches = db.session.query(MatchingRecord) \
-                .filter_by(matching_id=attempt_id, selector_id=sel_id) \
+                .filter_by(matching_id=match_id, selector_id=sel_id) \
                 .order_by(MatchingRecord.submission_period).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -158,7 +158,7 @@ def register_matching_email_tasks(celery):
 
         notify = celery.tasks['app.tasks.utilities.email_notification']
 
-        task = chain(group(publish_email_to_supervisor.si(id, fac_id, not bool(record.selected)) for fac_id in recipients),
+        task = chain(group(publish_email_to_supervisor.si(match_id, fac_id, not bool(record.selected)) for fac_id in recipients),
                      notify.s(user_id, '{n} email notification{pl} issued', 'info'),
                      publish_to_supervisors_finalize.si(match_id, task_id))
 
@@ -196,12 +196,12 @@ def register_matching_email_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def publish_email_to_supervisor(self, attempt_id, fac_id, is_draft):
+    def publish_email_to_supervisor(self, match_id, fac_id, is_draft):
         if isinstance(is_draft, str):
             is_draft = strtobool(is_draft)
 
         try:
-            record = db.session.query(MatchingAttempt).filter_by(id=attempt_id).first()
+            record = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
             fac = db.session.query(FacultyData).filter_by(id=fac_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

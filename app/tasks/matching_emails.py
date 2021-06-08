@@ -109,7 +109,7 @@ def register_matching_email_tasks(celery):
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
                       reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[user.email])
+                      recipients=['ds283@sussex.ac.uk'])
 
         if is_draft:
             msg.subject ='Notification: Draft project allocation for "{name}" ' \
@@ -231,7 +231,7 @@ def register_matching_email_tasks(celery):
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
                       reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[user.email])
+                      recipients=['ds283@sussex.ac.uk'])
 
         if is_draft:
             msg.subject ='Notification: Draft project allocation for ' \

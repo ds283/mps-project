@@ -242,7 +242,7 @@ def register_matching_email_tasks(celery):
             if len(matches) > 0:
                 msg.body = render_template('email/matching/draft_notify_faculty.txt', user=user, fac=fac,
                                            attempt=record, matches=binned_matches, convenors=convenors)
-                msg.html = render_template('email/matching/draft_notify_html.txt', user=user, fac=fac,
+                msg.html = render_template('email/matching/draft_notify_faculty.html', user=user, fac=fac,
                                            attempt=record, matches=binned_matches, convenors=convenors)
             else:
                 msg.body = render_template('email/matching/draft_unneeded_faculty.txt', user=user, fac=fac,

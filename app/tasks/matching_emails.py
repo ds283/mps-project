@@ -234,7 +234,7 @@ def register_matching_email_tasks(celery):
                       recipients=[user.email])
 
         if is_draft:
-            msg.subject ='Notification: Draft project allocation for ' \
+            msg.subject ='Notification: Draft MPhys FYP allocation for ' \
                          '{yra}-{yrb}'.format(yra=record.year+1, yrb=record.year+2)
 
             # check whether we are notifying of an assignment, or that a faculty member is not needed for an

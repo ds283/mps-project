@@ -5,17 +5,17 @@ it directly, because your email won't reach us.
 
 Thank you for your efforts in preparing project descriptions and accommodating
 student meetings over the last term. We now have a draft of the student
-project allocation for next academic year, {{ attempt.year+1 }}-{{ attempt.year+2 }}.
+project allocation for MPhys final-year projects in the next academic year,
+{{ attempt.year+1 }}-{{ attempt.year+2 }}. At this stage you have not been
+asked to supervise any of these.
 
-At this stage you have not been allocated any projects to supervise next year.
-However, not all students have yet been allocated to projects because the
-necessary information is unavailable. This includes students who decide to transfer
-from MPhys to BSc, together with any students who are moved or withdrawn by the PAB.
+Allocations for BSc final-year projects (and Mathematical Physics Projects
+if you take part in these) will be done later in the year, when progression
+outcomes are known more accurately. We will be in touch again to let you know
+about these allocations when they are available.
 
 A final, definitive list of students who require supervisors may not be available
-until early September. At that point, or earlier, we may contact you to discuss
-supervising students as they become known to us. Thanks very much for your
-patience during this process.
+until early September. Thanks very much for your patience during this process.
 
 Best wishes,
 the project convenors

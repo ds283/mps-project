@@ -1,0 +1,134 @@
+{% extends "base_app.html" %}
+
+{% block scripts %}
+    {{ super() }}
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@2.0.1/dist/gridstack.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/gridstack@2.0.1/dist/gridstack.all.js"></script>
+
+    <script>
+        $(document).ready(function () {
+           var grid = GridStack.init({
+               draggable: {
+                   handle: '.drag-handle'
+               }
+           });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Project hub
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            {% if text and url %}
+                <div class="top-return-link">
+                    <a href="{{ url }}">
+                        <i class="fas fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+
+            {% if is_student %}
+                <div class="h3 mb-2">{{ pclass.name }}</div>
+                <div class="row vertical-top">
+                    <div class="col-8">
+                        <div class="text-muted">
+                            {{ project.name }}
+                        </div>
+                        {% if period.hand_in_date %}
+                            <small class="text-muted">
+                                Hand-in <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
+                                ({{ period.time_to_hand_in }} from now)
+                            </small>
+                        {% endif %}
+                    </div>
+                    <div class="col-4">
+                        <div class="float-right">
+                            Supervisor: <a href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
+                        </div>
+                        <div class="float-right">
+                            Convenor: <a href="mailto:{{ config.convenor.user.email }}">{{ config.convenor.user.name }}</a>
+                        </div>
+                    </div>
+                </div>
+                <hr class="intro-divider mb-5">
+            {% else %}
+                <div class="h3 mb-2">Project hub for <i class="fas fa-user"></i> {{ student.user.name }}</div>
+                <div class="row vertical-top">
+                    <div class="col-8">
+                        <div class="text-muted">
+                            {{ project.name }}
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="float-right">
+                            {{ pclass.make_label()|safe }}
+                        </div>
+                        {% if period.hand_in_date %}
+                            <small class="text-muted float-right">
+                                Hand-in <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
+                                ({{ period.time_to_hand_in }} from now)
+                            </small>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        {% if submitter.published and record.submission_period <= config.submission_period %}
+                            {% if record.student_engaged %}
+                                <div class="mt-2 mb-2">
+                                    <i class="fa fa-check"></i> <strong>Student engaged</strong>
+                                    <a class="btn btn-sm btn-outline-danger ml-2" href="{{ url_for('faculty.mark_waiting', id=record.id) }}"> Mark as not engaged</a>
+                                </div>
+                            {% else %}
+                                <div class="mt-2 mb-2">
+                                    <a class="btn btn-sm btn-outline-success" href="{{ url_for('faculty.mark_started', id=record.id) }}"> Mark student as engaged</a>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                <hr class="intro-divider mb-5">
+            {% endif %}
+
+            {# Populate dashboard widgets #}
+            <div class="grid-stack">
+                <div class="grid-stack-item" id="resources-widget" data-gs-x="0" data-gs-y="0" data-gs-width="6" data-gs-height="4">
+                    <div class="grid-stack-item-content bg-well p-3">
+                        <i class="fas fa-bars drag-handle"></i> <span class="h5">Resources</span>
+                        <hr class="intro-divider">
+                        Content
+                    </div>
+                </div>
+                <div class="grid-stack-item" id="news-widget" data-gs-x="6" data-gs-y="0" data-gs-width="6" data-gs-height="4">
+                    <div class="grid-stack-item-content bg-well p-3">
+                        <i class="fas fa-bars drag-handle"></i> <span class="h5">News and articles</span>
+                        <hr class="intro-divider">
+                        Content
+                    </div>
+                </div>
+                <div class="grid-stack-item" id="journal-widget" data-gs-x="0" data-gs-y="4" data-gs-width="6" data-gs-height="4">
+                    <div class="grid-stack-item-content bg-well p-3">
+                        <i class="fas fa-bars drag-handle"></i> <span class="h5">Notes and journal</span>
+                        <hr class="intro-divider">
+                        Content
+                    </div>
+                </div>
+            </div>
+
+            {% if text and url %}
+                <div>
+                    <a href="{{ url }}">
+                        <i class="fas fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

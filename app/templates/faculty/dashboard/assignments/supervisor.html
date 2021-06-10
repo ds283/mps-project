@@ -85,7 +85,8 @@
                                         Actions
                                     </button>
                                     <div class="dropdown-menu dropdown-menu-right">
-                                        <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ rec.number_attachments }})...</a>
+{#                                        <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ rec.number_attachments }})...</a>#}
+                                        <a class="dropdown-item" href="{{ url_for('projecthub.hub', subid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fab fa-hubspot fa-fw"></i> Project hub</a>
                                         {% if rec.owner.published and not rec.student_engaged and rec.submission_period <= rec.owner.config.submission_period %}
                                             <a class="dropdown-item" href="{{ url_for('faculty.mark_started', id=rec.id) }}"><i class="fas fa-running fa-fw"></i> Mark as started</a>
                                         {% endif %}

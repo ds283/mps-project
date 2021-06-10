@@ -83,7 +83,7 @@ MarkupSafe==2.0.1
 mdx-smartypants==1.5.1
 more-itertools==8.8.0
 namedentities==1.9.4
-numpy==1.16.2
+numpy==1.19.5
 packaging==20.9
 parse==1.19.0
 parso==0.8.2

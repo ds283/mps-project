@@ -83,10 +83,10 @@
         {{ show_prepend_field(login_user_form.password, '<i class="fas fa-lock"></i>', show_label=false, placeholder='Password') }}
         <div class="d-flex justify-content-between w-100">
             <div>
-                {{ wtf.render_field(login_user_form.submit, button_map={'submit': 'outline-success'}) }}
+                <button type="button" class="btn btn-outline-primary video-btn" data-toggle="modal" data-target="#PanoptoModal">Show video explainer</button>
             </div>
             <div>
-                <button type="button" class="btn btn-outline-primary video-btn" data-toggle="modal" data-target="#PanoptoModal">Show video explainer</button>
+                {{ wtf.render_field(login_user_form.submit, button_map={'submit': 'outline-success'}) }}
             </div>
         </div>
     </form>

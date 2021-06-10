@@ -25,6 +25,7 @@ convertdate==2.3.2
 cryptography==3.4.7
 cssmin==0.2.0
 cssutils==2.3.0
+dataclasses==0.8
 decorator==5.0.9
 defusedxml==0.7.1
 dnspython==2.1.0
@@ -32,7 +33,7 @@ docutils==0.17.1
 dominate==2.6.0
 Dozer==0.8
 email-validator==1.1.2
-Flask==1.1.2
+Flask==2.0.1
 Flask-Assets==2.0
 Flask-BabelEx==0.9.4
 Flask-Caching==1.10.1
@@ -71,7 +72,7 @@ ipython==7.16.1
 ipython-genutils==0.2.0
 itsdangerous==2.0.1
 jedi==0.18.0
-Jinja2==2.11.3
+Jinja2==3.0.1
 jsmin==2.2.2
 kombu==4.6.11
 korean-lunar-calendar==0.2.1
@@ -130,7 +131,7 @@ wcwidth==0.2.5
 webassets==2.0
 webencodings==0.5.1
 WebOb==1.8.7
-Werkzeug==1.0.1
+Werkzeug==2.0.1
 WTForms==2.3.3
 WTForms-Alchemy==0.17.0
 WTForms-Components==0.10.5

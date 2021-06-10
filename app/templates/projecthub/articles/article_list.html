@@ -14,19 +14,28 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true,
-                ajax: { url: $SCRIPT_ROOT + '/' + {{ ajax_endpoint }},
+                ajax: { url: $SCRIPT_ROOT + '{{ ajax_endpoint }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'name',
+                    { data: 'title',
                       orderable: true,
                       searchable: true },
-                    { data: 'author',
+                    { data: 'published',
                       orderable: true,
-                      searchable: true }
+                      searchable: true },
+                    { data: 'last_edit',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'status',
+                      orderable: false,
+                      searchable: false },
+                    { data: 'menu',
+                      orderable: false,
+                      searchable: false }
                 ],
-                deferRender: true
+                order: [[1, 'desc']]
             });
         });
     </script>
@@ -52,7 +61,7 @@
                 <thead>
                 <tr>
                     <th width="30%">Title</th>
-                    <th width="15%">Created</th>
+                    <th width="15%">Published</th>
                     <th width="15%">Last edit</th>
                     <th width="25%">Status</th>
                     <th width="15%">Actions</th>

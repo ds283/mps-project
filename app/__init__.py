@@ -142,15 +142,15 @@ def create_app():
     # add debug toolbar if in debug mode
     if config_name == 'development':
         toolbar = DebugToolbarExtension(app)
-        api_toolbar = DebugAPIExtension(app)
+        # api_toolbar = DebugAPIExtension(app)
 
-        panels = list(app.config['DEBUG_TB_PANELS'])
-        panels.append('flask_debug_api.BrowseAPIPanel')
+        # panels = list(app.config['DEBUG_TB_PANELS'])
+        # panels.append('flask_debug_api.BrowseAPIPanel')
         # panels.append('flask_debugtoolbar_lineprofilerpanel.panels.LineProfilerPanel')
-        app.config['DEBUG_TB_PANELS'] = panels
 
     # app.config['BLEACH_ALLOWED_TAGS'] = markdown_tags
     # app.config['BLEACH_ALLOWED_ATTRS'] = markdown_attrs
+        # app.config['DEBUG_TB_PANELS'] = panels
 
     # set up CSS and javascript assets
     env = Environment(app)

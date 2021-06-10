@@ -51,7 +51,7 @@
 
                         {{ wtf.render_field(form.title) }}
                         {{ wtf.render_field(form.published) }}
-                        {{ date_field(form.publication_timestamp, 'publication_timestamp') }}
+                        {{ date_field(form.publish_on, 'publication_timestamp') }}
                         {{ wtf.render_field(form.article) }}
 
                         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}

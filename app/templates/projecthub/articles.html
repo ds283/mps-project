@@ -1,0 +1,17 @@
+{% macro articles_widget(submitter, student, config, pclass, project, record, period) %}
+    {% if record.has_articles %}
+        <table id="article-table" class="table table-striped">
+            <thead>
+                <tr>
+                    <th width="50%">Title</th>
+                    <th width="25%">Published</th>
+                    <th width="25%">Author</th>
+                </tr>
+            </thead>
+        </table>
+    {% else %}
+        <div class="alert alert-warning">
+            No articles have yet been posted for this project.
+        </div>
+    {% endif %}
+{% endmacro %}

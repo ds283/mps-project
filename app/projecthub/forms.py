@@ -26,11 +26,11 @@ class FormattedArticleForm(Form):
 
     published = BooleanField('Published', description='Select this option to make your article visible to other users')
 
-    publication_timestamp = DateTimeField('Automatically publish at a specified time', format='%d/%m/%Y %H:%M',
-                                          description='If you wish your article to be published automatically at '
-                                                      'a specified time, enter it here. Leave blank to disable '
-                                                      'automated publication.',
-                                          validators=[Optional()])
+    publish_on = DateTimeField('Automatically publish at a specified time', format='%d/%m/%Y %H:%M',
+                               description='If you wish your article to be published automatically at '
+                                           'a specified time, enter it here. Leave blank to disable '
+                                           'automated publication.',
+                               validators=[Optional()])
 
 
 

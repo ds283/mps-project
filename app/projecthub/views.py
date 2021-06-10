@@ -10,11 +10,13 @@
 
 import json
 from datetime import date, timedelta, datetime
+from functools import partial
 from math import pi
 
 from flask import render_template, redirect, flash, request, jsonify, current_app, url_for
 from flask_security import current_user, roles_accepted, login_required
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import with_polymorphic
 from sqlalchemy.sql import func
 from bokeh.embed import components
 from bokeh.plotting import figure
@@ -28,7 +30,7 @@ from .forms import AddFormatterArticleForm, EditFormattedArticleForm
 import app.ajax as ajax
 from ..database import db
 from ..models import SubmissionRecord, SubmittingStudent, StudentData, ProjectClassConfig, ProjectClass, LiveProject, \
-    SubmissionPeriodRecord, ProjectHubLayout, ConvenorSubmitterArticle
+    SubmissionPeriodRecord, ProjectHubLayout, ConvenorSubmitterArticle, FormattedArticle, ProjectSubmitterArticle, User
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..tools import ServerSideHandler
@@ -230,7 +232,11 @@ def edit_subpd_record_articles(pid):
 
     return render_template('projecthub/articles/article_list.html', text=text, url=url,
                            title='Edit submission period articles',
-                           panel_title='Edit articles for submission period {name}'.format(name=record.display_name),
+                           panel_title='Edit articles for submission period <strong>{name}</strong> in project '
+                                       'class <strong>{pclass}</strong> '
+                                       '({yra}&ndash;{yrb})'.format(name=record.display_name,
+                                                                    pclass=record.config.name,
+                                                                    yra=record.config.year, yrb=record.config.year+1),
                            ajax_endpoint=url_for('projecthub.edit_subpd_record_articles_ajax', pid=pid),
                            add_endpoint=url_for('projecthub.add_subpd_record_article', pid=pid))
 
@@ -261,8 +267,11 @@ def edit_subpd_record_articles_ajax(pid):
                'published': published,
                'last_edit': last_edit}
 
+    return_url = url_for('projecthub.edit_subpd_record_articles', pid=pid)
+
     with ServerSideHandler(request, base_query, columns) as handler:
-        return handler.build_payload(ajax.projecthub.article_list_data)
+        return handler.build_payload(partial(ajax.projecthub.article_list_data, return_url, 'submission period articles',
+                                             'projecthub.edit_subpd_record_article'))
 
 
 @projecthub.route('add_subpd_record_article/<int:pid>', methods=['GET', 'POST'])
@@ -278,12 +287,13 @@ def add_subpd_record_article(pid):
     form = AddFormatterArticleForm(request.form)
 
     if form.validate_on_submit():
+        current_time = datetime.now()
         article = ConvenorSubmitterArticle(title=form.title.data,
                                            period_id=record.id,
                                            article=form.article.data,
                                            published=form.published.data,
-                                           publication_timestamp=form.publication_timestamp.data,
-                                           creation_timestamp=datetime.now(),
+                                           publish_on=form.publish_on.data if not form.published.data else None,
+                                           creation_timestamp=current_time,
                                            creator_id=current_user.id,
                                            last_edit_timestamp=None,
                                            last_edit_id=None)
@@ -302,7 +312,8 @@ def add_subpd_record_article(pid):
     return render_template('projecthub/articles/edit_article.html', form=form, record=record,
                            title='Add new article',
                            panel_title='Add new article or news story to period <strong>{pname}</strong> '
-                                       '({yra}&ndash;{yrb})'.format(pname=record.display_name,
+                                       'in project class <strong>{pclass}</strong> '
+                                       '({yra}&ndash;{yrb})'.format(pname=record.display_name, pclass=record.config.name,
                                                                     yra=record.config.year, yrb=record.config.year+1),
                            action_url=url_for('projecthub.add_subpd_record_article', pid=pid))
 
@@ -311,7 +322,7 @@ def add_subpd_record_article(pid):
 @roles_accepted('faculty', 'admin', 'route')
 def edit_subpd_record_article(aid):
     # pid is a SubmissionPeriodRecord
-    article: ConvenorSubmitterArticle = ConvenorSubmitterArticle.query_get_or_404(aid)
+    article: ConvenorSubmitterArticle = ConvenorSubmitterArticle.query.get_or_404(aid)
     record: SubmissionPeriodRecord = article.period
 
     # reject if user is not a convenor for the project owning this submission period
@@ -325,6 +336,7 @@ def edit_subpd_record_article(aid):
         article.period_id = record.id
         article.article = form.article.data
         article.published = form.published.data
+        article.publish_on = form.publish_on.data if not article.published else None
 
         article.last_edit_timestamp = datetime.now()
         article.last_edit_id = current_user.id
@@ -342,6 +354,51 @@ def edit_subpd_record_article(aid):
     return render_template('projecthub/articles/edit_article.html', form=form, article=article, record=record,
                            title='Edit article',
                            panel_title='Edit article in period <strong>{pname}</strong> '
-                                       '({yra}&ndash;{yrb})'.format(pname=record.display_name,
+                                       'in project class <strong>{pclass}</strong> '
+                                       '({yra}&ndash;{yrb})'.format(pname=record.display_name, pclass=record.config.name,
                                                                     yra=record.config.year, yrb=record.config.year+1),
                            action_url=url_for('projecthub.edit_subpd_record_article', aid=aid))
+
+
+@projecthub.route('/show_formatted_article/<int:aid>')
+@login_required
+def show_formatted_article(aid):
+    article: FormattedArticle = FormattedArticle.query.get_or_404(aid)
+
+    url = request.args.get('url', None)
+    text =request.args.get('text', None)
+
+    return render_template('projecthub/articles/show_article.html', article=article, text=text, url=url)
+
+
+@projecthub.route('/article_widget_ajax/<int:subid>', methods=['POST'])
+@roles_accepted('admin', 'root', 'faculty', 'supervisor', 'student', 'office', 'moderator', 'external_examiner', 'exam_board')
+def article_widget_ajax(subid):
+    # subid labels a SubmissionRecord
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(subid)
+
+    if not validate_project_hub(record, current_user, message=True):
+        return jsonify({})
+
+    articles = with_polymorphic(FormattedArticle, [ConvenorSubmitterArticle, ProjectSubmitterArticle])
+    base_query = record.article_list.join(User, User.id == articles.creator_id)
+
+    title = {'search': FormattedArticle.title,
+             'order': FormattedArticle.title,
+             'search_collation': 'utf8_general_ci'}
+    published = {'search': func.date_format(FormattedArticle.publication_timestamp, "%a %d %b %Y %H:%M:%S"),
+                 'order': FormattedArticle.publication_timestamp,
+                 'search_collation': 'utf8_general_ci'}
+    author = {'search': func.concat(User.first_name, ' ', User.last_name),
+              'order': [User.last_name, User.first_name],
+              'search_collation': 'utf8_general_ci'}
+
+    columns = {'title': title,
+               'published': published,
+               'author': author}
+
+    url = url_for('projecthub.hub', subid=subid)
+    text = 'project hub'
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(partial(ajax.projecthub.widgets.articles, url, text))

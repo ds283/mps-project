@@ -22,7 +22,7 @@ from sqlalchemy import orm, or_, and_
 from sqlalchemy.event import listens_for
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import validates
+from sqlalchemy.orm import validates, with_polymorphic
 from sqlalchemy.sql import func
 
 from .cache import cache
@@ -8643,6 +8643,24 @@ class SubmissionRecord(db.Model):
                + (1 if self.report is not None else 0)
 
 
+    @property
+    def article_list(self):
+        articles = with_polymorphic(FormattedArticle, [ConvenorSubmitterArticle, ProjectSubmitterArticle])
+
+        return db.session.query(articles) \
+            .filter(or_(and_(articles.ConvenorSubmitterArticle.published == True,
+                             articles.ConvenorSubmitterArticle.period_id == self.period_id),
+                        and_(articles.ProjectSubmitterArticle.published == True,
+                             articles.ProjectSubmitterArticle.record_id == self.id)))
+
+
+    @property
+    def has_articles(self):
+        articles = self.article_list
+        return len(articles.all()) > 0
+        # return self.article_list.first() is not None
+
+
     def maintenance(self):
         """
         Fix (some) issues with record configuration
@@ -13461,9 +13479,19 @@ class FormattedArticle(db.Model, EditingMetadataMixin):
     # has this article been published? The exact meaning of 'published' might vary among derived models
     published = db.Column(db.Boolean(), default=False)
 
-    # either record the time of publication, for articles that are already published, or schedule publication
-    # for a specific time
+    # record time of publication
     publication_timestamp = db.Column(db.DateTime())
+
+    @validates('published')
+    def _validate_published(self, key, value):
+        with db.session.no_autoflush:
+            if value and not self.published:
+                self.publication_timestamp = datetime.now()
+
+        return value
+
+    # set a time for this article to be automatically published, if desired
+    publish_on = db.Column(db.DateTime())
 
 
     __mapper_args__ = {'polymorphic_identity': 0,

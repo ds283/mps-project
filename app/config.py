@@ -52,6 +52,10 @@ class Config(object):
     CELERY_ROUTES = {'app.task.ping.ping': {'queue': 'priority'}}
 
 
+    # Configure maximum upload size
+    MAX_CONTENT_LENGTH = 96*1024*1024
+
+
     # Flask-Security features
     SECURITY_CONFIRMABLE = True
     SECURITY_RECOVERABLE = True

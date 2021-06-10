@@ -22,7 +22,7 @@ from app.flask_bleach import Bleach
 from flaskext.markdown import Markdown
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_debug_api import DebugAPIExtension
-from flask_uploads import configure_uploads, patch_request_class
+from flask_uploads import configure_uploads
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 from .cache import cache
@@ -202,11 +202,6 @@ def create_app():
     app.config['UPLOADED_BATCHUSERLIST_DEST'] = abs_uploaded_path
     app.config['UPLOADED_SUBMISSIONS_DEST'] = abs_submissions_path
     configure_uploads(app, [solution_files, batch_user_files, submitted_files])
-
-    # set max upload size = 96 Mb, optimizer solution files shouldn't be larger than this
-    # (though MPS files can be quite large if those are being used)
-    # Some student reports are very large, eg. Roisin's lensing project was 83 Mb
-    patch_request_class(app, 96*1024*1024)
 
     # configure Flask-Security, which needs access to the database models for User and Role
     from app import models

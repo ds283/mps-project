@@ -1,0 +1,24 @@
+{% macro resources_widget(submitter, student, config, pclass, project, record, period) %}
+    <span class="mb-2 card-title">Resources provided by convenor</span>
+    <div class="text-muted mb-4">
+        <small>
+            <p>
+                The following documents have been provided by the convenor
+                and may include mark schemes
+                or other general information. Please ensure that you review them.
+            </p>
+        </small>
+    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th width="70%">Document</th>
+                <th width="30%">License</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for attachment in period.attachments %}
+            {% endfor %}
+        </tbody>
+    </table>
+{% endmacro %}

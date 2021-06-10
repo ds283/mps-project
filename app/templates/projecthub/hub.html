@@ -1,5 +1,7 @@
 {% extends "base_app.html" %}
 
+{% from "projecthub/resources.html" import resources_widget %}
+
 {% block scripts %}
     {{ super() }}
 
@@ -130,26 +132,35 @@
             <div class="grid-stack">
                 {% set data = layout['resources-widget'] %}
                 <div class="grid-stack-item" id="resources-widget" data-gs-x="{{ data['x'] }}" data-gs-y="{{ data['y'] }}" data-gs-width="{{ data['w'] }}" data-gs-height="{{ data['h'] }}">
-                    <div class="grid-stack-item-content bg-well p-3">
-                        <i class="fas fa-bars drag-handle"></i> <span class="h5">Resources</span>
-                        <hr class="intro-divider">
-                        Content
+                    <div class="grid-stack-item-content card border-secondary">
+                        <div class="card-header bg-secondary text-white">
+                            <i class="fas fa-bars drag-handle"></i> Resources
+                        </div>
+                        <div class="card-body bg-well">
+                            {{ resources_widget(submitter, student, config, pclass, project, record, period) }}
+                        </div>
                     </div>
                 </div>
                 {% set data = layout['news-widget'] %}
                 <div class="grid-stack-item" id="news-widget" data-gs-x="{{ data['x'] }}" data-gs-y="{{ data['y'] }}" data-gs-width="{{ data['w'] }}" data-gs-height="{{ data['h'] }}">
-                    <div class="grid-stack-item-content bg-well p-3">
-                        <i class="fas fa-bars drag-handle"></i> <span class="h5">News and articles</span>
-                        <hr class="intro-divider">
-                        Content
+                    <div class="grid-stack-item-content bg-well card border-secondary">
+                        <div class="card-header bg-secondary text-white">
+                            <i class="fas fa-bars drag-handle"></i> News and articles
+                        </div>
+                        <div class="card-body bg-well">
+                            Content
+                        </div>
                     </div>
                 </div>
                 {% set data = layout['journal-widget'] %}
                 <div class="grid-stack-item" id="journal-widget" data-gs-x="{{ data['x'] }}" data-gs-y="{{ data['y'] }}" data-gs-width="{{ data['w'] }}" data-gs-height="{{ data['h'] }}">
-                    <div class="grid-stack-item-content bg-well p-3">
-                        <i class="fas fa-bars drag-handle"></i> <span class="h5">Notes and journal</span>
-                        <hr class="intro-divider">
-                        Content
+                    <div class="grid-stack-item-content bg-well card border-secondary">
+                        <div class="card-header bg-secondary text-white">
+                            <i class="fas fa-bars drag-handle"></i> Notes and journal
+                        </div>
+                        <div class="card-body bg-well">
+                            Content
+                        </div>
                     </div>
                 </div>
             </div>

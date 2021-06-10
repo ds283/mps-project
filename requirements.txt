@@ -11,7 +11,7 @@ billiard==3.6.3.0
 bleach==3.3.0
 bleach-whitelist==0.0.11
 blinker==1.4
-bokeh==2.2.1
+bokeh==2.3.2
 cachetools==4.2.2
 celery==4.4.7
 certifi==2021.5.30

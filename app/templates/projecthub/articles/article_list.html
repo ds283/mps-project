@@ -1,7 +1,5 @@
 {% extends "base_app.html" %}
 
-{% import "bootstrap/form.html" as wtf %}
-
 {% from "datatables.html" import import_datatables %}
 
 {% block scripts %}
@@ -12,24 +10,21 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#download-table').DataTable({
+            $('#article-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/documents/download_log_ajax/{{ type }}/{{ attachment.id }}', dataSrc: '' },
+                serverSide: true,
+                ajax: { url: $SCRIPT_ROOT + '/' + {{ ajax_endpoint }},
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
-                      render: {
-                        _: 'display',
-                        sort: 'sortstring',
-                        type: 'sortstring'
-                    } },
-                    { data: 'timestamp',
-                      render: {
-                        _: 'display',
-                        sort: 'timestamp',
-                        type: 'timestamp'
-                    } }
+                      orderable: true,
+                      searchable: true },
+                    { data: 'author',
+                      orderable: true,
+                      searchable: true }
                 ],
                 deferRender: true
             });
@@ -38,7 +33,7 @@
 {% endblock %}
 
 {% block title %}
-    View download log
+    {{ title }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -51,16 +46,27 @@
     {% endif %}
 
     <div class="card mt-3 mb-3">
-        <div class="card-header bg-primary text-white">View download log for <strong>{{ asset.target_name if asset.target_name is defined else asset.filename }}</strong></div>
+        <div class="card-header bg-primary text-white">{{ panel_title }}</div>
         <div class="card-body">
-            <table id="download-table" class="table table-striped table-bordered">
+            <table id="article-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
-                    <th width="50%"> Name</th>
-                    <th width="50%"> Timestamp</th>
+                    <th width="30%">Title</th>
+                    <th width="15%">Created</th>
+                    <th width="15%">Last edit</th>
+                    <th width="25%">Status</th>
+                    <th width="15%">Actions</th>
                 </tr>
                 </thead>
             </table>
+            {% if add_endpoint %}
+                <div style="text-align: center;">
+                    <a href="#" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-plus"></i>
+                        Add new article
+                    </a>
+                </div>
+            {% endif %}
         </div>
     </div>
 

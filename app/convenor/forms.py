@@ -17,7 +17,7 @@ from wtforms_alchemy import QuerySelectField
 from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig, ConvenorGenericTask
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
     GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses, GetAccommodatableMatchings
-from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodCommonMixin, \
+from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodPresentationsMixin, \
     PeriodSelectorMixinFactory
 from ..shared.forms.wtf_validators import NotOptionalIf
 
@@ -154,7 +154,7 @@ class CustomCATSLimitForm(Form, SaveChangesMixin):
                                      validators=[Optional()])
 
 
-class SubmissionRecordMixin():
+class SubmissionRecordSettingsMixin():
 
     start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
                            description="Enter an optional start date for this submission period.")
@@ -163,9 +163,15 @@ class SubmissionRecordMixin():
                              description="Enter an optional hand-in date for this submission period. If present, "
                                          "this is used to show students how much time remains.")
 
+    collect_project_feedback = BooleanField('Collect project feedback online')
 
 
-class EditSubmissionRecordForm(Form, SubmissionRecordMixin, SubmissionPeriodCommonMixin, SaveChangesMixin):
+class EditSubmissionRecordSettingsForm(Form, SubmissionRecordSettingsMixin, SaveChangesMixin):
+
+    pass
+
+
+class EditSubmissionRecordPresentationsForm(Form, SubmissionPeriodPresentationsMixin, SaveChangesMixin):
 
     pass
 

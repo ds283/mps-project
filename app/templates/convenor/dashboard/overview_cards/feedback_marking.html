@@ -10,7 +10,7 @@
         <div class="col-3">
             <div class="float-right">
                 <a href="{{ url_for('convenor.close_feedback', id=config.id) }}"
-                   class="btn btn-danger">
+                   class="btn btn-outline-danger">
                     {% if config.submission_period == config.submissions %}
                         Close feedback
                     {% else %}
@@ -26,18 +26,36 @@
         {{ date_field(feedback_form.feedback_deadline, 'feedback_datetimepicker') }}
         {{ wtf.render_field(feedback_form.max_attachment) }}
         {{ wtf.render_field(feedback_form.cc_me) }}
-        <div class="row">
-            <div class="col-12">
-                <div class="float-right">
-                    <a class="btn btn-secondary" href="{{ url_for('convenor.submission_period_documents', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='overview') }}">Documents ({{ period.number_attachments }})...</a>
-                    {% if feedback_form.send_notifications is defined %}
-                        {{ wtf.render_field(feedback_form.send_notifications, button_map={'send_notifications': 'secondary'}) }}
-                    {% endif %}
-                    {% if feedback_form.test_button is defined  %}
-                        {{ wtf.render_field(feedback_form.test_button, button_map={'test_button': 'info'}) }}
-                    {% endif %}
-                    {{ wtf.render_field(feedback_form.submit_button, button_map={'submit_button': 'secondary'}) }}
+        <div class="d-flex flex-row justify-content-end">
+            <div class="btn-group">
+                <a role="button" class="btn btn-outline-secondary" href="{{ url_for('convenor.edit_submission_record_settings', pid=period.id) }}">Configure period...</a>
+                <button type="button" class="btn btn-secondary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-right">
+                    <a class="dropdown-item" href="{{ url_for('convenor.edit_submission_record_settings', pid=period.id) }}">
+                        Settings...
+                    </a>
+                    <a class="dropdown-item" href="{{ url_for('convenor.edit_submission_record_presentation', pid=period.id) }}">
+                        Presentation...
+                    </a>
+                    <a class="dropdown-item" href="{{ url_for('convenor.submission_period_documents', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='overview') }}">
+                        Manage documents ({{ period.number_attachments }})...
+                    </a>
                 </div>
+            </div>
+            {% if feedback_form.send_notifications is defined %}
+                <div class="ml-1">
+                    {{ wtf.render_field(feedback_form.send_notifications, button_map={'send_notifications': 'outline-secondary'}) }}
+                </div>
+            {% endif %}
+            {% if feedback_form.test_button is defined  %}
+                <div class="ml-1">
+                    {{ wtf.render_field(feedback_form.test_button, button_map={'test_button': 'outline-info'}) }}
+                </div>
+            {% endif %}
+            <div class="ml-1">
+                {{ wtf.render_field(feedback_form.submit_button, button_map={'submit_button': 'outline-danger'}) }}
             </div>
         </div>
     </form>

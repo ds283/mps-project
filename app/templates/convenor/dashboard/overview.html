@@ -73,16 +73,18 @@
                         {% if loop.index > 1 %}
                             <hr class="intro-divider">
                         {% endif %}
-                        {% set validation_messages = p.validate %}
                         <div class="row vertical-top">
                             <div class="col-4">
                                 <div class="d-flex flex-row align-content-end mb-3">
                                     <h5 class="mr-2 mb-0">
                                         <span class="badge badge-primary"><i class="fas fa-cubes fa-lg"></i> {{ p.display_name|safe }}</span>
                                     </h5>
-                                    {% if validation_messages is not none and validation_messages|length > 0 %}
-                                        <h6 class="mr-2 mb-0 mt-1"><i class="fas fa-exclamation-triangle" style="color:red;"></i></h6>
-                                        <a href="#submitter_card_{{ loop.index }}">Validation errors....</a>
+                                    {% if p.submission_period <= config.submission_period %}
+                                        {% set validation_messages = p.validate %}
+                                        {% if validation_messages is not none and validation_messages|length > 0 %}
+                                            <h6 class="mr-2 mb-0 mt-1"><i class="fas fa-exclamation-triangle" style="color:red;"></i></h6>
+                                            <a href="#submitter_card_{{ loop.index }}">Validation errors....</a>
+                                        {% endif %}
                                     {% endif %}
                                 </div>
                                 {% if p.has_presentation %}
@@ -135,7 +137,30 @@
                             <div class="col-4">
                                 <div class="float-right">
                                     {% if not p.is_feedback_open %}
-                                        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('convenor.edit_submission_record', pid=p.id) }}">Configure...</a>
+                                        <div class="btn-group">
+                                            <a role="button" class="btn btn-sm btn-outline-secondary"
+                                               href="{{ url_for('convenor.edit_submission_record_settings', pid=p.id) }}">Configure...
+                                            </a>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-secondary dropdown-toggle dropdown-toggle-split"
+                                                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                <span class="sr-only">Toggle Dropdown</span>
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-right">
+                                                <a class="dropdown-item"
+                                                   href="{{ url_for('convenor.edit_submission_record_settings', pid=p.id) }}">
+                                                    Settings...
+                                                </a>
+                                                <a class="dropdown-item"
+                                                   href="{{ url_for('convenor.edit_submission_record_presentation', pid=p.id) }}">
+                                                    Presentation...
+                                                </a>
+                                                <a class="dropdown-item"
+                                                   href="{{ url_for('convenor.submission_period_documents', pid=p.id, url=url_for('convenor.overview', id=config.project_class.id), text='overview') }}">
+                                                    Manage documents ({{ p.number_attachments }})...
+                                                </a>
+                                            </div>
+                                        </div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -226,7 +251,7 @@
                                             </td>
                                             <td>
                                                 <div class="dropdown">
-                                                    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                                    <button class="btn btn-outline-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                                                         Actions
                                                     </button>
                                                     <div class="dropdown-menu dropdown-menu-right">
@@ -258,7 +283,7 @@
                 <div class="row vertical-top mt-2 mb-2">
                     <div class="col-12">
                         <div class="float-right">
-                            <a class="btn btn-primary" href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure for {{ config.year }}&ndash;{{ config.year+1 }}....</a>
+                            <a class="btn btn-outline-primary" href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure for {{ config.year }}&ndash;{{ config.year+1 }}....</a>
                         </div>
                     </div>
                 </div>

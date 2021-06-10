@@ -32,10 +32,10 @@ import app.ajax as ajax
 from . import convenor
 from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
-    EditSubmissionRecordForm, UploadPeriodAttachmentForm, \
+    EditSubmissionRecordSettingsForm, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
     EditProjectConfigForm, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask, \
-    EditConvenorGenericTask
+    EditConvenorGenericTask, EditSubmissionRecordPresentationsForm
 from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
@@ -6781,36 +6781,31 @@ def edit_project_config(pid):
     return render_template('convenor/dashboard/edit_project_config.html', form=form, config=config)
 
 
-@convenor.route('/edit_submission_record/<int:pid>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'root')
-def edit_submission_record(pid):
-    # pid is a SubmissionPeriodRecord
-    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
-    config: ProjectClassConfig = record.config
+def _validate_submission_period(record: SubmissionPeriodRecord, config: ProjectClassConfig):
 
     # reject is user is not a convenor for the associated project class
     if not validate_is_convenor(config.project_class):
-        return redirect(redirect_url())
+        return False
 
     # check configuration is still current
     if config.project_class.most_recent_config.id != config.id:
         flash('It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} '
               'because it has been rolled over.'.format(yra=config.year, yrb=config.year+1), 'info')
-        return redirect(redirect_url())
+        return False
 
     # reject if project class is not published
     if not validate_project_class(config.project_class):
-        return redirect(redirect_url())
+        return False
 
     # reject if this submission period is in the past
     if config.submission_period > record.submission_period:
         flash('It is no longer possible to edit this submission period because it has been closed.', 'info')
-        return redirect(redirect_url())
+        return False
 
     # reject if period is retired
     if record.retired:
         flash('It is no longer possible to edit this submission period because it has been retired.', 'info')
-        return redirect(redirect_url())
+        return False
 
     # reject if lifecycle stage is marking or later
 
@@ -6818,23 +6813,60 @@ def edit_submission_record(pid):
     if state >= ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
         flash('It is no longer possible to edit this submission period because it is being marked, '
               'or is ready to rollover.', 'info')
+        return False
+
+    return True
+
+
+@convenor.route('/edit_submission_record_settings/<int:pid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_submission_record_settings(pid):
+    # pid is a SubmissionPeriodRecord
+    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+    config: ProjectClassConfig = record.config
+
+    if not _validate_submission_period(record, config):
         return redirect(redirect_url())
 
-    edit_form = EditSubmissionRecordForm(obj=record)
+    edit_form = EditSubmissionRecordSettingsForm(obj=record)
 
     if edit_form.validate_on_submit():
         record.start_date = edit_form.start_date.data
         record.hand_in_date = edit_form.hand_in_date.data
 
-        record.has_presentation = edit_form.has_presentation.data
-
-        record.collect_presentation_feedback = edit_form.collect_presentation_feedback.data
         record.collect_project_feedback = edit_form.collect_project_feedback.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not save submission period configuration because of a database error. '
+                  'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for('convenor.overview', id=config.project_class.id))
+
+    return render_template('convenor/dashboard/edit_submission_record_settings.html', form=edit_form, record=record)
+
+
+@convenor.route('/edit_submission_record_presentation/<int:pid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_submission_record_presentation(pid):
+    # pid is a SubmissionPeriodRecord
+    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+    config: ProjectClassConfig = record.config
+
+    if not _validate_submission_period(record, config):
+        return redirect(redirect_url())
+
+    edit_form = EditSubmissionRecordPresentationsForm(obj=record)
+
+    if edit_form.validate_on_submit():
+        record.has_presentation = edit_form.has_presentation.data
 
         if record.has_presentation:
             record.lecture_capture = edit_form.lecture_capture.data
             record.collect_presentation_feedback = edit_form.collect_presentation_feedback.data
-            record.collect_project_feedback = edit_form.collect_project_feedback.data
             record.number_assessors = edit_form.number_assessors.data
             record.max_group_size = edit_form.max_group_size.data
             record.morning_session = edit_form.morning_session.data
@@ -6851,7 +6883,7 @@ def edit_submission_record(pid):
 
         return redirect(url_for('convenor.overview', id=config.project_class.id))
 
-    return render_template('convenor/dashboard/edit_submission_record.html', form=edit_form, record=record)
+    return render_template('convenor/dashboard/edit_submission_record_presentation.html', form=edit_form, record=record)
 
 
 @convenor.route('/publish_assignment/<int:id>')

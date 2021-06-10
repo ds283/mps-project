@@ -21,7 +21,7 @@ from flask_assets import Environment
 from app.flask_bleach import Bleach
 from flaskext.markdown import Markdown
 from flask_debugtoolbar import DebugToolbarExtension
-from flask_debug_api import DebugAPIExtension
+# from flask_debug_api import DebugAPIExtension
 from flask_uploads import configure_uploads
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix

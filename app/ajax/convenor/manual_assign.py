@@ -23,17 +23,17 @@ _workload = \
 """
 {% set s, m, p = data %}
 <div>
-    <span class="badge badge-info">S {{ s }}</span>
-    <span class="badge badge-info">M {{ m }}</span>
-    <span class="badge badge-info">P {{ p }}</span>
-    <span class="badge badge-primary">Total {{ s+m+p }}</span>
+    <span class="badge bg-info text-dark">S {{ s }}</span>
+    <span class="badge bg-info text-dark">M {{ m }}</span>
+    <span class="badge bg-info text-dark">P {{ p }}</span>
+    <span class="badge bg-primary">Total {{ s+m+p }}</span>
 </div>
 """
 
 # language=jinja2
 _action = \
 """
-<div class="float-right">
+<div class="float-end">
     <a href="{{ url_for('convenor.assign_liveproject', id=rec.id, pid=p.id) }}" class="btn btn-secondary btn-sm">
         Assign
     </a>

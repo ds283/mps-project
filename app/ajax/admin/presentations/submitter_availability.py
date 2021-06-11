@@ -15,7 +15,7 @@ from flask import render_template_string, jsonify, url_for
 _pclass = \
 """
 {% set style = pclass.make_CSS_style() %}
-<a class="badge badge-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
+<a class="badge text-decoration-none bg-info text-dark" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
 """
 
 
@@ -23,7 +23,7 @@ _pclass = \
 _submitter_actions = \
 """
 <div style="text-align: right;">
-    <div class="float-right">
+    <div class="float-end">
         {% if a.not_attending(s.id) %}
             <a {% if editable %}href="{{ url_for('admin.assessment_attending', a_id=a.id, s_id=s.id) }}"{% endif %} class="btn btn-sm btn-secondary btn-table-block {% if not editable %}disabled{% endif %}">
                 Attending
@@ -52,7 +52,7 @@ _submitter_actions = \
 _session_actions = \
 """
 <div style="text-align: right;">
-    <div class="float-right">
+    <div class="float-end">
         {% if sess.submitter_available(s.id) %}
             <a class="btn btn-success btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-check"></i> Available</a>
             <a {% if editable %}href="{{ url_for('admin.submitter_unavailable', sess_id=sess.id, s_id=s.id) }}"{% endif %} class="btn btn-secondary btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-times"></i> Not available</a>
@@ -72,7 +72,7 @@ _global_name = \
 {% set constraints = s.number_unavailable %}
 {% if constraints > 0 %}
     &emsp;
-    <span class="badge badge-warning">{{ constraints }} session constraints</span>
+    <span class="badge bg-warning text-dark">{{ constraints }} session constraints</span>
 {% endif %}
 """
 
@@ -81,13 +81,13 @@ _global_name = \
 _project_name = \
 """
 {% if p is none %}
-    <span class="badge badge-secondary">No project assigned</span>
+    <span class="badge bg-secondary">No project assigned</span>
 {% else %}
     <div>
         <a href="{{ dest_url }}">{{ p.name }}</a>
     </div>
     <div>
-        <a class="badge badge-info" href="{{ url_for('convenor.attach_assessors', id=p.parent_id, pclass_id=p.config.pclass_id, url=url, text=text) }}">
+        <a class="badge text-decoration-none bg-info text-dark" href="{{ url_for('convenor.attach_assessors', id=p.parent_id, pclass_id=p.config.pclass_id, url=url, text=text) }}">
             {{ p.number_assessors }} assessors
         </a>
     </div>

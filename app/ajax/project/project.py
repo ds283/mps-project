@@ -33,7 +33,7 @@ REPERRORSYMBOL
     {% set num = project.num_descriptions %}
     {% if num > 0 %}
         {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
-        <span class="badge badge-info">{{ num }} variant{{ pl }}</span>
+        <span class="badge bg-info text-dark">{{ num }} variant{{ pl }}</span>
     {% endif %}
 </div>
 REPNAMELABELS
@@ -48,10 +48,10 @@ _project_name_labels = \
     {% for pclass in project.project_classes %}
         {% if pclass.active %}
             {% set style = pclass.make_CSS_style() %}
-            <a class="badge badge-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
+            <a class="badge text-decoration-none bg-info text-dark" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
         {% endif %}
     {% else %}
-        <span class="badge badge-danger">No project classes</span>
+        <span class="badge bg-danger">No project classes</span>
     {% endfor %}
 </div>
 """
@@ -64,18 +64,18 @@ _project_error_block = \
     {% set errors = project.errors %}
     {% set warnings = project.warnings %}
     {% if errors|length == 1 %}
-        <span class="badge badge-danger">1 error</span>
+        <span class="badge bg-danger">1 error</span>
     {% elif errors|length > 1 %}
-        <span class="badge badge-danger">{{ errors|length }} errors</span>
+        <span class="badge bg-danger">{{ errors|length }} errors</span>
     {% else %}
-        <span class="badge badge-success">0 errors</span>
+        <span class="badge bg-success">0 errors</span>
     {% endif %}
     {% if warnings|length == 1 %}
-        <span class="badge badge-warning">1 warning</span>
+        <span class="badge bg-warning text-dark">1 warning</span>
     {% elif warnings|length > 1 %}
-        <span class="badge badge-warning">{{ warnings|length }} warnings</span>
+        <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
     {% else %}
-        <span class="badge badge-success">0 warnings</span>
+        <span class="badge bg-success">0 warnings</span>
     {% endif %}
     {% if errors|length > 0 %}
         <div class="error-block">
@@ -108,14 +108,14 @@ _project_status = \
 """
 {% if project.is_offerable %}
     {% if project.active %}
-        <span class="badge badge-success"><i class="fas fa-check"></i> Project active</span>
+        <span class="badge bg-success"><i class="fas fa-check"></i> Project active</span>
     {% else %}
-        <span class="badge badge-warning"><i class="fas fa-times"></i> Project inactive</span>
+        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Project inactive</span>
     {% endif %}
     {{ 'REPENROLLMENT'|safe }}
     {{ 'REPAPPROVAL'|safe }}
 {% else %}
-    <span class="badge badge-danger">Not available</span>
+    <span class="badge bg-danger">Not available</span>
 {% endif %}
 """
 
@@ -125,7 +125,7 @@ _project_pclasses = \
 """
 {% for pclass in project.project_classes %}
     {% set style = pclass.make_CSS_style() %}
-    <a class="badge badge-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
+    <a class="badge text-decoration-none bg-info text-dark" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
 {% endfor %}
 """
 
@@ -134,13 +134,13 @@ _project_pclasses = \
 _project_meetingreqd = \
 """
 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
-    <span class="badge badge-danger">Required</span>
+    <span class="badge bg-danger">Required</span>
 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-    <span class="badge badge-warning">Optional</span>
+    <span class="badge bg-warning text-dark">Optional</span>
 {% elif project.meeting_reqd == project.MEETING_NONE %}
-    <span class="badge badge-success">Not required</span>
+    <span class="badge bg-success">Not required</span>
 {% else %}
-    <span class="badge badge-secondary">Unknown</span>
+    <span class="badge bg-secondary">Unknown</span>
 {% endif %}
 """
 
@@ -171,10 +171,10 @@ _project_skills = \
 _faculty_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
             <i class="fas fa-search fa-fw"></i> Preview web page
         </a>
@@ -227,10 +227,10 @@ _faculty_menu = \
 _convenor_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
             <i class="fas fa-search fa-fw"></i> Preview web page
         </a>
@@ -279,10 +279,10 @@ _convenor_menu = \
 _unofferable_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
             <i class="fas fa-search fa-fw"></i> Preview web page
         </a>
@@ -376,7 +376,7 @@ def _element(project_id, menu_template, in_current):
              'pclasses': render_template_string(_project_pclasses, project=p),
              'meeting': render_template_string(_project_meetingreqd, project=p),
              'group': p.group.make_label() if p.group is not None \
-                 else '<span class="badge badge-warning">Missing research group</span>',
+                 else '<span class="badge bg-warning text-dark">Missing research group</span>',
              'prefer': render_template_string(_project_prefer, project=p),
              'skills': render_template_string(_project_skills, skills=p.ordered_skills),
              'menu': render_template_string(menu_string, project=p, config_id=_config_proxy, pclass_id=_pclass_proxy,
@@ -415,12 +415,12 @@ def _process(project_id, enrollment_id, current_user_id, menu_template, config, 
         name = name.replace('REPNAMELABELS', '', 1)
 
     if is_running:
-        name = name.replace('REPISRUNNING', '<span class="badge badge-danger">RUNNING</span>', 1)
+        name = name.replace('REPISRUNNING', '<span class="badge bg-danger">RUNNING</span>', 1)
     else:
         name = name.replace('REPISRUNNING', '', 1)
 
     if is_live:
-        name = name.replace('REPISLIVE', '<span class="badge badge-success">LIVE</span>', 1)
+        name = name.replace('REPISLIVE', '<span class="badge bg-success">LIVE</span>', 1)
     else:
         name = name.replace('REPISLIVE', '', 1)
 
@@ -471,54 +471,54 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                 state = p.approval_state
 
                 if state == Project.DESCRIPTIONS_APPROVED:
-                    repapprove = '<span class="badge badge-success"><i class="fas fa-check"></i> Approved</span>'
+                    repapprove = '<span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>'
                 elif state == Project.SOME_DESCRIPTIONS_QUEUED:
-                    repapprove = '<span class="badge badge-warning">Approval: Queued</span>'
+                    repapprove = '<span class="badge bg-warning text-dark">Approval: Queued</span>'
                 elif state == Project.SOME_DESCRIPTIONS_REJECTED:
-                    repapprove = '<span class="badge badge-info">Approval: Rejected</span>'
+                    repapprove = '<span class="badge bg-info text-dark">Approval: Rejected</span>'
                 elif state == Project.SOME_DESCRIPTIONS_UNCONFIRMED:
-                    repapprove = '<span class="badge badge-secondary">Approval: Unconfirmed</span>'
+                    repapprove = '<span class="badge bg-secondary">Approval: Unconfirmed</span>'
                 elif state == Project.APPROVALS_NOT_ACTIVE:
                     repapprove = ''
                 elif state == Project.APPROVALS_NOT_OFFERABLE:
-                    repapprove = '<span class="badge badge-danger">Approval: Not offerable</span>'
+                    repapprove = '<span class="badge bg-danger">Approval: Not offerable</span>'
                 else:
-                    repapprove = '<span class="badge badge-danger">Unknown approval state</span>'
+                    repapprove = '<span class="badge bg-danger">Unknown approval state</span>'
 
             # otherwise, we can pick the correct description
             else:
                 desc = p.get_description(config.pclass_id)
 
                 if desc is None:
-                    repapprove = '<span class="badge badge-secondary">Approval: No description</span>'
+                    repapprove = '<span class="badge bg-secondary">Approval: No description</span>'
                 else:
                     state = desc.workflow_state
                     if desc.requires_confirmation and not desc.confirmed:
                         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
                             repapprove = """<div class="dropdown" style="display: inline-block;">
-                                                <a class="badge badge-light dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
+                                                <a class="badge text-decoration-none bg-light text-dark dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
                                                 <div class="dropdown-menu">
                                                     <a class="dropdown-item" href="{url}"><i class="fas fa-check fa-fw"></i> Confirm</a>
                                                 </div>
                                             </div>""".format(url=url_for('convenor.confirm_description', config_id=config.id, did=desc.id))
                         else:
-                            repapprove = '<span class="badge badge-secondary">Approval: Not confirmed</span>'
+                            repapprove = '<span class="badge bg-secondary">Approval: Not confirmed</span>'
                     else:
                         if state == ProjectDescription.WORKFLOW_APPROVAL_VALIDATED:
-                            repapprove = '<span class="badge badge-success"><i class="fas fa-check"></i> Approval: Approved</span>'
+                            repapprove = '<span class="badge bg-success"><i class="fas fa-check"></i> Approval: Approved</span>'
                         elif state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
-                            repapprove = '<span class="badge badge-warning">Approval: Queued</span>'
+                            repapprove = '<span class="badge bg-warning text-dark">Approval: Queued</span>'
                         elif state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
-                            repapprove = '<span class="badge badge-danger">Approval: Rejected</span>'
+                            repapprove = '<span class="badge bg-danger">Approval: Rejected</span>'
                         else:
-                            repapprove = '<span class="badge badge-danger">Unknown approval state</span>'
+                            repapprove = '<span class="badge bg-danger">Unknown approval state</span>'
 
                         if desc.validated_by:
-                            repapprove += ' <span class="badge badge-info">Signed-off: ' + desc.validated_by.name + '</span>'
+                            repapprove += ' <span class="badge bg-info text-dark">Signed-off: ' + desc.validated_by.name + '</span>'
                             if desc.validated_timestamp:
-                                repapprove += ' <span class="badge badge-info">' + desc.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") + '</span>'
+                                repapprove += ' <span class="badge bg-info text-dark">' + desc.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") + '</span>'
         else:
-            repapprove = '<span class="badge badge-secondary"><i class="fas fa-ban"></i> Can\'t approve</span>'
+            repapprove = '<span class="badge bg-secondary"><i class="fas fa-ban"></i> Can\'t approve</span>'
 
     status = status.replace('REPAPPROVAL', repapprove, 1)
     return status
@@ -530,7 +530,7 @@ def replace_comment_notification(current_user_id, name, p):
     if current_user_id is not None:
         u = db.session.query(User).filter_by(id=current_user_id).one()
         if p.has_new_comments(u):
-            repcomments = '<span class="badge badge-warning">New comments</span>'
+            repcomments = '<span class="badge bg-warning text-dark">New comments</span>'
 
     name = name.replace('REPNEWCOMMENTS', repcomments, 1)
     return name

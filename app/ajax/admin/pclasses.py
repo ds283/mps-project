@@ -23,10 +23,10 @@ _programmes = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <div class="dropdown-header">Edit</div>
         
         <a class="dropdown-item" href="{{ url_for('admin.edit_pclass', id=pcl.id) }}">
@@ -82,25 +82,25 @@ _options = \
 {% if p.colour and p.colour is not none %}
   {{ p.make_label(p.colour)|safe }}
 {% else %}
-  <span class="badge badge-secondary">No colour</span>'
+  <span class="badge bg-secondary">No colour</span>'
 {% endif %}
 {% if p.use_project_hub %}
-    <span class="badge badge-secondary">Project Hubs</span>
+    <span class="badge bg-secondary">Project Hubs</span>
 {% endif %}
 {% if p.do_matching %}
-    <span class="badge badge-secondary">Auto-match</span>
+    <span class="badge bg-secondary">Auto-match</span>
 {% endif %}
 {% if p.require_confirm %}
-    <span class="badge badge-secondary">Confirm</span>
+    <span class="badge bg-secondary">Confirm</span>
 {% endif %}
 {% if p.supervisor_carryover %}
-    <span class="badge badge-secondary">Carryover</span>
+    <span class="badge bg-secondary">Carryover</span>
 {% endif %}
 {% if p.include_available %}
-    <span class="badge badge-secondary">Availability</span>
+    <span class="badge bg-secondary">Availability</span>
 {% endif %}
 {% if p.reenroll_supervisors_early %}
-    <span class="badge badge-secondary">Re-enroll early</span>
+    <span class="badge bg-secondary">Re-enroll early</span>
 {% endif %}
 """
 
@@ -108,13 +108,13 @@ _options = \
 _workload = \
 """
 {% if p.uses_supervisor %}
-    <span class="badge badge-primary">S {{ p.CATS_supervision }}</span>
+    <span class="badge bg-primary">S {{ p.CATS_supervision }}</span>
 {% endif %}
 {% if p.uses_marker %}
-    <span class="badge badge-info">M {{ p.CATS_marking }}</span>
+    <span class="badge bg-info text-dark">M {{ p.CATS_marking }}</span>
 {% endif %}
 {% if p.uses_presentations %}
-    <span class="badge badge-info">P {{ p.CATS_presentation }}</span>
+    <span class="badge bg-info text-dark">P {{ p.CATS_presentation }}</span>
 {% endif %}
 """
 
@@ -125,8 +125,8 @@ _popularity = \
 {% if p.keep_hourly_popularity == 1 %}{% set hourly_pl = '' %}{% endif %}
 {% set daily_pl = 's' %}
 {% if p.keep_daily_popularity == 1 %}{% set daily_pl = '' %}{% endif %}
-<span class="badge badge-secondary">Hourly: {{ p.keep_hourly_popularity }} day{{ hourly_pl }}</span>
-<span class="badge badge-secondary">Daily: {{ p.keep_daily_popularity }} week{{ daily_pl }}</span>
+<span class="badge bg-secondary">Hourly: {{ p.keep_hourly_popularity }} day{{ hourly_pl }}</span>
+<span class="badge bg-secondary">Daily: {{ p.keep_daily_popularity }} week{{ daily_pl }}</span>
 """
 
 # language=jinja2
@@ -139,11 +139,11 @@ _personnel = \
         <div>Convenor</div>
     {% endif %}
     {% set style = p.make_CSS_style() %}
-    <a class="badge badge-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ p.convenor_email }}">
+    <a class="badge text-decoration-none bg-info text-dark" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ p.convenor_email }}">
         {{ p.convenor_name }}
     </a>
     {% for fac in p.coconvenors %}
-        <a class="badge badge-secondary" href="mailto:{{ fac.user.email }}">
+        <a class="badge text-decoration-none bg-secondary" href="mailto:{{ fac.user.email }}">
             {{ fac.user.name }}
         </a>
     {% endfor %}
@@ -152,7 +152,7 @@ _personnel = \
     <div class="personnel-container">
         <div>Office contacts</div>
         {% for user in p.office_contacts %}
-            <a class="badge badge-info" href="mailto:{{ user.email }}">
+            <a class="badge text-decoration-none bg-info text-dark" href="mailto:{{ user.email }}">
                 {{ user.name }}
             </a>
         {% endfor %}
@@ -163,14 +163,14 @@ _personnel = \
 # language=jinja2
 _submissions = \
 """
-<span class="badge badge-primary">{{ p.submissions }}/yr</span>
+<span class="badge bg-primary">{{ p.submissions }}/yr</span>
 {% if p.uses_marker %}
-    <span class="badge badge-info">2nd marked</span>
+    <span class="badge bg-info text-dark">2nd marked</span>
 {% endif %}
 {% if p.uses_presentations %}
     {% for item in p.periods.all() %}
         {% if item.has_presentation %}
-            <span class="badge badge-info">Presentation: Prd #{{ item.period }}</span>
+            <span class="badge bg-info text-dark">Presentation: Prd #{{ item.period }}</span>
         {% endif %}
     {% endfor %}
 {% endif %}
@@ -181,22 +181,22 @@ _submissions = \
 _timing = \
 """
 {% if p.start_level is not none %}
-    <span class="badge badge-primary">Y{{ p.start_level.academic_year }}</span>
+    <span class="badge bg-primary">Y{{ p.start_level.academic_year }}</span>
 {% else %}
-    <span class="badge badge-danger">Start level missing</span>
+    <span class="badge bg-danger">Start level missing</span>
 {% endif %}
-<span class="badge badge-secondary">extent: {{ p.extent }} yr</span>
+<span class="badge bg-secondary">extent: {{ p.extent }} yr</span>
 {% if p.selection_open_to_all %}
-    <span class="badge badge-secondary">enroll: open</span>
+    <span class="badge bg-secondary">enroll: open</span>
 {% else %}
-    <span class="badge badge-secondary">enroll: degree</span>
+    <span class="badge bg-secondary">enroll: degree</span>
 {% endif %}
 {% if p.auto_enroll_years == p.AUTO_ENROLL_PREVIOUS_YEAR %}
-    <span class="badge badge-secondary">enroll: prev</span>
+    <span class="badge bg-secondary">enroll: prev</span>
 {% elif p.auto_enroll_years == p.AUTO_ENROLL_ANY_YEAR %}
-    <span class="badge badge-secondary">enroll: any</span>
+    <span class="badge bg-secondary">enroll: any</span>
 {% else %}
-    <span class="badge badge-danger">enroll: unknown</span>
+    <span class="badge bg-danger">enroll: unknown</span>
 {% endif %}
 """
 
@@ -207,14 +207,14 @@ _name = \
 {{ p.name }} {{ p.make_label(p.abbreviation)|safe }}
 <div>
 {% if p.active %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Active</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
-    <span class="badge badge-warning"><i class="fas fa-times"></i> Inactive</span>
+    <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Inactive</span>
 {% endif %}
 {% if p.publish %}
-    <span class="badge badge-success"><i class="fas fa-eye"></i> Published</span>
+    <span class="badge bg-success"><i class="fas fa-eye"></i> Published</span>
 {% else %}
-    <span class="badge badge-warning"><i class="fas fa-eye-slash"></i> Unpublished</span>
+    <span class="badge bg-warning text-dark"><i class="fas fa-eye-slash"></i> Unpublished</span>
 {% endif %}
 </div>
 """

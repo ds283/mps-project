@@ -38,9 +38,9 @@
                                         Supervisor feedback
                                     </div>
                                     <div class="col-6">
-                                        <div class="float-right">
+                                        <div class="float-end">
                                             {% if record.supervisor_timestamp %}
-                                                <span class="badge badge-secondary">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                                <span class="badge bg-secondary">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                             {% endif %}
                                             {% if current_user.id == record.supervisor.id %}
                                                 {% if (record.period.is_feedback_open and not record.period.closed) or (record.period.closed and not record.supervisor_submitted) %}
@@ -80,9 +80,9 @@
                                         Marker feedback
                                     </div>
                                     <div class="col-6">
-                                        <div class="float-right">
+                                        <div class="float-end">
                                             {% if record.marker_timestamp %}
-                                                <span class="badge badge-secondary">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                                <span class="badge bg-secondary">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                             {% endif %}
                                             {% if current_user.id == record.marker_id %}
                                                 {% if (record.period.is_feedback_open and not record.period.closed) or (record.period.closed and not record.marker_submitted) %}
@@ -132,9 +132,9 @@
                                         Presentation feedback from <strong>{{ feedback.assessor.user.name }}</strong>
                                     </div>
                                     <div class="col-5">
-                                        <div class="float-right">
+                                        <div class="float-end">
                                             {% if feedback.timestamp %}
-                                                <span class="badge badge-secondary">Submitted at {{ feedback.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                                <span class="badge bg-secondary">Submitted at {{ feedback.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                             {% endif %}
                                             {% set valid = record.is_presentation_assessor_valid(feedback.assessor_id) %}
                                             {% set submitted = record.presentation_assessor_submitted(feedback.assessor_id) %}
@@ -179,11 +179,11 @@
                                 Student feedback to supervisor
                             </div>
                             <div class="col-6">
-                                <div class="float-right">
+                                <div class="float-end">
                                     {% if record.acknowledge_feedback %}
-                                        <span class="badge badge-success">Acknowledged</span>
+                                        <span class="badge bg-success">Acknowledged</span>
                                     {% endif %}
-                                    <span class="badge badge-secondary">Submitted at {{ record.student_feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                    <span class="badge bg-secondary">Submitted at {{ record.student_feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                     {% if record.acknowledge_feedback and not record.faculty_response_submitted %}
                                         <a href="{{ url_for('faculty.edit_response', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-secondary">Edit</a>
                                         {% if record.is_response_valid %}
@@ -193,7 +193,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="float-right">
+                        <div class="float-end">
                         </div>
                     </div>
                     <div class="card-body">

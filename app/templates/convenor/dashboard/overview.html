@@ -79,7 +79,7 @@
                             <div class="col-4">
                                 <div class="d-flex flex-row align-content-end mb-3">
                                     <h5 class="mr-2 mb-0">
-                                        <span class="badge badge-primary"><i class="fas fa-cubes fa-lg"></i> {{ p.display_name|safe }}</span>
+                                        <span class="badge bg-primary"><i class="fas fa-cubes fa-lg"></i> {{ p.display_name|safe }}</span>
                                     </h5>
                                     {% if p.submission_period <= config.submission_period %}
                                         {% set validation_messages = p.validate %}
@@ -90,17 +90,17 @@
                                     {% endif %}
                                 </div>
                                 {% if p.has_presentation %}
-                                    <span class="badge badge-secondary"><i class="fas fa-check"></i> Has presentation</span>
+                                    <span class="badge bg-secondary"><i class="fas fa-check"></i> Has presentation</span>
                                     {% if p.collect_presentation_feedback %}
-                                        <span class="badge badge-secondary"><i class="fas fa-check"></i> Presentation feedback</span>
+                                        <span class="badge bg-secondary"><i class="fas fa-check"></i> Presentation feedback</span>
                                     {%  else %}
-                                        <span class="badge badge-secondary"><i class="fas fa-times"></i> No presentation feedback</span>
+                                        <span class="badge bg-secondary"><i class="fas fa-times"></i> No presentation feedback</span>
                                     {% endif %}
                                 {% endif %}
                                 {% if p.collect_project_feedback %}
-                                    <span class="badge badge-secondary"><i class="fas fa-check"></i> Project feedback</span>
+                                    <span class="badge bg-secondary"><i class="fas fa-check"></i> Project feedback</span>
                                 {% else %}
-                                    <span class="badge badge-secondary"><i class="fas fa-times"></i> No project feedback</span>
+                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> No project feedback</span>
                                 {% endif %}
                             </div>
                             <div class="col-4">
@@ -116,15 +116,15 @@
                                 {% endif %}
                                 {% if p.feedback_open %}
                                     {% if p.closed %}
-                                        <span class="badge badge-primary"><i class="fas fa-check"></i> Feedback closed</span>
+                                        <span class="badge bg-primary"><i class="fas fa-check"></i> Feedback closed</span>
                                         {% if p.feedback_id %}
-                                            <span class="badge badge-info">Opened by {{ p.feedback_by.name }}{% if p.feedback_timestamp %} at {{ p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}{% endif %}</span>
+                                            <span class="badge bg-info text-dark">Opened by {{ p.feedback_by.name }}{% if p.feedback_timestamp %} at {{ p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}{% endif %}</span>
                                         {% endif %}
                                         {% if p.closed_id %}
-                                            <span class="badge badge-info">Closed by {{ p.closed_by.name }}{% if p.closed_timestamp %} at {{ p.closed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}{% endif %}</span>
+                                            <span class="badge bg-info text-dark">Closed by {{ p.closed_by.name }}{% if p.closed_timestamp %} at {{ p.closed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}{% endif %}</span>
                                         {% endif %}
                                     {% else %}
-                                        <span class="badge badge-primary"><i class="fas fa-check"></i> Feedback open</span>
+                                        <span class="badge bg-primary"><i class="fas fa-check"></i> Feedback open</span>
                                         {% if p.feedback_id %}
                                             <p>
                                                 Opened by {{ p.feedback_by.name }}
@@ -137,7 +137,7 @@
                                 {% endif %}
                             </div>
                             <div class="col-4">
-                                <div class="float-right">
+                                <div class="float-end">
                                     {% if not p.is_feedback_open %}
                                         {{ submission_period_configure_button(p, config, small=true) }}
                                     {% endif %}
@@ -145,25 +145,25 @@
                             </div>
                         </div>
                     {% else %}
-                        <span class="badge badge-secondary"><i class="fas fa-ban"></i> No configured submission periods</span>
+                        <span class="badge bg-secondary"><i class="fas fa-ban"></i> No configured submission periods</span>
                     {% endfor %}
                 </div>
                 <hr class="intro-divider">
                 <div class="d-flex justify-content-left mt-2 mb-2">
-                    <h5 class="mr-1"><span class="badge badge-info"><i class="fas fa-coins"></i> Supervision <span class="badge badge-secondary badge-pill">{{ config.CATS_supervision }} CATS</span> {% if config.CATS_supervision != pclass.CATS_supervision %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
-                    <h5 class="mr-1"><span class="badge badge-info"><i class="fas fa-coins"></i> Marking <span class="badge badge-secondary badge-pill">{{ config.CATS_marking }} CATS</span> {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
-                    <h5 class="mr-1"><span class="badge badge-info"><i class="fas fa-coins"></i> Presentation <span class="badge badge-secondary badge-pill">{{ config.CATS_presentation }} CATS</span> {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
+                    <h5 class="mr-1"><span class="badge bg-info text-dark"><i class="fas fa-coins"></i> Supervision <span class="badge bg-secondary rounded-pill">{{ config.CATS_supervision }} CATS</span> {% if config.CATS_supervision != pclass.CATS_supervision %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
+                    <h5 class="mr-1"><span class="badge bg-info text-dark"><i class="fas fa-coins"></i> Marking <span class="badge bg-secondary rounded-pill">{{ config.CATS_marking }} CATS</span> {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
+                    <h5 class="mr-1"><span class="badge bg-info text-dark"><i class="fas fa-coins"></i> Presentation <span class="badge bg-secondary rounded-pill">{{ config.CATS_presentation }} CATS</span> {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
                 </div>
                 <div class="d-flex justify-content-left mb-2">
                     {% if config.use_project_hub %}
-                        <h5 class="mr-1"><span class="h5 badge badge-secondary"><i class="fas fa-check"></i> Use Project Hub</span></h5>
+                        <h5 class="mr-1"><span class="h5 badge bg-secondary"><i class="fas fa-check"></i> Use Project Hub</span></h5>
                     {% else %}
-                        <h5 class="mr-1"><span class="h5 badge badge-secondary"><i class="fas fa-times"></i> Project Hub disabled</span></h5>
+                        <h5 class="mr-1"><span class="h5 badge bg-secondary"><i class="fas fa-times"></i> Project Hub disabled</span></h5>
                     {% endif %}
                 </div>
                 <div class="row vertical-top mt-2 mb-2">
                     <div class="col-12">
-                        <div class="float-right">
+                        <div class="float-end">
                             <a class="btn btn-outline-primary" href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure for {{ config.year }}&ndash;{{ config.year+1 }}....</a>
                         </div>
                     </div>
@@ -205,7 +205,7 @@
                                         <td>
                                             {{ tk.description|truncate(40) }}
                                             {% if tk.blocking %}
-                                                <span class="badge badge-warning"><i class="fas fa-hand-paper"></i> Blocking</span>
+                                                <span class="badge bg-warning text-dark"><i class="fas fa-hand-paper"></i> Blocking</span>
                                             {% endif %}
                                         </td>
                                         <td>
@@ -215,42 +215,42 @@
                                                     {{ obj.student.user.name }}
                                                 </a>
                                             {% elif tk_type == 3 %}
-                                                <span class="badge badge-secondary">Project task</span>
+                                                <span class="badge bg-secondary">Project task</span>
                                             {% endif %}
                                         </td>
                                         <td>
                                             {% if tk.defer_date is not none %}
                                                 {{ tk.defer_date.strftime("%a %d %b %Y %H:%M") }}
                                             {% else %}
-                                                <span class="badge badge-secondary">None</span>
+                                                <span class="badge bg-secondary">None</span>
                                             {% endif %}
                                         </td>
                                         <td>
                                             {% if tk.due_date is not none %}
                                                 {{ tk.due_date.strftime("%a %d %b %Y %H:%M") }}
                                             {% else %}
-                                                <span class="badge badge-secondary">None</span>
+                                                <span class="badge bg-secondary">None</span>
                                             {% endif %}
                                         </td>
                                         <td>
                                             {% if tk.dropped %}
-                                                <span class="badge badge-warning"><i class="fas fa-times"></i> Dropped</span>
+                                                <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Dropped</span>
                                             {% elif tk.complete %}
-                                                <span class="badge badge-success"><i class="fas fa-check"></i> Complete</span>
+                                                <span class="badge bg-success"><i class="fas fa-check"></i> Complete</span>
                                             {% elif tk.is_overdue %}
-                                                <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Overdue</span>
+                                                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Overdue</span>
                                             {% elif tk.is_available %}
-                                                <span class="badge badge-info"><i class="fas fa-thumbs-up"></i> Available</span>
+                                                <span class="badge bg-info text-dark"><i class="fas fa-thumbs-up"></i> Available</span>
                                             {% else %}
-                                                <span class="badge badge-secondary"><i class="fas fa-ban"></i> Not yet available</span>
+                                                <span class="badge bg-secondary"><i class="fas fa-ban"></i> Not yet available</span>
                                             {% endif %}
                                         </td>
                                         <td>
                                             <div class="dropdown">
-                                                <button class="btn btn-outline-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                                <button class="btn btn-outline-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                                     Actions
                                                 </button>
-                                                <div class="dropdown-menu dropdown-menu-right">
+                                                <div class="dropdown-menu dropdown-menu-end">
                                                     {% if tk_type == 1 or tk_type == 2 %}
                                                         <a class="dropdown-item" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.overview', id=pclass.id)) }}">
                                                             <i class="fas fa-pencil-alt fa-fw"></i> Edit...

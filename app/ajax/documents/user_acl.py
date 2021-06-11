@@ -35,15 +35,15 @@ _access = \
 {% set in_user_acl = asset.in_user_acl(user) %}
 {% set has_role_access = asset.has_role_access(user) %}
 {% if in_user_acl %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Has individual access</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Has individual access</span>
 {% elif has_role_access %}
     {% set eligible_roles = asset.get_eligible_roles(user) %}
-    <span class="badge badge-primary"><i class="fas fa-check"></i> Has role-based access</span>
+    <span class="badge bg-primary"><i class="fas fa-check"></i> Has role-based access</span>
     {% for role in eligible_roles %}
         {{ role.make_label()|safe }}
     {% endfor %}
 {% else %}
-    <span class="badge badge-danger"><i class="fas fa-times"></i> No access</span>
+    <span class="badge bg-danger"><i class="fas fa-times"></i> No access</span>
 {% endif %}
 """
 
@@ -53,7 +53,7 @@ _actions = \
 """
 {% set in_user_acl = asset.in_user_acl(user) %}
 <div style="text-align: right;">
-    <div class="float-right">
+    <div class="float-end">
         {% if in_user_acl %}
             <a class="btn btn-sm btn-secondary" href="{{ url_for('documents.remove_user_acl', user_id=user.id, attach_type=type, attach_id=attachment.id) }}">
                 <i class="fas fa-times"></i> Remove access

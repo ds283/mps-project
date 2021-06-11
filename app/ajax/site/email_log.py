@@ -15,10 +15,10 @@ from flask import render_template_string
 _email_log_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('admin.delete_email', id=e.id) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
@@ -34,9 +34,9 @@ _email_log_menu = \
 _name = \
 """
 {% if e.user is not none %}
-    <a href="mailto:{{ e.user.email }}" {% if e.user.last_email %}data-toggle="tooltip" title="Last notification at {{ e.user.last_email.strftime("%a %d %b %Y %H:%M:%S") }}"{% endif %}>{{ e.user.name }}</a>
+    <a href="mailto:{{ e.user.email }}" {% if e.user.last_email %}data-bs-toggle="tooltip" title="Last notification at {{ e.user.last_email.strftime("%a %d %b %Y %H:%M:%S") }}"{% endif %}>{{ e.user.name }}</a>
 {% else %}
-    <span class="badge badge-warning">Not logged</span>
+    <span class="badge bg-warning text-dark">Not logged</span>
 {% endif %}
 """
 
@@ -49,7 +49,7 @@ _address = \
 {% elif e.recipient %}
     {{ e.recipient }}
 {% else %}
-    <span class="badge badge-danger">Invalid address or recipient</span>
+    <span class="badge bg-danger">Invalid address or recipient</span>
 {% endif %}
 """
 

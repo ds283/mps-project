@@ -47,9 +47,9 @@
                                     Supervisor feedback
                                 </div>
                                 <div class="col-6">
-                                    <div class="float-right">
+                                    <div class="float-end">
                                         {% if record.supervisor_timestamp %}
-                                            <span class="badge badge-secondary">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            <span class="badge bg-secondary">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                         {% endif %}
                                         <a href="{{ url_for('convenor.supervisor_edit_feedback', id=record.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}" class="btn btn-sm btn-table-block btn-secondary">Edit</a>
                                         {% if not record.supervisor_submitted %}
@@ -87,9 +87,9 @@
                                     Marker feedback
                                 </div>
                                 <div class="col-6">
-                                    <div class="float-right">
+                                    <div class="float-end">
                                         {% if record.marker_timestamp %}
-                                            <span class="badge badge-secondary">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            <span class="badge bg-secondary">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                         {% endif %}
                                         <a href="{{ url_for('convenor.marker_edit_feedback', id=record.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}" class="btn btn-sm btn-table-block btn-secondary">Edit</a>
                                         {% if not record.marker_submitted %}
@@ -137,9 +137,9 @@
                                     Presentation feedback from <strong>{{ feedback.assessor.user.name }}</strong>
                                 </div>
                                 <div class="col-7">
-                                    <div class="float-right">
+                                    <div class="float-end">
                                         {% if feedback.timestamp %}
-                                            <span class="badge badge-secondary">Submitted at {{ feedback.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            <span class="badge bg-secondary">Submitted at {{ feedback.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                         {% endif %}
                                         {% set valid = record.is_presentation_assessor_valid(feedback.assessor_id) %}
                                         {% set submitted = record.presentation_assessor_submitted(feedback.assessor_id) %}
@@ -173,11 +173,11 @@
                                 Student feedback to supervisor
                             </div>
                             <div class="col-6">
-                                <div class="float-right">
+                                <div class="float-end">
                                     {% if record.acknowledge_feedback %}
-                                        <span class="badge badge-success">Acknowledged</span>
+                                        <span class="badge bg-success">Acknowledged</span>
                                     {% endif %}
-                                    <span class="badge badge-secondary">Submitted at {{ record.student_feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                    <span class="badge bg-secondary">Submitted at {{ record.student_feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                     <a href="{{ url_for('convenor.edit_response', id=record.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}" class="btn btn-sm btn-table-block btn-secondary">Edit</a>
                                     {% if record.is_response_valid %}
                                         <a href="{{ url_for('convenor.submit_response', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
@@ -185,7 +185,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="float-right">
+                        <div class="float-end">
                         </div>
                     </div>
                     <div class="card-body">

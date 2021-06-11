@@ -39,7 +39,7 @@ def _process(user_id, current_user_id):
 
     name = record['name']
     if u.currently_active:
-        name = name.replace('REPACTIVE', '<span class="badge badge-success">ACTIVE</span>', 1)
+        name = name.replace('REPACTIVE', '<span class="badge bg-success">ACTIVE</span>', 1)
     else:
         name = name.replace('REPACTIVE', '', 1)
 

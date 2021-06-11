@@ -32,7 +32,7 @@ _published = \
 {% if a.publication_timestamp %}
     {{ a.publication_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
 {% else %}
-    <span class="badge badge-warning">None</span>
+    <span class="badge bg-warning text-dark">None</span>
 {% endif %}
 """
 

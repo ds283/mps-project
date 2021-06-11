@@ -14,7 +14,7 @@ from flask import current_app, request, session, render_template, has_request_co
 from flask_migrate import Migrate
 from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm, MailUtil
 from flask_login.signals import user_logged_in
-from .thirdparty.flask_bootstrap4 import Bootstrap
+from .thirdparty.flask_bootstrap5 import Bootstrap
 from .thirdparty.flask_sessionstore import Session
 from flask_mail import Mail, Message
 from flask_assets import Environment

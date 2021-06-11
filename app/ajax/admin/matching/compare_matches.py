@@ -35,16 +35,16 @@ _records = \
 {% if r.project_id != c.project_id %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style()|safe %}
-    <span class="badge badge-info" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}:
+    <span class="badge bg-info text-dark" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}:
         {{ r.supervisor.user.name }} (No. {{ r.project.number }})</span>
 {% else %}
-    <span class="badge badge-success">PROJECT MATCH</span>
+    <span class="badge bg-success">PROJECT MATCH</span>
 {% endif %}
 {% if r.marker_id != c.marker_id %}
-    <span class="badge badge-secondary">#{{ r.submission_period }}:
+    <span class="badge bg-secondary">#{{ r.submission_period }}:
         {{ r.marker.user.name }}</span>
 {% else %}
-    <span class="badge badge-success">MARKER MATCH</span>
+    <span class="badge bg-success">MARKER MATCH</span>
 {% endif %}
 """
 
@@ -52,8 +52,8 @@ _records = \
 # language=jinja2
 _delta = \
 """
-<span class="badge {% if r.hi_ranked %}badge-success{% elif r.lo_ranked %}badge-warning{% else %}badge-info{% endif %}">{{ r.rank }}</span>
-<span class="badge badge-primary">&delta; = {{ r.delta }}</span>
+<span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning{% else %}bg-info{% endif %}">{{ r.rank }}</span>
+<span class="badge bg-primary">&delta; = {{ r.delta }}</span>
 """
 
 
@@ -62,10 +62,10 @@ _menu = \
 """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
-            data-toggle="dropdown">
+            data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('admin.merge_replace_records', src_id=l.id, dest_id=r.id) }}">
             <i class="fas fa-chevron-circle-right fa-fw"></i> Replace left to right
         </a>

@@ -17,15 +17,15 @@ _name = \
 <a href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
 <div>
     {% if a.confirmed %}
-        <span class="badge badge-success">Confirmed</span>
+        <span class="badge bg-success">Confirmed</span>
     {% else %}
-        <span class="badge badge-danger">Not confirmed</span>
+        <span class="badge bg-danger">Not confirmed</span>
     {% endif %}
     {% if a.assigned_limit is not none %}
-        <span class="badge badge-primary">Assignment limit {{ a.assigned_limit }}</span>
+        <span class="badge bg-primary">Assignment limit {{ a.assigned_limit }}</span>
     {% endif %}
     {% if a.comment is not none and a.comment|length > 0 %}
-        <span class="badge badge-info" data-toggle="tooltip" title="{{ a.comment }}">Comment</button>
+        <span class="badge bg-info text-dark" data-bs-toggle="tooltip" title="{{ a.comment }}">Comment</button>
     {% endif %}
 </div>
 """
@@ -38,7 +38,7 @@ _sessions = \
     <div style="display: inline-block; margin-bottom:2px; margin-right:2px;">
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
             {% set style = slot.session.get_label_type() %}
-            <a class="badge {% if style is not none %}{{ style }}{% else %}badge-secondary{% endif %} dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+            <a class="badge text-decoration-none {% if style is not none %}{{ style }}{% else %}bg-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                 {{ slot.session.short_date_as_string }} {{ slot.session.session_type_string }}
             </a>
             <div class="dropdown-menu">
@@ -55,7 +55,7 @@ _sessions = \
         {% for talk in slot.talks %}
             <div class="dropdown schedule-assign-button" style="display: inline-block;">
                 {% set style = talk.pclass.make_CSS_style() %}
-                <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                     {{ talk.owner.student.user.name }}
                 </a>
                 <div class="dropdown-menu">
@@ -70,7 +70,7 @@ _sessions = \
         {% endfor %}
     </div>
 {% else %}
-    <span class="badge badge-secondary">No assignment</span>
+    <span class="badge bg-secondary">No assignment</span>
 {% endfor %}
 """
 
@@ -78,9 +78,9 @@ _sessions = \
 # language=jinja2
 _availability = \
 """
-<span class="badge badge-success">{{ a.number_available }}</span>
-<span class="badge badge-warning">{{ a.number_ifneeded }}</span>
-<span class="badge badge-danger">{{ a.number_unavailable }}</span>
+<span class="badge bg-success">{{ a.number_available }}</span>
+<span class="badge bg-warning text-dark">{{ a.number_ifneeded }}</span>
+<span class="badge bg-danger">{{ a.number_unavailable }}</span>
 """
 
 

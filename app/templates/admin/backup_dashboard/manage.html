@@ -14,7 +14,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { url: $SCRIPT_ROOT + '/admin/manage_backups_ajax', dataSrc: '' },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'date',
                       render: {
@@ -49,7 +49,7 @@
                     {{ wtf.render_field(form.delete_age, button_map={'delete_age': 'warning'}) }}
                 </div>
                 <div class="col-8 grouped-button-pad">
-                    <div class="float-right">
+                    <div class="float-end">
                         <a href="{{ url_for('admin.confirm_delete_all_backups') }}" class="btn btn-danger">Delete all</a>
                     </div>
                 </div>

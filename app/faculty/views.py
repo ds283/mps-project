@@ -81,36 +81,36 @@ _desc_label = \
 </a>
 <div>
     {% if d.review_only %}
-        <span class="badge badge-info">Review project</span>
+        <span class="badge bg-info text-dark">Review project</span>
     {% endif %}
 </div>
 {% set state = d.workflow_state %}
 <div>
     {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
     {% if not_confirmed %}
-        <span class="badge badge-secondary">Approval: Not confirmed</span>
+        <span class="badge bg-secondary">Approval: Not confirmed</span>
     {% else %}
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
-            <span class="badge badge-success"><i class="fas fa-check"></i> Approved</span>
+            <span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>
         {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
-            <span class="badge badge-warning">Approval: Queued</span>
+            <span class="badge bg-warning text-dark">Approval: Queued</span>
         {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
-            <span class="badge badge-info">Approval: In progress</span>
+            <span class="badge bg-info text-dark">Approval: In progress</span>
         {% else %}
-            <span class="badge badge-danger">Unknown approval state</span>
+            <span class="badge bg-danger">Unknown approval state</span>
         {% endif %}
         {% if current_user.has_role('project_approver') and d.validated_by %}
             <div>
-                <span class="badge badge-info">Signed-off: {{ d.validated_by.name }}</span>
+                <span class="badge bg-info text-dark">Signed-off: {{ d.validated_by.name }}</span>
                 {% if d.validated_timestamp %}
-                    <span class="badge badge-info">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                    <span class="badge bg-info text-dark">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                 {% endif %}
             </div>
         {% endif %}
     {% endif %}
     {% if d.has_new_comments(current_user) %}
         <div>
-            <span class="badge badge-warning">New comments</span>
+            <span class="badge bg-warning text-dark">New comments</span>
         </div>
     {% endif %}
 </div>
@@ -119,18 +119,18 @@ _desc_label = \
         {% set errors = d.errors %}
         {% set warnings = d.warnings %}
         {% if errors|length == 1 %}
-            <span class="badge badge-danger">1 error</span>
+            <span class="badge bg-danger">1 error</span>
         {% elif errors|length > 1 %}
-            <span class="badge badge-danger">{{ errors|length }} errors</span>
+            <span class="badge bg-danger">{{ errors|length }} errors</span>
         {% else %}
-            <span class="badge badge-success">0 errors</span>
+            <span class="badge bg-success">0 errors</span>
         {% endif %}
         {% if warnings|length == 1 %}
-            <span class="badge badge-warning">1 warning</span>
+            <span class="badge bg-warning text-dark">1 warning</span>
         {% elif warnings|length > 1 %}
-            <span class="badge badge-warning">{{ warnings|length }} warnings</span>
+            <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
         {% else %}
-            <span class="badge badge-success">0 warnings</span>
+            <span class="badge bg-success">0 warnings</span>
         {% endif %}
         {% if errors|length > 0 %}
             <div class="error-block">
@@ -163,10 +163,10 @@ _desc_label = \
 _desc_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
            url=url_for('faculty.edit_descriptions', id=d.parent.id, create=create),
            text='description list view') }}">

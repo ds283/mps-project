@@ -16,10 +16,10 @@ _faculty_menu = \
 """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
-            data-toggle="dropdown">
+            data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         {% if userdata.is_enrolled(pclass) %}
             <a class="dropdown-item" href="{{ url_for('convenor.unenroll', userid=user.id, pclassid=pclass.id) }}">
                 <i class="fas fa-trash fa-fw"></i> Remove enrollment
@@ -46,28 +46,28 @@ _golive = \
 {% if config.require_confirm %}
     {% if config.requests_issued %}
         {% if config.is_confirmation_required(userdata) %}
-            <span class="badge badge-warning"><i class="fas fa-times"></i> Outstanding</span>
+            <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Outstanding</span>
         {% else %}
             {% if userdata.is_enrolled(pclass) %}
                 {% set record = userdata.get_enrollment_record(pclass.id) %}
                 {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
-                    <span class="badge badge-success"><i class="fas fa-check"></i> Confirmed</span>
+                    <span class="badge bg-success"><i class="fas fa-check"></i> Confirmed</span>
                 {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                    <span class="badge badge-secondary"><i class="fas fa-check"></i> Sabbatical</span>
+                    <span class="badge bg-secondary"><i class="fas fa-check"></i> Sabbatical</span>
                 {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                    <span class="badge badge-secondary"><i class="fas fa-check"></i> Exempt</span>
+                    <span class="badge bg-secondary"><i class="fas fa-check"></i> Exempt</span>
                 {% else %}
-                    <span class="badge badge-danger">Unknown</span>
+                    <span class="badge bg-danger">Unknown</span>
                 {% endif %}
             {% else %}
-                <span class="badge badge-secondary">Not enrolled</span>
+                <span class="badge bg-secondary">Not enrolled</span>
             {% endif %}
         {% endif %}
     {% else %}
-        <span class="badge badge-danger">Not yet issued</span>
+        <span class="badge bg-danger">Not yet issued</span>
     {% endif %}
 {% else %}
-    <span class="badge badge-secondary">Disabled</span>
+    <span class="badge bg-secondary">Disabled</span>
 {% endif %}
 """
 
@@ -93,23 +93,23 @@ _enrollments = \
     {{ f.enrolled_labels|safe }}
     <div>
         {% if f.CATS_supervision is not none %}
-            <span class="badge badge-warning">S: {{ f.CATS_supervision }} CATS</span>
+            <span class="badge bg-warning text-dark">S: {{ f.CATS_supervision }} CATS</span>
         {% else %}
-            <span class="badge badge-secondary">S: Default CATS</span>
+            <span class="badge bg-secondary">S: Default CATS</span>
         {% endif %}
         {% if f.CATS_marking is not none %}
-            <span class="badge badge-warning">M {{ f.CATS_marking }} CATS</span>
+            <span class="badge bg-warning text-dark">M {{ f.CATS_marking }} CATS</span>
         {% else %}
-            <span class="badge badge-secondary">M: Default CATS</span>
+            <span class="badge bg-secondary">M: Default CATS</span>
         {% endif %}
         {% if f.CATS_presentation is not none %}
-            <span class="badge badge-warning">P {{ f.CATS_marking }} CATS</span>
+            <span class="badge bg-warning text-dark">P {{ f.CATS_marking }} CATS</span>
         {% else %}
-            <span class="badge badge-secondary">P: Default CATS</span>
+            <span class="badge bg-secondary">P: Default CATS</span>
         {% endif %}
     </div>
 {% else %}
-    <span class="badge badge-secondary">Not enrolled</span>
+    <span class="badge bg-secondary">Not enrolled</span>
 {% endif %}
 """
 

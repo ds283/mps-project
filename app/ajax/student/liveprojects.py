@@ -23,17 +23,17 @@ _meeting = \
 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
     {% if sel %}
         {% if project.is_confirmed(sel) %}
-            <span class="badge badge-primary"><i class="fas fa-check"></i> Confirmed</span>
+            <span class="badge bg-primary"><i class="fas fa-check"></i> Confirmed</span>
         {% else %}
-            <span class="badge badge-danger"><i class="fas fa-times"></i> Required</span>
+            <span class="badge bg-danger"><i class="fas fa-times"></i> Required</span>
         {% endif %}
     {% else %}
-        <span class="badge badge-secondary">Not live</span>
+        <span class="badge bg-secondary">Not live</span>
     {% endif %}
 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-    <span class="badge badge-warning">Optional</span>
+    <span class="badge bg-warning text-dark">Optional</span>
 {% else %}
-    <span class="badge badge-secondary"><i class="fas fa-check"></i> Not required</span>
+    <span class="badge bg-secondary"><i class="fas fa-check"></i> Not required</span>
 {% endif %}
 """
 
@@ -43,20 +43,20 @@ _status = \
 """
 {% if sel %}
     {% if project.is_available(sel) %}
-        <span class="badge badge-success"><i class="fas fa-check"></i> Available for selection</span>
+        <span class="badge bg-success"><i class="fas fa-check"></i> Available for selection</span>
     {% else %}
         {% if project.is_waiting(sel) %}
-            <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="badge badge-warning">
+            <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="badge bg-warning text-dark">
                 <i class="fas fa-times"></i> Cancel request
             </a>
         {% else %}
-            <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="badge badge-primary">
+            <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="badge bg-primary">
                 <i class="fas fa-plus"></i> Request confirmation
             </a>
         {% endif %}
     {% endif %}
 {% else %}
-   <span class="badge badge-secondary">Not live</span>
+   <span class="badge bg-secondary">Not live</span>
 {% endif %} 
 """
 
@@ -66,17 +66,17 @@ _bookmarks = \
 {% if sel %}
     {% if sel.is_project_bookmarked(project) %}
         <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
-           class="badge badge-primary">
+           class="badge bg-primary">
            <i class="fas fa-times"></i> Remove
         </a>
     {% else %}
         <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}"
-           class="badge badge-secondary">
+           class="badge bg-secondary">
            <i class="fas fa-plus"></i> Add
         </a>
     {% endif %}
 {% else %}
-   <span class="badge badge-secondary">Not live</span>
+   <span class="badge bg-secondary">Not live</span>
 {% endif %} 
 """
 
@@ -85,10 +85,10 @@ _selector_menu = \
 """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
-            data-toggle="dropdown">
+            data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id) }}">
             View project...
         </a>
@@ -130,10 +130,10 @@ _submitter_menu = \
 """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
-            data-toggle="dropdown">
+            data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('student.submitter_view_project', sid=sub_id, pid=project.id) }}">
             View project...
         </a>
@@ -163,7 +163,7 @@ _project_skills = \
             {% if sel %}
                 {% set href = url_for('student.add_skill_filter', id=sel.id, skill_id=skill.id) %}
             {% endif %}
-            <a {% if href %}href="{{ href }}"{% endif %} class="badge badge-secondary" style="{{ skill.group.make_CSS_style() }}">{%- if skill.group.add_group -%}{{ skill.group.name }}:{% endif %} {{ skill.name }}</a>
+            <a {% if href %}href="{{ href }}"{% endif %} class="badge bg-secondary" style="{{ skill.group.make_CSS_style() }}">{%- if skill.group.add_group -%}{{ skill.group.name }}:{% endif %} {{ skill.name }}</a>
         {% endif %}
     {% endif %}
 {% endfor %}
@@ -176,14 +176,14 @@ _project_group = \
 {% if sel %}
     {% set href = url_for('student.add_group_filter', id=sel.id, gid=group.id) %}
 {% endif %}
-<a {% if href %}href="{{ href }}"{% endif %} class="badge badge-secondary" style="{{ group.make_CSS_style() }}">{{ group.name }}</a>
+<a {% if href %}href="{{ href }}"{% endif %} class="badge bg-secondary" style="{{ group.make_CSS_style() }}">{{ group.name }}</a>
 """
 
 
 # language=jinja2
 _not_live = \
 """
-<span class="badge badge-secondary">Not live</span>
+<span class="badge bg-secondary">Not live</span>
 """
 
 

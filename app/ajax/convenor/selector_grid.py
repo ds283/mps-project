@@ -26,16 +26,16 @@ _selections = \
         {% set offer = sel.accepted_offer %}
         {% set project = offer.liveproject %}
         {% if project %}
-            <span class="badge badge-success"><i class="fas fa-check"></i> {{ project.name }} ({{ project.owner.user.last_name }})</span>
+            <span class="badge bg-success"><i class="fas fa-check"></i> {{ project.name }} ({{ project.owner.user.last_name }})</span>
         {% else %}
-            <span class="badge badge-danger">MISSING ACCEPTED PROJECT</span>
+            <span class="badge bg-danger">MISSING ACCEPTED PROJECT</span>
         {% endif %}
     {% else %}
         {% for item in sel.ordered_selections %}
             {% set project = item.liveproject %}
             <div class="dropdown">
                 {% set style = project.group.make_CSS_style() %}
-                <a class="badge badge-info dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">#{{ item.rank }}
+                <a class="badge text-decoration-none bg-info text-dark dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">#{{ item.rank }}
                     {{ item.format_project()|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}</a>
                 <div class="dropdown-menu">
                     {% set menu_items = item.menu_order %}
@@ -52,10 +52,10 @@ _selections = \
                     {% endfor %}
                 </div>
                 {% if item.converted_from_bookmark %}
-                    <span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Bookmark</span>
+                    <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Bookmark</span>
                 {% endif %}
                 {% if item.hint != item.SELECTION_HINT_NEUTRAL %}
-                    <span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Hint</span>
+                    <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Hint</span>
                 {% endif %}
             </div>
         {% endfor %}
@@ -64,12 +64,12 @@ _selections = \
     <div class="row vertical-align">
         <div class="col-12">
             {% if sel.number_bookmarks >= sel.number_choices %}
-                <span class="badge badge-info">Bookmarks available</span>
+                <span class="badge bg-info text-dark">Bookmarks available</span>
                 <a href="{{ url_for('convenor.force_convert_bookmarks', sel_id=sel.id) }}">
                     Force conversion...
                 </a>
             {% else %}
-                <span class="badge badge-secondary">None</span>
+                <span class="badge bg-secondary">None</span>
             {% endif %}
         </div>
     </div>
@@ -82,12 +82,12 @@ _name = \
 <a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 <div>
 {% if sel.convert_to_submitter %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Convert</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Convert</span>
 {% else %}
-    <span class="badge badge-danger"><i class="fas fa-times"></i> Disable convert</span>
+    <span class="badge bg-danger"><i class="fas fa-times"></i> Disable convert</span>
 {% endif %}
 {% if sel.student.intermitting %}
-    <span class="badge badge-warning">TWD</span>
+    <span class="badge bg-warning text-dark">TWD</span>
 {% endif %}
 </div>
 """

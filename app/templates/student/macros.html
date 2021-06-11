@@ -11,7 +11,7 @@
                 {% set project = item.liveproject %}
                 <div class="row vertical-align final-selection-table">
                     <div class="col-1">
-                        <span class="badge badge-success">#{{ item.rank }}</span>
+                        <span class="badge bg-success">#{{ item.rank }}</span>
                     </div>
                     <div class="col-5">
                         <a href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id) }}">
@@ -53,13 +53,13 @@
                 {% if show_actions %}<div class="col-1">{% else %}<div class="col-2">{% endif %}
                     {% set status = offer.status %}
                     {% if status == offer.OFFERED %}
-                        <span class="badge badge-primary">Offered</span>
+                        <span class="badge bg-primary">Offered</span>
                     {% elif status == offer.DECLINED %}
-                        <span class="badge badge-danger">Declined</span>
+                        <span class="badge bg-danger">Declined</span>
                     {% elif status == offer.ACCEPTED %}
-                        <span class="badge badge-success">Accepted</span>
+                        <span class="badge bg-success">Accepted</span>
                     {% else %}
-                        <span class="badge badge-danger">Unknown status</span>
+                        <span class="badge bg-danger">Unknown status</span>
                     {% endif %}
                 </div>
                 {% if show_actions %}

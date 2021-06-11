@@ -35,19 +35,19 @@
                                     </a>
                                     <div>
                                         {% if req.request_timestamp is not none %}
-                                            <span class="badge badge-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            <span class="badge bg-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                         {% endif %}
                                         {% if req.response_timestamp is not none %}
-                                            <span class="badge badge-secondary">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            <span class="badge bg-secondary">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                         {% endif %}
                                         {% if req.request_timestamp is not none and req.response_timestamp is not none %}
                                             {% set delta = req.response_timestamp - req.request_timestamp %}
                                             {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                            <span class="badge badge-primary"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
+                                            <span class="badge bg-primary"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
                                         {% elif req.request_timestamp is not none %}
                                             {% set delta = now - req.request_timestamp %}
                                             {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                            <span class="badge badge-danger"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
+                                            <span class="badge bg-danger"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -60,9 +60,9 @@
                                     </a>
                                 </div>
                                 <div class="col-2">
-                                    <div class="float-right">
+                                    <div class="float-end">
                                         <div class="dropdown">
-                                            <a class="btn btn-warning dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                            <a class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                 Deconfirm
                                                 {% if not sel.satisfies_recommended(project) %}
                                                     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
@@ -102,19 +102,19 @@
                                     </a>
                                     <div>
                                         {% if req.request_timestamp is not none %}
-                                            <span class="badge badge-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            <span class="badge bg-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                         {% endif %}
                                         {% if req.response_timestamp is not none %}
-                                            <span class="badge badge-secondary">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            <span class="badge bg-secondary">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                         {% endif %}
                                         {% if req.request_timestamp is not none and req.response_timestamp is not none %}
                                             {% set delta = req.response_timestamp - req.request_timestamp %}
                                             {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                            <span class="badge badge-primary"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
+                                            <span class="badge bg-primary"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
                                         {% elif req.request_timestamp is not none %}
                                             {% set delta = now - req.request_timestamp %}
                                             {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                            <span class="badge badge-danger"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
+                                            <span class="badge bg-danger"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -127,9 +127,9 @@
                                     </a>
                                 </div>
                                 <div class="col-2">
-                                    <div class="float-right">
+                                    <div class="float-end">
                                         <div class="dropdown">
-                                            <a class="btn btn-success dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                            <a class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                 Confirm
                                                 {% if not sel.satisfies_recommended(project) %}
                                                     <i class="fas fa-exclamation-triangle" style="color:white;"></i>

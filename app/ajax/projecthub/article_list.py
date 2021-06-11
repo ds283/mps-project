@@ -21,7 +21,7 @@ _published = \
     {{ a.publication_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
     by <i class="fas fa-user"></i> <a href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}</a>
 {% else %}
-    <span class="badge badge-warning">Not published</span>
+    <span class="badge bg-warning text-dark">Not published</span>
 {% endif %}
 """
 
@@ -35,7 +35,7 @@ _last_edit = \
     {{ a.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
     by <i class="fas fa-user"></i> <a href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}</a>
 {% else %}
-    <span class="badge badge-danger">None</span>
+    <span class="badge bg-danger">None</span>
 {% endif %}
 """
 
@@ -50,10 +50,10 @@ _menu = \
 """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
-            data-toggle="dropdown">
+            data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('projecthub.show_formatted_article', aid=a.id, url=url, text=text) }}"><i class="fas fa-search fa-fw"></i> Show article...</a> 
         <a class="dropdown-item" href="{{ url_for(edit_endpoint, aid=a.id) }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit...</a>
         <a class="dropdown-item" href="#"><i class="fas fa-trash fa-fw"></i> Delete</a>

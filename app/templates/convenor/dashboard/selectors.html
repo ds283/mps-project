@@ -19,7 +19,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { url: $SCRIPT_ROOT + '/convenor/selectors_ajax/{{ pclass.id }}?cohort_filter={{ cohort_filter }}&year_filter={{ year_filter }}&prog_filter={{ prog_filter }}&state_filter={{ state_filter }}&convert_filter={{ convert_filter }}&match_filter={{ match_filter }}&match_show={{ match_show }}', dataSrc: '' },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
                       render: {
@@ -214,7 +214,7 @@
 
             <div class="row vertical-align">
                 <div class="col-12">
-                    <div class="float-right">
+                    <div class="float-end">
                         {% if is_admin or is_root or is_emailer %}
                             <a href="{{ url_for('convenor.email_selectors', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, convert_filter=convert_filter, match_filter=match_filter, match_show=match_show) }}"
                                class="btn btn-secondary top-row-button">

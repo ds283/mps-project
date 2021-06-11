@@ -28,7 +28,7 @@ _assessors = \
 {% for assessor in s.assessors %}
     <div>
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
-            <a class="badge badge-secondary" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+            <a class="badge text-decoration-none bg-secondary" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                 {{ assessor.user.name }}
                 {% set count = rec.get_number_faculty_slots(assessor.id) %}
                 ({{ count }})
@@ -40,7 +40,7 @@ _assessors = \
             </div>
         </div>
         {% if s.session.faculty_ifneeded(assessor.id) %}
-            <span class="badge badge-warning">if-needed</span>
+            <span class="badge bg-warning text-dark">if-needed</span>
         {% elif s.session.faculty_unavailable(assessor.id) %}
             <i class="fas fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}
@@ -48,9 +48,9 @@ _assessors = \
 {% endfor %}
 <div>
 {% if s.presenter_has_overlap(t) %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Pool overlap</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Pool overlap</span>
 {% else %}
-    <span class="badge badge-danger"><i class="fas fa-times"></i> No pool overlap</span>
+    <span class="badge bg-danger"><i class="fas fa-times"></i> No pool overlap</span>
 {% endif %}
 </div>
 """
@@ -71,7 +71,7 @@ _talks = \
     {% set ns.count = ns.count + 1 %}
     <div class="dropdown schedule-assign-button" style="display: inline-block;">
         {% set style = talk.pclass.make_CSS_style() %}
-        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+        <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
             {{ talk.owner.student.user.last_name }}
             ({{ talk.project.owner.user.last_name }} &ndash; {{ truncate_name(talk.project.name) }})
         </a>
@@ -90,18 +90,18 @@ _talks = \
     {% set errors = s.errors %}
     {% set warnings = s.warnings %}
     {% if errors|length == 1 %}
-        <span class="badge badge-danger">1 error</span>
+        <span class="badge bg-danger">1 error</span>
     {% elif errors|length > 1 %}
-        <span class="badge badge-danger">{{ errors|length }} errors</span>
+        <span class="badge bg-danger">{{ errors|length }} errors</span>
     {% else %}
-        <span class="badge badge-success">0 errors</span>
+        <span class="badge bg-success">0 errors</span>
     {% endif %}
     {% if warnings|length == 1 %}
-        <span class="badge badge-warning">1 warning</span>
+        <span class="badge bg-warning text-dark">1 warning</span>
     {% elif warnings|length > 1 %}
-        <span class="badge badge-warning">{{ warnings|length }} warnings</span>
+        <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
     {% else %}
-        <span class="badge badge-success">0 warnings</span>
+        <span class="badge bg-success">0 warnings</span>
     {% endif %}
     {% if errors|length > 0 %}
         <div class="error-block">
@@ -132,7 +132,7 @@ _talks = \
 # language=jinja2
 _menu = \
 """
-<div class="float-right">
+<div class="float-end">
     <a href="{{ url_for('admin.schedule_move_submitter', old_id=old_slot.id, new_id=new_slot.id, talk_id=talk.id, url=back_url, text=back_text) }}" class="btn btn-secondary btn-sm">
         <i class="fas fa-arrow-alt-circle-right"></i> Move
     </a>

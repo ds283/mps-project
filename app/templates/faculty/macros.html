@@ -2,10 +2,10 @@
     {% if project is not none %}
         {{ project.views_label()|safe }}
         {% if project.last_view %}
-            <span class="badge badge-secondary">last view {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            <span class="badge bg-secondary">last view {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</span>
         {% endif %}
     {% else %}
-        <span class="badge badge-danger">Missing project data</span>
+        <span class="badge bg-danger">Missing project data</span>
     {% endif %}
 {% endmacro %}
 
@@ -14,7 +14,7 @@
         {{ project.selections_label(popover=True)|safe }}
         {{ project.bookmarks_label(popover=True)|safe }}
     {% else %}
-        <span class="badge badge-danger">Missing project data</span>
+        <span class="badge bg-danger">Missing project data</span>
     {% endif %}
 {% endmacro %}
 
@@ -24,9 +24,9 @@
         {% if R is not none %}
             {% set rank, total = R %}
             {% if rank is none or total is none %}
-                <span class="badge badge-secondary">Popularity rank updating...</span>
+                <span class="badge bg-secondary">Popularity rank updating...</span>
             {% else %}
-                <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}" class="badge badge-primary">Popularity rank {{ rank }}/{{ total }}</a>
+                <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}" class="badge bg-primary">Popularity rank {{ rank }}/{{ total }}</a>
             {% endif %}
         {% endif %}
 
@@ -34,9 +34,9 @@
         {% if R is not none %}
             {% set rank, total = R %}
             {% if rank is none or total is none %}
-                <span class="badge badge-secondary">Selection rank updating...</span>
+                <span class="badge bg-secondary">Selection rank updating...</span>
             {% else %}
-                <a href="{{ url_for('reports.liveproject_analytics', pane='selections', proj_id=project.id, url=url, text=text) }}" class="badge badge-secondary">Selection rank {{ rank }}/{{ total }}</a>
+                <a href="{{ url_for('reports.liveproject_analytics', pane='selections', proj_id=project.id, url=url, text=text) }}" class="badge bg-secondary">Selection rank {{ rank }}/{{ total }}</a>
             {% endif %}
         {% endif %}
 
@@ -44,9 +44,9 @@
         {% if R is not none %}
             {% set rank, total = R %}
             {% if rank is none or total is none %}
-                <span class="badge badge-secondary">Bookmark rank updating...</span>
+                <span class="badge bg-secondary">Bookmark rank updating...</span>
             {% else %}
-                <a href="{{ url_for('reports.liveproject_analytics', pane='bookmarks', proj_id=project.id, url=url, text=text) }}" class="badge badge-secondary">Bookmark rank {{ rank }}/{{ total }}</a>
+                <a href="{{ url_for('reports.liveproject_analytics', pane='bookmarks', proj_id=project.id, url=url, text=text) }}" class="badge bg-secondary">Bookmark rank {{ rank }}/{{ total }}</a>
             {% endif %}
         {% endif %}
 
@@ -54,12 +54,12 @@
         {% if R is not none %}
             {% set rank, total = R %}
             {% if rank is none or total is none %}
-                <span class="badge badge-secondary">View rank updating...</span>
+                <span class="badge bg-secondary">View rank updating...</span>
             {% else %}
-                <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="badge badge-secondary">View rank {{ rank }}/{{ total }}</a>
+                <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="badge bg-secondary">View rank {{ rank }}/{{ total }}</a>
             {% endif %}
         {% endif %}
     {% else %}
-        <span class="badge badge-danger">Missing project data</span>
+        <span class="badge bg-danger">Missing project data</span>
     {% endif %}
 {% endmacro %}

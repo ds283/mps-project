@@ -25,33 +25,33 @@ _name = \
 {% endif %}
 <p></p>
 {% if a.is_deployed %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Deployed</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Deployed</span>
 {% endif %}
 {% if not a.is_feedback_open %}
-    <span class="badge badge-success">Feedback closed</span>
+    <span class="badge bg-success">Feedback closed</span>
 {% endif %}
 {% if state == a.AVAILABILITY_NOT_REQUESTED %}
-    <span class="badge badge-secondary">Availability not requested</span>
+    <span class="badge bg-secondary">Availability not requested</span>
 {% elif state == a.AVAILABILITY_REQUESTED %}
-    <span class="badge badge-success">Availability requested</span>
+    <span class="badge bg-success">Availability requested</span>
     {% set num_outstanding = a.availability_outstanding_count %}
     {% if num_outstanding > 0 %}
-        <span class="badge badge-info">{{ num_outstanding }} outstanding</span>
+        <span class="badge bg-info text-dark">{{ num_outstanding }} outstanding</span>
     {% endif %}
 {% elif state == a.AVAILABILITY_CLOSED %}
-    <span class="badge badge-primary">Availability closed</span>
+    <span class="badge bg-primary">Availability closed</span>
 {% else %}
-    <span class="badge badge-danger">Unknown lifecycle state</span>
+    <span class="badge bg-danger">Unknown lifecycle state</span>
 {% endif %}
 {% set sessions = a.number_sessions %}
 {% set pl = 's' %}{% if sessions == 1 %}{% set pl = '' %}{% endif %}
-<span class="badge badge-info">{{ sessions }} session{{ pl }}</span>
+<span class="badge bg-info text-dark">{{ sessions }} session{{ pl }}</span>
 {% set slots = a.number_slots %}
 {% set pl = 's' %}{% if slots == 1 %}{% set pl = '' %}{% endif %}
-<span class="badge badge-info">{{ slots }} slot{{ pl }}</span>
+<span class="badge bg-info text-dark">{{ slots }} slot{{ pl }}</span>
 {% set schedules = a.number_schedules %}
 {% set pl = 's' %}{% if schedules == 1 %}{% set pl = '' %}{% endif %}
-<span class="badge badge-info">{{ schedules }} schedule{{ pl }}</span>
+<span class="badge bg-info text-dark">{{ schedules }} schedule{{ pl }}</span>
 """
 
 
@@ -64,7 +64,7 @@ _periods = \
         {% set num = period.number_projects %}
         {% set pl = 's' %}
         {% if num == 1 %}{% set pl = '' %}{% endif %}
-        <span class="badge badge-info">{{ num }} project{{ pl }}</span>
+        <span class="badge bg-info text-dark">{{ num }} project{{ pl }}</span>
     </div>
 {% endfor %}
 {% set total = a.number_talks %}
@@ -72,11 +72,11 @@ _periods = \
 {% if total > 0 or missing > 0 %}
     <p></p>
     {% set pl = 's' %}{% if total == 1 %}{% set p = '' %}{% endif %}
-    <span class="badge badge-primary">{{ total }} presentation{{ pl }}</span>
+    <span class="badge bg-primary">{{ total }} presentation{{ pl }}</span>
     {% if missing > 0 %}
-        <span class="badge badge-warning">{{ missing }} not attending</span>
+        <span class="badge bg-warning text-dark">{{ missing }} not attending</span>
     {% else %}
-        <span class="badge badge-success">{{ missing }} not attending</span>
+        <span class="badge bg-success">{{ missing }} not attending</span>
     {% endif %}
 {% endif %}
 """
@@ -92,7 +92,7 @@ _sessions = \
             {{ session.label|safe }}
             {% set available = session.number_available_faculty %}
             {% set ifneeded = session.number_ifneeded_faculty %}
-            <span class="badge badge-info">{{ available }}{% if ifneeded > 0 %}(+{{ ifneeded }}){% endif %} available</span>
+            <span class="badge bg-info text-dark">{{ available }}{% if ifneeded > 0 %}(+{{ ifneeded }}){% endif %} available</span>
         </div>
     {% else %}
         {{ session.label|safe }}
@@ -103,18 +103,18 @@ _sessions = \
     {% set errors = a.errors %}
     {% set warnings = a.warnings %}
     {% if errors|length == 1 %}
-        <span class="badge badge-danger">1 error</span>
+        <span class="badge bg-danger">1 error</span>
     {% elif errors|length > 1 %}
-        <span class="badge badge-danger">{{ errors|length }} errors</span>
+        <span class="badge bg-danger">{{ errors|length }} errors</span>
     {% else %}
-        <span class="badge badge-success">0 errors</span>
+        <span class="badge bg-success">0 errors</span>
     {% endif %}
     {% if warnings|length == 1 %}
-        <span class="badge badge-warning">1 warning</span>
+        <span class="badge bg-warning text-dark">1 warning</span>
     {% elif warnings|length > 1 %}
-        <span class="badge badge-warning">{{ warnings|length }} warnings</span>
+        <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
     {% else %}
-        <span class="badge badge-success">0 warnings</span>
+        <span class="badge bg-success">0 warnings</span>
     {% endif %}
     {% if errors|length > 0 %}
         <div class="error-block">
@@ -146,10 +146,10 @@ _sessions = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <div class="dropdown-header">Scheduling</div>
         {% set valid = a.is_valid %}
         {% set disabled = not valid and a.availability_lifecycle < a.AVAILABILITY_REQUESTED %}

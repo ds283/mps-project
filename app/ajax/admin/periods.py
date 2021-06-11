@@ -15,25 +15,25 @@ from flask import render_template_string, jsonify
 _presentation = \
 """
 {% if p.has_presentation %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Required</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Required</span>
     {% if p.collect_presentation_feedback %}
-        <span class="badge badge-success"><i class="fas fa-check"></i> Collect feedback</span>
+        <span class="badge bg-success"><i class="fas fa-check"></i> Collect feedback</span>
     {% else %}
-        <span class="badge badge-warning"><i class="fas fa-times"></i> Do not collect feedback</span>
+        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Do not collect feedback</span>
     {% endif %}
-    <span class="badge badge-primary">Assessors per group = {{ p.number_assessors }}</span>
-    <span class="badge badge-primary">Max group size = {{ p.max_group_size }}</span> 
+    <span class="badge bg-primary">Assessors per group = {{ p.number_assessors }}</span>
+    <span class="badge bg-primary">Max group size = {{ p.max_group_size }}</span> 
     {% if p.lecture_capture %}
-        <span class="badge badge-info">Requires lecture capture</span>
+        <span class="badge bg-info text-dark">Requires lecture capture</span>
     {% else %}
-        <span class="badge badge-secondary">Lecture capture not required</span>
+        <span class="badge bg-secondary">Lecture capture not required</span>
     {% endif %}
     <p></p>
-    <span class="badge badge-info">Morning: {{ p.morning_session }}</span>
-    <span class="badge badge-info">Afternoon: {{ p.afternoon_session }}</span>
-    <span class="badge badge-info">Format: {{ p.talk_format }}</span>
+    <span class="badge bg-info text-dark">Morning: {{ p.morning_session }}</span>
+    <span class="badge bg-info text-dark">Afternoon: {{ p.afternoon_session }}</span>
+    <span class="badge bg-info text-dark">Format: {{ p.talk_format }}</span>
 {% else %}
-    <span class="badge badge-secondary">Not required</span>
+    <span class="badge bg-secondary">Not required</span>
 {% endif %}
 """
 
@@ -42,10 +42,10 @@ _presentation = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('admin.edit_period', id=period.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Edit period...
         </a>
@@ -63,16 +63,16 @@ _name = \
 {% if p.name %}
     {{ p.name }}
 {% else %}
-    <span class="badge badge-secondary">None</span>
+    <span class="badge bg-secondary">None</span>
 {% endif %}
 {% if p.start_date %}
     <div>
-        <span class="badge badge-info">Start: {{ p.start_date.strftime("%a %d %b %Y") }}</span>
+        <span class="badge bg-info text-dark">Start: {{ p.start_date.strftime("%a %d %b %Y") }}</span>
     </div>
 {% endif %}
 {% if p.collect_project_feedback %}
     <div>
-        <span class="badge badge-info"><i class="fas fa-check"></i> Collect feedback</span>
+        <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Collect feedback</span>
     </div>
 {% endif %}  
 """

@@ -25,8 +25,8 @@
             <div class="card mt-3 mb-3 card-body bg-well">
                 <form action="{{ url_for('admin.backups_overview') }}" method="POST" name="backup_options_form">
                     {{ form.hidden_tag() }}
-                    <span class="badge badge-primary" style="font-size: 95%;">Current backup size {{ backup_size }}</span>
-                    <span class="badge badge-info" style="font-size: 95%;">Settings last changed: {{ last_change.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                    <span class="badge bg-primary" style="font-size: 95%;">Current backup size {{ backup_size }}</span>
+                    <span class="badge bg-info text-dark" style="font-size: 95%;">Settings last changed: {{ last_change.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                     <hr class="intro-divider">
                     {{ on_click_selector_field(form.backup_limit, true) }}
                     {{ on_click_selector_field(form.limit_units, true) }}
@@ -47,7 +47,7 @@
                         {% if archive_div is defined and archive_div is not none and archive_script is defined and archive_script is not none %}
                             {{ archive_div|safe }}
                         {% else %}
-                            <span class="badge badge-warning">Too few data points to generate plot for archive file size vs. time</span>
+                            <span class="badge bg-warning text-dark">Too few data points to generate plot for archive file size vs. time</span>
                         {% endif %}
                     </div>
                     <div class="col-4">
@@ -79,7 +79,7 @@
                         {% if backup_div is defined and backup_div is not none and backup_script is defined and backup_script is not none %}
                             {{ backup_div|safe }}
                         {% else %}
-                            <span class="badge badge-warning">Too few data points to generate plot for backup size vs. time</span>
+                            <span class="badge bg-warning text-dark">Too few data points to generate plot for backup size vs. time</span>
                         {% endif %}
                     </div>
                     <div class="col-4">
@@ -89,7 +89,7 @@
                                 {% if gauge_div is defined and gauge_div is not none and gauge_script is defined and gauge_script is not none %}
                                     {{ gauge_div|safe }}
                                 {% else %}
-                                    <span class="badge badge-warning">Capacity gauge could not be generated</span>
+                                    <span class="badge bg-warning text-dark">Capacity gauge could not be generated</span>
                                 {% endif %}
                             </div>
                             <div class="col-2"></div>

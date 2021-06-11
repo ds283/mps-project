@@ -77,7 +77,7 @@
                         {% endif %}
                     </div>
                     <div class="col-6">
-                        <div class="float-right">
+                        <div class="float-end">
                             {% if project.group %}
                                 <div class="research-group-banner">{{ project.group.name }}</div>
                                 {% if project.group.website and project.group.website is not none %}
@@ -135,7 +135,7 @@
                                     </div>
                                     <div class="col-8">
                                         {% if not hidden and sel and selections_open %}
-                                            <div class="float-right">
+                                            <div class="float-end">
                                                 {% if sel.bookmarks.filter_by(liveproject_id=project.id).first() %}
                                                     <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
                                                        class="btn btn-secondary btn-sm">
@@ -175,20 +175,20 @@
                                                 <div class="sm-gap-below">
                                                     {% if project.meeting_reqd == project.MEETING_REQUIRED %}
                                                         {% if project.is_confirmed(sel) %}
-                                                            <span class="badge badge-primary project-label"><i
+                                                            <span class="badge bg-primary project-label"><i
                                                                     class="fas fa-check"></i> Meeting confirmed</span>
                                                         {% else %}
-                                                            <span class="badge badge-danger project-label"><i
+                                                            <span class="badge bg-danger project-label"><i
                                                                     class="fas fa-times"></i> Meeting required</span>
                                                         {% endif %}
                                                     {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-                                                        <span class="badge badge-warning project-label">Meeting optional</span>
+                                                        <span class="badge bg-warning text-dark project-label">Meeting optional</span>
                                                     {% else %}
-                                                        <span class="badge badge-secondary project-label"><i
+                                                        <span class="badge bg-secondary project-label"><i
                                                                 class="fas fa-check"></i> Meeting not required</span>
                                                     {% endif %}
                                                     {% if selections_open and project.is_available(sel) %}
-                                                        <span class="badge badge-success project-label"><i
+                                                        <span class="badge bg-success project-label"><i
                                                                 class="fas fa-check"></i> Available</span>
                                                     {% endif %}
                                                 </div>
@@ -215,7 +215,7 @@
                                             <div class="col-3">Subject keywords</div>
                                             <div class="col-9">
                                                 {% for keyword in keywords %}
-                                                    <span class="badge badge-success project-label">{{ keyword }}</span>
+                                                    <span class="badge bg-success project-label">{{ keyword }}</span>
                                                 {% endfor %}
                                             </div>
                                         </div>
@@ -277,7 +277,7 @@
                                             {% if desc %}
                                                 {% for role in desc.team %}
                                                     {% set style = role.make_CSS_style() %}
-                                                    <span class="badge badge-secondary project-label"
+                                                    <span class="badge bg-secondary project-label"
                                                           {% if style %}style="{{ style }}"{% endif %}>{{ role.name }}</span>
                                                 {% endfor %}
                                             {% endif %}
@@ -361,7 +361,7 @@
                     {% if desc.workflow_state == desc.WORKFLOW_APPROVAL_QUEUED %}
                         <div class="row m-3">
                             <div class="col-12">
-                                <div class="float-right">
+                                <div class="float-end">
                                     <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}" class="btn btn-success">
                                         <i class="fas fa-check"></i> Approve
                                     </a>
@@ -374,7 +374,7 @@
                     {% elif desc.workflow_state == desc.WORKFLOW_APPROVAL_REJECTED %}
                         <div class="row m-3">
                             <div class="col-12">
-                                <div class="float-right">
+                                <div class="float-end">
                                     <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}" class="btn btn-success">
                                         <i class="fas fa-check"></i> Approve
                                     </a>
@@ -445,7 +445,7 @@
                                                     Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                                 </div>
                                                 <div class="col-5">
-                                                    <div class="float-right">
+                                                    <div class="float-end">
                                                         {% if is_approver and approvals_team_only %}
                                                             <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Publish</a>
                                                         {% endif %}
@@ -458,7 +458,7 @@
                                                     Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                                 </div>
                                                 <div class="col-5">
-                                                    <div class="float-right">
+                                                    <div class="float-end">
                                                         <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Publish</a>
                                                     </div>
                                                 </div>
@@ -468,7 +468,7 @@
                                                 </div>
                                             {% elif current_user.id == comment.owner_id %}
                                                 <div class="col-12">
-                                                    <div class="float-right">
+                                                    <div class="float-end">
                                                         {% if is_approver and approvals_team_only %}
                                                             <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Publish</a>
                                                         {% endif %}
@@ -478,13 +478,13 @@
                                                 </div>
                                             {% elif is_approver and approvals_team_only %}
                                                 <div class="col-12">
-                                                    <div class="float-right">
+                                                    <div class="float-end">
                                                         <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-secondary btn-table-block">Publish</a>
                                                     </div>
                                                 </div>
                                             {% else %}
                                                 <div class="col-12">
-                                                    <span class="badge badge-danger">Unknown comment configuration</span>
+                                                    <span class="badge bg-danger">Unknown comment configuration</span>
                                                 </div>
                                             {% endif %}
                                         </div>
@@ -500,7 +500,7 @@
                         {% endif %}
                         <div class="row vertical-align">
                             <div class="col-12">
-                                <div class="float-right">
+                                <div class="float-end">
                                     {% if desc and current_user.has_role('admin') or current_user.has_role('root') %}
                                         <a href="{{ url_for('project_approver.clean_comments', id=desc.id) }}" class="btn btn-warning">Remove deleted comments</a>
                                     {% endif %}

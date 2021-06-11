@@ -14,7 +14,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],stateSave: true,
                 ajax: { url: $SCRIPT_ROOT + '/admin/schedule_assign_assessors_ajax/{{ slot.id }}?url={{ url|urlencode }}&text={{ text|urlencode }}', dataSrc: '' },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
                       render: {
@@ -46,12 +46,12 @@
         {% set pl = 's' %}
         {% if count == 1 %}{% set pl = '' %}{% endif %}
         &emsp;
-        <span class="badge badge-info">{{ count }} session{{ pl }}</span>
+        <span class="badge bg-info text-dark">{{ count }} session{{ pl }}</span>
         {% if slot.session.faculty_ifneeded(fac.id) %}
-            <span class="badge badge-warning">If needed</span>
+            <span class="badge bg-warning text-dark">If needed</span>
         {% endif %}
     {% else %}
-        <span class="badge badge-danger">No assignment</span>
+        <span class="badge bg-danger">No assignment</span>
     {% endif %}
 {% endmacro %}
 
@@ -90,7 +90,7 @@
                                             {% if talk.is_in_assessor_pool(item.id) %}
                                                 <div class="dropdown schedule-assign-button" style="display: inline-block;">
                                                     {% set style = talk.pclass.make_CSS_style() %}
-                                                    <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                                    <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                         {{ talk.owner.student.user.name }}
                                                     </a>
                                                     <div class="dropdown-menu">
@@ -106,13 +106,13 @@
                                         {% endfor %}
                                     </div>
                                     <div class="col-2">
-                                        <div class="float-right">
+                                        <div class="float-end">
                                             <a href="{{ url_for('admin.schedule_remove_assessor', slot_id=slot.id, fac_id=item.id) }}" class="btn btn-warning btn-sm"><i class="fas fa-trash"></i> Remove</a>
                                         </div>
                                     </div>
                                 </div>
                             {% else %}
-                                <span class="badge badge-danger">Error: missing content</span>
+                                <span class="badge bg-danger">Error: missing content</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -136,7 +136,7 @@
                                                 {% if talk.is_in_assessor_pool(item.id) %}
                                                     <div class="dropdown schedule-assign-button" style="display: inline-block;">
                                                         {% set style = talk.pclass.make_CSS_style() %}
-                                                        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                                        <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                             {{ talk.owner.student.user.name }}
                                                         </a>
                                                         <div class="dropdown-menu">
@@ -152,7 +152,7 @@
                                             {% endfor %}
                                         </div>
                                         <div class="col-2">
-                                            <div class="float-right">
+                                            <div class="float-end">
                                                 {% if slot.is_assessor(item.id) %}
                                                     <a class="btn btn-secondary btn-sm disabled">Already attached</a>
                                                 {% else %}

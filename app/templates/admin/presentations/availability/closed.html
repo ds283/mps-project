@@ -13,7 +13,7 @@
                 </p>
             {% else %}
                 Responses have now been received from all faculty
-                <span class="badge badge-success"><i class="fas fa-check"></i></span>
+                <span class="badge bg-success"><i class="fas fa-check"></i></span>
                 <p>
                     <a href="{{ url_for('admin.availability_as_csv', id=assessment.id) }}">Download availability data</a>
                 </p>
@@ -21,7 +21,7 @@
             {% if not assessment.is_deployed %}
                 <div class="row">
                     <div class="col-12">
-                        <div class="float-right">
+                        <div class="float-end">
                             <a class="btn btn-secondary" href="{{ url_for('admin.reopen_availability', id=assessment.id) }}">
                                 Reopen collection
                             </a>

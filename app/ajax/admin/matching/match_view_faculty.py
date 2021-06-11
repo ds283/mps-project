@@ -27,7 +27,7 @@ _name = \
             {% if rec is not none %}
                 {% set pcl = rec.pclass %}
                 {% set style = pcl.make_CSS_style() %}
-                <span class="badge {% if style is not none %}badge-secondary{% else %}badge-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
+                <span class="badge {% if style is not none %}bg-secondary{% else %}bg-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
                     {{ f.number_projects_offered(pcl.id) }}
                     {%- if rec.supervisor_state == rec.SUPERVISOR_ENROLLED %}
                         S <i class="fas fa-check"></i>
@@ -52,7 +52,7 @@ _name = \
                 {% set pcl = rec.pclass %}
                 {% if rec.CATS_supervision is not none or rec.CATS_marking is not none %}
                     {% set style = pcl.make_CSS_style() %}
-                    <span class="badge {% if style is not none %}badge-secondary{% else %}badge-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
+                    <span class="badge {% if style is not none %}bg-secondary{% else %}bg-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
                         {%- if rec.CATS_supervision is not none %}
                             S {{ rec.CATS_supervision }}
                         {%- endif -%}
@@ -65,7 +65,7 @@ _name = \
         {% endif %}
     {% endfor %}
     {% if f.CATS_supervision is not none or f.CATS_marking is not none %}
-        <span class="badge badge-primary">Global
+        <span class="badge bg-primary">Global
             {%- if f.CATS_supervision is not none %}
                 S {{ f.CATS_supervision }}
             {%- endif -%}
@@ -88,9 +88,9 @@ _projects = \
     {% set style = pclass.make_CSS_style() %}
     {% set proj_overassigned = r.is_project_overassigned %}
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="badge {% if proj_overassigned %}badge-danger{% elif style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
+        <a class="badge text-decoration-none {% if proj_overassigned %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
                 {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
-                {% if adjustable %}data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>#{{ r.submission_period }}:
+                {% if adjustable %}data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>#{{ r.submission_period }}:
             {{ r.selector.student.user.name }} (No. {{ r.project.number }})</a>
         {% if adjustable %}
             {% set list = r.selector.ordered_selections %}
@@ -111,18 +111,18 @@ _projects = \
     {% if outcome is not none %}
         {% set satisfied, violated = outcome %}
         {% if satisfied|length > 0 %}
-            <span class="badge badge-success">{%- for i in range(satisfied|length) -%}<i class="fas fa-check"></i>{%- endfor %} HINT</span>
+            <span class="badge bg-success">{%- for i in range(satisfied|length) -%}<i class="fas fa-check"></i>{%- endfor %} HINT</span>
         {% endif %}
         {% if violated|length > 0 %}
-            <span class="badge badge-warning">{%- for i in range(violated|length) -%}<i class="fas fa-times"></i>{%- endfor %} HINT</span>
+            <span class="badge bg-warning text-dark">{%- for i in range(violated|length) -%}<i class="fas fa-times"></i>{%- endfor %} HINT</span>
         {% endif %}
     {% endif %}
     {% set prog_status = r.project.satisfies_preferences(r.selector) %}
     {% if prog_status is not none %}
         {% if prog_status %}
-            <span class="badge badge-success"><i class="fas fa-check"></i> PROG</span>
+            <span class="badge bg-success"><i class="fas fa-check"></i> PROG</span>
         {% else %}
-            <span class="badge badge-warning"><i class="fas fa-times"></i> PROG</span>
+            <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> PROG</span>
         {% endif %}
     {% endif %}
 {% endmacro %}
@@ -134,7 +134,7 @@ _projects = \
     {% endif %}
 {% endfor %}
 {% if ns.count == 0 %}
-    <span class="badge badge-secondary btn-table-block">None</span>
+    <span class="badge bg-secondary btn-table-block">None</span>
 {% endif %}
 {% if err_msgs|length > 0 %}
     <div class="error-block">
@@ -153,7 +153,7 @@ _marking = \
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     <div class="dropdown match-assign-button" style="display: inline-block;">
-        <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown"
+        <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown"
             href="" role="button" aria-haspopup="true" aria-expanded="false">
             #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})
         </a>
@@ -178,7 +178,7 @@ _marking = \
     {% endif %}
 {% endfor %}
 {% if ns.count == 0 %}
-    <span class="badge badge-secondary btn-table-block">None</span>
+    <span class="badge bg-secondary btn-table-block">None</span>
 {% endif %}
 {% if err_msgs|length > 0 %}
     <div class="error-block">
@@ -193,16 +193,16 @@ _marking = \
 # language=jinja2
 _workload = \
 """
-<span class="badge {% if sup_overassigned %}badge-danger{% else %}badge-info{% endif %}">S {{ sup }}</span>
-<span class="badge {% if mark_overassigned %}badge-danger{% else %}badge-secondary{% endif %}">M {{ mark }}</span>
-<span class="badge {% if sup_overassigned or mark_overassigned %}badge-danger{% else %}badge-primary{% endif %}">T {{ tot }}</span>
+<span class="badge {% if sup_overassigned %}bg-danger{% else %}bg-info{% endif %}">S {{ sup }}</span>
+<span class="badge {% if mark_overassigned %}bg-danger{% else %}bg-secondary{% endif %}">M {{ mark }}</span>
+<span class="badge {% if sup_overassigned or mark_overassigned %}bg-danger{% else %}bg-primary{% endif %}">T {{ tot }}</span>
 {% if included_sup is not none and included_mark is not none and included_workload is not none and included_workload|length > 0 %}
     <p></p>
     {% for match in m.include_matches %}
-        <span class="badge badge-info">{{ match.name }} S {{ included_sup[match.id] }} M {{ included_mark[match.id] }} T {{ included_workload[match.id] }}</span>
+        <span class="badge bg-info text-dark">{{ match.name }} S {{ included_sup[match.id] }} M {{ included_mark[match.id] }} T {{ included_workload[match.id] }}</span>
     {% endfor %}
     <p></p>
-    <span class="badge {% if sup_overassigned or mark_overassigned %}badge-danger{% else %}badge-primary{% endif %}">Total {{ total_CATS_value }}</span>
+    <span class="badge {% if sup_overassigned or mark_overassigned %}bg-danger{% else %}bg-primary{% endif %}">Total {{ total_CATS_value }}</span>
 {% endif %}
 """
 

@@ -120,7 +120,7 @@ class ColouredLabelMixin():
         if self.colour is None:
             return None
 
-        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
+        return "background-color:{bg}!important; color:{fg}!important;".format(bg=self.colour, fg=get_text_colour(self.colour))
 
 
     def _make_label(self, text, user_classes=None, popover_text=None):
@@ -130,9 +130,9 @@ class ColouredLabelMixin():
         :return:
         """
         if user_classes is None:
-            classes = 'badge badge-secondary'
+            classes = 'badge bg-secondary'
         else:
-            classes = 'badge badge-secondary {cls}'.format(cls=user_classes)
+            classes = 'badge bg-secondary {cls}'.format(cls=user_classes)
 
         style = self.make_CSS_style()
 
@@ -141,7 +141,7 @@ class ColouredLabelMixin():
             element += ' style="{sty}"'.format(sty=style)
 
         if popover_text is not None:
-            element += ' data-toggle="tooltip" title="{text}"'.format(text=popover_text)
+            element += ' data-bs-toggle="tooltip" title="{text}"'.format(text=popover_text)
 
         element += '>{msg}</span>'.format(msg=text)
         return element
@@ -1303,9 +1303,9 @@ class User(db.Model, UserMixin):
     @property
     def active_label(self):
         if self.active:
-            return '<span class="badge badge-success">Active</a>'
+            return '<span class="badge bg-success">Active</a>'
 
-        return '<span class="badge badge-secondary">Inactive</a>'
+        return '<span class="badge bg-secondary">Inactive</a>'
 
 
     def post_task_update(self, uuid, payload, remove_on_load=False, autocommit=False):
@@ -1669,9 +1669,9 @@ class EmailNotification(db.Model):
     def event_label(self):
         if self.event_type in self._events:
             type, label = self._events[self.event_type]
-            return '<span class="badge badge-{type}">{label}</span>'.format(type=type, label=label)
+            return '<span class="badge bg-{type}">{label}</span>'.format(type=type, label=label)
 
-        return '<span class="badge badge-danger">Unknown type</span>'
+        return '<span class="badge bg-danger">Unknown type</span>'
 
     # index
     # the meaning of these fields varies depending on the notification type
@@ -2173,9 +2173,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
         n = self.number_projects_offered(pclass)
 
         if n == 0:
-            return '<span class="badge badge-danger"><i class="fas fa-times"></i> 0 available</span>'
+            return '<span class="badge bg-danger"><i class="fas fa-times"></i> 0 available</span>'
 
-        return '<span class="badge badge-success"><i class="fas fa-check"></i> {n} available</span>'.format(n=n)
+        return '<span class="badge bg-success"><i class="fas fa-check"></i> {n} available</span>'.format(n=n)
 
 
     def _variants_offered_query(self, pclass):
@@ -2235,9 +2235,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
         n = self.projects_unofferable
 
         if n == 0:
-            return '<span class="badge badge-secondary"><i class="fas fa-check"></i> 0 unofferable</span>'
+            return '<span class="badge bg-secondary"><i class="fas fa-check"></i> 0 unofferable</span>'
 
-        return '<span class="badge badge-warning"><i class="fas fa-times"></i> {n} unofferable</span>'.format(n=n)
+        return '<span class="badge bg-warning text-dark"><i class="fas fa-times"></i> {n} unofferable</span>'.format(n=n)
 
 
     def remove_affiliation(self, group, autocommit=False):
@@ -2360,7 +2360,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         record = self.get_enrollment_record(pclass)
 
         if record is None:
-            return '<span class="badge badge-warning">Not enrolled</span>'
+            return '<span class="badge bg-warning text-dark">Not enrolled</span>'
 
         return record.enrolled_labels
 
@@ -2473,9 +2473,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
         num = self.number_assessor
 
         if num == 0:
-            return '<span class="badge badge-secondary"><i class="fas fa-times"></i> Assessor for 0</span>'
+            return '<span class="badge bg-secondary"><i class="fas fa-times"></i> Assessor for 0</span>'
 
-        return '<span class="badge badge-info"><i class="fas fa-check"></i> Assessor for {n}</span>'.format(n=num)
+        return '<span class="badge bg-info"><i class="fas fa-check"></i> Assessor for {n}</span>'.format(n=num)
 
 
     def supervisor_assignments(self, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
@@ -3095,7 +3095,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
 
     @property
     def cohort_label(self):
-        return '<span class="badge badge-info">{c} cohort</span>'.format(c=self.cohort)
+        return '<span class="badge bg-info">{c} cohort</span>'.format(c=self.cohort)
 
 
     @property
@@ -3188,7 +3188,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
                 if self.repeated_years > 0:
                     text += ' R{n}'.format(n=self.repeated_years)
 
-        return '<span class="badge badge-{type}">{label}</span>'.format(label=text, type=type)
+        return '<span class="badge bg-{type}">{label}</span>'.format(label=text, type=type)
 
 
     @property
@@ -3477,7 +3477,7 @@ class StudentBatchItem(db.Model):
                 if self.repeated_years > 0:
                     text += ' R{n}'.format(n=self.repeated_years)
 
-        return '<span class="badge badge-{type}">{label}</span>'.format(label=text, type=type)
+        return '<span class="badge bg-{type}">{label}</span>'.format(label=text, type=type)
 
 
     @property
@@ -3831,9 +3831,9 @@ class TransferableSkill(db.Model, EditingMetadataMixin):
         """
         if self.group is None:
             if user_classes is None:
-                classes = 'label badge-secondary'
+                classes = 'label bg-secondary'
             else:
-                classes = 'label badge-secondary {cls}'.format(cls=user_classes)
+                classes = 'label bg-secondary {cls}'.format(cls=user_classes)
 
             return '<span class="{cls}">{name}</span>'.format(name=self.name, cls=classes)
 
@@ -5612,25 +5612,25 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
     def _generic_label(self, label, state, reenroll, comment, enrolled, sabbatical, exempt):
         if state == enrolled:
-            return '<span class="badge badge-info"><i class="fas fa-check"></i> ' + label + ': active</span>'
+            return '<span class="badge bg-info"><i class="fas fa-check"></i> ' + label + ': active</span>'
 
         if comment is not None:
             bleach = current_app.extensions['bleach']
-            comment_attr = 'data-toggle="tooltip" title="' + bleach.clean(comment) + '"'
+            comment_attr = 'data-bs-toggle="tooltip" title="' + bleach.clean(comment) + '"'
         else:
             comment_attr = None
 
         if state == sabbatical:
-            span = '<span class="badge badge-warning" ' + comment_attr + '><i class="fas fa-times"></i> ' + label + ': sab'
+            span = '<span class="badge bg-warning text-dark" ' + comment_attr + '><i class="fas fa-times"></i> ' + label + ': sab'
             if reenroll is not None:
                 span += ' ' + str(reenroll)
             span += '</span>'
             return span
 
         if state == exempt:
-            return '<span class="badge badge-danger" ' + comment_attr + '><i class="fas fa-times"></i> ' + label + ': exempt</span>'
+            return '<span class="badge bg-danger" ' + comment_attr + '><i class="fas fa-times"></i> ' + label + ': exempt</span>'
 
-        return '<span class="badge badge-danger">Unknown state</span>'
+        return '<span class="badge bg-danger">Unknown state</span>'
 
 
 
@@ -7145,7 +7145,7 @@ class LiveProject(db.Model,
 
         score = self.popularity_rank(live=True)
         if score is None:
-            return '<span class="badge badge-secondary {cls}">Popularity score unavailable</span>'.format(cls=cls)
+            return '<span class="badge bg-secondary {cls}">Popularity score unavailable</span>'.format(cls=cls)
 
         rank, total = score
         lowest_rank = self.lowest_popularity_rank(live=True)
@@ -7164,7 +7164,7 @@ class LiveProject(db.Model,
             lowest_frac = 1.0
 
         if lowest_frac < 0.5:
-            return '<span class="badge badge-secondary {cls}">Insufficient data for popularity score</span>'.format(cls=cls)
+            return '<span class="badge bg-secondary {cls}">Insufficient data for popularity score</span>'.format(cls=cls)
 
         label = 'Low'
         if frac < 0.1:
@@ -7174,7 +7174,7 @@ class LiveProject(db.Model,
         elif frac < 0.5:
             label = 'Medium'
 
-        return '<span class="badge badge-info {cls}">Popularity: {label}</span>'.format(cls=cls, label=label)
+        return '<span class="badge bg-info {cls}">Popularity: {label}</span>'.format(cls=cls, label=label)
 
 
     def format_bookmarks_label(self, css_classes=None, popover=False):
@@ -7194,11 +7194,11 @@ class LiveProject(db.Model,
             project_tags = ['<div>{name} #{rank}</div>'.format(name=rec.owner.student.user.name, rank=rec.rank)
                             for rec in self.bookmarks.order_by(Bookmark.rank).limit(10).all()]
             tooltip = ''.join(project_tags)
-            attrs = 'data-toggle="tooltip" data-html="true" title="{title}"'.format(title=tooltip)
+            attrs = 'data-bs-toggle="tooltip" data-bs-html="true" title="{title}"'.format(title=tooltip)
         else:
             attrs = ''
 
-        return '<span class="badge badge-info {cls}" {attrs}>{n} ' \
+        return '<span class="badge bg-info {cls}" {attrs}>{n} ' \
                'bookmark{pl}</span>'.format(cls=cls, n=num, pl=pl, attrs=attrs)
 
 
@@ -7206,7 +7206,7 @@ class LiveProject(db.Model,
         pl = 's' if self.page_views != 1 else ''
         cls = '' if css_classes is None else ' '.join(css_classes)
 
-        return '<span class="badge badge-info {cls}">{n} view{pl}</span>'.format(cls=cls, n=self.page_views, pl=pl)
+        return '<span class="badge bg-info {cls}">{n} view{pl}</span>'.format(cls=cls, n=self.page_views, pl=pl)
 
 
     def format_selections_label(self, css_classes=None, popover=False):
@@ -7226,11 +7226,11 @@ class LiveProject(db.Model,
             project_tags = ['<div>{name} #{rank}</div>'.format(name=rec.owner.student.user.name, rank=rec.rank)
                             for rec in self.selections.order_by(SelectionRecord.rank).limit(10).all()]
             tooltip = ''.join(project_tags)
-            attrs = 'data-toggle="tooltip" data-html="true" title="{title}"'.format(title=tooltip)
+            attrs = 'data-bs-toggle="tooltip" data-bs-html="true" title="{title}"'.format(title=tooltip)
         else:
             attrs = ''
 
-        return '<span class="badge badge-info {cls}" {attrs}>{n} ' \
+        return '<span class="badge bg-info {cls}" {attrs}>{n} ' \
                'selection{pl}</span>'.format(cls=cls, n=num, pl=pl, attrs=attrs)
 
 
@@ -11744,8 +11744,8 @@ class PresentationSession(db.Model, EditingMetadataMixin):
     SESSION_TO_TEXT = {MORNING_SESSION: 'morning',
                        AFTERNOON_SESSION: 'afternoon'}
 
-    SESSION_LABEL_TYPES = {MORNING_SESSION: 'badge-light',
-                           AFTERNOON_SESSION: 'badge-dark'}
+    SESSION_LABEL_TYPES = {MORNING_SESSION: 'bg-light text-dark',
+                           AFTERNOON_SESSION: 'bg-dark'}
 
     session_type = db.Column(db.Integer())
 
@@ -11773,14 +11773,14 @@ class PresentationSession(db.Model, EditingMetadataMixin):
         if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
             return PresentationSession.SESSION_LABEL_TYPES[self.session_type]
 
-        return 'badge-secondary'
+        return 'bg-secondary'
 
 
     def make_label(self, text):
         if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
             label_type = PresentationSession.SESSION_LABEL_TYPES[self.session_type]
         else:
-            label_type = 'badge-secondary'
+            label_type = 'bg-secondary'
 
         return '<span class="badge {type}">{text}</span>'.format(type=label_type, text=text)
 
@@ -11813,11 +11813,11 @@ class PresentationSession(db.Model, EditingMetadataMixin):
             if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
                 label_type = PresentationSession.SESSION_LABEL_TYPES[self.session_type]
             else:
-                label_type = 'badge-secondary'
+                label_type = 'bg-secondary'
 
             return '<span class="badge {type}">{tag}</span>'.format(type=label_type, tag=self.session_type_string)
 
-        return '<span class="badge badge-danger">Unknown session type</span>'
+        return '<span class="badge bg-danger">Unknown session type</span>'
 
 
     @property
@@ -13182,7 +13182,7 @@ class Module(db.Model, EditingMetadataMixin):
             text = 'Unknown value {n}'.format(n=self.semester)
             type = 'danger'
 
-        return '<span class="badge badge-{type}">{label}</span>'.format(label=text, type=type)
+        return '<span class="badge bg-{type}">{label}</span>'.format(label=text, type=type)
 
 
     @property

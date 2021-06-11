@@ -26,7 +26,7 @@ _type = \
 """
 {{ e.event_label|safe }}
 {% if e.held %}
-    <span class="badge badge-warning">HELD</span>
+    <span class="badge bg-warning text-dark">HELD</span>
 {% endif %}
 """
 
@@ -35,10 +35,10 @@ _type = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         {% if e.held %}
             <a class="dropdown-item" href="{{ url_for('admin.release_notification', eid=e.id) }}">
                 <i class="fas fa-play-circle fa-fw"></i> Release

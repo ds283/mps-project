@@ -15,10 +15,10 @@ from flask import render_template_string, jsonify
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('manage_users.edit_role', id=role.id) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit role
         </a>

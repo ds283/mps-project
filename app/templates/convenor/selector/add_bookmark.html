@@ -14,7 +14,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/convenor/add_student_bookmark_ajax/{{ sel.id }}', dataSrc: '' },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'project' },
                     { data: 'owner',

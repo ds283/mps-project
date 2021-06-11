@@ -17,7 +17,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/admin/do_match_compare_ajax/{{ record1.id }}/{{ record2.id }}?pclass_filter={{ pclass_filter }}&diff_filter={{ diff_filter }}', dataSrc: '' },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'student',
                       render: {

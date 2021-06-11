@@ -16,18 +16,18 @@ _projects = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="badge badge-secondary">{{ label }} not yet required</span> #}
+        {# <span class="badge bg-secondary">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="badge badge-info">{{ label }} to do</span>
+        <span class="badge bg-info text-dark">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <span class="badge badge-success">{{ label }} submitted</span>        
+        <span class="badge bg-success">{{ label }} submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}
-        <span class="badge badge-warning">{{ label }} in progress</span>        
+        <span class="badge bg-warning text-dark">{{ label }} in progress</span>        
     {% elif state == obj.FEEDBACK_LATE %}
-        <span class="badge badge-danger">{{ label }} late</span>
+        <span class="badge bg-danger">{{ label }} late</span>
     {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
     {% else %}
-        <span class="badge badge-danger">{{ label }} error &ndash; unknown state</span>
+        <span class="badge bg-danger">{{ label }} error &ndash; unknown state</span>
     {% endif %}        
 {% endmacro %}
 {% macro project_tag(r, show_period) %}
@@ -35,7 +35,7 @@ _projects = \
     {% set style = pclass.make_CSS_style() %}
     <div>
         <div class="dropdown assignment-label">
-            <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">
+            <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {{ r.owner.student.user.name }}
                 #{{ r.owner.student.exam_number }}
@@ -55,9 +55,9 @@ _projects = \
         </div>
         {% if r.owner.published %}
             <div class="dropdown assignment-label">
-                <a class="badge {% if r.student_engaged %}badge-success{% else %}badge-warning{% endif %} btn-table-block dropdown-toggle"
+                <a class="badge text-decoration-none {% if r.student_engaged %}bg-success{% else %}bg-warning{% endif %} btn-table-block dropdown-toggle"
                     href="" role="button" aria-haspopup="true" aria-expanded="false"
-                    data-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}
+                    data-bs-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}
                 <div class="dropdown-menu">
                     {% if r.submission_period > r.owner.config.submission_period %}
                         <a class="dropdown-item disabled">Submission period not yet open</a>
@@ -84,7 +84,7 @@ _projects = \
         {{ project_tag(rec, config.submissions > 1) }}
     {% endfor %}
 {% else %}
-    <span class="badge badge-info">None</span>
+    <span class="badge bg-info text-dark">None</span>
 {% endif %}
 """
 
@@ -94,18 +94,18 @@ _marking = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="badge badge-secondary">{{ label }} not yet required</span> #}
+        {# <span class="badge bg-secondary">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="badge badge-info">{{ label }} to do</span>
+        <span class="badge bg-info text-dark">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <span class="badge badge-success">{{ label }} submitted</span>        
+        <span class="badge bg-success">{{ label }} submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}
-        <span class="badge badge-warning">{{ label }} in progress</span>        
+        <span class="badge bg-warning text-dark">{{ label }} in progress</span>        
     {% elif state == obj.FEEDBACK_LATE %}
-        <span class="badge badge-danger">{{ label }} late</span>
+        <span class="badge bg-danger">{{ label }} late</span>
     {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
     {% else %}
-        <span class="badge badge-danger">{{ label }} error &ndash; unknown state</span>
+        <span class="badge bg-danger">{{ label }} error &ndash; unknown state</span>
     {% endif %}        
 {% endmacro %}
 {% macro marker_tag(r, show_period) %}
@@ -113,8 +113,8 @@ _marking = \
     {% set style = pclass.make_CSS_style() %}
     <div>
         <div class="dropdown assignment-label">
-            <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %}
-                href="" role="button" aria-haspopup="true" aria-expanded="false" data-toggle="dropdown">
+            <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %}
+                href="" role="button" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {{ r.owner.student.user.name }}
                 #{{ r.owner.student.exam_number }}
@@ -141,7 +141,7 @@ _marking = \
         {{ marker_tag(rec, config.submissions > 1) }}
     {% endfor %}
 {% else %}
-    <span class="badge badge-info">None</span>
+    <span class="badge bg-info text-dark">None</span>
 {% endif %}
 """
 
@@ -153,22 +153,22 @@ _presentations = \
     {% if state == obj.FEEDBACK_NOT_REQUIRED or state == obj.FEEDBACK_NOT_YET %}
         {# empty #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="badge badge-info">{{ label }} to do</span>
+        <span class="badge bg-info text-dark">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <span class="badge badge-success">{{ label }} submitted</span>        
+        <span class="badge bg-success">{{ label }} submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}
-        <span class="badge badge-warning">{{ label }} in progress</span>        
+        <span class="badge bg-warning text-dark">{{ label }} in progress</span>        
     {% elif state == obj.FEEDBACK_LATE %}
-        <span class="badge badge-danger">{{ label }} late</span>
+        <span class="badge bg-danger">{{ label }} late</span>
     {% else %}
-        <span class="badge badge-danger">{{ label }} error &ndash; unknown state</span>
+        <span class="badge bg-danger">{{ label }} error &ndash; unknown state</span>
     {% endif %}        
 {% endmacro %}
 {% if slots|length >= 1 %}
     {% for slot in slots %}
         <div {% if loop.index < loop.length %}style="padding-bottom: 10px;"{% endif %}>
             <div class="dropdown assignment-label">
-                <a class="badge badge-info btn-table-block dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                <a class="badge text-decoration-none bg-info text-dark btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                     {{ slot.short_date_as_string }}
                     {{ slot.session_type_string }}
                     {{ slot.room_full_name }}
@@ -189,13 +189,13 @@ _presentations = \
                 {% set numbers = slot.feedback_number(f.id) %}
                 {% if numbers is not none %}
                     {% set submitted, total = numbers %}
-                    <span class="badge badge-warning">{{ submitted }}/{{ total }} submitted</span>
+                    <span class="badge bg-warning text-dark">{{ submitted }}/{{ total }} submitted</span>
                 {% endif %}
             {% endif %}
         </div>
     {% endfor %}
 {% else %}
-    <span class="badge badge-info">None</span>
+    <span class="badge bg-info text-dark">None</span>
 {% endif %}
 """
 
@@ -204,15 +204,15 @@ _presentations = \
 _workload = \
 """
 {% if config.uses_supervisor %}
-    <span class="badge badge-info">S {{ CATS_sup }}</span>
+    <span class="badge bg-info text-dark">S {{ CATS_sup }}</span>
 {% endif %}
 {% if config.uses_marker %}
-    <span class="badge badge-info">M {{ CATS_mark }}</span>
+    <span class="badge bg-info text-dark">M {{ CATS_mark }}</span>
 {% endif %}
 {% if config.uses_presentations %}
-    <span class="badge badge-info">P {{ CATS_pres }}</span>
+    <span class="badge bg-info text-dark">P {{ CATS_pres }}</span>
 {% endif %}
-<span class="badge badge-primary">Total {{ CATS_sup+CATS_mark+CATS_pres }}</span>
+<span class="badge bg-primary">Total {{ CATS_sup+CATS_mark+CATS_pres }}</span>
 """
 
 

@@ -25,7 +25,7 @@
                 ajax: { url: $SCRIPT_ROOT + '/manage_users/users_faculty_ajax?pclass_filter={{ pclass_filter }}&group_filter={{ group_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
                       searchable: true,

@@ -10,7 +10,7 @@
                href="{{ url_for('admin.assessment_schedules', id=assessment.id) }}">
                 Manage schedules
                 {% if schedule_count is defined %}
-                    <span class="badge badge-light badge-pill">{{ schedule_count }}</span>
+                    <span class="badge bg-light text-dark rounded-pill">{{ schedule_count }}</span>
                 {% endif %}
             </a>
         </li>

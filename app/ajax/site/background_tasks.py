@@ -14,13 +14,13 @@ from flask import render_template_string, jsonify
 _state = \
 """
 {% if state == 0 %}
-    <span class="badge badge-info">PENDING</span>
+    <span class="badge bg-info text-dark">PENDING</span>
 {% elif state == 1 %}
-    <span class="badge badge-info">RUNNING</span>
+    <span class="badge bg-info text-dark">RUNNING</span>
 {% elif state == 2 %}
-    <span class="badge badge-success">SUCCESS</span>
+    <span class="badge bg-success">SUCCESS</span>
 {% else %}
-    <span class="badge badge-danger">FAILED</span>
+    <span class="badge bg-danger">FAILED</span>
 {% endif %}
 """
 
@@ -30,10 +30,10 @@ _menu = \
 """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
-            data-toggle="dropdown">
+            data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         {% if t.status == t.PENDING or t.status == t.RUNNING %}
             <a class="dropdown-item" href="{{ url_for('admin.terminate_background_task', id=t.id) }}">
                 <i class="fas fa-hand-paper fa-fw"></i> Terminate
@@ -53,7 +53,7 @@ def background_task_data(tasks):
     data = [{'id': t.id,
              'owner': '<a href="mailto:{em}">{nm}</a>'.format(nm=t.owner.name,
                                                               em=t.owner.email) if t.owner is not None
-                else '<span class="badge badge-secondary">Nobody</span>',
+                else '<span class="badge bg-secondary">Nobody</span>',
              'name': t.name,
              'description': t.description,
              'start_at': {

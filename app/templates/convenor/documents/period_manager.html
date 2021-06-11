@@ -46,7 +46,7 @@
     <tr id="PA-{{ attachment.id }}">
         <td>
             <i class="fas fa-bars drag-handle"></i>
-            <span id="ranking" class="badge badge-primary">#{{ attachment.rank_order }}</span>
+            <span id="ranking" class="badge bg-primary">#{{ attachment.rank_order }}</span>
         </td>
         <td>
             <div>
@@ -63,13 +63,13 @@
             {% endif %}
             <div>
                 {% if attachment.publish_to_students %}
-                    <span class="badge badge-info"><i class="fas fa-eye"></i> Publish</span>
+                    <span class="badge bg-info text-dark"><i class="fas fa-eye"></i> Publish</span>
                 {% endif %}
                 {% if attachment.include_marker_emails %}
-                    <span class="badge badge-info"><i class="fas fa-envelope"></i> Marker</span>
+                    <span class="badge bg-info text-dark"><i class="fas fa-envelope"></i> Marker</span>
                 {% endif %}
                 {% if attachment.include_supervisor_emails %}
-                    <span class="badge badge-info"><i class="fas fa-envelope"></i> Supervisor</span>
+                    <span class="badge bg-info text-dark"><i class="fas fa-envelope"></i> Supervisor</span>
                 {% endif %}
             </div>
         </td>
@@ -83,24 +83,24 @@
                 {% endif %}
             </div>
             <div>
-                <span class="badge badge-secondary">Downloads: {{ asset.number_downloads }}</span>
+                <span class="badge bg-secondary">Downloads: {{ asset.number_downloads }}</span>
             </div>
         </td>
         <td>
             {% if asset.license %}
                 {{ asset.license.make_label()|safe }}
-                <span class="badge badge-info">{{ asset.license.version }}</span>
+                <span class="badge bg-info text-dark">{{ asset.license.version }}</span>
             {% else %}
                 <strong>Unset</strong>
             {% endif %}
         </td>
         <td>
-            <div style="text-align: right;" class="float-right">
+            <div style="text-align: right;" class="float-end">
                 <div class="dropdown">
-                    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
                         Actions
                     </button>
-                    <div class="dropdown-menu dropdown-menu-right">
+                    <div class="dropdown-menu dropdown-menu-end">
                         {% set has_access = asset.has_access(current_user.id) %}
                         {# no need to check whether user is admin, because anyone accessing this view must be an admin user #}
                         {% if edit_url is not none %}

@@ -14,7 +14,7 @@
                 {{ date_field(issue_form.request_deadline, 'issue_datetimepicker') }}
                 <div class="row">
                     <div class="col-12">
-                        <div class="float-right">
+                        <div class="float-end">
                             {% if issue_form.skip_button is defined %}
                                 {{ wtf.render_field(issue_form.skip_button, button_map={'skip_button': 'outline-secondary'}) }}
                             {% endif %}

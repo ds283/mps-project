@@ -188,22 +188,22 @@
                             <a href="{{ url_for('faculty.project_preview', id=project.id, url=url_for('faculty.dashboard', id=pclass.id), text='dashboard', pclass=pclass.id) }}">{{ project.name }}</a>
                             <div>
                                 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
-                                    <span class="badge badge-danger">Meeting required</span>
+                                    <span class="badge bg-danger">Meeting required</span>
                                 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-                                    <span class="badge badge-warning">Meeting optional</span>
+                                    <span class="badge bg-warning text-dark">Meeting optional</span>
                                 {% elif project.meeting_reqd == project.MEETING_NONE %}
-                                    <span class="badge badge-success">Meeting not required</span>
+                                    <span class="badge bg-success">Meeting not required</span>
                                 {% endif %}
                                 {% if project.group  %}
                                     {{ project.group.make_label()|safe }}
                                 {% else %}
-                                    <span class="badge badge-warning">Missing research group</span>
+                                    <span class="badge bg-warning text-dark">Missing research group</span>
                                 {% endif %}
                                 {% set num_assessors = project.number_assessors(pclass) %}
                                 {% if num_assessors > 0 %}
-                                    <span class="badge badge-info" data-toggle="tooltip" data-html="true" title="{% for assessor in project.get_assessor_list(pclass) %}<div>{{ assessor.user.name }}</div>{% endfor %}">{{ num_assessors }} assessors</span>
+                                    <span class="badge bg-info text-dark" data-bs-toggle="tooltip" data-bs-html="true" title="{% for assessor in project.get_assessor_list(pclass) %}<div>{{ assessor.user.name }}</div>{% endfor %}">{{ num_assessors }} assessors</span>
                                 {% else %}
-                                    <span class="badge badge-danger">No assessors assigned</span>
+                                    <span class="badge bg-danger">No assessors assigned</span>
                                 {% endif %}
                             </div>
                             {% if not available %}
@@ -229,7 +229,7 @@
                             {% endif %}
                         </div>
                         <div class="col-3">
-                            <div class="float-right">
+                            <div class="float-end">
                                 <div class="btn-group btn-table-block">
                                     {% if desc %}
                                         {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
@@ -241,8 +241,8 @@
                                         {% endif %}
                                     {% endif %}
                                     <div class="btn-group">
-                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown">Actions</button>
-                                        <div class="dropdown-menu dropdown-menu-right">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Actions</button>
+                                        <div class="dropdown-menu dropdown-menu-end">
                                             <a class="dropdown-item" href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}"><i class="fas fa-times fa-fw"></i> Don't offer this project</a>
                                             <div class="dropdown-divider" role="separator"></div>
                                             <a class="dropdown-item" href="{{ url_for('faculty.edit_project', id=project.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-sliders-h fa-fw"></i> Project settings...</a>
@@ -301,9 +301,9 @@
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">
                                         {% set has_recommended = sel.satisfies_recommended(project) %}
-                                        <a class="badge {% if has_recommended %}badge-primary{% else %}badge-warning{% endif %} dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fas fa-exclamation-triangle" style="color:red;"></i> {% endif %}</a>
+                                        <a class="badge text-decoration-none {% if has_recommended %}bg-primary{% else %}bg-warning{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fas fa-exclamation-triangle" style="color:red;"></i> {% endif %}</a>
                                         {% if req.viewed is not none and not req.viewed %}
-                                            <span class="badge badge-info">NEW</span>
+                                            <span class="badge bg-info text-dark">NEW</span>
                                         {% endif %}
                                         <div class="dropdown-menu">
                                             {% if not has_recommended %}
@@ -335,7 +335,7 @@
                                     {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">
-                                        <a class="badge badge-success dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                        <a class="badge text-decoration-none bg-success dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                             {{ sel.student.user.name }}
                                         </a>
                                         <div class="dropdown-menu">

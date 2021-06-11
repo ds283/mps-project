@@ -25,7 +25,7 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-12">
-                            <div class="float-right">
+                            <div class="float-end">
                                 <a class="btn btn-secondary{% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.submitter_all_available', a_id=assessment.id, s_id=submitter.id) }}"{% endif %}><i class="fas fa-check"></i> Available for all</a>
                                 <a class="btn btn-secondary{% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.submitter_all_unavailable', a_id=assessment.id, s_id=submitter.id) }}"{% endif %}><i class="fas fa-times"></i> Not available for all</a>
                             </div>
@@ -43,7 +43,7 @@
                             <div class="col-4">{{ session.date.strftime("%a %d %b %Y") }}</div>
                             <div class="col-1">{{ session.session_type_label|safe }}</div>
                             <div class="col-7">
-                                <div class="float-right">
+                                <div class="float-end">
                                     {% if session.submitter_available(submitter.id) %}
                                         <a class="btn btn-success btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-check"></i> Available</a>
                                         <a {% if editabke %}href="{{ url_for('admin.submitter_unavailable', sess_id=session.id, s_id=submitter.id) }}"{% endif %} class="btn btn-secondary btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-times"></i> Not available</a>

@@ -31,7 +31,7 @@ _owner = \
 # language=jinja2
 _actions = \
 """
-<div class="float-right">
+<div class="float-end">
     <a href="{{ url_for('convenor.create_student_ranking', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.selector_choices', id=sel.id)) }}"
        class="btn btn-sm btn-secondary">
        Add ranking

@@ -89,7 +89,7 @@
                                 </div>
                             {% endif %}
                         {% else %}
-                            <span class="badge badge-danger">Error: Submission period lifecycle inconsistent</span>
+                            <span class="badge bg-danger">Error: Submission period lifecycle inconsistent</span>
                         {% endif %}
                     {% endif %}
                 {% endif %}
@@ -107,10 +107,10 @@
                                 {{ record.project.name }} (No. {{ record.project.number }})
                                 <div>
                                     {% if record.student_feedback_submitted and record.acknowledge_feedback %}
-                                        <span class="badge badge-success"><i class="fas fa-check"></i> Your feedback acknowledged</span>
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Your feedback acknowledged</span>
                                     {% endif %}
                                     {% if record.faculty_response_submitted %}
-                                        <span class="badge badge-success"><i class="fas fa-check"></i> Supervisor response</span>
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Supervisor response</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -119,10 +119,10 @@
                                     <div class="btn-group">
                                         <a class="btn btn-outline-primary btn-sm" href="{{ url_for('projecthub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}">Go to project hub</a>
                                         <div class="btn-group">
-                                            <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
+                                            <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                                 Actions
                                             </button>
-                                            <div class="dropdown-menu dropdown-menu-right">
+                                            <div class="dropdown-menu dropdown-menu-end">
     {#                                            <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ record.number_attachments_student }})...</a>#}
                                                 <a class="dropdown-item" href="{{ url_for('projecthub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fab fa-hubspot fa-fw"></i> Project hub...</a>
                                                 {% if record.has_feedback %}
@@ -144,16 +144,16 @@
                                 {% set slot = period.get_student_presentation_slot(sub.id) %}
                                 <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</div>
                                 {% if slot is not none %}
-                                    <span class="badge badge-primary">{{ slot.date_as_string }}</span>
-                                    <span class="badge badge-info">{{ slot.session_type_string }}</span>
-                                    <span class="badge badge-info">{{ slot.room_full_name }}</span>
+                                    <span class="badge bg-primary">{{ slot.date_as_string }}</span>
+                                    <span class="badge bg-info text-dark">{{ slot.session_type_string }}</span>
+                                    <span class="badge bg-info text-dark">{{ slot.room_full_name }}</span>
                                     {% for assessor in slot.assessors %}
-                                        <span class="badge badge-secondary">{{ assessor.user.name }}</span>
+                                        <span class="badge bg-secondary">{{ assessor.user.name }}</span>
                                     {% else %}
-                                        <span class="badge badge-danger">Assessor information missing</span>
+                                        <span class="badge bg-danger">Assessor information missing</span>
                                     {% endfor %}
                                 {% else %}
-                                    <span class="badge badge-warning">Not attending</span>
+                                    <span class="badge bg-warning text-dark">Not attending</span>
                                 {% endif %}
                             {% else %}
                                 <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">Presentation assessment</div>
@@ -178,7 +178,7 @@
         <div class="card mt-3 mb-3">
             <div class="card-header"><strong>Submission period #{{ n+1 }}</strong></div>
             <div class="card-body">
-                <span class="badge badge-danger">Error: Could not read period record</span>
+                <span class="badge bg-danger">Error: Could not read period record</span>
             </div>
         </div>
     {% endif %}

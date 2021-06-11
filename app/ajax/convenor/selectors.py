@@ -18,10 +18,10 @@ _menu = \
 {% set pclass = student.config.project_class %}
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
-            data-toggle="dropdown">
+            data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
             <a class="dropdown-item" href="{{ url_for('manage_users.edit_student', id=student.student.id, url=url_for('convenor.selectors', id=pclass.id)) }}">
                 <i class="fas fa-pencil-alt fa-fw"></i> Edit student...
@@ -141,12 +141,12 @@ _bookmarks = \
 """
 {% set count = sel.number_bookmarks %}
 {% if count > 0 %}
-    <span class="badge badge-primary">{{ count }}</span>
+    <span class="badge bg-primary">{{ count }}</span>
     <a href="{{ url_for('convenor.selector_bookmarks', id=sel.id) }}">
         Show...
     </a>
 {% else %}
-    <span class="badge badge-secondary">None</span>
+    <span class="badge bg-secondary">None</span>
 {% endif %}
 """
 
@@ -155,7 +155,7 @@ _submitted = \
 """
 {% if sel.has_submitted %}
     {% if sel.has_submission_list %}
-        <span class="badge badge-success">Yes</span>
+        <span class="badge bg-success">Yes</span>
         <a href="{{ url_for('convenor.selector_choices', id=sel.id) }}">
             Show...
         </a>
@@ -164,20 +164,20 @@ _submitted = \
     {% if offers > 0 %}
         <div>
             {% for offer in sel.custom_offers_accepted %}
-                <span class="badge badge-success">Accepted: {{ offer.liveproject.name }}</span>
+                <span class="badge bg-success">Accepted: {{ offer.liveproject.name }}</span>
             {% endfor %}
         </div>
     {% endif %}
 {% else %}
     {% if state >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-        <span class="badge badge-secondary">No</span>
+        <span class="badge bg-secondary">No</span>
         {% if sel.is_valid_selection[0] %}
-            <span class="badge badge-success">Valid selection</span>
+            <span class="badge bg-success">Valid selection</span>
         {% else %}
-            <span class="badge badge-danger">Invalid selection</span>
+            <span class="badge bg-danger">Invalid selection</span>
         {% endif %}
     {% else %}
-        <span class="badge badge-secondary">Not yet open</span>
+        <span class="badge bg-secondary">Not yet open</span>
     {% endif %}
 {% endif %}
 """
@@ -187,23 +187,23 @@ _confirmations = \
 """
 {% set pending = sel.number_pending %}
 {% set confirmed = sel.number_confirmed %}
-{% if confirmed > 0 %}<span class="badge badge-success"><i class="fas fa-check"></i> Confirmed {{ confirmed }}</span>{% endif %}
-{% if pending > 0 %}<span class="badge badge-warning"><i class="fas fa-clock"></i> Pending {{ pending }}</span>{% endif %}
+{% if confirmed > 0 %}<span class="badge bg-success"><i class="fas fa-check"></i> Confirmed {{ confirmed }}</span>{% endif %}
+{% if pending > 0 %}<span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pending {{ pending }}</span>{% endif %}
 {% if pending > 0 or confirmed > 0 %}
     <a href="{{ url_for('convenor.selector_confirmations', id=sel.id) }}">
         Show...
     </a>
 {% else %}
-    <span class="badge badge-secondary">None</span>
+    <span class="badge bg-secondary">None</span>
 {% endif %}
 {% set offers = sel.number_offers_pending + sel.number_offers_declined %}
 {% if offers > 0 %}
     <div>
         {% for offer in sel.custom_offers_pending %}
-            <span class="badge badge-primary">Offer: {{ offer.liveproject.name }}</span>
+            <span class="badge bg-primary">Offer: {{ offer.liveproject.name }}</span>
         {% endfor %}
         {% for offer in sel.custom_offers_declined %}
-            <span class="badge badge-secondary">Declined: {{ offer.liveproject.name }}</span>
+            <span class="badge bg-secondary">Declined: {{ offer.liveproject.name }}</span>
         {% endfor %}
     </div>
 {% endif %}
@@ -216,17 +216,17 @@ _name = \
 <a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 <div>
 {% if sel.convert_to_submitter %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Convert</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Convert</span>
 {% else %}
-    <span class="badge badge-danger"><i class="fas fa-times"></i> Disable convert</span>
+    <span class="badge bg-danger"><i class="fas fa-times"></i> Disable convert</span>
 {% endif %}
 {% if sel.student.intermitting %}
-    <span class="badge badge-warning">TWD</span>
+    <span class="badge bg-warning text-dark">TWD</span>
 {% endif %}
 {% set num_tasks = sel.number_available_tasks %}
 {% set pl = 's' %}{% if num_tasks == 1 %}{% set pl = '' %}{% endif %}
 {% if num_tasks > 0 %}
-    <span class="badge badge-info">{{ num_tasks }} task{{ pl }}</span>
+    <span class="badge bg-info text-dark">{{ num_tasks }} task{{ pl }}</span>
 {% endif %}
 </div>
 """

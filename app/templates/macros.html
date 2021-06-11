@@ -13,7 +13,7 @@
             {% for cat, msg in messages %}
                 <div class="alert alert-{{ transform.get(cat.lower(), default_category or cat) }}{% if dismissible %} alert-dismissible{% endif %}" role="alert">
                     {% if dismissible %}
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                     {% endif %}
                     {{ msg }}
                 </div>
@@ -70,11 +70,11 @@
         <div class="card-body">
             <div class="row vertical-top m-1">
                 <div class="col-12">
-                    <div class="float-right">
+                    <div class="float-end">
                         {% if fac_data is defined and fac_data is not none %}
                             {% for pclass in message.project_classes %}
                                 {% if fac_data.is_enrolled(pclass) %}
-                                    <span class="badge badge-info">{{ pclass.name }}</span>
+                                    <span class="badge bg-info text-dark">{{ pclass.name }}</span>
                                 {% endif %}
                             {% endfor %}
                         {% endif %}
@@ -96,7 +96,7 @@
                 </div>
                 <div class="col-3">
                     {% if message.dismissible %}
-                        <div class="float-right">
+                        <div class="float-end">
                             <a href="{{ url_for('admin.dismiss_message', id=message.id) }}" class="btn btn-secondary">Don't show again</a>
                         </div>
                     {% endif %}
@@ -135,7 +135,7 @@
     {% if field.flags.required and not 'required' in kwargs %}
         {% set x = kwargs.__setitem__('required', True) %}
     {% endif %}
-    {% set x = kwargs.__setitem__('data-target', '#'+id_tag) %}
+    {% set x = kwargs.__setitem__('data-bs-target', '#'+id_tag) %}
     {% set extra_classes = ' ' + field.render_kw.class if field.render_kw.class else '' %}
     <div class="form-group {% if field.flags_required %} require{% endif -%}">
         {{ field.label(class="control-label")|safe }}
@@ -145,7 +145,7 @@
             {% else %}
                 {{ field(class="form-control datetimepicker-input mb-2 mb-sm-0%s" % extra_classes, **kwargs)|safe }}
             {% endif %}
-            <div class="input-group-append" data-target="#{{ id_tag }}" data-toggle="datetimepicker">
+            <div data-target="#{{ id_tag }}" data-toggle="datetimepicker">
                 <div class="input-group-text"><i class="fas fa-calendar"></i></div>
             </div>
         </div>
@@ -174,9 +174,7 @@
             {% else %}
                 {{ field(class="form-control mb-2 mb-sm-0%s" % extra_classes, **kwargs)|safe }}
             {% endif %}
-            <div class="input-group-append">
-                <span class="input-group-text">Current default&nbsp;<strong>{{ default_value }}</strong></span>
-            </div>
+            <span class="input-group-text">Current default&nbsp;<strong>{{ default_value }}</strong></span>
         </div>
         {% if field.errors %}
             {% for error in field.errors %}
@@ -198,9 +196,7 @@
     <div class="form-group {%- if field.flags.required %} require{% endif -%}">
         {% if show_label %}{{ field.label(class="control-label")|safe }}{% endif %}
         <div class="input-group">
-            <div class="input-group-prepend">
-                <span class="input-group-text">{{ label|safe }}</span>
-            </div>
+            <span class="input-group-text">{{ label|safe }}</span>
             {% if field.errors %}
                 {{ field(class="form-control mb-2 mb-sm-0 is-invalid%s" % extra_classes, **kwargs)|safe }}
             {% else %}
@@ -239,7 +235,7 @@
                 <p>Research groups colour key</p>
                 <hr class="intro-divider">
                 {% for group in groups %}
-                    <span class="badge badge-secondary" style="{{ group.make_CSS_style() }} display:inline-block; font-size: 80%; margin-bottom: 4px;">{{ group.name }}</span>
+                    <span class="badge bg-secondary" style="{{ group.make_CSS_style() }} display:inline-block; font-size: 80%; margin-bottom: 4px;">{{ group.name }}</span>
                 {% endfor %}
             </div>
         </div>
@@ -253,7 +249,7 @@
                 <p>Transferable skill groups colour key</p>
                 <hr class="intro-divider">
                 {% for group in groups %}
-                    <span class="badge badge-secondary" style="{{ group.make_CSS_style() }} display:inline-block; font-size: 80%; margin-bottom: 4px;">{{ group.name }}</span>
+                    <span class="badge bg-secondary" style="{{ group.make_CSS_style() }} display:inline-block; font-size: 80%; margin-bottom: 4px;">{{ group.name }}</span>
                 {% endfor %}
             </div>
         </div>
@@ -264,12 +260,12 @@
     <div id="accordion">
         <div class="card mt-3 mb-3">
             <div class="card-header">
-                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseFilter">
+                <a class="accordion-toggle" data-bs-toggle="collapse" data-parent="#accordion" href="#collapseFilter">
                     Filters
                     {% if sel.group_filters.first() or sel.skill_filters.first() %}
                         [active]
                     {% endif %}
-                    <i class="indicator fas fa-chevron-up float-right"></i>
+                    <i class="indicator fas fa-chevron-up float-end"></i>
                 </a>
             </div>
             <div id="collapseFilter" class="collapse show">
@@ -281,7 +277,7 @@
                                 <div class="col-3">
                                     {% set enabled = true %}
                                     {% if not sel.group_filters.first() %}{% set enabled = false %}{% endif %}
-                                    <div class="float-right">
+                                    <div class="float-end">
                                         <a class="btn btn-sm btn-secondary {% if not enabled %}disabled{% endif %}"
                                            {% if enabled %}href="{{ url_for(clear_group, id=sel.id) }}"{% endif %}>
                                             Clear all
@@ -292,7 +288,7 @@
                             {% for group in groups %}
                                 {% if group in sel.group_filters %}
                                     <a href="{{ url_for(remove_group, id=sel.id, gid=group.id) }}"
-                                       class="badge badge-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
+                                       class="badge bg-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
                                         <i class="fas fa-times"></i>
                                         {{ group.name }}
                                     </a>
@@ -303,7 +299,7 @@
                             {% for group in groups %}
                                 {% if group not in sel.group_filters %}
                                     <a href="{{ url_for(add_group, id=sel.id, gid=group.id) }}"
-                                       class="badge badge-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
+                                       class="badge bg-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
                                         <i class="fas fa-plus"></i>
                                         {{ group.name }}
                                     </a>
@@ -318,7 +314,7 @@
                                 <div class="col-3">
                                     {% set enabled = true %}
                                     {% if not sel.skill_filters.first() %}{% set enabled = false %}{% endif %}
-                                    <div class="float-right">
+                                    <div class="float-end">
                                         <a class="btn btn-sm btn-secondary {% if not enabled %}disabled{% endif %}"
                                            {% if enabled %}href="{{ url_for(clear_skill, id=sel.id) }}"{% endif %}>
                                             Clear all
@@ -332,7 +328,7 @@
                                     {% for skill in skills  %}
                                         {% if skill in sel.skill_filters %}
                                             <a href="{{ url_for(remove_skill, id=sel.id, skill_id=skill.id) }}"
-                                               class="badge badge-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
+                                               class="badge bg-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
                                                 <i class="fas fa-times"></i>
                                                 {{ skill.name }}
                                             </a>
@@ -351,7 +347,7 @@
                                     {% for skill in skills %}
                                         {% if skill not in sel.skill_filters %}
                                             <a href="{{ url_for(add_skill, id=sel.id, skill_id=skill.id) }}"
-                                               class="badge badge-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
+                                               class="badge bg-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
                                                 <i class="fas fa-plus"></i>
                                                 {{ skill.name }}
                                             </a>
@@ -372,10 +368,10 @@
         <a role="button" class="btn {% if small %}btn-sm{% endif %} btn-outline-secondary"
            href="{{ url_for('convenor.edit_subpd_record_settings', pid=period.id) }}">Configure...
         </a>
-        <button type="button" class="btn {% if small %}btn-sm{% endif %} btn-secondary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="btn {% if small %}btn-sm{% endif %} btn-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="sr-only">Toggle Dropdown</span>
         </button>
-        <div class="dropdown-menu dropdown-menu-right">
+        <div class="dropdown-menu dropdown-menu-end">
             <a class="dropdown-item" href="{{ url_for('convenor.edit_subpd_record_settings', pid=period.id) }}">
                 Settings...
             </a>

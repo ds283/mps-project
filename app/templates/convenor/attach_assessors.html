@@ -29,7 +29,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/convenor/attach_assessors_ajax/{{ data.id }}/{{ pclass_id }}?state_filter={{ state_filter }}&pclass_filter={{ pclass_filter }}&group_filter={{ group_filter }}', dataSrc: '' },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
                       render: {
@@ -79,30 +79,30 @@
                             <div class="col-4">{{ pclass.name }}</div>
                             <div class="col-2">
                                 {% if pclass.uses_markers or pclass.uses_presentations %}
-                                    <span class="badge badge-info">{{ pclass.number_assessors }}</span>
+                                    <span class="badge bg-info text-dark">{{ pclass.number_assessors }}</span>
                                 {% else %}
-                                    <span class="badge badge-secondary">Not required</span>
+                                    <span class="badge bg-secondary">Not required</span>
                                 {% endif %}
                             </div>
                             <div class="col-6">
                                 {% set num = data.number_assessors(pclass) %}
                                 {% if pclass.uses_markers or pclass.uses_presentations %}
                                     {% if num >= pclass.number_assessors %}
-                                        <span class="badge badge-success">{{ num }}</span>
+                                        <span class="badge bg-success">{{ num }}</span>
                                     {% else %}
-                                        <span class="badge badge-warning">{{ num }}</span>
+                                        <span class="badge bg-warning text-dark">{{ num }}</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="badge badge-secondary">{{ num }}</span>
+                                    <span class="badge bg-secondary">{{ num }}</span>
                                 {% endif %}
                                 {% set live_counterpart = data.live_counterpart(config.id) %}
                                 {% set running_counterpart = data.running_counterpart(config.id) %}
                                 {% if running_counterpart is not none %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
-                                        <a class="badge badge-danger dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                        <a class="badge text-decoration-none bg-danger dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                             RUNNING {{ running_counterpart.number_assessors }}
                                         </a>
-                                        <div class="dropdown-menu dropdown-menu-right">
+                                        <div class="dropdown-menu dropdown-menu-end">
                                             <a class="dropdown-item" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=running_counterpart.id) }}">
                                                 <i class="fas fa-sync fa-fw"></i> Sync with library version
                                             </a>
@@ -111,10 +111,10 @@
                                 {% endif %}
                                 {% if live_counterpart is not none %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
-                                        <a class="badge badge-success dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                        <a class="badge text-decoration-none bg-success dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                             SELECTING {{ live_counterpart.number_assessors }}
                                         </a>
-                                        <div class="dropdown-menu dropdown-menu-right">
+                                        <div class="dropdown-menu dropdown-menu-end">
                                             <a class="dropdown-item" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=live_counterpart.id) }}">
                                                 <i class="fas fa-sync fa-fw"></i> Sync with library version
                                             </a>
@@ -126,13 +126,13 @@
                                 {% for marker in project_assessor_list %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
                                         {% if running_counterpart is not none and running_counterpart.is_assessor(marker.id) %}
-                                            <a class="badge badge-danger dropdown-toggle" data-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                            <a class="badge text-decoration-none bg-danger dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% elif live_counterpart is not none and live_counterpart.is_assessor(marker.id) %}
-                                            <a class="badge badge-success dropdown-toggle" data-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                            <a class="badge text-decoration-none bg-success dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% else %}
-                                            <a class="badge badge-secondary dropdown-toggle" data-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                            <a class="badge text-decoration-none bg-secondary dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% endif %}
-                                        <div class="dropdown-menu dropdown-menu-right">
+                                        <div class="dropdown-menu dropdown-menu-end">
                                             <div class="dropdown-header">Attached assessor</div>
                                             {% if running_counterpart is none %}
                                                 <a class="dropdown-item disabled"><i class="fas fa-times"></i> No running project</a>
@@ -168,8 +168,8 @@
                                     {% for marker in running_counterpart.assessor_list %}
                                         {% if not data.is_assessor(marker.id) %}
                                             <div class="dropdown project-status-button" style="display: inline-block;">
-                                                <a class="badge badge-warning" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
-                                                <div class="dropdown-menu dropdown-menu-right">
+                                                <a class="badge text-decoration-none bg-warning text-dark" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                                <div class="dropdown-menu dropdown-menu-end">
                                                     <div class="dropdown-header">Not attached to library version</div>
                                                     {% set disabled = not data.can_enroll_assessor(marker) %}
                                                     <a class="dropdown-item {% if disabled %}disabled{% endif %}"{% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
@@ -197,8 +197,8 @@
                                     {% for marker in live_counterpart.assessor_list %}
                                         {% if not data.is_assessor(marker.id) and (running_counterpart is none or (running_counterpart is not none and not running_counterpart.is_assessor(marker.id))) %}
                                             <div class="dropdown project-status-button" style="display: inline-block;">
-                                                <a class="badge badge-warning" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
-                                                <div class="dropdown-menu dropdown-menu-right">
+                                                <a class="badge text-decoration-none bg-warning text-dark" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                                <div class="dropdown-menu dropdown-menu-end">
                                                     <div class="dropdown-header">Not attached to library version</div>
                                                     {% set disabled = not data.can_enroll_assessor(marker) %}
                                                     <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
@@ -287,7 +287,7 @@
 
             <div class="row vertical-align">
                 <div class="col-12">
-                    <div class="float-right">
+                    <div class="float-end">
                         <a href="{{ url_for('convenor.remove_all_assessors', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
                            class="btn btn-secondary">
                             <i class="fas fa-trash"></i> Remove all

@@ -23,18 +23,18 @@ _date = \
     {% set errors = s.errors %}
     {% set warnings = s.warnings %}
     {% if errors|length == 1 %}
-        <span class="badge badge-danger">1 error</span>
+        <span class="badge bg-danger">1 error</span>
     {% elif errors|length > 1 %}
-        <span class="badge badge-danger">{{ errors|length }} errors</span>
+        <span class="badge bg-danger">{{ errors|length }} errors</span>
     {% else %}
-        <span class="badge badge-success">0 errors</span>
+        <span class="badge bg-success">0 errors</span>
     {% endif %}
     {% if warnings|length == 1 %}
-        <span class="badge badge-warning">1 warning</span>
+        <span class="badge bg-warning text-dark">1 warning</span>
     {% elif warnings|length > 1 %}
-        <span class="badge badge-warning">{{ warnings|length }} warnings</span>
+        <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
     {% else %}
-        <span class="badge badge-success">0 warnings</span>
+        <span class="badge bg-success">0 warnings</span>
     {% endif %}
     {% if errors|length > 0 %}
         <div class="error-block">
@@ -68,7 +68,7 @@ _rooms = \
 {% for room in s.ordered_rooms %}
     {{ room.label|safe }}
 {% else %}
-    <span class="badge badge-warning"><i class="fas fa-times"></i> No rooms attached</span>
+    <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> No rooms attached</span>
 {% endfor %}
 """
 
@@ -77,10 +77,10 @@ _rooms = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         {% set a = s.owner %}
         {% set disabled = not s.owner.is_feedback_open %}
         <div class="dropdown-header">Edit session</div>
@@ -112,28 +112,28 @@ _faculty = \
     {% set fac_unavailable = s.number_unavailable_faculty %}
     {% if fac_available > 0 or fac_ifneeded > 0 %}
         <div>
-            <span class="badge badge-primary">{{ fac_available }} available</span>
+            <span class="badge bg-primary">{{ fac_available }} available</span>
             {% if fac_ifneeded > 0 %}
-                <span class="badge badge-warning">{{ fac_ifneeded }} if needed</span>
+                <span class="badge bg-warning text-dark">{{ fac_ifneeded }} if needed</span>
             {% endif %}
             {% if fac_unavailable > 0 %}
-                <span class="badge badge-danger">{{ fac_unavailable }} unavailable</span>
+                <span class="badge bg-danger">{{ fac_unavailable }} unavailable</span>
             {% endif %}
-            <span class="badge badge-info">Total {{ fac_available + fac_ifneeded }}</span>
+            <span class="badge bg-info text-dark">Total {{ fac_available + fac_ifneeded }}</span>
         </div>
     {% else %}
-        <span class="badge badge-danger">No availability</span>
+        <span class="badge bg-danger">No availability</span>
     {% endif %}
     {% set sub_unavailable = s.number_unavailable_submitters %}
     {% if sub_unavailable > 0 %}
         {% set pl = 's' %}
         {% if sub_unavailable == 1 %}{% set pl = '' %}{% endif %}
-        <span class="badge badge-danger">{{ sub_unavailable }} submitter{{ pl }} unavailable</span>
+        <span class="badge bg-danger">{{ sub_unavailable }} submitter{{ pl }} unavailable</span>
     {% else %}
-        <span class="badge badge-primary">All submitters available</span>
+        <span class="badge bg-primary">All submitters available</span>
     {% endif %}
 {% else %}
-    <span class="badge badge-secondary">Not yet requested</span>
+    <span class="badge bg-secondary">Not yet requested</span>
 {% endif %}
 """
 

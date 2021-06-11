@@ -14,7 +14,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],stateSave: true,
                 ajax: { url: $SCRIPT_ROOT + '/admin/schedule_assign_submitter_ajax/{{ slot.id }}/{{ talk.id }}?url={{ url|urlencode }}&text={{ text|urlencode }}', dataSrc: '' },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'session',
                       render: {
@@ -44,12 +44,12 @@
         {% set pl = 's' %}
         {% if count == 1 %}{% set pl = '' %}{% endif %}
         &emsp;
-        <span class="badge badge-info">{{ count }} session{{ pl }}</span>
+        <span class="badge bg-info text-dark">{{ count }} session{{ pl }}</span>
         {% if slot.session.faculty_ifneeded(fac.id) %}
-            <span class="badge badge-warning">If needed</span>
+            <span class="badge bg-warning text-dark">If needed</span>
         {% endif %}
     {% else %}
-        <span class="badge badge-danger">No assignment</span>
+        <span class="badge bg-danger">No assignment</span>
     {% endif %}
 {% endmacro %}
 
@@ -89,18 +89,18 @@
                                 {% set errors = slot.errors %}
                                 {% set warnings = slot.warnings %}
                                 {% if errors|length == 1 %}
-                                    <span class="badge badge-danger">1 error</span>
+                                    <span class="badge bg-danger">1 error</span>
                                 {% elif errors|length > 1 %}
-                                    <span class="badge badge-danger">{{ errors|length }} errors</span>
+                                    <span class="badge bg-danger">{{ errors|length }} errors</span>
                                 {% else %}
-                                    <span class="badge badge-success">0 errors</span>
+                                    <span class="badge bg-success">0 errors</span>
                                 {% endif %}
                                 {% if warnings|length == 1 %}
-                                    <span class="badge badge-warning">1 warning</span>
+                                    <span class="badge bg-warning text-dark">1 warning</span>
                                 {% elif warnings|length > 1 %}
-                                    <span class="badge badge-warning">{{ warnings|length }} warnings</span>
+                                    <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
                                 {% else %}
-                                    <span class="badge badge-success">0 warnings</span>
+                                    <span class="badge bg-success">0 warnings</span>
                                 {% endif %}
                                 {% if errors|length > 0 %}
                                     <div class="error-block">
@@ -135,7 +135,7 @@
                                     <div class="col-3">
                                         {% set style = talk.pclass.make_CSS_style() %}
                                         <div class="dropdown schedule-assign-button" style="display: inline-block;">
-                                            <a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                            <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                 {{ talk.owner.student.user.name }}
                                             </a>
                                             <div class="dropdown-menu">
@@ -172,7 +172,7 @@
                                         <strong>{{ original_slot.room_full_name }}</strong>
                                     </div>
                                     <div class="col-2">
-                                        <div class="float-right">
+                                        <div class="float-end">
                                             {% if original_slot.id != slot.id %}
                                                 <a href="{{ url_for('admin.schedule_move_submitter', old_id=slot.id, new_id=original_slot.id, talk_id=talk.id, url=url, text=text) }}" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Revert</a>
                                             {% else %}

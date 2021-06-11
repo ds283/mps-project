@@ -15,7 +15,7 @@ from flask import render_template_string, jsonify
 _faculty_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button"
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button"
             data-bs-toggle="dropdown">
         Actions
     </button>

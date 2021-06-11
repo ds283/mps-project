@@ -38,7 +38,7 @@
                     {% endif %}
                     Approvals
                     {% if approve_total > 0 %}
-                        <span class="badge rounded-pill bg-light">{{ approve_total }}</span>
+                        <span class="badge rounded-pill {% if pane == 'approve' %}bg-light text-dark{% else %}bg-secondary{% endif %}">{{ approve_total }}</span>
                     {% endif %}
                 </a>
             </li>
@@ -47,8 +47,9 @@
             {% for item in enrollments %}
                 {% set config = item['config'] %}
                 {% set num_assignments = config.number_supervisor_records(current_user.id) %}
+                {% set pane_id = config.id|string %}
                 <li class="nav-item endif %}">
-                    <a class="nav-link {% if pane == config.id|string %}active{% endif %}" href="{{ url_for('faculty.dashboard', pane=config.id) }}">
+                    <a class="nav-link {% if pane == pane_id %}active{% endif %}" href="{{ url_for('faculty.dashboard', pane=config.id) }}">
                         {% set selector_state = config.selector_lifecycle %}
                         {% set submitter_state = config.submitter_lifecycle %}
                         {% set nproj = current_user.faculty_data.number_projects_offered(config.project_class) %}
@@ -59,7 +60,7 @@
                         {% endif %}
                         {{ config.name }}
                         {% if num_assignments %}
-                            <span class="badge rounded-pill bg-light">{{ num_assignments }}</span>
+                            <span class="badge rounded-pill {% if pane == pane_id %}bg-light text-dark{% else %}bg-secondary{% endif %}">{{ num_assignments }}</span>
                         {% endif %}
                     </a>
                 </li>

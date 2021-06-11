@@ -47,7 +47,7 @@
                             <span class="{% if not_pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback available to push</span>
                             <span class="badge bg-secondary rounded-pill">{{ not_pushed }}/{{ total }}</span>
                         </div>
-                        <div class="ml-3">
+                        <div class="mb-3">
                             {% if not_pushed > 0 %}
                                 <a href="{{ url_for('convenor.push_feedback', id=period.id) }}" class="btn btn-success btn-sm text-nowrap">Push feedback</a>
                             {% endif %}

@@ -78,13 +78,13 @@
                         <div class="row vertical-top">
                             <div class="col-4">
                                 <div class="d-flex flex-row align-content-end mb-3">
-                                    <h5 class="mr-2 mb-0">
+                                    <h5 class="me-2 mb-0">
                                         <span class="badge bg-primary"><i class="fas fa-cubes fa-lg"></i> {{ p.display_name|safe }}</span>
                                     </h5>
                                     {% if p.submission_period <= config.submission_period %}
                                         {% set validation_messages = p.validate %}
                                         {% if validation_messages is not none and validation_messages|length > 0 %}
-                                            <h6 class="mr-2 mb-0 mt-1"><i class="fas fa-exclamation-triangle" style="color:red;"></i></h6>
+                                            <h6 class="me-2 mb-0 mt-1"><i class="fas fa-exclamation-triangle" style="color:red;"></i></h6>
                                             <a href="#submitter_card_{{ loop.index }}">Validation errors....</a>
                                         {% endif %}
                                     {% endif %}
@@ -150,15 +150,15 @@
                 </div>
                 <hr class="intro-divider">
                 <div class="d-flex justify-content-left mt-2 mb-2">
-                    <h5 class="mr-1"><span class="badge bg-info text-dark"><i class="fas fa-coins"></i> Supervision <span class="badge bg-secondary rounded-pill">{{ config.CATS_supervision }} CATS</span> {% if config.CATS_supervision != pclass.CATS_supervision %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
-                    <h5 class="mr-1"><span class="badge bg-info text-dark"><i class="fas fa-coins"></i> Marking <span class="badge bg-secondary rounded-pill">{{ config.CATS_marking }} CATS</span> {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
-                    <h5 class="mr-1"><span class="badge bg-info text-dark"><i class="fas fa-coins"></i> Presentation <span class="badge bg-secondary rounded-pill">{{ config.CATS_presentation }} CATS</span> {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
+                    <h5 class="me-1"><span class="badge bg-info text-dark"><i class="fas fa-coins"></i> Supervision <span class="badge bg-secondary rounded-pill">{{ config.CATS_supervision }} CATS</span> {% if config.CATS_supervision != pclass.CATS_supervision %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
+                    <h5 class="me-1"><span class="badge bg-info text-dark"><i class="fas fa-coins"></i> Marking <span class="badge bg-secondary rounded-pill">{{ config.CATS_marking }} CATS</span> {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
+                    <h5 class="me-1"><span class="badge bg-info text-dark"><i class="fas fa-coins"></i> Presentation <span class="badge bg-secondary rounded-pill">{{ config.CATS_presentation }} CATS</span> {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
                 </div>
                 <div class="d-flex justify-content-left mb-2">
                     {% if config.use_project_hub %}
-                        <h5 class="mr-1"><span class="h5 badge bg-secondary"><i class="fas fa-check"></i> Use Project Hub</span></h5>
+                        <h5 class="me-1"><span class="h5 badge bg-secondary"><i class="fas fa-check"></i> Use Project Hub</span></h5>
                     {% else %}
-                        <h5 class="mr-1"><span class="h5 badge bg-secondary"><i class="fas fa-times"></i> Project Hub disabled</span></h5>
+                        <h5 class="me-1"><span class="h5 badge bg-secondary"><i class="fas fa-times"></i> Project Hub disabled</span></h5>
                     {% endif %}
                 </div>
                 <div class="row vertical-top mt-2 mb-2">
@@ -247,7 +247,7 @@
                                         </td>
                                         <td>
                                             <div class="dropdown">
-                                                <button class="btn btn-outline-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                <button class="btn btn-outline-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                                     Actions
                                                 </button>
                                                 <div class="dropdown-menu dropdown-menu-end">

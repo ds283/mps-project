@@ -1,6 +1,7 @@
 {% extends "admin/backup_dashboard/nav.html" %}
 
 {% from "macros.html" import on_click_selector_field %}
+{% from "icon_block.html" import icon_block %}
 {% from "bokeh.html" import import_bokeh %}
 
 {% block scripts %}
@@ -25,9 +26,14 @@
             <div class="card mt-3 mb-3 card-body bg-well">
                 <form action="{{ url_for('admin.backups_overview') }}" method="POST" name="backup_options_form">
                     {{ form.hidden_tag() }}
-                    <span class="badge bg-primary" style="font-size: 95%;">Current backup size {{ backup_size }}</span>
-                    <span class="badge bg-info text-dark" style="font-size: 95%;">Settings last changed: {{ last_change.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                    <hr class="intro-divider">
+                    <div class="alert alert-info mb-2">
+                        {% call icon_block("info-circle") %}
+                            <div><strong>Current backup size {{ backup_size }}</strong></div>
+                            <div class="mt-1">
+                                Settings last changed: {{ last_change.strftime("%a %d %b %Y %H:%M:%S") }}
+                            </div>
+                        {% endcall %}
+                    </div>
                     {{ on_click_selector_field(form.backup_limit, true) }}
                     {{ on_click_selector_field(form.limit_units, true) }}
                     {{ on_click_selector_field(form.keep_hourly, true) }}

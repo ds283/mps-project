@@ -111,7 +111,7 @@
         {% set kwargs = dict(required=True, **kwargs) %}
     {% endif %}
     {% set extra_classes = ' ' + field.render_kw.class if field.render_kw.class else '' %}
-    <div class="form-group {%- if field.flags.required %} required{% endif -%}">
+    <div class="form-component {%- if field.flags.required %} required{% endif -%}">
         {{ field.label(class="control-label")|safe }}
         <div id="{{ id }}" class="input-group {%- if field.errors %} is-invalid {% endif -%} colorpicker-component">
             {% if field.errors %}
@@ -137,7 +137,7 @@
     {% endif %}
     {% set x = kwargs.__setitem__('data-bs-target', '#'+id_tag) %}
     {% set extra_classes = ' ' + field.render_kw.class if field.render_kw.class else '' %}
-    <div class="form-group {% if field.flags_required %} require{% endif -%}">
+    <div class="form-component {% if field.flags_required %} require{% endif -%}">
         {{ field.label(class="control-label")|safe }}
         <div class="input-group {%- if field.errors %} is-invalid{% endif %} date" id="{{ id_tag }}" data-target-input="nearest">
             {% if field.errors %}
@@ -166,7 +166,7 @@
 
     {% set extra_classes = ' ' + field.render_kw.class if field.render_kw.class else '' %}
 
-    <div class="form-group {%- if field.flags.required %} require{% endif -%}">
+    <div class="form-component {%- if field.flags.required %} require{% endif -%}">
         {{ field.label(class="control-label")|safe }}
         <div class="input-group">
             {% if field.errors %}
@@ -193,7 +193,7 @@
 
     {% set extra_classes = ' ' + field.render_kw.class if field.render_kw.class else '' %}
 
-    <div class="form-group {%- if field.flags.required %} require{% endif -%}">
+    <div class="form-component {%- if field.flags.required %} require{% endif -%}">
         {% if show_label %}{{ field.label(class="control-label")|safe }}{% endif %}
         <div class="input-group">
             <span class="input-group-text">{{ label|safe }}</span>
@@ -214,7 +214,7 @@
 {% endmacro %}
 
 {% macro on_click_selector_field(field, show_label) %}
-    <div class="form-group {% if field.errors %} has-error{% endif -%}
+    <div class="form-component {% if field.errors %} has-error{% endif -%}
                                {%- if field.flags.required %} required{% endif -%}">
         {% if show_label %}
             {{ field.label(class="control-label")|safe }}

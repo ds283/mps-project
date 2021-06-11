@@ -99,7 +99,7 @@
                                     </div>
                                 {% endif %}
                             </div>
-                            <div class="ml-3">
+                            <div class="mb-3">
                                 <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-sm btn-success text-nowrap">Confirm all projects</a>
                             </div>
                         </div>
@@ -128,7 +128,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                        <div class="ml-3">
+                        <div class="mb-3">
                             <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-sm {% if nproj==0 %}btn-danger{% else %}btn-outline-secondary{% endif %} text-nowrap">Go to project library</a>
                         </div>
                     </div>

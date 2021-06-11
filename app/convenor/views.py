@@ -74,16 +74,16 @@ _marker_menu = \
 """
 {% if proj.is_assessor(f.id) %}
  <a href="{{ url_for('convenor.remove_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
-    class="btn btn-sm btn-block btn-secondary">
+    class="btn btn-sm full-width-button btn-secondary">
      <i class="fas fa-trash"></i> Remove
  </a>
 {% elif proj.can_enroll_assessor(f) %}
  <a href="{{ url_for('convenor.add_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
-    class="btn btn-sm btn-block btn-secondary">
+    class="btn btn-sm full-width-button btn-secondary">
      <i class="fas fa-plus"></i> Attach
  </a>
 {% else %}
- <a class="btn btn-secondary btn-block btn-sm disabled">
+ <a class="btn btn-secondary full-width-button btn-sm disabled">
      <i class="fas fa-ban"></i> Can't attach
  </a>
 {% endif %}
@@ -191,7 +191,7 @@ _desc_label = \
 _desc_menu = \
 """
     <div class="dropdown">
-        <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
             Actions
         </button>
         <div class="dropdown-menu dropdown-menu-end">

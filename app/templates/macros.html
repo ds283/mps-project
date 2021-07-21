@@ -13,7 +13,7 @@
             {% for cat, msg in messages %}
                 <div class="alert alert-{{ transform.get(cat.lower(), default_category or cat) }}{% if dismissible %} alert-dismissible{% endif %}" role="alert">
                     {% if dismissible %}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     {% endif %}
                     {{ msg }}
                 </div>

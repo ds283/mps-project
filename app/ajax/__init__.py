@@ -19,3 +19,4 @@ from . import reports
 from . import user_approver
 from . import project_approver
 from . import documents
+from . import projecthub

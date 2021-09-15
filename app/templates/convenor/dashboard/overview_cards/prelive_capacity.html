@@ -68,21 +68,21 @@
                 {% if proj_count > 0 %}
                     {{ proj_count }}
                 {% else %}
-                    <span class="badge badge-danger">None</span>
+                    <span class="badge bg-danger">None</span>
                 {% endif %}
             </div>
             <div class="col-2">
                 {% if capacity > 0 %}
                     {% if not bounded %}>= {% endif %}{{ capacity }}
                 {% else %}
-                    <span class="badge badge-danger">None</span>
+                    <span class="badge bg-danger">None</span>
                 {% endif %}
             </div>
             <div class="col-2">
                 {% if fac_count > 0 %}
                     {{ fac_count }}
                 {% else %}
-                    <span class="badge badge-danger">None</span>
+                    <span class="badge bg-danger">None</span>
                 {% endif %}
             </div>
             <div class="col-2">
@@ -93,8 +93,8 @@
     <hr class="into-divider">
     <div class="row vertical-align capacity-table">
         <div class="col-4"><strong>Total</strong></div>
-        <div class="col-2"><span class="badge badge-pill badge-info">{{ total_projects }}</span></div>
-        <div class="col-2">{% if not total_capacity_bounded %}>= {% endif %}<span class="badge badge-pill badge-info">{{ total_capacity }}</span></div>
+        <div class="col-2"><span class="badge rounded-pill bg-secondary">{{ total_projects }}</span></div>
+        <div class="col-2">{% if not total_capacity_bounded %}>= {% endif %}<span class="badge rounded-pill bg-secondary">{{ total_capacity }}</span></div>
         <div class="col-2"></div>
         <div class="col-2"></div>
     </div>

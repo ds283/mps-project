@@ -44,30 +44,16 @@
 {% endblock %}
 
 {% block form_content %}
-    <form action="{{ url_for('convenor.edit_submission_record', pid=record.id) }}" method="POST" name="edit_form">
+    <form action="{{ url_for('convenor.edit_subpd_record_settings', pid=record.id) }}" method="POST" name="edit_form">
 
         {{ form.hidden_tag() }}
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        <div class="card mt-3 mb-3 card-body bg-well">
-            {{ date_field(form.start_date, 'datetimepicker1') }}
-            {{ date_field(form.hand_in_date, 'datetimepicker2') }}
-        </div>
-
-        <div class="card mt-3 mb-3 card-body bg-well">
-            {{ wtf.render_field(form.has_presentation) }}
-            {{ wtf.render_field(form.collect_presentation_feedback) }}
-            {{ wtf.render_field(form.collect_project_feedback) }}
-            <hr class="intro-divider">
-            {{ wtf.render_field(form.lecture_capture) }}
-            {{ wtf.render_field(form.number_assessors) }}
-            {{ wtf.render_field(form.max_group_size) }}
-            <hr class="intro-divider">
-            {{ wtf.render_field(form.morning_session) }}
-            {{ wtf.render_field(form.afternoon_session) }}
-            {{ wtf.render_field(form.talk_format) }}
-        </div>
+        {{ date_field(form.start_date, 'datetimepicker1') }}
+        {{ date_field(form.hand_in_date, 'datetimepicker2') }}
+        <hr class="intro-divider">
+        {{ wtf.render_field(form.collect_project_feedback) }}
 
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 

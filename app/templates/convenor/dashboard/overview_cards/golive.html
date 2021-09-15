@@ -40,12 +40,12 @@
                 {{ wtf.render_field(golive_form.full_CATS) }}
                 <div class="row">
                     <div class="col-12">
-                        <div class="float-right">
+                        <div class="float-end">
                             {% if total_projects > 0 %}
                                 {% if golive_form.live_and_close is defined %}
-                                    {{ wtf.render_field(golive_form.live_and_close, button_map={'live_and_close': 'warning'}) }}
+                                    {{ wtf.render_field(golive_form.live_and_close, button_map={'live_and_close': 'outline-secondary'}) }}
                                 {% endif %}
-                                {{ wtf.render_field(golive_form.live, button_map={'live': 'primary'}) }}
+                                {{ wtf.render_field(golive_form.live, button_map={'live': 'outline-primary'}) }}
                             {% endif %}
                         </div>
                     </div>

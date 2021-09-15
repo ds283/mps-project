@@ -15,10 +15,10 @@ from flask import render_template_string, jsonify
 _scheduled_menu_template = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
             <a class="dropdown-item" href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
                 <i class="fas fa-cogs fa-fw"></i> Edit task
             </a>
@@ -46,9 +46,9 @@ _scheduled_menu_template = \
 _active = \
 """
 {% if t.enabled %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Active</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
-    <span class="badge badge-warning"><i class="fas fa-times"></i> Inactive</span>
+    <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Inactive</span>
 {% endif %}
 """
 
@@ -59,9 +59,9 @@ _name = \
 {{ t.name }}
 <div>
     {% if t.queue == 'priority' %}
-        <span class="badge badge-danger">PRIORITY</span>
+        <span class="badge bg-danger">PRIORITY</span>
     {% else %}
-        <span class="badge badge-secondary">{{ t.queue|upper }}</span>
+        <span class="badge bg-secondary">{{ t.queue|upper }}</span>
     {% endif %}
 </div>
 """
@@ -80,7 +80,7 @@ def _format_schedule(task):
             m=data.minute, h=data.hour, wd=data.day_of_week,
             mo=data.day_of_month, mon=data.month_of_year)
 
-    return '<span class="badge badge-danger">Invalid</a>'
+    return '<span class="badge bg-danger">Invalid</a>'
 
 
 def scheduled_task_data(tasks):
@@ -88,7 +88,7 @@ def scheduled_task_data(tasks):
              'schedule': _format_schedule(t),
              'owner': '<a href="mailto:{e}">{name}</a>'.format(e=t.owner.email,
                                                                name=t.owner.name) if t.owner is not None
-                else '<span class="badge badge-secondary">Nobody</span>',
+                else '<span class="badge bg-secondary">Nobody</span>',
              'active': render_template_string(_active, t=t),
              'last_run': {
                  'display': t.last_run_at.strftime("%a %d %b %Y %H:%M:%S"),
@@ -103,7 +103,7 @@ def scheduled_task_data(tasks):
                  'display': t.expires.strftime("%a %d %b %Y %H:%M:%S"),
                  'timestamp': t.expires.timestamp()
              } if t.expires is not None else {
-                 'display': '<span class="badge badge-secondary">No expiry</span>',
+                 'display': '<span class="badge bg-secondary">No expiry</span>',
                  'timestamp': None
              },
              'menu': render_template_string(_scheduled_menu_template, task=t)} for t in tasks]

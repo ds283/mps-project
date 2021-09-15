@@ -14,9 +14,9 @@
                 {% if slot.belongs_to(period) %}
                     {% set ns.count = ns.count + 1 %}
                     <p>
-                        <span class="badge badge-info">{{ slot.date_as_string }}</span>
-                        <span class="badge badge-info">{{ slot.session_type_string }}</span>
-                        <span class="badge badge-info">{{ slot.room_full_name }}</span>
+                        <span class="badge bg-info text-dark">{{ slot.date_as_string }}</span>
+                        <span class="badge bg-info text-dark">{{ slot.session_type_string }}</span>
+                        <span class="badge bg-info text-dark">{{ slot.room_full_name }}</span>
                     </p>
                     <table class="table table-striped">
                         <thead>
@@ -47,20 +47,20 @@
                                             {% if uses_feedback %}
                                                 <div>
                                                     {% if submitted %}
-                                                        <span class="badge badge-success"><i class="fas fa-check"></i> Feedback submitted</span>
+                                                        <span class="badge bg-success"><i class="fas fa-check"></i> Feedback submitted</span>
                                                     {% elif not slot.owner.owner.is_feedback_open and not submitted %}
-                                                        <span class="badge badge-warning"><i class="fas fa-times"></i> Feedback missing</span>
+                                                        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Feedback missing</span>
                                                     {% endif %}
                                                 </div>
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <div style="text-align: right;" class="float-right">
+                                            <div style="text-align: right;" class="float-end">
                                                 <div class="dropdown">
-                                                    <button class="btn btn-outline-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                                    <button class="btn btn-outline-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                                         Actions
                                                     </button>
-                                                    <div class="dropdown-menu dropdown-menu-right">
+                                                    <div class="dropdown-menu dropdown-menu-end">
                                                         <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=talk.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ talk.number_attachments }})...</a>
                                                         {% if uses_feedback %}
                                                             {% if slot.feedback_state(faculty_id) > slot.FEEDBACK_NOT_YET %}

@@ -107,11 +107,11 @@
                                 My feedback
                             </div>
                             <div class="col-6">
-                                <div class="float-right">
+                                <div class="float-end">
                                     {% if record.acknowledge_feedback %}
-                                        <span class="badge badge-success">Acknowledged</span>
+                                        <span class="badge bg-success">Acknowledged</span>
                                     {% else %}
-                                        <span class="badge badge-secondary">Not yet acknowledged</span>
+                                        <span class="badge bg-secondary">Not yet acknowledged</span>
                                     {% endif %}
                                     {% if record.period.closed and not record.retired and not record.student_feedback_submitted %}
                                         <a href="{{ url_for('student.edit_feedback', id=record.id, url=url_for('student.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-secondary btn-table-block">Edit</a>
@@ -140,7 +140,7 @@
                                 My feedback
                             </div>
                             <div class="col-6">
-                                <div class="float-right">
+                                <div class="float-end">
                                     {% if record.period.closed and not record.retired and not record.student_feedback_submitted %}
                                         <a href="{{ url_for('student.edit_feedback', id=record.id, url=url_for('student.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-outline-secondary btn-table-block">Edit my feedback</a>
                                     {% endif %}

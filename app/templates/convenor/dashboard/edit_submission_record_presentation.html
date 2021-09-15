@@ -1,0 +1,34 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}
+    Edit submission period
+{% endblock %}
+
+{% block formtitle %}
+    Edit submission period <strong>{{ record.display_name }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('convenor.edit_subpd_record_presentation', pid=record.id) }}" method="POST" name="edit_form">
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(form) }}#}
+
+        {{ wtf.render_field(form.has_presentation) }}
+        {{ wtf.render_field(form.collect_presentation_feedback) }}
+        <hr class="intro-divider">
+        {{ wtf.render_field(form.lecture_capture) }}
+        {{ wtf.render_field(form.number_assessors) }}
+        {{ wtf.render_field(form.max_group_size) }}
+        <hr class="intro-divider">
+        {{ wtf.render_field(form.morning_session) }}
+        {{ wtf.render_field(form.afternoon_session) }}
+        {{ wtf.render_field(form.talk_format) }}
+
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}

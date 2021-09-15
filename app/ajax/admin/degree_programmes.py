@@ -14,10 +14,10 @@ from flask import render_template_string
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <div class="dropdown-header">Edit</div>
         <a class="dropdown-item" href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Edit details...
@@ -53,9 +53,9 @@ _menu = \
 _active = \
 """
 {% if p.active %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Active</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
-    <span class="badge badge-warning"><i class="fas fa-times"></i> Inactive</span>
+    <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Inactive</span>
 {% endif %}
 """
 
@@ -64,9 +64,9 @@ _active = \
 _show_type = \
 """
 {% if p.show_type %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Yes</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Yes</span>
 {% else %}
-    <span class="badge badge-secondary"><i class="fas fa-times"></i> No</span>
+    <span class="badge bg-secondary"><i class="fas fa-times"></i> No</span>
 {% endif %}
 """
 
@@ -76,10 +76,10 @@ _name = \
 """
 {{ p.name }} {{ p.short_label|safe }}
 {% if p.foundation_year %}
-    <span class="badge badge-info">Foundation year</span>
+    <span class="badge bg-info text-dark">Foundation year</span>
 {% endif %}
 {% if p.year_out %}
-    <span class="badge badge-info">Year out{%- if p.year_out_value %} Y{{ p.year_out_value}}{% endif %}</span>
+    <span class="badge bg-info text-dark">Year out{%- if p.year_out_value %} Y{{ p.year_out_value}}{% endif %}</span>
 {% endif %}
 {% if levels|length > 0 %}
     <div class="mt-3">

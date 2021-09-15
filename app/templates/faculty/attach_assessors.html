@@ -14,14 +14,11 @@
     {% set state_filter = 'all' %}
 {% endif %}
 
+{% from "datatables.html" import import_datatables %}
+
 {% block scripts %}
     {{ super() }}
-    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css">
-
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
+    {{ import_datatables() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -31,7 +28,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/faculty/attach_assessors_ajax/{{ data.id }}?state_filter={{ state_filter }}&pclass_filter={{ pclass_filter }}&group_filter={{ group_filter }}', dataSrc: '' },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
                       render: {
@@ -79,25 +76,25 @@
                             <div class="col-4">{{ pclass.name }}</div>
                             <div class="col-2">
                                 {% if pclass.uses_marker or pclass.uses_presentations %}
-                                    <span class="badge badge-info">{{ pclass.number_assessors }}</span>
+                                    <span class="badge bg-info text-dark">{{ pclass.number_assessors }}</span>
                                 {% else %}
-                                    <span class="badge badge-secondary">Not required</span>
+                                    <span class="badge bg-secondary">Not required</span>
                                 {% endif %}
                             </div>
                             <div class="col-6">
                                 {% set num = data.number_assessors(pclass) %}
                                 {% if pclass.uses_marker or pclass.uses_presentations %}
                                     {% if num >= pclass.number_assessors %}
-                                        <span class="badge badge-success">{{ num }}</span>
+                                        <span class="badge bg-success">{{ num }}</span>
                                     {% else %}
-                                        <span class="badge badge-warning">{{ num }}</span>
+                                        <span class="badge bg-warning text-dark">{{ num }}</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="badge badge-secondary">{{ num }}</span>
+                                    <span class="badge bg-secondary">{{ num }}</span>
                                 {% endif %}
                                 <p></p>
                                 {% for marker in data.get_assessor_list(pclass) %}
-                                    <span class="badge badge-secondary">{{ marker.user.name }}</span>
+                                    <span class="badge bg-secondary">{{ marker.user.name }}</span>
                                 {% endfor %}
                             </div>
                         </div>
@@ -169,7 +166,7 @@
 
             <div class="row vertical-align">
                 <div class="col-12">
-                    <div class="float-right">
+                    <div class="float-end">
                         <a href="{{ url_for('faculty.remove_all_assessors', proj_id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
                            class="btn btn-secondary">
                             <i class="fas fa-trash"></i> Remove all

@@ -32,10 +32,10 @@ import app.ajax as ajax
 from . import convenor
 from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
-    EditSubmissionRecordForm, UploadPeriodAttachmentForm, \
+    EditSubPeriodRecordSettingsForm, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
     EditProjectConfigForm, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask, \
-    EditConvenorGenericTask
+    EditConvenorGenericTask, EditSubPeriodRecordPresentationsForm
 from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
@@ -74,16 +74,16 @@ _marker_menu = \
 """
 {% if proj.is_assessor(f.id) %}
  <a href="{{ url_for('convenor.remove_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
-    class="btn btn-sm btn-block btn-secondary">
+    class="btn btn-sm full-width-button btn-secondary">
      <i class="fas fa-trash"></i> Remove
  </a>
 {% elif proj.can_enroll_assessor(f) %}
  <a href="{{ url_for('convenor.add_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
-    class="btn btn-sm btn-block btn-secondary">
+    class="btn btn-sm full-width-button btn-secondary">
      <i class="fas fa-plus"></i> Attach
  </a>
 {% else %}
- <a class="btn btn-secondary btn-block btn-sm disabled">
+ <a class="btn btn-secondary full-width-button btn-sm disabled">
      <i class="fas fa-ban"></i> Can't attach
  </a>
 {% endif %}
@@ -104,42 +104,42 @@ _desc_label = \
 </a>
 <div>
     {% if d.review_only %}
-        <span class="badge badge-info">Review project</span>
+        <span class="badge bg-info text-dark">Review project</span>
     {% endif %}
     {% set state = d.workflow_state %}
     {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
     {% if not_confirmed %}
         {% if config is not none and config.selector_lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and desc_validator is not none and desc_validator(d) %}
             <div class="dropdown" style="display: inline-block;">
-                <a class="badge badge-secondary dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
+                <a class="badge text-decoration-none bg-secondary dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
                 <div class="dropdown-menu">
                     <a class="dropdown-item" class="dropdown-item" href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fas fa-check"></i> Confirm</a>
                 </div>
             </div>
         {% else %}
-            <span class="badge badge-secondary">Approval: Not confirmed</span>
+            <span class="badge bg-secondary">Approval: Not confirmed</span>
         {% endif %}
     {% else %}
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
-            <span class="badge badge-success"><i class="fas fa-check"></i> Approved</span>
+            <span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>
         {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
-            <span class="badge badge-warning">Approval: Queued</span>
+            <span class="badge bg-warning text-dark">Approval: Queued</span>
         {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
-            <span class="badge badge-info">Approval: In progress</span>
+            <span class="badge bg-info text-dark">Approval: In progress</span>
         {% else %}
-            <span class="badge badge-danger">Unknown approval state</span>
+            <span class="badge bg-danger">Unknown approval state</span>
         {% endif %}
         {% if current_user.has_role('project_approver') and d.validated_by %}
             <div>
-                <span class="badge badge-info">Signed-off: {{ d.validated_by.name }}</span>
+                <span class="badge bg-info text-dark">Signed-off: {{ d.validated_by.name }}</span>
                 {% if d.validated_timestamp %}
-                    <span class="badge badge-info">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                    <span class="badge bg-info text-dark">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                 {% endif %}
             </div>
         {% endif %}
     {% endif %}
     {% if d.has_new_comments(current_user) %}
-        <span class="badge badge-warning">New comments</span>
+        <span class="badge bg-warning text-dark">New comments</span>
     {% endif %}
 </div>
 {% if not valid %}
@@ -147,18 +147,18 @@ _desc_label = \
         {% set errors = d.errors %}
         {% set warnings = d.warnings %}
         {% if errors|length == 1 %}
-            <span class="badge badge-danger">1 error</span>
+            <span class="badge bg-danger">1 error</span>
         {% elif errors|length > 1 %}
-            <span class="badge badge-danger">{{ errors|length }} errors</span>
+            <span class="badge bg-danger">{{ errors|length }} errors</span>
         {% else %}
-            <span class="badge badge-success">0 errors</span>
+            <span class="badge bg-success">0 errors</span>
         {% endif %}
         {% if warnings|length == 1 %}
-            <span class="badge badge-warning">1 warning</span>
+            <span class="badge bg-warning text-dark">1 warning</span>
         {% elif warnings|length > 1 %}
-            <span class="badge badge-warning">{{ warnings|length }} warnings</span>
+            <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
         {% else %}
-            <span class="badge badge-success">0 warnings</span>
+            <span class="badge bg-success">0 warnings</span>
         {% endif %}
         {% if errors|length > 0 %}
             <div class="error-block">
@@ -191,10 +191,10 @@ _desc_label = \
 _desc_menu = \
 """
     <div class="dropdown">
-        <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
             Actions
         </button>
-        <div class="dropdown-menu dropdown-menu-right">
+        <div class="dropdown-menu dropdown-menu-end">
             <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
                                 url=url_for('convenor.edit_descriptions', id=d.parent.id, pclass_id=pclass_id, create=create),
                                 text='description list view') }}">
@@ -6758,6 +6758,9 @@ def edit_project_config(pid):
         if form.full_CATS.data != config.full_CATS:
             config.full_CATS = form.full_CATS.data
 
+        if form.use_project_hub.data != config.use_project_hub:
+            config.use_project_hub = form.use_project_hub.data
+
         config.uses_supervisor = form.uses_supervisor.data
         config.uses_marker = form.uses_marker.data
         config.uses_presentations = form.uses_presentations.data
@@ -6781,36 +6784,31 @@ def edit_project_config(pid):
     return render_template('convenor/dashboard/edit_project_config.html', form=form, config=config)
 
 
-@convenor.route('/edit_submission_record/<int:pid>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'root')
-def edit_submission_record(pid):
-    # pid is a SubmissionPeriodRecord
-    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
-    config: ProjectClassConfig = record.config
+def _validate_submission_period(record: SubmissionPeriodRecord, config: ProjectClassConfig):
 
     # reject is user is not a convenor for the associated project class
     if not validate_is_convenor(config.project_class):
-        return redirect(redirect_url())
+        return False
 
     # check configuration is still current
     if config.project_class.most_recent_config.id != config.id:
         flash('It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} '
               'because it has been rolled over.'.format(yra=config.year, yrb=config.year+1), 'info')
-        return redirect(redirect_url())
+        return False
 
     # reject if project class is not published
     if not validate_project_class(config.project_class):
-        return redirect(redirect_url())
+        return False
 
     # reject if this submission period is in the past
     if config.submission_period > record.submission_period:
         flash('It is no longer possible to edit this submission period because it has been closed.', 'info')
-        return redirect(redirect_url())
+        return False
 
     # reject if period is retired
     if record.retired:
         flash('It is no longer possible to edit this submission period because it has been retired.', 'info')
-        return redirect(redirect_url())
+        return False
 
     # reject if lifecycle stage is marking or later
 
@@ -6818,23 +6816,60 @@ def edit_submission_record(pid):
     if state >= ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
         flash('It is no longer possible to edit this submission period because it is being marked, '
               'or is ready to rollover.', 'info')
+        return False
+
+    return True
+
+
+@convenor.route('/edit_subpd_record_settings/<int:pid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_subpd_record_settings(pid):
+    # pid is a SubmissionPeriodRecord
+    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+    config: ProjectClassConfig = record.config
+
+    if not _validate_submission_period(record, config):
         return redirect(redirect_url())
 
-    edit_form = EditSubmissionRecordForm(obj=record)
+    edit_form = EditSubPeriodRecordSettingsForm(obj=record)
 
     if edit_form.validate_on_submit():
         record.start_date = edit_form.start_date.data
         record.hand_in_date = edit_form.hand_in_date.data
 
-        record.has_presentation = edit_form.has_presentation.data
-
-        record.collect_presentation_feedback = edit_form.collect_presentation_feedback.data
         record.collect_project_feedback = edit_form.collect_project_feedback.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not save submission period configuration because of a database error. '
+                  'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for('convenor.overview', id=config.project_class.id))
+
+    return render_template('convenor/dashboard/edit_submission_record_settings.html', form=edit_form, record=record)
+
+
+@convenor.route('/edit_subpd_record_presentation/<int:pid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_subpd_record_presentation(pid):
+    # pid is a SubmissionPeriodRecord
+    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+    config: ProjectClassConfig = record.config
+
+    if not _validate_submission_period(record, config):
+        return redirect(redirect_url())
+
+    edit_form = EditSubPeriodRecordPresentationsForm(obj=record)
+
+    if edit_form.validate_on_submit():
+        record.has_presentation = edit_form.has_presentation.data
 
         if record.has_presentation:
             record.lecture_capture = edit_form.lecture_capture.data
             record.collect_presentation_feedback = edit_form.collect_presentation_feedback.data
-            record.collect_project_feedback = edit_form.collect_project_feedback.data
             record.number_assessors = edit_form.number_assessors.data
             record.max_group_size = edit_form.max_group_size.data
             record.morning_session = edit_form.morning_session.data
@@ -6851,7 +6886,7 @@ def edit_submission_record(pid):
 
         return redirect(url_for('convenor.overview', id=config.project_class.id))
 
-    return render_template('convenor/dashboard/edit_submission_record.html', form=edit_form, record=record)
+    return render_template('convenor/dashboard/edit_submission_record_presentation.html', form=edit_form, record=record)
 
 
 @convenor.route('/publish_assignment/<int:id>')

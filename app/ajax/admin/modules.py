@@ -22,12 +22,12 @@ _code = \
 _status = \
 """
 {% if m.active %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Active</span>
-    <span class="badge badge-info">First taught {{ m.first_taught }}</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
+    <span class="badge bg-info text-dark">First taught {{ m.first_taught }}</span>
 {% else %}
-    <span class="badge badge-secondary"><i class="fas fa-times"></i> Retired</span>
-    <span class="badge badge-info">First taught {{ m.first_taught }}</span>
-    <span class="badge badge-info">Last taught {{ m.last_taught }}</span>
+    <span class="badge bg-secondary"><i class="fas fa-times"></i> Retired</span>
+    <span class="badge bg-info text-dark">First taught {{ m.first_taught }}</span>
+    <span class="badge bg-info text-dark">Last taught {{ m.last_taught }}</span>
 {% endif %}
 """
 
@@ -36,10 +36,10 @@ _status = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         {% set disabled = not m.active %}
         <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_module', id=m.id) }}"{% endif %}>
             <i class="fas fa-pencil-alt fa-fw"></i> Edit details...

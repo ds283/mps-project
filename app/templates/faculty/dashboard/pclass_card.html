@@ -25,30 +25,30 @@
             <div class="col-6">
                 {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
                     {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                        <div class="float-right">
-                            <span class="badge badge-success">Student selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
+                        <div class="float-end">
+                            <span class="badge bg-success">Student selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
                             {% if config.live_deadline %}
-                                <span class="badge badge-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                                <span class="badge bg-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                             {% endif %}
                         </div>
                     {% else %}
-                        <div class="float-right">
-                            <span class="badge badge-secondary">Student selection closed</span>
+                        <div class="float-end">
+                            <span class="badge bg-secondary">Student selection closed</span>
                         </div>
                     {% endif %}
                 {% else %}
-                    <div class="float-right">
+                    <div class="float-end">
                         {% if record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                            <span class="badge badge-secondary">On sabbatical</span>
+                            <span class="badge bg-secondary">On sabbatical</span>
                             {% if record.supervisor_reenroll is not none %}
                                 {% if pclass.reenroll_supervisors_early %}
-                                    <span class="badge badge-secondary">Re-enroll {{ record.supervisor_reenroll-1 }}</span>
+                                    <span class="badge bg-secondary">Re-enroll {{ record.supervisor_reenroll-1 }}</span>
                                 {% else %}
-                                    <span class="badge badge-secondary">Re-enroll {{ record.supervisor_reenroll }}</span>
+                                    <span class="badge bg-secondary">Re-enroll {{ record.supervisor_reenroll }}</span>
                                 {% endif %}
                             {% endif %}
                         {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                            <span class="badge badge-secondary">Exempt from supervision</span>
+                            <span class="badge bg-secondary">Exempt from supervision</span>
                         {% endif %}
                     </div>
                 {% endif %}

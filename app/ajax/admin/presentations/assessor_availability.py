@@ -17,7 +17,7 @@ _session_actions = \
 {% set available = s.faculty_available(f.id) %}
 {% set ifneeded = s.faculty_ifneeded(f.id) %}
 <div style="text-align: right;">
-    <div class="float-right">
+    <div class="float-end">
         {% if available %}
             <a class="btn btn-sm btn-success {% if not editable %}disabled{% endif %}">
                 <i class="fas fa-check"></i> Available
@@ -58,12 +58,12 @@ _session_actions = \
 _confirmed = \
 """
 {% if rec.confirmed %}
-    <span class="badge badge-primary">Yes</span>
+    <span class="badge bg-primary">Yes</span>
     {% if rec.confirmed_timestamp is not none %}
-        <span class="badge badge-info">{{ rec.confirmed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        <span class="badge bg-info text-dark">{{ rec.confirmed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
     {% endif %}
 {% else %}
-    <span class="badge badge-warning">No</span>
+    <span class="badge bg-warning text-dark">No</span>
 {% endif %}
 """
 
@@ -72,10 +72,10 @@ _confirmed = \
 _assessor_actions = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('admin.assessment_assessor_availability', a_id=a.id, f_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}">
             <i class="fas fa-calendar"></i> Sessions...
         </a>
@@ -101,7 +101,7 @@ _comment = \
 {% if rec.comment is not none and rec.comment|length > 0 %}
     {{ rec.comment }}
 {% else %}
-    <span class="badge badge-secondary">None</span>
+    <span class="badge bg-secondary">None</span>
 {% endif %}
 """
 
@@ -109,9 +109,9 @@ _comment = \
 # language=jinja2
 _availability = \
 """
-<span class="badge badge-success">{{ rec.number_available }}</span>
-<span class="badge badge-warning">{{ rec.number_ifneeded }}</span>
-<span class="badge badge-danger">{{ rec.number_unavailable }}</span>
+<span class="badge bg-success">{{ rec.number_available }}</span>
+<span class="badge bg-warning text-dark">{{ rec.number_ifneeded }}</span>
+<span class="badge bg-danger">{{ rec.number_unavailable }}</span>
 """
 
 
@@ -126,18 +126,18 @@ _name = \
 {% if has_block %}
     <div>
         {% if rec.assigned_limit is not none %}
-            <span class="badge badge-primary">Assignment limit {{ rec.assigned_limit }}</span>
+            <span class="badge bg-primary">Assignment limit {{ rec.assigned_limit }}</span>
         {% endif %}
         {% if rec.request_email_sent %}
-            <span class="badge badge-info"><i class="fas fa-envelope"></i> Invite sent</span>
+            <span class="badge bg-info text-dark"><i class="fas fa-envelope"></i> Invite sent</span>
             {% if rec.request_timestamp is not none %}
-                <span class="badge badge-secondary">{{ rec.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                <span class="badge bg-secondary">{{ rec.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
             {% endif %}
         {% endif %}
         {% if rec.reminder_email_sent %}
-            <span class="badge badge-info"><i class="fas fa-envelope"></i> Reminder sent</span>
+            <span class="badge bg-info text-dark"><i class="fas fa-envelope"></i> Reminder sent</span>
             {% if rec.last_reminder_timestamp is not none %}
-                <span class="badge badge-secondary">{{ rec.last_reminder_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                <span class="badge bg-secondary">{{ rec.last_reminder_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
             {% endif %}
         {% endif %}        
     </div>

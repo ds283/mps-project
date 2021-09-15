@@ -23,34 +23,34 @@ _name = \
 <div>
     {{ item.first_name }} {{ item.last_name }}
     {% if item.exam_number is not none %}
-        <span class="badge badge-info">Exam #{{ item.exam_number }}</span>
+        <span class="badge bg-info text-dark">Exam #{{ item.exam_number }}</span>
     {% endif %}
     {% if item.registration_number is not none %}
-        <span class="badge badge-info">Registration #{{ item.registration_number }}</span>
+        <span class="badge bg-info text-dark">Registration #{{ item.registration_number }}</span>
     {% endif %}
     {% set warnings = item.warnings %}
     {% set w_length = warnings|length %}
     {% if w_length == 1 %}
-        <span class="badge badge-warning">1 warning</span>
+        <span class="badge bg-warning text-dark">1 warning</span>
     {% elif w_length > 1 %}
-        <span class="badge badge-warning">{{ w_length }} warnings</span>
+        <span class="badge bg-warning text-dark">{{ w_length }} warnings</span>
     {% else %}
         {% if item.existing_record is none %}
-            <span class="badge badge-success"><i class="fas fa-plus-circle"></i> New</span>
+            <span class="badge bg-success"><i class="fas fa-plus-circle"></i> New</span>
         {% else %}
-            <span class="badge badge-success"><i class="fas fa-check"></i> Safe to import</span>
+            <span class="badge bg-success"><i class="fas fa-check"></i> Safe to import</span>
         {% endif %}
     {% endif %}
 </div>
 <div class="mt-1">
     {% if item.existing_record is not none %}
-        <span class="badge badge-success"><i class="fas fa-check"></i> Matches {{ item.existing_record.user.name }} {{ item.existing_record.cohort }}</span>
+        <span class="badge bg-success"><i class="fas fa-check"></i> Matches {{ item.existing_record.user.name }} {{ item.existing_record.cohort }}</span>
     {% endif %}
     {% if item.intermitting %}
-        <span class="badge badge-danger">TWD</span>
+        <span class="badge bg-danger">TWD</span>
     {% endif %}
     {% if item.dont_convert %}
-        <span class="badge badge-warning"><i class="fas fa-times"></i> Import disabled</span>
+        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Import disabled</span>
     {% endif %}
 </div>
 {% if w_length > 0 %}
@@ -69,7 +69,7 @@ _programme = \
 {% if p is not none %}
     {{ p.make_label()|safe }}
 {% else %}
-    <span class="badge badge-danger">Unknown</span>
+    <span class="badge bg-danger">Unknown</span>
 {% endif %}
 """
 
@@ -82,11 +82,11 @@ _cohort = \
     {{ item.academic_year_label()|safe }}
 </div>
 {% if item.foundation_year %}
-    <span class="badge badge-info">Foundation year</span>
+    <span class="badge bg-info text-dark">Foundation year</span>
 {% endif %}
 {% if item.repeated_years is not none and item.repeated_years > 0 %}
     {% set pl = 's' %}{% if item.repeated_years == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge badge-primary">{{ item.repeated_years }} repeated year{{ pl }}</span>
+    <span class="badge bg-primary">{{ item.repeated_years }} repeated year{{ pl }}</span>
 {% endif %}
 """
 
@@ -95,10 +95,10 @@ _cohort = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('manage_users.edit_batch_item', item_id=item.id) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
         </a>

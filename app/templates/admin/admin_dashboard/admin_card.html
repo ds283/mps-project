@@ -21,84 +21,84 @@
                 <div class="row vertical-top root-dashboard-table">
                     <div class="col-3">
                         {% set style = pclass.make_CSS_style() %}
-                        <a href="{{ url_for('convenor.overview', id=pclass.id) }}" {% if style %}class="badge badge-secondary" style="{{ style }}"{% endif %}>
+                        <a href="{{ url_for('convenor.overview', id=pclass.id) }}" {% if style %}class="badge text-decoration-none bg-secondary" style="{{ style }}"{% endif %}>
                             {{ pclass.name }}
                         </a>
                     </div>
                     <div class="col-2"><a href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor_name }}</a></div>
                     <div class="col-2">
                         {% if config.year == current_year %}
-                            <span class="badge badge-secondary">{{ config.year }}&ndash;{{ config.year+1 }}</span>
-                            <span class="badge badge-success"><i class="fas fa-check"></i> Current</span>
+                            <span class="badge bg-secondary">{{ config.year }}&ndash;{{ config.year+1 }}</span>
+                            <span class="badge bg-success"><i class="fas fa-check"></i> Current</span>
                         {% else %}
-                            <span class="badge badge-secondary">{{ config.year }}&ndash;{{ config.year+1 }}</span>
-                            <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Not current</span>
+                            <span class="badge bg-secondary">{{ config.year }}&ndash;{{ config.year+1 }}</span>
+                            <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Not current</span>
                         {% endif %}
                     </div>
                     <div class="col-5">
                         {% if config.year < current_year %}
-                            <span class="badge badge-danger"><i class="fas fa-check"></i> Rollover available</span>
+                            <span class="badge bg-danger"><i class="fas fa-check"></i> Rollover available</span>
                         {% endif %}
 
                         {% set sel_state = config.selector_lifecycle %}
                         {% set sub_state = config.submitter_lifecycle %}
                         {% set published = pclass.publish %}
                         {% if not published %}
-                            <span class="badge badge-danger"><i class="fas fa-eye-slash"></i> Not published</span>
+                            <span class="badge bg-danger"><i class="fas fa-eye-slash"></i> Not published</span>
                         {% else %}
                             {% if sub_state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
-                                <span class="badge badge-success">{{ config.current_period.display_name|safe }}</span>
+                                <span class="badge bg-success">{{ config.current_period.display_name|safe }}</span>
                             {% elif sub_state == config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
-                                <span class="badge badge-warning">Marking/feedback: {{ config.current_period.display_name|safe }}</span>
+                                <span class="badge bg-warning text-dark">Marking/feedback: {{ config.current_period.display_name|safe }}</span>
                             {% elif sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
-                                <span class="badge badge-primary"><i class="fas fa-check"></i> Submissions complete</span>
+                                <span class="badge bg-primary"><i class="fas fa-check"></i> Submissions complete</span>
                             {% else %}
-                                <span class="badge badge-danger">Unknown submitted lifecycle state {{ sub_state }}</span>
+                                <span class="badge bg-danger">Unknown submitted lifecycle state {{ sub_state }}</span>
                             {% endif %}
                             {% if sel_state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-                                <span class="badge badge-secondary"><i class="fas fa-times"></i> Confirmations not issued</span>
+                                <span class="badge bg-secondary"><i class="fas fa-times"></i> Confirmations not issued</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                                <span class="badge badge-secondary"><i class="fas fa-times"></i> Not live</span>
-                                <span class="badge badge-primary"><i class="fas fa-clock"></i> Confirmations outstanding</span>
+                                <span class="badge bg-secondary"><i class="fas fa-times"></i> Not live</span>
+                                <span class="badge bg-primary"><i class="fas fa-clock"></i> Confirmations outstanding</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                                <span class="badge badge-secondary"><i class="fas fa-times"></i> Not live</span>
-                                <span class="badge badge-success"><i class="fas fa-check"></i> GoLive ready</span>
+                                <span class="badge bg-secondary"><i class="fas fa-times"></i> Not live</span>
+                                <span class="badge bg-success"><i class="fas fa-check"></i> GoLive ready</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                <span class="badge badge-primary"><i class="fas fa-check"></i> Selection open</span>
+                                <span class="badge bg-primary"><i class="fas fa-check"></i> Selection open</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_MATCHING %}
-                                <span class="badge badge-primary"><i class="fas fa-bar"></i> Selection closed</span>
-                                <span class="badge badge-success"><i class="fas fa-check"></i> Matching ready</span>
+                                <span class="badge bg-primary"><i class="fas fa-bar"></i> Selection closed</span>
+                                <span class="badge bg-success"><i class="fas fa-check"></i> Matching ready</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
-                                <span class="badge badge-primary"><i class="fas fa-bar"></i> Selection closed</span>
+                                <span class="badge bg-primary"><i class="fas fa-bar"></i> Selection closed</span>
                                 {% if sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER and not (config.year < current_year) %}
-                                    <span class="badge badge-success"><i class="fas fa-check"></i> Rollover ready</span>
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> Rollover ready</span>
                                 {% else %}
                                     {% if config.do_matching %}
-                                        <span class="badge badge-success"><i class="fas fa-check"></i> Matching selected</span>
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Matching selected</span>
                                     {% endif %}
                                 {% endif %}
                             {% else %}
-                                <span class="badge badge-danger">Unknown selector lifecycle state {{ sel_state }}</span>
+                                <span class="badge bg-danger">Unknown selector lifecycle state {{ sel_state }}</span>
                             {% endif %}
                         {% endif %}
 
                         {% set num_sel = config.number_selectors %}
                         {% set pl = 's' %}
                         {% if num_sel == 1 %}{% set pl = '' %}{% endif %}
-                        <span class="badge badge-info">{{ num_sel }} selector{{ pl }}</span>
+                        <span class="badge bg-info text-dark">{{ num_sel }} selector{{ pl }}</span>
 
                         {% set num_sub = config.number_submitters %}
                         {% set pl = 's' %}
                         {% if num_sub == 1 %}{% set pl = '' %}{% endif %}
-                        <span class="badge badge-info">{{ num_sub }} submitter{{ pl }}</span>
+                        <span class="badge bg-info text-dark">{{ num_sub }} submitter{{ pl }}</span>
 
                         {% if sel_state <= config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
                             {% if capacity < num_sel %}
-                                <span class="badge badge-danger">Capacity {% if not bounded %}>= {% endif %}{{ capacity }}</span>
+                                <span class="badge bg-danger">Capacity {% if not bounded %}>= {% endif %}{{ capacity }}</span>
                             {% elif capacity < 1.15*num_sel %}
-                                <span class="badge badge-warning">Capacity {% if not bounded %}>= {% endif %}{{ capacity }}</span>
+                                <span class="badge bg-warning text-dark">Capacity {% if not bounded %}>= {% endif %}{{ capacity }}</span>
                             {% else %}
-                                <span class="badge badge-success">Capacity {% if not bounded %}>= {% endif %}{{ capacity }}</span>
+                                <span class="badge bg-success">Capacity {% if not bounded %}>= {% endif %}{{ capacity }}</span>
                             {% endif %}
                         {% endif %}
                     </div>

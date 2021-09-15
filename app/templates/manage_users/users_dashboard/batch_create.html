@@ -21,7 +21,7 @@
                                    onchange="$('#filename-data').html(this.files[0].name)">
                             Select file...
                         </label>
-                        <span class="badge badge-info" id="filename-data"></span>
+                        <span class="badge bg-info text-dark" id="filename-data"></span>
 
                         <hr class="intro-divider">
                         {{ wtf.render_field(form.current_year) }}
@@ -42,17 +42,17 @@
                         <div class="col-4">
                             <div>
                                 {% if not batch.celery_finished %}
-                                    <span class="badge badge-info">In progress</span>
+                                    <span class="badge bg-info text-dark">In progress</span>
                                 {% else %}
                                     {% if batch.success %}
-                                        <span class="badge badge-success"><i class="fas fa-check"></i> Read succeeded</span>
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Read succeeded</span>
                                     {% else %}
-                                        <span class="badge badge-danger"><i class="fas fa-times"></i> Read failed</span>
+                                        <span class="badge bg-danger"><i class="fas fa-times"></i> Read failed</span>
                                     {% endif %}
                                     {% if batch.converted %}
-                                        <span class="badge badge-success"><i class="fas fa-check"></i> Converted</span>
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Converted</span>
                                     {% else %}
-                                        <span class="badge badge-secondary">Not converted</span>
+                                        <span class="badge bg-secondary">Not converted</span>
                                     {% endif %}
                                 {% endif %}
                             </div>
@@ -60,42 +60,42 @@
                         <div class="col-4">
                             <div>
                                 {% if batch.timestamp %}
-                                    <span class="badge badge-primary">Timestamp {{ batch.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                    <span class="badge bg-primary">Timestamp {{ batch.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                 {% endif %}
                                 {% if batch.success %}
-                                    <span class="badge badge-primary">Total lines: {{ batch.total_lines }}</span>
+                                    <span class="badge bg-primary">Total lines: {{ batch.total_lines }}</span>
                                     {% if batch.interpreted_lines < batch.total_lines %}
-                                        <span class="badge badge-warning">Ignored lines: {{ batch.total_lines - batch.interpreted_lines }}</span>
+                                        <span class="badge bg-warning text-dark">Ignored lines: {{ batch.total_lines - batch.interpreted_lines }}</span>
                                     {% else %}
-                                        <span class="badge badge-secondary">No ignored lines</span>
+                                        <span class="badge bg-secondary">No ignored lines</span>
                                     {% endif %}
                                 {% endif %}
-                                <span class="badge badge-info">{{ batch.number_items }} items</span>
+                                <span class="badge bg-info text-dark">{{ batch.number_items }} items</span>
                             </div>
                             <div>
-                                <span class="badge badge-info">Reference academic year {{ batch.academic_year }}</span>
+                                <span class="badge bg-info text-dark">Reference academic year {{ batch.academic_year }}</span>
                                 {% if batch.trust_cohort %}
-                                    <span class="badge badge-success"><i class="fas fa-check"></i> Trust cohort data</span>
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> Trust cohort data</span>
                                 {% else %}
-                                    <span class="badge badge-secondary"><i class="fas fa-times"></i> Do not trust cohort data</span>
+                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> Do not trust cohort data</span>
                                 {% endif %}
                                 {% if batch.trust_exams %}
-                                    <span class="badge badge-success"><i class="fas fa-check"></i> Trust exam numbers</span>
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> Trust exam numbers</span>
                                 {% else %}
-                                    <span class="badge badge-secondary"><i class="fas fa-times"></i> Do not trust exam numbers</span>
+                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> Do not trust exam numbers</span>
                                 {% endif %}
                                 {% if batch.trust_registration %}
-                                    <span class="badge badge-success"><i class="fas fa-check"></i> Trust registration numbers</span>
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> Trust registration numbers</span>
                                 {% else %}
-                                    <span class="badge badge-secondary"><i class="fas fa-times"></i> Do not trust registration numbers</span>
+                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> Do not trust registration numbers</span>
                                 {% endif %}
                                 {% if batch.ignore_Y0 %}
-                                    <span class="badge badge-info"><i class="fas fa-times"></i> Do not import Y0 students</span>
+                                    <span class="badge bg-info text-dark"><i class="fas fa-times"></i> Do not import Y0 students</span>
                                 {% endif %}
                             </div>
                         </div>
                         <div class="col-4">
-                            <div class="float-right">
+                            <div class="float-end">
                                 {% if not batch.celery_finished %}
                                     <a href="{{ url_for('manage_users.terminate_batch', batch_id=batch.id) }}" class="btn btn-sm btn-danger btn-table-block">
                                         Terminate

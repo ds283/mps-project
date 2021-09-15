@@ -12,16 +12,16 @@
                 <div id="P-{{ project.id }}" class="row vertical-top final-selection-table">
                     <div class="col-1">
                         {% if not sel.retired %}<i class="fas fa-bars drag-handle"></i>{% endif %}
-                        <span id="ranking" class="badge badge-primary">#{{ item.rank }}</span>
+                        <span id="ranking" class="badge bg-primary">#{{ item.rank }}</span>
                     </div>
                     <div class="col-5">
                         <a href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
                             {{ item.format_project|safe }}
                         </a>
                         {% if project.is_available(sel) %}
-                            <span class="badge badge-success"><i class="fas fa-check"></i> Available</span>
+                            <span class="badge bg-success"><i class="fas fa-check"></i> Available</span>
                         {% else %}
-                            <span class="badge badge-danger"><i class="fas fa-times"></i> Not available</span>
+                            <span class="badge bg-danger"><i class="fas fa-times"></i> Not available</span>
                         {% endif %}
                     </div>
                     <div class="col-4">
@@ -31,7 +31,7 @@
                         {{ project.group.make_label(project.group.name)|safe }}
                     </div>
                    <div class="col-2">
-                       <div class="float-right">
+                       <div class="float-end">
                            <a href="{{ url_for('convenor.delete_student_bookmark', sid=sel.id, bid=item.id) }}" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>
                        </div>
                     </div>
@@ -56,39 +56,39 @@
                     <div class="col-3">
                         {{ item.format_name|safe }}
                         {% if item.owner.convert_to_submitter %}
-                            <span class="badge badge-success"><i class="fas fa-check"></i> Converting</span>
+                            <span class="badge bg-success"><i class="fas fa-check"></i> Converting</span>
                         {% else %}
-                            <span class="badge badge-danger"><i class="fas fa-times"></i> Not converting</span>
+                            <span class="badge bg-danger"><i class="fas fa-times"></i> Not converting</span>
                         {% endif %}
                     </div>
                     <div class="col-1">
-                        <span class="badge badge-success">#{{ item.rank }}</span>
+                        <span class="badge bg-success">#{{ item.rank }}</span>
                     </div>
                     <div class="col-3">
                         {% if item.owner.has_submitted %}
-                            <span class="badge badge-success">Yes</span>
+                            <span class="badge bg-success">Yes</span>
                         {% else %}
-                            <span class="badge badge-secondary">No</span>
+                            <span class="badge bg-secondary">No</span>
                         {% endif %}
                         {% if proj.is_available(item.owner) %}
-                            <span class="badge badge-success"><i class="fas fa-check"></i> Available</span>
+                            <span class="badge bg-success"><i class="fas fa-check"></i> Available</span>
                         {% else %}
-                            <span class="badge badge-danger"><i class="fas fa-times"></i> Not available</span>
+                            <span class="badge bg-danger"><i class="fas fa-times"></i> Not available</span>
                         {% endif %}
                     </div>
                     <div class="col-3">
                         {% if item.owner.has_submitted %}
                             {% if item.owner.is_project_submitted(item.liveproject) %}
-                                <span class="badge badge-success">Yes</span>
+                                <span class="badge bg-success">Yes</span>
                             {% else %}
-                                <span class="badge badge-secondary">No</span>
+                                <span class="badge bg-secondary">No</span>
                             {% endif %}
                         {% else %}
-                            <span class="badge badge-secondary">n/a</span>
+                            <span class="badge bg-secondary">n/a</span>
                         {% endif %}
                     </div>
                     <div class="col-2">
-                        <div class="float-right">
+                        <div class="float-end">
                             <a href="#" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>
                         </div>
                     </div>
@@ -112,22 +112,22 @@
                     <div {% if show_hint %}class="col-4"{% else %}class="col-5"{% endif %}>
                         {{ item.format_name|safe }}
                         {% if item.owner.convert_to_submitter %}
-                            <span class="badge badge-success"><i class="fas fa-check"></i> Converting</span>
+                            <span class="badge bg-success"><i class="fas fa-check"></i> Converting</span>
                         {% else %}
-                            <span class="badge badge-danger"><i class="fas fa-times"></i> Not converting</span>
+                            <span class="badge bg-danger"><i class="fas fa-times"></i> Not converting</span>
                         {% endif %}
                     </div>
                     <div {% if show_hint %}class="col-3"{% else %}class="col-2"{% endif %}>
-                        <span class="badge badge-success rank-hint-button">#{{ item.rank }}</span>
+                        <span class="badge bg-success rank-hint-button">#{{ item.rank }}</span>
                         {% if item.converted_from_bookmark %}
-                            <span class="badge badge-warning rank-hint-button">From bookmark</span>
+                            <span class="badge bg-warning text-dark rank-hint-button">From bookmark</span>
                         {% endif %}
                         {% if show_hint %}
                             <div class="rank-hint-button">
-                                <a class="badge badge-info dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                <a class="badge text-decoration-none bg-info text-dark dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                     Hint
                                 </a>
-                                <div class="dropdown-menu dropdown-menu-right">
+                                <div class="dropdown-menu dropdown-menu-end">
                                     {% set menu_items = item.menu_order %}
                                     {% for mi in menu_items %}
                                         {% if mi is string %}
@@ -150,7 +150,7 @@
                         {{ item.owner.submission_IP }}
                     </div>
                     <div class="col-2">
-                        <div class="float-right">
+                        <div class="float-end">
                             <a href="#" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>
                         </div>
                     </div>
@@ -175,16 +175,16 @@
                 <div id="P-{{ project.id }}" class="row vertical-top final-selection-table">
                     <div {% if show_hint %}class="col-2"{% else %}class="col-1"{% endif %}>
                         {% if not sel.retired %}<i class="fas fa-bars drag-handle"></i>{% endif %}
-                        <span id="ranking" class="badge badge-success rank-hint-button">#{{ item.rank }}</span>
+                        <span id="ranking" class="badge bg-success rank-hint-button">#{{ item.rank }}</span>
                         {% if item.converted_from_bookmark %}
-                            <span class="badge badge-warning rank-hint-button">Bookmark</span>
+                            <span class="badge bg-warning text-dark rank-hint-button">Bookmark</span>
                         {% endif %}
                         {% if show_hint %}
                             <div class="rank-hint-button">
-                                <a class="badge badge-info dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                <a class="badge text-decoration-none bg-info text-dark dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                     Hint
                                 </a>
-                                <div class="dropdown-menu dropdown-menu-right">
+                                <div class="dropdown-menu dropdown-menu-end">
                                     {% set menu_items = item.menu_order %}
                                     {% for mi in menu_items %}
                                         {% if mi is string %}
@@ -215,7 +215,7 @@
                     </div>
                     <div class="col-2">
                         {% if show_delete %}
-                            <div class="float-right">
+                            <div class="float-end">
                                 <a {% if can_delete %}href="{{ url_for('convenor.delete_student_choice', sid=sel.id, cid=item.id) }}"{% endif %} class="btn btn-sm btn-danger {% if not can_delete %}disabled{% endif %}"><i class="fas fa-trash"></i> Delete</a>
                             </div>
                         {% endif %}

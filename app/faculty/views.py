@@ -50,16 +50,16 @@ _marker_menu = \
 """
 {% if proj.is_assessor(f.id) %}
     <a href="{{ url_for('faculty.remove_assessor', proj_id=proj.id, mid=f.id) }}"
-       class="btn btn-sm btn-block btn-secondary">
+       class="btn btn-sm full-width-button btn-secondary">
         <i class="fas fa-trash"></i> Remove
     </a>
 {% elif proj.can_enroll_assessor(f) %}
     <a href="{{ url_for('faculty.add_assessor', proj_id=proj.id, mid=f.id) }}"
-       class="btn btn-sm btn-block btn-secondary">
+       class="btn btn-sm full-width-button btn-secondary">
         <i class="fas fa-plus"></i> Attach
     </a>
 {% else %}
-    <a class="btn btn-secondary btn-block btn-sm disabled">
+    <a class="btn btn-secondary full-width-button btn-sm disabled">
         <i class="fas fa-ban"></i> Can't attach
     </a>
 {% endif %}
@@ -81,36 +81,36 @@ _desc_label = \
 </a>
 <div>
     {% if d.review_only %}
-        <span class="badge badge-info">Review project</span>
+        <span class="badge bg-info text-dark">Review project</span>
     {% endif %}
 </div>
 {% set state = d.workflow_state %}
 <div>
     {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
     {% if not_confirmed %}
-        <span class="badge badge-secondary">Approval: Not confirmed</span>
+        <span class="badge bg-secondary">Approval: Not confirmed</span>
     {% else %}
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
-            <span class="badge badge-success"><i class="fas fa-check"></i> Approved</span>
+            <span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>
         {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
-            <span class="badge badge-warning">Approval: Queued</span>
+            <span class="badge bg-warning text-dark">Approval: Queued</span>
         {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
-            <span class="badge badge-info">Approval: In progress</span>
+            <span class="badge bg-info text-dark">Approval: In progress</span>
         {% else %}
-            <span class="badge badge-danger">Unknown approval state</span>
+            <span class="badge bg-danger">Unknown approval state</span>
         {% endif %}
         {% if current_user.has_role('project_approver') and d.validated_by %}
             <div>
-                <span class="badge badge-info">Signed-off: {{ d.validated_by.name }}</span>
+                <span class="badge bg-info text-dark">Signed-off: {{ d.validated_by.name }}</span>
                 {% if d.validated_timestamp %}
-                    <span class="badge badge-info">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                    <span class="badge bg-info text-dark">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                 {% endif %}
             </div>
         {% endif %}
     {% endif %}
     {% if d.has_new_comments(current_user) %}
         <div>
-            <span class="badge badge-warning">New comments</span>
+            <span class="badge bg-warning text-dark">New comments</span>
         </div>
     {% endif %}
 </div>
@@ -119,18 +119,18 @@ _desc_label = \
         {% set errors = d.errors %}
         {% set warnings = d.warnings %}
         {% if errors|length == 1 %}
-            <span class="badge badge-danger">1 error</span>
+            <span class="badge bg-danger">1 error</span>
         {% elif errors|length > 1 %}
-            <span class="badge badge-danger">{{ errors|length }} errors</span>
+            <span class="badge bg-danger">{{ errors|length }} errors</span>
         {% else %}
-            <span class="badge badge-success">0 errors</span>
+            <span class="badge bg-success">0 errors</span>
         {% endif %}
         {% if warnings|length == 1 %}
-            <span class="badge badge-warning">1 warning</span>
+            <span class="badge bg-warning text-dark">1 warning</span>
         {% elif warnings|length > 1 %}
-            <span class="badge badge-warning">{{ warnings|length }} warnings</span>
+            <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
         {% else %}
-            <span class="badge badge-success">0 warnings</span>
+            <span class="badge bg-success">0 warnings</span>
         {% endif %}
         {% if errors|length > 0 %}
             <div class="error-block">
@@ -163,10 +163,10 @@ _desc_label = \
 _desc_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
            url=url_for('faculty.edit_descriptions', id=d.parent.id, create=create),
            text='description list view') }}">
@@ -2234,7 +2234,50 @@ def mark_started(id):
         return redirect(redirect_url())
 
     rec.student_engaged = True
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not mark student as "engaged" due to a database error. '
+              'Please contact a system administrator', 'error')
+
+    return redirect(redirect_url())
+
+
+@faculty.route('/mark_waiting/<int:id>')
+@roles_accepted('faculty')
+def mark_waiting(id):
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # reject if logged-in user is not a convenor for the project class associated with this submission record
+    if not validate_submission_supervisor(rec):
+        return redirect(redirect_url())
+
+    if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late change engagement status for this submission period', 'error')
+        return redirect(redirect_url())
+
+    if rec.submission_period > rec.owner.config.submission_period:
+        flash('Cannot change engagement status for this submission period because it is not yet open', 'error')
+        return redirect(redirect_url())
+
+    if not rec.owner.published:
+        flash('Cannot change engagement status for this submission period because it is not published '
+              'to the submitter', 'error')
+        return redirect(redirect_url())
+
+    rec.student_engaged = False
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not mark student as "not engaged" due to a database error. '
+              'Please contact a system administrator', 'error')
 
     return redirect(redirect_url())
 

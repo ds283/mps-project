@@ -15,6 +15,7 @@
                         <div>
                             <div><strong>
                                 Confirmations are outstanding from {{ config.confirm_outstanding_count }}
+                        <strong>{{ config.confirm_outstanding_count }} faculty</strong>.
                                 faculty.
                             </strong></div>
                             <div>
@@ -22,9 +23,9 @@
                                 </a>
                             </div>
                         </div>
-                        <div class="ml-3">
+                        <div class="mb-3">
                             <a href="{{ url_for('convenor.force_confirm_all', id=config.id) }}"
-                               class="btn btn-sm btn-danger text-nowrap">
+                               class="btn btn-sm btn-outline-danger text-nowrap">
                                 Force confirm all
                             </a>
                         </div>
@@ -43,11 +44,11 @@
                 {{ date_field(issue_form.request_deadline, 'confirm_datetimepicker') }}
                 <div class="row">
                     <div class="col-12">
-                        <div class="float-right">
-                            <a href="{{ url_for('convenor.confirmation_reminder', id=config.id) }}" class="btn btn-secondary text-nowrap">
+                        <div class="float-end">
+                            <a href="{{ url_for('convenor.confirmation_reminder', id=config.id) }}" class="btn btn-outline-secondary">
                                 Send reminders
                             </a>
-                            {{ wtf.render_field(issue_form.submit_button, button_map={'submit_button': 'secondary'}) }}
+                            {{ wtf.render_field(issue_form.submit_button, button_map={'submit_button': 'outline-secondary'}) }}
                         </div>
                     </div>
                 </div>

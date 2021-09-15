@@ -29,25 +29,25 @@
                                 {{ rec.project.name }} (No. {{ rec.project.number }})
                             </a>
                             {% if rec.report %}
-                                <span class="badge badge-success"><i class="fas fa-check"></i> Report uploaded</span>
+                                <span class="badge bg-success"><i class="fas fa-check"></i> Report uploaded</span>
                             {% endif %}
                             {% if uses_feedback %}
                                 <div>
                                     {% if rec.marker_submitted %}
-                                        <span class="badge badge-success"><i class="fas fa-check"></i> Feedback submitted</span>
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Feedback submitted</span>
                                     {% elif period.closed and not rec.marker_submitted %}
-                                        <span class="badge badge-warning"><i class="fas fa-times"></i> Feedback missing</span>
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Feedback missing</span>
                                     {% endif %}
                                 </div>
                             {% endif %}
                         </td>
                         <td>
-                            <div style="text-align: right;" class="float-right">
+                            <div style="text-align: right;" class="float-end">
                                 <div class="dropdown">
-                                    <button class="btn btn-outline-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-outline-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                         Actions
                                     </button>
-                                    <div class="dropdown-menu dropdown-menu-right">
+                                    <div class="dropdown-menu dropdown-menu-end">
                                         <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ rec.number_attachments }})...</a>
                                         {% if uses_feedback %}
                                             {% set state = rec.marker_feedback_state %}

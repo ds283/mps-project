@@ -148,7 +148,6 @@ def validate_project_class(pclass):
     :param pclass:
     :return:
     """
-
     if not pclass.publish:
         flash("'{name}' is not published and is not available for certain lifecycle events.".format(name=pclass.name))
         return False
@@ -162,7 +161,6 @@ def validate_is_project_owner(project):
     :param project:
     :return:
     """
-
     if project.owner_id == current_user.id:
         return True
 

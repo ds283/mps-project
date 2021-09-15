@@ -1,5 +1,5 @@
 {% import "bootstrap/form.html" as wtf %}
-{% from "macros.html" import date_field %}
+{% from "macros.html" import date_field, submission_period_configure_button %}
 
 {% macro feedback_marking(config, period, feedback_form) %}
     <div class="row vertical-top">
@@ -8,9 +8,9 @@
             These are available to release to students when the feedback period closes.
         </div>
         <div class="col-3">
-            <div class="float-right">
+            <div class="float-end">
                 <a href="{{ url_for('convenor.close_feedback', id=config.id) }}"
-                   class="btn btn-danger">
+                   class="btn btn-outline-danger">
                     {% if config.submission_period == config.submissions %}
                         Close feedback
                     {% else %}
@@ -26,18 +26,20 @@
         {{ date_field(feedback_form.feedback_deadline, 'feedback_datetimepicker') }}
         {{ wtf.render_field(feedback_form.max_attachment) }}
         {{ wtf.render_field(feedback_form.cc_me) }}
-        <div class="row">
-            <div class="col-12">
-                <div class="float-right">
-                    <a class="btn btn-secondary" href="{{ url_for('convenor.submission_period_documents', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='overview') }}">Documents ({{ period.number_attachments }})...</a>
-                    {% if feedback_form.send_notifications is defined %}
-                        {{ wtf.render_field(feedback_form.send_notifications, button_map={'send_notifications': 'secondary'}) }}
-                    {% endif %}
-                    {% if feedback_form.test_button is defined  %}
-                        {{ wtf.render_field(feedback_form.test_button, button_map={'test_button': 'info'}) }}
-                    {% endif %}
-                    {{ wtf.render_field(feedback_form.submit_button, button_map={'submit_button': 'secondary'}) }}
+        <div class="d-flex flex-row justify-content-end">
+            {{ submission_period_configure_button(period, config, dropup=true) }}
+            {% if feedback_form.send_notifications is defined %}
+                <div class="mb-1">
+                    {{ wtf.render_field(feedback_form.send_notifications, button_map={'send_notifications': 'outline-secondary'}) }}
                 </div>
+            {% endif %}
+            {% if feedback_form.test_button is defined  %}
+                <div class="mb-1">
+                    {{ wtf.render_field(feedback_form.test_button, button_map={'test_button': 'outline-info'}) }}
+                </div>
+            {% endif %}
+            <div class="mb-1">
+                {{ wtf.render_field(feedback_form.submit_button, button_map={'submit_button': 'outline-danger'}) }}
             </div>
         </div>
     </form>

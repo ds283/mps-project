@@ -16,7 +16,7 @@ _affiliations = \
 {% for group in f.affiliations %}
     {{ group.make_label()|safe }}
 {% else %}
-    <span class="badge badge-secondary">None</span>
+    <span class="badge bg-secondary">None</span>
 {% endfor %}
 """
 
@@ -24,9 +24,9 @@ _affiliations = \
 _status = \
 """
 {% if proj.is_assessor(f.id) %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Attached</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Attached</span>
 {% else %}
-    <span class="badge badge-secondary"><i class-"fas fa-times"></i> Not attached</span>
+    <span class="badge bg-secondary"><i class-"fas fa-times"></i> Not attached</span>
 {% endif %}
 """
 
@@ -40,19 +40,19 @@ _enrollments = \
         {% if e.marker_state == e.MARKER_ENROLLED or e.presentations_state == e.PRESENTATIONS_ENROLLED %}
             {{ e.pclass.make_label('<i class="fas fa-check"></i> ' + e.pclass.abbreviation)|safe }}
         {% elif e.marker_state == e.MARKER_SABBATICAL and e.presentations_state == e.PRESENTATIONS_SABBATICAL %}
-            <{% if not disabled %}a{% else %}span{% endif%} class="badge badge-secondary" {% if not disabled %}href="{{ url_for('manage_users.edit_enrollment', id=e.id, url=url) }}"{% endif %}><i class="fas fa-times"></i> {{ e.pclass.abbreviation }} (sabbat)<{% if not disabled %}/a{% else %}/span{% endif %}>
+            <{% if not disabled %}a{% else %}span{% endif%} class="badge bg-secondary" {% if not disabled %}href="{{ url_for('manage_users.edit_enrollment', id=e.id, url=url) }}"{% endif %}><i class="fas fa-times"></i> {{ e.pclass.abbreviation }} (sabbat)<{% if not disabled %}/a{% else %}/span{% endif %}>
         {% elif (e.marker_state == e.MARKER_EXEMPT and e.presentations_state == e.PRESENTATIONS_SABBATICAL) or
                 (e.marker_state == e.MARKER_SABBATICAL and e.presentations_state == e.PRESENTATIONS_EXEMPT) or
                 (e.marker_state == e.MARKER_EXEMPT and e.presentations_state == e.PRESENTATIONS_EXEMPT)
         %}
-            <{% if not disabled %}a{% else %}span{% endif%} class="badge badge-secondary" {% if not disabled %}href="{{ url_for('manage_users.edit_enrollment', id=e.id, url=url) }}"{% endif %}><i class="fas fa-times"></i> {{ e.pclass.abbreviation }} (exempt)<{% if not disabled %}/a{% else %}/span{% endif %}>
+            <{% if not disabled %}a{% else %}span{% endif%} class="badge bg-secondary" {% if not disabled %}href="{{ url_for('manage_users.edit_enrollment', id=e.id, url=url) }}"{% endif %}><i class="fas fa-times"></i> {{ e.pclass.abbreviation }} (exempt)<{% if not disabled %}/a{% else %}/span{% endif %}>
         {% else %}
-            <{% if not disabled %}a{% else %}span{% endif%} class="badge badge-danger" {% if not disabled %}href="{{ url_for('manage_users.edit_enrollment', id=e.id, url=url) }}"{% endif %}><i class="fas fa-exclamation-triangle"></i> {{ e.pclass.abbreviation }} (unknown)<{% if not disabled %}/a{% else %}/span{% endif %}>
+            <{% if not disabled %}a{% else %}span{% endif%} class="badge bg-danger" {% if not disabled %}href="{{ url_for('manage_users.edit_enrollment', id=e.id, url=url) }}"{% endif %}><i class="fas fa-exclamation-triangle"></i> {{ e.pclass.abbreviation }} (unknown)<{% if not disabled %}/a{% else %}/span{% endif %}>
         {% endif %}
     {% endif %}
 {% endfor %}
 {% if ns.count == 0 %}
-    <span class="badge badge-secondary">None</span>
+    <span class="badge bg-secondary">None</span>
 {% endif %}
 """
 
@@ -60,7 +60,7 @@ _enrollments = \
 # language=jinja2
 _attached = \
 """
-<span class="badge badge-secondary">{{ f.number_assessor }}</span>
+<span class="badge bg-secondary">{{ f.number_assessor }}</span>
 """
 
 

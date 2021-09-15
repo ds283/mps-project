@@ -17,7 +17,7 @@ from wtforms_alchemy import QuerySelectField
 from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig, ConvenorGenericTask
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
     GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses, GetAccommodatableMatchings
-from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodCommonMixin, \
+from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodPresentationsMixin, \
     PeriodSelectorMixinFactory
 from ..shared.forms.wtf_validators import NotOptionalIf
 
@@ -154,7 +154,7 @@ class CustomCATSLimitForm(Form, SaveChangesMixin):
                                      validators=[Optional()])
 
 
-class SubmissionRecordMixin():
+class SubPeriodRecordSettingsMixin():
 
     start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
                            description="Enter an optional start date for this submission period.")
@@ -163,9 +163,15 @@ class SubmissionRecordMixin():
                              description="Enter an optional hand-in date for this submission period. If present, "
                                          "this is used to show students how much time remains.")
 
+    collect_project_feedback = BooleanField('Collect project feedback online')
 
 
-class EditSubmissionRecordForm(Form, SubmissionRecordMixin, SubmissionPeriodCommonMixin, SaveChangesMixin):
+class EditSubPeriodRecordSettingsForm(Form, SubPeriodRecordSettingsMixin, SaveChangesMixin):
+
+    pass
+
+
+class EditSubPeriodRecordPresentationsForm(Form, SubmissionPeriodPresentationsMixin, SaveChangesMixin):
 
     pass
 
@@ -179,8 +185,7 @@ class EditProjectConfigForm(Form, SaveChangesMixin):
                                     description='Disable confirmation of project descriptions for '
                                                 'this academic year')
 
-    uses_supervisor = BooleanField('Projects are supervised by a named faculty member',
-                                   default=True)
+    uses_supervisor = BooleanField('Projects are supervised by a named faculty member')
 
     uses_marker = BooleanField('Submissions are second-marked')
 
@@ -189,6 +194,13 @@ class EditProjectConfigForm(Form, SaveChangesMixin):
     display_marker = BooleanField('Include second marker information')
 
     display_presentations = BooleanField('Include presentation assessment information')
+
+    use_project_hub = BooleanField('Use Project Hubs',
+                                   description='This setting is inherited from the project configuration, '
+                                               'but can be overridden in any academic year. '
+                                               'The Project Hub is a lightweight learning management system '
+                                               'that allows you to publish resources to students and '
+                                               'offers some project management tools.')
 
     full_CATS = IntegerField('CAT threshold for supervisors to be full',
                              description='Optional. If a partial match is being accommodated, this is the maximum '

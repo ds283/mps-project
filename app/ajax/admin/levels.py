@@ -14,10 +14,10 @@ from flask import render_template_string
 _types_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('admin.edit_level', id=l.id) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit details...
         </a>
@@ -40,9 +40,9 @@ _types_menu = \
 _status = \
 """
 {% if l.active %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Active</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
-    <span class="badge badge-warning"><i class="fas fa-times"></i> Inactive</span>
+    <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Inactive</span>
 {% endif %}
 """
 

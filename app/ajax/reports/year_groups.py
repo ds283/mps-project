@@ -17,7 +17,7 @@ _name = \
 """
 <a href="mailto:{{ s.user.email }}">{{ s.user.name }}</a>
 {% if s.intermitting %}
-    <span class="badge badge-warning">TWD</span>
+    <span class="badge bg-warning text-dark">TWD</span>
 {% endif %}
 {{ s.academic_year_label()|safe }}
 {{ s.cohort_label|safe }}

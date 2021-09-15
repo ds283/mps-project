@@ -38,7 +38,7 @@
                 ajax: { url: $SCRIPT_ROOT + '{{ ajax_endpoint }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
                       orderable: true,
@@ -112,7 +112,7 @@
                         {% if bookmarks == 1 %}{% set bmpl = '' %}{% endif %}
                         {% set ncpl = 's' %}
                         {% if sel.number_choices == 1 %}{% set ncpl = '' %}{% endif %}
-                        <span class="badge badge-success">{{ bookmarks }} bookmark{{ bmpl }} &ndash; {{ sel.number_choices }} selection{{ ncpl }} required</span>
+                        <span class="badge bg-success">{{ bookmarks }} bookmark{{ bmpl }} &ndash; {{ sel.number_choices }} selection{{ ncpl }} required</span>
                     </div>
                 {% endif %}
                 {% if groups and skill_groups and skill_list %}

@@ -1,0 +1,228 @@
+{% extends "base_app.html" %}
+
+{% from "bokeh.html" import import_bokeh %}
+{% from "gridstack.html" import import_gridstack %}
+{% from "datatables.html" import import_datatables %}
+{% from "projecthub/resources.html" import resources_widget %}
+{% from "projecthub/articles.html" import articles_widget %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_bokeh() }}
+    {{ import_gridstack() }}
+    {{ import_datatables() }}
+
+    {% if burndown_div is defined and burndown_div is not none and burndown_script is defined and burndown_script is not none %}
+        {{ burndown_script|safe }}
+    {% endif %}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            function sendAjax(payload) {
+                $.ajax({
+                    url: $SCRIPT_ROOT + "/projecthub/save_hub_layout",
+                    type: "POST",
+                    data: JSON.stringify({
+                        'payload': payload,
+                        'record_id': {{ record.id }},
+                        'user_id': {{ current_user.id }},
+                        'timestamp': Date.now()
+                    }),
+                    contentType: "application/json; charset=utf-8"
+                });
+            }
+
+            let grid = GridStack.init({
+                draggable: {
+                    handle: '.drag-handle'
+                }
+            });
+
+            grid.on('change', function (event, items) {
+                let payload = [];
+                items.forEach(function (item) {
+                    payload.push({
+                        widget: item.el.id,
+                        x: item.x,
+                        y: item.y,
+                        w: item.width,
+                        h: item.height
+                    });
+                });
+                sendAjax(payload);
+            });
+
+            $('#article-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: '<f<t>>',
+                stateSave: true, serverSide: true, paging: false,
+                ajax: { url: $SCRIPT_ROOT + '/projecthub/article_widget_ajax/{{ record.id }}',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
+                columns: [
+                    { data: 'title',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'published',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'author',
+                      orderable: true,
+                      searchable: true }
+                ],
+                order: [[1, 'desc']]
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Project hub
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            {% if text and url %}
+                <div class="top-return-link">
+                    <a href="{{ url }}">
+                        <i class="fas fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+
+            {% if is_student %}
+                <div class="h3 mb-2">{{ pclass.name }}</div>
+                <div class="row vertical-top">
+                    <div class="col-8">
+                        <div class="d-flex flex-column">
+                            <div class="text-muted">
+                                {{ project.name }}
+                            </div>
+                            {% if period.hand_in_date %}
+                                <small class="text-muted">
+                                    Hand-in <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
+                                    ({{ period.time_to_hand_in }} from now)
+                                </small>
+                            {% endif %}
+                            {% if burndown_div is defined and burndown_div is not none and burndown_script is defined and burndown_script is not none %}
+                                {{ burndown_div|safe }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="d-flex flex-column align-items-end">
+                            <div>
+                                Supervisor: <a href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
+                            </div>
+                            <div>
+                                Convenor: <a href="mailto:{{ config.convenor.user.email }}">{{ config.convenor.user.name }}</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="mt-2 mb-2">
+                            <a class="btn btn-sm btn-outline-info" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('projecthub.hub', subid=record.id), text='project hub') }}">
+                                <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <hr class="intro-divider mb-5">
+            {% else %}
+                <div class="h3 mb-2">Project hub for <i class="fas fa-user"></i> {{ student.user.name }}</div>
+                <div class="row vertical-top">
+                    <div class="col-8">
+                        <div class="text-muted">
+                            {{ project.name }}
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="d-flex flex-column align-items-end">
+                            <div>
+                                {{ pclass.make_label()|safe }}
+                            </div>
+                            {% if period.hand_in_date %}
+                                <small class="text-muted text-right">
+                                    Hand-in <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
+                                    ({{ period.time_to_hand_in }} from now)
+                                </small>
+                            {% endif %}
+                            {% if burndown_div is defined and burndown_div is not none and burndown_script is defined and burndown_script is not none %}
+                                {{ burndown_div|safe }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="mt-2 mb-2">
+                        {% if submitter.published and record.submission_period <= config.submission_period %}
+                            {% if record.student_engaged %}
+                                <i class="fa fa-check"></i> <strong>Student engaged</strong>
+                                <a class="btn btn-sm btn-outline-danger mb-2" href="{{ url_for('faculty.mark_waiting', id=record.id) }}"> Mark as not engaged</a>
+                            {% else %}
+                                <a class="btn btn-sm btn-outline-success" href="{{ url_for('faculty.mark_started', id=record.id) }}"> Mark student as engaged</a>
+                            {% endif %}
+                        {% endif %}
+                            <a class="btn btn-sm btn-outline-info" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('projecthub.hub', subid=record.id), text='project hub') }}">
+                                <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <hr class="intro-divider mb-5">
+            {% endif %}
+
+            {# Populate dashboard widgets #}
+            <div class="grid-stack">
+                {% set data = layout['resources-widget'] %}
+                <div class="grid-stack-item" id="resources-widget" data-gs-x="{{ data['x'] }}" data-gs-y="{{ data['y'] }}" data-gs-width="{{ data['w'] }}" data-gs-height="{{ data['h'] }}">
+                    <div class="grid-stack-item-content card border-secondary">
+                        <div class="card-header bg-secondary text-white">
+                            <i class="fas fa-bars drag-handle"></i> Resources
+                        </div>
+                        <div class="card-body bg-well">
+                            {{ resources_widget(submitter, student, config, pclass, project, record, period) }}
+                        </div>
+                    </div>
+                </div>
+                {% set data = layout['news-widget'] %}
+                <div class="grid-stack-item" id="news-widget" data-gs-x="{{ data['x'] }}" data-gs-y="{{ data['y'] }}" data-gs-width="{{ data['w'] }}" data-gs-height="{{ data['h'] }}">
+                    <div class="grid-stack-item-content bg-well card border-secondary">
+                        <div class="card-header bg-secondary text-white">
+                            <i class="fas fa-bars drag-handle"></i> News and articles
+                        </div>
+                        <div class="card-body bg-well">
+                            {{ articles_widget(submitter, student, config, pclass, project, record, period) }}
+                        </div>
+                    </div>
+                </div>
+                {% set data = layout['journal-widget'] %}
+                <div class="grid-stack-item" id="journal-widget" data-gs-x="{{ data['x'] }}" data-gs-y="{{ data['y'] }}" data-gs-width="{{ data['w'] }}" data-gs-height="{{ data['h'] }}">
+                    <div class="grid-stack-item-content bg-well card border-secondary">
+                        <div class="card-header bg-secondary text-white">
+                            <i class="fas fa-bars drag-handle"></i> Notes and journal
+                        </div>
+                        <div class="card-body bg-well">
+                            Content
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if text and url %}
+                <div>
+                    <a href="{{ url }}">
+                        <i class="fas fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

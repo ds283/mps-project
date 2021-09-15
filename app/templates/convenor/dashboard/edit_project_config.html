@@ -18,52 +18,60 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        <div class="card mt-3 mb-3 card-body bg-well">
-            {{ wtf.render_field(form.skip_matching) }}
-            {{ wtf.render_field(form.requests_skipped) }}
-            <hr class="intro-divider">
-            {{ wtf.render_field(form.full_CATS) }}
-        </div>
-
-        <div class="card mt-3 mb-3 card-body bg-well">
-            <p class="form-group-heading">Supervision and assessment</p>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(form.uses_supervisor) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(form.uses_marker) }}
-                </div>
+        <p class="form-group-heading">Settings</p>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(form.skip_matching) }}
             </div>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(form.uses_presentations) }}
-                </div>
-                <div class="col-6">
-                </div>
-            </div>
-            <p class="form-group-heading">Faculty dashboards</p>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(form.display_marker) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(form.display_presentations) }}
-                </div>
+            <div class="col-6">
+                {{ wtf.render_field(form.requests_skipped) }}
             </div>
         </div>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(form.use_project_hub) }}
+            </div>
+            <div class="col-6"></div>
+        </div>
+        {{ wtf.render_field(form.full_CATS) }}
+        <hr class="intro-divider">
 
-        <div class="card mt-3 mb-3 card-body bg-well">
-            <div class="row vertical-top">
-                <div class="col-4">
-                    {{ show_default_field(form.CATS_supervision, config.project_class.CATS_supervision) }}
-                </div>
-                <div class="col-4">
-                    {{ show_default_field(form.CATS_marking, config.project_class.CATS_marking) }}
-                </div>
-                <div class="col-4">
-                    {{ show_default_field(form.CATS_presentation, config.project_class.CATS_presentation) }}
-                </div>
+        <p class="form-group-heading">Supervision and assessment</p>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(form.uses_supervisor) }}
+            </div>
+            <div class="col-6">
+                {{ wtf.render_field(form.uses_marker) }}
+            </div>
+        </div>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(form.uses_presentations) }}
+            </div>
+            <div class="col-6">
+            </div>
+        </div>
+        <p class="form-group-heading">Faculty dashboards</p>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(form.display_marker) }}
+            </div>
+            <div class="col-6">
+                {{ wtf.render_field(form.display_presentations) }}
+            </div>
+        </div>
+
+        <p class="form-group-heading">Workload model support</p>
+        <div class="row vertical-top">
+            <div class="col-4">
+                {{ show_default_field(form.CATS_supervision, config.project_class.CATS_supervision) }}
+            </div>
+            <div class="col-4">
+                {{ show_default_field(form.CATS_marking, config.project_class.CATS_marking) }}
+            </div>
+            <div class="col-4">
+                {{ show_default_field(form.CATS_presentation, config.project_class.CATS_presentation) }}
             </div>
         </div>
 

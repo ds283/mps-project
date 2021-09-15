@@ -41,30 +41,30 @@ _enrolled = \
 _settings = \
 """
 {% if f.sign_off_students %}
-    <span class="badge badge-info">Require meetings</span>
+    <span class="badge bg-info text-dark">Require meetings</span>
 {% endif %}
-<span class="badge badge-primary">Default capacity {{ f.project_capacity }}</span>
+<span class="badge bg-primary">Default capacity {{ f.project_capacity }}</span>
 {% if f.enforce_capacity %}
-    <span class="badge badge-info">Enforce capacity</span>
+    <span class="badge bg-info text-dark">Enforce capacity</span>
 {% endif %}
 {% if f.show_popularity %}
-    <span class="badge badge-info">Show popularity</span>
+    <span class="badge bg-info text-dark">Show popularity</span>
 {% endif %}
 <p>
 {% if f.CATS_supervision is not none %}
-    <span class="badge badge-warning">S: {{ f.CATS_supervision }} CATS</span>
+    <span class="badge bg-warning text-dark">S: {{ f.CATS_supervision }} CATS</span>
 {% else %}
-    <span class="badge badge-secondary">S: Default CATS</span>
+    <span class="badge bg-secondary">S: Default CATS</span>
 {% endif %}
 {% if f.CATS_marking is not none %}
-    <span class="badge badge-warning">M {{ f.CATS_marking }} CATS</span>
+    <span class="badge bg-warning text-dark">M {{ f.CATS_marking }} CATS</span>
 {% else %}
-    <span class="badge badge-secondary">M: Default CATS</span>
+    <span class="badge bg-secondary">M: Default CATS</span>
 {% endif %}
 {% if f.CATS_presentation is not none %}
-    <span class="badge badge-warning">P {{ f.CATS_marking }} CATS</span>
+    <span class="badge bg-warning text-dark">P {{ f.CATS_marking }} CATS</span>
 {% else %}
-    <span class="badge badge-secondary">P: Default CATS</span>
+    <span class="badge bg-secondary">P: Default CATS</span>
 {% endif %}
 """
 
@@ -91,7 +91,7 @@ def _process(user_id, current_user_id):
 
     name = record['name']
     if u.currently_active:
-        name = name.replace('REPACTIVE', '<span class="badge badge-success">ACTIVE</span>', 1)
+        name = name.replace('REPACTIVE', '<span class="badge bg-success">ACTIVE</span>', 1)
     else:
         name = name.replace('REPACTIVE', '', 1)
 

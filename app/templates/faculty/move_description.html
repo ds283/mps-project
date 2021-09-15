@@ -1,6 +1,20 @@
 {% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
+{% from "chosen.html" import import_chosen %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_chosen() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#destination').chosen();
+        });
+    </script>
+{% endblock %}
 
 {% block title %}
     {{ title }}

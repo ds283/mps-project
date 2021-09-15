@@ -5,8 +5,6 @@
 
 {% block scripts %}
     {{ super() }}
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
-
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }}
@@ -83,12 +81,12 @@
 
         {{ show_prepend_field(login_user_form.email, '<i class="fas fa-user"></i>', show_label=false, placeholder='Email address') }}
         {{ show_prepend_field(login_user_form.password, '<i class="fas fa-lock"></i>', show_label=false, placeholder='Password') }}
-        <div class="d-flex justify-content-between w-100">
+        <div class="mt-2 d-flex justify-content-between w-100">
             <div>
-                {{ wtf.render_field(login_user_form.submit, button_map={'submit': 'outline-success'}) }}
+                <button type="button" class="btn btn-outline-primary video-btn" data-bs-toggle="modal" data-bs-target="#PanoptoModal">Show video explainer</button>
             </div>
             <div>
-                <button type="button" class="btn btn-outline-primary video-btn" data-toggle="modal" data-target="#PanoptoModal">Show video explainer</button>
+                {{ wtf.render_field(login_user_form.submit, button_map={'submit': 'outline-success'}) }}
             </div>
         </div>
     </form>
@@ -103,7 +101,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>

@@ -24,7 +24,7 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-12">
-                            <div class="float-right">
+                            <div class="float-end">
                                 <a class="btn btn-secondary" href="{{ url_for('faculty.session_all_available', id=assessment.id) }}"><i class="fas fa-check"></i> Available for all</a>
                                 <a class="btn btn-secondary" href="{{ url_for('faculty.session_all_unavailable', id=assessment.id) }}"><i class="fas fa-times"></i> Not available for all</a>
                             </div>
@@ -44,7 +44,7 @@
                                 <div class="col-4">{{ session.date.strftime("%a %d %b %Y") }}</div>
                                 <div class="col-1">{{ session.session_type_label|safe }}</div>
                                 <div class="col-7">
-                                    <div class="float-right">
+                                    <div class="float-end">
                                     {% if session.faculty_available(current_user.id) %}
                                         <a class="btn btn-success btn-sm btn-table-block"><i class="fas fa-check"></i> Available</a>
                                         <a href="{{ url_for('faculty.session_ifneeded', id=session.id) }}" class="btn btn-secondary btn-sm btn-table-block">If needed</a>

@@ -15,10 +15,10 @@ from flask import render_template_string, jsonify
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('admin.edit_room', id=r.id) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit details...
         </a>
@@ -47,9 +47,9 @@ _menu = \
 _active = \
 """
 {% if r.active %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Active</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
-    <span class="badge badge-warning"><i class="fas fa-times"></i> Inactive</span>
+    <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Inactive</span>
 {% endif %}
 """
 
@@ -57,9 +57,9 @@ _active = \
 # language=jinja2
 _info = \
 """
-<span class="badge badge-primary">Capacity {{ r.capacity }}</span>
+<span class="badge bg-primary">Capacity {{ r.capacity }}</span>
 {% if r.lecture_capture %}
-    <span class="badge badge-info">Lecture capture</span>
+    <span class="badge bg-info text-dark">Lecture capture</span>
 {% endif %}
 """
 

@@ -26,7 +26,7 @@ from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, FilterRecord, StudentData, \
     MatchingAttempt, ProjectDescription, WorkflowMixin, DegreeProgramme, DegreeType, ConvenorTask, \
-    selector_tasks, submitter_tasks, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask, project_tasks
+    ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask
 from ..models import project_assessors
 
 
@@ -577,9 +577,6 @@ def build_convenor_tasks_query(config, status_filter='all', blocking_filter='all
     :return: SQLAlchemy query instance
     """
 
-    # TODO: this is not very efficient; might need to consider a different database
-    #  schema to allow more performant recovery of the task list
-
     # subquery to get list of current selectors
     selectors = db.session.query(SelectingStudent.id) \
         .filter(~SelectingStudent.retired,
@@ -591,18 +588,18 @@ def build_convenor_tasks_query(config, status_filter='all', blocking_filter='all
                 SubmittingStudent.config_id == config.id).subquery()
 
     # find selector tasks that are linked to one of our current selectors
-    sel_tks = db.session.query(selector_tasks.c.tasks_id) \
-        .join(selectors, selectors.c.id == selector_tasks.c.selector_id) \
-        .filter(selectors.c.id != None)
+    sel_tks = db.session.query(ConvenorSelectorTask.id) \
+        .select_from(selectors) \
+        .join(ConvenorSelectorTask, ConvenorSelectorTask.owner_id == selectors.c.id)
 
     # find submitter tasks that are linked to one of our current submitters
-    sub_tks = db.session.query(submitter_tasks.c.tasks_id) \
-        .join(submitters, submitters.c.id == submitter_tasks.c.submitter_id) \
-        .filter(submitters.c.id != None)
+    sub_tks = db.session.query(ConvenorSubmitterTask.id) \
+        .select_from(submitters) \
+        .join(ConvenorSubmitterTask, ConvenorSubmitterTask.owner_id == submitters.c.id)
 
     # find ids of tasks linked ot this project class config
-    task_tks = db.session.query(project_tasks.c.tasks_id) \
-        .filter(project_tasks.c.config_id == config.id)
+    task_tks = db.session.query(ConvenorGenericTask.id) \
+        .filter(ConvenorGenericTask.owner_id == config.id)
 
     # join these lists to produce a single list of tasks associated with our current selectors or submitters
     task_ids = sel_tks.union(sub_tks).union(task_tks).subquery()

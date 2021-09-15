@@ -38,7 +38,7 @@ _pclass = \
 """
 {% set pclass = sel.config.project_class %}
 {% set style = pclass.make_CSS_style() %}
-<a class="badge {% if style %}badge-secondary{% else %}badge-info{% endif %} btn-table-block"
+<a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block"
    {% if style %}style="{{ style }}"{% endif %}
    href="mailto:{{ pclass.convenor_email }}">
     {{ pclass.abbreviation }} ({{ pclass.convenor_name }})
@@ -66,9 +66,9 @@ _project = \
     {% set proj_overassigned = r.is_project_overassigned %}
     <div>
         <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-            <a class="badge {% if proj_overassigned %}badge-danger{% elif style %}badge-secondary{% else %}badge-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
+            <a class="badge text-decoration-none {% if proj_overassigned %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
                     {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
-                    {% if adjustable %}data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }}
+                    {% if adjustable %}data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }}
                 (No. {{ r.project.number }})</a>
             {% if adjustable %}
                 {% set list = r.selector.ordered_selections %}
@@ -89,18 +89,18 @@ _project = \
         {% if outcome is not none %}
             {% set satisfied, violated = outcome %}
             {% if satisfied|length > 0 %}
-                <span class="badge badge-success">{%- for i in range(satisfied|length) -%}<i class="fas fa-check"></i>{%- endfor %} HINT</span>
+                <span class="badge bg-success">{%- for i in range(satisfied|length) -%}<i class="fas fa-check"></i>{%- endfor %} HINT</span>
             {% endif %}
             {% if violated|length > 0 %}
-                <span class="badge badge-warning">{%- for i in range(violated|length) -%}<i class="fas fa-times"></i>{%- endfor %} HINT</span>
+                <span class="badge bg-warning text-dark">{%- for i in range(violated|length) -%}<i class="fas fa-times"></i>{%- endfor %} HINT</span>
             {% endif %}
         {% endif %}
         {% set prog_status = r.project.satisfies_preferences(r.selector) %}
         {% if prog_status is not none %}
             {% if prog_status %}
-                <span class="badge badge-success"><i class="fas fa-check"></i> PROG</span>
+                <span class="badge bg-success"><i class="fas fa-check"></i> PROG</span>
             {% else %}
-                <span class="badge badge-warning"><i class="fas fa-times"></i> PROG</span>
+                <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> PROG</span>
             {% endif %}
         {% endif %}
     </div>
@@ -119,18 +119,18 @@ _project = \
         {% set errors = r.errors %}
         {% set warnings = r.warnings %}
         {% if errors|length == 1 %}
-            <span class="badge badge-danger">1 error</span>
+            <span class="badge bg-danger">1 error</span>
         {% elif errors|length > 1 %}
-            <span class="badge badge-danger">{{ errors|length }} errors</span>
+            <span class="badge bg-danger">{{ errors|length }} errors</span>
         {% else %}
-            <span class="badge badge-success">0 errors</span>
+            <span class="badge bg-success">0 errors</span>
         {% endif %}
         {% if warnings|length == 1 %}
-            <span class="badge badge-warning">1 warning</span>
+            <span class="badge bg-warning text-dark">1 warning</span>
         {% elif warnings|length > 1 %}
-            <span class="badge badge-warning">{{ warnings|length }} warnings</span>
+            <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
         {% else %}
-            <span class="badge badge-success">0 warnings</span>
+            <span class="badge bg-success">0 warnings</span>
         {% endif %}
         {% if errors|length > 0 %}
             <div class="error-block">
@@ -165,7 +165,7 @@ _marker = \
 {% macro marker_tag(r, show_period) %}
     {% if r.marker %}
         <div class="dropdown match-assign-button" style="display: inline-block;">
-            <a class="badge badge-light dropdown-toggle" data-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+            <a class="badge text-decoration-none bg-light text-dark dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.marker.user.name }}
             </a>
             <div class="dropdown-menu">
@@ -181,7 +181,7 @@ _marker = \
             </div>
         </div>
     {% else %}
-        <span class="badge badge-light">None</span>
+        <span class="badge bg-light text-dark">None</span>
     {% endif %}
 {% endmacro %}
 {% if recs|length == 1 %}
@@ -199,13 +199,13 @@ _rank = \
 """
 {% if recs|length == 1 %}
     {% set r = recs[0] %}
-    <span class="badge {% if r.hi_ranked %}badge-success{% elif r.lo_ranked %}badge-warning{% else %}badge-info{% endif %}">{{ r.rank }}</span>
-    <span class="badge badge-primary">&delta; = {{ delta }}</span>
+    <span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning{% else %}bg-info{% endif %}">{{ r.rank }}</span>
+    <span class="badge bg-primary">&delta; = {{ delta }}</span>
 {% elif recs|length > 1 %}
     {% for r in recs %}
-        <span class="badge {% if r.hi_ranked %}badge-success{% elif r.lo_ranked %}badge-warning{% else %}badge-info{% endif %}">#{{ r.submission_period }}: {{ r.rank }}</span>
+        <span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning{% else %}bg-info{% endif %}">#{{ r.submission_period }}: {{ r.rank }}</span>
     {% endfor %}
-    <span class="badge badge-primary">&delta; = {{ delta }}</span>
+    <span class="badge bg-primary">&delta; = {{ delta }}</span>
 {% endif %}
 """
 
@@ -215,12 +215,12 @@ _scores = \
 """
 {% if recs|length == 1 %}
     {% set r = recs[0] %}
-    <span class="badge badge-primary">{{ r.current_score|round(precision=2) }}</span>
+    <span class="badge bg-primary">{{ r.current_score|round(precision=2) }}</span>
 {% elif recs|length > 1 %}
     {% for r in recs %}
-        <span class="badge badge-secondary">#{{ r.submission_period }}: {{ r.current_score|round(precision=2) }}</span>
+        <span class="badge bg-secondary">#{{ r.submission_period }}: {{ r.current_score|round(precision=2) }}</span>
     {% endfor %}
-    <span class="badge badge-primary">Total {{ total_score|round(precision=2) }}</span>
+    <span class="badge bg-primary">Total {{ total_score|round(precision=2) }}</span>
 {% endif %}
 """
 

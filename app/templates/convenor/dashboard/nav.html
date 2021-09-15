@@ -2,14 +2,11 @@
 
 {% extends "base_app.html" %}
 
+{% from "datatables.html" import import_datatables %}
+
 {% block scripts %}
     {{ super() }}
-    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.css">
-
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.10.21/b-1.6.2/b-colvis-1.6.2/b-html5-1.6.2/b-print-1.6.2/cr-1.5.2/fc-3.3.1/r-2.2.5/sp-1.1.1/datatables.min.js"></script>
+    {{ import_datatables() }}
 {% endblock %}
 
 {% block title %}
@@ -34,17 +31,17 @@
             <a class="nav-link {% if pane == 'attached' %}active{% endif %}" href="{{ url_for('convenor.attached', id=pclass.id) }}">
                 Projects
                 {% if proj_count is defined %}
-                    <span class="badge badge-light badge-pill">{{ proj_count }}</span>
+                    <span class="badge {% if pane == 'attached' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ proj_count }}</span>
                 {% endif %}
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link {% if pane == 'faculty' %}active{% endif %}" href="{{ url_for('convenor.faculty', id=pclass.id) }}">
                 Faculty
-                {% if enrolled is defined and total is defined%}
-                    <span class="badge badge-light badge-pill">{{ enrolled }}/{{ total }}</span>
+                {% if enrolled is defined and total is defined %}
+                    <span class="badge {% if pane == 'faculty' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ enrolled }}/{{ total }}</span>
                 {% else %}
-                    <span class="badge badge-light badge-pill">0</span>
+                    <span class="badge {% if pane == 'faculty' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">0</span>
                 {% endif %}
             </a>
         </li>
@@ -52,7 +49,7 @@
             <a class="nav-link {% if pane == 'selectors' %}active{% endif %}" href="{{ url_for('convenor.selectors', id=pclass.id) }}">
                 Selectors for {{ config.year+1 }}&ndash;{{ config.year+2 }}
                 {% if sel_count is defined %}
-                    <span id="selector-count" class="badge badge-light badge-pill">{{ sel_count }}</span>
+                    <span id="selector-count" class="badge {% if pane == 'selectors' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ sel_count }}</span>
                 {% endif %}
             </a>
         </li>
@@ -60,7 +57,7 @@
             <a class="nav-link {% if pane == 'submitters' %}active{% endif %}" href="{{ url_for('convenor.submitters', id=pclass.id) }}">
                 Submitters for {{ config.year }}&ndash;{{ config.year+1 }}
                 {% if sub_count is defined %}
-                    <span id="submitter-count" class="badge badge-light badge-pill">{{ sub_count }}</span>
+                    <span id="submitter-count" class="badge {% if pane == 'submitters' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ sub_count }}</span>
                 {% endif %}
             </a>
         </li>
@@ -68,14 +65,14 @@
             <li class="nav-item">
                 <a class="nav-link {% if pane == 'live' %}active{% endif %}" href="{{ url_for('convenor.liveprojects', id=pclass.id) }}">
                     Live projects {{ config.year+1 }}&ndash;{{ config.year+2 }}
-                    <span id="live-project-count" class="badge badge-light badge-pill">{{ live_count }}</span>
+                    <span id="live-project-count" class="badge {% if pane == 'live' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ live_count }}</span>
                 </a>
             </li>
         {% endif %}
         <li class="nav-item">
             <a class="nav-link {% if pane == 'todo' %}active{% endif %}" href="{{ url_for('convenor.todo_list', id=pclass.id) }}">
                 Tasks
-                <span class="badge badge-light badge-pill">{{ num_to_dos }}</span>
+                <span class="badge {% if pane == 'todo' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ num_to_dos }}</span>
             </a>
         </li>
     </ul>

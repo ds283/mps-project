@@ -19,7 +19,7 @@ _task = \
 """
 {{ tk.description }}
 {% if tk.blocking %}
-    <span class="badge badge-warning"><i class="fas fa-hand-paper"></i> Blocking</span>
+    <span class="badge bg-warning text-dark"><i class="fas fa-hand-paper"></i> Blocking</span>
 {% endif %}
 """
 
@@ -28,15 +28,15 @@ _task = \
 _status = \
 """
 {% if tk.dropped %}
-    <span class="badge badge-warning"><i class="fas fa-times"></i> Dropped</span>
+    <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Dropped</span>
 {% elif tk.complete %}
-    <span class="badge badge-success"><i class="fas fa-check"></i> Complete</span>
+    <span class="badge bg-success"><i class="fas fa-check"></i> Complete</span>
 {% elif overdue %}
-    <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Overdue</span>
+    <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Overdue</span>
 {% elif available %}
-    <span class="badge badge-info"><i class="fas fa-thumbs-up"></i> Available</span>
+    <span class="badge bg-info text-dark"><i class="fas fa-thumbs-up"></i> Available</span>
 {% else %}
-    <span class="badge badge-secondary"><i class="fas fa-ban"></i> Not yet available</span>
+    <span class="badge bg-secondary"><i class="fas fa-ban"></i> Not yet available</span>
 {% endif %}
 """
 
@@ -45,10 +45,10 @@ _status = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=return_url) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
         </a>
@@ -72,8 +72,8 @@ _menu = \
 
 def student_task_data(type, sid, return_url, tasks: List[ConvenorTask]):
     data = [{'task': render_template_string(_task, tk=t),
-             'due_date': t.due_date.strftime("%a %d %b %Y %H:%M") if t.due_date is not None else '<span class="badge badge-secondary">None</span>',
-             'defer_date': t.defer_date.strftime("%a %d %b %Y %H:%M") if t.defer_date is not None else '<span class="badge badge-secondary">None</span>',
+             'due_date': t.due_date.strftime("%a %d %b %Y %H:%M") if t.due_date is not None else '<span class="badge bg-secondary">None</span>',
+             'defer_date': t.defer_date.strftime("%a %d %b %Y %H:%M") if t.defer_date is not None else '<span class="badge bg-secondary">None</span>',
              'status': render_template_string(_status, available=t.is_available, overdue=t.is_overdue, tk=t),
              'menu': render_template_string(_menu, tk=t, type=type, sid=sid,
                                             return_url=return_url)} for t in tasks]

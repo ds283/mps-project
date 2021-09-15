@@ -15,10 +15,10 @@ from flask import render_template_string, jsonify, url_for
 _project_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('faculty.live_project', pid=project.id, text='offered projects view', url=url_for('faculty.past_projects')) }}">
             View web page
         </a>
@@ -30,7 +30,7 @@ _project_menu = \
 _pclass = \
 """
 {% set style = config.project_class.make_CSS_style() %}
-<a class="badge badge-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ config.convenor_email }}">
+<a class="badge text-decoration-none bg-info text-dark" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ config.convenor_email }}">
     {{ config.project_class.abbreviation }} ({{ config.convenor_name }})
 </a>
 """

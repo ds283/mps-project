@@ -75,7 +75,7 @@
                                     <i class="fas fa-user"></i> {{ project.owner.user.name }}
                                 </div>
                             {% else %}
-                                <span class="badge badge-danger">MISSING ACCEPTED PROJECT</span>
+                                <span class="badge bg-danger">MISSING ACCEPTED PROJECT</span>
                                 <p>This is an internal error. Please contact a system administrator.</p>
                             {% endif %}
                         {% else %}
@@ -91,7 +91,7 @@
                             <hr class="intro-divider" role="separator">
                             <div class="row">
                                 <div class="col-12">
-                                    <div class="float-right">
+                                    <div class="float-end">
                                         <a href="{{ url_for('convenor.add_student_ranking', sid=sel.id) }}" class="btn btn-secondary">Add ranking</a>
                                     </div>
                                 </div>

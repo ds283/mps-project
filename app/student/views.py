@@ -690,7 +690,7 @@ def update_ranking():
     sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sid).first()
 
     if config is None or sel is None:
-        return jsonify({'status': 'data_missing'})
+        return jsonify({'status': 'database_error'})
 
     # check logged-in user is eligible to modify ranking data
     if current_user.id != sel.student.id:
@@ -717,7 +717,7 @@ def update_ranking():
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        return jsonify({'status': 'database_failure'})
+        return jsonify({'status': 'database_error'})
 
     # work out which HTML elements to make visible and which to hide, based on validity of this selection
     valid, messages = sel.is_valid_selection

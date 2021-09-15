@@ -66,11 +66,13 @@ p.copyright {
 .batch-name {
     font-size: 20px;
     font-weight: bold;
+    font-family: "Roboto", Helvetica, Arial, sans-serif;
     padding-bottom: 8px;
 }
 
 .dashboard-project-title {
     font-size: 32px;
+    font-family: "Roboto", Helvetica, Arial, sans-serif;
     font-weight: lighter;
 }
 
@@ -90,11 +92,13 @@ p.copyright {
 
 .document-group-title {
     font-size: 26px;
+    font-family: "Roboto", Helvetica, Arial, sans-serif;
     font-weight: lighter;
 }
 
 .dashboard-subtitle {
     font-size: 22px;
+    font-family: "Roboto", Helvetica, Arial, sans-serif;
     font-weight: lighter;
 }
 
@@ -104,13 +108,13 @@ p.copyright {
 
 .filter-title {
     font-size: 18px;
-    font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: "Roboto", Helvetica, Arial, sans-serif;
     font-weight: lighter;
 }
 
 .skill-group-heading {
     font-size: 15px;
-    font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: "Roboto", Helvetica, Arial, sans-serif;
     font-weight: bold;
     margin-bottom: 6px;
 }
@@ -225,7 +229,7 @@ p.copyright {
 }
 
 .drag-handle {
-    padding-right: 5%;
+    padding-right: 5px;
 }
 
 .validity-label {
@@ -300,4 +304,28 @@ p.copyright {
 .form-group-heading {
     font-size: 1rem;
     font-weight: bolder;
+    margin-bottom: 0.5em;
+}
+
+.form-component + .form-group-heading {
+    margin-top: 0.85em;
+}
+
+div + .form-group-heading {
+    margin-top: 0.85em;
+}
+.form-component + .form-component {
+    margin-top: 0.6em;
+}
+
+.form-check + .form-component {
+    margin-top: 0.6em;
+}
+
+.form-component + .form-check {
+    margin-top: 0.6em;
+}
+
+.full-width-button {
+    width: 100%;
 }

@@ -19,7 +19,7 @@
                         {% elif email.recipient %}
                             <strong>{{ email.recipient }}</strong>
                         {% else %}
-                            <span class="badge badge-danger">Invalid</span>
+                            <span class="badge bg-danger">Invalid</span>
                         {% endif %}
                     <p>Sent: <strong>{{ email.send_date.strftime("%a %d %b %Y %H:%M:%S") }}</strong></p>
                     <p>Subject: <strong>{{ email.subject }}</strong></p>
@@ -44,7 +44,7 @@
                     </a>
                 </div>
                 <div class="col-6">
-                    <div class="float-right">
+                    <div class="float-end">
                         <a href="{{ url_for('admin.delete_email', id=email.id) }}" class="btn btn-danger">Delete</a>
                     </div>
                 </div>

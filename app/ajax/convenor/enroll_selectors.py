@@ -20,10 +20,10 @@ from ...shared.utils import get_current_year
 _enroll_action = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle table-button" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle table-button" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id, convert=1) }}">
             <i class="fas fa-plus fa-fw"></i> Enroll
         </a>

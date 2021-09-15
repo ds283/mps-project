@@ -92,7 +92,7 @@
                         icon.classList.add('fa-exclamation-circle');
                         icon.classList.add('fa-lg');
                         icon.classList.add('pt-1');
-                        icon.classList.add('mr-2');
+                        icon.classList.add('me-2');
 
                         let textblock = document.createElement("div");
                         textblock.classList.add('w-100');
@@ -135,11 +135,11 @@
                             rspan = $(items[i]).find('#ranking');
                             rspan.html("#" + (i+1));
                             if (i < {{ sel.number_choices }}) {
-                                rspan.addClass('badge-success');
-                                rspan.removeClass('badge-danger');
+                                rspan.addClass('bg-success');
+                                rspan.removeClass('bg-danger');
                             } else {
-                                rspan.addClass('badge-danger');
-                                rspan.removeClass('badge-success');
+                                rspan.addClass('bg-danger');
+                                rspan.removeClass('bg-success');
                             }
                         }
                         sendAjax(result, {{ config.id }}, {{ sel.id }});
@@ -193,9 +193,9 @@
             </a>
         </div>
         <div class="col-6">
-            <div class="float-right">
+            <div class="float-end">
                 Commences
-                <span class="badge badge-info">Y{{ pclass.start_level.academic_year }}</span>
+                <span class="badge bg-info text-dark">Y{{ pclass.start_level.academic_year }}</span>
             </div>
         </div>
     </div>
@@ -211,15 +211,15 @@
         <div class="col-5">
             {% if sdata and sdata.live_deadline is defined %}
                 {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                    <div class="float-right">
-                        <span class="badge badge-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
+                    <div class="float-end">
+                        <span class="badge bg-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
                         {% if config.live_deadline %}
-                            <span class="badge badge-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                            <span class="badge bg-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                         {% endif %}
                     </div>
                 {% else %}
-                    <div class="float-right">
-                        <span class="badge badge-secondary">Student selections not open</span>
+                    <div class="float-end">
+                        <span class="badge bg-secondary">Student selections not open</span>
                     </div>
                 {% endif %}
             {% endif %}
@@ -331,7 +331,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>

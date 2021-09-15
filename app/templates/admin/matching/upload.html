@@ -25,7 +25,7 @@
                                    onchange="$('#filename-data').html(this.files[0].name)">
                             Select file...
                         </label>
-                        <span class="badge badge-info" id="filename-data"></span>
+                        <span class="badge bg-info text-dark" id="filename-data"></span>
 
                         <hr class="intro-divider">
                         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}

@@ -22,7 +22,7 @@ from sqlalchemy import orm, or_, and_
 from sqlalchemy.event import listens_for
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import validates
+from sqlalchemy.orm import validates, with_polymorphic
 from sqlalchemy.sql import func
 
 from .cache import cache
@@ -45,8 +45,8 @@ YEAR_LENGTH = 4
 # length of database string for password hash field, if used
 PASSWORD_HASH_LENGTH = 255
 
-# length of project description fields
-DESCRIPTION_STRING_LENGTH = 8000
+# length of string for serialized project hub layout storage
+SERIALIZED_LAYOUT_LENGTH = 2048
 
 
 # labels and keys for 'year' field; it's not possible to join in Y1; treat students as
@@ -120,7 +120,7 @@ class ColouredLabelMixin():
         if self.colour is None:
             return None
 
-        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
+        return "background-color:{bg}!important; color:{fg}!important;".format(bg=self.colour, fg=get_text_colour(self.colour))
 
 
     def _make_label(self, text, user_classes=None, popover_text=None):
@@ -130,9 +130,9 @@ class ColouredLabelMixin():
         :return:
         """
         if user_classes is None:
-            classes = 'badge badge-secondary'
+            classes = 'badge bg-secondary'
         else:
-            classes = 'badge badge-secondary {cls}'.format(cls=user_classes)
+            classes = 'badge bg-secondary {cls}'.format(cls=user_classes)
 
         style = self.make_CSS_style()
 
@@ -141,7 +141,7 @@ class ColouredLabelMixin():
             element += ' style="{sty}"'.format(sty=style)
 
         if popover_text is not None:
-            element += ' data-toggle="tooltip" title="{text}"'.format(text=popover_text)
+            element += ' data-bs-toggle="tooltip" title="{text}"'.format(text=popover_text)
 
         element += '>{msg}</span>'.format(msg=text)
         return element
@@ -1105,22 +1105,6 @@ submitted_acr = db.Table('acr_submitted',
                          db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True))
 
 
-# CONVENOR TASKS
-
-# tasks for selecting students
-selector_tasks = db.Table('selector_tasks',
-                          db.Column('selector_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True),
-                          db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True))
-
-submitter_tasks = db.Table('submitter_tasks',
-                           db.Column('submitter_id', db.Integer(), db.ForeignKey('submitting_students.id'), primary_key=True),
-                           db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True))
-
-project_tasks = db.Table('project_tasks',
-                         db.Column('config_id', db.Integer(), db.ForeignKey('project_class_config.id'), primary_key=True),
-                         db.Column('tasks_id', db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True))
-
-
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
@@ -1319,9 +1303,9 @@ class User(db.Model, UserMixin):
     @property
     def active_label(self):
         if self.active:
-            return '<span class="badge badge-success">Active</a>'
+            return '<span class="badge bg-success">Active</a>'
 
-        return '<span class="badge badge-secondary">Inactive</a>'
+        return '<span class="badge bg-secondary">Inactive</a>'
 
 
     def post_task_update(self, uuid, payload, remove_on_load=False, autocommit=False):
@@ -1448,9 +1432,9 @@ def _User_role_remove_handler(target, value, initiator):
 
 class ConvenorTask(db.Model, EditingMetadataMixin):
     """
-    Record a to-do item for the convenor, and can be attached either to a SelectingStudent or a SubmittingStudent
+    Record a to-do item for the convenor. Derived classes represent specific types of task, eg.,
+    associated with a specific selecting or submitting student, or a given project configuration
     """
-
     __tablename__ = 'convenor_tasks'
 
 
@@ -1511,19 +1495,49 @@ class ConvenorTask(db.Model, EditingMetadataMixin):
 
 
 class ConvenorSelectorTask(ConvenorTask):
-    __tablename__ = None
+    """
+    Derived from ConvenorTask. Represents a task record attached to a specific SelectingStudent
+    """
+    __tablename__ = "convenor_selector_tasks"
+
+
+    # primary key links to base table
+    id = db.Column(db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True)
+
+    # owner SelectingStudent
+    owner_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
+
 
     __mapper_args__ = {'polymorphic_identity': 1}
 
 
 class ConvenorSubmitterTask(ConvenorTask):
-    __tablename__ = None
+    """
+    Derived from ConvenorTask. Represents a task record attached to a specific SubmittingStudent
+    """
+
+    # primary key links to base table
+    id = db.Column(db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True)
+
+    # owner SelectingStudent
+    owner_id = db.Column(db.Integer(), db.ForeignKey('submitting_students.id'))
+
 
     __mapper_args__ = {'polymorphic_identity': 2}
 
 
 class ConvenorGenericTask(ConvenorTask):
-    __tablename__ = None
+    """
+    Derived from ConvenorTask. Represents a task record attached to a specific ProjectClassConfig
+    """
+    __tablename__ = 'convenor_generic_tasks'
+
+
+    # primary key links to base table
+    id = db.Column(db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True)
+
+    # owner SelectingStudent
+    owner_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
 
 
     # is this task repeating, ie. does it recur every year?
@@ -1536,7 +1550,7 @@ class ConvenorGenericTask(ConvenorTask):
     repeat_options = [(REPEAT_DAILY, 'Daily'),
                       (REPEAT_MONTHLY, 'Monthly'),
                       (REPEAT_YEARLY, 'Yearly')]
-    repeat_interval = db.Column(db.Boolean(), default=REPEAT_DAILY)
+    repeat_interval = db.Column(db.Integer(), default=REPEAT_DAILY)
 
     # repeat frequency
     repeat_frequency = db.Column(db.Integer())
@@ -1552,14 +1566,13 @@ class ConvenorGenericTask(ConvenorTask):
 
 
 
-def ConvenorTasksMixinFactory(association_table, subclass):
+def ConvenorTasksMixinFactory(subclass):
 
     class ConvenorTasksMixin():
 
         @declared_attr
         def tasks(cls):
-            return db.relationship(subclass, secondary=association_table, lazy='dynamic',
-                                   backref=db.backref('parent', uselist=False))
+            return db.relationship(subclass, lazy='dynamic', backref=db.backref('parent', uselist=False))
 
 
         @property
@@ -1656,9 +1669,9 @@ class EmailNotification(db.Model):
     def event_label(self):
         if self.event_type in self._events:
             type, label = self._events[self.event_type]
-            return '<span class="badge badge-{type}">{label}</span>'.format(type=type, label=label)
+            return '<span class="badge bg-{type}">{label}</span>'.format(type=type, label=label)
 
-        return '<span class="badge badge-danger">Unknown type</span>'
+        return '<span class="badge bg-danger">Unknown type</span>'
 
     # index
     # the meaning of these fields varies depending on the notification type
@@ -2160,9 +2173,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
         n = self.number_projects_offered(pclass)
 
         if n == 0:
-            return '<span class="badge badge-danger"><i class="fas fa-times"></i> 0 available</span>'
+            return '<span class="badge bg-danger"><i class="fas fa-times"></i> 0 available</span>'
 
-        return '<span class="badge badge-success"><i class="fas fa-check"></i> {n} available</span>'.format(n=n)
+        return '<span class="badge bg-success"><i class="fas fa-check"></i> {n} available</span>'.format(n=n)
 
 
     def _variants_offered_query(self, pclass):
@@ -2222,9 +2235,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
         n = self.projects_unofferable
 
         if n == 0:
-            return '<span class="badge badge-secondary"><i class="fas fa-check"></i> 0 unofferable</span>'
+            return '<span class="badge bg-secondary"><i class="fas fa-check"></i> 0 unofferable</span>'
 
-        return '<span class="badge badge-warning"><i class="fas fa-times"></i> {n} unofferable</span>'.format(n=n)
+        return '<span class="badge bg-warning text-dark"><i class="fas fa-times"></i> {n} unofferable</span>'.format(n=n)
 
 
     def remove_affiliation(self, group, autocommit=False):
@@ -2347,7 +2360,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         record = self.get_enrollment_record(pclass)
 
         if record is None:
-            return '<span class="badge badge-warning">Not enrolled</span>'
+            return '<span class="badge bg-warning text-dark">Not enrolled</span>'
 
         return record.enrolled_labels
 
@@ -2460,9 +2473,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
         num = self.number_assessor
 
         if num == 0:
-            return '<span class="badge badge-secondary"><i class="fas fa-times"></i> Assessor for 0</span>'
+            return '<span class="badge bg-secondary"><i class="fas fa-times"></i> Assessor for 0</span>'
 
-        return '<span class="badge badge-info"><i class="fas fa-check"></i> Assessor for {n}</span>'.format(n=num)
+        return '<span class="badge bg-info"><i class="fas fa-check"></i> Assessor for {n}</span>'.format(n=num)
 
 
     def supervisor_assignments(self, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
@@ -3082,7 +3095,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
 
     @property
     def cohort_label(self):
-        return '<span class="badge badge-info">{c} cohort</span>'.format(c=self.cohort)
+        return '<span class="badge bg-info">{c} cohort</span>'.format(c=self.cohort)
 
 
     @property
@@ -3175,7 +3188,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
                 if self.repeated_years > 0:
                     text += ' R{n}'.format(n=self.repeated_years)
 
-        return '<span class="badge badge-{type}">{label}</span>'.format(label=text, type=type)
+        return '<span class="badge bg-{type}">{label}</span>'.format(label=text, type=type)
 
 
     @property
@@ -3464,7 +3477,7 @@ class StudentBatchItem(db.Model):
                 if self.repeated_years > 0:
                     text += ' R{n}'.format(n=self.repeated_years)
 
-        return '<span class="badge badge-{type}">{label}</span>'.format(label=text, type=type)
+        return '<span class="badge bg-{type}">{label}</span>'.format(label=text, type=type)
 
 
     @property
@@ -3818,9 +3831,9 @@ class TransferableSkill(db.Model, EditingMetadataMixin):
         """
         if self.group is None:
             if user_classes is None:
-                classes = 'label badge-secondary'
+                classes = 'label bg-secondary'
             else:
-                classes = 'label badge-secondary {cls}'.format(cls=user_classes)
+                classes = 'label bg-secondary {cls}'.format(cls=user_classes)
 
             return '<span class="{cls}">{name}</span>'.format(name=self.name, cls=classes)
 
@@ -3856,6 +3869,9 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin):
 
 
     # PRACTICAL DATA
+
+    # enable project hub by default?
+    use_project_hub = db.Column(db.Boolean(), default=True)
 
     # in which academic year/FHEQ level does this project class begin?
     start_level_id = db.Column(db.Integer(), db.ForeignKey('fheq_levels.id'))
@@ -4278,7 +4294,7 @@ class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
         return 'Submission Period #{n}'.format(n=self.period)
 
 
-class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, ConvenorGenericTask)):
+class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask)):
     """
     Model current configuration options for each project class
     """
@@ -4328,6 +4344,12 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
 
     # display presentation information in UI?
     display_presentations = db.Column(db.Boolean())
+
+
+    # SETTINGS
+
+    # enable project hub (inherited from ProjectClass, but can be set on a per-configuration basis)
+    use_project_hub = db.Column(db.Boolean(), default=True)
 
 
     # SELECTOR LIFECYCLE MANAGEMENT
@@ -4675,6 +4697,16 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(project_tasks, Conv
     @property
     def abbreviation(self):
         return self.project_class.abbreviation
+
+
+    @property
+    def uses_project_hub(self):
+        # if we have a locally override, use that setting; otherwise, we inherit our setting from our parent
+        # ProjectClass
+        if self.use_project_hub is not None:
+            return self.use_project_hub
+
+        return self.project_class.use_project_hub
 
 
     @property
@@ -5580,25 +5612,25 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
     def _generic_label(self, label, state, reenroll, comment, enrolled, sabbatical, exempt):
         if state == enrolled:
-            return '<span class="badge badge-info"><i class="fas fa-check"></i> ' + label + ': active</span>'
+            return '<span class="badge bg-info"><i class="fas fa-check"></i> ' + label + ': active</span>'
 
         if comment is not None:
             bleach = current_app.extensions['bleach']
-            comment_attr = 'data-toggle="tooltip" title="' + bleach.clean(comment) + '"'
+            comment_attr = 'data-bs-toggle="tooltip" title="' + bleach.clean(comment) + '"'
         else:
             comment_attr = None
 
         if state == sabbatical:
-            span = '<span class="badge badge-warning" ' + comment_attr + '><i class="fas fa-times"></i> ' + label + ': sab'
+            span = '<span class="badge bg-warning text-dark" ' + comment_attr + '><i class="fas fa-times"></i> ' + label + ': sab'
             if reenroll is not None:
                 span += ' ' + str(reenroll)
             span += '</span>'
             return span
 
         if state == exempt:
-            return '<span class="badge badge-danger" ' + comment_attr + '><i class="fas fa-times"></i> ' + label + ': exempt</span>'
+            return '<span class="badge bg-danger" ' + comment_attr + '><i class="fas fa-times"></i> ' + label + ': exempt</span>'
 
-        return '<span class="badge badge-danger">Unknown state</span>'
+        return '<span class="badge bg-danger">Unknown state</span>'
 
 
 
@@ -7113,7 +7145,7 @@ class LiveProject(db.Model,
 
         score = self.popularity_rank(live=True)
         if score is None:
-            return '<span class="badge badge-secondary {cls}">Popularity score unavailable</span>'.format(cls=cls)
+            return '<span class="badge bg-secondary {cls}">Popularity score unavailable</span>'.format(cls=cls)
 
         rank, total = score
         lowest_rank = self.lowest_popularity_rank(live=True)
@@ -7132,7 +7164,7 @@ class LiveProject(db.Model,
             lowest_frac = 1.0
 
         if lowest_frac < 0.5:
-            return '<span class="badge badge-secondary {cls}">Insufficient data for popularity score</span>'.format(cls=cls)
+            return '<span class="badge bg-secondary {cls}">Insufficient data for popularity score</span>'.format(cls=cls)
 
         label = 'Low'
         if frac < 0.1:
@@ -7142,7 +7174,7 @@ class LiveProject(db.Model,
         elif frac < 0.5:
             label = 'Medium'
 
-        return '<span class="badge badge-info {cls}">Popularity: {label}</span>'.format(cls=cls, label=label)
+        return '<span class="badge bg-info {cls}">Popularity: {label}</span>'.format(cls=cls, label=label)
 
 
     def format_bookmarks_label(self, css_classes=None, popover=False):
@@ -7162,11 +7194,11 @@ class LiveProject(db.Model,
             project_tags = ['<div>{name} #{rank}</div>'.format(name=rec.owner.student.user.name, rank=rec.rank)
                             for rec in self.bookmarks.order_by(Bookmark.rank).limit(10).all()]
             tooltip = ''.join(project_tags)
-            attrs = 'data-toggle="tooltip" data-html="true" title="{title}"'.format(title=tooltip)
+            attrs = 'data-bs-toggle="tooltip" data-bs-html="true" title="{title}"'.format(title=tooltip)
         else:
             attrs = ''
 
-        return '<span class="badge badge-info {cls}" {attrs}>{n} ' \
+        return '<span class="badge bg-info {cls}" {attrs}>{n} ' \
                'bookmark{pl}</span>'.format(cls=cls, n=num, pl=pl, attrs=attrs)
 
 
@@ -7174,7 +7206,7 @@ class LiveProject(db.Model,
         pl = 's' if self.page_views != 1 else ''
         cls = '' if css_classes is None else ' '.join(css_classes)
 
-        return '<span class="badge badge-info {cls}">{n} view{pl}</span>'.format(cls=cls, n=self.page_views, pl=pl)
+        return '<span class="badge bg-info {cls}">{n} view{pl}</span>'.format(cls=cls, n=self.page_views, pl=pl)
 
 
     def format_selections_label(self, css_classes=None, popover=False):
@@ -7194,11 +7226,11 @@ class LiveProject(db.Model,
             project_tags = ['<div>{name} #{rank}</div>'.format(name=rec.owner.student.user.name, rank=rec.rank)
                             for rec in self.selections.order_by(SelectionRecord.rank).limit(10).all()]
             tooltip = ''.join(project_tags)
-            attrs = 'data-toggle="tooltip" data-html="true" title="{title}"'.format(title=tooltip)
+            attrs = 'data-bs-toggle="tooltip" data-bs-html="true" title="{title}"'.format(title=tooltip)
         else:
             attrs = ''
 
-        return '<span class="badge badge-info {cls}" {attrs}>{n} ' \
+        return '<span class="badge bg-info {cls}" {attrs}>{n} ' \
                'selection{pl}</span>'.format(cls=cls, n=num, pl=pl, attrs=attrs)
 
 
@@ -7390,7 +7422,7 @@ class ConfirmRequest(db.Model):
                 delete_notification(self.project.owner.user, EmailNotification.CONFIRMATION_REQUEST_CREATED, self)
 
 
-class SelectingStudent(db.Model, ConvenorTasksMixinFactory(selector_tasks, ConvenorSelectorTask)):
+class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)):
     """
     Model a student who is selecting a project in the current cycle
     """
@@ -7853,7 +7885,7 @@ def _SelectingStudent_update_handler(mapper, connection, target):
             _delete_MatchingRecord_cache(record.id, record.matching_id)
 
 
-class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(submitter_tasks, ConvenorSubmitterTask)):
+class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTask)):
     """
     Model a student who is submitting work for evaluation in the current cycle
     """
@@ -8642,6 +8674,24 @@ class SubmissionRecord(db.Model):
                                      SubmittedAsset.access_control_roles.any(name='student')))) \
                + get_count(self.period.attachments.filter_by(publish_to_students=True)) \
                + (1 if self.report is not None else 0)
+
+
+    @property
+    def article_list(self):
+        articles = with_polymorphic(FormattedArticle, [ConvenorSubmitterArticle, ProjectSubmitterArticle])
+
+        return db.session.query(articles) \
+            .filter(or_(and_(articles.ConvenorSubmitterArticle.published == True,
+                             articles.ConvenorSubmitterArticle.period_id == self.period_id),
+                        and_(articles.ProjectSubmitterArticle.published == True,
+                             articles.ProjectSubmitterArticle.record_id == self.id)))
+
+
+    @property
+    def has_articles(self):
+        articles = self.article_list
+        return len(articles.all()) > 0
+        # return self.article_list.first() is not None
 
 
     def maintenance(self):
@@ -11694,8 +11744,8 @@ class PresentationSession(db.Model, EditingMetadataMixin):
     SESSION_TO_TEXT = {MORNING_SESSION: 'morning',
                        AFTERNOON_SESSION: 'afternoon'}
 
-    SESSION_LABEL_TYPES = {MORNING_SESSION: 'badge-light',
-                           AFTERNOON_SESSION: 'badge-dark'}
+    SESSION_LABEL_TYPES = {MORNING_SESSION: 'bg-light text-dark',
+                           AFTERNOON_SESSION: 'bg-dark'}
 
     session_type = db.Column(db.Integer())
 
@@ -11723,14 +11773,14 @@ class PresentationSession(db.Model, EditingMetadataMixin):
         if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
             return PresentationSession.SESSION_LABEL_TYPES[self.session_type]
 
-        return 'badge-secondary'
+        return 'bg-secondary'
 
 
     def make_label(self, text):
         if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
             label_type = PresentationSession.SESSION_LABEL_TYPES[self.session_type]
         else:
-            label_type = 'badge-secondary'
+            label_type = 'bg-secondary'
 
         return '<span class="badge {type}">{text}</span>'.format(type=label_type, text=text)
 
@@ -11763,11 +11813,11 @@ class PresentationSession(db.Model, EditingMetadataMixin):
             if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
                 label_type = PresentationSession.SESSION_LABEL_TYPES[self.session_type]
             else:
-                label_type = 'badge-secondary'
+                label_type = 'bg-secondary'
 
             return '<span class="badge {type}">{tag}</span>'.format(type=label_type, tag=self.session_type_string)
 
-        return '<span class="badge badge-danger">Unknown session type</span>'
+        return '<span class="badge bg-danger">Unknown session type</span>'
 
 
     @property
@@ -13132,7 +13182,7 @@ class Module(db.Model, EditingMetadataMixin):
             text = 'Unknown value {n}'.format(n=self.semester)
             type = 'danger'
 
-        return '<span class="badge badge-{type}">{label}</span>'.format(label=text, type=type)
+        return '<span class="badge bg-{type}">{label}</span>'.format(label=text, type=type)
 
 
     @property
@@ -13410,6 +13460,117 @@ class MatchingEnumeration(db.Model):
     matching_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'))
     matching = db.relationship('MatchingAttempt', foreign_keys=[matching_id], uselist=False,
                                backref=db.backref('enumerations', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+
+class ProjectHubLayout(db.Model):
+    """
+    Serialize stored layout for project hub widgets
+    """
+    __tablename__ = 'project_hub_layout'
+
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # link to SubmissionRecord to which this hub layout applies
+    owner_id = db.Column(db.Integer(), db.ForeignKey('submission_records.id'))
+    owner = db.relationship('SubmissionRecord', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('saved_layouts', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+    # link to User for which this hub layout applies
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    user = db.relationship('User', foreign_keys=[user_id], uselist=False,
+                           backref=db.backref('saved_layouts', lazy='dynamic'))
+
+    # serialized content
+    serialized_layout = db.Column(db.String(SERIALIZED_LAYOUT_LENGTH, collation='utf8_bin'))
+
+    # last recorded timestamp, to ensure we only store layouts in order: ie., we should not overwrite
+    # a later layout with the details of an earlier one
+    timestamp = db.Column(db.BigInteger())
+
+
+class FormattedArticle(db.Model, EditingMetadataMixin):
+    """
+    Base class for generic HTML-like formatted page of text
+    """
+    __tablename__ = 'formatted_articles'
+
+
+    # unique ID for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # polymorphic identifier
+    type = db.Column(db.Integer(), default=0, nullable=False)
+
+    # title
+    title = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # formatted text (usually held in HTML format, but doesn't have to be)
+    article = db.Column(db.Text())
+
+    # has this article been published? The exact meaning of 'published' might vary among derived models
+    published = db.Column(db.Boolean(), default=False)
+
+    # record time of publication
+    publication_timestamp = db.Column(db.DateTime())
+
+    @validates('published')
+    def _validate_published(self, key, value):
+        with db.session.no_autoflush:
+            if value and not self.published:
+                self.publication_timestamp = datetime.now()
+
+        return value
+
+    # set a time for this article to be automatically published, if desired
+    publish_on = db.Column(db.DateTime())
+
+
+    __mapper_args__ = {'polymorphic_identity': 0,
+                       'polymorphic_on': 'type'}
+
+
+class ConvenorSubmitterArticle(FormattedArticle):
+    """
+    Represents a formatted article written by a convenor and made available to all submitters attached to
+    a particular ProjectClassConfig instance
+    """
+    __tablename__ = 'submitter_convenor_articles'
+
+
+    # primary key links to base table
+    id = db.Column(db.Integer(), db.ForeignKey('formatted_articles.id'), primary_key=True)
+
+    # owning ProjectClassConfig
+    period_id = db.Column(db.Integer(), db.ForeignKey('submission_periods.id'))
+    period = db.relationship('SubmissionPeriodRecord', foreign_keys=[period_id], uselist=False,
+                             backref=db.backref('articles', lazy='dynamic',
+                                                cascade='all, delete, delete-orphan'))
+
+
+    __mapper_args__ = {'polymorphic_identity': 1}
+
+
+class ProjectSubmitterArticle(FormattedArticle):
+    """
+    Represents a formatted article written by a member of the supervision team and made available just to a single
+    SubmissionRecord instance
+    """
+    __tablename__ = 'submitter_project_articles'
+
+
+    # primary key links to base table
+    id = db.Column(db.Integer(), db.ForeignKey('formatted_articles.id'), primary_key=True)
+
+    # owning SubmissionRecord
+    record_id = db.Column(db.Integer(), db.ForeignKey('submission_records.id'))
+    record = db.relationship('SubmissionRecord', foreign_keys=[record_id], uselist=False,
+                             backref=db.backref('articles', lazy='dynamic',
+                                                cascade='all, delete, delete-orphan'))
+
+
+    __mapper_args__ = {'polymorphic_identity': 2}
 
 
 # ############################

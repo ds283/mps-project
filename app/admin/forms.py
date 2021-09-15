@@ -50,7 +50,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules, \
     BuildPossibleOfficeContacts, BuildOfficeContactName
 
-from ..shared.forms.mixins import SaveChangesMixin, SubmissionPeriodCommonMixin
+from ..shared.forms.mixins import SaveChangesMixin, SubmissionPeriodPresentationsMixin
 
 from ..models import BackupConfiguration, ScheduleAttempt, extent_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices, auto_enroll_year_choices, \
@@ -231,6 +231,12 @@ class ProjectClassMixin():
                                                 'sufficient flexibility during matching.',
                                     validators=[NotOptionalIf('do_matching')])
 
+    use_project_hub = BooleanField('Use Project Hubs',
+                                   description='The Project Hub is a lightweight learning management system that '
+                                               'allows resources to be published to students, and provides a journal '
+                                               'and to-do list. It is a central '
+                                               'location to manage projects.')
+
     start_level = QuerySelectField('Starts in academic year',
                                    description='Select the academic year in which students join the project.',
                                    query_factory=GetFHEQLevels, get_label=BuildFHEQYearLabel)
@@ -389,7 +395,7 @@ class EditProjectTextForm(Form, SaveChangesMixin):
                                                     render_kw={"rows": 5}, validators=[Optional()])
 
 
-class SubmissionPeriodMixin():
+class SubmissionPeriodSettingsMixin():
 
     name = StringField('Name', description='Optional. Enter an alternative text name for this submission '
                                            'period, such as "Autumn Term"',
@@ -398,13 +404,15 @@ class SubmissionPeriodMixin():
     start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
                            description='The year will increment when a rollover takes place')
 
+    collect_project_feedback = BooleanField('Collect project feedback online')
 
-class AddSubmissionPeriodForm(Form, SubmissionPeriodMixin, SubmissionPeriodCommonMixin):
+
+class AddSubmissionPeriodForm(Form, SubmissionPeriodSettingsMixin, SubmissionPeriodPresentationsMixin):
 
     submit = SubmitField('Add new submission period')
 
 
-class EditSubmissionPeriodForm(Form, SubmissionPeriodMixin, SubmissionPeriodCommonMixin, SaveChangesMixin):
+class EditSubmissionPeriodForm(Form, SubmissionPeriodSettingsMixin, SubmissionPeriodPresentationsMixin, SaveChangesMixin):
 
     pass
 
@@ -470,7 +478,7 @@ def MessageMixinFactory(query_factory, convenor_editing):
         title = StringField('Title', validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
                             description='Optional. Briefly summarize your message.')
 
-        body = TextAreaField('Message', render_kw={"rows": 5},
+        body = TextAreaField('Message', render_kw={"rows": 10},
                              validators=[InputRequired(message='You must enter a message, however short')])
 
         project_classes = QuerySelectMultipleField('Display to users enrolled for',

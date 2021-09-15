@@ -29,12 +29,12 @@ _exemptions = \
 """
 {% macro display(state, sabbatical_state, exempt_state, reenroll, comment) %}
     {% if state == sabbatical_state %}
-        <span class="badge badge-info">Sabbatical</span>
+        <span class="badge bg-info text-dark">Sabbatical</span>
         {% if reenroll %}
-            <span class="badge badge-secondary">Re-enroll {{ reenroll }}</span>
+            <span class="badge bg-secondary">Re-enroll {{ reenroll }}</span>
         {% endif %}
     {% elif state == exempt_state %}
-        <span class="badge badge-danger">Exempt</span>
+        <span class="badge bg-danger">Exempt</span>
     {% endif %}
     {% if comment and comment|length > 0 %}
         <div class="text-muted">{{ comment }}</div>
@@ -65,10 +65,10 @@ _exemptions = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-right">
+    <div class="dropdown-menu dropdown-menu-end">
         <a class="dropdown-item {% if not is_admin %}disabled{% endif %}" {% if is_admin %}href="{{ url_for('manage_users.edit_enrollment', id=rec.id, url=url_for('reports.sabbaticals')) }}"{% endif %}>
             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
         </a>

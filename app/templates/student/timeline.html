@@ -7,7 +7,6 @@
 
 {% block scripts %}
     {{ super() }}
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block title %}
@@ -121,18 +120,18 @@
                                                             <div>
                                                                 {% if record.student_feedback_submitted and record.acknowledge_feedback %}
                                                                     {% if is_student %}
-                                                                        <span class="badge badge-success"><i class="fas fa-check"></i> Your feedback acknowledged</span>
+                                                                        <span class="badge bg-success"><i class="fas fa-check"></i> Your feedback acknowledged</span>
                                                                     {% else %}
-                                                                        <span class="badge badge-success"><i class="fas fa-check"></i> Student feedback acknowledged</span>
+                                                                        <span class="badge bg-success"><i class="fas fa-check"></i> Student feedback acknowledged</span>
                                                                     {% endif %}
                                                                 {% endif %}
                                                                 {% if record.faculty_response_submitted %}
-                                                                    <span class="badge badge-success"><i class="fas fa-check"></i> Supervisor response</span>
+                                                                    <span class="badge bg-success"><i class="fas fa-check"></i> Supervisor response</span>
                                                                 {% endif %}
                                                             </div>
                                                         </div>
                                                         <div class="col-4">
-                                                            <div style="text-align: right;" class="float-right">
+                                                            <div style="text-align: right;" class="float-end">
                                                                 <a href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=student_text if is_student else generic_text) }}" class="btn btn-sm btn-secondary btn-table-block">Documents ({{ record.number_attachments }})...</a>
                                                                 {% if record.has_feedback %}
                                                                     {% if record.id in roles %}
@@ -144,7 +143,7 @@
                                                                         {% elif role == 'convenor' %}
                                                                             <a href="{{ url_for('convenor.view_feedback', id=record.id, text=generic_text, url=return_url) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
                                                                         {% else %}
-                                                                            <span class="badge badge-danger">Unknown role</span>
+                                                                            <span class="badge bg-danger">Unknown role</span>
                                                                         {% endif %}
                                                                     {% else %}
                                                                         <a class="btn btn-sm btn-outline-secondary"><i class="fas fa-ban"></i> Feedback locked</a>
@@ -161,16 +160,16 @@
                                                             {% set slot = period.get_student_presentation_slot(rec.id) %}
                                                             <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</div>
                                                             {% if slot is not none %}
-                                                                <span class="badge badge-primary">{{ slot.date_as_string }}</span>
-                                                                <span class="badge badge-info">{{ slot.session_type_string }}</span>
-                                                                <span class="badge badge-info">{{ slot.room_full_name }}</span>
+                                                                <span class="badge bg-primary">{{ slot.date_as_string }}</span>
+                                                                <span class="badge bg-info text-dark">{{ slot.session_type_string }}</span>
+                                                                <span class="badge bg-info text-dark">{{ slot.room_full_name }}</span>
                                                                 {% for assessor in slot.assessors %}
-                                                                    <span class="badge badge-secondary">{{ assessor.user.name }}</span>
+                                                                    <span class="badge bg-secondary">{{ assessor.user.name }}</span>
                                                                 {% else %}
-                                                                    <span class="badge badge-danger">Assessor information missing</span>
+                                                                    <span class="badge bg-danger">Assessor information missing</span>
                                                                 {% endfor %}
                                                             {% else %}
-                                                                <span class="badge badge-warning">Did not attend</span>
+                                                                <span class="badge bg-warning text-dark">Did not attend</span>
                                                             {% endif %}
                                                         {% else %}
                                                             <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">Presentation assessment</div>

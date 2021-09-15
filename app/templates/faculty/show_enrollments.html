@@ -69,61 +69,61 @@
                             <div class="col-4">
                                 {% if record.pclass.uses_supervisor %}
                                     {% if record.supervisor_state == record.SUPERVISOR_ENROLLED  %}
-                                        <span class="badge badge-info"><i class="fas fa-check"></i> Enrolled</span>
+                                        <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Enrolled</span>
                                     {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                                        <span class="badge badge-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
+                                        <span class="badge bg-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
                                         {% if record.supervisor_reenroll is not none %}
-                                            <span class="badge badge-secondary">ends {{ record.supervisor_reenroll }}</span>
+                                            <span class="badge bg-secondary">ends {{ record.supervisor_reenroll }}</span>
                                         {% else %}
-                                            <span class="badge badge-warning">no end date</span>
+                                            <span class="badge bg-warning text-dark">no end date</span>
                                         {% endif %}
                                     {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                                        <span class="badge badge-warning"><i class="fas fa-times"></i> Exempt</span>
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Exempt</span>
                                     {% else %}
-                                        <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
+                                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="badge badge-secondary">Not used</span>
+                                    <span class="badge bg-secondary">Not used</span>
                                 {% endif %}
                             </div>
                             <div class="col-4">
                                 {% if record.pclass.uses_marker %}
                                     {% if record.marker_state == record.MARKER_ENROLLED %}
-                                        <span class="badge badge-info"><i class="fas fa-check"></i> Enrolled</span>
+                                        <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Enrolled</span>
                                     {% elif record.marker_state == record.MARKER_SABBATICAL %}
-                                        <span class="badge badge-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
+                                        <span class="badge bg-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
                                         {% if record.marker_reenroll is not none %}
-                                            <span class="badge badge-secondary">ends {{ record.marker_reenroll }}</span>
+                                            <span class="badge bg-secondary">ends {{ record.marker_reenroll }}</span>
                                         {% else %}
-                                            <span class="badge badge-warning">no end date</span>
+                                            <span class="badge bg-warning text-dark">no end date</span>
                                         {% endif %}
                                     {% elif record.marker_state == record.MARKER_EXEMPT %}
-                                        <span class="badge badge-warning"><i class="fas fa-times"></i> Exempt</span>
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Exempt</span>
                                     {% else %}
-                                        <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
+                                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="badge badge-secondary">Not used</span>
+                                    <span class="badge bg-secondary">Not used</span>
                                 {% endif %}
                             </div>
                             <div class="col-4">
                                 {% if record.pclass.uses_presentations %}
                                     {% if record.presentations_state == record.PRESENTATIONS_ENROLLED %}
-                                        <span class="badge badge-info"><i class="fas fa-check"></i> Enrolled</span>
+                                        <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Enrolled</span>
                                     {% elif record.presentations_state == record.PRESENTATIONS_SABBATICAL %}
-                                        <span class="badge badge-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
+                                        <span class="badge bg-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
                                         {% if record.presentations_reenroll is not none %}
-                                            <span class="badge badge-secondary">ends {{ record.presentations_reenroll }}</span>
+                                            <span class="badge bg-secondary">ends {{ record.presentations_reenroll }}</span>
                                         {% else %}
-                                            <span class="badge badge-warning">no end date</span>
+                                            <span class="badge bg-warning text-dark">no end date</span>
                                         {% endif %}
                                     {% elif record.presentations_state == record.PRESENTATIONS_EXEMPT %}
-                                        <span class="badge badge-warning"><i class="fas fa-times"></i> Exempt</span>
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Exempt</span>
                                     {% else %}
-                                        <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
+                                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="badge badge-secondary">Not used</span>
+                                    <span class="badge bg-secondary">Not used</span>
                                 {% endif %}
                             </div>
                         </div>

@@ -1,0 +1,6 @@
+{% macro import_datatables() %}
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs5/dt-1.10.25/cr-1.5.4/fc-3.3.3/r-2.2.9/datatables.min.css"/>
+
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs5/dt-1.10.25/cr-1.5.4/fc-3.3.3/r-2.2.9/datatables.min.js"></script>
+{% endmacro %}

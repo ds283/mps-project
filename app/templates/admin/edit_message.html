@@ -2,17 +2,13 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
+{% from "summernote.html" import import_summernote %}
+{% from "chosen.html" import import_chosen %}
 
 {% block scripts %}
     {{ super() }}
-
-    {% assets filters="cssutils", output="gen/component-chosen.min.css", "css/component-chosen.css" -%}
-        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
-    {% endassets %}
-
-    {% assets filters="jsmin", output="gen/chosen.jquery.min.js", "js/chosen.jquery.js" -%}
-        <script src="{{ ASSET_URL }}"></script>
-    {% endassets %}
+    {{ import_summernote() }}
+    {{ import_chosen() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -21,6 +17,7 @@
             $('#project_classes').chosen({
                 placeholder_text_multiple: 'Leave blank to broadcast to all users'
             });
+            $('#body').summernote();
         });
     </script>
 {% endblock %}

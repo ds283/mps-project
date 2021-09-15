@@ -62,7 +62,7 @@
                 Save and exit
             </a>
         {% else %}
-            <span class="badge badge-danger">Unknown user dashboard pane '{{ pane }}'</span>
+            <span class="badge bg-danger">Unknown user dashboard pane '{{ pane }}'</span>
         {% endif %}
     {% else %}
         {% if pane is none or pane == 'accounts' %}
@@ -78,7 +78,7 @@
                 <i class="fas fa-backward"></i> Return to student accounts
             </a>
         {% else %}
-            <span class="badge badge-danger">Unknown user dashboard pane '{{ pane }}'</span>
+            <span class="badge bg-danger">Unknown user dashboard pane '{{ pane }}'</span>
         {% endif %}
     {% endif %}
 {% endblock %}

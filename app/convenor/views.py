@@ -2343,7 +2343,7 @@ def attach_liveproject_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
-    if not config.live or config.selection_closed:
+    if not config.live:
         return jsonify({})
 
     # get existing liveprojects
@@ -2428,7 +2428,7 @@ def attach_liveproject_other_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
-    if not config.live or config.selection_closed:
+    if not config.live:
         return jsonify({})
 
     # find all projects that do not have a LiveProject equivalent

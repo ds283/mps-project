@@ -45,7 +45,6 @@ import app.tasks as tasks
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from mdx_smartypants import makeExtension
 import latex2markdown
 from urllib import parse
 
@@ -122,7 +121,7 @@ def create_app():
     bootstrap = Bootstrap(app)
     mail = Mail(app)
     bleach = Bleach(app)
-    md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
+    md = Markdown(app, extensions=['smarty'])
     rb = Rollbar(app)
     qr = QRcode(app)
     bbl = Babel(app)

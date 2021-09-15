@@ -2316,10 +2316,6 @@ def attach_liveproject(id):
         flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
         return redirect(redirect_url())
 
-    if config.selection_closed:
-        flash('Manual attachment of projects is only possible before student choices are closed', 'error')
-        return redirect(redirect_url())
-
     data = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/attach_liveproject.html', pane='live', subpane='attach',
@@ -2396,10 +2392,6 @@ def manual_attach_project(id, configid):
     # reject if project class is not live
     if not config.live:
         flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
-        return redirect(redirect_url())
-
-    if config.selection_closed:
-        flash('Manual attachment of projects is only possible before student choices are closed', 'error')
         return redirect(redirect_url())
 
     # reject if desired project is not attachable
@@ -2491,10 +2483,6 @@ def manual_attach_other_project(id, configid):
     # reject if project class is not live
     if not config.live:
         flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
-        return redirect(redirect_url())
-
-    if config.selection_closed:
-        flash('Manual attachment of projects is only possible before student choices are closed', 'error')
         return redirect(redirect_url())
 
     # get number for this project

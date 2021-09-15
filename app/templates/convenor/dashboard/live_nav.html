@@ -8,7 +8,7 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {% if config.live and not config.selection_closed %}{% if subpane=='attach' %}active{% endif %}{% else %}disabled{% endif %}"
+            <a class="nav-link {% if config.live %}{% if subpane=='attach' %}active{% endif %}{% else %}disabled{% endif %}"
                {% if config.live %}href="{{ url_for('convenor.attach_liveproject', id=pclass.id) }}"{% endif %}>
                 Manually attach a project
             </a>

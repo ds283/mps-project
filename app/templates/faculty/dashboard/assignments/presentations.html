@@ -5,7 +5,7 @@
         {% set schedule = period.deployed_schedule %}
         <div>
             <span class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</span>
-            (<a href="{{ url_for('admin.view_schedule', tag=schedule.tag) }}">view full schedule</a>)
+            (<a class="text-decoration-none" href="{{ url_for('admin.view_schedule', tag=schedule.tag) }}">view full schedule</a>)
         </div>
         {% set records = period.get_faculty_presentation_slots(faculty_id) %}
         {% if records|length > 0 %}
@@ -35,13 +35,13 @@
                                     {% set uses_feedback = talk.uses_presentation_feedback %}
                                     <tr>
                                         <td>
-                                            <a href="mailto:{{ talk.owner.student.user.email }}">{{ talk.student_identifier }}</a>
+                                            <a class="text-decoration-none" href="mailto:{{ talk.owner.student.user.email }}">{{ talk.student_identifier }}</a>
                                         </td>
                                         <td>
-                                            <a href="mailto:{{ talk.project.owner.user.email }}">{{ talk.project.owner.user.name }}</a>
+                                            <a class="text-decoration-none" href="mailto:{{ talk.project.owner.user.email }}">{{ talk.project.owner.user.name }}</a>
                                         </td>
                                         <td>
-                                            <a href="{{ url_for('faculty.live_project', pid=talk.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                            <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=talk.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
                                                 {{ talk.project.name }} (No. {{ talk.project.number }})
                                             </a>
                                             {% if uses_feedback %}

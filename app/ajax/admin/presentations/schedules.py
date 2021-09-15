@@ -47,20 +47,20 @@ _status = \
     <p></p>
     {% if s.published and current_user.has_role('root') %}
         <span class="badge bg-primary"><i class="fas fa-check"></i> Published</span>
-        (<a href="{{ url_for('admin.view_schedule', tag=s.tag) }}">public link</a>)
+        (<a class="text-decoration-none" href="{{ url_for('admin.view_schedule', tag=s.tag) }}">public link</a>)
     {% endif %}
     {% if s.deployed and current_user.has_role('root') %}
         <span class="badge bg-success"><i class="fas fa-check"></i> Deployed</span>
-        (<a href="{{ url_for('admin.view_schedule', tag=s.tag) }}">public link</a>)
+        (<a class="text-decoration-none" href="{{ url_for('admin.view_schedule', tag=s.tag) }}">public link</a>)
     {% endif %}
 {% else %}
     {% if s.awaiting_upload %}
         <span class="badge bg-success">Awaiting upload</span>
         {% if s.lp_file is not none %}
-            <a href="{{ url_for('admin.download_generated_asset', asset_id=s.lp_file.id) }}">LP</a>
+            <a class="text-decoration-none" href="{{ url_for('admin.download_generated_asset', asset_id=s.lp_file.id) }}">LP</a>
         {% endif %}
         {% if s.mps_file is not none %}
-            <a href="{{ url_for('admin.download_generated_asset', asset_id=s.mps_file.id) }}">MPS</a>
+            <a class="text-decoration-none" href="{{ url_for('admin.download_generated_asset', asset_id=s.mps_file.id) }}">MPS</a>
         {% endif %}
     {% else %}
         <span class="badge bg-success">In progress</span>
@@ -73,7 +73,7 @@ _status = \
 _timestamp = \
 """
 Created by
-<a href="mailto:{{ s.created_by.email }}">{{ s.created_by.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ s.created_by.email }}">{{ s.created_by.name }}</a>
 on
 {% if s.creation_timestamp is not none %}
     {{ s.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
@@ -83,7 +83,7 @@ on
 {% if s.last_edited_by is not none %}
     <p></p>
     Last edited by 
-    <a href="mailto:{{ s.last_edited_by.email }}">{{ s.last_edited_by.name }}</a>
+    <a class="text-decoration-none" href="mailto:{{ s.last_edited_by.email }}">{{ s.last_edited_by.name }}</a>
     {% if s.last_edit_timestamp is not none %}
         {{ s.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
     {% endif %}
@@ -107,7 +107,7 @@ _name = \
 """
 <div>
     {% if s.finished and s.solution_usable %}
-        <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">{{ s.name }}</a>
+        <a class="text-decoration-none" href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">{{ s.name }}</a>
         <span class="badge bg-secondary">{{ s.tag }}</span>
         {% if s.has_issues %}
             <i class="fas fa-exclamation-triangle" style="color:red;"></i>

@@ -23,12 +23,12 @@
                     <div class="list-group">
                         <div class="list-group-item {% if submitted == total %}list-group-item-success{% else %}list-group-item-secondary"{% endif %}>
                             Submitted
-                            <a href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='submitted') }}">(Show...)</a>
+                            <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='submitted') }}">(Show...)</a>
                             <span class="badge bg-secondary rounded-pill">{{ submitted }}/{{ total }}</span>
                         </div>
                         <div class="list-group-item {% if outstanding_confirm > 0 %}list-group-item-danger{% else %}list-group-item-success{% endif %}">
                             Confirmation requests
-                            <a href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">(Show...)</a>
+                            <a class="text-decoration-none" href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">(Show...)</a>
                             <span class="badge bg-secondary rounded-pill">{{ outstanding_confirm }}</span>
                         </div>
                     </div>
@@ -37,7 +37,7 @@
                     <div class="list-group">
                         <div class="list-group-item {% if bookmarks > 0 %}list-group-item-primary{% else %}list-group-item-secondary{% endif %}">
                             Has bookmarks
-                            <a href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='bookmarks') }}">(Show...)</a>
+                            <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='bookmarks') }}">(Show...)</a>
                             <span class="badge bg-secondary rounded-pill">{{ bookmarks }}/{{ total }}</span>
                         </div>
                     </div>
@@ -46,7 +46,7 @@
                     <div class="list-group">
                         <div class="list-group-item {% if bookmarks > 0 %}list-group-item-primary{% else %}list-group-item-secondary{% endif %}">
                             No bookmarks
-                            <a href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">(Show...)</a>
+                            <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">(Show...)</a>
                             <span class="badge bg-secondary rounded-pill">{{ missing}}/{{ total }}</span>
                         </div>
                     </div>

@@ -31,7 +31,7 @@ _properties = \
 """
 {% if l.url is not none %}
     <div>
-        <a href="{{ l.url }}">{{ l.url }}</a>
+        <a class="text-decoration-none" href="{{ l.url }}">{{ l.url }}</a>
     </div>
 {% endif %}
 {% if l.allows_redistribution %}
@@ -41,7 +41,7 @@ _properties = \
 {% endif %}
 <div style="padding-top: 5px;">
     Created by
-    <a href="mailto:{{ l.created_by.email }}">{{ l.created_by.name }}</a>
+    <a class="text-decoration-none" href="mailto:{{ l.created_by.email }}">{{ l.created_by.name }}</a>
     on
     {% if l.creation_timestamp is not none %}
         {{ l.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
@@ -51,7 +51,7 @@ _properties = \
     {% if l.last_edited_by is not none %}
         <p></p>
         Last edited by 
-        <a href="mailto:{{ l.last_edited_by.email }}">{{ l.last_edited_by.name }}</a>
+        <a class="text-decoration-none" href="mailto:{{ l.last_edited_by.email }}">{{ l.last_edited_by.name }}</a>
         {% if l.last_edit_timestamp is not none %}
             {{ l.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
         {% endif %}

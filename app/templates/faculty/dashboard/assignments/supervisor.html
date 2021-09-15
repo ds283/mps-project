@@ -23,7 +23,7 @@
                     {% set uses_feedback = rec.uses_supervisor_feedback %}
                     <tr>
                         <td>
-                            <a href="mailto:{{ rec.owner.student.user.email }}">{{ rec.student_identifier }}</a>
+                            <a class="text-decoration-none" href="mailto:{{ rec.owner.student.user.email }}">{{ rec.student_identifier }}</a>
                             <div style="padding-top: 6px;">
                                 {{ rec.owner.student.cohort_label|safe }}
                                 {{ rec.owner.student.programme.short_label|safe }}
@@ -33,7 +33,7 @@
                             </div>
                             {% if rec.owner.student.has_previous_submissions %}
                                 <div style="padding-top: 6px;">
-                                    <a href="{{ url_for('faculty.past_feedback', student_id=rec.owner.student.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">View previous feedback...</a>
+                                    <a class="text-decoration-none" href="{{ url_for('faculty.past_feedback', student_id=rec.owner.student.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">View previous feedback...</a>
                                 </div>
                             {% endif %}
                         </td>
@@ -41,7 +41,7 @@
                             <td>
                                 {% if period.config.uses_marker %}
                                     {% if rec.marker is not none %}
-                                        <a href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
+                                        <a class="text-decoration-none" href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
                                     {% else %}
                                         <span class="badge bg-warning text-dark">Marker not yet assigned</span>
                                     {% endif %}
@@ -51,7 +51,7 @@
                             </td>
                         {% endif %}
                         <td>
-                            <a href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                            <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
                                 {{ rec.project.name }} (No. {{ rec.project.number }})
                             </a>
                             {% if rec.report %}

@@ -19,7 +19,7 @@ _projects = \
     <div class="outstanding-confirm-group">
         <div class="outstanding-confirm-row">
             {{ loop.index }} &ndash;
-            <a href="{{ url_for('faculty.project_preview', id=p.id, pclass=pclass.id, show_selector=0, text=text, url=url) }}">
+            <a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=p.id, pclass=pclass.id, show_selector=0, text=text, url=url) }}">
                 {{ p.name }}
             </a>
             {% if not offerable %}
@@ -102,7 +102,7 @@ _menu = \
 # language=jinja2
 _name = \
 """
-<a href="mailto:{{ u.email }}">{{ u.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ u.email }}">{{ u.name }}</a>
 <div>
     {% if config.no_explicit_confirm(f) %}
         <span class="badge bg-danger">NO RESPONSE</span>
@@ -124,7 +124,7 @@ def outstanding_confirm_data(config, url=None, text=None):
 
     data = [{'name': {'display': render_template_string(_name, u=f.user, f=f, config=config, pclass=config.project_class),
                       'sortstring': f.user.last_name + f.user.first_name},
-             'email': '<a href="mailto:{em}">{em}</a>'.format(em=f.user.email),
+             'email': '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=f.user.email),
              'projects': render_template_string(_projects, f=f, config=config, pclass=config.project_class,
                                                 url=url, text=text),
              'menu': render_template_string(_menu, config=config, f=f)} for f in config.faculty_waiting_confirmation]

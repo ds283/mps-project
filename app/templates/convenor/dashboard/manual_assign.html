@@ -50,7 +50,7 @@
 
 {% macro faculty_data(fac) %}
     {% if fac is not none %}
-        <a href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
+        <a class="text-decoration-none" href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
         {% set CATS_supv, CATS_mark, CATS_pres = fac.total_CATS_assignment() %}
         <div>
             {% if config.uses_supervisor %}
@@ -88,7 +88,7 @@
             <div class="col-10">
                 {% if url and text %}
                     <div class="top-return-link">
-                        <a href="{{ url }}">
+                        <a class="text-decoration-none" href="{{ url }}">
                             <i class="fas fa-backward"></i> Return to {{ text }}
                         </a>
                     </div>
@@ -119,7 +119,7 @@
                                             <div class="col-6">
                                                 {% if item.project is not none %}
                                                     {{ record_label(item, text, url) }}
-                                                    <a href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
+                                                    <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
                                                         {{ item.project.name }}
                                                     </a>
                                                 {% else %}
@@ -186,7 +186,7 @@
                                                     <div class="row vertical-align final-selection-table">
                                                         <div class="col-6">
                                                             <span class="badge bg-success">#{{ item.rank }}</span>
-                                                            <a href="{{ url_for('faculty.live_project', pid=item.liveproject_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
+                                                            <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=item.liveproject_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
                                                                 {{ item.format_project()|safe }}
                                                             </a>
                                                             {% if item.converted_from_bookmark %}
@@ -226,7 +226,7 @@
                                             <div class="row vertical-align final-selection-table">
                                                 <div class="col-5">
                                                     <span class="badge bg-secondary">#{{ item.submission_period }}</span>
-                                                    <a href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
+                                                    <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
                                                         {{ item.project.name }}
                                                     </a>
                                                 </div>
@@ -279,7 +279,7 @@
 
                     {% if url and text %}
                         <div>
-                            <a href="{{ url }}">
+                            <a class="text-decoration-none" href="{{ url }}">
                                 <i class="fas fa-backward"></i> Return to {{ text }}
                             </a>
                         </div>

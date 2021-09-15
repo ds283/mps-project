@@ -144,7 +144,7 @@
                     </div>
                     <div class="mt-1">
                         You may continue to revise your list up to the deadline.
-                        <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
+                        <a class="text-decoration-none" href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
                     </div>
                 {% endif %}
             {% else %}
@@ -202,7 +202,7 @@
                     <ul>
                         <li>
                             Your preferences were received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.
-                            <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
+                            <a class="text-decoration-none" href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
                         </li>
                     </ul>
                 {% else %}
@@ -246,7 +246,7 @@
                     <span id="ranking" class="badge {% if loop.index <= sel.number_choices %}bg-success{% else %}bg-danger{% endif %}">#{{ loop.index }}</span>
                 </div>
                 <div class="col-3">
-                    <a href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id) }}">
+                    <a class="text-decoration-none" href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id) }}">
                         <strong>{{ project.name }}</strong>
                     </a>
                     {% if not sel.satisfies_recommended(project) %}
@@ -258,7 +258,7 @@
                     {% endif %}
                 </div>
                 <div class="col-2">
-                    <a href="mailto:{{ project.owner.user.email }}">
+                    <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
                         {{ project.owner.user.name }}
                     </a>
                 </div>

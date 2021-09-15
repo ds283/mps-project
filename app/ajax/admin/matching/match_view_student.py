@@ -14,7 +14,7 @@ from flask import jsonify, render_template_string
 # language=jinja2
 _student = \
 """
-<a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 {% if not valid %}
     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}

@@ -15,9 +15,9 @@
             <div>
                 {% if has_access and download_url is not none %}
                     {% if asset.target_name %}
-                        <strong><a href="{{ download_url }}">{{ asset.target_name }}</a></strong>
+                        <strong><a class="text-decoration-none" href="{{ download_url }}">{{ asset.target_name }}</a></strong>
                     {% else %}
-                        <strong><a href="{{ download_url }}">{{ asset.filename }}</a></strong>
+                        <strong><a class="text-decoration-none" href="{{ download_url }}">{{ asset.filename }}</a></strong>
                     {% endif %}
                 {% else %}
                     {% if asset.target_name %}
@@ -132,7 +132,7 @@
     {% set admin_rights = is_root or is_admin or is_convenor %}
     {% if url and text %}
         <div class="top-return-link">
-            <a href="{{ url }}">
+            <a class="text-decoration-none" href="{{ url }}">
                 <i class="fas fa-backward"></i> Return to {{ text }}
             </a>
         </div>
@@ -327,7 +327,7 @@
     </div>
 
     {% if url and text %}
-        <a href="{{ url }}">
+        <a class="text-decoration-none" href="{{ url }}">
             <i class="fas fa-backward"></i> Return to {{ text }}
         </a>
     {% endif %}

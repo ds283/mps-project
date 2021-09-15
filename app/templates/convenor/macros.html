@@ -15,7 +15,7 @@
                         <span id="ranking" class="badge bg-primary">#{{ item.rank }}</span>
                     </div>
                     <div class="col-5">
-                        <a href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
+                        <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
                             {{ item.format_project|safe }}
                         </a>
                         {% if project.is_available(sel) %}
@@ -25,7 +25,7 @@
                         {% endif %}
                     </div>
                     <div class="col-4">
-                        <a href="mailto:{{ project.owner.user.email }}">
+                        <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
                             {{ project.owner.user.name }}
                         </a>
                         {{ project.group.make_label(project.group.name)|safe }}
@@ -203,12 +203,12 @@
                         {% endif %}
                     </div>
                     <div {% if show_hint %}class="col-4"{% else %}class="col-5"{% endif %}>
-                        <a href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
+                        <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
                             {{ item.format_project(show_hint=show_hint)|safe }}
                         </a>
                     </div>
                     <div class="col-4">
-                        <a href="mailto:{{ project.owner.user.email }}">
+                        <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
                             {{ project.owner.user.name }}
                         </a>
                         {{ project.group.make_label(project.group.name)|safe }}

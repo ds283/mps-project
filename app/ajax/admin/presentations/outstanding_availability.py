@@ -37,7 +37,7 @@ def outstanding_availability_data(assessors, assessment):
 
     data = [{'name': {'display': assessor.faculty.user.name,
                       'sortstring': assessor.faculty.user.last_name + assessor.faculty.user.first_name},
-             'email': '<a href="mailto:{em}">{em}</a>'.format(em=assessor.faculty.user.email),
+             'email': '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=assessor.faculty.user.email),
              'menu': render_template_string(_menu, a=assessment, assessor=assessor)} for assessor in assessors]
 
     return jsonify(data)

@@ -51,7 +51,7 @@
                                     <ol class="breadcrumb">
                                         {% for assessor in slot.assessors %}
                                             <li>
-                                                <a href="mailto:{{ assessor.user.name }}">{{ assessor.user.name }}</a>
+                                                <a class="text-decoration-none" href="mailto:{{ assessor.user.name }}">{{ assessor.user.name }}</a>
                                             </li>
                                         {% endfor %}
                                     </ol>
@@ -74,7 +74,7 @@
                                     {% for talk in slot.talks %}
                                         <tr>
                                             <td>{{ talk.owner.student.user.name }}</td>
-                                            <td><a href="{{ url_for('faculty.live_project', pid=talk.project.id, url=url_for('admin.view_schedule', tag=schedule.tag), text='schedule overview') }}">{{ talk.project.name }}</a></td>
+                                            <td><a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=talk.project.id, url=url_for('admin.view_schedule', tag=schedule.tag), text='schedule overview') }}">{{ talk.project.name }}</a></td>
                                             <td>{{ talk.project.owner.user.name }}</td>
                                         </tr>
                                     {% endfor %}

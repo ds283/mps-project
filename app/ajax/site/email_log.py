@@ -45,7 +45,7 @@ _name = \
 _address = \
 """
 {% if e.user is not none %}
-    <a href="mailto:{{ e.user.email }}">{{ e.user.email }}</a>
+    <a class="text-decoration-none" href="mailto:{{ e.user.email }}">{{ e.user.email }}</a>
 {% elif e.recipient %}
     {{ e.recipient }}
 {% else %}
@@ -56,7 +56,7 @@ _address = \
 # language=jinja2
 _subject = \
 """
-<a href="{{ url_for('admin.display_email', id=e.id) }}">{{ e.subject }}</a>
+<a class="text-decoration-none" href="{{ url_for('admin.display_email', id=e.id) }}">{{ e.subject }}</a>
 """
 
 

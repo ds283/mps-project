@@ -7,15 +7,15 @@
             {% if count > 0 %}
                 <p>Responses are outstanding from <strong>{{ count }} faculty</strong>.</p>
                 <p>
-                    <a href="{{ url_for('admin.outstanding_availability', id=assessment.id) }}">View outstanding responses...</a>
+                    <a class="text-decoration-none" href="{{ url_for('admin.outstanding_availability', id=assessment.id) }}">View outstanding responses...</a>
                     &emsp;
-                    <a href="{{ url_for('admin.availability_as_csv', id=assessment.id) }}">Download availability data</a>
+                    <a class="text-decoration-none" href="{{ url_for('admin.availability_as_csv', id=assessment.id) }}">Download availability data</a>
                 </p>
             {% else %}
                 Responses have now been received from all faculty
                 <span class="badge bg-success"><i class="fas fa-check"></i></span>
                 <p>
-                    <a href="{{ url_for('admin.availability_as_csv', id=assessment.id) }}">Download availability data</a>
+                    <a class="text-decoration-none" href="{{ url_for('admin.availability_as_csv', id=assessment.id) }}">Download availability data</a>
                 </p>
             {% endif %}
             {% if not assessment.is_deployed %}

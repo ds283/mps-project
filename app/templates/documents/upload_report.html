@@ -34,7 +34,7 @@
             </div>
 
             <div>
-                <a href="{{ url_for('documents.submitter_documents', sid=record.id, url=url, text=text) }}">
+                <a class="text-decoration-none" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url, text=text) }}">
                     <i class="fas fa-backward"></i> Return to document manager for <i class="fas fa-user"></i> {{ record.student_identifier }}
                 </a>
             </div>

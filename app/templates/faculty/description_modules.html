@@ -61,7 +61,7 @@
         </div>
     </div>
 
-    <a href="{{ url_for('faculty.edit_descriptions', id=desc.parent_id, create=create) }}">
+    <a class="text-decoration-none" href="{{ url_for('faculty.edit_descriptions', id=desc.parent_id, create=create) }}">
         <i class="fas fa-backward"></i> Return to project description list
     </a>
 {% endblock %}

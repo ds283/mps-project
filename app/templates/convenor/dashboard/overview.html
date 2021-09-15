@@ -85,7 +85,7 @@
                                         {% set validation_messages = p.validate %}
                                         {% if validation_messages is not none and validation_messages|length > 0 %}
                                             <h6 class="me-2 mb-0 mt-1"><i class="fas fa-exclamation-triangle" style="color:red;"></i></h6>
-                                            <a href="#submitter_card_{{ loop.index }}">Validation errors....</a>
+                                            <a class="text-decoration-none" href="#submitter_card_{{ loop.index }}">Validation errors....</a>
                                         {% endif %}
                                     {% endif %}
                                 </div>
@@ -211,7 +211,7 @@
                                         <td>
                                             {% if tk_type == 1 or tk_type == 2 %}
                                                 <i class="fas fa-user"></i>
-                                                <a href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.overview', id=pclass.id), text='convenor overview') }}">
+                                                <a class="text-decoration-none" href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.overview', id=pclass.id), text='convenor overview') }}">
                                                     {{ obj.student.user.name }}
                                                 </a>
                                             {% elif tk_type == 3 %}
@@ -285,7 +285,7 @@
                         <div class="card-header bg-danger text-white">Proposed assessment schedules are available to view</div>
                         <div class="card-body">
                             <p>An administrator has published one or more proposed schedules for presentation assessments.</p>
-                            <a href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or edit proposed schedules...</a>
+                            <a class="text-decoration-none" href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or edit proposed schedules...</a>
                         </div>
                     </div>
                 {% endif %}

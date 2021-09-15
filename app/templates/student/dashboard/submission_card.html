@@ -101,7 +101,7 @@
                         <div class="dashboard-subtitle" style="padding-bottom: 8px;">Project assignment</div>
                         <div class="row vertical-top">
                             <div class="col-3">
-                                <a href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }}</a>
+                                <a class="text-decoration-none" href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }}</a>
                             </div>
                             <div class="col-5">
                                 {{ record.project.name }} (No. {{ record.project.number }})

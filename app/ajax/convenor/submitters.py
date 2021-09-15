@@ -332,7 +332,7 @@ _name = \
 {% set pclass = sub.config.project_class %}
 <div>
     {% if show_name %}
-        <a href="mailto:{{ sub.student.user.email }}">{{ sub.student.user.name }}</a>
+        <a class="text-decoration-none" href="mailto:{{ sub.student.user.email }}">{{ sub.student.user.name }}</a>
     {% endif %}
     {% if show_number %}
         {% if current_user.has_role('admin') or current_user.has_role('root') %}

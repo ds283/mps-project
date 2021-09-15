@@ -23,7 +23,7 @@ from ...models import Project, EnrollmentRecord, ResearchGroup, SkillGroup, Tran
 _project_name = \
 """
 REPERRORSYMBOL
-<a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
+<a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
     {{ project.name }}
 </a>
 <div>
@@ -370,7 +370,7 @@ def _element(project_id, menu_template, in_current):
 
     return {'name': render_template_string(_project_name, project=p, text='REPTEXT', url='REPURL'),
              'owner': {
-                 'display': '<a href="mailto:{em}">{nm}</a>'.format(em=p.owner.user.email, nm=p.owner.user.name),
+                 'display': '<a class="text-decoration-none" href="mailto:{em}">{nm}</a>'.format(em=p.owner.user.email, nm=p.owner.user.name),
                  'sortvalue': p.owner.user.last_name + p.owner.user.first_name},
              'status': render_template_string(_project_status, project=p),
              'pclasses': render_template_string(_project_pclasses, project=p),

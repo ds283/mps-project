@@ -68,7 +68,7 @@ def _element(user_id, current_user_id):
 
     return {'name': render_template_string(name, u=u),
              'user': u.username,
-             'email': '<a href="mailto:{m}">{m}</a>'.format(m=u.email),
+             'email': '<a class="text-decoration-none" href="mailto:{m}">{m}</a>'.format(m=u.email),
              'confirm': u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if u.confirmed_at is not None \
                         else '<span class="badge bg-warning text-dark">Not confirmed</span>',
              'active': u.active_label,

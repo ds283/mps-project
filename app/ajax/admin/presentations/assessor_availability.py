@@ -118,7 +118,7 @@ _availability = \
 # language=jinja2
 _name = \
 """
-<a href="mailto:{{ rec.faculty.user.email }}">{{ rec.faculty.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ rec.faculty.user.email }}">{{ rec.faculty.user.name }}</a>
 {% set has_block = false %}
 {% if rec.assigned_limit is not none %}{% set has_block = true %}{% endif %}
 {% if rec.request_email_sent %}{% set has_block = true %}{% endif %}

@@ -14,7 +14,7 @@ from flask import render_template_string, jsonify
 # language=jinja2
 _name = \
 """
-<a href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
 <div>
     {% if a.confirmed %}
         <span class="badge bg-success">Confirmed</span>

@@ -68,7 +68,7 @@ _session_actions = \
 # language=jinja2
 _global_name = \
 """
-<a href="mailto:{{ s.submitter.owner.student.user.email }}">{{ s.submitter.owner.student.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ s.submitter.owner.student.user.email }}">{{ s.submitter.owner.student.user.name }}</a>
 {% set constraints = s.number_unavailable %}
 {% if constraints > 0 %}
     &emsp;
@@ -84,7 +84,7 @@ _project_name = \
     <span class="badge bg-secondary">No project assigned</span>
 {% else %}
     <div>
-        <a href="{{ dest_url }}">{{ p.name }}</a>
+        <a class="text-decoration-none" href="{{ dest_url }}">{{ p.name }}</a>
     </div>
     <div>
         <a class="badge text-decoration-none bg-info text-dark" href="{{ url_for('convenor.attach_assessors', id=p.parent_id, pclass_id=p.config.pclass_id, url=url, text=text) }}">
@@ -96,7 +96,7 @@ _project_name = \
 
 
 def submitter_session_availability_data(assessment, session, talks, editable=False):
-    data = [{'student': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=s.submitter.owner.student.user.email,
+    data = [{'student': {'display': '<a class="text-decoration-none" href="mailto:{email}">{name}</a>'.format(email=s.submitter.owner.student.user.email,
                                                                                  name=s.submitter.owner.student.user.name),
                          'sortstring': s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name},
              'pclass': render_template_string(_pclass, pclass=s.submitter.owner.config.project_class),

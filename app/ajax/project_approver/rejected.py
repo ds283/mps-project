@@ -35,7 +35,7 @@ _actions = \
 _rejected = \
 """
 {% if r.validated_by %}
-    <a href="mailto:{{ r.validated_by.email }}">{{ r.validated_by.name }}</a>
+    <a class="text-decoration-none" href="mailto:{{ r.validated_by.email }}">{{ r.validated_by.name }}</a>
     {% if r.validated_timestamp %}
         at {{ r.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
     {% endif %}

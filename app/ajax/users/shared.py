@@ -11,7 +11,7 @@
 
 name = \
 """
-<a href="mailto:{{ u.email }}">{{ u.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ u.email }}">{{ u.name }}</a>
 <div>
     {{ 'REPACTIVE'|safe }}
     {% if u.student_data and u.student_data is not none %}

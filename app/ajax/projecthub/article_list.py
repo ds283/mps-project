@@ -19,7 +19,7 @@ _published = \
 """
 {% if a.published and a.publication_timestamp %}
     {{ a.publication_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-    by <i class="fas fa-user"></i> <a href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}</a>
+    by <i class="fas fa-user"></i> <a class="text-decoration-none" href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}</a>
 {% else %}
     <span class="badge bg-warning text-dark">Not published</span>
 {% endif %}
@@ -30,10 +30,10 @@ _last_edit = \
 """
 {% if a.last_edit_timestamp %}
     {{ a.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-    by <i class="fas fa-user"></i> <a href="mailto:{{ a.last_edited_by.email }}">{{ a.last_edited_by.name }}</a>
+    by <i class="fas fa-user"></i> <a class="text-decoration-none" href="mailto:{{ a.last_edited_by.email }}">{{ a.last_edited_by.name }}</a>
 {% elif a.creation_timestamp %}
     {{ a.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-    by <i class="fas fa-user"></i> <a href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}</a>
+    by <i class="fas fa-user"></i> <a class="text-decoration-none" href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}</a>
 {% else %}
     <span class="badge bg-danger">None</span>
 {% endif %}
@@ -42,7 +42,7 @@ _last_edit = \
 
 _title = \
 """
-<a href="{{ url_for('projecthub.show_formatted_article', aid=a.id, url=url, text=text) }}">{{ a.title }}</a>
+<a class="text-decoration-none" href="{{ url_for('projecthub.show_formatted_article', aid=a.id, url=url, text=text) }}">{{ a.title }}</a>
 """
 
 

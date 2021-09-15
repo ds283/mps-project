@@ -10,7 +10,7 @@
 {% block bodyblock %}
     {% if text and url %}
         <div class="top-return-link">
-            <a href="{{ url }}">
+            <a class="text-decoration-none" href="{{ url }}">
                 <i class="fas fa-backward"></i> Return to {{ text }}
             </a>
         </div>
@@ -22,7 +22,7 @@
             <div class="card mt-3 mb-3 card-body bg-well">
                 <p><span class="dashboard-project-title">{{ project.name }}</span></p>
                 <p>{{ config.year }}&ndash;{{ config.year+1 }} |
-                    <a href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a> |
+                    <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a> |
                     {{ config.project_class.name }}</p>
                 <hr class="intro-divider">
                 <div class="row vertical-top">
@@ -123,7 +123,7 @@
 
     {% if text and url %}
         <div>
-            <a href="{{ url }}">
+            <a class="text-decoration-none" href="{{ url }}">
                 <i class="fas fa-backward"></i> Return to {{ text }}
             </a>
         </div>

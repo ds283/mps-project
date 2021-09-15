@@ -53,7 +53,7 @@
 
 {% block bodyblock %}
     <div class="top-return-link">
-        <a href="{{ url_for('faculty.edit_projects') }}">
+        <a class="text-decoration-none" href="{{ url_for('faculty.edit_projects') }}">
             <i class="fas fa-backward"></i> Return to project list
         </a>
     </div>
@@ -205,7 +205,7 @@
             Save and preview
         </a>
     {% else %}
-        <a href="{{ url_for('faculty.edit_projects') }}">
+        <a class="text-decoration-none" href="{{ url_for('faculty.edit_projects') }}">
             <i class="fas fa-backward"></i> Return to project list
         </a>
     {% endif %}

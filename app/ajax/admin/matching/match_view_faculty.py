@@ -16,7 +16,7 @@ from ....shared.utils import get_count
 # language=jinja2
 _name = \
 """
-<a href="mailto:{{ f.user.email }}">{{ f.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ f.user.email }}">{{ f.user.name }}</a>
 {% if overassigned %}
     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}

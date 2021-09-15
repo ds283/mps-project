@@ -82,7 +82,7 @@ _projects = \
 # language=jinja2
 _name = \
 """
-<a href="mailto:{{ u.email }}">{{ u.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ u.email }}">{{ u.name }}</a>
 """
 
 # language=jinja2
@@ -118,7 +118,7 @@ def faculty_data(faculty, pclass, config):
 
     data = [{'name': {'display': render_template_string(_name, u=u, d=d, pclass_id=pclass.id),
                       'sortstring': u.last_name + u.first_name},
-             'email': '<a href="mailto:{em}">{em}</a>'.format(em=u.email),
+             'email': '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=u.email),
              'user': u.username,
              'enrolled': render_template_string(_enrollments, d=d, pclass_id=pclass.id),
              'projects': render_template_string(_projects, d=d, pclass=pclass),

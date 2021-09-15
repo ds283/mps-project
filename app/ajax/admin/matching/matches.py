@@ -56,10 +56,10 @@ _status = \
     {% if m.awaiting_upload %}
         <span class="badge bg-info text-dark">Awaiting upload</span>
         {% if m.lp_file is not none %}
-            <a href="{{ url_for('admin.download_generated_asset', asset_id=m.lp_file.id) }}">LP</a>
+            <a class="text-decoration-none" href="{{ url_for('admin.download_generated_asset', asset_id=m.lp_file.id) }}">LP</a>
         {% endif %}
         {% if m.mps_file is not none %}
-            <a href="{{ url_for('admin.download_generated_asset', asset_id=m.mps_file.id) }}">MPS</a>
+            <a class="text-decoration-none" href="{{ url_for('admin.download_generated_asset', asset_id=m.mps_file.id) }}">MPS</a>
         {% endif %}
     {% else %}
         <span class="badge bg-info text-dark">In progress</span>
@@ -147,7 +147,7 @@ _info = \
 </div>
 <div class="mt-1">
     Created by
-    <a href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
+    <a class="text-decoration-none" href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
     on
     {% if m.creation_timestamp is not none %}
         {{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
@@ -158,7 +158,7 @@ _info = \
 {% if m.last_edited_by is not none %}
     <div class="mt-1">
         Last edited by 
-        <a href="mailto:{{ m.last_edited_by.email }}">{{ m.last_edited_by.name }}</a>
+        <a class="text-decoration-none" href="mailto:{{ m.last_edited_by.email }}">{{ m.last_edited_by.name }}</a>
         {% if m.last_edit_timestamp is not none %}
             {{ m.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
         {% endif %}
@@ -355,7 +355,7 @@ _name = \
 """
 <div>
     {% if m.finished and m.solution_usable %}
-        <a href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}"><strong>{{ m.name }}</strong></a>
+        <a class="text-decoration-none" href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}"><strong>{{ m.name }}</strong></a>
         {% if m.has_issues %}
             <i class="fas fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}

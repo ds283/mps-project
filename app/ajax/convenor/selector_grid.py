@@ -65,7 +65,7 @@ _selections = \
         <div class="col-12">
             {% if sel.number_bookmarks >= sel.number_choices %}
                 <span class="badge bg-info text-dark">Bookmarks available</span>
-                <a href="{{ url_for('convenor.force_convert_bookmarks', sel_id=sel.id) }}">
+                <a class="text-decoration-none" href="{{ url_for('convenor.force_convert_bookmarks', sel_id=sel.id) }}">
                     Force conversion...
                 </a>
             {% else %}
@@ -79,7 +79,7 @@ _selections = \
 # language=jinja2
 _name = \
 """
-<a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 <div>
 {% if sel.convert_to_submitter %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Convert</span>

@@ -16,14 +16,14 @@ from datetime import datetime
 # language=jinja2
 _student = \
 """
-<a href="mailto:{{ req.owner.student.user.email }}">{{ req.owner.student.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ req.owner.student.user.email }}">{{ req.owner.student.user.name }}</a>
 """
 
 
 # language=jinja2
 _project = \
 """
-<a href="{{ url_for('faculty.live_project', pid=req.project.id, text='outstanding confirmations', url=url_for('convenor.show_confirmations', id=pclass_id)) }}">
+<a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=req.project.id, text='outstanding confirmations', url=url_for('convenor.show_confirmations', id=pclass_id)) }}">
     {{ req.project.name }}
 </a>
 """
@@ -32,7 +32,7 @@ _project = \
 # language=jinja2
 _supervisor = \
 """
-<a href="mailto:{{ req.project.owner.user.email }}">{{ req.project.owner.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ req.project.owner.user.email }}">{{ req.project.owner.user.name }}</a>
 """
 
 

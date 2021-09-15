@@ -229,7 +229,7 @@ def faculty_workload_data(faculty, config):
         marking = d.marker_assignments(config_id=config.id).all()
         presentations = d.presentation_assignments(config_id=config.id).all()
 
-        data.append({'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
+        data.append({'name': {'display': '<a class="text-decoration-none" href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
                               'sortvalue': u.last_name + u.first_name},
                      'projects': {'display': render_template_string(_projects, f=d, config=config, recs=projects),
                                   'sortvalue': len(projects)},

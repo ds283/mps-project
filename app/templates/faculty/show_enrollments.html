@@ -14,7 +14,7 @@
         <div class="col-8">
             {% if url %}
                 <div class="top-return-link">
-                    <a href="{{ url }}">
+                    <a class="text-decoration-none" href="{{ url }}">
                         <i class="fas fa-backward"></i> Return to previous page
                     </a>
                 </div>
@@ -33,7 +33,7 @@
                                     {% if not data.is_enrolled(pclass) %}
                                         <li>
                                             {{ pclass.name }} &ndash; convenor
-                                            <a href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor_name }}</a>
+                                            <a class="text-decoration-none" href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor_name }}</a>
                                         </li>
                                     {% endif %}
                                 {% endfor %}
@@ -50,7 +50,7 @@
                             </div>
                             <div class="text-secondary">
                                 Convenor:
-                                <a href="mailto:{{ pclass.convenor.user.email }}">{{ pclass.convenor.user.name }}</a>
+                                <a class="text-decoration-none" href="mailto:{{ pclass.convenor.user.email }}">{{ pclass.convenor.user.name }}</a>
                             </div>
                         </div>
                         <hr class="intro-divider mb-2">
@@ -142,7 +142,7 @@
                             {% for pclass in project_classes %}
                                 <li>
                                     {{ pclass.name }} &ndash;
-                                    <a href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor_name }}</a>
+                                    <a class="text-decoration-none" href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor_name }}</a>
                                 </li>
                             {% endfor %}
                         </ul>
@@ -151,7 +151,7 @@
             {% endif %}
 
             {% if url %}
-                <a href="{{ url }}">
+                <a class="text-decoration-none" href="{{ url }}">
                     <i class="fas fa-backward"></i> Return to previous page
                 </a>
             {% endif %}

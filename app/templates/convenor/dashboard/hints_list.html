@@ -9,7 +9,7 @@
         <div class="col-1"></div>
         <div class="col-10">
             <div class="top-return-link">
-                <a href="{{ url_for('convenor.selector_grid', id=pclass.id) }}">
+                <a class="text-decoration-none" href="{{ url_for('convenor.selector_grid', id=pclass.id) }}">
                     <i class="fas fa-backward"></i> Return to selector grid
                 </a>
             </div>
@@ -55,7 +55,7 @@
                                 </div>
                                 <div class="col-7">
                                     <div>
-                                        <a href="{{ url_for('faculty.live_project', pid=project.id, text='all hints view', url=url_for('convenor.hints_list', id=pclass.id)) }}">
+                                        <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text='all hints view', url=url_for('convenor.hints_list', id=pclass.id)) }}">
                                             {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.liveproject.name }}
                                         </a>
                                     </div>
@@ -76,7 +76,7 @@
             </div>
 
             <div>
-                <a href="{{ url_for('convenor.selector_grid', id=pclass.id) }}">
+                <a class="text-decoration-none" href="{{ url_for('convenor.selector_grid', id=pclass.id) }}">
                     <i class="fas fa-backward"></i> Return to selector grid
                 </a>
             </div>

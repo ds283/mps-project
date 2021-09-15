@@ -16,9 +16,9 @@ _name = \
 """
 {% set state = a.availability_lifecycle %}
 {% if state >= a.AVAILABILITY_CLOSED %}
-    <a href="{{ url_for('admin.assessment_schedules', id=a.id) }}">{{ a.name }}</a>
+    <a class="text-decoration-none" href="{{ url_for('admin.assessment_schedules', id=a.id) }}">{{ a.name }}</a>
 {% else %}
-    <a href="{{ url_for('admin.assessment_manage_sessions', id=a.id) }}">{{ a.name }}</a>
+    <a class="text-decoration-none" href="{{ url_for('admin.assessment_manage_sessions', id=a.id) }}">{{ a.name }}</a>
 {% endif %}
 {% if a.has_issues %}
     <i class="fas fa-exclamation-triangle" style="color:red;"></i>

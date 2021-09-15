@@ -14,7 +14,7 @@ from flask import render_template_string, jsonify
 # language=jinja2
 _project = \
 """
-<a href="{{ url_for('faculty.live_project', pid=proj.id, url=url_for('convenor.selector_bookmarks', id=sel.id), text='selector bookmarks') }}">
+<a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=proj.id, url=url_for('convenor.selector_bookmarks', id=sel.id), text='selector bookmarks') }}">
     {{ proj.name }}
 </a>
 """
@@ -23,7 +23,7 @@ _project = \
 # language=jinja2
 _owner = \
 """
-<a href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
 {{ project.group.make_label()|safe }}
 """
 

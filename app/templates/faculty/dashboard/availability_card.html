@@ -12,10 +12,10 @@
             {% for assessment in faculty.outstanding_availability_requests %}
                 <div class="row vertical-align event-table">
                     <div class="col-4">
-                        <a href="{{ url_for('faculty.set_availability', id=assessment.id, url=home_dashboard_url, text='Return to dashboard') }}">{{ assessment.name }}</a>
+                        <a class="text-decoration-none" href="{{ url_for('faculty.set_availability', id=assessment.id, url=home_dashboard_url, text='Return to dashboard') }}">{{ assessment.name }}</a>
                     </div>
                     <div class="col-4">
-                        <a href="mailto:{{ assessment.created_by.email }}">{{ assessment.created_by.name }}</a>
+                        <a class="text-decoration-none" href="mailto:{{ assessment.created_by.email }}">{{ assessment.created_by.name }}</a>
                     </div>
                     <div class="col-3">
                         {% if assessment.availability_deadline is not none %}

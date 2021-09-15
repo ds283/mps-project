@@ -86,7 +86,7 @@ def _format_schedule(task):
 def scheduled_task_data(tasks):
     data = [{'name': render_template_string(_name, t=t),
              'schedule': _format_schedule(t),
-             'owner': '<a href="mailto:{e}">{name}</a>'.format(e=t.owner.email,
+             'owner': '<a class="text-decoration-none" href="mailto:{e}">{name}</a>'.format(e=t.owner.email,
                                                                name=t.owner.name) if t.owner is not None
                 else '<span class="badge bg-secondary">Nobody</span>',
              'active': render_template_string(_active, t=t),

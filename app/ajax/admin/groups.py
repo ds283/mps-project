@@ -52,7 +52,7 @@ def groups_data(groups):
              'active': render_template_string(_active, g=g),
              'name': g.name,
              'colour': '<span class="badge bg-secondary">None</span>' if g.colour is None else g.make_label(g.colour),
-             'website': '<a href="{web}">{web}</a>'.format(web=g.website) if g.website is not None
+             'website': '<a class="text-decoration-none" href="{web}">{web}</a>'.format(web=g.website) if g.website is not None
                  else '<span class="badge bg-secondary">None</span>',
              'menu': render_template_string(_groups_menu, group=g)} for g in groups]
 

@@ -40,7 +40,7 @@ _pclass = \
 _name = \
 """
 {% from "faculty/macros.html" import project_metadata %}
-<a href="{{ url_for('faculty.live_project', pid=p.id, text='offered projects view', url=url_for('faculty.past_projects')) }}">
+<a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=p.id, text='offered projects view', url=url_for('faculty.past_projects')) }}">
     {{ p.name }}
 </a>
 <div>

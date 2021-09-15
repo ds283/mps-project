@@ -16,7 +16,7 @@ from ....models import MatchingRecord
 # language=jinja2
 _student = \
 """
-<a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 """
 
 

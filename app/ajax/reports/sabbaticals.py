@@ -20,7 +20,7 @@ from ...models import EnrollmentRecord
 # language=jinja2
 _name = \
 """
-<a href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
 """
 
 

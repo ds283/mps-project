@@ -22,10 +22,10 @@
                             {{ rec.student_identifier }}
                         </td>
                         <td>
-                            <a href="mailto:{{ rec.project.owner.user.email }}">{{ rec.project.owner.user.name }}</a>
+                            <a class="text-decoration-none" href="mailto:{{ rec.project.owner.user.email }}">{{ rec.project.owner.user.name }}</a>
                         </td>
                         <td>
-                            <a href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                            <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
                                 {{ rec.project.name }} (No. {{ rec.project.number }})
                             </a>
                             {% if rec.report %}

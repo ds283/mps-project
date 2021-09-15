@@ -21,7 +21,7 @@ _student_task = \
 <strong>{{ tk.description }}</strong>
 <div>
     <i class="fas fa-user"></i>
-    <a href="{{ url_for('convenor.student_tasks', type=type, sid=tk.parent.id, url=return_url) }}">
+    <a class="text-decoration-none" href="{{ url_for('convenor.student_tasks', type=type, sid=tk.parent.id, url=return_url) }}">
         {{ tk.parent.student.user.name }}
     </a>
     {% if type == 1 %}

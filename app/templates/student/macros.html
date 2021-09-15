@@ -14,7 +14,7 @@
                         <span class="badge bg-success">#{{ item.rank }}</span>
                     </div>
                     <div class="col-5">
-                        <a href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id) }}">
+                        <a class="text-decoration-none" href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id) }}">
                             <strong>{{ project.name }}</strong>
                         </a>
                     </div>
@@ -22,7 +22,7 @@
                         {{ project.group.make_label(project.group.name)|safe }}
                     </div>
                     <div class="col-3">
-                        <a href="mailto:{{ project.owner.user.email }}">
+                        <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
                             {{ project.owner.user.name }}
                         </a>
                     </div>
@@ -46,7 +46,7 @@
                     {{ offer.liveproject.name }}
                 </div>
                 {% if show_actions %}<div class="col-4">{% else %}<div class="col-5">{% endif %}
-                    <a href="mailto:{{ offer.liveproject.owner.user.email }}">
+                    <a class="text-decoration-none" href="mailto:{{ offer.liveproject.owner.user.email }}">
                         {{ offer.liveproject.owner.user.name }}
                     </a>
                 </div>

@@ -39,7 +39,7 @@
 
 {% macro faculty_data(fac, slot) %}
     {% if fac is not none %}
-        <a href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
+        <a class="text-decoration-none" href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
         {% set count = rec.get_number_faculty_slots(fac.id) %}
         {% set pl = 's' %}
         {% if count == 1 %}{% set pl = '' %}{% endif %}
@@ -59,7 +59,7 @@
         <div class="col-10">
             {% if url and text %}
                 <div class="top-return-link">
-                    <a href="{{ url }}">
+                    <a class="text-decoration-none" href="{{ url }}">
                         <i class="fas fa-backward"></i> Return to {{ text }}
                     </a>
                 </div>
@@ -149,10 +149,10 @@
                                         {% endif %}
                                     </div>
                                     <div class="col-5">
-                                        <a href="{{ url_for('faculty.live_project', pid=talk.project_id, url=url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text), text='reassign presentation view') }}">{{ talk.project.name }}</a>
+                                        <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=talk.project_id, url=url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text), text='reassign presentation view') }}">{{ talk.project.name }}</a>
                                     </div>
                                     <div class="col-4">
-                                        <a href="mailto:{{ talk.project.owner.user.email }}">{{ talk.project.owner.user.name }}</a>
+                                        <a class="text-decoration-none" href="mailto:{{ talk.project.owner.user.email }}">{{ talk.project.owner.user.name }}</a>
                                     </div>
                                 </div>
                             {% endfor %}
@@ -209,7 +209,7 @@
 
             {% if url and text %}
                 <div>
-                    <a href="{{ url }}">
+                    <a class="text-decoration-none" href="{{ url }}">
                         <i class="fas fa-backward"></i> Return to {{ text }}
                     </a>
                 </div>

@@ -9,7 +9,7 @@
         <div class="col-1"></div>
         <div class="col-10">
             <div class="top-return-link">
-                <a href="{{ home_dashboard_url }}">
+                <a class="text-decoration-none" href="{{ home_dashboard_url }}">
                     <i class="fas fa-backward"></i> Return to dashboard
                 </a>
             </div>
@@ -29,10 +29,10 @@
                     {% for assessment in current_user.faculty_data.editable_availability_requests %}
                         <div class="row vertical-align event-table">
                             <div class="col-4">
-                                <a href="{{ url_for('faculty.set_availability', id=assessment.id, url=url_for('faculty.change_availability'), text='Return to availability page') }}">{{ assessment.name }}</a>
+                                <a class="text-decoration-none" href="{{ url_for('faculty.set_availability', id=assessment.id, url=url_for('faculty.change_availability'), text='Return to availability page') }}">{{ assessment.name }}</a>
                             </div>
                             <div class="col-4">
-                                <a href="mailto:{{ assessment.created_by.email }}">{{ assessment.created_by.name }}</a>
+                                <a class="text-decoration-none" href="mailto:{{ assessment.created_by.email }}">{{ assessment.created_by.name }}</a>
                             </div>
                             <div class="col-3">
                                 {% if assessment.availability_deadline is not none %}
@@ -51,7 +51,7 @@
             </div>
 
             <div>
-                <a href="{{ home_dashboard_url }}">
+                <a class="text-decoration-none" href="{{ home_dashboard_url }}">
                     <i class="fas fa-backward"></i> Return to dashboard
                 </a>
             </div>

@@ -185,7 +185,7 @@
                             <strong>{{ loop.index }}</strong>
                         </div>
                         <div class="col-8">
-                            <a href="{{ url_for('faculty.project_preview', id=project.id, url=url_for('faculty.dashboard', id=pclass.id), text='dashboard', pclass=pclass.id) }}">{{ project.name }}</a>
+                            <a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=project.id, url=url_for('faculty.dashboard', id=pclass.id), text='dashboard', pclass=pclass.id) }}">{{ project.name }}</a>
                             <div>
                                 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
                                     <span class="badge bg-danger">Meeting required</span>
@@ -211,7 +211,7 @@
                                     <div class="error-message">
                                         {% call icon_block("exclamation-circle") %}
                                             This project has validation errors that will prevent it from being published.
-                                            <a href="{{ url_for('faculty.edit_projects') }}">Edit in library...</a>
+                                            <a class="text-decoration-none" href="{{ url_for('faculty.edit_projects') }}">Edit in library...</a>
                                         {% endcall %}
                                     </div>
                                 </div>
@@ -222,7 +222,7 @@
 {#                                            This project variant does not have a statement of aims.#}
 {#                                            Please consider adding a statement#}
 {#                                            to help support robust marking.#}
-{#                                            <a href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url, focus_aims=1) }}">Fix this...</a>#}
+{#                                            <a class="text-decoration-none" href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url, focus_aims=1) }}">Fix this...</a>#}
 {#                                        {% endcall %}#}
 {#                                    </div>#}
 {#                                </div>#}
@@ -279,7 +279,7 @@
                     {% for project in live_projects %}
                         <div class="row fac-project-table">
                             <div class="col-3">
-                                <a href="{{ url_for('faculty.live_project', pid=project.id, text='home dashboard', url=home_dashboard_url) }}">
+                                <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text='home dashboard', url=home_dashboard_url) }}">
                                     {{ project.name }}
                                 </a>
                                 <div>

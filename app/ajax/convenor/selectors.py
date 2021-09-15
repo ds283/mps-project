@@ -142,7 +142,7 @@ _bookmarks = \
 {% set count = sel.number_bookmarks %}
 {% if count > 0 %}
     <span class="badge bg-primary">{{ count }}</span>
-    <a href="{{ url_for('convenor.selector_bookmarks', id=sel.id) }}">
+    <a class="text-decoration-none" href="{{ url_for('convenor.selector_bookmarks', id=sel.id) }}">
         Show...
     </a>
 {% else %}
@@ -156,7 +156,7 @@ _submitted = \
 {% if sel.has_submitted %}
     {% if sel.has_submission_list %}
         <span class="badge bg-success">Yes</span>
-        <a href="{{ url_for('convenor.selector_choices', id=sel.id) }}">
+        <a class="text-decoration-none" href="{{ url_for('convenor.selector_choices', id=sel.id) }}">
             Show...
         </a>
     {% endif %}
@@ -190,7 +190,7 @@ _confirmations = \
 {% if confirmed > 0 %}<span class="badge bg-success"><i class="fas fa-check"></i> Confirmed {{ confirmed }}</span>{% endif %}
 {% if pending > 0 %}<span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pending {{ pending }}</span>{% endif %}
 {% if pending > 0 or confirmed > 0 %}
-    <a href="{{ url_for('convenor.selector_confirmations', id=sel.id) }}">
+    <a class="text-decoration-none" href="{{ url_for('convenor.selector_confirmations', id=sel.id) }}">
         Show...
     </a>
 {% else %}
@@ -213,7 +213,7 @@ _confirmations = \
 # language=jinja2
 _name = \
 """
-<a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 <div>
 {% if sel.convert_to_submitter %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Convert</span>

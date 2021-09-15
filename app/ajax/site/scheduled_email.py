@@ -17,7 +17,7 @@ from ...models import EmailNotification
 # language=jinja2
 _name = \
 """
-<a href="{{ user.email }}">{{ user.name }}</a>
+<a class="text-decoration-none" href="{{ user.email }}">{{ user.name }}</a>
 """
 
 

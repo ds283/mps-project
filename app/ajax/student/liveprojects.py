@@ -192,9 +192,9 @@ def _selector_element(sel_id, project_id, is_live):
     sel = db.session.query(SelectingStudent).filter_by(id=sel_id).one() if sel_id is not None else None
     p = db.session.query(LiveProject).filter_by(id=project_id).one()
 
-    base = {'name': '<a href="{url}">{name}</a>' \
+    base = {'name': '<a class="text-decoration-none" href="{url}">{name}</a>' \
                 .format(name=p.name, url=url_for('student.selector_view_project', sid=sel.id, pid=p.id)),
-            'supervisor': '{name} <a href="mailto:{em}">{em}</a>'.format(name=p.owner.user.name, em=p.owner.user.email),
+            'supervisor': '{name} <a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(name=p.owner.user.name, em=p.owner.user.email),
             'group': render_template_string(_project_group, sel=sel, group=p.group),
             'skills': render_template_string(_project_skills, sel=sel, skills=p.ordered_skills),
             'prefer': render_template_string(_project_prefer, project=p),
@@ -213,9 +213,9 @@ def _selector_element(sel_id, project_id, is_live):
 def _submitter_element(sub_id, project_id):
     p = db.session.query(LiveProject).filter_by(id=project_id).one()
 
-    return {'name': '<a href="{url}">{name}</a>' \
+    return {'name': '<a class="text-decoration-none" href="{url}">{name}</a>' \
                 .format(name=p.name, url=url_for('student.submitter_view_project', sid=sub_id, pid=p.id)),
-            'supervisor': '{name} <a href="mailto:{em}">{em}</a>'.format(name=p.owner.user.name, em=p.owner.user.email),
+            'supervisor': '{name} <a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(name=p.owner.user.name, em=p.owner.user.email),
             'group': render_template_string(_project_group, sel=None, group=p.group),
             'skills': render_template_string(_project_skills, sel=None, skills=p.ordered_skills),
             'prefer': render_template_string(_project_prefer, project=p),

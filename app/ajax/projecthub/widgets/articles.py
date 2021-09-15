@@ -17,13 +17,13 @@ from ....models import FormattedArticle
 
 _title = \
 """
-<a href="{{ url_for('projecthub.show_formatted_article', aid=a.id, url=url, text=text) }}">{{ a.title }}</a>
+<a class="text-decoration-none" href="{{ url_for('projecthub.show_formatted_article', aid=a.id, url=url, text=text) }}">{{ a.title }}</a>
 """
 
 
 _author = \
 """
-<i class="fas fa-user"></i> <a href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}</a>
+<i class="fas fa-user"></i> <a class="text-decoration-none" href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}</a>
 """
 
 

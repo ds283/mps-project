@@ -16,7 +16,7 @@ from ...models import ProjectClassConfig
 # language=jinja2
 _name = \
 """
-<a href="{{ url_for('faculty.live_project', pid=project.id, text='live projects list', url=url_for('convenor.liveprojects', id=config.pclass_id)) }}">{{ project.name }}</a>
+<a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text='live projects list', url=url_for('convenor.liveprojects', id=config.pclass_id)) }}">{{ project.name }}</a>
 {% if project.hidden %}
     <div>
         <span class="badge bg-danger"><i class="fas fa-eye-slash"></i> HIDDEN</span>
@@ -31,7 +31,7 @@ _bookmarks = \
 {% set bookmarks = project.number_bookmarks %}
 {% if bookmarks > 0 %}
     <span class="badge bg-info text-dark">{{ bookmarks }}</span>
-    <a href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
+    <a class="text-decoration-none" href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
        Show...
    </a>
 {% else %}
@@ -46,7 +46,7 @@ _selections = \
 <div>
     {% if selections > 0 %}
         <span class="badge bg-primary">{{ selections }}</span>
-        <a href="{{ url_for('convenor.project_choices', id=project.id) }}">
+        <a class="text-decoration-none" href="{{ url_for('convenor.project_choices', id=project.id) }}">
             Show...
         </a>
     {% else %}
@@ -72,7 +72,7 @@ _confirmations = \
     {% if confirmed > 0 %}<span class="badge bg-success"><i class="fas fa-check"></i> Confirmed {{ confirmed }}</span>{% endif %}
     {% if pending > 0 %}<span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pending {{ pending }}</span>{% endif %}
     {% if pending > 0 or confirmed > 0 %}
-        <a href="{{ url_for('convenor.project_confirmations', id=project.id) }}">
+        <a class="text-decoration-none" href="{{ url_for('convenor.project_confirmations', id=project.id) }}">
             Show...
         </a>
     {% else %}
@@ -223,7 +223,7 @@ def liveprojects_data(config: ProjectClassConfig, projects, url=None, text=None)
 
     data = [{'number': '{c}'.format(c=p.number),
              'name': render_template_string(_name, project=p, config=config),
-             'owner': '<a href="mailto:{em}">{name}</a>'.format(em=p.owner.user.email, name=p.owner.user.name),
+             'owner': '<a class="text-decoration-none" href="mailto:{em}">{name}</a>'.format(em=p.owner.user.email, name=p.owner.user.name),
              'group': p.group.make_label(),
              'bookmarks': {
                  'display': render_template_string(_bookmarks, project=p),

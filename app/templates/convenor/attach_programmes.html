@@ -56,7 +56,7 @@
             Finish and preview
         </a>
     {% else %}
-        <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
+        <a class="text-decoration-none" href="{{ url_for('convenor.attached', id=pclass_id) }}">
             <i class="fas fa-backward"></i> Return to convenor dashboard
         </a>
     {% endif %}

@@ -41,7 +41,7 @@
 
 {% block bodyblock %}
     <div class="top-return-link">
-        <a href="{{ url_for('admin.assessment_manage_sessions', id=assessment.id) }}">
+        <a class="text-decoration-none" href="{{ url_for('admin.assessment_manage_sessions', id=assessment.id) }}">
             <i class="fas fa-backward"></i> Return to sessions list
         </a>
     </div>
@@ -79,7 +79,7 @@
     </div>
 
     <div>
-        <a href="{{ url_for('admin.assessment_manage_sessions', id=assessment.id) }}">
+        <a class="text-decoration-none" href="{{ url_for('admin.assessment_manage_sessions', id=assessment.id) }}">
             <i class="fas fa-backward"></i> Return to sessions list
         </a>
     </div>

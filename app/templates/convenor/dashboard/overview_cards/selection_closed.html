@@ -11,7 +11,7 @@
                     <div class="list-group">
                         <div class="list-group-item {% if submitted == total %}list-group-item-success{% else %}list-group-item-secondary{% endif %}">
                             Selection data
-                            <a href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='submitted') }}">(Show...)</a>
+                            <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='submitted') }}">(Show...)</a>
                             <span class="badge bg-secondary rounded-pill">{{ submitted }}/{{ total }}</span>
                         </div>
                     </div>
@@ -20,7 +20,7 @@
                     <div class="list-group">
                         <div class="list-group-item {% if missing > 0 %}list-group-item-danger{% else %}list-group-item-success{% endif %}">
                             Missing data
-                            <a href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='none') }}">(Show...)</a>
+                            <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='none') }}">(Show...)</a>
                             <span class="badge bg-secondary rounded-pill">{{ missing }}/{{ total }}</span>
                         </div>
                     </div>
@@ -75,7 +75,7 @@
             </div>
             <div class="row">
                 <div class="col-12">
-                    <a href="{{ url_for('convenor.selector_grid', id=config.pclass_id) }}">
+                    <a class="text-decoration-none" href="{{ url_for('convenor.selector_grid', id=config.pclass_id) }}">
                         Show selector grid ...
                     </a>
                 </div>
@@ -87,7 +87,7 @@
             <div class="card-header bg-danger text-white">Proposed matches are available to view</div>
             <div class="card-body">
                 <p>An administrator has published one or more proposals for selector/project matches.</p>
-                <a href="{{ url_for('convenor.audit_matches', pclass_id=config.pclass_id) }}">View or edit proposed matches...</a>
+                <a class="text-decoration-none" href="{{ url_for('convenor.audit_matches', pclass_id=config.pclass_id) }}">View or edit proposed matches...</a>
             </div>
         </div>
     {% endif %}

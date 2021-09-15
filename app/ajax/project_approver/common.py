@@ -30,7 +30,7 @@ title = \
 
 owner = \
 """
-<a href="mailto:{{ f.user.email }}">{{ f.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ f.user.email }}">{{ f.user.name }}</a>
 """
 
 

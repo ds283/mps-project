@@ -18,7 +18,7 @@
         <div class="row vertical-align">
             <div class="col-6">
                 <span>Convenor:
-                <a href="mailto:{{ pclass.convenor_email }}">
+                <a class="text-decoration-none" href="mailto:{{ pclass.convenor_email }}">
                     {{ pclass.convenor_name }}
                 </a></span>
             </div>
@@ -59,7 +59,7 @@
                 <div class="col-12">
                     <span>Co-convenors:</span>
                     {% for fac in pclass.coconvenors %}
-                        <span><a href="mailto:{{ fac.user.email }}">
+                        <span><a class="text-decoration-none" href="mailto:{{ fac.user.email }}">
                             {{ fac.user.name }}
                         </a></span>
                     {% endfor %}

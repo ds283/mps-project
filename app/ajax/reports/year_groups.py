@@ -15,7 +15,7 @@ from flask import render_template_string
 # language=jinja2
 _name = \
 """
-<a href="mailto:{{ s.user.email }}">{{ s.user.name }}</a>
+<a class="text-decoration-none" href="mailto:{{ s.user.email }}">{{ s.user.name }}</a>
 {% if s.intermitting %}
     <span class="badge bg-warning text-dark">TWD</span>
 {% endif %}

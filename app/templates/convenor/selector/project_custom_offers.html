@@ -48,7 +48,7 @@
 
 {% block bodyblock %}
     <div class="top-return-link">
-        <a href="{{ url_for('convenor.liveprojects', id=pclass_id) }}">
+        <a class="text-decoration-none" href="{{ url_for('convenor.liveprojects', id=pclass_id) }}">
             <i class="fas fa-backward"></i> Return to convenor dashboard
         </a>
     </div>
@@ -78,7 +78,7 @@
         </div>
     </div>
 
-    <a href="{{ url_for('convenor.liveprojects', id=pclass_id) }}">
+    <a class="text-decoration-none" href="{{ url_for('convenor.liveprojects', id=pclass_id) }}">
         <i class="fas fa-backward"></i> Return to convenor dashboard
     </a>
 {% endblock %}

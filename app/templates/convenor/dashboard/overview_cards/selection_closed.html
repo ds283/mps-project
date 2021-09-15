@@ -82,13 +82,4 @@
             </div>
         </div>
     </div>
-    {% if config.has_published_matches and not rollover_in_progress %}
-        <div class="card mt-3 mb-3 border-danger">
-            <div class="card-header bg-danger text-white">Proposed matches are available to view</div>
-            <div class="card-body">
-                <p>An administrator has published one or more proposals for selector/project matches.</p>
-                <a class="text-decoration-none" href="{{ url_for('convenor.audit_matches', pclass_id=config.pclass_id) }}">View or edit proposed matches...</a>
-            </div>
-        </div>
-    {% endif %}
 {% endmacro %}

@@ -10,6 +10,8 @@
 {% from "convenor/dashboard/overview_cards/selection_closed.html" import selection_closed %}
 {% from "convenor/dashboard/overview_cards/submitter_card.html" import submitter_card %}
 
+{% set rollover_in_progress = config.year < current_year %}
+
 {% block scripts %}
     {{ super() }}
 
@@ -176,6 +178,16 @@
             {% endif %}
 
             {% if pclass.publish %}
+                {% if config.has_published_matches and not rollover_in_progress %}
+                    <div class="card mt-3 mb-3 border-danger">
+                        <div class="card-header bg-danger text-white">Proposed matches are available to view</div>
+                        <div class="card-body">
+                            <p>An administrator has published one or more proposals for selector/project matches.</p>
+                            <a class="text-decoration-none" href="{{ url_for('convenor.audit_matches', pclass_id=config.pclass_id) }}">View or edit proposed matches...</a>
+                        </div>
+                    </div>
+                {% endif %}
+
                 {% if config.has_auditable_schedules %}
                     <div class="card mt-3 mb-3 border-danger">
                         <div class="card-header bg-danger text-white">Proposed assessment schedules are available to view</div>
@@ -305,7 +317,7 @@
                 {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                     {{ selection_open(config, change_form) }}
                 {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
-                    {{ selection_closed(config, config.year < current_year) }}
+                    {{ selection_closed(config, rollover_in_progress) }}
                 {% else %}
                     <div class="card border-danger mt-3 mb-3">
                         <div class="card-header bg-danger text-white">Error</div>

@@ -175,8 +175,20 @@
                 {{ rollover_card(current_year, pclass, config) }}
             {% endif %}
 
+            {% if pclass.publish %}
+                {% if config.has_auditable_schedules %}
+                    <div class="card mt-3 mb-3 border-danger">
+                        <div class="card-header bg-danger text-white">Proposed assessment schedules are available to view</div>
+                        <div class="card-body">
+                            <p>An administrator has published one or more proposed schedules for presentation assessments.</p>
+                            <a class="text-decoration-none" href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or edit proposed schedules...</a>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+
             {% if top_to_dos is defined and top_do_dos is not none and top_to_dos|length > 0 %}
-                <div class="card border-dark mt-3 mb-3">
+                <div class="card mt-3 mb-3">
                     {% set pl = 's' %}{% if num_to_dos == 1 %}{% set pl = '' %}{% endif %}
                     <div class="card-header bg-warning">Upcoming tasks (<strong>{{ num_to_dos }}</strong> task{{ pl }} waiting)</div>
                     <div class="card-body">
@@ -280,15 +292,6 @@
             {% if pclass.publish %}
                 {# SELECTING #}
                 {# provide summary #}
-                {% if config.has_auditable_schedules %}
-                    <div class="card mt-3 mb-3 border-danger">
-                        <div class="card-header bg-danger text-white">Proposed assessment schedules are available to view</div>
-                        <div class="card-body">
-                            <p>An administrator has published one or more proposed schedules for presentation assessments.</p>
-                            <a class="text-decoration-none" href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or edit proposed schedules...</a>
-                        </div>
-                    </div>
-                {% endif %}
 
                 {% set state = config.selector_lifecycle %}
                 {% set sel_count = convenor_data['selectors'] %}

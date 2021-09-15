@@ -288,7 +288,7 @@
                             {% for group in groups %}
                                 {% if group in sel.group_filters %}
                                     <a href="{{ url_for(remove_group, id=sel.id, gid=group.id) }}"
-                                       class="badge bg-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
+                                       class="badge bg-secondary selection-label text-decoration-none" style="{{ group.make_CSS_style()|safe }}">
                                         <i class="fas fa-times"></i>
                                         {{ group.name }}
                                     </a>
@@ -299,7 +299,7 @@
                             {% for group in groups %}
                                 {% if group not in sel.group_filters %}
                                     <a href="{{ url_for(add_group, id=sel.id, gid=group.id) }}"
-                                       class="badge bg-secondary selection-label" style="{{ group.make_CSS_style()|safe }}">
+                                       class="badge bg-secondary selection-label text-decoration-none" style="{{ group.make_CSS_style()|safe }}">
                                         <i class="fas fa-plus"></i>
                                         {{ group.name }}
                                     </a>
@@ -328,7 +328,7 @@
                                     {% for skill in skills  %}
                                         {% if skill in sel.skill_filters %}
                                             <a href="{{ url_for(remove_skill, id=sel.id, skill_id=skill.id) }}"
-                                               class="badge bg-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
+                                               class="badge bg-secondary selection-label text-decoration-none" style="{{ skill.group.make_CSS_style()|safe }}">
                                                 <i class="fas fa-times"></i>
                                                 {{ skill.name }}
                                             </a>
@@ -347,7 +347,7 @@
                                     {% for skill in skills %}
                                         {% if skill not in sel.skill_filters %}
                                             <a href="{{ url_for(add_skill, id=sel.id, skill_id=skill.id) }}"
-                                               class="badge bg-secondary selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
+                                               class="badge bg-secondary selection-label text-decoration-none" style="{{ skill.group.make_CSS_style()|safe }}">
                                                 <i class="fas fa-plus"></i>
                                                 {{ skill.name }}
                                             </a>

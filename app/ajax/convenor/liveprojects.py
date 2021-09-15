@@ -98,14 +98,14 @@ _popularity = \
 {% set R = project.popularity_rank(live=require_live) %}
 {% if R is not none %}
     {% set rank, total = R %}
-    <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}" class="badge bg-primary">Popularity {{ rank }}/{{ total }}</a>
+    <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}" class="badge bg-primary text-decoration-none">Popularity {{ rank }}/{{ total }}</a>
 {% else %}
     <span class="badge bg-secondary">Popularity updating...</span>
 {% endif %}
 {% set R = project.views_rank(live=require_live) %}
 {% if R is not none %}
     {% set rank, total = R %}
-    <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="badge bg-secondary">Views {{ rank }}/{{ total }}</a>
+    <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="badge bg-secondary text-decoration-none">Views {{ rank }}/{{ total }}</a>
 {% else %}
     <span class="badge bg-secondary">Views updating...</span>
 {% endif %}

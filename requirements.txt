@@ -25,7 +25,6 @@ convertdate==2.3.2
 cryptography==3.4.7
 cssmin==0.2.0
 cssutils==2.3.0
-dataclasses==0.8
 decorator==5.0.9
 defusedxml==0.7.1
 dnspython==2.1.0

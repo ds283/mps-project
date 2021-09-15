@@ -4430,8 +4430,8 @@ def match_faculty_view(id):
     pclass_filter = request.args.get('pclass_filter')
     show_includes = request.args.get('show_includes')
 
-    if show_includes != 'true' and show_includes != 'false':
-        show_inclueds = 'false'
+    if show_includes is not None and show_includes not in ['true', 'false']:
+        show_includes = 'false'
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)

@@ -1515,6 +1515,7 @@ class ConvenorSubmitterTask(ConvenorTask):
     """
     Derived from ConvenorTask. Represents a task record attached to a specific SubmittingStudent
     """
+    __tablename__ = 'convenor_submitter_tasks'
 
     # primary key links to base table
     id = db.Column(db.Integer(), db.ForeignKey('convenor_tasks.id'), primary_key=True)

@@ -13,9 +13,9 @@ You are receiving this email because we expect you will undertake a project
 of type "{{ config.name }}" in academic year {{ config.year+1 }}-{{ config.year+2 }}.
 Please let us know as soon as possible if you believe this is not correct.
 
-The final project allocation is now available. Unless you have already
-been contacted to discuss changes, there should be no variation compared
-to the draft allocation of which you have already been notified.
+The final project allocation is now available. If you previously received
+notice of a draft allocation, there should be no substantial variation
+unless you have already been contacted to discuss changes.
 {%- endif %}
 
 {% if number == 1 -%}

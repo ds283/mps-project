@@ -261,14 +261,15 @@ def register_matching_email_tasks(celery):
                                            attempt=record, matches=binned_matches, convenors=convenors)
                 msg.html = render_template('email/matching/final_notify_faculty.html', user=user, fac=fac,
                                            attempt=record, matches=binned_matches, convenors=convenors)
+
+                # register a new task in the database
+                task_id = register_task(msg.subject,
+                                        description='Send schedule email to {r}'.format(r=', '.join(msg.recipients)))
+                send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
             else:
                 msg.body = render_template('email/matching/final_unneeded_faculty.txt', user=user, fac=fac,
                                            attempt=record)
                 msg.html = render_template('email/matching/final_unneeded_faculty.html', user=user, fac=fac,
                                            attempt=record)
-
-        # register a new task in the database
-        task_id = register_task(msg.subject, description='Send schedule email to {r}'.format(r=', '.join(msg.recipients)))
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1

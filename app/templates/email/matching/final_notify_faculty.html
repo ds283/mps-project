@@ -17,7 +17,6 @@
 {%- else -%}
 <li><a href="mailto:{{ item.selector.student.user.email }}">{{ item.selector.student.user.name }}</a> (<em>{{ item.project.name }}</em>)</li>
 {%- endif -%}
-{{ text|wordwrap(79) }}
 {%- endfor %}
 </ol>
 </li>l

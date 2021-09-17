@@ -34,9 +34,9 @@ You have been allocated the following projects:
 {%- endif %}
 {%- endfor %}
 
-If you believe there has been an error in the allocation, please contact
-the project convenor as soon as possible.
+If you have any queries about this allocation, please contact the projects
+convenor as soon as possible.
 
 Best wishes
 {{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} <{{ pclass.convenor_email }}>
-(the project convenor)
+(the projects convenor)

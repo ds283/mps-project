@@ -2,7 +2,7 @@
 
 <p><strong>This email is sent from an automated address. Please don't reply to it directly, because your email won't reach us.</strong></p>
 
-<p>Thank you for your efforts in preparing project descriptions and accommodating student meetings over the last term.  The final project allocation is now available. Unless you have already been contacted to discuss changes, there should be no variation compared to the draft allocation of which you have already been notified.</p>
+<p>Thank you for your efforts in preparing project descriptions and accommodating student meetings in the last academic year. You may have received notification of a draft matching in July, which included MPhys final-year projects only. We now have an updated project allocation that includes BSc final-year projects and Mathematical Physics Projects. The students we are asking you to supervise this year are:</p>
 
 <ul>
 {% for key in matches %}
@@ -26,10 +26,12 @@
 
 <p>If you anticipate any problems with this allocation, please let the appropriate project convenor know as soon as possible.</p>
 
+<p>For a small number of BSc students it was not possible to allocate projects until their progression outcomes were known. If you are not already being asked to supervise three students, it is possible that one or more additional students will be assigned to you over the coming days.</p>
+
 <p>Best wishes
 {% for convenor in convenors -%}
 <br><a href="mailto:{{ convenor.user.email }}">{{ convenor.user.first_name }} {{ convenor.user.last_name }}</a>
 {% endfor -%}
 {%- set pl = 's' -%}
 {%- if convenors|length == 1 -%}{%- set pl = '' -%}{%- endif -%}
-<br>(the project convenor{{ pl }})</p>
+<br>(the projects convenor{{ pl }})</p>

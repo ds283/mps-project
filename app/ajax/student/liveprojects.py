@@ -46,11 +46,11 @@ _status = \
         <span class="badge bg-success"><i class="fas fa-check"></i> Available for selection</span>
     {% else %}
         {% if project.is_waiting(sel) %}
-            <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="badge bg-warning text-dark">
+            <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="badge bg-warning text-dark text-decoration-none">
                 <i class="fas fa-times"></i> Cancel request
             </a>
         {% else %}
-            <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="badge bg-primary">
+            <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="badge bg-primary text-decoration-none">
                 <i class="fas fa-plus"></i> Request confirmation
             </a>
         {% endif %}
@@ -66,12 +66,12 @@ _bookmarks = \
 {% if sel %}
     {% if sel.is_project_bookmarked(project) %}
         <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
-           class="badge bg-primary">
+           class="badge bg-primary text-decoration-none">
            <i class="fas fa-times"></i> Remove
         </a>
     {% else %}
         <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}"
-           class="badge bg-secondary">
+           class="badge bg-secondary text-decoration-none">
            <i class="fas fa-plus"></i> Add
         </a>
     {% endif %}
@@ -163,7 +163,7 @@ _project_skills = \
             {% if sel %}
                 {% set href = url_for('student.add_skill_filter', id=sel.id, skill_id=skill.id) %}
             {% endif %}
-            <a {% if href %}href="{{ href }}"{% endif %} class="badge bg-secondary" style="{{ skill.group.make_CSS_style() }}">{%- if skill.group.add_group -%}{{ skill.group.name }}:{% endif %} {{ skill.name }}</a>
+            <a {% if href %}href="{{ href }}"{% endif %} class="badge bg-secondary text-decoration-none" style="{{ skill.group.make_CSS_style() }}">{%- if skill.group.add_group -%}{{ skill.group.name }}:{% endif %} {{ skill.name }}</a>
         {% endif %}
     {% endif %}
 {% endfor %}
@@ -176,7 +176,7 @@ _project_group = \
 {% if sel %}
     {% set href = url_for('student.add_group_filter', id=sel.id, gid=group.id) %}
 {% endif %}
-<a {% if href %}href="{{ href }}"{% endif %} class="badge bg-secondary" style="{{ group.make_CSS_style() }}">{{ group.name }}</a>
+<a {% if href %}href="{{ href }}"{% endif %} class="badge bg-secondary text-decoration-none" style="{{ group.make_CSS_style() }}">{{ group.name }}</a>
 """
 
 

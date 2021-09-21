@@ -3556,6 +3556,8 @@ def create_match():
     info = get_matching_dashboard_data()
 
     base_id = request.args.get('base_id', None)
+
+    base_match: MatchingAttempt
     base_match = None
     if base_id is not None:
         base_match = MatchingAttempt.query.get_or_404(base_id)
@@ -3709,6 +3711,29 @@ def create_match():
     else:
         if request.method == 'GET':
             form.use_hints.data = True
+
+            if base_match is not None:
+                # pre-populate form fields with same parameters used for base match
+                form.programme_bias.data = base_match.programme_bias
+                form.bookmark_bias.data = base_match.bookmark_bias
+
+                form.use_hints.data = base_match.use_hints
+
+                form.supervising_limit.data = base_match.supervising_limit
+                form.marking_limit.data = base_match.marking_limit
+                form.max_marking_multiplicity.data = base_match.max_marking_multiplicity
+
+                form.levelling_bias.data = base_match.levelling_bias
+                form.supervising_pressure.data = base_match.supervising_pressure
+                form.CATS_violation_penalty.data = base_match.CATS_violation_penalty
+                form.no_assignment_penalty.data = base_match.no_assignment_penalty
+
+                form.intra_group_tension.data = base_match.intra_group_tension
+
+                form.encourage_bias.data = base_match.encourage_bias
+                form.discourage_bias.data = base_match.discourage_bias
+                form.strong_encourage_bias.data = base_match.strong_encourage_bias
+                form.strong_discourage_bias.data = base_match.strong_discourage_bias
 
     # estimate equitable CATS loading
     supervising_CATS, marking_CATS, presentation_CATS, \

@@ -3725,6 +3725,7 @@ def create_match():
 
                 form.levelling_bias.data = base_match.levelling_bias
                 form.supervising_pressure.data = base_match.supervising_pressure
+                form.marking_pressure.data = base_match.marking_pressure
                 form.CATS_violation_penalty.data = base_match.CATS_violation_penalty
                 form.no_assignment_penalty.data = base_match.no_assignment_penalty
 

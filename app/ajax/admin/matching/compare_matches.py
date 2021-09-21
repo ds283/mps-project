@@ -52,7 +52,7 @@ _records = \
 # language=jinja2
 _delta = \
 """
-<span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning{% else %}bg-info{% endif %}">{{ r.rank }}</span>
+<span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning text-dark{% else %}bg-info{% endif %}">{{ r.rank }}</span>
 <span class="badge bg-primary">&delta; = {{ r.delta }}</span>
 """
 

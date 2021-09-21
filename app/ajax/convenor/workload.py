@@ -55,7 +55,7 @@ _projects = \
         </div>
         {% if r.owner.published %}
             <div class="dropdown assignment-label">
-                <a class="badge text-decoration-none {% if r.student_engaged %}bg-success{% else %}bg-warning{% endif %} btn-table-block dropdown-toggle"
+                <a class="badge text-decoration-none {% if r.student_engaged %}bg-success{% else %}bg-warning text-dark{% endif %} btn-table-block dropdown-toggle"
                     href="" role="button" aria-haspopup="true" aria-expanded="false"
                     data-bs-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}
                 <div class="dropdown-menu">

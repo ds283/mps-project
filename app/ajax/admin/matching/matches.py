@@ -128,7 +128,7 @@ _info = \
             {% set fail_pl = 's' %}{% if fail == 1 %}{% set fail_pl = '' %}{% endif %}
             <div>
                 <span class="badge {% if match > 0 %}bg-success{% else %}bg-secondary{% endif %}">Matched {{ match }} programme pref{{ match_pl }}</span>
-                <span class="badge {% if fail > 0 %}bg-warning{% elif match > 0 %}bg-success{% else %}bg-secondary{% endif %}">Failed {{ fail }} programme pref{{ fail_pl }}</span>
+                <span class="badge {% if fail > 0 %}bg-warning text-dark{% elif match > 0 %}bg-success{% else %}bg-secondary{% endif %}">Failed {{ fail }} programme pref{{ fail_pl }}</span>
             </div>
         {% endif %}
     {% endif %}
@@ -140,7 +140,7 @@ _info = \
             {% set violated_pl = 's' %}{% if violated == 1 %}{% set violated_pl = '' %}{% endif %}
             <div>
                 <span class="badge {% if satisfied > 0 %}bg-success{% else %}bg-secondary{% endif %}">Satisfied {{ satisfied }} hint{{ satisfied_pl }}</span>
-                <span class="badge {% if violated > 0 %}bg-warning{% elif satisfied > 0 %}bg-success{% else %}bg-secondary{% endif %}">Violated {{ violated }} hint{{ violated_pl }}</span>
+                <span class="badge {% if violated > 0 %}bg-warning text-dark{% elif satisfied > 0 %}bg-success{% else %}bg-secondary{% endif %}">Violated {{ violated }} hint{{ violated_pl }}</span>
             </div>
         {% endif %}
     {% endif %}

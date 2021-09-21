@@ -199,11 +199,11 @@ _rank = \
 """
 {% if recs|length == 1 %}
     {% set r = recs[0] %}
-    <span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning{% else %}bg-info{% endif %}">{{ r.rank }}</span>
+    <span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning text-dark{% else %}bg-info{% endif %}">{{ r.rank }}</span>
     <span class="badge bg-primary">&delta; = {{ delta }}</span>
 {% elif recs|length > 1 %}
     {% for r in recs %}
-        <span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning{% else %}bg-info{% endif %}">#{{ r.submission_period }}: {{ r.rank }}</span>
+        <span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning text-dark{% else %}bg-info{% endif %}">#{{ r.submission_period }}: {{ r.rank }}</span>
     {% endfor %}
     <span class="badge bg-primary">&delta; = {{ delta }}</span>
 {% endif %}

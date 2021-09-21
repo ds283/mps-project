@@ -264,12 +264,34 @@ def _Bookmark_delete_handler(mapper, connection, target):
 
 
 def selector_liveprojects_data(sel_id, is_live, projects):
-    data = [_selector_element(sel_id, p.id, is_live) for p in projects]
+    if isinstance(projects, list):
+        if len(projects) > 0:
+            if isinstance(projects[0], int):
+                return [_selector_element(sel_id, pid, is_live) for pid in projects]
+            else:
+                return [_selector_element(sel_id, p.id, is_live) for p in projects]
 
-    return data
+    else:
+        if isinstance(projects, int):
+            return [_selector_element(sel_id, projects, is_live)]
+        else:
+            return [_selector_element(sel_id, projects.id, is_live)]
+
+    return []
 
 
 def submitter_liveprojects_data(sub_id, projects):
-    data = [_submitter_element(sub_id, p.id) for p in projects]
+    if isinstance(projects, list):
+        if len(projects) > 0:
+            if isinstance(projects[0], int):
+                return [_submitter_element(sub_id, pid) for pid in projects]
+            else:
+                return [_submitter_element(sub_id, p.id) for p in projects]
 
-    return data
+    else:
+        if isinstance(projects, int):
+            return [_submitter_element(sub_id, projects)]
+        else:
+            return [_submitter_element(sub_id, projects.id)]
+
+    return []

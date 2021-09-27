@@ -2897,6 +2897,9 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     def _get_provisional_year(self, cohort, repeat_years):
         provisional_year = self._get_raw_provisional_year(cohort, repeat_years)
 
+        if provisional_year is None:
+            return None
+
         current_programme: DegreeProgramme = self.programme
         if current_programme is None and self.programme_id is not None:
             current_programme: DegreeProgramme = db.session.query(DegreeProgramme) \

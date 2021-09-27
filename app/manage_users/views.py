@@ -589,6 +589,8 @@ def batch_create_users():
                                       interpreted_lines=None,
                                       trust_cohort=trust_cohort,
                                       trust_exams=trust_exams,
+                                      trust_registration=trust_registration,
+                                      ignore_Y0=ignore_Y0,
                                       academic_year=current_year)
 
                 try:

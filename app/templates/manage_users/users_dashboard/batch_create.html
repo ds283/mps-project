@@ -37,7 +37,13 @@
 
             {% for batch in batches %}
                 <div class="card mt-3 mb-3 card-body bg-well">
-                    <div class="batch-name">{{ batch.name }}</div>
+                    <div class="batch-name">
+                        {% if batch.celery_finished and batch.success %}
+                            <a href="{{ url_for('manage_users.view_batch_data', batch_id=batch.id) }}" class="text-decoration-none">{{ batch.name }}</a>
+                        {% else %}
+                            {{ batch.name }}
+                        {% endif %}
+                    </div>
                     <div class="row vertical-top" style="margin-bottom: 10px;">
                         <div class="col-4">
                             <div>
@@ -67,7 +73,7 @@
                                     {% if batch.interpreted_lines < batch.total_lines %}
                                         <span class="badge bg-warning text-dark">Ignored lines: {{ batch.total_lines - batch.interpreted_lines }}</span>
                                     {% else %}
-                                        <span class="badge bg-secondary">No ignored lines</span>
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> All lines processed</span>
                                     {% endif %}
                                 {% endif %}
                                 <span class="badge bg-info text-dark">{{ batch.number_items }} items</span>
@@ -75,22 +81,22 @@
                             <div>
                                 <span class="badge bg-info text-dark">Reference academic year {{ batch.academic_year }}</span>
                                 {% if batch.trust_cohort %}
-                                    <span class="badge bg-success"><i class="fas fa-check"></i> Trust cohort data</span>
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> Cohort data</span>
                                 {% else %}
-                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> Do not trust cohort data</span>
+                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> Cohort data</span>
                                 {% endif %}
                                 {% if batch.trust_exams %}
-                                    <span class="badge bg-success"><i class="fas fa-check"></i> Trust exam numbers</span>
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> Exam numbers</span>
                                 {% else %}
-                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> Do not trust exam numbers</span>
+                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> Exam numbers</span>
                                 {% endif %}
                                 {% if batch.trust_registration %}
-                                    <span class="badge bg-success"><i class="fas fa-check"></i> Trust registration numbers</span>
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> Registration numbers</span>
                                 {% else %}
-                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> Do not trust registration numbers</span>
+                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> Registration numbers</span>
                                 {% endif %}
                                 {% if batch.ignore_Y0 %}
-                                    <span class="badge bg-info text-dark"><i class="fas fa-times"></i> Do not import Y0 students</span>
+                                    <span class="badge bg-info text-dark"><i class="fas fa-times"></i> Y0 students</span>
                                 {% endif %}
                             </div>
                         </div>

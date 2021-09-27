@@ -3373,10 +3373,10 @@ class StudentBatchItem(db.Model):
     email = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # registration number
-    registration_number = db.Column(db.Integer(), unique=True)
+    registration_number = db.Column(db.Integer())
 
     # exam number
-    exam_number = db.Column(db.Integer(), unique=True)
+    exam_number = db.Column(db.Integer())
 
     # cohort
     cohort = db.Column(db.Integer())

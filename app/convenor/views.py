@@ -2326,7 +2326,7 @@ def attach_liveproject(id):
 @roles_accepted('faculty', 'admin', 'root')
 def attach_liveproject_ajax(id):
     """
-    Ajax datapoint for attach_liveproject view
+    Ajax datapoint for attach_liveproject view - projects available to be attached
     :param id:
     :return:
     """
@@ -2414,7 +2414,7 @@ def manual_attach_project(id, configid):
 @roles_accepted('admin', 'root')
 def attach_liveproject_other_ajax(id):
     """
-    Ajax datapoint for attach_liveproject view
+    Ajax datapoint for attach_liveproject view - projects attached to *other* project classes that we might wish to attach
     :param id:
     :return:
     """

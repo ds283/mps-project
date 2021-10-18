@@ -1719,7 +1719,7 @@ def enroll_submitters_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
-    if config.selection_closed:
+    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         return jsonify({})
 
     candidates = build_enroll_submitter_candidates(config)

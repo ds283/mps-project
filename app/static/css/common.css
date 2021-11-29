@@ -307,25 +307,28 @@ p.copyright {
     margin-bottom: 0.5em;
 }
 
-.form-component + .form-group-heading {
-    margin-top: 0.85em;
-}
-
-div + .form-group-heading {
-    margin-top: 0.85em;
-}
-.form-component + .form-component {
-    margin-top: 0.6em;
-}
-
-.form-check + .form-component {
-    margin-top: 0.6em;
-}
-
-.form-component + .form-check {
-    margin-top: 0.6em;
-}
-
 .full-width-button {
     width: 100%;
+}
+
+/* add back form classes removed in Bootstrap 5 as a quick hack to get form layouts working again */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-inline .form-control {
+  display: inline-block;
+  width: auto;
+  vertical-align: middle;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: -5px;
+  margin-left: -5px;
+}
+
+label {
+  margin-bottom: 0.5rem;
 }

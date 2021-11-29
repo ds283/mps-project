@@ -31,8 +31,10 @@
                 sideBySide: true
             });
             tinymce.init({
-              selector: 'article',
-              menubar: 'false'
+              selector: '#article',
+              plugins: 'lists advlist autolink autosave codesample emoticons fullscreen hr link paste searchreplace table visualblocks',
+              toolbar: 'undo redo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | hr link codesample table emoticons | restoredraft paste pastetext visualblocks | fullscreen',
+              menubar: 'edit insert view table'
             });
         });
     </script>

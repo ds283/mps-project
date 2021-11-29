@@ -2,12 +2,12 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
-{% from "summernote.html" import import_summernote %}
+{% from "tinymce.html" import import_tinymce %}
 {% from "chosen.html" import import_chosen %}
 
 {% block scripts %}
     {{ super() }}
-    {{ import_summernote() }}
+    {{ import_tinymce() }}
     {{ import_chosen() }}
 
     <script>
@@ -17,7 +17,10 @@
             $('#project_classes').chosen({
                 placeholder_text_multiple: 'Leave blank to broadcast to all users'
             });
-            $('#body').summernote();
+            tinymce.init({
+              selector: '#body-editor',
+              menubar: 'false'
+            });
         });
     </script>
 {% endblock %}
@@ -60,7 +63,7 @@
         <hr class="intro-divider">
 
         {{ wtf.render_field(form.title) }}
-        {{ wtf.render_field(form.body) }}
+        {{ wtf.render_field(form.body, id='body-editor') }}
 
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 

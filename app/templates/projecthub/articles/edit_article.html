@@ -3,11 +3,11 @@
 {% import "bootstrap/form.html" as wtf %}
 
 {% from "macros.html" import date_field %}
-{% from "summernote.html" import import_summernote %}
+{% from "tinymce.html" import import_tinymce %}
 
 {% block scripts %}
     {{ super() }}
-    {{ import_summernote() }}
+    {{ import_tinymce() }}
 
     {% assets filters="cssmin", output="gen/tempusdominus-bootstrap-4.min.css", "css/tempusdominus-bootstrap-4.css" -%}
         <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
@@ -30,7 +30,10 @@
                 allowInputToggle: true,
                 sideBySide: true
             });
-            $('#article').summernote();
+            tinymce.init({
+              selector: 'article',
+              menubar: 'false'
+            });
         });
     </script>
 {% endblock %}

@@ -59,7 +59,7 @@ _sessions = \
                     {{ slot.session.short_date_as_string }} {{ slot.session.session_type_string }}
                 </a>
                 <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
-                    <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_assessors', id=slot.id, url=url, text=text) }}">
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_assessors', id=slot.id, url=url, text=text) }}">
                         Reassign assessors...
                     </a>
                 </div>
@@ -95,7 +95,7 @@ _sessions = \
                         ({{ talk.project.owner.user.last_name }} &ndash; {{ truncate_name(talk.project.name) }})
                     </a>
                     <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
-                        <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">
                             Reassign assessors...
                         </a>
                     </div>

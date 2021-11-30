@@ -19,22 +19,22 @@ _scheduled_menu_template = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-            <a class="dropdown-item" href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
+            <a class="dropdown-item d-flex gap-2" href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
                 <i class="fas fa-cogs fa-fw"></i> Edit task
             </a>
-            <a class="dropdown-item" href="{{ url_for('admin.delete_scheduled_task', id=task.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.delete_scheduled_task', id=task.id) }}">
                 <i class="fas fa-trash fa-fw"></i> Delete
             </a>
             {% if task.enabled %}
-                <a class="dropdown-item" href="{{ url_for('admin.deactivate_scheduled_task', id=task.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_scheduled_task', id=task.id) }}">
                     <i class="fas fa-wrench fa-fw"></i> Make inactive
                 </a>
             {% else %}
-                <a class="dropdown-item" href="{{ url_for('admin.activate_scheduled_task', id=task.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_scheduled_task', id=task.id) }}">
                     <i class="fas fa-wrench fa-fw"></i> Make active
                 </a>
             {% endif %}
-            <a class="dropdown-item" href="{{ url_for('admin.launch_scheduled_task', id=task.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.launch_scheduled_task', id=task.id) }}">
                 <i class="fas fa-running fa-fw"></i> Run now...
             </a>
     </div>

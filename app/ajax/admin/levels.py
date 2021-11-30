@@ -18,16 +18,16 @@ _types_menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('admin.edit_level', id=l.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_level', id=l.id) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit details...
         </a>
 
         {% if l.active %}
-            <a class="dropdown-item" href="{{ url_for('admin.deactivate_level', id=l.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_level', id=l.id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make inactive
             </a>
         {% else %}
-            <a class="dropdown-item" href="{{ url_for('admin.activate_level', id=l.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_level', id=l.id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make active
             </a>
         {% endif %}

@@ -29,10 +29,10 @@ _messages_menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('admin.edit_message', id=message.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_message', id=message.id) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit message
         </a>
-        <a class="dropdown-item" href="{{ url_for('admin.delete_message', id=message.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.delete_message', id=message.id) }}">
             <i class="fas fa-trash fa-fw"></i> Delete message
         </a>
 
@@ -42,14 +42,14 @@ _messages_menu = \
             {% set dpl = 's' %}
             {% if dismiss_count == 1 %}{% set dpl = '' %}{% endif %}
             {% if dismiss_count > 0 %}
-                <a class="dropdown-item" href="{{ url_for('admin.reset_dismissals', id=message.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.reset_dismissals', id=message.id) }}">
                     Reset {{ dismiss_count }} dismissal{{ dpl }}
                 </a>
             {% else %}
-                <a class="dropdown-item disabled">No dismissals</a>
+                <a class="dropdown-item d-flex gap-2 disabled">No dismissals</a>
             {% endif %}
         {% else %}
-            <a class="dropdown-item disabled">Not dismissible</a>
+            <a class="dropdown-item d-flex gap-2 disabled">Not dismissible</a>
         {% endif %}
     </div>
 </div>

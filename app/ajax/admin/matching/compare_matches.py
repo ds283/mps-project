@@ -66,10 +66,10 @@ _menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('admin.merge_replace_records', src_id=l.id, dest_id=r.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.merge_replace_records', src_id=l.id, dest_id=r.id) }}">
             <i class="fas fa-chevron-circle-right fa-fw"></i> Replace left to right
         </a>
-        <a class="dropdown-item" href="{{ url_for('admin.merge_replace_records', src_id=r.id, dest_id=l.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.merge_replace_records', src_id=r.id, dest_id=l.id) }}">
             <i class="fas fa-chevron-circle-left fa-fw"></i> Replace right to left
         </a>
     </div>

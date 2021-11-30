@@ -123,13 +123,13 @@
                                                 Actions
                                             </button>
                                             <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-    {#                                            <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ record.number_attachments_student }})...</a>#}
-                                                <a class="dropdown-item" href="{{ url_for('projecthub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fab fa-hubspot fa-fw"></i> Project hub...</a>
+    {#                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ record.number_attachments_student }})...</a>#}
+                                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('projecthub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fab fa-hubspot fa-fw"></i> Project hub...</a>
                                                 {% if record.has_feedback %}
-                                                    <a class="dropdown-item" href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}"><i class="fas fa-search fa-fw"></i> View feedback...</a>
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}"><i class="fas fa-search fa-fw"></i> View feedback...</a>
                                                 {% endif %}
                                                 <div role="separator" class="dropdown-divider"></div>
-                                                <a class="dropdown-item" href="{{ url_for('student.submitter_browse_projects', id=sub.id) }}"><i class="fas fa-search fa-fw"></i> View project list...</a>
+                                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.submitter_browse_projects', id=sub.id) }}"><i class="fas fa-search fa-fw"></i> View project list...</a>
                                             </div>
                                         </div>
                                     </div>

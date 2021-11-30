@@ -372,16 +372,16 @@
             <span class="sr-only">Toggle Dropdown</span>
         </button>
         <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-            <a class="dropdown-item" href="{{ url_for('convenor.edit_subpd_record_settings', pid=period.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_subpd_record_settings', pid=period.id) }}">
                 Settings...
             </a>
-            <a class="dropdown-item" href="{{ url_for('convenor.edit_subpd_record_presentation', pid=period.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_subpd_record_presentation', pid=period.id) }}">
                 Presentation...
             </a>
-            <a class="dropdown-item" href="{{ url_for('projecthub.edit_subpd_record_articles', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='convenor overview dashboard') }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('projecthub.edit_subpd_record_articles', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='convenor overview dashboard') }}">
                 Articles and news...
             </a>
-            <a class="dropdown-item"
+            <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('convenor.submission_period_documents', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='convenor overview dashboard') }}">
                 Manage documents ({{ period.number_attachments }})...
             </a>

@@ -40,15 +40,15 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         {% if e.held %}
-            <a class="dropdown-item" href="{{ url_for('admin.release_notification', eid=e.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.release_notification', eid=e.id) }}">
                 <i class="fas fa-play-circle fa-fw"></i> Release
             </a>
         {% else %}
-            <a class="dropdown-item" href="{{ url_for('admin.hold_notification', eid=e.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.hold_notification', eid=e.id) }}">
                 <i class="fas fa-pause-circle fa-fw"></i> Hold
             </a>
         {% endif %}
-        <a class="dropdown-item" href="{{ url_for('admin.delete_notification', eid=e.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.delete_notification', eid=e.id) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
     </div>

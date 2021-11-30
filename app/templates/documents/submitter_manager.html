@@ -87,39 +87,39 @@
                         {% if has_access or editable or deletable %}
                             {% if editable %}
                                 {% if edit_url is not none %}
-                                    <a class="dropdown-item" href="{{ edit_url }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit</a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ edit_url }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit</a>
                                 {% else %}
-                                    <a class="dropdown-item disabled"><i class="fas fa-pencil-alt fa-fw"></i> Edit</a>
+                                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-pencil-alt fa-fw"></i> Edit</a>
                                 {% endif %}
                             {% endif %}
                             {% if has_access %}
                                 {% if download_url is not none %}
-                                    <a class="dropdown-item" href="{{ download_url }}"><i class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ download_url }}"><i class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
                                 {% else %}
-                                    <a class="dropdown-item disabled"><i class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
+                                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
                                 {% endif %}
                             {% endif %}
                             {% if admin_rights %}
                                 {% if acl_url is not none %}
-                                    <a class="dropdown-item" href="{{ acl_url }}"><i class="fas fa-check-square fa-fw"></i> Access control...</a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ acl_url }}"><i class="fas fa-check-square fa-fw"></i> Access control...</a>
                                 {% else %}
-                                    <a class="dropdown-item disabled"><i class="fas fa-check-square fa-fw"></i> Access control...</a>
+                                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-check-square fa-fw"></i> Access control...</a>
                                 {% endif %}
                                 {% if log_url is not none %}
-                                    <a class="dropdown-item" href="{{ log_url }}"><i class="fas fa-address-book fa-fw"></i> Download log...</a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ log_url }}"><i class="fas fa-address-book fa-fw"></i> Download log...</a>
                                 {% else %}
-                                    <a class="dropdown-item disabled"><i class="fas fa-address-book fa-fw"></i> Download log...</a>
+                                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-address-book fa-fw"></i> Download log...</a>
                                 {% endif %}
                             {% endif %}
                             {% if deletable %}
                                 {% if delete_url is not none %}
-                                    <a class="dropdown-item" href="{{ delete_url }}"><i class="fas fa-trash fa-fw"></i> Remove</a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ delete_url }}"><i class="fas fa-trash fa-fw"></i> Remove</a>
                                 {% else %}
-                                    <a class="dropdown-item disabled"><i class="fas fa-trash fa-fw"></i> Remove</a>
+                                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-trash fa-fw"></i> Remove</a>
                                 {% endif %}
                             {% endif %}
                         {% else %}
-                            <a class="dropdown-item disabled"><i class="fas fa-times fa-fw"></i> No access</a>
+                            <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-times fa-fw"></i> No access</a>
                         {% endif %}
                     </div>
                 </div>

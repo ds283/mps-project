@@ -139,7 +139,7 @@
                                                 {{ talk.owner.student.user.name }}
                                             </a>
                                             <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
-                                                <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">
+                                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">
                                                     Reassign presentation...
                                                 </a>
                                             </div>

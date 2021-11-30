@@ -20,13 +20,13 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         {% set disabled = a.availability_closed %} 
-        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=assessor.faculty.id) }}"{% endif %}>
+        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=assessor.faculty.id) }}"{% endif %}>
             <i class="fas fa-check fa-fw"></i> Force confirm
         </a>
-        <a class="dropdown-item" href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=assessor.faculty.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=assessor.faculty.id) }}">
             <i class="fas fa-trash fa-fw"></i> Remove
         </a>
-        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.availability_reminder_individual', id=assessor.id) }}"{% endif %}>
+        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.availability_reminder_individual', id=assessor.id) }}"{% endif %}>
             <i class="fas fa-envelope fa-fw"></i> Send reminder
         </a>
     </div>

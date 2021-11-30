@@ -19,22 +19,22 @@ _menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('admin.edit_skill', id=skill.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_skill', id=skill.id) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit details...
         </a>
 
         {% if skill.group is not none and skill.group.active %}
             {% if skill.active %}
-                <a class="dropdown-item" href="{{ url_for('admin.deactivate_skill', id=skill.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_skill', id=skill.id) }}">
                     <i class="fas fa-wrench fa-fw"></i> Make inactive
                 </a>
             {% else %}
-                <a class="dropdown-item" href="{{ url_for('admin.activate_skill', id=skill.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_skill', id=skill.id) }}">
                     <i class="fas fa-wrench fa-fw"></i> Make active
                 </a>
             {% endif %}
         {% else %}
-            <a class="dropdown-item disabled">Parent disabled</a>
+            <a class="dropdown-item d-flex gap-2 disabled">Parent disabled</a>
         {% endif %}
     </ul>
 </div>

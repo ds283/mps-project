@@ -29,13 +29,13 @@ _menu = \
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         <div class="dropdown-header">Edit</div>
         
-        <a class="dropdown-item" href="{{ url_for('admin.edit_pclass', id=pcl.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_pclass', id=pcl.id) }}">
             <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
-        <a class="dropdown-item" href="{{ url_for('admin.edit_pclass_text', id=pcl.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_pclass_text', id=pcl.id) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Customize messages...
         </a>
-        <a class="dropdown-item" href="{{ url_for('admin.edit_submission_periods', id=pcl.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_submission_periods', id=pcl.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Submission periods...
         </a>
         
@@ -43,31 +43,31 @@ _menu = \
         <div class="dropdown-header">Admin</div>
 
         {% if pcl.active %}
-            <a class="dropdown-item" href="{{ url_for('admin.deactivate_pclass', id=pcl.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_pclass', id=pcl.id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make inactive
             </a>
         {% else %}
             {% if pcl.available %}
-                <a class="dropdown-item" href="{{ url_for('admin.activate_pclass', id=pcl.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_pclass', id=pcl.id) }}">
                     <i class="fas fa-wrench fa-fw"></i> Make active
                 </a>
             {% else %}
-                <a class="dropdown-item disabled">
+                <a class="dropdown-item d-flex gap-2 disabled">
                     <i class="fas fa-ban fa-fw"></i> Can't make active
                 </a>
             {% endif %}
         {% endif %}
         {% if pcl.publish %}
-            <a class="dropdown-item" href="{{ url_for('admin.unpublish_pclass', id=pcl.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.unpublish_pclass', id=pcl.id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Unpublish
             </a>
         {% else %}
             {% if pcl.available %}
-                <a class="dropdown-item" href="{{ url_for('admin.publish_pclass', id=pcl.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.publish_pclass', id=pcl.id) }}">
                     <i class="fas fa-wrench fa-fw"></i> Publish
                 </a>
             {% else %}
-                <a class="dropdown-item disabled">
+                <a class="dropdown-item d-flex gap-2 disabled">
                     <i class="fas fa-ban fa-fw"></i> Can't publish
                 </a>
             {% endif %}

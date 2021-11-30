@@ -41,17 +41,17 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         {% set disabled = not m.active %}
-        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_module', id=m.id) }}"{% endif %}>
+        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_module', id=m.id) }}"{% endif %}>
             <i class="fas fa-pencil-alt fa-fw"></i> Edit details...
         </a>
 
         {% if m.active %}
-            <a class="dropdown-item" href="{{ url_for('admin.retire_module', id=m.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.retire_module', id=m.id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Retire
             </a>
         {% else %}
             {% set disabled = m.available %}
-            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.unretire_module', id=m.id) }}"{% endif %}>
+            <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.unretire_module', id=m.id) }}"{% endif %}>
                 <i class="fas fa-wrench fa-fw"></i> Unretire
             </a>
         {% endif %}

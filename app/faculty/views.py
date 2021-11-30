@@ -167,7 +167,7 @@ _desc_menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
            url=url_for('faculty.edit_descriptions', id=d.parent.id, create=create),
            text='description list view') }}">
             <i class="fas fa-search fa-fw"></i> Preview web page
@@ -176,37 +176,37 @@ _desc_menu = \
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Edit description</div>
 
-        <a class="dropdown-item" href="{{ url_for('faculty.edit_description', did=d.id, create=create,
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_description', did=d.id, create=create,
                                                   url=url_for('faculty.edit_descriptions', id=d.parent_id, create=create),
                                                   text='project variants list') }}">
             <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
-        <a class="dropdown-item" href="{{ url_for('faculty.edit_description_content', did=d.id, create=create,
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_description_content', did=d.id, create=create,
                                                   url=url_for('faculty.edit_descriptions', id=d.parent_id, create=create),
                                                   text='project variants list') }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit content...
         </a>
-        <a class="dropdown-item" href="{{ url_for('faculty.description_modules', did=d.id, create=create) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.description_modules', did=d.id, create=create) }}">
             <i class="fas fa-cogs fa-fw"></i> Recommended modules...
         </a>
-        <a class="dropdown-item" href="{{ url_for('faculty.duplicate_description', did=d.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.duplicate_description', did=d.id) }}">
             <i class="fas fa-clone fa-fw"></i> Duplicate
         </a>
-        <a class="dropdown-item" href="{{ url_for('faculty.move_description', did=d.id, create=create) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.move_description', did=d.id, create=create) }}">
             <i class="fas fa-folder-open fa-fw"></i> Move to project...
         </a>
-        <a class="dropdown-item" href="{{ url_for('faculty.delete_description', did=d.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.delete_description', did=d.id) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
         
         <div role="separator" class="dropdown-divider"></div>
         
         {% if d.default is none %}
-            <a class="dropdown-item" href="{{ url_for('faculty.make_default_description', pid=d.parent_id, did=d.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.make_default_description', pid=d.parent_id, did=d.id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make default
             </a>
         {% else %}
-            <a class="dropdown-item" href="{{ url_for('faculty.make_default_description', pid=d.parent_id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.make_default_description', pid=d.parent_id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Remove default
             </a>
         {% endif %}

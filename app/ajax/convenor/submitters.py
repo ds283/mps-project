@@ -59,10 +59,10 @@ _projects = \
                 <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                     {% set disabled = r.period.is_feedback_open or r.student_engaged %}
                     {% if disabled %}
-                        <a class="dropdown-item disabled">Can't reassign: Feedback open or student engaged</a>
+                        <a class="dropdown-item d-flex gap-2 disabled">Can't reassign: Feedback open or student engaged</a>
                     {% else %}
-                        <a class="dropdown-item" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Manually reassign</a>
-                        <a class="dropdown-item" href="{{ url_for('convenor.deassign_project', id=r.id) }}">Remove assignment</a>
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Manually reassign</a>
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}">Remove assignment</a>
                     {% endif %}
                 </div>
             </div>
@@ -73,14 +73,14 @@ _projects = \
                         data-bs-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}</a>
                     <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                         {% if r.submission_period > r.owner.config.submission_period %}
-                            <a class="dropdown-item disabled">Submission period not yet open</a>
+                            <a class="dropdown-item d-flex gap-2 disabled">Submission period not yet open</a>
                         {% elif not r.student_engaged %}
-                            <a class="dropdown-item" href="{{ url_for('convenor.mark_started', id=r.id) }}">
+                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_started', id=r.id) }}">
                                 <i class="fas fa-check fa-fw"></i> Mark as started
                             </a>
                         {% else %}
                             {% set disabled = (r.owner.config.submitter_lifecycle >= r.owner.config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
-                            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
+                            <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
                                 <i class="fas fa-times fa-fw"></i> Mark as waiting
                             </a>
                         {% endif %}
@@ -155,10 +155,10 @@ _markers = \
                 <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                     {% set disabled = r.period.is_feedback_open %}
                     {% if disabled %}
-                        <a class="dropdown-item disabled">Can't reassign: Feedback open or student engaged</a>
+                        <a class="dropdown-item d-flex gap-2 disabled">Can't reassign: Feedback open or student engaged</a>
                     {% else %}
-                        <a class="dropdown-item" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Manually reassign</a>
-                        <a class="dropdown-item" href="{{ url_for('convenor.deassign_marker', id=r.id) }}">Remove assignment</a>
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Manually reassign</a>
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_marker', id=r.id) }}">Remove assignment</a>
                     {% endif %}
                 </div>
             </div>
@@ -228,7 +228,7 @@ _presentations = \
                         {% endif %}
                         <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                             {% set disabled = not rec.can_assign_feedback %}
-                            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=rec.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                            <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=rec.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
                                 Add new feedback
                             </a>
                         </div>
@@ -271,30 +271,30 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
-            <a class="dropdown-item" href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
                 <i class="fas fa-pencil-alt fa-fw"></i> Edit student...
             </a>
         {% endif %}
         {% if sub.student.has_timeline %}
-            <a class="dropdown-item" href="{{ url_for('student.timeline', student_id=sub.student.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.timeline', student_id=sub.student.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
                 <i class="fas fa-history fa-fw"></i> Show history... 
             </a>
         {% endif %}
-        <a class="dropdown-item" href="{{ url_for('convenor.student_tasks', type=2, sid=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_tasks', type=2, sid=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
             <i class="fas fa-tasks fa-fw"></i> Tasks...
         </a>
         
         {% if sub.published and pclass.publish %}
-            <a class="dropdown-item" href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">
                 <i class="fas fa-eye-slash fa-fw"></i> Unpublish
             </a>
         {% else %}
             {% if pclass.publish %}
-                <a class="dropdown-item" href="{{ url_for('convenor.publish_assignment', id=sub.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.publish_assignment', id=sub.id) }}">
                     <i class="fas fa-eye fa-fw"></i> Publish to student
                 </a>
             {% else %}
-                <a class="dropdown-item disabled">
+                <a class="dropdown-item d-flex gap-2 disabled">
                     <i class="fas fa-eye-slash fa-fw"></i> Cannot publish
                 </a>
             {% endif %}
@@ -302,24 +302,24 @@ _menu = \
         <div role="separator" class="dropdown-divider"></div>
 
         {% set disabled = not pclass.publish %}
-        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('documents.submitter_documents', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('documents.submitter_documents', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
             <i class="fas fa-file fa-fw"></i> Manage documents...
         </a>
-        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.view_feedback', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.view_feedback', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
             <i class="fas fa-comments fa-fw"></i> View feedback...
         </a>
-        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.manual_assign', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.manual_assign', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
             <i class="fas fa-wrench fa-fw"></i> Manual assignment...
         </a>
 
         <div role="separator" class="dropdown-divider"></div>
 
         {% if allow_delete %}
-            <a class="dropdown-item" href="{{ url_for('convenor.delete_submitter', sid=sub.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.delete_submitter', sid=sub.id) }}">
                 <i class="fas fa-trash fa-fw"></i> Delete
             </a>
         {% else %}
-            <a class="dropdown-item disabled"><i class="fas fa-trash fa-fw"></i> Delete disabled</a>
+            <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-trash fa-fw"></i> Delete disabled</a>
         {% endif %}
     </div>
 </div>

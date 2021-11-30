@@ -255,7 +255,7 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         {% if m.finished and m.solution_usable %}
-            <a class="dropdown-item" href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">
                 <i class="fas fa-search fa-fw"></i> Inspect match...
             </a>
             <div role="separator" class="dropdown-divider"></div>
@@ -264,47 +264,47 @@ _menu = \
         {% if not m.finished %}
             {% set disabled = not current_user.has_role('root') %}
             {% if m.awaiting_upload %}
-                <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.upload_match', match_id=m.id) }}"{% endif %}>
+                <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.upload_match', match_id=m.id) }}"{% endif %}>
                     <i class="fas fa-cloud-upload fa-fw"></i> Upload solution...
                 </a>
             {% endif %}
-            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.duplicate_match', id=m.id) }}"{% endif %}>
+            <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.duplicate_match', id=m.id) }}"{% endif %}>
                 <i class="fas fa-clone fa-fw"></i> Duplicate
             </a>
-            <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.terminate_match', id=m.id) }}"{% endif %}>
+            <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.terminate_match', id=m.id) }}"{% endif %}>
                 <i class="fas fa-hand-paper fa-fw"></i> Terminate
             </a>
         {% else %}
             {% if m.solution_usable %}
-                <a class="dropdown-item" href="{{ url_for('admin.rename_match', id=m.id, url=url) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.rename_match', id=m.id, url=url) }}">
                     <i class="fas fa-pencil-alt fa-fw"></i> Rename...
                 </a>
                 {% if m.is_modified %}
-                    <a class="dropdown-item" href="{{ url_for('admin.revert_match', id=m.id) }}">
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.revert_match', id=m.id) }}">
                         <i class="fas fa-undo fa-fw"></i> Revert to original
                     </a>
                 {% endif %}
-                <a class="dropdown-item" href="{{ url_for('admin.duplicate_match', id=m.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.duplicate_match', id=m.id) }}">
                     <i class="fas fa-clone fa-fw"></i> Duplicate
                 </a>
-                <a class="dropdown-item" href="{{ url_for('admin.compare_match', id=m.id, text=text, url=url) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.compare_match', id=m.id, text=text, url=url) }}">
                     <i class="fas fa-balance-scale fa-fw"></i> Compare to...
                 </a>
                 {% if is_root %}
-                    <a class="dropdown-item" href="{{ url_for('admin.create_match', base_id=m.id) }}">
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.create_match', base_id=m.id) }}">
                         <i class="fas fa-plus-circle fa-fw"></i> Use as base...
                     </a>
                 {% endif %}
             {% else %}
-                <a class="dropdown-item disabled"><i class="fas fa-times"></i> Solution is not usable</a>
+                <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-times"></i> Solution is not usable</a>
             {% endif %}
 
             {% if current_user.has_role('root') or current_user.id == m.creator_id %}
-                <a class="dropdown-item" href="{{ url_for('admin.delete_match', id=m.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.delete_match', id=m.id) }}">
                     <i class="fas fa-trash fa-fw"></i> Delete
                 </a>
                 {% if m.can_clean_up %}
-                    <a class="dropdown-item" href="{{ url_for('admin.clean_up_match', id=m.id) }}">
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.clean_up_match', id=m.id) }}">
                         <i class="fas fa-cut fa-fw"></i> Clean up
                     </a>
                 {% endif %}
@@ -315,31 +315,31 @@ _menu = \
                 <div class="dropdown-header">Superuser functions</div>
                 
                 {% if m.published %}
-                    <a class="dropdown-item" href="{{ url_for('admin.unpublish_match', id=m.id) }}">
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.unpublish_match', id=m.id) }}">
                         <i class="fas fa-stop-circle fa-fw"></i> Unpublish
                     </a>
                 {% else %}
-                    <a class="dropdown-item" href="{{ url_for('admin.publish_match', id=m.id) }}">
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.publish_match', id=m.id) }}">
                         <i class="fas fa-share fa-fw"></i> Publish to convenors
                     </a>
                 {% endif %}
                 
                 {% if m.selected %}
-                    <a class="dropdown-item" href="{{ url_for('admin.deselect_match', id=m.id) }}">
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deselect_match', id=m.id) }}">
                         <i class="fas fa-times fa-fw"></i> Deselect
                     </a>
                 {% else %}
-                    <a class="dropdown-item" href="{{ url_for('admin.select_match', id=m.id, force=0) }}">
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.select_match', id=m.id, force=0) }}">
                         <i class="fas fa-check fa-fw"></i> Select
                     </a>
                 {% endif %}
                 
                 {% if m.selected or m.published %}
                     <div role="separator" class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="{{ url_for('admin.publish_matching_selectors', id=m.id) }}">
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.publish_matching_selectors', id=m.id) }}">
                         <i class="fas fa-mail-bulk fa-fw"></i> {% if m.selected %}Final{% else %}Draft{% endif %} to selectors
                     </a>
-                    <a class="dropdown-item" href="{{ url_for('admin.publish_matching_supervisors', id=m.id) }}">
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.publish_matching_supervisors', id=m.id) }}">
                         <i class="fas fa-mail-bulk fa-fw"></i> {% if m.selected %}Final{% else %}Draft{% endif %} to supervisors
                     </a>
                 {% endif %}

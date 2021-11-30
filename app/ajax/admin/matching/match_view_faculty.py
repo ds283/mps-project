@@ -99,7 +99,7 @@ _projects = \
                 {% for item in list %}
                     {% set disabled = false %}
                     {% if item.liveproject_id == r.project_id or not item.is_selectable %}{% set disabled = true %}{% endif %}
-                    <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
+                    <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
                        #{{ item.rank }}:
                        {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.format_project()|safe }} 
                     </a>
@@ -163,7 +163,7 @@ _marking = \
             {% for marker in assessor_list %}
                 {% set disabled = false %}
                 {% if marker.id == r.marker_id %}{% set disabled = true %}{% endif %}
-                <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=marker.id) }}"{% endif %}>
+                <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=marker.id) }}"{% endif %}>
                     {{ marker.user.name }}
                 </a>
             {% endfor %}

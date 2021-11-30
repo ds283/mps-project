@@ -84,18 +84,18 @@ _menu = \
         {% set a = s.owner %}
         {% set disabled = not s.owner.is_feedback_open %}
         <div class="dropdown-header">Edit session</div>
-        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_session', id=s.id) }}"{% endif %}>
+        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_session', id=s.id) }}"{% endif %}>
             <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
         {% set disabled = not a.requested_availability or a.is_deployed %}
-        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.submitter_session_availability', id=s.id) }}"{% endif %}>
+        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.submitter_session_availability', id=s.id) }}"{% endif %}>
             <i class="fas fa-cogs fa-fw"></i> Submitters...
         </a>
-        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.assessor_session_availability', id=s.id) }}"{% endif %}>
+        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.assessor_session_availability', id=s.id) }}"{% endif %}>
             <i class="fas fa-cogs fa-fw"></i> Assessors...
         </a>
         {% set disabled = not a.is_feedback_open %}
-        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.delete_session', id=s.id) }}"{% endif %}>
+        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.delete_session', id=s.id) }}"{% endif %}>
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
     </div>

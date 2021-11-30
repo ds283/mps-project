@@ -19,7 +19,7 @@ _menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('manage_users.edit_role', id=role.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_role', id=role.id) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit role
         </a>
     </div>

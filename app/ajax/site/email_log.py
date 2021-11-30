@@ -19,10 +19,10 @@ _email_log_menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('admin.delete_email', id=e.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.delete_email', id=e.id) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
-        <a class="dropdown-item" href="{{ url_for('admin.display_email', id=e.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.display_email', id=e.id) }}">
             <i class="fas fa-eye fa-fw"></i> View email
         </a>
     </div>

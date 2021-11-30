@@ -59,17 +59,17 @@
                                             </a>
                                             <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                                                 {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                                    <a class="dropdown-item" href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
                                                         <i class="fas fa-clock fa-fw"></i> Make pending
                                                     </a>
-                                                    <a class="dropdown-item" href="{{ url_for('convenor.deconfirm', sid=sel.id, pid=project.id) }}">
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deconfirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fas fa-trash fa-fw"></i> Delete
                                                     </a>
                                                 {% else %}
-                                                    <a class="dropdown-item disabled">
+                                                    <a class="dropdown-item d-flex gap-2 disabled">
                                                         <i class="fas fa-clock fa-fw"></i> Make pending
                                                     </a>
-                                                    <a class="dropdown-item disabled">
+                                                    <a class="dropdown-item d-flex gap-2 disabled">
                                                         <i class="fas fa-trash fa-fw"></i> Delete
                                                     </a>
                                                 {% endif %}
@@ -116,17 +116,17 @@
                                             </a>
                                             <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                                                 {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                                    <a class="dropdown-item" href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fas fa-check fa-fw"></i> Confirm
                                                     </a>
-                                                    <a class="dropdown-item" href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fas fa-trash fa-fw"></i> Delete
                                                     </a>
                                                 {% else %}
-                                                    <a class="dropdown-item disabled">
+                                                    <a class="dropdown-item d-flex gap-2 disabled">
                                                         <i class="fas fa-check fa-fw"></i> Confirm
                                                     </a>
-                                                    <a class="dropdown-item disabled">
+                                                    <a class="dropdown-item d-flex gap-2 disabled">
                                                         <i class="fas fa-trash fa-fw"></i> Delete
                                                     </a>
                                                 {% endif %}

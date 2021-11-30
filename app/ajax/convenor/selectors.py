@@ -23,23 +23,23 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
-            <a class="dropdown-item" href="{{ url_for('manage_users.edit_student', id=student.student.id, url=url_for('convenor.selectors', id=pclass.id)) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_student', id=student.student.id, url=url_for('convenor.selectors', id=pclass.id)) }}">
                 <i class="fas fa-pencil-alt fa-fw"></i> Edit student...
             </a>
         {% endif %}
         {% if student.student.has_timeline %}
-            <a class="dropdown-item" href="{{ url_for('student.timeline', student_id=student.student.id, text='selectors view', url=url_for('convenor.selectors', id=pclass.id)) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.timeline', student_id=student.student.id, text='selectors view', url=url_for('convenor.selectors', id=pclass.id)) }}">
                 <i class="fas fa-history fa-fw"></i> Show history... 
             </a>
         {% endif %}
-        <a class="dropdown-item" href="{{ url_for('convenor.selector_custom_offers', sel_id=student.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.selector_custom_offers', sel_id=student.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Custom offers...
         </a>
-        <a class="dropdown-item" href="{{ url_for('convenor.student_tasks', type=1, sid=student.id, text='selectors view', url=url_for('convenor.selectors', id=pclass.id)) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_tasks', type=1, sid=student.id, text='selectors view', url=url_for('convenor.selectors', id=pclass.id)) }}">
             <i class="fas fa-tasks fa-fw"></i> Tasks...
         </a>
         {% if is_admin %}
-            <a class="dropdown-item" href="{{ url_for('admin.move_selector', sid=student.id, text='selectors view', url=url_for('convenor.selectors', id=pclass.id)) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.move_selector', sid=student.id, text='selectors view', url=url_for('convenor.selectors', id=pclass.id)) }}">
                 <i class="fas fa-arrow-alt-circle-right fa-fw"></i> Move...
             </a>
         {% endif %}
@@ -47,40 +47,40 @@ _menu = \
         <div class="dropdown-header">Selections</div>
         {% set is_valid = student.is_valid_selection[0] %}
         {% if is_valid %}
-            <a class="dropdown-item" href="{{ url_for('convenor.submit_student_selection', sel_id=student.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.submit_student_selection', sel_id=student.id) }}">
                 <i class="fas fa-paper-plane fa-fw"></i> Submit selection
             </a>
         {% endif %}
         
         {% if student.has_submitted %}
-            <a class="dropdown-item" href="{{ url_for('convenor.selector_choices', id=student.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.selector_choices', id=student.id) }}">
                 <i class="fas fa-eye fa-fw"></i> Show selection
             </a>
         {% elif (is_admin and not is_valid) %}
-            <a class="dropdown-item" href="{{ url_for('convenor.force_submit_selection', sel_id=student.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.force_submit_selection', sel_id=student.id) }}">
                 <i class="fas fa-exclamation-triangle fa-fw"></i> Force submission
             </a>
         {% endif %}
         
         {% if student.convert_to_submitter %}
-            <a class="dropdown-item" href="{{ url_for('convenor.disable_conversion', sid=student.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.disable_conversion', sid=student.id) }}">
                 <i class="fas fa-times fa-fw"></i> Disable conversion
             </a>
         {% else %}
-            <a class="dropdown-item" href="{{ url_for('convenor.enable_conversion', sid=student.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.enable_conversion', sid=student.id) }}">
                 <i class="fas fa-check fa-fw"></i> Enable conversion
             </a>
         {% endif %}
 
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Bookmarks</div>    
-        <a class="dropdown-item" href="{{ url_for('convenor.selector_bookmarks', id=student.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.selector_bookmarks', id=student.id) }}">
             <i class="fas fa-eye fa-fw"></i> Show bookmarks
         </a>
 
         {% if student.has_bookmarks %}
             {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                <a class="dropdown-item" href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
                     <i class="fas fa-trash fa-fw"></i> Delete bookmarks
                 </a>
             {% endif %}
@@ -89,10 +89,10 @@ _menu = \
         {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.number_pending > 0 %}
             <div role="separator" class="dropdown-divider"></div>
             <div class="dropdown-header">Meeting requests</div>
-            <a class="dropdown-item" href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
                 <i class="fas fa-check fa-fw"></i> Confirm all
             </a>
-            <a class="dropdown-item" href="{{ url_for('convenor.student_clear_requests', sid=student.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_clear_requests', sid=student.id) }}">
                 <i class="fas fa-trash fa-fw"></i> Delete all
             </a>
         {% endif %}
@@ -100,27 +100,27 @@ _menu = \
         {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.number_confirmed > 0 %}
             <div role="separator" class="dropdown-divider"></div>
             <div class="dropdown-header">Meeting confirmations</div>
-            <a class="dropdown-item" href="{{ url_for('convenor.student_make_all_confirms_pending', sid=student.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_make_all_confirms_pending', sid=student.id) }}">
                 <i class="fas fa-clock fa-fw"></i> Make all pending
             </a>
-            <a class="dropdown-item" href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
                 <i class="fas fa-trash fa-fw"></i> Delete all
             </a>
         {% endif %}
                 
         {% if student.number_pending > 0 or student.number_confirmed > 0 %}
-            <a class="dropdown-item" href="{{ url_for('convenor.selector_confirmations', id=student.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.selector_confirmations', id=student.id) }}">
                 <i class="fas fa-cogs fa-fw"></i> Show confirmations
             </a>
         {% endif %}
         
         <div role="separator" class="dropdown-divider"></div>
         {% if config.selection_closed and not is_admin %}
-            <a class="dropdown-item disabled">
+            <a class="dropdown-item d-flex gap-2 disabled">
                 <i class="fas fa-trash fa-fw"></i> Delete is disabled
             </a>
         {% else %}
-            <a class="dropdown-item" href="{{ url_for('convenor.delete_selector', sid=student.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.delete_selector', sid=student.id) }}">
                 <i class="fas fa-trash fa-fw"></i> Delete
             </a>
         {% endif %}

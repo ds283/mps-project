@@ -32,7 +32,7 @@ _assessors = \
                 {{ assessor.user.name }}
             </a>
             <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
-                <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
                     Reassign assessors...
                 </a>
             </div>
@@ -59,7 +59,7 @@ _talks = \
             {{ talk.owner.student.user.name }}
         </a>
         <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
-            <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=s.id, talk_id=talk.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=s.id, talk_id=talk.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
                 Reassign presentation...
             </a>
         </div>
@@ -124,11 +124,11 @@ _room = \
         <div class="dropdown-header">Alternative venues</div>
         {% set rooms = s.alternative_rooms %}
         {% for room in rooms %}
-            <a class="dropdown-item" href="{{ url_for('admin.schedule_move_room', slot_id=s.id, room_id=room.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_move_room', slot_id=s.id, room_id=room.id) }}">
                 {{ room.full_name }}
             </a>
         {% else %}
-            <a class="dropdown-item disabled"><i class="fas fa-bar fa-fw"></i> None available</a>
+            <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-bar fa-fw"></i> None available</a>
         {% endfor %}
     </ul>
 </div>

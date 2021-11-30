@@ -24,10 +24,10 @@ _enroll_action = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id, convert=1) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id, convert=1) }}">
             <i class="fas fa-plus fa-fw"></i> Enroll
         </a>
-        <a class="dropdown-item" href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id, convert=0) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id, convert=0) }}">
             <i class="fas fa-plus fa-fw"></i> Enroll without conversion
         </a>
     </div>

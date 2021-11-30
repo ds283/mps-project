@@ -175,46 +175,46 @@ _faculty_menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
             <i class="fas fa-search fa-fw"></i> Preview web page
         </a>
 
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Edit project</div>
 
-        <a class="dropdown-item" href="{{ url_for('faculty.edit_project', id=project.id, text=text, url=url) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_project', id=project.id, text=text, url=url) }}">
             <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
-        <a class="dropdown-item" href="{{ url_for('faculty.edit_descriptions', id=project.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_descriptions', id=project.id) }}">
             <i class="fas fa-tools fa-fw"></i> Variants...
         </a>
-        <a class="dropdown-item" href="{{ url_for('faculty.attach_assessors', id=project.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.attach_assessors', id=project.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Assessors...
         </a>
-        <a class="dropdown-item" href="{{ url_for('faculty.attach_skills', id=project.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.attach_skills', id=project.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Transferable skills...
         </a>
-        <a class="dropdown-item" href="{{ url_for('faculty.attach_programmes', id=project.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.attach_programmes', id=project.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Degree programmes...
         </a>
 
         <div role="separator" class="dropdown-divider"></div>
 
         {% if project.active %}
-            <a class="dropdown-item" href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make inactive
             </a>
         {% else %}
-            <a class="dropdown-item" href="{{ url_for('faculty.activate_project', id=project.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.activate_project', id=project.id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make active
             </a>
         {% endif %}
         {% if project.is_deletable %}
-            <a class="dropdown-item" href="{{ url_for('faculty.delete_project', id=project.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.delete_project', id=project.id) }}">
                 <i class="fas fa-trash fa-fw"></i> Delete
             </a>
         {% else %}
-            <a class="dropdown-item disabled">
+            <a class="dropdown-item d-flex gap-2 disabled">
                 <i class="fas fa-trash fa-fw"></i> Delete disabled
             </a>
         {% endif %}
@@ -231,30 +231,30 @@ _convenor_menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
             <i class="fas fa-search fa-fw"></i> Preview web page
         </a>
 
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Edit project</div>
 
-        <a class="dropdown-item" href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=pclass_id, text=text, url=url) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=pclass_id, text=text, url=url) }}">
             <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
-        <a class="dropdown-item" href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=pclass_id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=pclass_id) }}">
             <i class="fas fa-tools fa-fw"></i> Variants...
         </a>
-        <a class="dropdown-item" href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=pclass_id, url=url_for('convenor.attached', id=pclass_id), text='convenor dashboard') }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=pclass_id, url=url_for('convenor.attached', id=pclass_id), text='convenor dashboard') }}">
             <i class="fas fa-cogs fa-fw"></i> Assessors...
         </a>
-        <a class="dropdown-item" href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=pclass_id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=pclass_id) }}">
             <i class="fas fa-cogs fa-fw"></i> Transferable skills...
         </a>
-        <a class="dropdown-item" href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=pclass_id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=pclass_id) }}">
             <i class="fas fa-cogs fa-fw"></i> Degree programmes...
         </a>
         {% if not in_current %}
-            <a class="dropdown-item" href="{{ url_for('convenor.inject_liveproject', pid=project.id, pclass_id=pclass_id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.inject_liveproject', pid=project.id, pclass_id=pclass_id) }}">
                 <i class="fas fa-cogs fa-fw"></i> Generate LiveProject...
             </a>
         {% endif %}
@@ -262,11 +262,11 @@ _convenor_menu = \
         <div role="separator" class="dropdown-divider"></div>
 
         {% if project.active %}
-            <a class="dropdown-item" href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=pclass_id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=pclass_id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make inactive
             </a>
         {% else %}
-            <a class="dropdown-item" href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=pclass_id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=pclass_id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make active
             </a>
         {% endif %}
@@ -283,37 +283,37 @@ _unofferable_menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-        <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
             <i class="fas fa-search fa-fw"></i> Preview web page
         </a>
 
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Edit project</div>
 
-        <a class="dropdown-item" href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0, text=text, url=url) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0, text=text, url=url) }}">
             <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
-        <a class="dropdown-item" href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=0) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=0) }}">
             <i class="fas fa-tools fa-fw"></i> Variants...
         </a>
-        <a class="dropdown-item" href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=0, url=url_for('convenor.attached', id=0), text='convenor dashboard') }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=0, url=url_for('convenor.attached', id=0), text='convenor dashboard') }}">
             <i class="fas fa-cogs fa-fw"></i> Assessors...
         </a>
-        <a class="dropdown-item" href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=0) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=0) }}">
             <i class="fas fa-cogs fa-fw"></i> Transferable skills...
         </a>
-        <a class="dropdown-item" href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=0) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=0) }}">
             <i class="fas fa-cogs fa-fw"></i> Degree programmes...
         </a>
 
         <div role="separator" class="dropdown-divider"></div>
 
         {% if project.active %}
-            <a class="dropdown-item" href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=0) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=0) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make inactive
             </a>
         {% else %}
-            <a class="dropdown-item" href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=0) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=0) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make active
             </a>
         {% endif %}
@@ -498,7 +498,7 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                             repapprove = """<div class="dropdown" style="display: inline-block;">
                                                 <a class="badge text-decoration-none bg-light text-dark dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
                                                 <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
-                                                    <a class="dropdown-item" href="{url}"><i class="fas fa-check fa-fw"></i> Confirm</a>
+                                                    <a class="dropdown-item d-flex gap-2" href="{url}"><i class="fas fa-check fa-fw"></i> Confirm</a>
                                                 </div>
                                             </div>""".format(url=url_for('convenor.confirm_description', config_id=config.id, did=desc.id))
                         else:

@@ -67,23 +67,23 @@ _menu = \
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         {% set status = offer.status %}
         {% if status == offer.OFFERED %}
-            <a class="dropdown-item" href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">
                 <i class="fas fa-check fa-fw"></i> Accept
             </a>
-            <a class="dropdown-item" href="{{ url_for('convenor.decline_custom_offer', offer_id=offer.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.decline_custom_offer', offer_id=offer.id) }}">
                 <i class="fas fa-times fa-fw"></i> Decline
             </a>
         {% elif status == offer.DECLINED %}
-            <a class="dropdown-item" href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">
                 <i class="fas fa-check fa-fw"></i> Accept
             </a>
         {% elif status == offer.ACCEPTED %}
-            <a class="dropdown-item" href="{{ url_for('convenor.decline_custom_offer', offer_id=offer.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.decline_custom_offer', offer_id=offer.id) }}">
                 <i class="fas fa-check fa-fw"></i> Decline
             </a>
         {% endif %}        
     
-        <a class="dropdown-item" href="{{ url_for('convenor.delete_custom_offer', offer_id=offer.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.delete_custom_offer', offer_id=offer.id) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
     </div>

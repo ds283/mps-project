@@ -276,18 +276,18 @@
                                                 </button>
                                                 <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                                     {% if tk_type == 1 or tk_type == 2 %}
-                                                        <a class="dropdown-item" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.overview', id=pclass.id)) }}">
+                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.overview', id=pclass.id)) }}">
                                                             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
                                                         </a>
                                                     {% elif tk_type == 3 %}
-                                                        <a class="dropdown-item" href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.overview', id=pclass.id)) }}">
+                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.overview', id=pclass.id)) }}">
                                                             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
                                                         </a>
                                                     {% endif %}
-                                                    <a class="dropdown-item" href="{{ url_for('convenor.mark_task_complete', tid=tk.id, action='complete') }}">
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_task_complete', tid=tk.id, action='complete') }}">
                                                         <i class="fas fa-check fa-fw"></i> Complete
                                                     </a>
-                                                    <a class="dropdown-item" href="{{ url_for('convenor.mark_task_dropped', tid=tk.id, action='drop') }}">
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_task_dropped', tid=tk.id, action='drop') }}">
                                                         <i class="fas fa-ban fa-fw"></i> Drop
                                                     </a>
                                                 </div>

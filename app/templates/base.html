@@ -278,13 +278,13 @@
         <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
             <div class="dropdown-header">Convenorships</div>
             {% for project_class in pclasses %}
-                <a class="dropdown-item"href="{{ url_for('convenor.overview', id=project_class.id) }}">
+                <a class="dropdown-item d-flex gap-2"href="{{ url_for('convenor.overview', id=project_class.id) }}">
                     <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}...
                 </a>
             {% endfor %}
             {% if current_user.has_role('admin') or current_user.has_role('root') %}
                 <div role="separator" class="dropdown-divider"></div>
-                <a class="dropdown-item" href="{{ url_for('convenor.show_unofferable', id=0) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.show_unofferable', id=0) }}">
                     <i class="fas fa-exclamation-circle fa-fw"></i> Unofferable projects...
                 </a>
             {% endif %}
@@ -321,18 +321,18 @@
                                 My projects
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-                                <a class="dropdown-item" href="{{ url_for('faculty.edit_projects') }}">
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_projects') }}">
                                     <i class="fas fa-book-open fa-fw"></i> My project library...
                                 </a>
-                                <a class="dropdown-item" href="{{ url_for('faculty.assessor_for') }}">
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.assessor_for') }}">
                                     <i class="fas fa-book-open fa-fw"></i> My assessor projects...
                                 </a>
                                 <div role="separator" class="dropdown-divider"></div>
                                 <div class="dropdown-header">Browse history</div>
-                                <a class="dropdown-item"href="{{ url_for('faculty.past_projects') }}">
+                                <a class="dropdown-item d-flex gap-2"href="{{ url_for('faculty.past_projects') }}">
                                     <i class="fas fa-archive fa-fw"></i> Offered projects...
                                 </a>
-                                <a class="dropdown-item"href="#">
+                                <a class="dropdown-item d-flex gap-2"href="#">
                                     <i class="fas fa-archive fa-fw"></i> Students...
                                 </a>
                             </div>
@@ -347,11 +347,11 @@
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                 {% if current_user.student_data.has_timeline %}
-                                    <a class="dropdown-item" href="{{ url_for('student.timeline', student_id=current_user.id) }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.timeline', student_id=current_user.id) }}">
                                         <i class="fas fa-history fa-fw"></i> Show history...
                                     </a>
                                 {% else %}
-                                    <a class="dropdown-item disabled">
+                                    <a class="dropdown-item d-flex gap-2 disabled">
                                         <i class="fas fa-history fa-fw"></i> Show history...
                                     </a>
                                 {% endif %}
@@ -365,16 +365,16 @@
                                 Reports
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-                                <a class="dropdown-item" href="{{ url_for('reports.year_groups') }}">
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('reports.year_groups') }}">
                                     <i class="fas fa-binoculars fa-fw"></i> Year groups....
                                 </a>
-                                <a class="dropdown-item" href="{{ url_for('reports.all_projects') }}">
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('reports.all_projects') }}">
                                     <i class="fas fa-binoculars fa-fw"></i> All projects...
                                 </a>
-                                <a class="dropdown-item" href="{{ url_for('reports.workload') }}">
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('reports.workload') }}">
                                     <i class="fas fa-binoculars fa-fw"></i> Faculty workload...
                                 </a>
-                                <a class="dropdown-item" href="{{ url_for('reports.sabbaticals') }}">
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('reports.sabbaticals') }}">
                                     <i class="fas fa-binoculars fa-fw"></i> Sabbaticals...
                                 </a>
                             </div>
@@ -397,13 +397,13 @@
                             <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                 {% set needs_divider = false %}
                                 {% if is_manage_users or is_root %}
-                                    <a class="dropdown-item" href="{{ url_for('manage_users.edit_users') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_users') }}">
                                         <i class="fas fa-users fa-fw"></i> Manage users...
                                     </a>
                                     {% set needs_divider = true %}
                                 {% endif %}
                                 {% if is_admin or is_root or is_convenor %}
-                                    <a class="dropdown-item" href="{{ url_for('admin.edit_messages') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_messages') }}">
                                         <i class="fas fa-comments fa-fw"></i> Messages...
                                     </a>
                                     {% set needs_divider = true %}
@@ -414,10 +414,10 @@
                                         {% set needs_divider = false %}
                                     {% endif %}
                                     <div class="dropdown-header">Project components</div>
-                                    <a class="dropdown-item" href="{{ url_for('admin.edit_skills') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_skills') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Transferable skills...
                                     </a>
-                                    <a class="dropdown-item" href="{{ url_for('admin.edit_supervisors') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_supervisors') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Supervisory team...
                                     </a>
                                     {% set needs_divider = true %}
@@ -429,28 +429,28 @@
                                     {% endif %}
                                     <div class="dropdown-header">Sysadmin only</div>
                                     {% if matching_ready %}
-                                        <a class="dropdown-item" href="{{ url_for('admin.manage_matching') }}">
+                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.manage_matching') }}">
                                             <i class="fas fa-tools fa-fw"></i> Manage matching...
                                         </a>
                                     {% endif %}
                                     {% if has_assessments %}
-                                        <a class="dropdown-item" href="{{ url_for('admin.manage_assessments') }}">
+                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.manage_assessments') }}">
                                             <i class="fas fa-tools fa-fw"></i> Manage assessments...
                                         </a>
                                     {% endif %}
-                                    <a class="dropdown-item" href="{{ url_for('admin.edit_project_classes') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_project_classes') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Project classes...
                                     </a>
-                                    <a class="dropdown-item" href="{{ url_for('admin.edit_groups') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_groups') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Research groups...
                                     </a>
-                                    <a class="dropdown-item" href="{{ url_for('admin.edit_degree_programmes') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_degree_programmes') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Degree programmes...
                                     </a>
-                                    <a class="dropdown-item" href="{{ url_for('admin.edit_rooms') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_rooms') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Presentation venues...
                                     </a>
-                                    <a class="dropdown-item" href="{{ url_for('admin.edit_licenses') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_licenses') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Asset licenses...
                                     </a>
                                 {% endif %}
@@ -466,26 +466,26 @@
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                 {% if is_root %}
-                                    <a class="dropdown-item" href="{{ url_for('manage_users.edit_roles') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_roles') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Role editor...
                                     </a>
                                 {% endif %}
                                 {% if is_root or is_view_email %}
-                                    <a class="dropdown-item" href="{{ url_for('admin.scheduled_email') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.scheduled_email') }}">
                                         <i class="fas fa-wrench fa-fw"></i> Scheduled email...
                                     </a>
-                                    <a class="dropdown-item" href="{{ url_for('admin.email_log') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.email_log') }}">
                                         <i class="fas fa-wrench fa-fw"></i> Email log...
                                     </a>
                                 {% endif %}
                                 {% if is_root %}
-                                    <a class="dropdown-item" href="{{ url_for('admin.background_tasks') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.background_tasks') }}">
                                         <i class="fas fa-wrench fa-fw"></i> Background tasks...
                                     </a>
-                                    <a class="dropdown-item" href="{{ url_for('admin.scheduled_tasks') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.scheduled_tasks') }}">
                                         <i class="fas fa-wrench fa-fw"></i> Scheduled tasks...
                                     </a>
-                                    <a class="dropdown-item" href="{{ url_for('admin.backups_overview') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.backups_overview') }}">
                                         <i class="fas fa-wrench fa-fw"></i> Manage backups...
                                     </a>
                                 {% endif %}
@@ -508,49 +508,49 @@
                                 {% endif %}
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-                                <a class="dropdown-item" href="{{ url_for('home.homepage') }}">
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('home.homepage') }}">
                                     <i class="fas fa-tachometer-alt fa-fw"></i> Dashboard...
                                 </a>
                                 {% if current_user.faculty_data.has_editable_availability_requests %}
                                     <div role="separator" class="dropdown-divider"></div>
                                     <div class="dropdown-header">Assessment events</div>
-                                    <a class="dropdown-item" href="{{ url_for('faculty.change_availability') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.change_availability') }}">
                                         <i class="fas fa-calendar fa-fw"></i> Change availability...
                                     </a>
                                 {% endif %}
                                 {% if is_faculty %}
                                     <div role="separator" class="dropdown-divider"></div>
                                     <div class="dropdown-header">Faculty options</div>
-                                    <a class="dropdown-item" href="{{ url_for('faculty.settings') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.settings') }}">
                                         <i class="fas fa-sliders-h fa-fw"></i> Settings...
                                     </a>
-                                    <a class="dropdown-item" href="{{ url_for('faculty.show_enrollments') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.show_enrollments') }}">
                                         <i class="fas fa-user-cog fa-fw"></i> Enrollments...
                                     </a>
-                                    <a class="dropdown-item" href="{{ url_for('faculty.affiliations') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.affiliations') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Research affiliations...
                                     </a>
-                                    <a class="dropdown-item" href="{{ url_for('faculty.show_workload') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.show_workload') }}">
                                         <i class="fas fa-info-circle fa-fw"></i> View workload limits...
                                     </a>
                                 {% elif is_student %}
                                     <div role="separator" class="dropdown-divider"></div>
                                     <div class="dropdown-header">Student options</div>
-                                    <a class="dropdown-item" href="{{ url_for('student.settings') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.settings') }}">
                                         <i class="fas fa-sliders-h fa-fw"></i> Settings...
                                     </a>
                                 {% elif is_office %}
                                     <div role="separator" class="dropdown-divider"></div>
                                     <div class="dropdown-header">Office options</div>
-                                    <a class="dropdown-item" href="{{ url_for('office.settings') }}">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('office.settings') }}">
                                         <i class="fas fa-sliders-h fa-fw"></i> Settings...
                                     </a>
                                 {% endif %}
-                                <a class="dropdown-item" href="{{ url_for_security('change_password') }}">
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for_security('change_password') }}">
                                     <i class="fas fa-tools fa-fw"></i> Change password...
                                 </a>
                                 <div role="separator" class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('auth.logout') }}">
                                     <i class="fas fa-sign-out-alt fa-fw"></i> Logout
                                 </a>
                             </div>

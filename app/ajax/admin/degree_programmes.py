@@ -19,10 +19,10 @@ _menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         <div class="dropdown-header">Edit</div>
-        <a class="dropdown-item" href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Edit details...
         </a>
-        <a class="dropdown-item" href="{{ url_for('admin.attach_modules', id=programme.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.attach_modules', id=programme.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Attach modules...
         </a>
         
@@ -30,16 +30,16 @@ _menu = \
         <div class="dropdown-header">Administration</div>
 
         {% if programme.active %}
-            <a class="dropdown-item" href="{{ url_for('admin.deactivate_degree_programme', id=programme.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_degree_programme', id=programme.id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make inactive
             </a>
         {% else %}
             {% if programme.available %}
-                <a class="dropdown-item" href="{{ url_for('admin.activate_degree_programme', id=programme.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_degree_programme', id=programme.id) }}">
                     <i class="fas fa-wrench fa-fw"></i> Make active
                 </a>
             {% else %}
-                <a class="dropdown-item disabled">
+                <a class="dropdown-item d-flex gap-2 disabled">
                     <i class="fas fa-ban fa-fw"></i> Degree type inactive
                 </a>
             {% endif %}

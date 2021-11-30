@@ -103,7 +103,7 @@
                                             RUNNING {{ running_counterpart.number_assessors }}
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-                                            <a class="dropdown-item" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=running_counterpart.id) }}">
+                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=running_counterpart.id) }}">
                                                 <i class="fas fa-sync fa-fw"></i> Sync with library version
                                             </a>
                                         </div>
@@ -115,7 +115,7 @@
                                             SELECTING {{ live_counterpart.number_assessors }}
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
-                                            <a class="dropdown-item" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=live_counterpart.id) }}">
+                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=live_counterpart.id) }}">
                                                 <i class="fas fa-sync fa-fw"></i> Sync with library version
                                             </a>
                                         </div>
@@ -135,28 +135,28 @@
                                         <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                             <div class="dropdown-header">Attached assessor</div>
                                             {% if running_counterpart is none %}
-                                                <a class="dropdown-item disabled"><i class="fas fa-times"></i> No running project</a>
+                                                <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-times"></i> No running project</a>
                                             {% else %}
                                                 {% if running_counterpart.is_assessor(marker.id) %}
-                                                    <a class="dropdown-item" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
                                                         <i class="fas fa-trash fa-fw"></i> Remove from running project
                                                     </a>
                                                 {% else %}
-                                                    <a class="dropdown-item" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
                                                         <i class="fas fa-plus fa-fw"></i> Attach to running project
                                                     </a>
 
                                                 {% endif %}
                                             {% endif %}
                                             {% if live_counterpart is none %}
-                                                <a class="dropdown-item disabled"><i class="fas fa-times"></i> No live project</a>
+                                                <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-times"></i> No live project</a>
                                             {% else %}
                                                 {% if live_counterpart.is_assessor(marker.id) %}
-                                                    <a class="dropdown-item" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
                                                         <i class="fas fa-trash fa-fw"></i> Remove from live project
                                                     </a>
                                                 {% else %}
-                                                    <a class="dropdown-item" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
                                                         <i class="fas fa-plus fa-fw"></i> Attach to live project
                                                     </a>
                                                 {% endif %}
@@ -172,18 +172,18 @@
                                                 <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                                     <div class="dropdown-header">Not attached to library version</div>
                                                     {% set disabled = not data.can_enroll_assessor(marker) %}
-                                                    <a class="dropdown-item {% if disabled %}disabled{% endif %}"{% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
+                                                    <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"{% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
                                                         <i class="fas fa-plus fa-fw"></i> Attach to library version
                                                     </a>
                                                     {% if live_counterpart is none %}
-                                                        <a class="dropdown-item disabled"><i class="fas fa-times fa-fw"></i> No live project</a>
+                                                        <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-times fa-fw"></i> No live project</a>
                                                     {% else %}
                                                         {% if live_counterpart.is_assessor(marker.id) %}
-                                                            <a class="dropdown-item" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
+                                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
                                                                 <i class="fas fa-trash fa-fw"></i> Remove from live project
                                                             </a>
                                                         {% else %}
-                                                            <a class="dropdown-item" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
+                                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
                                                                 <i class="fas fa-plus fa-fw"></i> Attach to live project
                                                             </a>
                                                         {% endif %}
@@ -201,14 +201,14 @@
                                                 <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                                     <div class="dropdown-header">Not attached to library version</div>
                                                     {% set disabled = not data.can_enroll_assessor(marker) %}
-                                                    <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
+                                                    <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
                                                         <i class="fas fa-plus fa-fw"></i> Attach to library version
                                                     </a>
                                                     {% if running_counterpart is none %}
-                                                        <a class="dropdown-item disabled"><i class="fas fa-times fa-fw"></i> No running project</a>
+                                                        <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-times fa-fw"></i> No running project</a>
                                                     {% else %}
                                                         {# guaranteed not to be attached to the running project #}
-                                                        <a class="dropdown-item" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
+                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
                                                             <i class="fas fa-plus fa-fw"></i> Attach to running project
                                                         </a>
                                                     {% endif %}

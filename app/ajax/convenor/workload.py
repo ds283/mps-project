@@ -42,14 +42,14 @@ _projects = \
             </a>
             <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                 {% set disabled = not pclass.publish %}
-                <a class="dropdown-item {% if disabled %}disabled{% endif %}"{% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Show feedback</a>
+                <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"{% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Show feedback</a>
                 
                 {% set disabled = r.period.is_feedback_open or r.student_engaged %}
                 {% if disabled %}
-                    <a class="dropdown-item disabled">Can't reassign: Feedback open or student engaged</a>
+                    <a class="dropdown-item d-flex gap-2 disabled">Can't reassign: Feedback open or student engaged</a>
                 {% else %}
-                    <a class="dropdown-item" href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">Manually reassign</a>
-                    <a class="dropdown-item" href="{{ url_for('convenor.deassign_project', id=r.id) }}">Remove assignment</a>
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">Manually reassign</a>
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}">Remove assignment</a>
                 {% endif %}
             </div>
         </div>
@@ -60,14 +60,14 @@ _projects = \
                     data-bs-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}
                 <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                     {% if r.submission_period > r.owner.config.submission_period %}
-                        <a class="dropdown-item disabled">Submission period not yet open</a>
+                        <a class="dropdown-item d-flex gap-2 disabled">Submission period not yet open</a>
                     {% elif not r.student_engaged %}
-                        <a class="dropdown-item" href="{{ url_for('convenor.mark_started', id=r.id) }}">
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_started', id=r.id) }}">
                             <i class="fas fa-check fa-fw"></i> Mark as started
                         </a>
                     {% else %}
                         {% set disabled = (r.owner.config.submitter_lifecycle >= r.owner.config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
-                        <a class="dropdown-item {% if disabled %}disabled{% endif %}"{% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
+                        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"{% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
                             <i class="fas fa-times fa-fw"></i> Mark as waiting
                         </a>
                     {% endif %}
@@ -121,14 +121,14 @@ _marking = \
             </a>
             <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                 {% set disabled = not pclass.publish %}
-                <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Show feedback</a>
+                <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Show feedback</a>
                 
                 {% set disabled = r.period.is_feedback_open %}
                 {% if disabled %}
-                    <a class="dropdown-item disabled">Can't reassign: Feedback open or student engaged</a>
+                    <a class="dropdown-item d-flex gap-2 disabled">Can't reassign: Feedback open or student engaged</a>
                 {% else %}
-                    <a class="dropdown-item" href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">Manually reassign</a>
-                    <a class="dropdown-item" href="{{ url_for('convenor.deassign_marker', id=r.id) }}">Remove assignment</a>
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">Manually reassign</a>
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_marker', id=r.id) }}">Remove assignment</a>
                 {% endif %}
             </div>
         </div>
@@ -177,7 +177,7 @@ _presentations = \
                     {% for rec in slot.talks %}
                         {% set pclass = rec.owner.config.project_class %}
                         {% set disabled = not pclass.publish %}
-                        <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=rec.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>
+                        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=rec.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>
                             Show feedback for {{ rec.owner.student.user.name }}
                         </a>
                     {% endfor %}

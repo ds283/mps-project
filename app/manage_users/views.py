@@ -1096,7 +1096,6 @@ def edit_office(id):
         user.username = form.username.data
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
-        user.theme = form.theme.data
 
         _datastore.commit()
 
@@ -1132,7 +1131,6 @@ def edit_faculty(id):
         user.username = form.username.data
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
-        user.theme = form.theme.data
 
         data.academic_title = form.academic_title.data
         data.use_academic_title = form.use_academic_title.data
@@ -1212,7 +1210,6 @@ def edit_student(id):
         user.username = form.username.data
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
-        user.theme = form.theme.data
 
         rep_years = form.repeated_years.data
         ry = rep_years if rep_years is not None and rep_years >= 0 else 0

@@ -56,7 +56,6 @@ def settings():
     form.user = user
 
     if form.validate_on_submit():
-        user.theme = form.theme.data
         user.default_license = form.default_license.data
 
         user.group_summaries = form.group_summaries.data

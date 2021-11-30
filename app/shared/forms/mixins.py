@@ -15,7 +15,7 @@ from wtforms import SubmitField, StringField, SelectField, BooleanField, Integer
 from wtforms.validators import InputRequired, Optional, Length
 from wtforms_alchemy import QuerySelectField
 
-from ...models import theme_choices, academic_titles, email_freq_choices, DEFAULT_STRING_LENGTH, ProjectClassConfig
+from ...models import academic_titles, email_freq_choices, DEFAULT_STRING_LENGTH, ProjectClassConfig
 from .wtf_validators import valid_username, unique_or_original_username, NotOptionalIf
 
 from .queries import GetActiveAssetLicenses, GetSubmissionRecords, BuildSubmissionRecordLabel
@@ -37,11 +37,6 @@ class FirstLastNameMixin():
     first_name = StringField('First name', validators=[InputRequired(message='First name is required')])
 
     last_name = StringField('Last or family name', validators=[InputRequired(message='Last name is required')])
-
-
-class ThemeMixin():
-
-    theme = SelectField('Theme', choices=theme_choices, coerce=int)
 
 
 class DefaultLicenseMixin():

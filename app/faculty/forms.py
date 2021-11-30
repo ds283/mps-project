@@ -15,7 +15,7 @@ from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..models import Project
 
-from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLastNameMixin, ThemeMixin, \
+from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLastNameMixin, \
     FacultyDataMixinFactory, FeedbackMixin, EmailSettingsMixin, DefaultLicenseMixin
 from ..shared.forms.wtf_validators import globally_unique_project, unique_or_original_project, project_unique_label, \
     project_unique_or_original_label
@@ -305,7 +305,7 @@ class SupervisorResponseForm(Form, SupervisorResponseMixin):
 def FacultySettingsFormFactory(user=None):
 
     class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixinFactory(admin=False),
-                              FirstLastNameMixin, SaveChangesMixin, ThemeMixin, EmailSettingsMixin,
+                              FirstLastNameMixin, SaveChangesMixin, EmailSettingsMixin,
                               DefaultLicenseMixin):
 
         if user is not None and user.has_role('root', skip_mask=True):

@@ -2535,7 +2535,6 @@ def settings():
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
         user.username = form.username.data
-        user.theme = form.theme.data
         user.default_license = form.default_license.data
 
         user.group_summaries = form.group_summaries.data
@@ -2575,7 +2574,6 @@ def settings():
             form.first_name.data = user.first_name
             form.last_name.data = user.last_name
             form.username.data = user.username
-            form.theme.data = user.theme
             form.default_license.data = user.default_license
 
             form.group_summaries.data = user.group_summaries

@@ -20,7 +20,7 @@
 {% set has_assessments = base_context_data['has_assessments'] %}
 
 {% set live_platform = get_live_platform() %}
-{% set theme = current_user.ui_theme if current_user.ui_theme is defined else 'default' %}
+
 
 {% block scripts %}
     {{ super() }}
@@ -614,7 +614,7 @@
                 {% if real_user %}
                     <span class="navbar-text small" style="float: right;">You
                         are viewing as <i class="fas fa-user"></i>
-                        {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if theme == 'flat' or theme == 'dark' %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
+                        {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" style="color: antiquewhite;">Return to my normal role</a></span>
                 {% endif %}
             </div>
         </div>

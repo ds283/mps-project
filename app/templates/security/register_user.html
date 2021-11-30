@@ -11,7 +11,6 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#theme').chosen();
             $('#programme').chosen();
             $('#academic_title').chosen();
             $('#default_license').chosen();
@@ -75,7 +74,6 @@
                 </div>
             </div>
             <hr class="intro-divider">
-            {{ wtf.render_field(user_form.theme) }}
             {% if user_form.default_license is defined %}
                 {{ wtf.render_field(user_form.default_license) }}
             {% endif %}

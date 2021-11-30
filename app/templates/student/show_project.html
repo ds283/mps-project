@@ -528,7 +528,7 @@
             {% if real_user %}
                 <span class="navbar-text small" style="float: right;">You
                     are viewing as <i class="fas fa-user"></i>
-                    {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if theme == 'flat' or theme == 'dark' %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
+                    {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" style="color: antiquewhite;">Return to my normal role</a></span>
             {% endif %}
         </div>
     </nav>

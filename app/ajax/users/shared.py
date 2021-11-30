@@ -38,16 +38,6 @@ name = \
             {% endif %}
         </div>
     {% endif %}
-    {% set theme = u.ui_theme if u.ui_theme is defined else 'default' %}
-    {% if theme == 'default' %}
-        <span class="badge bg-primary">Default</span>
-    {% elif theme == 'flat' %}
-        <span class="badge bg-primary">Flat</span>
-    {% elif theme == 'dark' %}
-        <span class="badge bg-primary">Dark</span>
-    {% else %}
-        <span class="badge bg-danger">Unknown theme</span>
-    {% endif %}
     {% if u.last_email %}
         <span class="badge bg-info text-dark">Last notify {{ u.last_email.strftime("%a %d %b %Y %H:%M:%S") }}</span>
     {% endif %}

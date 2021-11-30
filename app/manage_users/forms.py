@@ -19,7 +19,7 @@ from wtforms.validators import InputRequired, Length, Optional
 from wtforms_alchemy import QuerySelectField
 
 from app.models import DEFAULT_STRING_LENGTH, EnrollmentRecord
-from app.shared.forms.mixins import ThemeMixin, FirstLastNameMixin, FacultyDataMixinFactory, SaveChangesMixin, \
+from app.shared.forms.mixins import FirstLastNameMixin, FacultyDataMixinFactory, SaveChangesMixin, \
     EditUserNameMixin, DefaultLicenseMixin
 from app.shared.forms.queries import GetActiveDegreeProgrammes, BuildDegreeProgrammeName
 from app.shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_email, \
@@ -103,7 +103,7 @@ class StudentDataMixin():
     intermitting = BooleanField('Currently intermitting')
 
 
-class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, AskConfirmAddFormMixin, ThemeMixin,
+class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, AskConfirmAddFormMixin,
                          UniqueEmailFormMixin, NewPasswordFormMixin, FirstLastNameMixin, DefaultLicenseMixin):
 
     pass
@@ -164,7 +164,7 @@ class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin, Cr
     pass
 
 
-class EditOfficeForm(Form, SaveChangesMixin, EditUserNameMixin, AskConfirmEditFormMixin, ThemeMixin,
+class EditOfficeForm(Form, SaveChangesMixin, EditUserNameMixin, AskConfirmEditFormMixin,
                      EditEmailFormMixin, FirstLastNameMixin, DefaultLicenseMixin):
 
     pass

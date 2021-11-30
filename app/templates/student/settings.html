@@ -12,7 +12,6 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#theme').chosen();
             $('#default_license').chosen();
             $('#academic_title').chosen();
         });
@@ -34,7 +33,6 @@
 
 {#        {{ wtf.form_errors(settings_form) }}#}
 
-    {{ wtf.render_field(settings_form.theme) }}
     {{ wtf.render_field(settings_form.default_license) }}
 
     <div class="card mt-3 mb-3 card-body bg-well">

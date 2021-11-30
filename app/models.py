@@ -70,9 +70,6 @@ solver_choices = [(0, 'PuLP-packaged CBC'), (1, 'CBC external command'), (2, 'GL
 # session types
 session_choices = [(0, 'Morning'), (1, 'Afternoon')]
 
-# theme types
-theme_choices = [(0, 'Default'), (1, 'Flat'), (2, 'Dark')]
-
 # semesters
 semester_choices = [(0, 'Autumn Semester'), (1, 'Spring Semester'), (2, 'Autumn & Spring teaching'),
                     (3, 'All-year teaching')]
@@ -1190,27 +1187,6 @@ class User(db.Model, UserMixin):
 
     # masked roles (currently available only to 'root' users)
     mask_roles = db.relationship('Role', secondary=mask_roles_to_users, lazy='dynamic')
-
-
-    # THEME
-
-    THEME_DEFAULT = 0
-    THEME_FLAT = 1
-    THEME_DARK = 2
-
-    THEME_KEYS = {THEME_DEFAULT: 'default',
-                  THEME_FLAT: 'flat',
-                  THEME_DARK: 'dark'}
-
-    # theme options
-    theme = db.Column(db.Integer(), default=THEME_DEFAULT, nullable=False)
-
-    @property
-    def ui_theme(self):
-        if self.theme in User.THEME_KEYS:
-            return User.THEME_KEYS[self.theme]
-
-        return User.THEME_KEYS[User.THEME_DEFAULT]
 
 
     # EMAIL PREFERENCES

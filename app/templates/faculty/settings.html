@@ -16,7 +16,6 @@
             $('#mask_roles').chosen({
                 placeholder_text_multiple: 'Select one or more roles...'
             });
-            $('#theme').chosen();
             $('#default_license').chosen();
             $('#academic_title').chosen();
         });
@@ -57,7 +56,6 @@
         </div>
 
         <hr class="intro-divider">
-        {{ wtf.render_field(settings_form.theme) }}
         {{ wtf.render_field(settings_form.default_license) }}
         {% if settings_form.mask_roles %}
             {{ wtf.render_field(settings_form.mask_roles) }}

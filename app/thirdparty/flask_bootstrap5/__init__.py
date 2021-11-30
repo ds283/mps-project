@@ -74,25 +74,15 @@ class Bootstrap(object):
         :param version: The version of Bootstrap.
         """
 
-        theme_CDNs = {'default': 'https://cdn.jsdelivr.net/npm/bootstrap@%s/dist/css/%s',
-                      'flat': 'https://stackpath.bootstrapcdn.com/bootswatch/%s/pulse/%s',
-                      'dark': 'https://stackpath.bootstrapcdn.com/bootswatch/%s/slate/%s'}
-
-        theme_subfolders = {'default': 'default',
-                            'flat': 'pulse',
-                            'dark': 'slate'}
-
         css_filename = 'bootstrap.min.css'
         serve_local = current_app.config['BOOTSTRAP_SERVE_LOCAL']
 
-        theme = current_user.ui_theme if hasattr(current_user, 'ui_theme') else 'default'
-
         if serve_local:
             href = url_for('bootstrap.static',
-                           filename='css/%s/%s' % (theme_subfolders[theme], css_filename))
+                           filename='css/%s/%s' % ('default', css_filename))
             css = '<link rel="stylesheet" href="%s" type="text/css">' % href
         else:
-            href = theme_CDNs[theme] % (version, css_filename)
+            href = 'https://cdn.jsdelivr.net/npm/bootstrap@%s/dist/css/%s' % (version, css_filename)
             css = '<link rel="stylesheet" href="%s" type="text/css">' % href
         return Markup(css)
 

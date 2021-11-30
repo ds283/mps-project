@@ -33,15 +33,15 @@ _status = \
         {% if m.is_modified %}
             <span class="badge bg-warning text-dark">Modified</span>
         {% else %}
-            <span class="badge bg-info text-dark">Original</span>
+            <span class="badge bg-secondary text-dark">Original</span>
         {% endif %}
     </div>
     {% if m.finished %}
         <div class="mt-1">
-            <span class="badge bg-info text-dark">{{ m.records.count() }} selectors</span>
-            <span class="badge bg-info text-dark">{{ m.supervisors.count() }} supervisors</span>
-            <span class="badge bg-info text-dark">{{ m.markers.count() }} markers</span>
-            <span class="badge bg-info text-dark">{{ m.projects.count() }} projects</span>
+            <span class="badge bg-secondary">{{ m.records.count() }} selectors</span>
+            <span class="badge bg-secondary">{{ m.supervisors.count() }} supervisors</span>
+            <span class="badge bg-secondary">{{ m.markers.count() }} markers</span>
+            <span class="badge bg-secondary">{{ m.projects.count() }} projects</span>
         </div>
     {% endif %}
     <div class="mt-1">
@@ -235,10 +235,10 @@ _score = \
         <span class="badge bg-warning text-dark">Current score undefined</span>
     {% endif %}
     <p></p>
-    <span class="badge bg-info text-dark">&delta; max {{ m.delta_max }}</span>
-    <span class="badge bg-info text-dark">&delta; min {{ m.delta_min }}</span>
-    <span class="badge bg-info text-dark">CATS max {{ m.CATS_max }}</span>
-    <span class="badge bg-info text-dark">CATS min {{ m.CATS_min }}</span>
+    <span class="badge bg-secondary">&delta; max {{ m.delta_max }}</span>
+    <span class="badge bg-secondary">&delta; min {{ m.delta_min }}</span>
+    <span class="badge bg-secondary">CATS max {{ m.CATS_max }}</span>
+    <span class="badge bg-secondary">CATS min {{ m.CATS_min }}</span>
 {% else %}
     <span class="badge bg-secondary">Invalid</span>
 {% endif %}

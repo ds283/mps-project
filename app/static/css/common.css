@@ -304,6 +304,7 @@ p.copyright {
 .form-group-heading {
     font-size: 1rem;
     font-weight: bolder;
+    margin-top: 1rem;
     margin-bottom: 0.5em;
 }
 
@@ -327,8 +328,4 @@ p.copyright {
   flex-wrap: wrap;
   margin-right: -5px;
   margin-left: -5px;
-}
-
-label {
-  margin-bottom: 0.5rem;
 }

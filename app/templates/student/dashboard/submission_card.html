@@ -97,6 +97,7 @@
                 {# show assignments #}
                 {% set record = sub.get_assignment(period) %}
                 {% if record %}
+                    {% set uses_project_hub = record.uses_project_hub %}
                     {% if sub.published and record.project is not none %}
                         <div class="dashboard-subtitle" style="padding-bottom: 8px;">Project assignment</div>
                         <div class="row vertical-top">
@@ -116,23 +117,30 @@
                             </div>
                             <div class="col-4">
                                 <div class="d-flex flex-row justify-content-end">
-                                    <div class="btn-group">
-                                        <a class="btn btn-outline-primary btn-sm" href="{{ url_for('projecthub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}">Go to project hub</a>
+                                    {% if uses_project_hub %}
                                         <div class="btn-group">
-                                            <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                                Actions
-                                            </button>
-                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-    {#                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ record.number_attachments_student }})...</a>#}
-                                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('projecthub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fab fa-hubspot fa-fw"></i> Project hub...</a>
-                                                {% if record.has_feedback %}
-                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}"><i class="fas fa-search fa-fw"></i> View feedback...</a>
-                                                {% endif %}
-                                                <div role="separator" class="dropdown-divider"></div>
-                                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.submitter_browse_projects', id=sub.id) }}"><i class="fas fa-search fa-fw"></i> View project list...</a>
+                                            <a class="btn btn-outline-primary btn-sm" href="{{ url_for('projecthub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}">Go to project hub</a>
+                                    {% endif %}
+                                            <div class="btn-group">
+                                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                    Actions
+                                                </button>
+                                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+                                                    {% if uses_project_hub %}
+                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('projecthub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fab fa-hubspot fa-fw"></i> Project hub...</a>
+                                                    {% else %}
+                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ record.number_attachments_student }})...</a>
+                                                    {% endif %}
+                                                    {% if record.has_feedback %}
+                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}"><i class="fas fa-search fa-fw"></i> View feedback...</a>
+                                                    {% endif %}
+                                                    <div role="separator" class="dropdown-divider"></div>
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.submitter_browse_projects', id=sub.id) }}"><i class="fas fa-search fa-fw"></i> View project list...</a>
+                                                </div>
                                             </div>
+                                    {% if uses_project_hub %}
                                         </div>
-                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

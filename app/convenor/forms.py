@@ -181,48 +181,60 @@ class EditSubPeriodRecordPresentationsForm(Form, SubmissionPeriodPresentationsMi
     pass
 
 
-class EditProjectConfigForm(Form, SaveChangesMixin):
+def EditProjectConfigFormFactory(config: ProjectClassConfig):
 
-    skip_matching = BooleanField('Skip matching',
-                                 description='Opt out of automated matching for this academic year')
+    hub_enabled = config.project_class.use_project_hub
 
-    requests_skipped = BooleanField('Skip confirmation requests',
-                                    description='Disable confirmation of project descriptions for '
-                                                'this academic year')
+    class EditProjectConfigForm(Form, SaveChangesMixin):
 
-    uses_supervisor = BooleanField('Projects are supervised by a named faculty member')
+        skip_matching = BooleanField('Skip matching',
+                                     description='Opt out of automated matching for this academic year')
 
-    uses_marker = BooleanField('Submissions are second-marked')
+        requests_skipped = BooleanField('Skip confirmation requests',
+                                        description='Disable confirmation of project descriptions for '
+                                                    'this academic year')
 
-    uses_presentations = BooleanField('Includes one or more assessed presentations')
+        uses_supervisor = BooleanField('Projects are supervised by a named faculty member')
 
-    display_marker = BooleanField('Include second marker information')
+        uses_marker = BooleanField('Submissions are second-marked')
 
-    display_presentations = BooleanField('Include presentation assessment information')
+        uses_presentations = BooleanField('Includes one or more assessed presentations')
 
-    use_project_hub = BooleanField('Use Project Hubs',
-                                   description='This setting is inherited from the project configuration, '
-                                               'but can be overridden in any academic year. '
-                                               'The Project Hub is a lightweight learning management system '
-                                               'that allows you to publish resources to students and '
-                                               'offers some project management tools.')
+        display_marker = BooleanField('Include second marker information')
 
-    full_CATS = IntegerField('CAT threshold for supervisors to be full',
-                             description='Optional. If a partial match is being accommodated, this is the maximum '
-                                         'number of CATS a supervisor can carry before they are regarded '
-                                         'as full for the purposes of further allocation. If left blank, '
-                                         'the maximum number of CATS is taken from the settings for the '
-                                         'matching.',
-                             validators=[Optional()])
+        display_presentations = BooleanField('Include presentation assessment information')
 
-    CATS_supervision = IntegerField('CATS awarded for project supervision',
-                                    validators=[InputRequired(message='Please enter an integer value')])
+        project_hub_choices = [
+            (1, 'Inherit ({which} in project class)'.format(which='enabled' if hub_enabled else 'disabled')),
+            (2, 'Enable'), (3, 'Disable')]
+        project_hub_value_map = {1: None, 2: True, 3: False}
+        project_hub_choice_map = {None: 1, True: 2, False: 3}
 
-    CATS_marking = IntegerField('CATS awarded for project 2nd marking',
-                                validators=[Optional()])
+        use_project_hub = SelectField('Use Project Hubs', choices=project_hub_choices, coerce=int,
+                                       description='This setting is inherited from the project configuration, '
+                                                   'but can be overridden in any academic year. '
+                                                   'The Project Hub is a lightweight learning management system '
+                                                   'that allows you to publish resources to students and '
+                                                   'offers some project management tools.')
 
-    CATS_presentation = IntegerField('CATS awarded for assessing presentations',
-                                     validators=[Optional()])
+        full_CATS = IntegerField('CAT threshold for supervisors to be full',
+                                 description='Optional. If a partial match is being accommodated, this is the maximum '
+                                             'number of CATS a supervisor can carry before they are regarded '
+                                             'as full for the purposes of further allocation. If left blank, '
+                                             'the maximum number of CATS is taken from the settings for the '
+                                             'matching.',
+                                 validators=[Optional()])
+
+        CATS_supervision = IntegerField('CATS awarded for project supervision',
+                                        validators=[InputRequired(message='Please enter an integer value')])
+
+        CATS_marking = IntegerField('CATS awarded for project 2nd marking',
+                                    validators=[Optional()])
+
+        CATS_presentation = IntegerField('CATS awarded for assessing presentations',
+                                         validators=[Optional()])
+
+    return EditProjectConfigForm
 
 
 def AssignMarkerFormFactory(live_project: LiveProject, uses_marker: bool,

@@ -4329,7 +4329,9 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     # SETTINGS
 
     # enable project hub (inherited from ProjectClass, but can be set on a per-configuration basis)
-    use_project_hub = db.Column(db.Boolean(), default=True)
+    # True/False = override setting inherited from ProjectClass
+    # None = inherit setting
+    use_project_hub = db.Column(db.Boolean(), default=None, nullable=True)
 
 
     # SELECTOR LIFECYCLE MANAGEMENT
@@ -8100,6 +8102,15 @@ class SubmissionRecord(db.Model):
                                       backref=db.backref('submission_record', uselist=False))
 
 
+    # CONFIGURATION
+
+    # override project hub setting inherited from ProjectClassConfig
+    # (which may in turn inherit its setting from the parent ProjectClass)
+    # True/False = override inherited setting
+    # None = inherit setting
+    use_project_hub = db.Column(db.Boolean(), default=None, nullable=True)
+
+
     # SUBMITTED FILES
 
     # main report
@@ -8195,6 +8206,16 @@ class SubmissionRecord(db.Model):
 
     # timestamp when feedback was sent
     feedback_push_timestamp = db.Column(db.DateTime())
+
+
+    @property
+    def uses_project_hub(self):
+        # if we have a local override, use that setting; otherwise, we inherit our setting from our parent
+        # ProjectClassConfig (which may in turn inherit its own etting)
+        if self.use_project_hub is not None:
+            return self.use_project_hub
+
+        return self.current_config.uses_project_hub
 
 
     @property
@@ -8531,6 +8552,10 @@ class SubmissionRecord(db.Model):
         return space
 
 
+    @property
+    def current_config(self):
+        return self.owner.config
+
 
     @property
     def previous_config(self):
@@ -8538,18 +8563,18 @@ class SubmissionRecord(db.Model):
         if self.selection_config:
             return self.selection_config
 
-        current_config: ProjectClassConfig = self.owner.config
+        current_config: ProjectClassConfig = self.current_config
         return current_config.previous_config
 
 
     @property
     def pclass_id(self):
-        return self.owner.config.pclass_id
+        return self.current_config.pclass_id
 
 
     @property
     def pclass(self):
-        return self.owner.config.project_class
+        return self.current_config.project_class
 
 
     @property

@@ -45,6 +45,11 @@ def hub(subid):
     if not validate_project_hub(record, current_user, message=True):
         return redirect(redirect_url())
 
+    if not record.uses_project_hub:
+        flash('The project hub has been disabled for this submission. If you think this is incorrect, '
+              'please contact your supervisor or the projects convenor.', 'info')
+        return redirect(redirect_url())
+
     submitter: SubmittingStudent = record.owner
     student: StudentData = submitter.student
 
@@ -222,12 +227,19 @@ def save_hub_layout():
 def edit_subpd_record_articles(pid):
     # pid is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+    config: ProjectClassConfig = record.config
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
     # reject if user is not a convenor for the project owning this submission period
-    if not validate_is_convenor(record.config.project_class):
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    if not config.uses_project_hub:
+        flash('It is not possible to edit articles or news for {pclass}/{period} because project hubs '
+              'are currently disabled for this project class. Please contact a system administrator if you '
+              'believe this is an error.'.format(pclass=config.name, period=record.display_name))
         return redirect(redirect_url())
 
     return render_template('projecthub/articles/article_list.html', text=text, url=url,
@@ -246,9 +258,13 @@ def edit_subpd_record_articles(pid):
 def edit_subpd_record_articles_ajax(pid):
     # pid is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+    config: ProjectClassConfig = record.config
 
     # reject if user is not a convenor for the project owning this submission period
     if not validate_is_convenor(record.config.project_class):
+        return jsonify({})
+
+    if not config.uses_project_hub:
         return jsonify({})
 
     base_query = record.articles
@@ -279,9 +295,16 @@ def edit_subpd_record_articles_ajax(pid):
 def add_subpd_record_article(pid):
     # pid is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+    config: ProjectClassConfig = record.config
 
     # reject if user is not a convenor for the project owning this submission period
     if not validate_is_convenor(record.config.project_class):
+        return redirect(redirect_url())
+
+    if not config.uses_project_hub:
+        flash('It is not possible to edit articles or news for {pclass}/{period} because project hubs '
+              'are currently disabled for this project class. Please contact a system administrator if you '
+              'believe this is an error.'.format(pclass=config.name, period=record.display_name))
         return redirect(redirect_url())
 
     form = AddFormatterArticleForm(request.form)
@@ -324,9 +347,16 @@ def edit_subpd_record_article(aid):
     # pid is a SubmissionPeriodRecord
     article: ConvenorSubmitterArticle = ConvenorSubmitterArticle.query.get_or_404(aid)
     record: SubmissionPeriodRecord = article.period
+    config: ProjectClassConfig = record.config
 
     # reject if user is not a convenor for the project owning this submission period
     if not validate_is_convenor(record.config.project_class):
+        return redirect(redirect_url())
+
+    if not config.uses_project_hub:
+        flash('It is not possible to edit articles or news for {pclass}/{period} because project hubs '
+              'are currently disabled for this project class. Please contact a system administrator if you '
+              'believe this is an error.'.format(pclass=config.name, period=record.display_name))
         return redirect(redirect_url())
 
     form = EditFormattedArticleForm(obj=article)
@@ -378,6 +408,9 @@ def article_widget_ajax(subid):
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(subid)
 
     if not validate_project_hub(record, current_user, message=True):
+        return jsonify({})
+
+    if not record.uses_project_hub:
         return jsonify({})
 
     articles = with_polymorphic(FormattedArticle, [ConvenorSubmitterArticle, ProjectSubmitterArticle])

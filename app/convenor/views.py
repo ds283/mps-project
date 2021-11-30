@@ -34,7 +34,7 @@ from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, Ope
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
     EditSubPeriodRecordSettingsForm, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
-    EditProjectConfigForm, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask, \
+    EditProjectConfigFormFactory, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask, \
     EditConvenorGenericTask, EditSubPeriodRecordPresentationsForm
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -6806,6 +6806,7 @@ def edit_project_config(pid):
               'because it has been rolled over.'.format(yra=config.year, yrb=config.year+1), 'info')
         return redirect(redirect_url())
 
+    EditProjectConfigForm = EditProjectConfigFormFactory(config)
     form = EditProjectConfigForm(obj=config)
 
     if form.validate_on_submit():
@@ -6827,8 +6828,9 @@ def edit_project_config(pid):
         if form.full_CATS.data != config.full_CATS:
             config.full_CATS = form.full_CATS.data
 
-        if form.use_project_hub.data != config.use_project_hub:
-            config.use_project_hub = form.use_project_hub.data
+        use_hub = form.project_hub_value_map[form.use_project_hub.data]
+        if use_hub != config.use_project_hub:
+            config.use_project_hub = use_hub
 
         config.uses_supervisor = form.uses_supervisor.data
         config.uses_marker = form.uses_marker.data
@@ -6849,6 +6851,13 @@ def edit_project_config(pid):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('convenor.overview', id=config.project_class.id))
+
+    else:
+        if request.method == 'GET':
+            value = config.use_project_hub
+            if value not in form.project_hub_choice_map.keys():
+                value = None
+            form.use_project_hub.data = form.project_hub_choice_map[value]
 
     return render_template('convenor/dashboard/edit_project_config.html', form=form, config=config)
 

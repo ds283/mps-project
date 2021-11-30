@@ -29,11 +29,14 @@
         <div class="d-flex flex-row justify-content-end">
             <div class="btn-group mb-1" role="group">
                 {{ submission_period_configure_button(period, config, dropup=true) }}
+                {% if feedback_form.test_button is defined %}
+                    {{ wtf.render_field(feedback_form.test_button, button_map={'test_button': 'outline-secondary'}) }}
+                {% endif %}
                 {% if feedback_form.send_notifications is defined %}
                     {{ wtf.render_field(feedback_form.send_notifications, button_map={'send_notifications': 'outline-secondary'}) }}
                 {% endif %}
-                {% if feedback_form.test_button is defined  %}
-                    {{ wtf.render_field(feedback_form.test_button, button_map={'test_button': 'outline-info'}) }}
+                {% if feedback_form.close_button is defined %}
+                    {{ wtf.render_field(feedback_form.close_button, button_map={'close_button': 'outline-secondary'}) }}
                 {% endif %}
                 {{ wtf.render_field(feedback_form.submit_button, button_map={'submit_button': 'outline-danger'}) }}
             </div>

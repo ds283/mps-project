@@ -112,7 +112,7 @@ _desc_label = \
         {% if config is not none and config.selector_lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and desc_validator is not none and desc_validator(d) %}
             <div class="dropdown" style="display: inline-block;">
                 <a class="badge text-decoration-none bg-secondary dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
-                <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                     <a class="dropdown-item d-flex gap-2" class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fas fa-check"></i> Confirm</a>
                 </div>
             </div>
@@ -194,7 +194,7 @@ _desc_menu = \
         <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
             Actions
         </button>
-        <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
                                 url=url_for('convenor.edit_descriptions', id=d.parent.id, pclass_id=pclass_id, create=create),
                                 text='description list view') }}">
@@ -299,12 +299,14 @@ def overview(id):
         OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Change deadline',
                                                    datebox_label='The current deadline for feedback is',
                                                    include_send_button=True,
-                                                   include_test_button=True)
+                                                   include_test_button=True,
+                                                   include_close_button=False)
     else:
         OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Open feedback and email markers',
                                                    datebox_label='Deadline',
                                                    include_send_button=False,
-                                                   include_test_button=True)
+                                                   include_test_button=True,
+                                                   include_close_button=True)
 
     feedback_form = OpenFeedbackForm(request.form)
 
@@ -6338,10 +6340,15 @@ def open_feedback(id):
         flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
         return redirect(redirect_url())
 
+    # set up instance of OpenFeedbackForm to capture form state
     if period is not None and period.is_feedback_open:
-        OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=True, include_test_button=True)
+        OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=True,
+                                                   include_test_button=True,
+                                                   include_close_button=False)
     else:
-        OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=False, include_test_button=True)
+        OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=False,
+                                                   include_test_button=True,
+                                                   include_close_button=True)
 
     feedback_form = OpenFeedbackForm(request.form)
 
@@ -6360,8 +6367,9 @@ def open_feedback(id):
 
                 try:
                     db.session.commit()
-                    flash('The feedback deadline for "{proj}" has been successfully changed '
-                          'to {deadline}.'.format(proj=config.name, deadline=deadline.strftime("%a %d %b %Y")),
+                    flash('The feedback deadline for {proj}/{period} has been successfully changed '
+                          'to {deadline}.'.format(proj=config.name, period=period.display_name,
+                                                  deadline=deadline.strftime("%a %d %b %Y")),
                           'success')
                 except SQLAlchemyError as e:
                     flash('Could not modify feedback status due to a database error. '
@@ -6372,17 +6380,17 @@ def open_feedback(id):
 
             else:
                 # issue confirmation request
-                title = 'Open feedback for "{proj}"'.format(proj=config.name)
-                panel_title = 'Open feedback for <strong>{proj}</strong> and issue email ' \
-                              'notifications to markers'.format(proj=config.name)
-                message = '<p>Are you sure that you wish to open <strong>{proj}</strong> for feedback?</p>' \
+                title = 'Open feedback for {proj}/{period}'.format(proj=config.name, period=period.display_name)
+                panel_title = 'Open feedback for <strong>{proj}/{period}</strong> and issue email ' \
+                              'notifications to markers'.format(proj=config.name, period=period.display_name)
+                message = '<p>Are you sure that you wish to open <strong>{proj}/{period}</strong> for feedback?</p>' \
                           '<p>The marking deadline will be set to <strong>{deadline}</strong> and email ' \
                           'notifications will be issued to markers where a project report has already been ' \
                           'uploaded.</p>' \
                           '<p>If no report has yet been uploaded, email notifications can be issued at a later date ' \
                           'when the report is available.</p>' \
                           '<p>These actions cannot be ' \
-                          'undone.</p>'.format(proj=config.name,
+                          'undone.</p>'.format(proj=config.name, period=period.display_name,
                                                deadline=deadline.strftime("%a %d %b %Y"))
 
                 action_url = url_for('convenor.do_open_feedback', id=id, url=url,
@@ -6396,15 +6404,15 @@ def open_feedback(id):
 
         elif hasattr(feedback_form, 'send_notifications') and feedback_form.send_notifications.data:
             # issue confirmation request
-            title = 'Catch up email notifications for "{proj}"'.format(proj=config.name)
+            title = 'Catch up email notifications for {proj}/{period}'.format(proj=config.name, period=period.display_name)
             panel_title = 'Catch up email notifications for ' \
-                          '<strong>{proj}</strong>'.format(proj=config.name)
+                          '<strong>{proj}/{period}</strong>'.format(proj=config.name, period=period.display_name)
             message = '<p>Are you sure that you wish to catch up email notifications for ' \
-                      '<strong>{proj}</strong>?</p>' \
+                      '<strong>{proj}/{period}</strong>?</p>' \
                       '<p>Email notifications will be issued to markers where a project report is now ' \
                       'available, but no notification email has previously been issued.</p>' \
                       '<p>If no report has yet been uploaded, further email notifications can be issued at a later ' \
-                      'date when the report is available.</p>'.format(proj=config.name)
+                      'date when the report is available.</p>'.format(proj=config.name, period=period.display_name)
 
             action_url = url_for('convenor.do_send_notifications', id=id, url=url,
                                  deadline=deadline.isoformat(),
@@ -6420,6 +6428,19 @@ def open_feedback(id):
                                     deadline=deadline.isoformat(),
                                     cc_me=int(feedback_form.cc_me.data),
                                     max_attachment=int(feedback_form.max_attachment.data)))
+
+        elif hasattr(feedback_form, 'close_button') and feedback_form.close_button.data:
+            title = 'Immediately close {proj}/{period}'.format(proj=config.name, period=period.display_name)
+            panel_title = 'Immediately close <strong>{proj}/{period}</strong>'.format(proj=config.name, period=period.display_name)
+            message = '<p>Are you sure that you wish to immediately close <strong>{proj}/{period}</strong>?</p>' \
+                      '<p>No marking requests will be sent, and the feedback window will be closed.<p>' \
+                      '<p>These actions cannot be undone.</p>'.format(proj=config.name, period=period.display_name)
+
+            action_url = url_for('convenor.immediate_close_feedback', id=id, url=url)
+            submit_label = 'Immediately close {period}'.format(period=period.display_name)
+
+            return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title,
+                                   action_url=action_url, message=message, submit_label=submit_label)
 
     return redirect(redirect_url())
 
@@ -6621,6 +6642,63 @@ def do_open_feedback(id):
     return redirect(url)
 
 
+@convenor.route('/immediate_close_feedback/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def immediate_close_feedback(id):
+    # id is a ProjectClassConfig
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(redirect_url())
+
+    state = config.submitter_lifecycle
+    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and \
+            state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+        flash('Feedback cannot be closed at this stage in the project lifecycle.', 'info')
+        return redirect(redirect_url())
+
+    if config.submission_period > config.submissions:
+        flash('Feedback close request ignored because "{name}" '
+              'is already in a rollover state.'.format(name=config.name), 'info')
+        return request.referrer
+
+    # get record for current submission period
+    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
+    if period is None and config.submissions > 0:
+        flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
+        return redirect(redirect_url())
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('convenor.overview', id=config.pclass_id)
+
+    now = datetime.now()
+
+    period.feedback_open = True
+    period.feedback_deaedline = now
+    period.feedback_id = current_user.id
+    period.feedback_timestamp = now
+
+    period.closed = True
+    period.closed_id = current_user.id
+    period.closed_timestamp = now
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not modify feedback status due to a database error. '
+              'Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+
+    return redirect(url)
+
+
 @convenor.route('/close_feedback/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def close_feedback(id):
@@ -6693,6 +6771,9 @@ def do_close_feedback(id):
         url = redirect_url()
 
     period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
+    if period is None and config.submissions > 0:
+        flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
+        return redirect(redirect_url())
 
     period.closed = True
     period.closed_id = current_user.id

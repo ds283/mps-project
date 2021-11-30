@@ -94,7 +94,7 @@ _projects = \
             {{ r.selector.student.user.name }} (No. {{ r.project.number }})</a>
         {% if adjustable %}
             {% set list = r.selector.ordered_selections %}
-            <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                 <div class="dropdown-header">Submitted choices</div>
                 {% for item in list %}
                     {% set disabled = false %}
@@ -157,7 +157,7 @@ _marking = \
             href="" role="button" aria-haspopup="true" aria-expanded="false">
             #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})
         </a>
-        <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
             <div class="dropdown-header">Reassign 2nd marker</div>
             {% set assessor_list = r.project.assessor_list %}
             {% for marker in assessor_list %}

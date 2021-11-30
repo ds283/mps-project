@@ -68,7 +68,7 @@ _menu = \
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2 {% if not is_admin %}disabled{% endif %}" {% if is_admin %}href="{{ url_for('manage_users.edit_enrollment', id=rec.id, url=url_for('reports.sabbaticals')) }}"{% endif %}>
             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
         </a>

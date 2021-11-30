@@ -93,7 +93,7 @@
                                                     <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                         {{ talk.owner.student.user.name }}
                                                     </a>
-                                                    <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                                                    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                                         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">
                                                             Reassign presentation...
                                                         </a>
@@ -139,7 +139,7 @@
                                                         <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                             {{ talk.owner.student.user.name }}
                                                         </a>
-                                                        <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">
                                                                 Reassign presentation...
                                                             </a>

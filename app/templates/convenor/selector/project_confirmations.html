@@ -57,7 +57,7 @@
                                             <a class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                 Deconfirm
                                             </a>
-                                            <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                                 {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
                                                         <i class="fas fa-clock fa-fw"></i> Make pending
@@ -114,7 +114,7 @@
                                             <a class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                 Confirm
                                             </a>
-                                            <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                                 {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fas fa-check fa-fw"></i> Confirm

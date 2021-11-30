@@ -211,7 +211,7 @@ _menu = \
             data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         {% if s.finished and s.solution_usable %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">
                 <i class="fas fa-search fa-fw"></i> Inspect schedule...

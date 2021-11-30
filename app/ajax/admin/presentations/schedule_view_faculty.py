@@ -41,7 +41,7 @@ _sessions = \
             <a class="badge text-decoration-none {% if style is not none %}{{ style }}{% else %}bg-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                 {{ slot.session.short_date_as_string }} {{ slot.session.session_type_string }}
             </a>
-            <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_assessors', id=slot.id, url=url_for('admin.schedule_view_faculty', id=rec.id, url=back_url, text=back_text), text='schedule inspector faculty view') }}">
                     Reassign assessors...
                 </a>
@@ -58,7 +58,7 @@ _sessions = \
                 <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                     {{ talk.owner.student.user.name }}
                 </a>
-                <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url_for('admin.schedule_view_faculty', id=rec.id, url=back_url, text=back_text), text='schedule inspector faculty view') }}">
                         Reassign presentation...
                     </a>

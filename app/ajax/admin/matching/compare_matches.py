@@ -65,7 +65,7 @@ _menu = \
             data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.merge_replace_records', src_id=l.id, dest_id=r.id) }}">
             <i class="fas fa-chevron-circle-right fa-fw"></i> Replace left to right
         </a>

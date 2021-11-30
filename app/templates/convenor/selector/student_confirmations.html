@@ -68,7 +68,7 @@
                                                     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
                                                 {% endif %}
                                             </a>
-                                            <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                                 {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
                                                         <i class="fas fa-clock fa-fw"></i> Make pending
@@ -135,7 +135,7 @@
                                                     <i class="fas fa-exclamation-triangle" style="color:white;"></i>
                                                 {% endif %}
                                             </a>
-                                            <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                                 {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fas fa-check"></i> Confirm

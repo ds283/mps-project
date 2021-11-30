@@ -101,7 +101,8 @@ def IssueFacultyConfirmRequestFormFactory(submit_label='Issue confirmation reque
 def OpenFeedbackFormFactory(submit_label='Open feedback period',
                             datebox_label='Deadline',
                             include_send_button=False,
-                            include_test_button=False):
+                            include_test_button=False,
+                            include_close_button=False):
 
     class OpenFeedbackForm(Form):
 
@@ -118,12 +119,16 @@ def OpenFeedbackFormFactory(submit_label='Open feedback period',
         if include_test_button:
             test_button = SubmitField('Test notifications', render_kw={'class': 'me-2'})
 
-        # submit button: open feedback
-        submit_button = SubmitField(submit_label)
-
         # if already open, include a 'send notifications' button
         if include_send_button:
             send_notifications = SubmitField('Send notifications', render_kw={'class': 'me-2'})
+
+        # direct close button
+        if include_close_button:
+            close_button = SubmitField('Close without notifications', render_kw={'class': 'me-2'})
+
+        # submit button: open feedback
+        submit_button = SubmitField(submit_label)
 
     return OpenFeedbackForm
 

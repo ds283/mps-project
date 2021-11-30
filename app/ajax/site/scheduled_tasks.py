@@ -18,7 +18,7 @@ _scheduled_menu_template = \
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
             <a class="dropdown-item d-flex gap-2" href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
                 <i class="fas fa-cogs fa-fw"></i> Edit task
             </a>

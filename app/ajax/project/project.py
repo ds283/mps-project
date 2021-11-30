@@ -174,7 +174,7 @@ _faculty_menu = \
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
             <i class="fas fa-search fa-fw"></i> Preview web page
         </a>
@@ -230,7 +230,7 @@ _convenor_menu = \
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
             <i class="fas fa-search fa-fw"></i> Preview web page
         </a>
@@ -282,7 +282,7 @@ _unofferable_menu = \
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
             <i class="fas fa-search fa-fw"></i> Preview web page
         </a>
@@ -497,7 +497,7 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
                             repapprove = """<div class="dropdown" style="display: inline-block;">
                                                 <a class="badge text-decoration-none bg-light text-dark dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
-                                                <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                                     <a class="dropdown-item d-flex gap-2" href="{url}"><i class="fas fa-check fa-fw"></i> Confirm</a>
                                                 </div>
                                             </div>""".format(url=url_for('convenor.confirm_description', config_id=config.id, did=desc.id))

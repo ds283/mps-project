@@ -102,7 +102,7 @@
                                         <a class="badge text-decoration-none bg-danger dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                             RUNNING {{ running_counterpart.number_assessors }}
                                         </a>
-                                        <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=running_counterpart.id) }}">
                                                 <i class="fas fa-sync fa-fw"></i> Sync with library version
                                             </a>
@@ -114,7 +114,7 @@
                                         <a class="badge text-decoration-none bg-success dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                             SELECTING {{ live_counterpart.number_assessors }}
                                         </a>
-                                        <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=live_counterpart.id) }}">
                                                 <i class="fas fa-sync fa-fw"></i> Sync with library version
                                             </a>
@@ -132,7 +132,7 @@
                                         {% else %}
                                             <a class="badge text-decoration-none bg-secondary dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% endif %}
-                                        <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                             <div class="dropdown-header">Attached assessor</div>
                                             {% if running_counterpart is none %}
                                                 <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-times"></i> No running project</a>
@@ -169,7 +169,7 @@
                                         {% if not data.is_assessor(marker.id) %}
                                             <div class="dropdown project-status-button" style="display: inline-block;">
                                                 <a class="badge text-decoration-none bg-warning text-dark" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
-                                                <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+                                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                                     <div class="dropdown-header">Not attached to library version</div>
                                                     {% set disabled = not data.can_enroll_assessor(marker) %}
                                                     <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"{% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
@@ -198,7 +198,7 @@
                                         {% if not data.is_assessor(marker.id) and (running_counterpart is none or (running_counterpart is not none and not running_counterpart.is_assessor(marker.id))) %}
                                             <div class="dropdown project-status-button" style="display: inline-block;">
                                                 <a class="badge text-decoration-none bg-warning text-dark" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
-                                                <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+                                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                                     <div class="dropdown-header">Not attached to library version</div>
                                                     {% set disabled = not data.can_enroll_assessor(marker) %}
                                                     <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>

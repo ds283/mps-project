@@ -58,7 +58,7 @@ menu = \
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <div class="dropdown-header">Edit</div>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_user', id=user.id, pane=pane) }}">
             <i class="fas fa-sliders-h fa-fw"></i> Account settings...

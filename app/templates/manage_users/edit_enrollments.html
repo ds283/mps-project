@@ -26,7 +26,7 @@
                                         type="button" data-bs-toggle="dropdown">
                                     {{ pclass.name }}
                                 </button>
-                                <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                     <div class="dropdown-header">Admin</div>
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.remove_enrollment', userid=user.id, pclassid=pclass.id) }}">
                                         <i class="fas fa-trash fa-fw"></i> Remove enrollment

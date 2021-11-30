@@ -50,7 +50,7 @@ _projects = \
                 {% if not_confirmed %}
                     <div class="dropdown" style="display: inline-block;">
                         <a class="badge text-decoration-none bg-secondary dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
-                        <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fas fa-check"></i> Confirm</a>
                         </div>
                     </div>
@@ -87,7 +87,7 @@ _menu = \
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.force_confirm', id=config.id, uid=f.id) }}">
             <i class="fas fa-check fa-fw"></i> Force confirm all
         </a>

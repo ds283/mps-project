@@ -36,7 +36,7 @@
         {{ wtf.render_field(form.full_CATS) }}
         <hr class="intro-divider">
 
-        <p class="form-group-heading">Supervision and assessment</p>
+        <p class="form-group-heading mt-2">Supervision and assessment</p>
         <div class="row vertical-top">
             <div class="col-6">
                 {{ wtf.render_field(form.uses_supervisor) }}
@@ -52,7 +52,7 @@
             <div class="col-6">
             </div>
         </div>
-        <p class="form-group-heading">Faculty dashboards</p>
+        <p class="form-group-heading mt-2">Faculty dashboards</p>
         <div class="row vertical-top">
             <div class="col-6">
                 {{ wtf.render_field(form.display_marker) }}
@@ -62,7 +62,7 @@
             </div>
         </div>
 
-        <p class="form-group-heading">Workload model support</p>
+        <p class="form-group-heading mt-2">Workload model support</p>
         <div class="row vertical-top">
             <div class="col-4">
                 {{ show_default_field(form.CATS_supervision, config.project_class.CATS_supervision) }}

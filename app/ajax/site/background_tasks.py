@@ -33,7 +33,7 @@ _menu = \
             data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         {% if t.status == t.PENDING or t.status == t.RUNNING %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.terminate_background_task', id=t.id) }}">
                 <i class="fas fa-hand-paper fa-fw"></i> Terminate

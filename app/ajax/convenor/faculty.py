@@ -19,7 +19,7 @@ _faculty_menu = \
             data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         {% if userdata.is_enrolled(pclass) %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.unenroll', userid=user.id, pclassid=pclass.id) }}">
                 <i class="fas fa-trash fa-fw"></i> Remove enrollment

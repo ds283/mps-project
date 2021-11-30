@@ -140,7 +140,7 @@
                 </div>
                 <div class="col-6"></div>
             </div>
-            <p class="form-group-heading">Rollover</p>
+            <p class="form-group-heading mt-2">Rollover</p>
             <div class="row vertical-top">
                 <div class="col-6">
                     {{ wtf.render_field(pclass_form.reenroll_supervisors_early) }}
@@ -149,7 +149,7 @@
                     {{ wtf.render_field(pclass_form.supervisor_carryover) }}
                 </div>
             </div>
-            <p class="form-group-heading">Student selections</p>
+            <p class="form-group-heading mt-2">Student selections</p>
             <div class="row vertical-top">
                 <div class="col-6">
                     {{ wtf.render_field(pclass_form.initial_choices) }}
@@ -180,7 +180,7 @@
                     </div>
                 {% endcall %}
             </div>
-            <p class="form-group-heading">Supervision and assessment</p>
+            <p class="form-group-heading mt-2">Supervision and assessment</p>
             <div class="row vertical-top">
                 <div class="col-6">
                     {{ wtf.render_field(pclass_form.uses_supervisor) }}
@@ -196,7 +196,7 @@
                 <div class="col-6">
                 </div>
             </div>
-            <p class="form-group-heading">Faculty dashboards</p>
+            <p class="form-group-heading mt-2">Faculty dashboards</p>
             <div class="row vertical-top">
                 <div class="col-6">
                     {{ wtf.render_field(pclass_form.display_marker) }}
@@ -208,7 +208,7 @@
         </div>
 
         <div class="card mt-3 mb-3 card-body bg-well">
-            <p class="form-group-heading">Popularity data</p>
+            <p class="form-group-heading mt-2">Popularity data</p>
             <div class="row vertical-top">
                 <div class="col-6">
                     {{ wtf.render_field(pclass_form.keep_hourly_popularity) }}
@@ -220,7 +220,7 @@
         </div>
 
         <div class="card mt-3 mb-3 card-body bg-well">
-            <p class="form-group-heading">Workload model support</p>
+            <p class="form-group-heading mt-2">Workload model support</p>
             <div class="row vertical-top">
                 <div class="col-4">
                     {{ wtf.render_field(pclass_form.CATS_supervision) }}

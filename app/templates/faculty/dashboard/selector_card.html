@@ -242,7 +242,7 @@
                                     {% endif %}
                                     <div class="btn-group">
                                         <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Actions</button>
-                                        <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
+                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}"><i class="fas fa-times fa-fw"></i> Don't offer this project</a>
                                             <div class="dropdown-divider" role="separator"></div>
                                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_project', id=project.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-sliders-h fa-fw"></i> Project settings...</a>
@@ -305,7 +305,7 @@
                                         {% if req.viewed is not none and not req.viewed %}
                                             <span class="badge bg-info text-dark">NEW</span>
                                         {% endif %}
-                                        <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                             {% if not has_recommended %}
                                                 <a class="dropdown-item d-flex gap-2 disabled">Programme does not include recommended modules</a>
                                                 <div role="separator" class="dropdown-divider"></div>
@@ -338,7 +338,7 @@
                                         <a class="badge text-decoration-none bg-success dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                             {{ sel.student.user.name }}
                                         </a>
-                                        <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
                                                 <i class="fas fa-clock fa-fw"></i> Make pending
                                             </a>

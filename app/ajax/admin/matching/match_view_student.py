@@ -72,7 +72,7 @@ _project = \
                 (No. {{ r.project.number }})</a>
             {% if adjustable %}
                 {% set list = r.selector.ordered_selections %}
-                <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                     <div class="dropdown-header">Submitted choices</div>
                     {% for item in list %}
                         {% set disabled = false %}
@@ -168,7 +168,7 @@ _marker = \
             <a class="badge text-decoration-none bg-light text-dark dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.marker.user.name }}
             </a>
-            <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
+            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                 <div class="dropdown-header">Reassign 2nd marker</div>
                 {% set assessor_list = r.project.assessor_list %}
                 {% for marker in assessor_list %}

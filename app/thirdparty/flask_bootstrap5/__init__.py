@@ -20,7 +20,7 @@ else:
         return isinstance(field, HiddenField)
 
 # central definition of used versions
-VERSION_BOOTSTRAP = '5.0.0'
+VERSION_BOOTSTRAP = '5.1.3'
 VERSION_JQUERY = '3.4.1'
 VERSION_POPPER = '2.9.2'
 

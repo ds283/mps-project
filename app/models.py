@@ -4681,7 +4681,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
     @property
     def uses_project_hub(self):
-        # if we have a locally override, use that setting; otherwise, we inherit our setting from our parent
+        # if we have a local override, use that setting; otherwise, we inherit our setting from our parent
         # ProjectClass
         if self.use_project_hub is not None:
             return self.use_project_hub

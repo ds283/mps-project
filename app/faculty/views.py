@@ -166,7 +166,7 @@ _desc_menu = \
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
            url=url_for('faculty.edit_descriptions', id=d.parent.id, create=create),
            text='description list view') }}">

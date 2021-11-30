@@ -56,7 +56,7 @@ _projects = \
                         {{ r.project.name[0:35] }}...
                     {% endif %}
                     ({{ r.supervisor.user.last_name }})</a>
-                <div class="dropdown-menu">
+                <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                     {% set disabled = r.period.is_feedback_open or r.student_engaged %}
                     {% if disabled %}
                         <a class="dropdown-item disabled">Can't reassign: Feedback open or student engaged</a>
@@ -71,7 +71,7 @@ _projects = \
                     <a class="badge text-decoration-none {% if r.student_engaged %}bg-success{% else %}bg-warning text-dark{% endif %} btn-table-block dropdown-toggle"
                         href="" role="button" aria-haspopup="true" aria-expanded="false"
                         data-bs-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}</a>
-                    <div class="dropdown-menu">
+                    <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                         {% if r.submission_period > r.owner.config.submission_period %}
                             <a class="dropdown-item disabled">Submission period not yet open</a>
                         {% elif not r.student_engaged %}
@@ -152,7 +152,7 @@ _markers = \
                     {% if show_period %}#{{ r.submission_period }}: {% endif %}
                     {{ r.marker.user.name }}
                 </a>
-                <div class="dropdown-menu">
+                <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                     {% set disabled = r.period.is_feedback_open %}
                     {% if disabled %}
                         <a class="dropdown-item disabled">Can't reassign: Feedback open or student engaged</a>
@@ -226,7 +226,7 @@ _presentations = \
                                 Not attending
                             </a>
                         {% endif %}
-                        <div class="dropdown-menu">
+                        <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                             {% set disabled = not rec.can_assign_feedback %}
                             <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=rec.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
                                 Add new feedback
@@ -269,7 +269,7 @@ _menu = \
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
             <a class="dropdown-item" href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
                 <i class="fas fa-pencil-alt fa-fw"></i> Edit student...

@@ -53,7 +53,7 @@ _menu = \
             data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('projecthub.show_formatted_article', aid=a.id, url=url, text=text) }}"><i class="fas fa-search fa-fw"></i> Show article...</a> 
         <a class="dropdown-item" href="{{ url_for(edit_endpoint, aid=a.id) }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit...</a>
         <a class="dropdown-item" href="#"><i class="fas fa-trash fa-fw"></i> Delete</a>

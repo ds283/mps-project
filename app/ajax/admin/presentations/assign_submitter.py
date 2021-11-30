@@ -33,7 +33,7 @@ _assessors = \
                 {% set count = rec.get_number_faculty_slots(assessor.id) %}
                 ({{ count }})
             </a>
-            <div class="dropdown-menu">
+            <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                 <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url, text=text) }}">
                     Reassign assessors...
                 </a>
@@ -75,7 +75,7 @@ _talks = \
             {{ talk.owner.student.user.last_name }}
             ({{ talk.project.owner.user.last_name }} &ndash; {{ truncate_name(talk.project.name) }})
         </a>
-        <div class="dropdown-menu">
+        <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
             <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=s.id, talk_id=talk.id, url=url, text=text) }}">
                 Reassign presentation...
             </a>

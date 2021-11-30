@@ -39,7 +39,7 @@ _menu = \
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         {% set disabled = not m.active %}
         <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_module', id=m.id) }}"{% endif %}>
             <i class="fas fa-pencil-alt fa-fw"></i> Edit details...

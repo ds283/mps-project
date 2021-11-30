@@ -31,7 +31,7 @@
     {# based on https://stackoverflow.com/questions/32746598/bootstrap-dropdown-list-position-up-bottom-based-on-document-height #}
     <script>
         function determineDropDirection() {
-          $(".dropdown-menu dropdown-menu-end").each( function(){
+          $(".dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end").each( function(){
             $(this).css({
               visibility: "hidden",
               display: "block"
@@ -275,7 +275,7 @@
             Convenor
         </a>
 
-        <div class="dropdown-menu dropdown-menu-end">
+        <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
             <div class="dropdown-header">Convenorships</div>
             {% for project_class in pclasses %}
                 <a class="dropdown-item"href="{{ url_for('convenor.overview', id=project_class.id) }}">
@@ -320,7 +320,7 @@
                             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
                                 My projects
                             </a>
-                            <div class="dropdown-menu dropdown-menu-end">
+                            <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                 <a class="dropdown-item" href="{{ url_for('faculty.edit_projects') }}">
                                     <i class="fas fa-book-open fa-fw"></i> My project library...
                                 </a>
@@ -345,7 +345,7 @@
                             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
                                 My projects
                             </a>
-                            <div class="dropdown-menu dropdown-menu-end">
+                            <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                 {% if current_user.student_data.has_timeline %}
                                     <a class="dropdown-item" href="{{ url_for('student.timeline', student_id=current_user.id) }}">
                                         <i class="fas fa-history fa-fw"></i> Show history...
@@ -364,7 +364,7 @@
                             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
                                 Reports
                             </a>
-                            <div class="dropdown-menu dropdown-menu-end">
+                            <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                 <a class="dropdown-item" href="{{ url_for('reports.year_groups') }}">
                                     <i class="fas fa-binoculars fa-fw"></i> Year groups....
                                 </a>
@@ -394,7 +394,7 @@
                             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
                                 Admin
                             </a>
-                            <div class="dropdown-menu dropdown-menu-end">
+                            <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                 {% set needs_divider = false %}
                                 {% if is_manage_users or is_root %}
                                     <a class="dropdown-item" href="{{ url_for('manage_users.edit_users') }}">
@@ -464,7 +464,7 @@
                             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
                                 Site management
                             </a>
-                            <div class="dropdown-menu dropdown-menu-end">
+                            <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                 {% if is_root %}
                                     <a class="dropdown-item" href="{{ url_for('manage_users.edit_roles') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Role editor...
@@ -507,7 +507,7 @@
                                     (student)
                                 {% endif %}
                             </a>
-                            <div class="dropdown-menu dropdown-menu-end">
+                            <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                 <a class="dropdown-item" href="{{ url_for('home.homepage') }}">
                                     <i class="fas fa-tachometer-alt fa-fw"></i> Dashboard...
                                 </a>

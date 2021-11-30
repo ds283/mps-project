@@ -40,7 +40,7 @@ _projects = \
                 {{ r.owner.student.user.name }}
                 #{{ r.owner.student.exam_number }}
             </a>
-            <div class="dropdown-menu">
+            <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                 {% set disabled = not pclass.publish %}
                 <a class="dropdown-item {% if disabled %}disabled{% endif %}"{% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Show feedback</a>
                 
@@ -58,7 +58,7 @@ _projects = \
                 <a class="badge text-decoration-none {% if r.student_engaged %}bg-success{% else %}bg-warning text-dark{% endif %} btn-table-block dropdown-toggle"
                     href="" role="button" aria-haspopup="true" aria-expanded="false"
                     data-bs-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}
-                <div class="dropdown-menu">
+                <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                     {% if r.submission_period > r.owner.config.submission_period %}
                         <a class="dropdown-item disabled">Submission period not yet open</a>
                     {% elif not r.student_engaged %}
@@ -119,7 +119,7 @@ _marking = \
                 {{ r.owner.student.user.name }}
                 #{{ r.owner.student.exam_number }}
             </a>
-            <div class="dropdown-menu">
+            <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                 {% set disabled = not pclass.publish %}
                 <a class="dropdown-item {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Show feedback</a>
                 
@@ -173,7 +173,7 @@ _presentations = \
                     {{ slot.session_type_string }}
                     {{ slot.room_full_name }}
                 </a>
-                <div class="dropdown-menu">
+                <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                     {% for rec in slot.talks %}
                         {% set pclass = rec.owner.config.project_class %}
                         {% set disabled = not pclass.publish %}

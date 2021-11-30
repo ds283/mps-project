@@ -45,7 +45,7 @@ _menu = \
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         <a class="dropdown-item" href="{{ url_for('admin.edit_period', id=period.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Edit period...
         </a>

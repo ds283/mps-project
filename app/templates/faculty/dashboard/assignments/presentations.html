@@ -60,7 +60,7 @@
                                                     <button class="btn btn-outline-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                                         Actions
                                                     </button>
-                                                    <div class="dropdown-menu dropdown-menu-end">
+                                                    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                                                         <a class="dropdown-item" href="{{ url_for('documents.submitter_documents', sid=talk.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ talk.number_attachments }})...</a>
                                                         {% if uses_feedback %}
                                                             {% if slot.feedback_state(faculty_id) > slot.FEEDBACK_NOT_YET %}

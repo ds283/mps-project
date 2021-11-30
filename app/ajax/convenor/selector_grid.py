@@ -37,7 +37,7 @@ _selections = \
                 {% set style = project.group.make_CSS_style() %}
                 <a class="badge text-decoration-none bg-info text-dark dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">#{{ item.rank }}
                     {{ item.format_project()|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}</a>
-                <div class="dropdown-menu">
+                <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                     {% set menu_items = item.menu_order %}
                     {% for mi in menu_items %}
                         {% if mi is string %}

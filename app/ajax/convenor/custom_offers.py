@@ -64,7 +64,7 @@ _menu = \
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle table-button" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         {% set status = offer.status %}
         {% if status == offer.OFFERED %}
             <a class="dropdown-item" href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">

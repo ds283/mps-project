@@ -100,7 +100,7 @@
                     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
                         Actions
                     </button>
-                    <div class="dropdown-menu dropdown-menu-end">
+                    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
                         {% set has_access = asset.has_access(current_user.id) %}
                         {# no need to check whether user is admin, because anyone accessing this view must be an admin user #}
                         {% if edit_url is not none %}

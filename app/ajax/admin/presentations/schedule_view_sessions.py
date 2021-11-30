@@ -31,7 +31,7 @@ _assessors = \
             <a class="badge text-decoration-none bg-light text-dark" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                 {{ assessor.user.name }}
             </a>
-            <div class="dropdown-menu">
+            <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
                 <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
                     Reassign assessors...
                 </a>
@@ -58,7 +58,7 @@ _talks = \
         <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
             {{ talk.owner.student.user.name }}
         </a>
-        <div class="dropdown-menu">
+        <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
             <a class="dropdown-item" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=s.id, talk_id=talk.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
                 Reassign presentation...
             </a>
@@ -120,7 +120,7 @@ _room = \
     <a class="badge text-decoration-none {% if style is none %}bg-info{% else %}bg-secondary{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
         {{ s.room.full_name }}
     </a>
-    <div class="dropdown-menu">
+    <div class="dropdown-menu dropdown-menu-dark mx-o border-0">
         <div class="dropdown-header">Alternative venues</div>
         {% set rooms = s.alternative_rooms %}
         {% for room in rooms %}

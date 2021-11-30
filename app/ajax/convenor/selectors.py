@@ -21,7 +21,7 @@ _menu = \
             data-bs-toggle="dropdown">
         Actions
     </button>
-    <div class="dropdown-menu dropdown-menu-end">
+    <div class="dropdown-menu dropdown-menu-dark mx-o border-0 dropdown-menu-end">
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
             <a class="dropdown-item" href="{{ url_for('manage_users.edit_student', id=student.student.id, url=url_for('convenor.selectors', id=pclass.id)) }}">
                 <i class="fas fa-pencil-alt fa-fw"></i> Edit student...

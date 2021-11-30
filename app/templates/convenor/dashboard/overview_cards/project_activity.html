@@ -22,18 +22,14 @@
         {{ wtf.render_field(feedback_form.max_attachment) }}
         {{ wtf.render_field(feedback_form.cc_me) }}
         <div class="d-flex flex-row justify-content-end">
-            {{ submission_period_configure_button(period, config, dropup=true) }}
-            {% if feedback_form.send_notifications is defined %}
-                <div class="mb-1">
+            <div class="btn-group mb-1">
+                {{ submission_period_configure_button(period, config, dropup=true) }}
+                {% if feedback_form.send_notifications is defined %}
                     {{ wtf.render_field(feedback_form.send_notifications, button_map={'send_notifications': 'outline-secondary'}) }}
-                </div>
-            {% endif %}
-            {% if feedback_form.test_button is defined  %}
-                <div class="mb-1">
+                {% endif %}
+                {% if feedback_form.test_button is defined  %}
                     {{ wtf.render_field(feedback_form.test_button, button_map={'test_button': 'outline-info'}) }}
-                </div>
-            {% endif %}
-            <div class="mb-1">
+                {% endif %}
                 {{ wtf.render_field(feedback_form.submit_button, button_map={'submit_button': 'outline-danger'}) }}
             </div>
         </div>

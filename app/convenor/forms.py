@@ -116,14 +116,14 @@ def OpenFeedbackFormFactory(submit_label='Open feedback period',
 
         # submit button: test
         if include_test_button:
-            test_button = SubmitField('Test notifications')
+            test_button = SubmitField('Test notifications', render_kw={'class': 'me-2'})
 
         # submit button: open feedback
         submit_button = SubmitField(submit_label)
 
         # if already open, include a 'send notifications' button
         if include_send_button:
-            send_notifications = SubmitField('Send notifications')
+            send_notifications = SubmitField('Send notifications', render_kw={'class': 'me-2'})
 
     return OpenFeedbackForm
 

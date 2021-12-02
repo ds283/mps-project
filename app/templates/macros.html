@@ -211,6 +211,33 @@
     </div>
 {% endmacro %}
 
+{% macro show_floating_field(field, label, show_label=true) %}
+    {% if field.flags.required and not required in kwargs %}
+        {% set kwargs = dict(required=True, **kwargs) %}
+    {% endif %}
+
+    {% set extra_classes = ' ' + field.render_kw.class if field.render_kw.class else '' %}
+
+    <div class="form-group {%- if field.flags.required %} require{% endif -%}">
+        {% if show_label %}{{ field.label(class="control-label")|safe }}{% endif %}
+        <div class="form-floating mb-3 mb-sm-1">
+            {% if field.errors %}
+                {{ field(class="form-control is-invalid%s" % extra_classes, id="{{ id|safe }}", **kwargs)|safe }}
+            {% else %}
+                {{ field(class="form-control%s" % extra_classes, id="{{ id|safe }}", **kwargs)|safe }}
+            {% endif %}
+            <label for="{{ id|safe }}">{{ label|safe }}</label>
+        </div>
+        {% if field.errors %}
+            {% for error in field.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+        {% elif field.description %}
+            <small class="form-text text-muted">{{ field.description|safe }}</small>
+        {% endif %}
+    </div>
+{% endmacro %}
+
 {% macro on_click_selector_field(field, show_label) %}
     <div class="form-group {% if field.errors %} has-error{% endif -%}
                                {%- if field.flags.required %} required{% endif -%}">

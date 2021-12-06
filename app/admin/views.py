@@ -42,7 +42,7 @@ from .forms import AddResearchGroupForm, EditResearchGroupForm, \
     AddModuleForm, EditModuleForm, \
     AddTransferableSkillForm, EditTransferableSkillForm, AddSkillGroupForm, EditSkillGroupForm, \
     AddProjectClassForm, EditProjectClassForm, EditProjectTextForm, \
-    AddSubmissionPeriodForm, EditSubmissionPeriodForm, \
+    AddSubmissionPeriodDefinitionForm, EditSubmissionPeriodDefinitionForm, \
     AddSupervisorForm, EditSupervisorForm, \
     EmailLogForm, \
     AddMessageFormFactory, EditMessageFormFactory, \
@@ -1889,7 +1889,7 @@ def add_period(id):
     """
 
     pclass: ProjectClass = ProjectClass.query.get_or_404(id)
-    form = AddSubmissionPeriodForm(form=request.form)
+    form = AddSubmissionPeriodDefinitionForm(form=request.form)
 
     if form.validate_on_submit():
         if form.has_presentation.data:
@@ -1947,7 +1947,7 @@ def edit_period(id):
     """
 
     data = SubmissionPeriodDefinition.query.get_or_404(id)
-    form = EditSubmissionPeriodForm(obj=data)
+    form = EditSubmissionPeriodDefinitionForm(obj=data)
 
     if form.validate_on_submit():
         data.name = form.name.data

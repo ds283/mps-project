@@ -160,7 +160,11 @@ class CustomCATSLimitForm(Form, SaveChangesMixin):
                                      validators=[Optional()])
 
 
-class SubPeriodRecordSettingsMixin():
+class SubmissionPeriodRecordSettingsMixin():
+
+    name = StringField('Name', description='Optional. Enter a textual name for this submission '
+                                           'period, such as "Autumn Term". Leave blank to use the default name.',
+                       validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
 
     start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
                            description="Enter an optional start date for this submission period.")
@@ -176,12 +180,12 @@ class SubPeriodRecordSettingsMixin():
                                          'identifier for the corresponding Canvas assignment')
 
 
-class EditSubPeriodRecordSettingsForm(Form, SubPeriodRecordSettingsMixin, SaveChangesMixin):
+class EditSubmissionPeriodRecordSettingsForm(Form, SubmissionPeriodRecordSettingsMixin, SaveChangesMixin):
 
     pass
 
 
-class EditSubPeriodRecordPresentationsForm(Form, SubmissionPeriodPresentationsMixin, SaveChangesMixin):
+class EditSubmissionPeriodRecordPresentationsForm(Form, SubmissionPeriodPresentationsMixin, SaveChangesMixin):
 
     pass
 

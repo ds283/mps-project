@@ -5277,7 +5277,7 @@ class SubmissionPeriodRecord(db.Model):
 
     # CANVAS INTEGRATION
 
-    # Canvas id for the assignemnt matching this submision period
+    # Canvas id for the assignment matching this submission period
     canvas_id = db.Column(db.Integer(), default=None, nullable=False)
 
 

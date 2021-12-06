@@ -395,7 +395,7 @@ class EditProjectTextForm(Form, SaveChangesMixin):
                                                     render_kw={"rows": 5}, validators=[Optional()])
 
 
-class SubmissionPeriodSettingsMixin():
+class SubmissionPeriodDefinitionSettingsMixin():
 
     name = StringField('Name', description='Optional. Enter an alternative text name for this submission '
                                            'period, such as "Autumn Term"',
@@ -407,12 +407,12 @@ class SubmissionPeriodSettingsMixin():
     collect_project_feedback = BooleanField('Collect project feedback online')
 
 
-class AddSubmissionPeriodForm(Form, SubmissionPeriodSettingsMixin, SubmissionPeriodPresentationsMixin):
+class AddSubmissionPeriodDefinitionForm(Form, SubmissionPeriodDefinitionSettingsMixin, SubmissionPeriodPresentationsMixin):
 
     submit = SubmitField('Add new submission period')
 
 
-class EditSubmissionPeriodForm(Form, SubmissionPeriodSettingsMixin, SubmissionPeriodPresentationsMixin, SaveChangesMixin):
+class EditSubmissionPeriodDefinitionForm(Form, SubmissionPeriodDefinitionSettingsMixin, SubmissionPeriodPresentationsMixin, SaveChangesMixin):
 
     pass
 

@@ -44,12 +44,13 @@
 {% endblock %}
 
 {% block form_content %}
-    <form action="{{ url_for('convenor.edit_subpd_record_settings', pid=record.id) }}" method="POST" name="edit_form">
+    <form action="{{ url_for('convenor.edit_submission_period_record_settings', pid=record.id) }}" method="POST" name="edit_form">
 
         {{ form.hidden_tag() }}
 
 {#        {{ wtf.form_errors(form) }}#}
 
+        {{ wtf.render_field(form.name) }}
         {{ date_field(form.start_date, 'datetimepicker1') }}
         {{ date_field(form.hand_in_date, 'datetimepicker2') }}
         <hr class="intro-divider">

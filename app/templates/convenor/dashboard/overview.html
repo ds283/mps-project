@@ -1,6 +1,7 @@
 {% extends "convenor/dashboard/nav.html" %}
 
 {% from "macros.html" import submission_period_configure_button %}
+{% from "icon_block.html" import icon_block %}
 
 {% from "convenor/dashboard/overview_cards/rollover.html" import rollover_card %}
 {% from "convenor/dashboard/overview_cards/issue_confirmations.html" import issue_confirmations %}
@@ -75,52 +76,60 @@
                     <div class="dashboard-project-title me-2">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</div>
                     <a class="mt-1 btn btn-sm btn-outline-secondary align-self-start" href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Project settings...</a>
                 </div>
-                <div class="d-flex justify-content-left mt-2 mb-2">
-                    <h5 class="me-1"><span class="badge bg-info text-dark"><i class="fas fa-coins"></i> Supervision <span class="badge bg-secondary rounded-pill">{{ config.CATS_supervision }} CATS</span> {% if config.CATS_supervision != pclass.CATS_supervision %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
-                    <h5 class="me-1"><span class="badge bg-info text-dark"><i class="fas fa-coins"></i> Marking <span class="badge bg-secondary rounded-pill">{{ config.CATS_marking }} CATS</span> {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
-                    <h5 class="me-1"><span class="badge bg-info text-dark"><i class="fas fa-coins"></i> Presentation <span class="badge bg-secondary rounded-pill">{{ config.CATS_presentation }} CATS</span> {% if config.CATS_marking != pclass.CATS_marking %}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{% endif %}</span></h5>
-                </div>
-                {% set messages = [] %}
-                {% if config.uses_project_hub %}
-                    {% set tmp = messages.append('Project hub enabled') %}
-                {% else %}
-                    {% set tmp = messages.append('Project hub disabled') %}
-                {% endif %}
-                {% if config.do_matching %}
-                    {% set tmp = messages.append('Participate in automated matching') %}
-                {% endif %}
-                {% if config.skip_matching %}
-                    {% set tmp = messages.append('Skip matching this cycle') %}
-                {% endif %}
-                {% if config.requests_skipped %}
-                    {% set tmp = message.append('Skip confirmation requests this cycle') %}
-                {% endif %}
-                {% if config.require_confirm %}
-                    {% set tmp = messages.append('Requires project confirmations') %}
-                {% endif %}
-                {% set tmp = messages.append('Initial choices = ' + config.initial_choices|string) %}
-                {% set tmp = messages.append('Switch choices = ' + config.switch_choices|string) %}
-                {% set tmp = messages.append('Maximum selectable projects with same supervisor = ' + config.faculty_maximum|string) %}
-                {% set tmp = messages.append('Start year Y' + config.start_year|string) %}
-                {% set tmp = messages.append('Extent = ' + config.extent|string) %}
-                {% if config.selection_open_to_all %}
-                    {% set tmp = messages.append('Selection open to all') %}
-                {% else %}
-                    {% set tmp = messages.append('Selection restricted to invitees') %}
-                {% endif %}
-                {% if config.full_CATS %}
-                    {% set temp = message.append('Maximum supervisor CATS for accommodated matchings = ' + config.full_CATS|string) %}
-                {% endif %}
-                {% if messages|length > 0 %}
-                    <span class="text-muted">{{ messages|join(', ') }}</span>
-                {% endif %}
-                <div class="row vertical-top mt-2 mb-2">
-                    <div class="col-12">
-                        <div class="float-end">
+                <ul class="list-group border-0 mb-5">
+                    <li class="list-group-item">
+                        {% call icon_block("coins") %}
+                            <p><strong>CATS allocations</strong></p>
+                            <p>
+                                Supervision <span class="badge bg-secondary rounded-pill">{{ config.CATS_supervision }} CATS</span> {%- if config.CATS_supervision != pclass.CATS_supervision -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%},
+                                Marking <span class="badge bg-secondary rounded-pill">{{ config.CATS_marking }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%},
+                                Presentation <span class="badge bg-secondary rounded-pill">{{ config.CATS_presentation }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%}
+                            </p>
+                        {% endcall %}
+                    </li>
+                    <li class="list-group-item">
+                        {% set messages = [] %}
+                        {% if config.uses_project_hub %}
+                            {% set tmp = messages.append('Project hub enabled') %}
+                        {% else %}
+                            {% set tmp = messages.append('Project hub disabled') %}
+                        {% endif %}
+                        {% if config.do_matching %}
+                            {% set tmp = messages.append('Participate in automated matching') %}
+                        {% endif %}
+                        {% if config.skip_matching %}
+                            {% set tmp = messages.append('Skip matching this cycle') %}
+                        {% endif %}
+                        {% if config.requests_skipped %}
+                            {% set tmp = message.append('Skip confirmation requests this cycle') %}
+                        {% endif %}
+                        {% if config.require_confirm %}
+                            {% set tmp = messages.append('Requires project confirmations') %}
+                        {% endif %}
+                        {% set tmp = messages.append('Initial choices = ' + config.initial_choices|string) %}
+                        {% set tmp = messages.append('Switch choices = ' + config.switch_choices|string) %}
+                        {% set tmp = messages.append('Maximum selectable projects with same supervisor = ' + config.faculty_maximum|string) %}
+                        {% set tmp = messages.append('Start year Y' + config.start_year|string) %}
+                        {% set tmp = messages.append('Extent = ' + config.extent|string) %}
+                        {% if config.selection_open_to_all %}
+                            {% set tmp = messages.append('Selection open to all') %}
+                        {% else %}
+                            {% set tmp = messages.append('Selection restricted to invitees') %}
+                        {% endif %}
+                        {% if config.full_CATS %}
+                            {% set temp = message.append('Maximum supervisor CATS for accommodated matchings = ' + config.full_CATS|string) %}
+                        {% endif %}
+                        {% if messages|length > 0 %}
+                            <span class="text-muted">{{ messages|join(', ') }}</span>
+                        {% endif %}
+                        <div class="row vertical-top mt-2 mb-2">
+                            <div class="col-12">
+                                <div class="float-end">
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <hr class="intro-divider">
+                    </li>
+                </ul>
                 {% for p in config.periods %}
                     {% if loop.index > 1 %}
                         <hr class="intro-divider">

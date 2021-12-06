@@ -8,6 +8,10 @@
     {% set pclass_filter = 'all' %}
 {% endif %}
 
+{% if not filter_CATS or filter_CATS is none %}
+    {% set filter_CATS = false %}
+{% endif %}
+
 {% from "datatables.html" import import_datatables %}
 
 {% block scripts %}
@@ -22,7 +26,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true,
-                ajax: { url: $SCRIPT_ROOT + '/manage_users/users_faculty_ajax?pclass_filter={{ pclass_filter }}&group_filter={{ group_filter }}',
+                ajax: { url: $SCRIPT_ROOT + '/manage_users/users_faculty_ajax?pclass_filter={{ pclass_filter }}&group_filter={{ group_filter }}&&filter_CATS={{ '1' if filter_CATS else '0' }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
@@ -106,6 +110,18 @@
                             </div>
                         </div>
                     {% endif %}
+
+                    {% if needs_hrule %}<hr class="intro-divider">{% endif %}
+                    {% set needs_hrule = true %}
+                    <div class="row">
+                        <div class="col-12">
+                            <p>Filter by properties</p>
+                            <a href="{{ url_for('manage_users.edit_users_faculty', pclass_filter=pclass_filter, group_filter=group_filter, filter_CATS='0' if filter_CATS else '1') }}"
+                               class="btn btn-sm filter-btn {% if filter_CATS %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Has CATS limits
+                            </a>
+                        </div>
+                    </div>
                 </div>
             {% endif %}
 

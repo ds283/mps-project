@@ -380,6 +380,18 @@ def edit_users_faculty():
     if pclass_filter is not None:
         session['accounts_pclass_filter'] = pclass_filter
 
+    filter_CATS_pre = request.args.get('filter_CATS')
+
+    if filter_CATS_pre is None:
+        if session.get('accounts_filter_CATS'):
+            filter_CATS = bool(session['accounts_filter_CATS'])
+        else:
+            filter_CATS = False
+    else:
+        filter_CATS = bool(int(filter_CATS_pre))
+
+    session['accounts_filter_CATS'] = filter_CATS
+
     groups_ids = db.session.query(faculty_affiliations.c.group_id).distinct().subquery()
     groups = db.session.query(ResearchGroup) \
         .join(groups_ids, groups_ids.c.group_id == ResearchGroup.id) \
@@ -393,7 +405,7 @@ def edit_users_faculty():
         .order_by(ProjectClass.name.asc()).all()
 
     return render_template("manage_users/users_dashboard/faculty.html", pane='faculty',
-                           group_filter=group_filter, pclass_filter=pclass_filter,
+                           group_filter=group_filter, pclass_filter=pclass_filter, filter_CATS=filter_CATS,
                            groups=groups, pclasses=pclasses)
 
 
@@ -518,6 +530,7 @@ def users_students_ajax():
 def users_faculty_ajax():
     group_filter = request.args.get('group_filter')
     pclass_filter = request.args.get('pclass_filter')
+    filter_CATS = request.args.get('filter_CATS')
 
     base_query = db.session.query(FacultyData.id) \
         .join(User, User.id == FacultyData.id)
@@ -529,6 +542,12 @@ def users_faculty_ajax():
     flag, pclass_value = is_integer(pclass_filter)
     if flag:
         base_query = base_query.filter(FacultyData.enrollments.any(pclass_id=pclass_value))
+
+    flag, filter_CATS = is_integer(filter_CATS)
+    if flag and bool(filter_CATS):
+        base_query = base_query.filter(or_(FacultyData.CATS_supervision != None,
+                                           FacultyData.CATS_marking != None,
+                                           FacultyData.CATS_presentation != None))
 
     name = {'search': func.concat(User.first_name, ' ', User.last_name),
             'order': [User.last_name, User.first_name],

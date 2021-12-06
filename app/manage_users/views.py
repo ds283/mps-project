@@ -38,7 +38,7 @@ from ..models import User, FacultyData, StudentData, StudentBatch, StudentBatchI
     DegreeProgramme, DegreeType, ProjectClass, ResearchGroup, Role, TemporaryAsset, TaskRecord, BackupRecord, \
     AssetLicense, WorkflowMixin, faculty_affiliations
 from ..shared.asset_tools import make_temporary_asset_filename
-from ..shared.conversions import is_integer
+from ..shared.conversions import is_integer, is_boolean
 from ..shared.sqlalchemy import func
 from ..shared.utils import get_current_year, get_main_config, home_dashboard_url, redirect_url
 from ..shared.validators import validate_is_convenor
@@ -485,7 +485,7 @@ def users_students_ajax():
     cohort_filter = request.args.get('cohort_filter')
     year_filter = request.args.get('year_filter')
     valid_filter = request.args.get('valid_filter')
-    filter_TWD = request.args.get('filter_TWD')
+    filter_TWD_pre = request.args.get('filter_TWD')
 
     base_query = db.session.query(StudentData.id) \
         .join(User, User.id == StudentData.id) \
@@ -514,8 +514,8 @@ def users_students_ajax():
     elif year_filter == 'grad':
         base_query = base_query.filter(StudentData.academic_year > DegreeType.duration)
 
-    flag, filter_TWD = is_integer(filter_TWD)
-    if flag and bool(filter_TWD):
+    flag, filter_TWD = is_boolean(filter_TWD_pre)
+    if flag and filter_TWD:
         base_query = base_query.filter(StudentData.intermitting == True)
 
     name = {'search': func.concat(User.first_name, ' ', User.last_name),
@@ -548,7 +548,7 @@ def users_students_ajax():
 def users_faculty_ajax():
     group_filter = request.args.get('group_filter')
     pclass_filter = request.args.get('pclass_filter')
-    filter_CATS = request.args.get('filter_CATS')
+    filter_CATS_pre = request.args.get('filter_CATS')
 
     base_query = db.session.query(FacultyData.id) \
         .join(User, User.id == FacultyData.id)
@@ -561,8 +561,8 @@ def users_faculty_ajax():
     if flag:
         base_query = base_query.filter(FacultyData.enrollments.any(pclass_id=pclass_value))
 
-    flag, filter_CATS = is_integer(filter_CATS)
-    if flag and bool(filter_CATS):
+    flag, filter_CATS = is_boolean(filter_CATS_pre)
+    if flag and filter_CATS:
         base_query = base_query.filter(or_(FacultyData.CATS_supervision != None,
                                            FacultyData.CATS_marking != None,
                                            FacultyData.CATS_presentation != None))

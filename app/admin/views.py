@@ -1508,7 +1508,9 @@ def add_pclass():
                                         CATS_presentation=data.CATS_presentation,
                                         creator_id=current_user.id,
                                         creation_timestamp=datetime.now(),
-                                        submission_period=1)
+                                        submission_period=1,
+                                        canvas_id=None,
+                                        canvas_login_id=None)
             db.session.add(config)
             db.session.flush()
 
@@ -1536,7 +1538,8 @@ def add_pclass():
                                                 feedback_deadline=None,
                                                 closed=False,
                                                 closed_id=None,
-                                                closed_timestamp=None)
+                                                closed_timestamp=None,
+                                                canvas_id=None)
                 db.session.add(period)
 
             db.session.commit()
@@ -1827,7 +1830,8 @@ def regenerate_period_records(id):
                                         feedback_deadline=None,
                                         closed=False,
                                         closed_id=None,
-                                        closed_timestamp=None)
+                                        closed_timestamp=None,
+                                        canvas_id=None)
         db.session.add(period)
 
         # add SubmissionRecord instances for any attached students

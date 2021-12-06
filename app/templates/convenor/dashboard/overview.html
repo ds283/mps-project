@@ -94,6 +94,16 @@
                         {% else %}
                             {% set tmp = messages.append('Project hub disabled') %}
                         {% endif %}
+                        {% if config.canvas_enabled %}
+                            {% set tmp = messages.append('Canvas integration enabled') %}
+                        {% else %}
+                            {% if not config.canvas_id %}
+                                {% set tmp = messages.append('Canvas course identifier not set') %}
+                            {% endif %}
+                            {% if not config.canvas_login %}
+                                {% set tmp = messages.append('Canvas login not set') %}
+                            {% endif %}
+                        {% endif %}
                         {% if config.do_matching %}
                             {% set tmp = messages.append('Participate in automated matching') %}
                         {% endif %}
@@ -160,6 +170,11 @@
                                     {% set tmp = messages.append('Hand-in date ' + p.hand_in_date.strftime("%a %d %b %Y")) %}
                                 {% endif %}
                             </div>
+                        {% endif %}
+                        {% if p.canvas_enabled %}
+                            {% set tmp = messages.append('Canvas integration enabled') %}
+                        {% else %}
+                            {% set tmp = messages.append('Canvas integration not enabled') %}
                         {% endif %}
                         {% if p.has_presentation %}
                             {% set tmp = messages.append('Has presentation') %}

@@ -391,3 +391,17 @@ def GetSubmissionRecords(config: ProjectClassConfig):
 
 def BuildSubmissionRecordLabel(period: SubmissionPeriodRecord):
     return period.display_name
+
+
+def GetCanvasEnabledConvenors(config: ProjectClassConfig):
+    return db.session.query(FacultyData).filter(FacultyData.canvas_API_token != None) \
+        .filter(or_(FacultyData.id == config.convenor_id,
+                    FacultyData.id == config.project_class.convenor_id,
+                    FacultyData.coconvenor_for.any(id=config.pclass_id))) \
+        .join(User, User.id == FacultyData.id) \
+        .filter(User.active == True) \
+        .order_by(User.last_name.asc(), User.first_name.asc())
+
+
+def BuildCanvasLoginUserName(data: FacultyData):
+    return data.user.name_and_username

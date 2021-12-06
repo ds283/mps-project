@@ -16,7 +16,8 @@ from wtforms_alchemy import QuerySelectField
 
 from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig, ConvenorGenericTask
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
-    GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses, GetAccommodatableMatchings
+    GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses, GetAccommodatableMatchings, \
+    GetCanvasEnabledConvenors, BuildCanvasLoginUserName
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodPresentationsMixin, \
     PeriodSelectorMixinFactory
 from ..shared.forms.wtf_validators import NotOptionalIf
@@ -170,6 +171,10 @@ class SubPeriodRecordSettingsMixin():
 
     collect_project_feedback = BooleanField('Collect project feedback online')
 
+    canvas_id = IntegerField('Canvas assignment identifier', validators=[Optional()],
+                             description='To enable Canvas integration for this submission period, enter the numeric '
+                                         'identifier for the corresponding Canvas assignment')
+
 
 class EditSubPeriodRecordSettingsForm(Form, SubPeriodRecordSettingsMixin, SaveChangesMixin):
 
@@ -233,6 +238,14 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
 
         CATS_presentation = IntegerField('CATS awarded for assessing presentations',
                                          validators=[Optional()])
+
+        canvas_id = IntegerField('Canvas course identifier', validators=[Optional()],
+                                 description='To enable Canvas integration for this cycle, enter the numeric '
+                                             'identifier for the corresponding Canvas course')
+
+        canvas_login = QuerySelectField('Canvas login account', query_factory=partial(GetCanvasEnabledConvenors, config),
+                                        allow_blank=True, get_label=BuildCanvasLoginUserName)
+
 
     return EditProjectConfigForm
 

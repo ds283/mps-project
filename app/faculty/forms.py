@@ -302,13 +302,13 @@ class SupervisorResponseForm(Form, SupervisorResponseMixin):
     pass
 
 
-def FacultySettingsFormFactory(user=None):
+def FacultySettingsFormFactory(user=None, current_user=None, canvas=False):
 
-    class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixinFactory(admin=False),
+    class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixinFactory(admin=False, canvas=canvas),
                               FirstLastNameMixin, SaveChangesMixin, EmailSettingsMixin,
                               DefaultLicenseMixin):
 
-        if user is not None and user.has_role('root', skip_mask=True):
+        if current_user is not None and current_user.has_role('root', skip_mask=True):
             mask_roles = QuerySelectMultipleField('Temporarily mask roles',
                                                   query_factory=partial(GetMaskableRoles, user.id), get_label='name')
 

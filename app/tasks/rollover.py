@@ -492,7 +492,9 @@ def register_rollover_tasks(celery):
                                             CATS_supervision=pclass.CATS_supervision,
                                             CATS_marking=pclass.CATS_marking,
                                             CATS_presentation=pclass.CATS_presentation,
-                                            submission_period=1)
+                                            submission_period=1,
+                                            canvas_id=None,
+                                            canvas_login_id=None)
             db.session.add(new_config)
             db.session.flush()
 
@@ -518,7 +520,8 @@ def register_rollover_tasks(celery):
                                                 feedback_deadline=None,
                                                 closed=False,
                                                 closed_id=None,
-                                                closed_timestamp=None)
+                                                closed_timestamp=None,
+                                                canvas_id=None)
                 db.session.add(period)
 
             # retire old SubmissionPeriodRecords:

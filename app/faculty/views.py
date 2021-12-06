@@ -2527,7 +2527,7 @@ def settings():
     user = User.query.get_or_404(current_user.id)
     data = FacultyData.query.get_or_404(current_user.id)
 
-    FacultySettingsForm = FacultySettingsFormFactory(current_user)
+    FacultySettingsForm = FacultySettingsFormFactory(user, current_user, canvas=data.is_convenor)
     form = FacultySettingsForm(obj=data)
     form.user = user
 
@@ -2550,6 +2550,13 @@ def settings():
                 user.mask_roles.append(root)
         else:
             user.mask_roles = []
+
+        if hasattr(form, 'canvas_API_token'):
+            data.canvas_API_token = form.canvas_API_token.data
+
+        else:
+            # automatically delete for safety
+            data.canvas_API_token = None
 
         data.academic_title = form.academic_title.data
         data.use_academic_title = form.use_academic_title.data

@@ -107,6 +107,13 @@
         </div>
     </div>
 
+    {% if settings_form.canvas_API_token is defined %}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <div class="form-group-heading">Canvas integration</div>
+            {{ wtf.render_field(settings_form.canvas_API_token) }}
+        </div>
+    {% endif %}
+
     {{ wtf.render_field(settings_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>

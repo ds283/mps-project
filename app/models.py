@@ -9,6 +9,8 @@
 #
 
 import json
+import cryptography
+
 from datetime import date, datetime, timedelta
 from os import path
 from time import time
@@ -24,6 +26,8 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import validates, with_polymorphic
 from sqlalchemy.sql import func
+from sqlalchemy_utils import EncryptedType
+from sqlalchemy_utils.types.encrypted.encrypted_type import AesGcmEngine
 
 from .cache import cache
 from .database import db
@@ -2068,6 +2072,10 @@ class ResearchGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):
         return self._make_label(text, user_classes)
 
 
+def _get_key():
+    return current_app.config['SQLACHEMY_AES_KEY']
+
+
 class FacultyData(db.Model, EditingMetadataMixin):
     """
     Models extra data held on faculty members
@@ -2121,6 +2129,15 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     # presentation assessment CATS capacity
     CATS_presentation = db.Column(db.Integer())
+
+
+    # CANVAS INTEGRATION
+
+    # used only for convenors
+
+    # API access token for this user
+    canvas_API_token = db.Column(EncryptedType(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'),
+                                               _get_key, AesGcmEngine, 'pkcs5'), default=None, nullable=True)
 
 
     def _projects_offered_query(self, pclass):
@@ -4287,15 +4304,18 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
     # year should match an available year in MainConfig
     year = db.Column(db.Integer(), db.ForeignKey('main_config.year'))
-    main_config = db.relationship('MainConfig', uselist=False, backref=db.backref('project_classes', lazy='dynamic'))
+    main_config = db.relationship('MainConfig', uselist=False, foreign_keys=[year],
+                                  backref=db.backref('project_classes', lazy='dynamic'))
 
     # id should be an available project class
     pclass_id = db.Column(db.Integer(), db.ForeignKey('project_classes.id'))
-    project_class = db.relationship('ProjectClass', uselist=False, backref=db.backref('configs', lazy='dynamic'))
+    project_class = db.relationship('ProjectClass', uselist=False, foreign_keys=[pclass_id],
+                                    backref=db.backref('configs', lazy='dynamic'))
 
     # who was convenor in this year?
     convenor_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
-    convenor = db.relationship('FacultyData', uselist=False, backref=db.backref('past_convenorships', lazy='dynamic'))
+    convenor = db.relationship('FacultyData', uselist=False, foreign_keys=[convenor_id],
+                               backref=db.backref('past_convenorships', lazy='dynamic'))
 
     # who created this record, ie. initiated the rollover of the academic year?
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
@@ -4332,6 +4352,19 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     # True/False = override setting inherited from ProjectClass
     # None = inherit setting
     use_project_hub = db.Column(db.Boolean(), default=None, nullable=True)
+
+
+
+    # CANVAS INTEGRATION
+
+
+    # Canvas id for the module corresponding to this ProjectClassConfig
+    canvas_id = db.Column(db.Integer(), default=None, nullable=True)
+
+    # Link to FacultyData record for convenor whose access token we are using
+    canvas_login_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
+    canvas_login = db.relationship('FacultyData', uselist=False, foreign_keys=[canvas_login_id],
+                                   backref=db.backref('canvas_logins', lazy='dynamic'))
 
 
     # SELECTOR LIFECYCLE MANAGEMENT
@@ -4919,7 +4952,8 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
                                             feedback_deadline=None,
                                             closed=False,
                                             closed_id=None,
-                                            closed_timestamp=None)
+                                            closed_timestamp=None,
+                                            canvas_id=None)
             db.session.add(period)
             db.session.commit()
 
@@ -5146,6 +5180,11 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
         return sum([p.number_supervisor_records(faculty) for p in self.periods])
 
 
+    @property
+    def canvas_enabled(self):
+        return self.canvas_id is not None and self.canvas_login is not None
+
+
 class SubmissionPeriodRecord(db.Model):
     """
     Capture details about a submission period
@@ -5234,6 +5273,12 @@ class SubmissionPeriodRecord(db.Model):
 
     # closed timestamp
     closed_timestamp = db.Column(db.DateTime())
+
+
+    # CANVAS INTEGRATION
+
+    # Canvas id for the assignemnt matching this submision period
+    canvas_id = db.Column(db.Integer(), default=None, nullable=False)
 
 
     # SUBMISSION RECORDS
@@ -5474,6 +5519,14 @@ class SubmissionPeriodRecord(db.Model):
 
 
     @property
+    def canvas_enabled(self):
+        if not self.config.canvas_enabled:
+            return False
+
+        return self.canvas_id is not None
+
+
+    @property
     def validate(self):
         messages = []
 
@@ -5491,6 +5544,11 @@ class SubmissionPeriodRecord(db.Model):
 
         if not self.all_markers_assigned:
             messages.append('Some students still require markers to be assigned')
+
+        if not self.config.canvas_enabled:
+            messages.append('Canvas integration is not yet set up for this cycle')
+        elif not self.canvas_enabled:
+            messages.append('Canvas integration is not yet set up for this submission period')
 
         return messages
 

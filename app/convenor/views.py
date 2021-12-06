@@ -6843,6 +6843,9 @@ def edit_project_config(pid):
         config.CATS_marking = form.CATS_marking.data
         config.CATS_presentation = form.CATS_presentation.data
 
+        config.canvas_id = form.canvas_id.data
+        config.canvas_login = form.canvas_login.data
+
         try:
             db.session.commit()
         except SQLAlchemyError as e:
@@ -6918,6 +6921,8 @@ def edit_subpd_record_settings(pid):
 
         record.collect_project_feedback = edit_form.collect_project_feedback.data
 
+        record.canvas_id = edit_form.canvas_id.data
+
         try:
             db.session.commit()
         except SQLAlchemyError as e:
@@ -6928,7 +6933,7 @@ def edit_subpd_record_settings(pid):
 
         return redirect(url_for('convenor.overview', id=config.project_class.id))
 
-    return render_template('convenor/dashboard/edit_submission_record_settings.html', form=edit_form, record=record)
+    return render_template('convenor/dashboard/edit_subpd_record_settings.html', form=edit_form, record=record)
 
 
 @convenor.route('/edit_subpd_record_presentation/<int:pid>', methods=['GET', 'POST'])
@@ -6965,7 +6970,7 @@ def edit_subpd_record_presentation(pid):
 
         return redirect(url_for('convenor.overview', id=config.project_class.id))
 
-    return render_template('convenor/dashboard/edit_submission_record_presentation.html', form=edit_form, record=record)
+    return render_template('convenor/dashboard/edit_subpd_record_presentation.html', form=edit_form, record=record)
 
 
 @convenor.route('/publish_assignment/<int:id>')

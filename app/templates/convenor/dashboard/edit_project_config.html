@@ -38,6 +38,10 @@
         </div>
         <hr class="intro-divider">
 
+        <p class="form-group-heading mt-2">Canvas integration</p>
+        {{ wtf.render_field(form.canvas_id) }}
+        {{ wtf.render_field(form.canvas_login) }}
+
         <p class="form-group-heading mt-2">Supervision and assessment</p>
         <div class="row vertical-top">
             <div class="col-6">

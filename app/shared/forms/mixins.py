@@ -53,7 +53,7 @@ class EmailSettingsMixin():
     summary_frequency = SelectField('Frequency of summaries', choices=email_freq_choices, coerce=int)
 
 
-def FacultyDataMixinFactory(admin=False):
+def FacultyDataMixinFactory(admin=False, canvas=False):
 
     class FacultyDataMixin():
 
@@ -114,6 +114,11 @@ def FacultyDataMixinFactory(admin=False):
             CATS_presentation = IntegerField('Guideline number of CATS available for presentation assessment',
                                              description='Leave blank for default assignment',
                                              validators=[Optional()])
+
+        if canvas:
+            canvas_API_token = StringField('Canvas API token', validators=[Length(max=DEFAULT_STRING_LENGTH)],
+                                           description='Optional. Enter an API token to support Canvas sync for '
+                                                       'projects convened by this user.')
 
     return FacultyDataMixin
 

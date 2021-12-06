@@ -2521,7 +2521,8 @@ def todo_list(id):
         status_filter = session['convenor_todo_list_status_filter']
 
     if status_filter is not None and status_filter not in ['all', 'overdue', 'available', 'dropped', 'completed']:
-        status_filter = 'all'
+        # default to 'available' view
+        status_filter = 'available'
 
     if status_filter is not None:
         session['convenor_todo_list_status_filter'] = status_filter

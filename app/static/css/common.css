@@ -76,6 +76,22 @@ p.copyright {
     font-weight: lighter;
 }
 
+.dashboard-period-title {
+    font-size: 24px;
+    font-family: Helvetica, Arial, Helvetica, sans-serif;
+    font-weight: normal;
+}
+
+.large-warning-triangle {
+  display: inline;
+  font-size: .95em;
+  margin-top: 2.33em;
+  margin-bottom: 2.33em;
+  margin-left: 0;
+  margin-right: 0.18em;
+  font-weight: bold;
+}
+
 .timeline-page-title {
     font-family: 'Roboto', sans-serif;
     font-weight: bold;

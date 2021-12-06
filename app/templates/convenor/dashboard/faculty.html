@@ -100,7 +100,7 @@
                 <hr class="intro-divider">
                 <div class="row">
                     <div class="col-12">
-                        <p>Filter by project status</p>
+                        <p>Filter by status</p>
                         <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter=enroll_filter, state_filter='all') }}"
                            class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             All

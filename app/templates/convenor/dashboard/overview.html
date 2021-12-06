@@ -86,6 +86,31 @@
                 {% else %}
                     {% set tmp = messages.append('Project hub disabled') %}
                 {% endif %}
+                {% if config.do_matching %}
+                    {% set tmp = messages.append('Participate in automated matching') %}
+                {% endif %}
+                {% if config.skip_matching %}
+                    {% set tmp = messages.append('Skip matching this cycle') %}
+                {% endif %}
+                {% if config.requests_skipped %}
+                    {% set tmp = message.append('Skip confirmation requests this cycle') %}
+                {% endif %}
+                {% if config.require_confirm %}
+                    {% set tmp = messages.append('Requires project confirmations') %}
+                {% endif %}
+                {% set tmp = messages.append('Initial choices = ' + config.initial_choices|string) %}
+                {% set tmp = messages.append('Switch choices = ' + config.switch_choices|string) %}
+                {% set tmp = messages.append('Maximum selectable projects with same supervisor = ' + config.faculty_maximum|string) %}
+                {% set tmp = messages.append('Start year Y' + config.start_year|string) %}
+                {% set tmp = messages.append('Extent = ' + config.extent|string) %}
+                {% if config.selection_open_to_all %}
+                    {% set tmp = messages.append('Selection open to all') %}
+                {% else %}
+                    {% set tmp = messages.append('Selection restricted to invitees') %}
+                {% endif %}
+                {% if config.full_CATS %}
+                    {% set temp = message.append('Maximum supervisor CATS for accommodated matchings = ' + config.full_CATS|string) %}
+                {% endif %}
                 {% if messages|length > 0 %}
                     <span class="text-muted">{{ messages|join(', ') }}</span>
                 {% endif %}

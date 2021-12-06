@@ -338,6 +338,18 @@ def edit_users_students():
     if valid_filter is not None:
         session['accounts_valid_filter'] = valid_filter
 
+    filter_TWD_pre = request.args.get('filter_TWD')
+
+    if filter_TWD_pre is None:
+        if session.get('accounts_filter_TWD'):
+            filter_TWD = bool(session['accounts_filter_TWD'])
+        else:
+            filter_TWD = False
+    else:
+        filter_TWD = bool(int(filter_TWD_pre))
+
+    session['accounts_filter_CATS'] = filter_TWD
+
     prog_query = db.session.query(StudentData.programme_id).distinct().subquery()
     programmes = db.session.query(DegreeProgramme) \
         .join(prog_query, prog_query.c.programme_id == DegreeProgramme.id) \
@@ -353,7 +365,8 @@ def edit_users_students():
 
     return render_template("manage_users/users_dashboard/students.html", filter=prog_filter, pane='students',
                            prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter,
-                           valid_filter=valid_filter, programmes=programmes, cohorts=sorted(cohorts))
+                           valid_filter=valid_filter, filter_TWD=filter_TWD, programmes=programmes,
+                           cohorts=sorted(cohorts))
 
 
 @manage_users.route('/edit_users_faculty')
@@ -472,6 +485,7 @@ def users_students_ajax():
     cohort_filter = request.args.get('cohort_filter')
     year_filter = request.args.get('year_filter')
     valid_filter = request.args.get('valid_filter')
+    filter_TWD = request.args.get('filter_TWD')
 
     base_query = db.session.query(StudentData.id) \
         .join(User, User.id == StudentData.id) \
@@ -499,6 +513,10 @@ def users_students_ajax():
                                        StudentData.academic_year == year_value)
     elif year_filter == 'grad':
         base_query = base_query.filter(StudentData.academic_year > DegreeType.duration)
+
+    flag, filter_TWD = is_integer(filter_TWD)
+    if flag and bool(filter_TWD):
+        base_query = base_query.filter(StudentData.intermitting == True)
 
     name = {'search': func.concat(User.first_name, ' ', User.last_name),
             'order': [User.last_name, User.first_name],

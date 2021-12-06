@@ -7,7 +7,7 @@
 
 {% macro waiting_confirmations(config, issue_form, capacity_data, sel_count) %}
     <div class="card border-info mt-3 mb-3">
-        <div class="card-header bg-info text-white"><strong>Student selections are not yet live</strong></div>
+        <div class="card-header bg-info"><strong>Student selections are not yet live</strong></div>
         <div class="card-body">
             <div class="alert alert-warning">
                 {% call icon_block("exclamation-circle") %}
@@ -56,7 +56,7 @@
         </div>
     </div>
     <div class="card border-info mt-3 mb-3">
-        <div class="card-header bg-info text-white">Approximate student capacities</div>
+        <div class="card-header bg-info">Approximate student capacities</div>
         <div class="card-body">
             {{ prelive_capacity(capacity_data, sel_count) }}
         </div>

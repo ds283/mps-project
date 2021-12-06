@@ -192,7 +192,6 @@
                         {% if p.feedback_open %}
                             {% if p.closed %}
                                 {% set tmp = messages.append('Feedback closed') %}
-                                <span class="badge bg-primary"><i class="fas fa-check"></i> Feedback closed</span>
                                 {% if p.feedback_id %}
                                     {% if p.feedback_timestamp %}
                                         {% set tmp = messages.append('Opened by ' + p.feedback_by.name + ' at ' + p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S")) %}

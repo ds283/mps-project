@@ -154,10 +154,10 @@
                         {% if p.start_date or p.hand_in_date %}
                             <div class="mb-3">
                                 {% if p.start_date %}
-                                    {% set tmp = messages.append('Commences <strong>' + p.start_date.strftime("%a %d %b %Y") + '</strong>') %}
+                                    {% set tmp = messages.append('Commences ' + p.start_date.strftime("%a %d %b %Y")) %}
                                 {% endif %}
                                 {% if p.hand_in_date %}
-                                    {% set tmp = messages.append('Hand-in date <strong>' + p.hand_in_date.strftime("%a %d %b %Y") + '</strong>') %}
+                                    {% set tmp = messages.append('Hand-in date ' + p.hand_in_date.strftime("%a %d %b %Y")) %}
                                 {% endif %}
                             </div>
                         {% endif %}

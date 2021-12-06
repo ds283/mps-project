@@ -75,6 +75,9 @@ def _overwrite_record(item: StudentBatchItem) -> int:
     if item.programme_id is not None and student_record.programme_id != item.programme_id:
         student_record.programme_id = item.programme_id
 
+    if item.intermitting is not None and student_record.intermitting != item.intermitting:
+        student_record.intermitting = item.intermitting
+
     student_record.workflow_state = StudentData.WORKFLOW_APPROVAL_VALIDATED
 
     # delete validation sentinel
@@ -559,7 +562,7 @@ def register_batch_create_tasks(celery):
             else:
                 result = _create_record(item, user_id)
 
-            # delete this record
+            # delete this item
             item.parent.items.remove(item)
             db.session.delete(item)
 

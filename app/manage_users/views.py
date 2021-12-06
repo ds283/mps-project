@@ -348,7 +348,7 @@ def edit_users_students():
     else:
         filter_TWD = bool(int(filter_TWD_pre))
 
-    session['accounts_filter_CATS'] = filter_TWD
+    session['accounts_filter_TWD'] = filter_TWD
 
     prog_query = db.session.query(StudentData.programme_id).distinct().subquery()
     programmes = db.session.query(DegreeProgramme) \

@@ -1,0 +1,54 @@
+{% from "macros.html" import submission_period_configure_button %}
+
+{% macro period_settings(config, period) %}
+    <ul class="list-group border-0 mb-3">
+        <li class="list-group-item list-group-item-info">
+            <div class="d-flex w-100 justify-content-start align-content-start mb-2">
+                <div class="overview-dashboard-settings me-3 mt-1">Settings</div>
+                <div class="align-self-start">
+                    {{ submission_period_configure_button(period, config, small=true, margin=false) }}
+                </div>
+            </div>
+            {% set messages = [] %}
+            {% if period.collect_project_feedback %}
+                {% set tmp = messages.append('Collect project feedback')%}
+            {% else %}
+                {% set tmp = messages.append('Do not collect project feedback') %}
+            {% endif %}
+            {% if period.has_presentation %}
+                {% set tmp = messages.append('Has presentation') %}
+                {% if period.collect_presentation_feedback %}
+                    {% set tmp = messages.append('Collect presentation feedback') %}
+                {% else %}
+                    {% set tmp = messages.append('Do not collect presentation feedback') %}
+                {% endif %}
+            {% endif %}
+            <span class="text-muted">{{ messages|join(', ') }}</span>
+        </li>
+        {% if period.has_presentation %}
+            <li class="list-group-item list-group-item-info">
+                <h6>Presentation assessment</h6>
+                {% set messages = [] %}
+                {% if period.talk_format and period.talk_format|length > 0 %}{% set tmp = messages.append(period.talk_format) %}{% else %}{% set tmp = messages.append('Format not set') %}{% endif %}
+                {% if period.lecture_capture %}
+                    {% set tmp = messages.append('Requires lecture capture') %}
+                {% endif %}
+                {% if period.number_assessors %}
+                    {% set tmp = messages.append('Uses ' + period.number_assessors|string + ' assessors') %}
+                {% endif %}
+                {% if period.max_group_size %}
+                    {% set tmp = messages.append('Maximum group size = ' + period.max_group_size|string) %}
+                {% endif %}
+                <span class="text-muted">{{ messages|join(', ') }}</span>
+            </li>
+            <li class="list-group-item list-group-item-info">
+                <h6>Morning session</h6>
+                <span class="text-muted">{% if period.morning_session and period.morning_session|length > 0 %}{{ period.morning_session }}{% else %}Not set{% endif %}</span>
+            </li>
+            <li class="list-group-item list-group-item-info">
+                <h6>Afternoon session</h6>
+                <span class="text-muted">{% if period.afternoon_session and period.afternoon_session|length > 0 %}{{ period.afternoon_session }}{% else %}Not set{% endif %}</span>
+            </li>
+        {% endif %}
+    </ul>
+{% endmacro %}

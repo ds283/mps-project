@@ -76,8 +76,8 @@
                     <div class="dashboard-project-title me-2">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</div>
                     <a class="mt-1 btn btn-sm btn-outline-secondary align-self-start" href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Project settings...</a>
                 </div>
-                <ul class="list-group border-0 mb-5">
-                    <li class="list-group-item">
+                <ul class="list-group border-0 mb-3">
+                    <li class="list-group-item list-group-item-primary">
                         {% call icon_block("coins") %}
                             <p><strong>CATS allocations</strong></p>
                             <p>
@@ -87,7 +87,8 @@
                             </p>
                         {% endcall %}
                     </li>
-                    <li class="list-group-item">
+                    <li class="list-group-item list-group-item-secondary">
+                        <h6 class="mt-2">Details</h6>
                         {% set messages = [] %}
                         {% if config.uses_project_hub %}
                             {% set tmp = messages.append('Project hub enabled') %}
@@ -132,98 +133,97 @@
                         {% if messages|length > 0 %}
                             <span class="text-muted">{{ messages|join(', ') }}</span>
                         {% endif %}
-                        <div class="row vertical-top mt-2 mb-2">
-                            <div class="col-12">
-                                <div class="float-end">
-                                </div>
-                            </div>
-                        </div>
                     </li>
                 </ul>
-                {% for p in config.periods %}
-                    {% if loop.index > 1 %}
-                        <hr class="intro-divider">
-                    {% endif %}
-                    <div class="d-flex flex-row justify-content-start align-content-start mb-2">
-                        <div class="dashboard-period-title me-2">{{ p.display_name|safe }}</div>
-                        <div class="align-self-start">
-                            {{ submission_period_configure_button(p, config, small=true, margin=false, disable=p.is_feedback_open) }}
-                        </div>
-                        {% if p.submission_period <= config.submission_period %}
-                            {% set validation_messages = p.validate %}
-                            {% if validation_messages is not none and validation_messages|length > 0 %}
-                                <div class="col ms-4 align-self-start">
-                                    <div class="large-warning-triangle"><i class="fas fa-exclamation-triangle" style="color:red;"></i></div>
-                                    <a class="text-decoration-none" href="#submitter_card_{{ loop.index }}">Validation errors....</a>
+                <ul class="list-group border-0">
+                    {% for p in config.periods %}
+                        <li class="list-group-item list-group-item-secondary">
+                            <div class="d-flex flex-row justify-content-start align-content-start mb-2">
+                                <div class="dashboard-period-title me-2">{{ p.display_name|safe }}</div>
+                                <div class="align-self-start">
+                                    {{ submission_period_configure_button(p, config, small=true, margin=false, disable=p.is_feedback_open) }}
                                 </div>
-                            {% endif %}
-                        {% endif %}
-                    </div>
-                    <div class="mb-2">
-                        {% set messages = [] %}
-                        {% if p.start_date or p.hand_in_date %}
-                            <div class="mb-3">
-                                {% if p.start_date %}
-                                    {% set tmp = messages.append('Commences ' + p.start_date.strftime("%a %d %b %Y")) %}
-                                {% endif %}
-                                {% if p.hand_in_date %}
-                                    {% set tmp = messages.append('Hand-in date ' + p.hand_in_date.strftime("%a %d %b %Y")) %}
+                                {% if p.submission_period <= config.submission_period %}
+                                    {% set validation_messages = p.validate %}
+                                    {% if validation_messages is not none and validation_messages|length > 0 %}
+                                        <div class="col ms-4 align-self-start">
+                                            <div class="large-warning-triangle"><i class="fas fa-exclamation-triangle" style="color:red;"></i></div>
+                                            <a class="text-decoration-none" href="#submitter_card_{{ loop.index }}">Validation errors....</a>
+                                        </div>
+                                    {% endif %}
                                 {% endif %}
                             </div>
-                        {% endif %}
-                        {% if p.canvas_enabled %}
-                            {% set tmp = messages.append('Canvas integration enabled') %}
-                        {% else %}
-                            {% set tmp = messages.append('Canvas integration not enabled') %}
-                        {% endif %}
-                        {% if p.has_presentation %}
-                            {% set tmp = messages.append('Has presentation') %}
-                            {% if p.collect_presentation_feedback %}
-                                {% set tmp = messages.append('Collect presentation feedback') %}
-                            {%  else %}
-                                {% set tmp = messages.append('Do not collect presentation feedback') %}
-                            {% endif %}
-                        {% endif %}
-                        {% if p.collect_project_feedback %}
-                            {% set tmp = messages.append('Collect project feedback') %}
-                        {% else %}
-                            {% set tmp = messages.append('Do not collect project feedback') %}
-                        {% endif %}
-                        {% if p.feedback_open %}
-                            {% if p.closed %}
-                                {% set tmp = messages.append('Feedback closed') %}
-                                {% if p.feedback_id %}
-                                    {% if p.feedback_timestamp %}
-                                        {% set tmp = messages.append('Opened by ' + p.feedback_by.name + ' at ' + p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S")) %}
-                                    {% else %}
-                                        {% set tmp = messages.append('Opened by ' + p.feedback_by.name) %}
+                            <div class="mb-2">
+                                {% set messages = [] %}
+                                {% if p.start_date or p.hand_in_date %}
+                                    <div class="mb-3">
+                                        {% if p.start_date %}
+                                            {% set tmp = messages.append('Commences ' + p.start_date.strftime("%a %d %b %Y")) %}
+                                        {% endif %}
+                                        {% if p.hand_in_date %}
+                                            {% set tmp = messages.append('Hand-in date ' + p.hand_in_date.strftime("%a %d %b %Y")) %}
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                                {% if p.canvas_enabled %}
+                                    {% set tmp = messages.append('Canvas integration enabled') %}
+                                {% else %}
+                                    {% set tmp = messages.append('Canvas integration not enabled') %}
+                                {% endif %}
+                                {% if p.has_presentation %}
+                                    {% set tmp = messages.append('Has presentation') %}
+                                    {% if p.collect_presentation_feedback %}
+                                        {% set tmp = messages.append('Collect presentation feedback') %}
+                                    {%  else %}
+                                        {% set tmp = messages.append('Do not collect presentation feedback') %}
                                     {% endif %}
                                 {% endif %}
-                                {% if p.closed_id %}
-                                    {% if p.closed_timestamp %}
-                                        {% set tmp = messages.append('Closed by ' + p.closed_by.name + ' at ' + p.closed_timestamp.strftime("%a %d %b %Y %H:%M:%S")) %}
+                                {% if p.collect_project_feedback %}
+                                    {% set tmp = messages.append('Collect project feedback') %}
+                                {% else %}
+                                    {% set tmp = messages.append('Do not collect project feedback') %}
+                                {% endif %}
+                                {% if p.feedback_open %}
+                                    {% if p.closed %}
+                                        {% set tmp = messages.append('Feedback closed') %}
+                                        {% if p.feedback_id %}
+                                            {% if p.feedback_timestamp %}
+                                                {% set tmp = messages.append('Opened by ' + p.feedback_by.name + ' at ' + p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S")) %}
+                                            {% else %}
+                                                {% set tmp = messages.append('Opened by ' + p.feedback_by.name) %}
+                                            {% endif %}
+                                        {% endif %}
+                                        {% if p.closed_id %}
+                                            {% if p.closed_timestamp %}
+                                                {% set tmp = messages.append('Closed by ' + p.closed_by.name + ' at ' + p.closed_timestamp.strftime("%a %d %b %Y %H:%M:%S")) %}
+                                            {% else %}
+                                                {% set tmp = messages.append('Closed by ' + p.closed_by.name) %}
+                                            {% endif %}
+                                        {% endif %}
                                     {% else %}
-                                        {% set tmp = messages.append('Closed by ' + p.closed_by.name) %}
+                                        {% set tmp = messages.append('Feedback open') %}
+                                        {% if p.feedback_id %}
+                                            {% if p.feedback_timestamp %}
+                                                {% set tmp = messages.append('Opened by ' + p.feedback_by.name + ' at ' + p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S")) %}
+                                            {% else %}
+                                                {% set tmp = messages.append('Opened by ' + p.feedback_by.name) %}
+                                            {% endif %}
+                                        {% endif %}
                                     {% endif %}
                                 {% endif %}
-                            {% else %}
-                                {% set tmp = messages.append('Feedback open') %}
-                                {% if p.feedback_id %}
-                                    {% if p.feedback_timestamp %}
-                                        {% set tmp = messages.append('Opened by ' + p.feedback_by.name + ' at ' + p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S")) %}
-                                    {% else %}
-                                        {% set tmp = messages.append('Opened by ' + p.feedback_by.name) %}
-                                    {% endif %}
+                                {% if messages|length > 0 %}
+                                    <span class="text-muted">{{ messages|join(', ') }}</span>
                                 {% endif %}
-                            {% endif %}
-                        {% endif %}
-                        {% if messages|length > 0 %}
-                            <span class="text-muted">{{ messages|join(', ') }}</span>
-                        {% endif %}
-                    </div>
-                {% else %}
-                    <i class="fas fa-ban"></i> No configured submission periods
-                {% endfor %}
+                            </div>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item">
+                            {% call icon_block('ban') %}
+                                <strong>No configured submission periods</strong>
+                            {% endcall %}
+                        </li>
+                    {% endfor %}
+                </ul>
             </div>
 
             {# offer rollover of academic year if available #}

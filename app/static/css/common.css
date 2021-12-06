@@ -92,6 +92,12 @@ p.copyright {
   font-weight: bold;
 }
 
+.overview-dashboard-settings {
+  display: inline;
+  font-size: .95em;
+  font-weight: bold;
+}
+
 .timeline-page-title {
     font-family: 'Roboto', sans-serif;
     font-weight: bold;

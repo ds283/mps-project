@@ -1,5 +1,6 @@
+{% from "convenor/dashboard/overview_cards/period_settings.html" import period_settings %}
 {% from "convenor/dashboard/overview_cards/period_closed.html" import period_closed %}
-{% from "convenor/dashboard/overview_cards/project_activity.html" import project_activity %}
+{% from "convenor/dashboard/overview_cards/project_activity.html" import project_activity_banner, project_activity_form %}
 {% from "convenor/dashboard/overview_cards/feedback_marking.html" import feedback_marking %}
 {% from "icon_block.html" import icon_block %}
 
@@ -57,68 +58,18 @@
                 {% if period.submission_period < config.submission_period or period.closed %}
                     {{ period_closed(config, period) }}
                 {% elif period.submission_period > config.submission_period %}
-                    <div class="alert alert-info mt-1 mb-2">
+                    <div class="alert alert-secondary mt-1 mb-2">
                         {% call icon_block("info-circle") %}
                             <strong>Activity for this period has not yet commenced.</strong>
                         {% endcall %}
                     </div>
                 {% else %}
-                    <div class="card mb-3 mt-3 card-body bg-light">
-                        <div class="row">
-                            <div class="col-12">
-                                {% if period.collect_project_feedback %}
-                                    <span class="badge bg-primary"><i class="fas fa-check"></i> Collect project feedback</span>
-                                {% else %}
-                                    <span class="badge bg-danger"><i class="fas fa-times"></i> Project feedback disabled</span>
-                                {% endif %}
-                                {% if period.has_presentation %}
-                                    <span class="badge bg-primary"><i class="fas fa-check"></i> Presentation assessment</span>
-                                    {% if period.collect_presentation_feedback %}
-                                        <span class="badge bg-primary"><i class="fas fa-check"></i> Collect presentation feedback</span>
-                                    {% else %}
-                                        <span class="badge bg-danger"><i class="fas fa-times"></i> Presentation feedback disabled</span>
-                                    {% endif %}
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% if period.has_presentation %}
-                            <div class="row">
-                                <div class="col-12">
-                                    {% if period.lecture_capture %}
-                                        <span class="badge bg-secondary">Requires lecture capture</span>
-                                    {% endif %}
-                                    {% if period.number_assessors %}
-                                        <span class="badge bg-secondary">{{ period.number_assessors }} assessors</span>
-                                    {% endif %}
-                                    {% if period.max_group_size %}
-                                        <span class="badge bg-secondary">Max group {{ period.max_group_size }}</span>
-                                    {% endif %}
-                                    {% if period.collect_presentation_feedback %}
-                                        <span class="badge bg-secondary">Collect feedback</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-6">
-                                    <span class="badge bg-info text-dark">Morning session</span>
-                                    <span class="badge bg-secondary">{% if period.morning_session and period.morning_session|length > 0 %}{{ period.morning_session }}{% else %}Not set{% endif %}</span>
-                                </div>
-                                <div class="col-6">
-                                    <span class="badge bg-info text-dark">Afternoon session</span>
-                                    <span class="badge bg-secondary">{% if period.afternoon_session and period.afternoon_session|length > 0 %}{{ period.afternoon_session }}{% else %}Not set{% endif %}</span>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-12">
-                                    <span class="badge bg-info text-dark">Format</span>
-                                    <span class="badge bg-secondary">{% if period.talk_format and period.talk_format|length > 0 %}{{ period.talk_format }}{% else %}Not set{% endif %}</span>
-                                </div>
-                            </div>
-                        {% endif %}
-                    </div>
                     {% if not period.is_feedback_open %}
-                        {{ project_activity(config, period, feedback_form, today) }}
+                        {{ project_activity_banner(period, today) }}
+                        {{ period_settings(config, period) }}
+                        {{ project_activity_form(config, period, feedback_form) }}
                     {% elif period.is_feedback_open %}
+                        {{ period_settings(config, period) }}
                         {{ feedback_marking(config, period, feedback_form) }}
                     {% endif %}
                 {% endif %}

@@ -1,8 +1,8 @@
 {% import "bootstrap/form.html" as wtf %}
-{% from "macros.html" import date_field, submission_period_configure_button %}
+{% from "macros.html" import date_field %}
 {% from "icon_block.html" import icon_block %}
 
-{% macro project_activity(config, period, feedback_form, today) %}
+{% macro project_activity_banner(period, today) %}
     {% if period.start_date and period.start_date > today %}
         <div class="alert alert-secondary mt-1 mb-3">
             {% call icon_block("info-circle") %}
@@ -16,6 +16,9 @@
             {% endcall %}
         </div>
     {% endif %}
+{% endmacro %}
+
+{% macro project_activity_form(config, period, feedback_form) %}
     <form action="{{ url_for('convenor.open_feedback', id=config.id) }}" method="POST" name="feedback-form">
         {{ feedback_form.hidden_tag() }}
         {{ date_field(feedback_form.feedback_deadline, 'deadline_datetimepicker') }}
@@ -23,7 +26,6 @@
         {{ wtf.render_field(feedback_form.cc_me) }}
         <div class="d-flex flex-row justify-content-end">
             <div class="btn-group mb-1">
-                {{ submission_period_configure_button(period, config, dropup=true) }}
                 {% if feedback_form.test_button is defined  %}
                     {{ wtf.render_field(feedback_form.test_button, button_map={'test_button': 'outline-secondary'}) }}
                 {% endif %}

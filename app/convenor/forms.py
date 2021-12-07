@@ -114,7 +114,11 @@ def OpenFeedbackFormFactory(submit_label='Open feedback period',
         cc_me = BooleanField('CC myself in notification emails')
 
         # maximum size of attachments
-        max_attachment = IntegerField('Maximum total size of attachments, measured in Mb', validators=[InputRequired()])
+        max_attachment = IntegerField('Maximum total size of attachments, measured in Mb', validators=[InputRequired()],
+                                      description='Documents with a total size larger than this will not be sent as '
+                                                  'attachments, but '
+                                                  'as download links to the original documents hosted on this site. '
+                                                  'Only authorized users can download files.')
 
         # submit button: test
         if include_test_button:

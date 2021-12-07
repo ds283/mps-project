@@ -2,7 +2,7 @@
 
 {% macro period_settings(config, period) %}
     <ul class="list-group border-0 mb-3">
-        <li class="list-group-item list-group-item-info">
+        <li class="list-group-item list-group-item-secondary">
             <div class="d-flex w-100 justify-content-start align-content-start mb-2">
                 <div class="overview-dashboard-settings me-3 mt-1">Settings</div>
                 <div class="align-self-start">
@@ -26,7 +26,7 @@
             <span class="text-muted">{{ messages|join(', ') }}</span>
         </li>
         {% if period.has_presentation %}
-            <li class="list-group-item list-group-item-info">
+            <li class="list-group-item">
                 <h6>Presentation assessment</h6>
                 {% set messages = [] %}
                 {% if period.talk_format and period.talk_format|length > 0 %}{% set tmp = messages.append(period.talk_format) %}{% else %}{% set tmp = messages.append('Format not set') %}{% endif %}
@@ -41,11 +41,11 @@
                 {% endif %}
                 <span class="text-muted">{{ messages|join(', ') }}</span>
             </li>
-            <li class="list-group-item list-group-item-info">
+            <li class="list-group-item">
                 <h6>Morning session</h6>
                 <span class="text-muted">{% if period.morning_session and period.morning_session|length > 0 %}{{ period.morning_session }}{% else %}Not set{% endif %}</span>
             </li>
-            <li class="list-group-item list-group-item-info">
+            <li class="list-group-item">
                 <h6>Afternoon session</h6>
                 <span class="text-muted">{% if period.afternoon_session and period.afternoon_session|length > 0 %}{{ period.afternoon_session }}{% else %}Not set{% endif %}</span>
             </li>

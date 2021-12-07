@@ -2870,6 +2870,15 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     academic_year = db.Column(db.Integer(), default=None)
 
 
+    # SEND labelling
+
+    # requires dyspraxia sticker on reports distributed for marking?
+    dyspraxia_sticker = db.Column(db.Boolean(), default=False, nullable=False)
+
+    # requires dyslexia stricker on reports distributed for marking?
+    dyslexia_sticker = db.Column(db.Boolean(), default=False, nullable=False)
+
+
     def _get_raw_provisional_year(self, cohort, repeat_years):
         if cohort is None:
             return None
@@ -5278,7 +5287,7 @@ class SubmissionPeriodRecord(db.Model):
     # CANVAS INTEGRATION
 
     # Canvas id for the assignment matching this submission period
-    canvas_id = db.Column(db.Integer(), default=None, nullable=False)
+    canvas_id = db.Column(db.Integer(), default=None, nullable=True)
 
 
     # SUBMISSION RECORDS

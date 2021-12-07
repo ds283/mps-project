@@ -102,6 +102,11 @@ class StudentDataMixin():
 
     intermitting = BooleanField('Currently intermitting')
 
+    dyspraxia_sticker = BooleanField('Mark work with dyspraxia sticker', default=False)
+
+    dyslexia_sticker = BooleanField('Mark work with dyslexia sticker', default=False)
+
+
 
 class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, AskConfirmAddFormMixin,
                          UniqueEmailFormMixin, NewPasswordFormMixin, FirstLastNameMixin, DefaultLicenseMixin):

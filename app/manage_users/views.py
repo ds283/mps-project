@@ -242,6 +242,8 @@ def create_student(role):
                            programme_id=form.programme.data.id,
                            foundation_year=form.foundation_year.data,
                            repeated_years=ry,
+                           dyspraxia_sticker=form.dyspraxia_sticker.data,
+                           dyslexia_sticker=form.dyslexia_sticker.data,
                            creator_id=current_user.id,
                            creation_timestamp=datetime.now())
 
@@ -273,6 +275,9 @@ def create_student(role):
             license = db.session.query(AssetLicense) \
                 .filter_by(abbreviation=current_app.config['STUDENT_DEFAULT_LICENSE']).first()
             form.default_license.data = license
+
+            form.dyspraxia_sticker.data = False
+            form.dyslexia_sticker.data  =False
 
     return render_template('security/register_user.html', user_form=form, role=role, pane=pane,
                            title='Register a new {r} user account'.format(r=role))
@@ -1258,6 +1263,8 @@ def edit_student(id):
         data.cohort = form.cohort.data
         data.repeated_years = ry
         data.programme_id = form.programme.data.id
+        data.dyspraxia_sticker = form.dyspraxia_sticker.data
+        data.dyslexia_sticker = form.dyslexia_sticker.data
 
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
@@ -1294,6 +1301,8 @@ def edit_student(id):
             form.cohort.data = data.cohort
             form.repeated_years.data = data.repeated_years
             form.programme.data = data.programme
+            form.dyspraxia_sticker.data = data.dyspraxia_sticker
+            form.dyslexia_sticker.data = data.dyslexia_sticker
 
     return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account',
                            pane=pane, url=url)

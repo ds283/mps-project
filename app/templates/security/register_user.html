@@ -81,6 +81,7 @@
 
         {% if user_form.password is defined or user_form.password_confirm is defined or user_form.random_password is defined %}
             <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="form-group-heading">Security</div>
                 {% if user_form.password is defined %}
                     {{ wtf.render_field(user_form.password) }}
                 {% endif %}
@@ -97,6 +98,7 @@
 
         {% if user_form.foundation_year is defined or user_form.exam_number is defined or user_form.cohort is defined or user_form.repeated_years is defined or user_form.programme is defined or user_form.registration_number is defined %}
             <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="form-group-heading">Student settings</div>
                 {% if user_form.exam_number is defined %}
                     {{ wtf.render_field(user_form.exam_number) }}
                 {% endif %}
@@ -120,12 +122,24 @@
                 {% endif %}
             </div>
         {%  endif %}
+        {% if user_form.dyspraxia_stricker is defined or user_form.dyslexia_sticker is defined %}
+            <div class=""card mt-3 mb-3 card-body bg-well">
+                <div class="form-group-heading">SEND settings</div>
+                {% if user_form.dyspraxia_sticker is defined %}
+                    {{ wtf.render_field(user_form.dyspraxia_sticker) }}
+                {% endif %}
+                {% if user_form.dyslexia_sticker is defined %}
+                    {{ wtf.render_field(user_form.dyslexia_sticker) }}
+                {% endif %}
+            </div>
+        {% endif %}
 
 
         {# FACULTY FIELDS #}
 
         {% if user_form.academic_title is defined or user_form.use_academic_title is defined %}
             <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="form-group-heading">Faculty settings</div>
                 {% if user_form.office is defined %}
                     {{ wtf.render_field(user_form.office) }}
                 {% endif %}
@@ -140,7 +154,7 @@
 
         {% if user_form.sign_off_students is defined or user_form.project_capacity is defined or user_form.enforce_capacity is defined or user_form.show_popularity is defined %}
             <div class="card mt-3 mb-3 card-body bg-well">
-                <p>Default settings for new projects</p>
+                <div class="form-group-heading">Default settings for new projects</div>
                 {% if user_form.sign_off_students is defined %}
                     {{ wtf.render_field(user_form.sign_off_students) }}
                 {% endif %}
@@ -161,7 +175,7 @@
 
         {% if user_form.CATS_supervision is defined or user_form.CATS_marking is defined %}
             <div class="card mt-3 mb-3 card-body bg-well">
-                <p>Workload model</p>
+                <div class"form-group-heading">>Workload model</div>
                 {% if user_form.CATS_supervision is defined %}
                     {{ wtf.render_field(user_form.CATS_supervision) }}
                 {% endif %}

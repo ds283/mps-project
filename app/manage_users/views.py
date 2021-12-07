@@ -355,6 +355,18 @@ def edit_users_students():
 
     session['accounts_filter_TWD'] = filter_TWD
 
+    filter_SEND_pre = request.args.get('filter_SEND')
+
+    if filter_SEND_pre is None:
+        if session.get('accounts_filter_SEND'):
+            filter_SEND = bool(session['accounts_filter_SEND'])
+        else:
+            filter_SEND = False
+    else:
+        filter_SEND = bool(int(filter_SEND_pre))
+
+    session['accounts_filter_SEND'] = filter_SEND
+
     prog_query = db.session.query(StudentData.programme_id).distinct().subquery()
     programmes = db.session.query(DegreeProgramme) \
         .join(prog_query, prog_query.c.programme_id == DegreeProgramme.id) \
@@ -370,8 +382,8 @@ def edit_users_students():
 
     return render_template("manage_users/users_dashboard/students.html", filter=prog_filter, pane='students',
                            prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter,
-                           valid_filter=valid_filter, filter_TWD=filter_TWD, programmes=programmes,
-                           cohorts=sorted(cohorts))
+                           valid_filter=valid_filter, filter_TWD=filter_TWD, filter_SEND=filter_SEND,
+                           programmes=programmes, cohorts=sorted(cohorts))
 
 
 @manage_users.route('/edit_users_faculty')
@@ -491,6 +503,7 @@ def users_students_ajax():
     year_filter = request.args.get('year_filter')
     valid_filter = request.args.get('valid_filter')
     filter_TWD_pre = request.args.get('filter_TWD')
+    filter_SEND_pre = request.args.get('filter_SEND')
 
     base_query = db.session.query(StudentData.id) \
         .join(User, User.id == StudentData.id) \
@@ -522,6 +535,11 @@ def users_students_ajax():
     flag, filter_TWD = is_boolean(filter_TWD_pre)
     if flag and filter_TWD:
         base_query = base_query.filter(StudentData.intermitting == True)
+
+    flag, filter_SEND = is_boolean(filter_SEND_pre)
+    if flag and filter_SEND:
+        base_query = base_query.filter(or_(StudentData.dyspraxia_sticker == True,
+                                           StudentData.dyslexia_sticker == True))
 
     name = {'search': func.concat(User.first_name, ' ', User.last_name),
             'order': [User.last_name, User.first_name],

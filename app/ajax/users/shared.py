@@ -9,21 +9,29 @@
 #
 
 
+# language=jinja2
 name = \
 """
 <a class="text-decoration-none" href="mailto:{{ u.email }}">{{ u.name }}</a>
 <div>
     {{ 'REPACTIVE'|safe }}
-    {% if u.student_data and u.student_data is not none %}
-        {% if u.student_data.intermitting %}
+    {% set sd = u.student_data %}
+    {% if sd and sd is not none %}
+        {% if sd.intermitting %}
             <span class="badge bg-warning text-dark">TWD</span>
         {% endif %}
-        {% set state = u.student_data.workflow_state %}
-        {% if state == u.student_data.WORKFLOW_APPROVAL_QUEUED %}
+        {% if sd.dyspraxia_sticker %}
+            <span class="badge bg-primary">Dyspraxia</span>
+        {% endif %}
+        {% if sd.dyslexia_sticker %}
+            <span class="badge bg-primary">Dyslexia</span>
+        {% endif %}
+        {% set state = sd.workflow_state %}
+        {% if state == sd.WORKFLOW_APPROVAL_QUEUED %}
             <span class="badge bg-warning text-dark">Approval: Queued</span>
-        {% elif state == u.student_data.WORKFLOW_APPROVAL_REJECTED %}
+        {% elif state == sd.WORKFLOW_APPROVAL_REJECTED %}
             <span class="badge bg-danger">Approval: Rejected</span>
-        {% elif state == u.student_data.WORKFLOW_APPROVAL_VALIDATED %}
+        {% elif state == sd.WORKFLOW_APPROVAL_VALIDATED %}
             <span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>
         {% else %}
             <span class="badge bg-danger">Unknown validation</span>
@@ -45,6 +53,7 @@ name = \
 """
 
 
+# language=jinja2
 menu = \
 """
 {% set user_is_student  = user.has_role('student') %}

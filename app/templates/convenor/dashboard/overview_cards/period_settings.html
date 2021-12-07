@@ -10,6 +10,11 @@
                 </div>
             </div>
             {% set messages = [] %}
+            {% if period.canvas_enabled %}
+                {% set tmp = messages.append('Canvas integration enabled') %}
+            {% else %}
+                {% set tmp = messages.append('Canvas integration not enabled') %}
+            {% endif %}
             {% if period.collect_project_feedback %}
                 {% set tmp = messages.append('Collect project feedback')%}
             {% else %}

@@ -21,7 +21,8 @@ from sqlalchemy.sql.functions import func
 
 from app.manage_users.actions import register_user
 from ..database import db
-from ..models import TemporaryAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData
+from ..models import TemporaryAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData, \
+    AssetLicense
 from ..shared.asset_tools import canonical_temporary_asset_filename
 from ..task_queue import progress_update
 
@@ -84,13 +85,18 @@ def _overwrite_record(item: StudentBatchItem) -> int:
 
 
 def _create_record(item, user_id) -> int:
+    student_lic = current_app.config['STUDENT_DEFAULT_LICENSE']
+    student_default = db.session.query(AssetLicense) \
+        .filter_by(abbreviation=student_lic).first()
+
     user: User = register_user(first_name=item.first_name,
                                last_name=item.last_name,
                                username=item.user_id,
                                email=item.email,
                                roles=['student'],
                                random_password=True,
-                               ask_confirm=False)
+                               ask_confirm=False,
+                               default_license=student_default)
 
     # create new student record and mark it as automatically validated
     data = StudentData(id=user.id,
@@ -102,7 +108,9 @@ def _create_record(item, user_id) -> int:
                        foundation_year=item.foundation_year,
                        repeated_years=item.repeated_years,
                        creator_id=user_id,
-                       creation_timestamp=datetime.now())
+                       creation_timestamp=datetime.now(),
+                       dyspraxia_sticker=False,
+                       dyslexia_sticker=False)
 
     # exceptions will be caught in parent
     db.session.add(data)

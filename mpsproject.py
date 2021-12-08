@@ -258,32 +258,33 @@ def populate_default_licenses(app):
         .filter_by(abbreviation=office_lic).first()
 
     for user in users:
-        if user.has_role('faculty'):
-            user.default_license = faculty_default
-            if faculty_default is not None:
-                print('== Set faculty user "{name}" to have default license '
-                      '"{lic}"'.format(name=user.name, lic=faculty_default.name))
+        if user.default_license is None:
+            if user.has_role('faculty'):
+                user.default_license = faculty_default
+                if faculty_default is not None:
+                    print('== Set faculty user "{name}" to have default license '
+                          '"{lic}"'.format(name=user.name, lic=faculty_default.name))
+                else:
+                    print('!! Set faculty user "{name}" to have unset default '
+                          'license'.format(name=user.name))
+            elif user.has_role('student'):
+                user.default_license = student_default
+                if student_default is not None:
+                    print('== Set student user "{name}" to have default license '
+                          '"{lic}"'.format(name=user.name, lic=student_default.name))
+                else:
+                    print('!! Set student user "{name}" to have unset default '
+                          'license'.format(name=user.name))
+            elif user.has_role('office'):
+                user.default_license = office_default
+                if office_default is not None:
+                    print('== Set office user "{name}" to have default license '
+                          '"{lic}"'.format(name=user.name, lic=office_default.name))
+                else:
+                    print('!! Set office user "{name}" to have unset default '
+                          'license'.format(name=user.name))
             else:
-                print('!! Set faculty user "{name}" to have unset default '
-                      'license'.format(name=user.name))
-        elif user.has_role('student'):
-            user.default_license = student_default
-            if student_default is not None:
-                print('== Set student user "{name}" to have default license '
-                      '"{lic}"'.format(name=user.name, lic=student_default.name))
-            else:
-                print('!! Set student user "{name}" to have unset default '
-                      'license'.format(name=user.name))
-        elif user.has_role('office'):
-            user.default_license = office_default
-            if office_default is not None:
-                print('== Set office user "{name}" to have default license '
-                      '"{lic}"'.format(name=user.name, lic=office_default.name))
-            else:
-                print('!! Set office user "{name}" to have unset default '
-                      'license'.format(name=user.name))
-        else:
-            print('!! Did not set default license for user "{name}"'.format(name=user.name))
+                print('!! Did not set default license for user "{name}"'.format(name=user.name))
 
     db.session.commit()
 
@@ -336,7 +337,7 @@ def migrate_exam_numbers_back():
 
 app, celery = create_app()
 
-# with app.app_context():
+with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -347,7 +348,7 @@ app, celery = create_app()
     # populate_project_validation_data()
     # migrate_description_confirmations()
     # populate_workflow_history()
-    # populate_default_licenses(app)
+    populate_default_licenses(app)
     # migrate_lifetime_data(GeneratedAsset)
     # migrate_lifetime_data(TemporaryAsset)
     # migrate_lifetime_data(SubmittedAsset)

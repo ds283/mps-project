@@ -27,7 +27,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import validates, with_polymorphic
 from sqlalchemy.sql import func
 from sqlalchemy_utils import EncryptedType
-from sqlalchemy_utils.types.encrypted.encrypted_type import AesGcmEngine
+from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine, AesGcmEngine
 
 from .cache import cache
 from .database import db
@@ -2136,7 +2136,8 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     # used only for convenors
 
-    # API access token for this user
+    # API access token for this user; AesGcmEngine is more secure but cannot perform queries
+    # here, that's OK because we don't expect to have to query against the token
     canvas_API_token = db.Column(EncryptedType(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'),
                                                _get_key, AesGcmEngine, 'pkcs5'), default=None, nullable=True)
 
@@ -2841,7 +2842,9 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     registration_number = db.Column(db.Integer(), unique=True)
 
     # exam number is needed for marking
-    exam_number = db.Column(db.Integer(), index=True, unique=True)
+    # we store this encrypted out of prudence. Note that we use AesEngine which is the less secure of the two
+    # AES choices provided by SQLAlchemyUtils, but which can perform queries against the field
+    exam_number = db.Column(EncryptedType(db.Integer(), _get_key, AesEngine, 'pkcs5'))
 
     # temporary exam number field while main field is converted to an encrypted format
     exam_number_temp = db.Column(db.Integer(), index=True, unique=True)

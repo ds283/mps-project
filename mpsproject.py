@@ -326,7 +326,7 @@ def migrate_temporary_exam_numbers():
 
 app, celery = create_app()
 
-with app.app_context():
+# with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -342,7 +342,7 @@ with app.app_context():
     # migrate_lifetime_data(TemporaryAsset)
     # migrate_lifetime_data(SubmittedAsset)
     # fix_null_passwords()
-    migrate_temporary_exam_numbers()
+    # migrate_temporary_exam_numbers()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

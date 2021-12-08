@@ -314,9 +314,19 @@ def fix_null_passwords():
     db.session.commit()
 
 
+# migrate exam numbers to temporary field
+def migrate_temporary_exam_numbers():
+    students = db.session.query(StudentData).all()
+
+    for s in students:
+        s.exam_number_temp = s.exam_number
+
+    db.session.commit()
+
+
 app, celery = create_app()
 
-# with app.app_context():
+with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -332,6 +342,7 @@ app, celery = create_app()
     # migrate_lifetime_data(TemporaryAsset)
     # migrate_lifetime_data(SubmittedAsset)
     # fix_null_passwords()
+    migrate_temporary_exam_numbers()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

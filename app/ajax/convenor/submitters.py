@@ -336,7 +336,7 @@ _name = \
     {% endif %}
     {% if show_number %}
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
-            <a href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="badge bg-secondary">
+            <a href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="badge bg-secondary text-decoration-none">
                 #{{ sub.student.exam_number }}
             </a>
         {% else %}

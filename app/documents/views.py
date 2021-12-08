@@ -143,7 +143,7 @@ def delete_submitter_report(sid):
 @login_required
 def perform_delete_submitter_report(sid):
     # sid is a SubmissionRecord id
-    record = SubmissionRecord.query.get_or_404(sid)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
 
     # nothing to do if no report attached
     if record.report is None:
@@ -161,8 +161,23 @@ def perform_delete_submitter_report(sid):
         # set lifetime of uploaded asset to 30 days, after which it will be deleted by the garbage collection.
         # also, unlink asset record from this SubmissionRecord.
         # notice we have to adjust the timestamp, since together with the lifetime this determines the expiry date
-        record.report.expiry = datetime.now() + timedelta(days=30)
+        expiry_date = datetime.now() + timedelta(days=30)
+
+        record.report.expiry = expiry_date
         record.report_id = None
+
+        # remove processed report if it has been generated
+        if record.processed_report is not None:
+            record.processed_report.expiry = expiry_date
+            record.processed_report_id = None
+
+        record.celery_id = None
+        record.celery_finished = None
+        record.timestamp = None
+
+        # remove exemplar flag
+        record.report_exemplar = None
+
         db.session.commit()
 
     except SQLAlchemyError as e:
@@ -251,6 +266,17 @@ def upload_submitter_report(sid):
             # set up list of roles that should have access, if they exist
             asset.grant_roles(['office', 'convenor', 'moderator', 'exam_board', 'external_examiner'])
 
+            # remove processed report, if that has not already been done
+            if record.processed_report is not None:
+                expiry_date = datetime.now() + timedelta(days=30)
+                record.processed_report.expiry = expiry_date
+                record.processed_report_id = None
+
+            record.celery_id = None
+            record.celery_finished = None
+            record.timestamp = None
+            record.report_exemplar = False
+
             try:
                 db.session.commit()
             except SQLAlchemyError as e:
@@ -297,6 +323,11 @@ def edit_submitter_report(sid):
     if form.validate_on_submit():
         asset.license = form.license.data
         asset.target_name = form.target_name.data
+
+        # update processed report license to match
+        if record.processed_report is not None:
+            passet: GeneratedAsset = record.processed_report
+            passet.license = form.license.data
 
         try:
             db.session.commit()

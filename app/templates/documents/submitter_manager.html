@@ -247,11 +247,31 @@
                                           edit_url=url_for('documents.edit_submitter_report', sid=record.id, url=url, text=text),
                                           acl_url=url_for('documents.attachment_acl', attach_type=2, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                           log_url=url_for('documents.attachment_download_log', attach_type=2, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
-                                          deletable=deletable, allow_student=false, is_editable=is_editable,
-                                          admin_rights=admin_rights) }}
-                            {% if passet is not None %}
+                                          deletable=deletable, allow_student=false, is_editable=is_editable, admin_rights=admin_rights) }}
+                            {% if passet %}
                                 {{ asset_line(passet, none,
-                                              download_url=url_for('admin.download_generated_asset', asset_id=passet.id), }}
+                                              download_url=url_for('admin.download_generated_asset', asset_id=passet.id),
+                                              acl_url=url_for('documents.attachment_acl', attach_type=3, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
+                                              log_url=url_for('documents.attachment_download_log', attach_type=3, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
+                                              deletable=false, allow_student=false, is_editable=false, admin_rights=admin_rights) }}
+                            {% else %}
+                                <tr>
+                                    <td>
+                                        {% if record.celery_id %}
+                                            {% if not record.celery_finished %}
+                                                <span class="text-muted">Processed report in progress...</span>
+                                            {% else %}
+                                                <span class="text-danger">Processed report did not generate</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">Waiting to generate processed report...</span>
+                                        {% endif %}
+                                    </td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 {% else %}

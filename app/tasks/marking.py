@@ -18,7 +18,8 @@ from celery.exceptions import Ignore
 
 from ..database import db
 from ..models import SubmissionPeriodRecord, SubmissionRecord, User, SubmittedAsset, ProjectClassConfig, \
-    ProjectClass, FacultyData, SubmittingStudent, StudentData, PeriodAttachment, SubmissionAttachment
+    ProjectClass, FacultyData, SubmittingStudent, StudentData, PeriodAttachment, SubmissionAttachment, \
+    GeneratedAsset
 
 from ..task_queue import register_task
 
@@ -116,13 +117,14 @@ def register_marking_tasks(celery):
             self.update_state('FAILURE', meta='Could not load SubmissionRecord from database')
             raise Ignore()
 
-        # nothing to do if either (1) no project assigned, or (2) no report yet uploaded
-        if record.project is None or record.report is None:
+        # nothing to do if either (1) no project assigned, or (2) no report yet uploaded, or
+        # (3) processed report not yet generaed
+        if record.project is None or record.processed_report is None:
             return
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
 
-        asset: SubmittedAsset = record.report
+        asset: GeneratedAsset = record.processed_report
         period: SubmissionPeriodRecord = record.period
         config: ProjectClassConfig = period.config
         pclass: ProjectClass = config.project_class
@@ -228,16 +230,17 @@ def register_marking_tasks(celery):
         # track attached documents
         attached_documents = []
 
-        # extract location of report from SubmissionRecord; we can rely on record.report not being None
-        report_asset: SubmittedAsset = record.report
+        # extract location of (processed) report from SubmissionRecord; we can rely on record.processed_report not being None
+        report_asset: GeneratedAsset = record.processed_report
         if report_asset is None:
-            raise RuntimeError('_attach_documents() called with a null report')
+            raise RuntimeError('_attach_documents() called with a null processed report')
 
         asset_folder: Path = Path(current_app.config.get('ASSETS_FOLDER'))
+        generated_subfolder: Path = Path(current_app.config.get('ASSETS_GENERATED_SUBFOLDER'))
         submitted_subfolder: Path = Path(current_app.config.get('ASSETS_SUBMITTED_SUBFOLDER'))
 
         # attach report or generate link for download later
-        report_abs_path = asset_folder / submitted_subfolder / report_asset.filename
+        report_abs_path = asset_folder / generated_subfolder / report_asset.filename
         attached_size = _attach_asset(msg, report_asset, attached_size, attached_documents, report_abs_path,
                                       filename=report_filename, max_attachment=max_attachment,
                                       description="student's submitted report")

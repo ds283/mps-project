@@ -8850,7 +8850,7 @@ class SubmissionRecord(db.Model):
         messages = []
 
         exam_license = db.session.query(AssetLicense).filter_by(abbreviation='Exam').first()
-        
+
         def _validate_report_access_control(asset, text_label):
             if self.supervisor is not None:
                 if not asset.has_access(self.supervisor.user):
@@ -8870,8 +8870,8 @@ class SubmissionRecord(db.Model):
                 if asset.license_id != exam_license.id:
                     messages.append('The {what} is tagged with an unexpected license type '
                                     '"{license}"'.format(license=rep.license.name, what=text_label))
-        
-        
+
+
         def _validate_attachment_access_control(asset):
             if self.supervisor is not None:
                 if not asset.has_access(self.supervisor.user):
@@ -8896,7 +8896,7 @@ class SubmissionRecord(db.Model):
 
         if self.report is not None:
             _validate_report_access_control(self.report, 'uploaded report')
-        
+
         if self.processed_report is not None:
             _validate_report_access_control(self.processed_report, 'processed report')
 
@@ -13481,7 +13481,7 @@ class GeneratedAssetDownloadRecord(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # asset downloaded
-    asset_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), default=None)
+    asset_id = db.Column(db.Integer(), db.ForeignKey('generated_assets.id'), default=None)
     asset = db.relationship('GeneratedAsset', foreign_keys=[asset_id], uselist=False,
                             backref=db.backref('downloads', lazy='dynamic'))
 

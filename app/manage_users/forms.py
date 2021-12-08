@@ -199,10 +199,6 @@ class UploadBatchCreateForm(Form):
                                 description="Select this option if imported cohort years should be considered authoritative. "
                                             "Otherwise, existing cohort data will be retained where they exist.")
 
-    trust_exams = BooleanField('Trust imported exam numbers', default=False,
-                               description="Select this option if imported exam numbers should be considered authoritative. "
-                                           "Otherwise, existing exam numbers will be retained where they exist.")
-
     trust_registration = BooleanField('Trust imported registration numbers', default=False,
                                       description="Select this option if imported registration numbers should be considered authoritative. "
                                                   "Otherwise, existing registration numbers will be retained where they exist.")

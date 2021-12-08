@@ -87,6 +87,11 @@ auto_enroll_year_choices = [(0, 'The year before students join the project'),
                             (1, 'Every year for which students are eligible')]
 
 
+# for encrypted fields, extract encryption key from configuration variables
+def _get_key():
+    return current_app.config['SQLACHEMY_AES_KEY']
+
+
 class EditingMetadataMixin():
     # created by
     @declared_attr
@@ -2072,10 +2077,6 @@ class ResearchGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):
         return self._make_label(text, user_classes)
 
 
-def _get_key():
-    return current_app.config['SQLACHEMY_AES_KEY']
-
-
 class FacultyData(db.Model, EditingMetadataMixin):
     """
     Models extra data held on faculty members
@@ -3326,9 +3327,6 @@ class StudentBatch(db.Model):
     # were we told to trust cohort data?
     trust_cohort = db.Column(db.Boolean(), default=False)
 
-    # were we told to trust exam numbers?
-    trust_exams = db.Column(db.Boolean(), default=False)
-
     # were we told to trust registration numbers?
     trust_registration = db.Column(db.Boolean(), default=False)
 
@@ -3379,9 +3377,6 @@ class StudentBatchItem(db.Model):
 
     # registration number
     registration_number = db.Column(db.Integer())
-
-    # exam number
-    exam_number = db.Column(db.Integer())
 
     # cohort
     cohort = db.Column(db.Integer())

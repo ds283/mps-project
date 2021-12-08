@@ -28,7 +28,6 @@
                         {{ wtf.render_field(form.ignore_Y0) }}
                         <hr class="intro-divider">
                         {{ wtf.render_field(form.trust_cohort) }}
-                        {{ wtf.render_field(form.trust_exams) }}
                         {{ wtf.render_field(form.trust_registration) }}
                         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>
@@ -84,11 +83,6 @@
                                     <span class="badge bg-success"><i class="fas fa-check"></i> Cohort data</span>
                                 {% else %}
                                     <span class="badge bg-secondary"><i class="fas fa-times"></i> Cohort data</span>
-                                {% endif %}
-                                {% if batch.trust_exams %}
-                                    <span class="badge bg-success"><i class="fas fa-check"></i> Exam numbers</span>
-                                {% else %}
-                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> Exam numbers</span>
                                 {% endif %}
                                 {% if batch.trust_registration %}
                                     <span class="badge bg-success"><i class="fas fa-check"></i> Registration numbers</span>

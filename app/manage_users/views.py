@@ -616,7 +616,6 @@ def batch_create_users():
             batch_file = request.files['batch_list']
 
             trust_cohort = form.trust_cohort.data
-            trust_exams = form.trust_exams.data
             trust_registration = form.trust_registration.data
             current_year = form.current_year.data
             ignore_Y0 = form.ignore_Y0.data
@@ -648,7 +647,6 @@ def batch_create_users():
                                       total_lines=None,
                                       interpreted_lines=None,
                                       trust_cohort=trust_cohort,
-                                      trust_exams=trust_exams,
                                       trust_registration=trust_registration,
                                       ignore_Y0=ignore_Y0,
                                       academic_year=current_year)
@@ -685,7 +683,6 @@ def batch_create_users():
     else:
         if request.method == 'GET':
             form.trust_cohort.data = False
-            form.trust_exams.data = False
             form.trust_registration.data = False
             form.ignore_Y0.data = True
             form.current_year.data = get_current_year()

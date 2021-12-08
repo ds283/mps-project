@@ -57,9 +57,6 @@ def _overwrite_record(item: StudentBatchItem) -> int:
     if item.email is not None and user_record.email != item.email:
         user_record.email = item.email
 
-    if item.exam_number is not None and student_record.exam_number != item.exam_number:
-        student_record.exam_number = item.exam_number
-
     if item.registration_number is not None and student_record.registration_number != item.registration_number:
         student_record.registration_number = item.registration_number
 
@@ -97,7 +94,7 @@ def _create_record(item, user_id) -> int:
 
     # create new student record and mark it as automatically validated
     data = StudentData(id=user.id,
-                       exam_number=item.exam_number,
+                       exam_number=None,
                        registration_number=item.registration_number,
                        intermitting=item.intermitting,
                        cohort=item.cohort,
@@ -191,13 +188,6 @@ def _get_registration_number(row, current_line) -> int:
 
     if 'registration no.' in row:
         return int(row['registration no.'])
-
-    return None
-
-
-def _get_exam_number(row, current_line) -> int:
-    if 'exam number' in row:
-        return int(row['exam number'])
 
     return None
 
@@ -437,7 +427,6 @@ def register_batch_create_tasks(celery):
                     first_name, last_name = _get_name(row, current_line)
                     intermitting = _get_intermitting(row, current_line)
                     registration_number = _get_registration_number(row, current_line)
-                    exam_number = _get_exam_number(row, current_line)
                     year_of_course = _get_course_year(row, current_line)
                     programme = _get_course_code(row, current_line)
 
@@ -461,9 +450,6 @@ def register_batch_create_tasks(celery):
                         _guess_year_data(cohort, year_of_course, current_year, programme, fyear_hint=fyear_hint)
 
                     if existing_record is not None:
-                        if not record.trust_exams and existing_record.exam_number is not None:
-                            exam_number = existing_record.exam_number
-
                         if not record.trust_registration and existing_record.registration_number is not None:
                             registration_number = existing_record.registration_number
 
@@ -473,7 +459,6 @@ def register_batch_create_tasks(celery):
                                             first_name=first_name,
                                             last_name=last_name,
                                             email=email,
-                                            exam_number=exam_number,
                                             registration_number=registration_number,
                                             cohort=cohort,
                                             programme_id=programme.id if programme is not None else None,

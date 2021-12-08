@@ -2843,6 +2843,9 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     # exam number is needed for marking
     exam_number = db.Column(db.Integer(), index=True, unique=True)
 
+    # temporary exam number field while main field is converted to an encrypted format
+    exam_number_temp = db.Column(db.Integer(), index=True, unique=True)
+
     # cohort is used to compute this student's academic year, and
     # identifies which project classes this student will be enrolled for
     cohort = db.Column(db.Integer(), index=True)

@@ -8055,11 +8055,11 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
     @property
     def has_report(self):
         """
-        Returns true if a report has been uploaded for the current submission period
+        Returns true if a report has been uploaded and processed for the current submission period
         :return:
         """
         sub: SubmissionRecord = self.get_assignment()
-        return sub.report is not None
+        return sub.processed_report is not None
 
 
     @property
@@ -8725,6 +8725,8 @@ class SubmissionRecord(db.Model):
         and any uploaded report
         :return:
         """
+        # note that we count the original report, rather than the processed version of it;
+        # this is a bit arbitrary, but hopefully sensible
         return get_count(self.attachments) + get_count(self.period.attachments) + (1 if self.report is not None else 0)
 
 
@@ -8753,6 +8755,8 @@ class SubmissionRecord(db.Model):
         They can only see convenor-provided attachments that have been marked as 'publish to students'
         :return:
         """
+        # note that we count the original report, rather than the processed version of it;
+        # this is a bit arbitrary, but hopefully sensible
         return get_count(self.attachments.join(SubmittedAsset, SubmittedAsset.id == SubmissionAttachment.attachment_id) \
                          .filter(or_(SubmittedAsset.uploaded_id == current_user.id,
                                      SubmittedAsset.access_control_list.any(id=current_user.id),
@@ -8779,6 +8783,41 @@ class SubmissionRecord(db.Model):
         # return self.article_list.first() is not None
 
 
+    def _check_access_control_users(self, asset, allow_student=False):
+        modified = False
+
+        if self.supervisor is not None:
+            if not asset.has_access(self.supervisor.user):
+                asset.grant_user(self.supervisor.user)
+                modified = True
+
+        if self.marker is not None:
+            if not asset.has_access(self.marker.user):
+                asset.grant_user(self.marker.user)
+                modified = True
+
+        for user in asset.access_control_list:
+            # OK for assigned supervisor to have download rights
+            if self.supervisor is not None and self.supervisor.id == user.id:
+                continue
+
+            # OK for assigned marker to have download rights
+            if self.marker is not None and self.marker.id == user.id:
+                continue
+
+            # if allow_student flag is set, OK for student to download their own report
+            if allow_student and self.owner.student.id == user.id:
+                continue
+
+            # emit warning message to log
+            print('@@ Access control warning: Asset id={asset_id} (target={target}, file={file}) for '
+                  'SubmissionRecord id={record_id} grants access to user {name} who is not the supervisor or '
+                  'marker'.format(asset_id=asset.id, target=asset.target_name, file=asset.filename,
+                                  record_id=self.id, name=user.name))
+
+        return modified
+
+
     def maintenance(self):
         """
         Fix (some) issues with record configuration
@@ -8786,18 +8825,18 @@ class SubmissionRecord(db.Model):
         """
         modified = False
 
+        # check access control status for uploaded report
         if self.report is not None:
-            rep: SubmittedAsset = self.report
+            modified = modified | self._check_access_control_users(self.report, allow_student=True)
 
-            if self.supervisor is not None:
-                if not rep.has_access(self.supervisor.user):
-                    rep.grant_user(self.supervisor.user)
-                    modified = True
+        # check access control status for processed report
+        if self.processed_report is not None:
+            modified = modified | self._check_access_control_users(self.processed_report, allow_student=False)
 
-            if self.marker is not None:
-                if not rep.has_access(self.marker.user):
-                    rep.grant_user(self.marker.user)
-                    modified = True
+        # check access control status for any uploaded attachments; generally these should not be
+        # available to students
+        for asset in self.attachments:
+            modified = modified | self._check_access_control_users(asset, allow_student=False)
 
         return modified
 
@@ -8811,36 +8850,29 @@ class SubmissionRecord(db.Model):
         messages = []
 
         exam_license = db.session.query(AssetLicense).filter_by(abbreviation='Exam').first()
-
-        if self.period.closed and self.report is None:
-            messages.append('This submission period is closed, but no report has been uploaded.')
-
-        if self.report is not None:
-            rep: SubmittedAsset = self.report
-
+        
+        def _validate_report_access_control(asset, text_label):
             if self.supervisor is not None:
-                if not rep.has_access(self.supervisor.user):
+                if not asset.has_access(self.supervisor.user):
                     messages.append('The project supervisor "{name}" does not have download permissions for the '
-                                    'report'.format(name=self.supervisor.user.name))
+                                    '{what}'.format(name=self.supervisor.user.name, what=text_label))
 
             if self.marker is not None:
-                if not rep.has_access(self.marker.user):
+                if not asset.has_access(self.marker.user):
                     messages.append('The project marker "{name}" does not have download permissions for the '
-                                    'report'.format(name=self.marker.user.name))
+                                    '{what}'.format(name=self.marker.user.name, what=text_label))
 
-            if not rep.has_access(self.pclass.convenor.user):
+            if not asset.has_access(self.pclass.convenor.user):
                 messages.append('The project convenor "{name}" does not have download permissions for the '
-                                'report'.format(name=self.pclass.convenor_name))
+                                '{what}'.format(name=self.pclass.convenor_name, what=text_label))
 
             if exam_license is not None:
-                if rep.license_id != exam_license.id:
-                    messages.append('The uploaded report is tagged with an unexpected license type '
-                                    '"{license}"'.format(license=rep.license.name))
-
-        for item in self.attachments:
-            item: SubmissionAttachment
-            asset: SubmittedAsset = item.attachment
-
+                if asset.license_id != exam_license.id:
+                    messages.append('The {what} is tagged with an unexpected license type '
+                                    '"{license}"'.format(license=rep.license.name, what=text_label))
+        
+        
+        def _validate_attachment_access_control(asset):
             if self.supervisor is not None:
                 if not asset.has_access(self.supervisor.user):
                     messages.append('The project supervisor "{name}" does not have download permissions for the '
@@ -8857,6 +8889,21 @@ class SubmissionRecord(db.Model):
                 messages.append('The project convenor "{name}" does not have download permissions for the '
                                 'attachment "{attach}'.format(name=self.pclass.convenor_name,
                                                               attach=asset.target_name))
+
+
+        if self.period.closed and self.report is None:
+            messages.append('This submission period is closed, but no report has been uploaded.')
+
+        if self.report is not None:
+            _validate_report_access_control(self.report, 'uploaded report')
+        
+        if self.processed_report is not None:
+            _validate_report_access_control(self.processed_report, 'processed report')
+
+
+        for item in self.attachments:
+            _validate_attachment_access_control(item.attachment)
+
 
         return messages
 
@@ -13399,7 +13446,7 @@ class SubmittedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
         return get_count(self.downloads)
 
 
-class DownloadRecord(db.Model):
+class SubmittedAssetDownloadRecord(db.Model):
     """
     Serves as a log of downloads for a particular SubmittedAsset
     """
@@ -13417,7 +13464,31 @@ class DownloadRecord(db.Model):
     # downloaded by
     downloader_id = db.Column(db.Integer(), db.ForeignKey('users.id'), default=None)
     downloader = db.relationship('User', foreign_keys=[downloader_id], uselist=False,
-                                 backref=db.backref('downloads', lazy='dynamic'))
+                                 backref=db.backref('submitted_downloads', lazy='dynamic'))
+
+    # download time
+    timestamp = db.Column(db.DateTime(), index=True)
+
+
+class GeneratedAssetDownloadRecord(db.Model):
+    """
+    Serves as a log of downloads for a particular SubmittedAsset
+    """
+    __tablename__ = 'generated_downloads'
+
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # asset downloaded
+    asset_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), default=None)
+    asset = db.relationship('GeneratedAsset', foreign_keys=[asset_id], uselist=False,
+                            backref=db.backref('downloads', lazy='dynamic'))
+
+    # downloaded by
+    downloader_id = db.Column(db.Integer(), db.ForeignKey('users.id'), default=None)
+    downloader = db.relationship('User', foreign_keys=[downloader_id], uselist=False,
+                                 backref=db.backref('generated_ownloads', lazy='dynamic'))
 
     # download time
     timestamp = db.Column(db.DateTime(), index=True)

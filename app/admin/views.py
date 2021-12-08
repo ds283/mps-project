@@ -68,7 +68,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset, \
-    AssetLicense, DownloadRecord, SelectingStudent, EmailNotification
+    AssetLicense, SubmittedAssetDownloadRecord, GeneratedAssetDownloadRecord, SelectingStudent, EmailNotification
 from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
     canonical_submitted_asset_filename
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
@@ -8390,8 +8390,28 @@ def download_generated_asset(asset_id):
               'a system administrator.', 'info')
         return redirect(redirect_url())
 
+    filename = request.args.get('filename', None)
+
+    # log this download
+    record = GeneratedAssetDownloadRecord(asset_id=asset.id,
+                                          downloader_id=current_user.id,
+                                          timestamp=datetime.now())
+
+    try:
+        db.session.add(record)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not serve download request for asset_id={number} because of a database error. '
+              'Please contact a system administrator'.format(number=asset_id),
+              'error')
+        return redirect(redirect_url())
+
     abs_path = canonical_generated_asset_filename(asset.filename)
-    return send_file(abs_path, as_attachment=True, attachment_filename=asset.target_name)
+    return send_file(abs_path, as_attachment=True,
+                     attachment_filename=filename if filename is not None else asset.target_name,
+                     mimetype=asset.mimetype)
 
 
 @admin.route('/download_submitted_asset/<int:asset_id>')
@@ -8408,9 +8428,9 @@ def download_submitted_asset(asset_id):
     filename = request.args.get('filename', None)
 
     # log this download
-    record = DownloadRecord(asset_id=asset.id,
-                            downloader_id=current_user.id,
-                            timestamp=datetime.now())
+    record = SubmittedAssetDownloadRecord(asset_id=asset.id,
+                                          downloader_id=current_user.id,
+                                          timestamp=datetime.now())
 
     try:
         db.session.add(record)

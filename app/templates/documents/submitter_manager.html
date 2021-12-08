@@ -230,6 +230,7 @@
                 <span class="document-group-title mb-2">Report</span>
                 {% if record.report %}
                     {% set asset = record.report %}
+                    {% set passet = record.processed_report %}
                     <table class="table table-striped">
                         <thead>
                             <tr>
@@ -248,6 +249,9 @@
                                           log_url=url_for('documents.attachment_download_log', attach_type=2, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                           deletable=deletable, allow_student=false, is_editable=is_editable,
                                           admin_rights=admin_rights) }}
+                            {% if passet is not None %}
+                                {{ asset_line(passet, none,
+                                              download_url=url_for('admin.download_generated_asset', asset_id=passet.id), }}
                         </tbody>
                     </table>
                 {% else %}

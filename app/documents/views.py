@@ -24,8 +24,8 @@ from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from .utils import is_editable, is_deletable, is_listable, is_uploadable, is_admin
 
 from ..database import db
-from ..models import SubmissionRecord, SubmittedAsset, SubmissionAttachment, Role, SubmissionPeriodRecord, \
-    ProjectClassConfig, ProjectClass, PeriodAttachment, User, AssetLicense, SubmittingStudent
+from ..models import SubmissionRecord, SubmittedAsset, GeneratedAsset, SubmissionAttachment, Role,\
+    SubmissionPeriodRecord, ProjectClassConfig, ProjectClass, PeriodAttachment, User, AssetLicense, SubmittingStudent
 
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.validators import validate_is_convenor
@@ -37,7 +37,8 @@ import app.ajax as ajax
 
 ATTACHMENT_TYPE_PERIOD = 0
 ATTACHMENT_TYPE_SUBMISSION = 1
-ATTACHMENT_TYPE_REPORT = 2
+ATTACHMENT_TYPE_UPLOADED_REPORT = 2
+ATTACHMENT_TYPE_PROCESSED_REPORT = 3
 
 
 @documents.route('/submitter_documents', methods=['GET', 'POST'])
@@ -585,15 +586,23 @@ def _get_attachment_asset(attach_type, attach_id):
 
         return attachment, asset, pclass
 
-    if attach_type == ATTACHMENT_TYPE_REPORT:
-        attachment: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=attach_id).first()
-        if attachment is None:
+    if attach_type == ATTACHMENT_TYPE_UPLOADED_REPORT:
+        record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=attach_id).first()
+        if record is None:
             raise KeyError
 
-        asset: SubmittedAsset = attachment.report
-        pclass: ProjectClass = attachment.period.config.project_class
+        asset: SubmittedAsset = record.report
+        pclass: ProjectClass = record.period.config.project_class
 
-        return attachment, asset, pclass
+        return record, asset, pclass
+
+    if attach_type == ATTACHMENT_TYPE_PROCESSED_REPORT:
+        record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=attach_id).first()
+        if record is None:
+            return KeyError
+
+        asset: GeneratedAsset = record.processed_report
+        pclass: ProjectClass = record.period.config.project_class
 
     raise KeyError
 

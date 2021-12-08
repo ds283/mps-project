@@ -8171,7 +8171,7 @@ class SubmissionRecord(db.Model):
 
     # CONFIGURATION
 
-    # override project hub setting inherited from ProjectClassConfig
+    # optionally override project hub setting inherited from ProjectClassConfig
     # (which may in turn inherit its setting from the parent ProjectClass)
     # True/False = override inherited setting
     # None = inherit setting
@@ -8185,6 +8185,21 @@ class SubmissionRecord(db.Model):
     report = db.relationship('SubmittedAsset', foreign_keys=[report_id], uselist=False,
                              backref=db.backref('submission_record', uselist=False))
 
+    # processed version of report; if report is not None, then a value of None indicates that processing has not
+    # yet been done
+    processed_report_id = db.Column(db.Integer(), db.ForeignKey('generated_assets.id'), default=None)
+    processed_report = db.relationship('GeneratedAsset', foreign_keys=[processed_report_id], uselist=False,
+                                       backref=db.backref('submission_record', uselist=False))
+
+    # UUID of Celery task to process report
+    celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # is the celery processing task finished?
+    celery_finished = db.Column(db.Boolean(), default=False)
+
+    # timestamp for generation of report
+    timestamp = db.Column(db.DateTime())
+
     # is this report marked as an exemplar?
     report_exemplar = db.Column(db.Boolean(), default=False)
 
@@ -8193,10 +8208,10 @@ class SubmissionRecord(db.Model):
 
     # MARKING EMAILS
 
-    # marking email sent to supervisor
+    # marking email sent to supervisor?
     email_to_supervisor = db.Column(db.Boolean(), default=False)
 
-    # marking email sent to marker
+    # marking email sent to marker?
     email_to_marker = db.Column(db.Boolean(), default=False)
 
 
@@ -13336,6 +13351,16 @@ class GeneratedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
     # primary key id
     id = db.Column(db.Integer(), primary_key=True)
 
+    # optional link to SubmittedAsset from which this asset was generated
+    parent_asset_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), default=None)
+    parent_asset = db.relationship('SubmittedAsset', foreign_keys=[parent_asset_id], uselist=False,
+                                   backref=db.backref('generated_assets', lazy='dynamic'))
+
+    # optional license applied to this asset
+    license_id = db.Column(db.Integer(), db.ForeignKey('asset_licenses.id'), default=None)
+    license = db.relationship('AssetLicense', foreign_keys=[license_id], uselist=False,
+                              backref=db.backref('generated_assets', lazy='dynamic'))
+
 
 class TemporaryAsset(db.Model, AssetExpiryMixin, AssetMixinFactory(temporary_acl, temporary_acr)):
     """
@@ -13351,8 +13376,8 @@ class TemporaryAsset(db.Model, AssetExpiryMixin, AssetMixinFactory(temporary_acl
 class SubmittedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
                      AssetMixinFactory(submitted_acl, submitted_acr)):
     """
-    Track submitted assets: usually these will be project reports, but they can be other things to
-    (eg. attachments)
+    Track submitted assets: these may be uploaded project reports, but they can be other things too,
+    such as attachments
     """
     __tablename__ = 'submitted_assets'
 
@@ -13368,7 +13393,7 @@ class SubmittedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
     # (optional) license applied to this asset
     license_id = db.Column(db.Integer(), db.ForeignKey('asset_licenses.id'), default=None)
     license = db.relationship('AssetLicense', foreign_keys=[license_id], uselist=False,
-                              backref=db.backref('assets', lazy='dynamic'))
+                              backref=db.backref('submitted_assets', lazy='dynamic'))
 
 
     @property

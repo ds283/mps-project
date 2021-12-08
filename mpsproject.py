@@ -337,7 +337,7 @@ def migrate_exam_numbers_back():
 
 app, celery = create_app()
 
-with app.app_context():
+# with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -348,7 +348,7 @@ with app.app_context():
     # populate_project_validation_data()
     # migrate_description_confirmations()
     # populate_workflow_history()
-    populate_default_licenses(app)
+    # populate_default_licenses(app)
     # migrate_lifetime_data(GeneratedAsset)
     # migrate_lifetime_data(TemporaryAsset)
     # migrate_lifetime_data(SubmittedAsset)

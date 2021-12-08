@@ -2844,7 +2844,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     # exam number is needed for marking
     # we store this encrypted out of prudence. Note that we use AesEngine which is the less secure of the two
     # AES choices provided by SQLAlchemyUtils, but which can perform queries against the field
-    exam_number = db.Column(EncryptedType(db.Integer(), _get_key, AesEngine, 'pkcs5'))
+    exam_number = db.Column(EncryptedType(db.Integer(), _get_key, AesEngine, 'oneandzeroes'))
 
     # temporary exam number field while main field is converted to an encrypted format
     exam_number_temp = db.Column(db.Integer(), index=True, unique=True)

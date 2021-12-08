@@ -324,9 +324,19 @@ def migrate_temporary_exam_numbers():
     db.session.commit()
 
 
+# migrate exam numbers back from temporary field to main (encrypted) field
+def migrate_exam_numbers_back():
+    students = db.session.query(StudentData).all()
+
+    for s in students:
+        s.exam_number = s.exam_number_temp
+
+    db.session.commit()
+
+
 app, celery = create_app()
 
-# with app.app_context():
+with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -343,6 +353,7 @@ app, celery = create_app()
     # migrate_lifetime_data(SubmittedAsset)
     # fix_null_passwords()
     # migrate_temporary_exam_numbers()
+    migrate_exam_numbers_back()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

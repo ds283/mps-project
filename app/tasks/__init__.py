@@ -34,5 +34,6 @@ from .selecting import register_selecting_tasks
 from .sessions import register_session_tasks
 from .marking import register_marking_tasks
 from .services import register_services_tasks
+from .process_report import register_process_report_tasks
 
 from .test import register_test_tasks

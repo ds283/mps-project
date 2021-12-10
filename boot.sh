@@ -1,6 +1,5 @@
 #!/bin/bash
 
-source venv/bin/activate
 while true; do
     flask db upgrade
     if [[ "$?" == "0" ]]; then
@@ -10,4 +9,4 @@ while true; do
     sleep 5
 done
 
-pypy3 serve.py
+python3 serve.py

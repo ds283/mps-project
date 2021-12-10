@@ -9,31 +9,28 @@
 #
 
 from datetime import datetime, timedelta
-from pathlib import Path
 from functools import partial
+from pathlib import Path
 
+from celery import chain
 from flask import render_template, redirect, url_for, flash, request, current_app, jsonify, abort, session
 from flask_security import login_required, current_user
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError
 
+import app.ajax as ajax
 from . import documents
 from .forms import UploadReportForm, UploadSubmitterAttachmentFormFactory, EditReportForm, \
     EditSubmitterAttachmentFormFactory
-from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from .utils import is_editable, is_deletable, is_listable, is_uploadable, is_admin
-
 from ..database import db
-from ..models import SubmissionRecord, SubmittedAsset, GeneratedAsset, SubmissionAttachment, Role,\
+from ..models import SubmissionRecord, SubmittedAsset, GeneratedAsset, SubmissionAttachment, Role, \
     SubmissionPeriodRecord, ProjectClassConfig, ProjectClass, PeriodAttachment, User, AssetLicense, SubmittingStudent
-
 from ..shared.asset_tools import make_submitted_asset_filename
-from ..shared.validators import validate_is_convenor
+from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.utils import redirect_url
+from ..shared.validators import validate_is_convenor
 from ..uploads import submitted_files
-
-import app.ajax as ajax
-
 
 ATTACHMENT_TYPE_PERIOD = 0
 ATTACHMENT_TYPE_SUBMISSION = 1
@@ -171,7 +168,7 @@ def perform_delete_submitter_report(sid):
             record.processed_report.expiry = expiry_date
             record.processed_report_id = None
 
-        record.celery_id = None
+        record.celery_started = None
         record.celery_finished = None
         record.timestamp = None
 
@@ -200,8 +197,8 @@ def upload_submitter_report(sid):
         return redirect(redirect_url())
 
     # check is convenor for the project's class, or has suitable admin/root privileges
-    config = record.owner.config
-    pclass = config.project_class
+    config: ProjectClassConfig = record.owner.config
+    pclass: ProjectClass = config.project_class
     if not is_uploadable(record, message=True, allow_student=False, allow_faculty=False):
         return redirect(redirect_url())
 
@@ -241,6 +238,7 @@ def upload_submitter_report(sid):
                 db.session.add(asset)
                 db.session.flush()
             except SQLAlchemyError as e:
+                db.session.rollback()
                 flash('Could not upload report due to a database issue. Please contact an administrator.', 'error')
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 return redirect(url_for('documents.submitter_documents', sid=record.sid))
@@ -272,7 +270,18 @@ def upload_submitter_report(sid):
                 record.processed_report.expiry = expiry_date
                 record.processed_report_id = None
 
-            record.celery_id = None
+            # set up asynchronous task to process this report
+            celery = current_app.extensions['celery']
+
+            process = celery.tasks['app.tasks.process_report.process']
+            finalize = celery.tasks['app.tasks.process_report.finalize']
+            error = celery.tasks['app.tasks.process_report.error']
+
+            work = chain(process.si(record.id),
+                         finalize.si(record.id)).on_error(error.si(record.id, current_user.id))
+            work.apply_async()
+
+            record.celery_started = True
             record.celery_finished = None
             record.timestamp = None
             record.report_exemplar = False
@@ -280,6 +289,7 @@ def upload_submitter_report(sid):
             try:
                 db.session.commit()
             except SQLAlchemyError as e:
+                db.session.rollback()
                 flash('Could not upload report due to a database issue. Please contact an administrator.', 'error')
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             else:

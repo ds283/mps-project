@@ -8189,8 +8189,8 @@ class SubmissionRecord(db.Model):
     processed_report = db.relationship('GeneratedAsset', foreign_keys=[processed_report_id], uselist=False,
                                        backref=db.backref('submission_record', uselist=False))
 
-    # UUID of Celery task to process report
-    celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+    # launched Celery task for process report?
+    celery_started = db.Column(db.Boolean(), default=False)
 
     # is the celery processing task finished?
     celery_finished = db.Column(db.Boolean(), default=False)

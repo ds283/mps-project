@@ -63,13 +63,13 @@ def _make_canonical_asset_filename(filename, asset_folder=None, subfolder=None):
     return asset_folder / subfolder / filename
 
 
-def make_generated_asset_filename(ext=None):
+def make_generated_asset_filename(ext=None, subpath=None):
     """
     Generate a unique filename for a newly-generated asset
     :return:
     """
     return _make_asset_filename(asset_folder=current_app.config.get('ASSETS_FOLDER'),
-                                subfolder=current_app.config.get('ASSETS_GENERATED_SUBFOLDER'), ext=ext)
+                                subfolder=current_app.config.get('ASSETS_GENERATED_SUBFOLDER') / subpath, ext=ext)
 
 
 def canonical_generated_asset_filename(filename):

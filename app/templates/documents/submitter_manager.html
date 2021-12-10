@@ -257,7 +257,7 @@
                             {% else %}
                                 <tr>
                                     <td>
-                                        {% if record.celery_id %}
+                                        {% if record.celery_started %}
                                             {% if not record.celery_finished %}
                                                 <span class="text-muted">Processed report in progress...</span>
                                             {% else %}

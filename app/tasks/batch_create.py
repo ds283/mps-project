@@ -614,7 +614,7 @@ def register_batch_create_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def import_error(self, user_id):
         try:
-            user = db.session.query(User).filter_by(id=user_id).first()
+            user: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -632,7 +632,7 @@ def register_batch_create_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def garbage_collection(self):
         try:
-            records = db.session.query(StudentBatch).filter_by(celery_finished=True).all()
+            records: StudentBatch = db.session.query(StudentBatch).filter_by(celery_finished=True).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

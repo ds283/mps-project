@@ -171,6 +171,30 @@ def is_uploadable(record, message=False, allow_student=True, allow_faculty=True)
     return False
 
 
+def is_processable(record, period=None, config=None, message=False):
+    """
+    Determine whether the currently logged-in user has permission to initiate processing of a report
+    :param record:
+    :param message:
+    :param allow_faculty:
+    :return:
+    """
+    # 'root' and 'admin' users can always initiate procssing
+    if current_user.has_role('root') or current_user.has_role('admin'):
+        return True
+
+    period = period or record.period
+    config = config or period.config
+    pclass = config.project_class
+
+    # otherwise, the project covenor can initiate processig
+    if not pclass.is_convenor(current_user.id):
+        if message:
+            flash('Only the project convenor can initiate generation of a processed report', 'info')
+
+        return False
+
+
 def is_admin(current_user):
     if current_user.has_role('root') or current_user.has_role('admin'):
         return True

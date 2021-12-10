@@ -101,6 +101,8 @@ def _process_report(source: Path, dest: Path, record: SubmissionRecord):
     data: StudentData = record.owner.student
 
     doc = fitz.open(str(source))
+    if not doc.is_pdf:
+        raise ValueError('Report document is not a PDF file')
 
     num_pages = doc.page_count
     metadata = doc.metadata
@@ -230,30 +232,37 @@ def register_process_report_tasks(celery):
         processed_filename, abs_processed_path = make_generated_asset_filename(ext=extension, subpath=subfolder)
         rel_processed_path = subfolder/processed_filename
 
-        _process_report(abs_path, abs_processed_path, config)
-
-        # generate asset record
-        passet = GeneratedAsset(timestamp=datetime.now(),
-                                expiry=None,
-                                filename=str(rel_processed_path),
-                                target_name=asset.target_name,
-                                mimetype=asset.mimetype,
-                                license=asset.license)
+        # ensure folders exist
+        abs_processed_path.mkdir(parents=True, exist_ok=True)
 
         try:
-            db.session.add(passet)
-            db.session.flush()
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
+            _process_report(abs_path, abs_processed_path, record)
+        except ValueError as e:
+            # document was not a PDF
+            record.processed_report = None
+        else:
+            # generate asset record
+            passet = GeneratedAsset(timestamp=datetime.now(),
+                                    expiry=None,
+                                    filename=str(rel_processed_path),
+                                    target_name=asset.target_name,
+                                    mimetype=asset.mimetype,
+                                    license=asset.license)
 
-        # attach asset to the SubmissionRecord
-        record.processed_report_id = passet.id
+            try:
+                db.session.add(passet)
+                db.session.flush()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
 
-        # set ACLs for processed report to match those of uploaded report
-        passet.access_control_list = asset.access_control_list
-        passet.access_control_roles = asset.access_control_roles
+            # attach asset to the SubmissionRecord
+            record.processed_report_id = passet.id
+
+            # set ACLs for processed report to match those of uploaded report
+            passet.access_control_list = asset.access_control_list
+            passet.access_control_roles = asset.access_control_roles
 
         try:
             db.session.commit()

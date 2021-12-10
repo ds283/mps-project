@@ -13407,6 +13407,17 @@ class GeneratedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
                               backref=db.backref('generated_assets', lazy='dynamic'))
 
 
+    @property
+    def number_downloads(self):
+        # 'downloads' data member provided by back reference from GeneratedAssetDownloadRecord
+        return get_count(self.downloads)
+
+
+    @property
+    def verb_label(self):
+        return 'generated'
+
+
 class TemporaryAsset(db.Model, AssetExpiryMixin, AssetMixinFactory(temporary_acl, temporary_acr)):
     """
     Track temporary uploaded assets
@@ -13443,7 +13454,13 @@ class SubmittedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
 
     @property
     def number_downloads(self):
+        # 'downloads' data member provided by back reference from SubmittedAssetDownloadRecord
         return get_count(self.downloads)
+
+
+    @property
+    def verb_label(self):
+        return 'uploaded'
 
 
 class SubmittedAssetDownloadRecord(db.Model):

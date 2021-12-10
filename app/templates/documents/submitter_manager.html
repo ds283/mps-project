@@ -7,12 +7,18 @@
     Manage documents for {{ record.student_identifier }}
 {% endblock %}
 
-{% macro asset_line(asset, attachment, download_url=none, delete_url=none, edit_url=none, acl_url=none, log_url=none,
-                    deletable=false, allow_student=false, is_editable=none, admin_rights=false) %}
+{% macro asset_line(asset, attachment, label=none, download_url=none, delete_url=none, edit_url=none, acl_url=none,
+                    log_url=none, deletable=false, allow_student=false, is_editable=none, admin_rights=false) %}
     {% set has_access = asset.has_access(current_user.id) %}
     <tr>
         <td style="word-wrap: break-word;">
             <div>
+                {% if label %}
+                    <div class="d-flex w-100 align-content-start justify-content-start">
+                        <i class="fa fa-file-alt me-2 mt-1 text-muted"></i>
+                        <span class="text-muted">{{ label }}</span>
+                    </div>
+                {% endif %}
                 {% if has_access and download_url is not none %}
                     {% if asset.target_name %}
                         <strong><a class="text-decoration-none" href="{{ download_url }}">{{ asset.target_name }}</a></strong>
@@ -52,9 +58,9 @@
         <td>
             <div>
                 {% if asset.timestamp %}
-                    uploaded at {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                    {{ asset.verb_label }} on {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
                 {% endif %}
-                {% if asset.uploaded_by %}
+                {% if asset.uploaded_by is defined and asset.uploaded_by %}
                     <i class="fas fa-user"></i> {{ asset.uploaded_by.name }}
                 {% endif %}
             </div>
@@ -241,7 +247,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {{ asset_line(asset, none,
+                            {{ asset_line(asset, none, label='Uploaded report',
                                           download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
                                           delete_url=url_for('documents.delete_submitter_report', sid=record.id),
                                           edit_url=url_for('documents.edit_submitter_report', sid=record.id, url=url, text=text),
@@ -249,22 +255,25 @@
                                           log_url=url_for('documents.attachment_download_log', attach_type=2, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                           deletable=deletable, allow_student=false, is_editable=is_editable, admin_rights=admin_rights) }}
                             {% if passet %}
-                                {{ asset_line(passet, none,
+                                {{ asset_line(passet, none, label='Processed report',
                                               download_url=url_for('admin.download_generated_asset', asset_id=passet.id),
                                               acl_url=url_for('documents.attachment_acl', attach_type=3, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                               log_url=url_for('documents.attachment_download_log', attach_type=3, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
-                                              deletable=false, allow_student=false, is_editable=false, admin_rights=admin_rights) }}
+                                              deletable=false, allow_student=false, is_editable=none, admin_rights=admin_rights) }}
                             {% else %}
                                 <tr>
                                     <td>
                                         {% if record.celery_started %}
                                             {% if not record.celery_finished %}
-                                                <span class="text-muted">Processed report in progress...</span>
+                                                <span class="text-muted">Generation of processed report in progress...</span>
                                             {% else %}
                                                 <span class="text-danger">Processed report did not generate</span>
                                             {% endif %}
                                         {% else %}
                                             <span class="text-muted">Waiting to generate processed report...</span>
+                                            {% if admin_rights %}
+                                                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('documents.generate_processed_report', sid=record.id) }}">Generate</a>
+                                            {% endif %}
                                         {% endif %}
                                     </td>
                                     <td></td>

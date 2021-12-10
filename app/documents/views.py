@@ -22,7 +22,7 @@ import app.ajax as ajax
 from . import documents
 from .forms import UploadReportForm, UploadSubmitterAttachmentFormFactory, EditReportForm, \
     EditSubmitterAttachmentFormFactory
-from .utils import is_editable, is_deletable, is_listable, is_uploadable, is_admin
+from .utils import is_editable, is_deletable, is_listable, is_uploadable, is_admin, is_processable
 from ..database import db
 from ..models import SubmissionRecord, SubmittedAsset, GeneratedAsset, SubmissionAttachment, Role, \
     SubmissionPeriodRecord, ProjectClassConfig, ProjectClass, PeriodAttachment, User, AssetLicense, SubmittingStudent
@@ -105,6 +105,47 @@ def submitter_documents():
                                                                allow_faculty=True))
 
 
+@documents.route('/generate_processed_report/<int:sid>')
+def generate_processed_report(sid):
+    # sid is a SubmissionRecord id
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+
+    # nothing to do if no report attached
+    if record.report is None:
+        flash('Could not initiate processing of the report for this submitter because no report has been attached.', 'info')
+        return redirect(redirect_url())
+
+    # validate user has permission to carry out deletions
+    if not is_deletable(record, message=True):
+        return redirect(redirect_url())
+
+    if record.processed_report:
+        flash('Could not initiate processing of the report for this submitter because a processed report is already attached', 'info')
+        return redirect(redirect_url())
+
+    celery = current_app.extensions['celery']
+
+    process = celery.tasks['app.tasks.process_report.process']
+    finalize = celery.tasks['app.tasks.process_report.finalize']
+    error = celery.tasks['app.tasks.process_report.error']
+
+    work = chain(process.si(record.id),
+                 finalize.si(record.id)).on_error(error.si(record.id, current_user.id))
+    work.apply_async()
+
+    record.celery_started = True
+    record.celery_finished = None
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash('A database error was encountered while initiating processing. Please contact an administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
 @documents.route('/delete_submitter_report/<int:sid>')
 @login_required
 def delete_submitter_report(sid):
@@ -113,7 +154,7 @@ def delete_submitter_report(sid):
 
     # nothing to do if no report attached
     if record.report is None:
-        flash('Could not delete report for this submitter because no file has been attached.', 'info')
+        flash('Could not delete report for this submitter because no report has been attached.', 'info')
         return redirect(redirect_url())
 
     # validate user has permission to carry out deletions
@@ -645,6 +686,8 @@ def _get_attachment_asset(attach_type, attach_id):
         asset: GeneratedAsset = record.processed_report
         pclass: ProjectClass = record.period.config.project_class
 
+        return record, asset, pclass
+
     raise KeyError
 
 @documents.route('/attachment_acl/<int:attach_type>/<int:attach_id>')
@@ -865,7 +908,7 @@ def attachment_download_log(attach_type, attach_id):
 
 @documents.route('/download_log_ajax/<int:attach_type>/<int:attach_id>')
 @login_required
-def download_log_ajac(attach_type, attach_id):
+def download_log_ajax(attach_type, attach_id):
     try:
         attachment, asset, pclass = _get_attachment_asset(attach_type, attach_id)
     except KeyError as e:

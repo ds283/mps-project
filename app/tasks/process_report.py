@@ -36,15 +36,17 @@ _initial_y_position = 30
 _sticker_margin = 100
 
 
-_yellow = (255/255, 200/255, 69/255)
+_dyslexia_sticker_colour = (248 / 255, 250 / 255, 83 / 255)
+_dyspraxia_sticker_colour = (176 / 255, 210 / 255, 120 / 255)
+
 _black = (0, 0, 0)
-_grey = (0.75, 0.75, 0.75)
+_light_grey = (0.8, 0.8, 0.8)
 
 
 _dyslexic_label = "SSU have flagged this student as dyslexic. " \
-                  "Before marking, please refer to the marking guidelines for dyslexic students."
+                  "Please refer to the guidelines on marking which can be found in the Handbook for Examiners."
 _dyspraxic_label = "SSU have flagged this student as dyspraxic. " \
-                   "Before marking, please refer to the marking guidelines for dyspraxic students"
+                   "Please refer to the guidelines on marking which can be found in the Handbook for Examiners."
 
 
 # PDF date parser borrowed from here: https://stackoverflow.com/questions/16503075/convert-creationtime-of-pdf-to-a-readable-format-in-python
@@ -117,34 +119,31 @@ def _process_report(source: Path, dest: Path, record: SubmissionRecord):
     page = doc.new_page(pno=0, width=w, height=h)
 
     ytop = _initial_y_position
-    coverpage_label_width = fitz.get_text_length(coverpage_label, fontname='Helvetica', fontsize=_title_label_size)
 
-    x0 = (w - coverpage_label_width) / 2
-    y0 = ytop + _title_label_size + _vertical_margin
-    p_title = fitz.Point(x0, y0)
+    ytop = _coverpage_title(coverpage_label, page, w, ytop)
+    ytop = _coverpage_candidate_number(candidate_label, page, w, ytop)
+    ytop = _coverpage_metadata(creation_date, metadata, modified_date, num_pages, page, w, ytop)
 
-    rc = page.insert_text(p_title, coverpage_label, color=_black, fontname='Helvetica', fontsize=_title_label_size)
-    ytop = ytop + _title_label_size + _vertical_margin + _title_label_size
+    # embed dyslexia sticker if required
+    if data.dyslexia_sticker:
+        ytop = _attach_sticker(page, w, ytop, _dyslexia_sticker_colour, _dyslexic_label)
 
-    candidate_label_width = fitz.get_text_length(candidate_label, fontname='Helvetica', fontsize=_subtitle_label_size)
+    # embed dyspraxia sticker if required
+    if data.dyspraxia_sticker:
+        ytop = _attach_sticker(page, w, ytop, _dyspraxia_sticker_colour, _dyspraxic_label)
 
-    x0 = (w - candidate_label_width) / 2;
-    y0 = ytop + _subtitle_label_size + _vertical_margin
-    p_subtitle = fitz.Point(x0, y0)
+    doc.save(str(dest))
 
-    rc = page.insert_text(p_subtitle, candidate_label, color=_black, fontname='Helvetica', fontsize=_subtitle_label_size)
-    ytop = ytop + _subtitle_label_size + _vertical_margin + _subtitle_label_size
 
+def _coverpage_metadata(creation_date, metadata, modified_date, num_pages, page, w, ytop):
     x0 = _initial_x_position
     y0 = ytop + _text_label_size + _vertical_margin
     p2 = fitz.Point(x0, y0)
-
     rc = page.insert_text(p2, 'Number of pages: {n}'.format(n=num_pages), color=_black, fontname='Helvetica',
                           fontsize=_text_label_size)
 
     x0 = int(w / 2)
     p3 = fitz.Point(x0, y0)
-
     rc = page.insert_text(p3, 'Producer: {p}'.format(p=metadata['producer']), color=_black, fontname='Helvetica',
                           fontsize=_text_label_size)
     ytop = ytop + _text_label_size + _vertical_margin
@@ -152,7 +151,6 @@ def _process_report(source: Path, dest: Path, record: SubmissionRecord):
     x0 = _initial_x_position
     y0 = ytop + _text_label_size + _vertical_margin
     p4 = fitz.Point(x0, y0)
-
     rc = page.insert_text(p4, 'Format: {p}'.format(p=metadata['format']), color=_black, fontname='Helvetica',
                           fontsize=_text_label_size)
     ytop = ytop + _text_label_size + _vertical_margin
@@ -160,20 +158,68 @@ def _process_report(source: Path, dest: Path, record: SubmissionRecord):
     x0 = _initial_x_position
     y0 = ytop + _text_label_size + _vertical_margin
     p6 = fitz.Point(x0, y0)
-
     rc = page.insert_text(p6, 'Created at {date}'.format(date=creation_date.strftime("%a %d %b %Y %H:%M:%S")),
                           color=_black, fontname='Helvetica', fontsize=_text_label_size)
 
     x0 = int(w / 2)
     p7 = fitz.Point(x0, y0)
-
     rc = page.insert_text(p7, 'Last modified: {date}'.format(date=modified_date.strftime("%a %d %b %Y %H:%M:%S")),
                           color=_black, fontname='Helvetica', fontsize=_text_label_size)
     ytop = ytop + _text_label_size + _vertical_margin
 
+    return ytop
+
+
+def _coverpage_candidate_number(candidate_label, page, w, ytop):
+    candidate_label_width = fitz.get_text_length(candidate_label, fontname='Helvetica', fontsize=_subtitle_label_size)
+
+    x0 = (w - candidate_label_width) / 2;
+    y0 = ytop + _subtitle_label_size + _vertical_margin
+
+    p_subtitle = fitz.Point(x0, y0)
+
+    rc = page.insert_text(p_subtitle, candidate_label, color=_black, fontname='Helvetica',
+                          fontsize=_subtitle_label_size)
+
+    return ytop + _subtitle_label_size + _vertical_margin + _subtitle_label_size
+
+
+def _coverpage_title(coverpage_label, page, w, ytop):
+    rwidth = w - 2*_sticker_margin
+    rheight = _vertical_margin + _text_label_size
+
+    x0 = _sticker_margin
+    y0 = ytop + _vertical_margin
+
+    r1 = fitz.Rect(x0, y0, x0 + rwidth, y0 + rheight)
+
+    shape = page.new_shape()
+    shape.draw_rect(r1)
+    shape.finish(color=_light_grey, fill=_light_grey, width=0.3)
+
+    now = datetime.now()
+    rc = shape.insert_textbox(r1, "This page was automatically generated on {now}".format(now=now.strftime("%a %d %b %Y %H:%M:%S")),
+                              color=_black, fontname="Helvetica", align=fitz.TEXT_ALIGN_CENTER,
+                              fontsize=_text_label_size)
+    shape.commit()
+    ytop = ytop + rheight + _text_label_size
+
+    coverpage_label_width = fitz.get_text_length(coverpage_label, fontname='Helvetica', fontsize=_title_label_size)
+
+    x0 = (w - coverpage_label_width) / 2
+    y0 = ytop + _title_label_size + _vertical_margin
+
+    p_title = fitz.Point(x0, y0)
+
+    rc = page.insert_text(p_title, coverpage_label, color=_black, fontname='Helvetica', fontsize=_title_label_size)
+
+    return ytop + _title_label_size + _vertical_margin + _title_label_size
+
+
+def _attach_sticker(page, w, ytop, colour, text):
     xmargin = _sticker_margin
 
-    rwidth = w - 2 * xmargin
+    rwidth = w - 2*xmargin
     rheight = _vertical_margin + 3 * _title_label_size + _vertical_margin
 
     x0 = xmargin
@@ -183,13 +229,12 @@ def _process_report(source: Path, dest: Path, record: SubmissionRecord):
 
     shape = page.new_shape()
     shape.draw_rect(r1)
-    shape.finish(color=_yellow, fill=_yellow, width=0.3)
-
-    rc = shape.insert_textbox(r1, _dyslexic_label, color=_black, fontname='Helvetica', align=fitz.TEXT_ALIGN_CENTER,
+    shape.finish(color=colour, fill=colour, width=0.3)
+    rc = shape.insert_textbox(r1, text, color=_black, fontname='Helvetica', align=fitz.TEXT_ALIGN_CENTER,
                               fontsize=_sticker_text_size)
-
     shape.commit()
-    doc.save(str(dest))
+
+    return ytop + _title_label_size + rheight + _vertical_margin
 
 
 def register_process_report_tasks(celery):
@@ -245,6 +290,7 @@ def register_process_report_tasks(celery):
             passet = GeneratedAsset(timestamp=datetime.now(),
                                     expiry=None,
                                     filename=str(rel_processed_path),
+                                    parent_asset_id=asset.id,
                                     target_name=asset.target_name,
                                     mimetype=asset.mimetype,
                                     license=asset.license)

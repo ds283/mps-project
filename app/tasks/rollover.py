@@ -901,6 +901,7 @@ def register_rollover_tasks(celery):
 
             if record.supervisor_reenroll is not None and record.supervisor_reenroll + renroll_offset <= current_year:
                 record.supervisor_state = EnrollmentRecord.SUPERVISOR_ENROLLED
+                record.supervisor_reenroll = None
                 record.supervisor_comment = 'Automatically re-enrolled during academic year rollover'
                 add_notification(record.owner, EmailNotification.FACULTY_REENROLL_SUPERVISOR, record)
 
@@ -908,12 +909,14 @@ def register_rollover_tasks(celery):
         if record.marker_state != EnrollmentRecord.MARKER_ENROLLED:
             if record.marker_reenroll is not None and record.marker_reenroll <= current_year:
                 record.marker_state = EnrollmentRecord.MARKER_ENROLLED
+                record.marker_reenroll = None
                 record.marker_comment = 'Automatically re-enrolled during academic year rollover'
                 add_notification(record.owner, EmailNotification.FACULTY_REENROLL_MARKER, record)
 
         if record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
             if record.presentations_reenroll is not None and record.presentations_reenroll <= current_year:
                 record.presentations_state = EnrollmentRecord.PRESENTATIONS_ENROLLED
+                record.presentations_reenroll = None
                 record.presentations_comment = 'Automatically re-enrolled during academic year rollover'
                 add_notification(record.owner, EmailNotification.FACULTY_REENROLL_PRESENTATIONS, record)
 

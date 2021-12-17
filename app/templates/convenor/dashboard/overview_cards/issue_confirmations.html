@@ -8,7 +8,6 @@
         <div class="card-header bg-danger text-white"><strong>Confirmation of project descriptions</strong></div>
         <div class="card-body">
             Confirmation requests have not yet been issued to faculty.
-            <hr class="intro-divider">
             <form action="{{ url_for('convenor.issue_confirm_requests', id=config.id) }}" method="POST" name="issue-form">
                 {{ issue_form.hidden_tag() }}
                 {{ date_field(issue_form.request_deadline, 'issue_datetimepicker') }}

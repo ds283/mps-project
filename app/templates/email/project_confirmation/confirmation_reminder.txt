@@ -1,14 +1,11 @@
 Dear {{ user.first_name }}
 
-This is an automated email from the Sussex Physics & Astronomy
-project management web app at https://mpsprojects.sussex.ac.uk.
-It is sent from an address that is not monitored or answered;
-please direct any queries to the project convenor.
+This email is automated. Please do not reply to it directly, because email
+to the sending address is not monitored.
 
-You are receiving this email because you are enrolled as a supervisor for
+You are receiving this message because you are enrolled as a supervisor for
 projects of type "{{ pclass.name }}". If you believe this to be
-incorrect, please contact the project convenor to have your enrollment
-status changed.
+incorrect, please contact the project convenor ({{ pclass.convenor.user.email }}).
 
 We would like to gently remind you that the deadline to check or modify
 your project descriptions for "{{ pclass.name }}" is getting close.
@@ -20,11 +17,10 @@ if you could confirm your projects before then.
 To check your projects, please log in to the project management web app
 at https://mpsprojects.sussex.ac.uk and select 'My projects/My project
 library...' from the drop-down menu in the menubar. Alternatively, the list of
-active projects associated with each project type is shown in the appropriate
-tab on your dashboard. This shows which projects will be published to
-students. If you wish to withdraw a project, use the Action menu shown in the
-list and choose 'Don't offer this project'. You can also deactivate the project
-entirely from the library view.
+active projects associated with each project type is shown in the corresponding
+tab on your dashboard. If you wish to withdraw a project, use the Action menu
+shown in the list and choose 'Don't offer this project'. If a project has come
+to the end of its life, you can deactivate it entirely from the library view.
 
 {% if number_projects == 0 -%}
 Please note that you currently have no projects in your library that are
@@ -36,22 +32,21 @@ project, or create a new one.
 You currently have {{ number_projects }} project{{ pl }} eligible for this project type:
 {% for p in projects -%}
 - {{ p.name }}
-{% endfor %}
-{% endif -%}
+{% endfor -%}
+{%- endif %}
 
 When you are satisfied that your project descriptions are up-to-date,
-return to your dashboard and select the "{{ pclass.name }}" tab.
+please return to your dashboard and select the "{{ pclass.name }}" tab.
 An information request box labelled "Selections: Confirmation of projects
 required" should appear highlighted in red at the top of the page.
 You can confirm projects individually, or use the green 'Confirm all projects'
 button if everything is ready to go.
 
 If you have already reviewed your projects, please log in again and ensure
-you have confirmed them all. This will ensure that you do not
-receive further unnecessary reminder emails. Please note that if your
-project has variants for different project types then you may need
-to confirm them individually from the appropriate tab on your dashboard.
+you have confirmed them all. This will ensure that you do not receive further
+unnecessary reminder emails. Please note that if your project has variants for
+different project types then you may need to confirm them individually from
+the appropriate tab on your dashboard.
 
 Thank you for your help,
 {{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
-project convenor

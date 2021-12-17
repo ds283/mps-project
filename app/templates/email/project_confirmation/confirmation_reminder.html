@@ -4,7 +4,11 @@
 
 <p>You are receiving this message because you are enrolled as a supervisor for projects of type <strong>{{ pclass.name }}</strong>. If you believe this to be incorrect, please contact the project convenor ({{ pclass.convenor.user.email }}).</p>
 
-<p>We are now preparing to publish project descriptions to this year's Y{{ pclass.start_level.academic_year-1 }} cohort. To help us, we would like to ask you to confirm the projects you wish to offer in this cycle.</p>
+<p>We would like to gently remind you that the deadline to check your project descriptions for <strong>{{ pclass.name }}</strong> is getting close.
+{% if config.request_deadline is defined and config.request_deadline is not none -%}
+The current deadline is {{ config.request_deadline.strftime("%a %d %b %Y") }}, and it would be very helpful if you could confirm your projects before then.
+{%- endif %}
+</p>
 
 <p>To check your projects, please log in to the <a href="https://mpsprojects.sussex.ac.uk">project management web app</a> and select 'My projects/My project library...' from the drop-down menu in the menubar. Alternatively, the list of active projects associated with each project type is shown in the corresponding tab on your dashboard. If you wish to withdraw a project, use the <em>Action</em> menu shown in the list and choose 'Don't offer this project'. If a project has come to the end of its life, you can deactivate the project entirely from the library view.</p>
 
@@ -18,20 +22,11 @@
 <li>{{ p.name }}</li>
 {% endfor -%}
 </ul>
-{% if number_projects == 1 -%}
-<p>If you make no changes, this project will be offered to students in this cycle.</p>
-{%- else -%}
-<p>If you make no changes, these projects will be offered to students in this cycle.</p>
-{%- endif %}
 {%- endif %}
 
 <p>When you are satisfied that your project descriptions are up-to-date, please return to your dashboard and select the <strong>{{ pclass.name }}</strong> tab. An information request box labelled "Selections: Confirmation of projects required" should appear highlighted in red at the top of the page. You can confirm projects individually, or use the green 'Confirm all projects' button if everything is ready to go.</p>
 
-{% if config.request_deadline is defined and config.request_deadline is not none -%}
-<p>It would be very helpful if you could provide your response by {{ config.request_deadline.strftime("%a %d %b %Y") }} at latest.</p>
-{%- endif %}
-
-<p>You will receive one copy of this email for each project type in which you are enrolled as a supervisor. Please note that if your project has variants for different project types then you may need to confirm them individually from the appropriate tab on your dashboard.</p>
+<p>If you have already reviewed your projects, please log in again and ensure you have confirmed them all. This will ensure that you do not receive further unnecessary reminder emails. Please note that if your project has variants for different project types then you may need to confirm them individually from the appropriate tab on your dashboard.</p>
 
 <p>Thank you for your help,</p>
 <p>{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})</p>

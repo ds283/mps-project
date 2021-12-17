@@ -252,6 +252,9 @@ def register_issue_confirm_tasks(celery):
         msg.body = render_template('email/project_confirmation/confirmation_requested.txt', user=data.user,
                                    pclass=config.project_class, config=config,
                                    number_projects=len(projects), projects=projects)
+        msg.html = render_template('email/project_confirmation/confirmation_requested.html', user=data.user,
+                                   pclass=config.project_class, config=config,
+                                   number_projects=len(projects), projects=projects)
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send confirmation request email to {r}'.format(r=', '.join(msg.recipients)))

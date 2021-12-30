@@ -699,7 +699,7 @@ def AssetMixinFactory(acl_name, acr_name):
             elif isinstance(role, Role):
                 role_id = role.id
             else:
-                raise RuntimeError('Unreognized object "role" passed to AssetMixin._get_roleid()')
+                raise RuntimeError('Unrecognized object "role" passed to AssetMixin._get_roleid()')
 
             return role_id
 
@@ -815,7 +815,6 @@ def AssetMixinFactory(acl_name, acr_name):
 
             for role in roles:
                 self.revoke_role(role)
-
 
     return AssetMixin
 

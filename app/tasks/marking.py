@@ -243,7 +243,8 @@ def register_marking_tasks(celery):
         report_abs_path = asset_folder / generated_subfolder / report_asset.filename
         attached_size = _attach_asset(msg, report_asset, attached_size, attached_documents, report_abs_path,
                                       filename=report_filename, max_attachment=max_attachment,
-                                      description="student's submitted report")
+                                      description="student's submitted report",
+                                      endpoint='download_generated_asset')
 
         # attach any other documents provided by the project convenor
         if role is not None:
@@ -257,7 +258,8 @@ def register_marking_tasks(celery):
                     # TODO: consider rationalizing how filenames work with assets. Currently it's a bit inconsistent.
                     attachment_abs_path = asset_folder / submitted_subfolder / asset.filename
                     attached_size = _attach_asset(msg, asset, attached_size, attached_documents, attachment_abs_path,
-                                                  max_attachment=max_attachment, description=attachment.description)
+                                                  max_attachment=max_attachment, description=attachment.description,
+                                                  endpoint='download_submitted_asset')
 
             for attachment in record.ordered_record_attachments:
                 attachment: SubmissionAttachment
@@ -269,7 +271,8 @@ def register_marking_tasks(celery):
                     # TODO: consider rationalizing how filenames work with assets. Currently it's a bit inconsistent.
                     attachment_abs_path = asset_folder / submitted_subfolder / asset.filename
                     attached_size = _attach_asset(msg, asset, attached_size, attached_documents, attachment_abs_path,
-                                                  max_attachment=max_attachment, description=attachment.description)
+                                                  max_attachment=max_attachment, description=attachment.description,
+                                                  endpoint='download_submitted_asset')
 
         return attached_documents
 

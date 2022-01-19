@@ -54,18 +54,18 @@
                 {% endif %}
             </div>
         </div>
-        {% if pclass.coconvenors.first() %}
-            <div class="row vertical-align">
-                <div class="col-12">
-                    <span>Co-convenors:</span>
-                    {% for fac in pclass.coconvenors %}
-                        <span><a class="text-decoration-none" href="mailto:{{ fac.user.email }}">
-                            {{ fac.user.name }}
-                        </a></span>
-                    {% endfor %}
-                </div>
-            </div>
-        {% endif %}
+{#        {% if pclass.coconvenors.first() %}#}
+{#            <div class="row vertical-align">#}
+{#                <div class="col-12">#}
+{#                    <span>Co-convenors:</span>#}
+{#                    {% for fac in pclass.coconvenors %}#}
+{#                        <span><a class="text-decoration-none" href="mailto:{{ fac.user.email }}">#}
+{#                            {{ fac.user.name }}#}
+{#                        </a></span>#}
+{#                    {% endfor %}#}
+{#                </div>#}
+{#            </div>#}
+{#        {% endif %}#}
 
         {% if config.uses_supervisor %}
             {{ selector_card(data, sel_state, current_user, home_dashboard_url) }}

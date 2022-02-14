@@ -1,0 +1,35 @@
+<p>Dear {{ user.first_name }}</p>
+
+<p><strong>Note: Project selection deadline is {{ deadline.strftime("%a %d %b %Y") }}</strong></p>
+
+<p><strong>This email is automated. Please do not reply to it directly, because email to the sending address is not monitored.</strong></p>
+
+{% if student.is_optional %}
+<p>You are receiving this email because you have the <strong>option</strong> to apply or enroll as a participant for <em>{{ pclass.name }}</em>. If you are unsure whether you are eligible for "{{ pclass.name }}", please seek guidance from the project convenor whose details are given below.</p>
+
+<p>If this is not relevant for you, then you need take no action and can safely ignore the remainder of this email.</p>
+{% else %}
+<p>You are receiving this email because we are expecting you to participate in the <em>{{ pclass.name }}</em> module. This runs in Y{{ pclass.start_level.academic_year }}, and it is now time to select your preferred projects. If you believe this to be incorrect, for example if you are not expecting to undertake this type of project, please contact the convenor as soon as possible. Contact details are given below.</p>
+{% endif %}
+
+<p>This year's project list has now been published, and can be inspected by logging in to our web platform: <a href="https://mpsprojects.sussex.ac.uk">https://mpsprojects.sussex.ac.uk</a>.</p>
+
+<p>If you have used the platform before, log in with your Sussex email address and existing password. If not, an account has been set up for you using your Sussex email address and a random password that is not known to anyone. Use the <em>Forgot password?</em> link to reset your password, and then log into the website in the usual way. If you experience log-in difficulties then please contact <a href="mailto:D.Seery@sussex.ac.uk">David Seery</a>.</p>
+
+<p>To view the project list, log in to your account and scroll to find the box labelled <em>{{ pclass.name }}</em> on your dashboard. Now click the green button labelled <em>Show available projects</em>. You can search the list by entering keywords or phrases in the search box in the top-right, or by applying filters for keywords and research groups in the box labelled <em>Filters</em>.</p>
+
+<p>Each project has a description, and a number of key facts that detail recommended modules, supervision arrangements and subject information. If you have not taken the recommended modules then you can still apply for the project, but you should make arrangements to discuss with the supervisor beforehand. Some project descriptions may include popularity indicators. You can use these to get some sense of how many other students are interested in a project, and therefore whether it is likely to be oversubscribed. The popularity indicators may not be available until enough data has been collected.</p>
+
+<p>Use the <em>bookmark</em> function to keep track of projects in which you are interested. Bookmarked projects appear on your dashboard for quick access, and you can drag-and-drop individual bookmarks to arrange them in order of preference. Once you have bookmarked enough projects you can submit your ranked list. You can do this as many times as you like before the selection deadline. We are asking you to select at least {{ student.number_choices }} projects to help us find a good match for everyone.</p>
+
+{% if student.is_optional %}
+<p>The deadline for selections is <strong>{{ deadline.strftime("%a %d %b %Y") }}</strong>. You do not need to do anything else to apply for enrolment in the programme. If you do not submit a selection by the deadline we will assume that you do not wish to apply.</p>
+{%- else -%}
+<p>The deadline for selections is <strong>{{ deadline.strftime("%a %d %b %Y") }}</strong>.</p>
+{%- endif %}
+
+<p>Some projects require more background than others. In these cases the project supervisor may require you to obtain a signoff before allowing you to submit a selection containing the project. To request a sign-off, use the 'Request confirmation' button. You will be notified by email when the supervisor responds. Use the <em>Settings...</em> option from the drop-down menu at the top of the page to control how often the website contacts you by email.</p>
+
+<p>If you have questions or encounter difficulties, please contact the project convenor.</p>
+
+<p><a href="mailto:{{ pclass.convenor.user.email }}">{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }}</a> – project convenor</p>

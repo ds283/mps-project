@@ -394,6 +394,8 @@ def register_golive_tasks(celery):
 
         msg.body = render_template('email/go_live/selector.txt', user=data.student.user, student=data,
                                    pclass=config.project_class, config=config, deadline=deadline)
+        msg.html = render_template('email/go_live/selector.html', user=data.student.user, student=data,
+                                   pclass=config.project_class, config=config, deadline=deadline)
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send confirmation request email to {r}'.format(r=', '.join(msg.recipients)))

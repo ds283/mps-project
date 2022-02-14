@@ -2,22 +2,23 @@ Dear {{ user.first_name }}
 
 ** NOTE: PROJECT SELECTION DEADLINE IS {{ deadline.strftime("%a %d %b %Y") }} **
 
+This email is automated. Please do not reply to it directly, because email to
+the sending address is not monitored.
+
 {% if student.is_optional -%}
 You are receiving this email because you have the option to apply or enroll
-as a participant for "{{ pclass.name }}". Depending on your current
-enrolment, this may require a change of degree programme or meeting special
-criteria such as a minimum performance in your end-of-stage exams.
-If you are unsure whether you are eligible for "{{ pclass.name }}", please
-seek guidance from the project convenor whose details are given below.
+as a participant for "{{ pclass.name }}". If you are unsure whether you
+are eligible for "{{ pclass.name }}", please seek guidance from the
+project convenor whose details are given below.
 
-If you do not wish to participate in "{{ pclass.name }}" then you
-need take no action and can ignore the remainder of this email.
+If this is not relevant for you, then you need take no action and can safely
+ignore the remainder of this email.
 {%- else -%}
-You are receiving this email because you are enrolled as a participant for
-"{{ pclass.name }}". This runs in Y{{ pclass.start_level.academic_year }}, and it is now time to select
-your preferred projects. (If you believe this to be incorrect, for example
-if you are not expecting to participate in this project, please contact
-the convenor as soon as possible. Contact details are given below.)
+You are receiving this email because we are expecting you to participate in
+the "{{ pclass.name }}" module. This runs in Y{{ pclass.start_level.academic_year }}, and it is now
+time to select your preferred projects. If you believe this to be incorrect,
+for example if you are not expecting to undertake this type of project, please
+contact the convenor as soon as possible. Contact details are given below.
 {%- endif %}
 
 This year's project list has now been published, and can be inspected
@@ -33,7 +34,7 @@ difficulties then please contact David Seery (D.Seery@sussex.ac.uk).
 To view the project list, log in to your account and scroll to find the
 box labelled "{{ pclass.name }}" on your dashboard.
 Now click the green button labelled "Show available projects".
-You can search the list by entering key words or phrases in the
+You can search the list by entering keywords or phrases in the
 search box in the top-right, or by applying filters for keywords
 and research groups in the box labelled "Filters".
 
@@ -65,7 +66,7 @@ The deadline for selections is {{ deadline.strftime("%a %d %b %Y") }}.
 {%- endif %}
 
 Some projects require more background than others. In these cases the
-project supervisor may require you to obtain a 'sign off' before
+project supervisor may require you to obtain a signoff before
 allowing you to submit a selection containing the project. To request
 a sign-off, use the 'Request confirmation' button. You will be notified by
 email when the supervisor responds. Use the "Settings..." option
@@ -77,8 +78,3 @@ project convenor.
 
 {{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
 project convenor
-
-This is an automated email from the Sussex Physics & Astronomy
-project management web app at https://mpsprojects.sussex.ac.uk.
-It is sent from an address that is not monitored or answered;
-please direct any queries to the project convenor.

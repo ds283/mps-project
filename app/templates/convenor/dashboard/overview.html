@@ -112,7 +112,7 @@
                             {% set tmp = messages.append('Skip matching this cycle') %}
                         {% endif %}
                         {% if config.requests_skipped %}
-                            {% set tmp = message.append('Skip confirmation requests this cycle') %}
+                            {% set tmp = messages.append('Skip confirmation requests this cycle') %}
                         {% endif %}
                         {% if config.require_confirm %}
                             {% set tmp = messages.append('Requires project confirmations') %}
@@ -128,7 +128,7 @@
                             {% set tmp = messages.append('Selection restricted to invitees') %}
                         {% endif %}
                         {% if config.full_CATS %}
-                            {% set temp = message.append('Maximum supervisor CATS for accommodated matchings = ' + config.full_CATS|string) %}
+                            {% set temp = messages.append('Maximum supervisor CATS for accommodated matchings = ' + config.full_CATS|string) %}
                         {% endif %}
                         {% if messages|length > 0 %}
                             <span class="text-muted">{{ messages|join(', ') }}</span>

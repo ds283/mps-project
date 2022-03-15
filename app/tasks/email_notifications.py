@@ -111,7 +111,7 @@ def register_email_notification_tasks(celery):
             return
 
         # is today a working day?
-        if not is_busday(today, holidays=None):
+        if not is_busday(today):
             return
 
         # search through all active users and dispatch notifications

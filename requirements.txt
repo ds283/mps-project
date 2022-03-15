@@ -104,7 +104,7 @@ PuLP==2.6.0
 pycparser==2.21
 Pygments==2.11.2
 PyMeeus==0.5.11
-pymongo==4.0.2
+pymongo==3.12.1
 PyMuPDF==1.19.6
 PyMySQL==1.0.2
 pyparsing==3.0.7

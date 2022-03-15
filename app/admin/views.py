@@ -2986,8 +2986,8 @@ def edit_crontab_task(id):
             form.minute.data = data.crontab.minute
             form.hour.data = data.crontab.hour
             form.day_of_week.data = data.crontab.day_of_week
-            form.day_of_month = data.crontab.day_of_month
-            form.month_of_year = data.crontab.month_of_year
+            form.day_of_month.data = data.crontab.day_of_month
+            form.month_of_year.data = data.crontab.month_of_year
 
     return render_template('admin/edit_scheduled_task.html', task=data, form=form, title='Add new crontab task')
 

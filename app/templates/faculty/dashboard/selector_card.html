@@ -310,6 +310,9 @@
                                                 <a class="dropdown-item d-flex gap-2 disabled">Programme does not include recommended modules</a>
                                                 <div role="separator" class="dropdown-divider"></div>
                                             {% endif %}
+                                            <a class="dropdown-item d-flex gap-2" href="mailto:{{ sel.student.user.email }}">
+                                                <i class="fas fa-envelope fa-fw"></i> Send email...
+                                            </a>
                                             {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
                                                     <i class="fas fa-check fa-fw"></i> Confirm
@@ -339,6 +342,9 @@
                                             {{ sel.student.user.name }}
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                                            <a class="dropdown-item d-flex gap-2" href="mailto:{{ sel.student.user.email }}">
+                                                <i class="fas fa-envelope fa-fw"></i> Send email...
+                                            </a>
                                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
                                                 <i class="fas fa-clock fa-fw"></i> Make pending
                                             </a>

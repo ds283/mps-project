@@ -26,7 +26,7 @@
             {% if rank is none or total is none %}
                 <span class="badge bg-secondary">Popularity rank updating...</span>
             {% else %}
-                <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}" class="badge bg-primary">Popularity rank {{ rank }}/{{ total }}</a>
+                <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}" class="badge bg-primary text-decoration-none">Popularity rank {{ rank }}/{{ total }}</a>
             {% endif %}
         {% endif %}
 
@@ -36,7 +36,7 @@
             {% if rank is none or total is none %}
                 <span class="badge bg-secondary">Selection rank updating...</span>
             {% else %}
-                <a href="{{ url_for('reports.liveproject_analytics', pane='selections', proj_id=project.id, url=url, text=text) }}" class="badge bg-secondary">Selection rank {{ rank }}/{{ total }}</a>
+                <a href="{{ url_for('reports.liveproject_analytics', pane='selections', proj_id=project.id, url=url, text=text) }}" class="badge bg-secondary text-decoration-none">Selection rank {{ rank }}/{{ total }}</a>
             {% endif %}
         {% endif %}
 
@@ -46,7 +46,7 @@
             {% if rank is none or total is none %}
                 <span class="badge bg-secondary">Bookmark rank updating...</span>
             {% else %}
-                <a href="{{ url_for('reports.liveproject_analytics', pane='bookmarks', proj_id=project.id, url=url, text=text) }}" class="badge bg-secondary">Bookmark rank {{ rank }}/{{ total }}</a>
+                <a href="{{ url_for('reports.liveproject_analytics', pane='bookmarks', proj_id=project.id, url=url, text=text) }}" class="badge bg-secondary text-decoration-none">Bookmark rank {{ rank }}/{{ total }}</a>
             {% endif %}
         {% endif %}
 
@@ -56,7 +56,7 @@
             {% if rank is none or total is none %}
                 <span class="badge bg-secondary">View rank updating...</span>
             {% else %}
-                <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="badge bg-secondary">View rank {{ rank }}/{{ total }}</a>
+                <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="badge bg-secondary text-decoration-none">View rank {{ rank }}/{{ total }}</a>
             {% endif %}
         {% endif %}
     {% else %}

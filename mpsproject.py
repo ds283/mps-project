@@ -335,7 +335,7 @@ def migrate_exam_numbers_back():
     db.session.commit()
 
 
-app, celery = create_app()
+app = create_app()
 
 # with app.app_context():
     # migrate_availability_data()

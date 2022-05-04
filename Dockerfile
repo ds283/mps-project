@@ -1,6 +1,6 @@
-FROM python:3.8-slim-bullseye
+FROM python:3.9-slim-bullseye
 
-RUN apt-get update && apt-get install -qq -y build-essential gcc gfortran mariadb-client mysqltuner libssl-dev libjpeg-dev zlib1g-dev libglpk-dev glpk-utils coinor-cbc git pkg-config swig wget --no-install-recommends
+RUN apt-get update && apt-get install -qq -y build-essential gcc gfortran mariadb-client mysqltuner libssl-dev libjpeg-dev zlib1g-dev libglpk-dev glpk-utils coinor-cbc git pkg-config swig wget libcairo2-dev --no-install-recommends
 
 # uid = 500 needed for deployment on Amazon, where ecs-user has uid 500
 RUN adduser --disabled-password --shell /bin/bash --gecos '' --uid 500 mpsproject

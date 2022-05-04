@@ -12,7 +12,7 @@ bleach filter class for Flask.
 """
 
 from flask import Markup
-from jinja2 import evalcontextfilter
+from jinja2 import pass_eval_context
 
 import bleach
 
@@ -70,8 +70,8 @@ class Bleach(object):
                                    bleach.ALLOWED_TAGS)
         self.app.config.setdefault('BLEACH_ALLOWED_ATTRIBUTES',
                                    bleach.ALLOWED_ATTRIBUTES)
-        self.app.config.setdefault('BLEACH_ALLOWED_STYLES',
-                                   bleach.ALLOWED_STYLES)
+        self.app.config.setdefault('BLEACH_ALLOWED_PROTOCOLS',
+                                   bleach.ALLOWED_PROTOCOLS)
         self.app.config.setdefault('BLEACH_STRIP_MARKUP', False)
         self.app.config.setdefault('BLEACH_STRIP_COMMENTS', True)
         self.app.config.setdefault('BLEACH_AUTO_LINKIFY', False)
@@ -95,14 +95,12 @@ class Bleach(object):
         return cleaned
 
     def __build_clean_filter(self):
-        @evalcontextfilter
-        def bleach_filter(eval_ctx, stream):
+        def bleach_filter(stream):
             return Markup(self(stream))
         return bleach_filter
 
     def __build_linkify_filter(self):
-        @evalcontextfilter
-        def linkify_filter(eval_ctx, stream):
+        def linkify_filter(stream):
             if self.app.config['BLEACH_CLEAN_BEFORE_LINKIFY']:
                 stream = self.clean(stream)
 
@@ -113,7 +111,7 @@ class Bleach(object):
         return bleach.clean(stream,
                             tags=self.app.config['BLEACH_ALLOWED_TAGS'],
                             attributes=self.app.config['BLEACH_ALLOWED_ATTRIBUTES'],
-                            styles=self.app.config['BLEACH_ALLOWED_STYLES'],
+                            protocols=self.app.config['BLEACH_ALLOWED_PROTOCOLS'],
                             strip=self.app.config['BLEACH_STRIP_MARKUP'],
                             strip_comments=self.app.config['BLEACH_STRIP_COMMENTS']
                             )

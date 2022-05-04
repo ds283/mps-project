@@ -1119,6 +1119,12 @@ class MainConfig(db.Model):
     # year is the main configuration variable
     year = db.Column(db.Integer(), primary_key=True)
 
+    # URL for Canvas instance used to sync (if enabled)
+    canvas_url = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # globally enable Canvas sync
+    enable_canvas_sync = db.Column(db.Boolean(), default=False)
+
 
 class Role(db.Model, RoleMixin, ColouredLabelMixin):
     """

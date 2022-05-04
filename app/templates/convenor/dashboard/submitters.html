@@ -194,35 +194,35 @@
                     <div class="float-end">
                         {% if is_admin or is_root or is_emailer %}
                             <a href="{{ url_for('convenor.email_submitters', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter) }}"
-                               class="btn btn-secondary top-row-button">
+                               class="btn btn-sm btn-outline-primary top-row-button">
                                 <i class="fas fa-envelope"></i> Email
                             </a>
                         {% endif %}
                         {% if not config.all_markers_assigned %}
-                            <a href="{{ url_for('convenor.populate_markers', configid=config.id) }}" class="btn btn-secondary top-row-button">
+                            <a href="{{ url_for('convenor.populate_markers', configid=config.id) }}" class="btn btn-sm btn-outline-primary top-row-button">
                                 <i class="fas fa-wrench"></i> Populate markers
                             </a>
                         {% endif %}
-                        <a href="{{ url_for('convenor.remove_markers', configid=config.id) }}" class="btn btn-secondary top-row-button">
+                        <a href="{{ url_for('convenor.remove_markers', configid=config.id) }}" class="btn btn-sm btn-outline-primary top-row-button">
                             <i class="fas fa-wrench"></i> Remove markers
                         </a>
-                        <a href="{{ url_for('convenor.delete_all_submitters', configid=config.id) }}" class="btn btn-secondary top-row-button">
+                        <a href="{{ url_for('convenor.delete_all_submitters', configid=config.id) }}" class="btn btn-sm btn-outline-primary top-row-button">
                             <i class="fas fa-trash"></i> Delete all
                         </a>
                         {% if pclass.publish %}
-                            <a href="{{ url_for('convenor.mark_all_started', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}" class="btn btn-secondary top-row-button">
+                            <a href="{{ url_for('convenor.mark_all_started', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}" class="btn btn-sm btn-outline-primary top-row-button">
                                 Mark all started
                             </a>
-                            <a href="{{ url_for('convenor.unpublish_all_assignments', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}" class="btn btn-secondary top-row-button">
+                            <a href="{{ url_for('convenor.unpublish_all_assignments', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}" class="btn btn-sm btn-outline-primary top-row-button">
                                 <i class="fas fa-eye-slash"></i> Unpublish all
                             </a>
-                            <a href="{{ url_for('convenor.publish_all_assignments', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}" class="btn btn-secondary top-row-button">
+                            <a href="{{ url_for('convenor.publish_all_assignments', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}" class="btn btn-sm btn-outline-primary top-row-button">
                                 <i class="fas fa-eye"></i> Publish all
                             </a>
                         {% else %}
-                            <a class="btn btn-secondary top-row-button disabled">Mark all started</a>
-                            <a class="btn btn-secondary top-row-button disabled"><i class="fas fa-eye-slash"></i> Unpublish all</a>
-                            <a class="btn btn-secondary top-row-button disabled"><i class="fas fa-eye"></i> Publish all</a>
+                            <a class="btn btn-sm btn-outline-primary top-row-button disabled">Mark all started</a>
+                            <a class="btn btn-sm btn-outline-primary top-row-button disabled"><i class="fas fa-eye-slash"></i> Unpublish all</a>
+                            <a class="btn btn-sm btn-outline-primary top-row-button disabled"><i class="fas fa-eye"></i> Publish all</a>
                         {% endif %}
                     </div>
                 </div>

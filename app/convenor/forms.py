@@ -223,7 +223,7 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
         project_hub_value_map = {1: None, 2: True, 3: False}
         project_hub_choice_map = {None: 1, True: 2, False: 3}
 
-        use_project_hub = SelectField('Use Project Hubs', choices=project_hub_choices, coerce=int,
+        use_project_hub = SelectField('Use Project Hubs (caution: not production quality)', choices=project_hub_choices, coerce=int,
                                        description='This setting is inherited from the project configuration, '
                                                    'but can be overridden in any academic year. '
                                                    'The Project Hub is a lightweight learning management system '

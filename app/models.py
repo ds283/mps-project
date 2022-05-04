@@ -9,7 +9,6 @@
 #
 
 import json
-import cryptography
 
 from datetime import date, datetime, timedelta
 from os import path

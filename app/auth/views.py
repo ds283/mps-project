@@ -11,7 +11,7 @@
 from flask import render_template, redirect, url_for, flash, session, current_app
 from flask_security import login_required, current_user, logout_user, login_user
 
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
+from sqlalchemy.exc import NoResultFound, MultipleResultsFound
 
 from ..database import db
 from ..models import User

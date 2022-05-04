@@ -123,7 +123,7 @@ class ConfirmRegisterOfficeForm(RegisterOfficeForm, PasswordConfirmFormMixin, Ne
             self.next.data = request.args.get('next', '')
 
 
-class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixinFactory(admin=True, canvas=False)):
+class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixinFactory(admin=True, enable_canvas=False)):
 
     save_and_exit = SubmitField('Save and exit')
 
@@ -133,7 +133,7 @@ class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixinFactory(admin=True
         self.submit.label.text = 'Next: Research group affiliations'
 
 
-class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixinFactory(admin=True, canvas=False)):
+class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixinFactory(admin=True, enable_canvas=False)):
 
     save_and_exit = SubmitField('Save and exit')
 
@@ -175,7 +175,7 @@ class EditOfficeForm(Form, SaveChangesMixin, EditUserNameMixin, AskConfirmEditFo
     pass
 
 
-class EditFacultyForm(EditOfficeForm, FacultyDataMixinFactory(admin=True, canvas=False)):
+class EditFacultyForm(EditOfficeForm, FacultyDataMixinFactory(admin=True, enable_canvas=False)):
 
     pass
 

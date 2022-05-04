@@ -35,7 +35,7 @@ from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
 from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_assessors, \
-    get_current_year, get_count, get_approvals_data, allow_approvals, redirect_url
+    get_current_year, get_count, get_approvals_data, allow_approvals, redirect_url, get_main_config
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable, \
     validate_assessment, validate_using_assessment, validate_presentation_assessor, \
@@ -2527,7 +2527,10 @@ def settings():
     user = User.query.get_or_404(current_user.id)
     data = FacultyData.query.get_or_404(current_user.id)
 
-    FacultySettingsForm = FacultySettingsFormFactory(user, current_user, canvas=data.is_convenor)
+    main_config = get_main_config()
+
+    FacultySettingsForm = FacultySettingsFormFactory(user, current_user,
+                                                     enable_canvas=main_config.enable_canvas_sync and data.is_convenor)
     form = FacultySettingsForm(obj=data)
     form.user = user
 
@@ -2551,9 +2554,9 @@ def settings():
         else:
             user.mask_roles = []
 
-        if hasattr(form, 'canvas_API_token'):
+        # store Canvas API token if present on form and Canvas integration is enabled
+        if main_config.enable_canvas_sync and hasattr(form, 'canvas_API_token'):
             data.canvas_API_token = form.canvas_API_token.data
-
         else:
             # automatically delete for safety
             data.canvas_API_token = None

@@ -95,14 +95,16 @@
                         {% else %}
                             {% set tmp = messages.append('Project hub disabled') %}
                         {% endif %}
-                        {% if config.canvas_enabled %}
-                            {% set tmp = messages.append('Canvas integration enabled') %}
-                        {% else %}
-                            {% if not config.canvas_id %}
-                                {% set tmp = messages.append('Canvas course identifier not set') %}
-                            {% endif %}
-                            {% if not config.canvas_login %}
-                                {% set tmp = messages.append('Canvas login not set') %}
+                        {% if config.main_config.enable_canvas_sync %}
+                            {% if config.canvas_enabled %}
+                                {% set tmp = messages.append('Canvas integration enabled') %}
+                            {% else %}
+                                {% if not config.canvas_id %}
+                                    {% set tmp = messages.append('Canvas course identifier not set') %}
+                                {% endif %}
+                                {% if not config.canvas_login %}
+                                    {% set tmp = messages.append('Canvas login not set') %}
+                                {% endif %}
                             {% endif %}
                         {% endif %}
                         {% if config.do_matching %}
@@ -165,10 +167,12 @@
                                         {% endif %}
                                     </div>
                                 {% endif %}
-                                {% if p.canvas_enabled %}
-                                    {% set tmp = messages.append('Canvas integration enabled') %}
-                                {% else %}
-                                    {% set tmp = messages.append('Canvas integration not enabled') %}
+                                {% if config.main_config.enable_canvas_sync %}
+                                    {% if p.canvas_enabled %}
+                                        {% set tmp = messages.append('Canvas integration enabled') %}
+                                    {% else %}
+                                        {% set tmp = messages.append('Canvas integration not enabled') %}
+                                    {% endif %}
                                 {% endif %}
                                 {% if p.has_presentation %}
                                     {% set tmp = messages.append('Has presentation') %}

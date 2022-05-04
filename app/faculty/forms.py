@@ -302,9 +302,10 @@ class SupervisorResponseForm(Form, SupervisorResponseMixin):
     pass
 
 
-def FacultySettingsFormFactory(user=None, current_user=None, canvas=False):
+def FacultySettingsFormFactory(user=None, current_user=None, enable_canvas=False):
 
-    class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixinFactory(admin=False, canvas=canvas),
+    class FacultySettingsForm(Form, EditUserNameMixin,
+                              FacultyDataMixinFactory(admin=False, enable_canvas=enable_canvas),
                               FirstLastNameMixin, SaveChangesMixin, EmailSettingsMixin,
                               DefaultLicenseMixin):
 

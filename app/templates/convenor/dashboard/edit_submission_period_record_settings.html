@@ -54,8 +54,11 @@
         {{ date_field(form.start_date, 'datetimepicker1') }}
         {{ date_field(form.hand_in_date, 'datetimepicker2') }}
         <hr class="intro-divider">
-        <p class="form-group-heading mt-2">Canvas integration</p>
-        {{ wtf.render_field(form.canvas_id) }}
+
+        {% if config.main_config.enable_canvas_sync %}
+            <p class="form-group-heading mt-2">Canvas integration</p>
+            {{ wtf.render_field(form.canvas_id) }}
+        {% endif %}
 
         <div class="mt-2">
             {{ wtf.render_field(form.collect_project_feedback) }}

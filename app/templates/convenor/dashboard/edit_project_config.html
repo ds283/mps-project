@@ -38,9 +38,11 @@
         </div>
         <hr class="intro-divider">
 
-        <p class="form-group-heading mt-2">Canvas integration</p>
-        {{ wtf.render_field(form.canvas_id) }}
-        {{ wtf.render_field(form.canvas_login) }}
+        {% if config.main_config.enable_canvas_sync %}
+            <p class="form-group-heading mt-2">Canvas integration</p>
+            {{ wtf.render_field(form.canvas_id) }}
+            {{ wtf.render_field(form.canvas_login) }}
+        {% endif %}
 
         <p class="form-group-heading mt-2">Supervision and assessment</p>
         <div class="row vertical-top">

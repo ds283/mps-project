@@ -32,7 +32,7 @@ import app.ajax as ajax
 from . import convenor
 from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
-    EditSubmissionPeriodRecordSettingsForm, UploadPeriodAttachmentForm, \
+    EditSubmissionPeriodRecordSettingsFormFactory, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
     EditProjectConfigFormFactory, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask, \
     EditConvenorGenericTask, EditSubmissionPeriodRecordPresentationsForm
@@ -6913,7 +6913,8 @@ def edit_submission_period_record_settings(pid):
     if not _validate_submission_period(record, config):
         return redirect(redirect_url())
 
-    edit_form = EditSubmissionPeriodRecordSettingsForm(obj=record)
+    FormClass = EditSubmissionPeriodRecordSettingsFormFactory(config)
+    edit_form = FormClass(obj=record)
 
     if edit_form.validate_on_submit():
         record.name = edit_form.name.data
@@ -6934,7 +6935,8 @@ def edit_submission_period_record_settings(pid):
 
         return redirect(url_for('convenor.overview', id=config.project_class.id))
 
-    return render_template('convenor/dashboard/edit_submission_period_record_settings.html', form=edit_form, record=record)
+    return render_template('convenor/dashboard/edit_submission_period_record_settings.html',
+                           form=edit_form, record=record, config=config)
 
 
 @convenor.route('/edit_submission_period_record_presentation/<int:pid>', methods=['GET', 'POST'])

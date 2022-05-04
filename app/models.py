@@ -5193,7 +5193,8 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
     @property
     def canvas_enabled(self):
-        return self.canvas_id is not None and self.canvas_login is not None
+        return self.main_config.enable_canvas_sync and \
+               self.canvas_id is not None and self.canvas_login is not None
 
 
 class SubmissionPeriodRecord(db.Model):
@@ -5556,10 +5557,11 @@ class SubmissionPeriodRecord(db.Model):
         if not self.all_markers_assigned:
             messages.append('Some students still require markers to be assigned')
 
-        if not self.config.canvas_enabled:
-            messages.append('Canvas integration is not yet set up for this cycle')
-        elif not self.canvas_enabled:
-            messages.append('Canvas integration is not yet set up for this submission period')
+        if self.config.main_config.enable_canvas_sync:
+            if not self.config.canvas_enabled:
+                messages.append('Canvas integration is not yet set up for this cycle')
+            elif not self.canvas_enabled:
+                messages.append('Canvas integration is not yet set up for this submission period')
 
         return messages
 

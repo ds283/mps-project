@@ -164,29 +164,41 @@ class CustomCATSLimitForm(Form, SaveChangesMixin):
                                      validators=[Optional()])
 
 
-class SubmissionPeriodRecordSettingsMixin():
+def SubmissionPeriodRecordSettingsMixinFactory(enable_canvas=True):
 
-    name = StringField('Name', description='Optional. Enter a textual name for this submission '
-                                           'period, such as "Autumn Term". Leave blank to use the default name.',
-                       validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
+    class SubmissionPeriodRecordSettingsMixin():
 
-    start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
-                           description="Enter an optional start date for this submission period.")
+        name = StringField('Name', description='Optional. Enter a textual name for this submission '
+                                               'period, such as "Autumn Term". Leave blank to use the default name.',
+                           validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
 
-    hand_in_date = DateField('Hand-in date', format='%d/%m/%Y', validators=[Optional()],
-                             description="Enter an optional hand-in date for this submission period. If present, "
-                                         "this is used to show students how much time remains.")
+        start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
+                               description="Enter an optional start date for this submission period.")
 
-    collect_project_feedback = BooleanField('Collect project feedback online')
+        hand_in_date = DateField('Hand-in date', format='%d/%m/%Y', validators=[Optional()],
+                                 description="Enter an optional hand-in date for this submission period. If present, "
+                                             "this is used to show students how much time remains.")
 
-    canvas_id = IntegerField('Canvas assignment identifier', validators=[Optional()],
-                             description='To enable Canvas integration for this submission period, enter the numeric '
-                                         'identifier for the corresponding Canvas assignment')
+        collect_project_feedback = BooleanField('Collect project feedback online')
+
+        if enable_canvas:
+            canvas_id = IntegerField('Canvas assignment identifier', validators=[Optional()],
+                                     description='To enable Canvas integration for this submission period, enter the numeric '
+                                                 'identifier for the corresponding Canvas assignment')
+
+    return SubmissionPeriodRecordSettingsMixin
 
 
-class EditSubmissionPeriodRecordSettingsForm(Form, SubmissionPeriodRecordSettingsMixin, SaveChangesMixin):
+def EditSubmissionPeriodRecordSettingsFormFactory(config: ProjectClassConfig):
 
-    pass
+    canvas_enabled = config.main_config.enable_canvas_sync
+    mixin = SubmissionPeriodRecordSettingsMixinFactory(enable_canvas=canvas_enabled)
+
+    class EditSubmissionPeriodRecordSettingsForm(Form, mixin, SaveChangesMixin):
+
+        pass
+
+    return EditSubmissionPeriodRecordSettingsForm
 
 
 class EditSubmissionPeriodRecordPresentationsForm(Form, SubmissionPeriodPresentationsMixin, SaveChangesMixin):
@@ -197,6 +209,7 @@ class EditSubmissionPeriodRecordPresentationsForm(Form, SubmissionPeriodPresenta
 def EditProjectConfigFormFactory(config: ProjectClassConfig):
 
     hub_enabled = config.project_class.use_project_hub
+    canvas_enabled = config.main_config.enable_canvas_sync
 
     class EditProjectConfigForm(Form, SaveChangesMixin):
 
@@ -247,12 +260,14 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
         CATS_presentation = IntegerField('CATS awarded for assessing presentations',
                                          validators=[Optional()])
 
-        canvas_id = IntegerField('Canvas course identifier', validators=[Optional()],
-                                 description='To enable Canvas integration for this cycle, enter the numeric '
-                                             'identifier for the corresponding Canvas course')
+        # only include Canvas-related fields if Canvas integration is actually switched on
+        if canvas_enabled:
+            canvas_id = IntegerField('Canvas course identifier', validators=[Optional()],
+                                     description='To enable Canvas integration for this cycle, enter the numeric '
+                                                 'identifier for the corresponding Canvas course')
 
-        canvas_login = QuerySelectField('Canvas login account', query_factory=partial(GetCanvasEnabledConvenors, config),
-                                        allow_blank=True, get_label=BuildCanvasLoginUserName)
+            canvas_login = QuerySelectField('Canvas login account', query_factory=partial(GetCanvasEnabledConvenors, config),
+                                            allow_blank=True, get_label=BuildCanvasLoginUserName)
 
 
     return EditProjectConfigForm

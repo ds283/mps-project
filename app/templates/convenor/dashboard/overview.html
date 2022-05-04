@@ -143,7 +143,7 @@
                             <div class="d-flex flex-row justify-content-start align-items-start mb-2">
                                 <div class="dashboard-period-title align-self-start me-2">{{ p.display_name|safe }}</div>
                                 <div class="align-self-center">
-                                    {{ submission_period_configure_button(p, config, small=true, margin=false, disable=p.is_feedback_open or p.closed) }}
+                                    {{ submission_period_configure_button(p, config, small=true, margin=false, disable=(p.is_feedback_open or p.closed)) }}
                                 </div>
                                 {% if p.submission_period <= config.submission_period %}
                                     {% set validation_messages = p.validate %}

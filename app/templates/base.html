@@ -465,12 +465,18 @@
                                 Site management
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+                                {% set needs_divider = false %}
                                 {% if is_root %}
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_roles') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Role editor...
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.global_config') }}">
+                                        <i class="fas fa-sliders-h fa-fw"></i> Global settings...
                                     </a>
+                                    {% set needs_divider = true %}
                                 {% endif %}
                                 {% if is_root or is_view_email %}
+                                    {% if needs_divider %}
+                                        <div role="separator" class="dropdown-divider"></div>
+                                        {% set needs_divider = false %}
+                                    {% endif %}
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.scheduled_email') }}">
                                         <i class="fas fa-wrench fa-fw"></i> Scheduled email...
                                     </a>
@@ -479,6 +485,7 @@
                                     </a>
                                 {% endif %}
                                 {% if is_root %}
+                                    <div role="separator" class="dropdown-divider"></div>
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.background_tasks') }}">
                                         <i class="fas fa-wrench fa-fw"></i> Background tasks...
                                     </a>
@@ -487,6 +494,10 @@
                                     </a>
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.backups_overview') }}">
                                         <i class="fas fa-wrench fa-fw"></i> Manage backups...
+                                    </a>
+                                    <div role="separator" class="dropdown-divider"></div>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_roles') }}">
+                                        <i class="fas fa-cogs fa-fw"></i> Role editor...
                                     </a>
                                 {% endif %}
                             </div>

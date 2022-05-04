@@ -1,0 +1,25 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}
+    Edit global settings
+{% endblock %}
+
+{% block formtitle %}
+    Edit global settings
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('admin.global_config') }}" method="POST" name="config_form">
+        {{ config_form.hidden_tag() }}
+
+        <div class="mb-2">
+            {{ wtf.render_field(config_form.enable_canvas_sync) }}
+        </div>
+
+        {{ wtf.render_field(config_form.canvas_url) }}
+
+        {{ wtf.render_field(config_form.submit, button_map={'submit': 'primary'}) }}
+    </form>
+{% endblock %}

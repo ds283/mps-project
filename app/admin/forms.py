@@ -11,7 +11,7 @@
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, BooleanField, SubmitField, \
     TextAreaField, DateField, DateTimeField, FloatField, RadioField, ValidationError
-from wtforms.validators import InputRequired, Optional, Length
+from wtforms.validators import InputRequired, Optional, Length, URL
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..manage_users.forms import ResearchGroupMixin
@@ -61,6 +61,19 @@ from functools import partial
 import re
 
 
+class GlobalConfig(Form):
+
+    enable_canvas_sync = BooleanField('Enable Canvas integration globally')
+
+    canvas_url = StringField('Root Canvas URL', validators=[NotOptionalIf('enable_canvas_sync'),
+                                                            Length(max=DEFAULT_STRING_LENGTH),
+                                                            URL()],
+                             description='Provide the root URL for the Canvas instance that should be used for '
+                                         'push or pull of student data.')
+
+    submit = SubmitField('Save changes')
+
+
 class AddResearchGroupForm(Form, ResearchGroupMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Name is required'),
@@ -85,7 +98,7 @@ class EditResearchGroupForm(Form, ResearchGroupMixin, SaveChangesMixin):
                                                            unique_or_original_group_abbreviation])
 
 
-class DegreeTypeMixin():
+class DegreeTypeMixin:
 
     colour = StringField('Colour', description='Assign a colour to help identify this degree type.',
                          validators=[Length(max=DEFAULT_STRING_LENGTH)])
@@ -118,7 +131,7 @@ class EditDegreeTypeForm(Form, DegreeTypeMixin, SaveChangesMixin):
                                                            unique_or_original_degree_abbreviation])
 
 
-class DegreeProgrammeMixin():
+class DegreeProgrammeMixin:
 
     degree_type = QuerySelectField('Degree type', query_factory=GetActiveDegreeTypes, get_label='name')
 
@@ -170,7 +183,7 @@ class EditDegreeProgrammeForm(Form, DegreeProgrammeMixin, SaveChangesMixin):
                                                          unique_or_original_course_code])
 
 
-class ModuleMixin():
+class ModuleMixin:
 
     name = StringField('Module name', validators=[InputRequired(message='Module name is required'),
                                                   Length(max=DEFAULT_STRING_LENGTH)])

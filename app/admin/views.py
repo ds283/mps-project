@@ -36,7 +36,8 @@ from werkzeug.wrappers import Response
 import app.ajax as ajax
 from . import admin
 from .actions import estimate_CATS_load, availability_CSV_generator, pair_slots
-from .forms import AddResearchGroupForm, EditResearchGroupForm, \
+from .forms import GlobalConfig,\
+    AddResearchGroupForm, EditResearchGroupForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
     AddModuleForm, EditModuleForm, \
@@ -78,12 +79,46 @@ from ..shared.forms.queries import ScheduleSessionQuery
 from ..shared.internal_redis import get_redis
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import get_current_year, home_dashboard, get_matching_dashboard_data, \
-    get_rollover_data, get_ready_to_match_data, get_automatch_pclasses, redirect_url
+    get_rollover_data, get_ready_to_match_data, get_automatch_pclasses, redirect_url, get_main_config
 from ..shared.validators import validate_is_admin_or_convenor, validate_match_inspector, \
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..task_queue import register_task, progress_update
 from ..tools import ServerSideHandler
 from ..uploads import solution_files
+
+
+@admin.route('/global_config', methods=['GET', 'POST'])
+@roles_required('root')
+def global_config():
+    """
+    Edit global configurations for this app instance
+    :return:
+    """
+    config: MainConfig = get_main_config()
+    form: GlobalConfig = GlobalConfig(obj=config)
+
+    if form.validate_on_submit():
+        url = form.canvas_url.data
+        r = None
+        if url is not None:
+            if not re.match(r'http(s?)\:', url):
+                url = 'http://' + url
+            r = urlsplit(url)
+
+        config.enable_canvas_sync = form.enable_canvas_sync.data
+        config.canvas_url = r.geturl() if r is not None else None
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes because of a database error. Please contact a system '
+                  'administrator', 'error')
+
+        return home_dashboard()
+
+    return render_template('admin/global_config.html', config_form=form)
 
 
 @admin.route('/edit_groups')
@@ -2170,6 +2205,7 @@ def perform_global_rollover():
     """
 
     data = get_rollover_data()
+    current_config = get_main_config()
 
     if not data['rollover_ready']:
         flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
@@ -2183,7 +2219,9 @@ def perform_global_rollover():
     next_year = current_year + 1
 
     try:
-        new_year = MainConfig(year=next_year)
+        new_year = MainConfig(year=next_year,
+                              enable_canvas_sync=current_config.enable_canvas_sync,
+                              canvas_url=current_config.canvas_url)
         db.session.add(new_year)
         db.session.commit()
     except SQLAlchemyError as e:

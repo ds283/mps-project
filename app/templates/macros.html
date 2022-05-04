@@ -391,7 +391,7 @@
 {% macro submission_period_configure_button(period, config, small=false, dropup=false, margin=true, disable=false) %}
     <div class="btn-group {%- if dropup %} dropup{% endif -%}{%- if margin %} me-2{% endif %}" role="group">
         <a role="button" class="btn {% if small %}btn-sm{% endif %} {% if disabled %}disabled {% endif %} btn-outline-secondary"
-           {% if not disabled %}href="{{ url_for('convenor.edit_submission_period_record_settings', pid=period.id) }}"{% endif %}>Period settings...
+           {% if not disabled %}href="{{ url_for('convenor.edit_submission_period_record_settings', pid=period.id) }}"{% endif %}>Configure period...
         </a>
         <button type="button" class="btn {% if small %}btn-sm{% endif %} btn-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="sr-only">Toggle Dropdown</span>

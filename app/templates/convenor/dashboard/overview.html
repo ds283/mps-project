@@ -72,18 +72,18 @@
         <div class="col-1"></div>
         <div class="col-10">
             <div class="card mt-3 mb-3 card-body border-dark bg-well">
-                <div class="d-flex flex-row justify-content-start align-content-start mb-4">
-                    <div class="dashboard-project-title me-2">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</div>
-                    <a class="mt-1 btn btn-sm btn-outline-secondary align-self-start" href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Project settings...</a>
+                <div class="d-flex flex-row justify-content-start align-items-start mb-4">
+                    <div class="dashboard-project-title align-self-start me-2">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</div>
+                    <a class="mt-1 btn btn-sm btn-outline-secondary align-self-start mt-2" href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure this cycle...</a>
                 </div>
                 <ul class="list-group border-0 mb-3">
                     <li class="list-group-item list-group-item-primary">
                         {% call icon_block("coins") %}
                             <p><strong>CATS allocations</strong></p>
                             <p>
-                                Supervision <span class="badge bg-secondary rounded-pill">{{ config.CATS_supervision }} CATS</span> {%- if config.CATS_supervision != pclass.CATS_supervision -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%},
-                                Marking <span class="badge bg-secondary rounded-pill">{{ config.CATS_marking }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%},
-                                Presentation <span class="badge bg-secondary rounded-pill">{{ config.CATS_presentation }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%}
+                                <span class="me-2">Supervision <span class="badge bg-secondary rounded-pill">{{ config.CATS_supervision }} CATS</span> {%- if config.CATS_supervision != pclass.CATS_supervision -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%}</span>
+                                <span class="me-2">Marking <span class="badge bg-secondary rounded-pill">{{ config.CATS_marking }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%}</span>
+                                <span class="me-2">Presentation <span class="badge bg-secondary rounded-pill">{{ config.CATS_presentation }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%}</span>
                             </p>
                         {% endcall %}
                     </li>
@@ -138,15 +138,15 @@
                 <ul class="list-group border-0">
                     {% for p in config.periods %}
                         <li class="list-group-item list-group-item-secondary">
-                            <div class="d-flex flex-row justify-content-start align-content-start mb-2">
-                                <div class="dashboard-period-title me-2">{{ p.display_name|safe }}</div>
-                                <div class="align-self-start">
-                                    {{ submission_period_configure_button(p, config, small=true, margin=false, disable=p.is_feedback_open) }}
+                            <div class="d-flex flex-row justify-content-start align-items-start mb-2">
+                                <div class="dashboard-period-title align-self-start me-2">{{ p.display_name|safe }}</div>
+                                <div class="align-self-center">
+                                    {{ submission_period_configure_button(p, config, small=true, margin=false, disable=p.is_feedback_open or p.closed) }}
                                 </div>
                                 {% if p.submission_period <= config.submission_period %}
                                     {% set validation_messages = p.validate %}
                                     {% if validation_messages is not none and validation_messages|length > 0 %}
-                                        <div class="col ms-4 align-self-start">
+                                        <div class="col ms-4 align-self-center">
                                             <div class="large-warning-triangle"><i class="fas fa-exclamation-triangle" style="color:red;"></i></div>
                                             <a class="text-decoration-none" href="#submitter_card_{{ loop.index }}">Validation errors....</a>
                                         </div>

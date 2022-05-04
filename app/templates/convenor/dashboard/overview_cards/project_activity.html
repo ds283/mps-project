@@ -9,6 +9,18 @@
                 <div><strong>This period will begin on {{ period.start_date.strftime("%a %d %b %Y") }}.</strong></div>
             {% endcall %}
         </div>
+    {% elif period.hand_in_date and period.hand_in_date == today %}
+        <div class="alert alert-secondary mt-1 mb-3">
+            {% call icon_block("info-circle") %}
+                <div><strong>The hand-in date for this period is today.</strong></div>
+            {% endcall %}
+        </div>
+    {% elif period.hand_in_date and period.hand_in_date < today %}
+        <div class="alert alert-secondary mt-1 mb-3">
+            {% call icon_block("info-circle") %}
+                <div><strong>The hand-in date for this period was {{ period.hand_in_date.strftime("%a %d %b %Y") }}.</strong></div>
+            {% endcall %}
+        </div>
     {% else %}
         <div class="alert alert-secondary mt-1 mb-3">
             {% call icon_block("info-circle") %}
@@ -19,6 +31,7 @@
 {% endmacro %}
 
 {% macro project_activity_form(config, period, feedback_form) %}
+    <div class="period-subtitle">Open for feedback</div>
     <form action="{{ url_for('convenor.open_feedback', id=config.id) }}" method="POST" name="feedback-form">
         {{ feedback_form.hidden_tag() }}
         {{ date_field(feedback_form.feedback_deadline, 'deadline_datetimepicker') }}

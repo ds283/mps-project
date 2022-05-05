@@ -329,21 +329,31 @@ _menu = \
 # language=jinja2
 _name = \
 """
-{% set pclass = sub.config.project_class %}
+{% set config = sub.config %}
+{% set pclass = config.project_class %}
+{% set student = sub.student %}
+{% set user = student.user %}
 <div>
     {% if show_name %}
-        <a class="text-decoration-none" href="mailto:{{ sub.student.user.email }}">{{ sub.student.user.name }}</a>
+        {% if config.canvas_enabled %}
+            {% if student.canvas_user_id is not none %}
+                <i class="fa fa-circle me-1" style="color: green;"></i>
+            {% elif student.canvas_missing %}
+                <i class="fa fa-circle me-1" style="color: red;"></i>
+            {% endif %}
+        {% endif %}
+        <a class="text-decoration-none" href="mailto:{{ user.email }}">{{ user.name }}</a>
     {% endif %}
     {% if show_number %}
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
-            <a href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="badge bg-secondary text-decoration-none">
-                #{{ sub.student.exam_number }}
+            <a href="{{ url_for('manage_users.edit_student', id=student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="badge bg-secondary text-decoration-none">
+                #{{ student.exam_number }}
             </a>
         {% else %}
-            <span class="badge bg-secondary">#{{ sub.student.exam_number }}</span>
+            <span class="badge bg-secondary">#{{ student.exam_number }}</span>
         {% endif %}
     {% endif %}
-    {% if sub.student.intermitting %}
+    {% if student.intermitting %}
         <span class="badge bg-warning text-dark">TWD</span>
     {% endif %}
     {% set num_tasks = sub.number_available_tasks %}

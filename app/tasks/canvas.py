@@ -17,7 +17,7 @@ from celery.exceptions import Ignore
 
 from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SubmissionPeriodRecord, SubmissionRecord, SubmittingStudent, \
-    CanvasStudent
+    CanvasStudent, StudentData, User
 
 import requests
 from nameparser import HumanName
@@ -143,12 +143,21 @@ def register_canvas_tasks(celery):
                     num_record = len(record)
                     if num_record == 0:
                         # need to add a new record
+
+                        # parse name to human-readable format with first name/last name
                         hn = HumanName(name)
+
+                        # try to find match in our own user database
+                        found_user = db.session.query(StudentData) \
+                            .join(User, User.id == StudentData.id) \
+                            .filter(User.email == email).first()
+
                         c_add_list.append(CanvasStudent(config_id=config.id,
-                                          email=email,
-                                          canvas_user_id=canvas_user_id,
-                                          first_name=hn.first,
-                                          last_name=hn.last))
+                                                        student_id=found_user.id if found_user is not None else None,
+                                                        email=email,
+                                                        canvas_user_id=canvas_user_id,
+                                                        first_name=hn.first,
+                                                        last_name=hn.last))
                     elif num_record == 1:
                         # remove from list of CanvasStudent entries to delete
                         if record[0].id in canvas_student_delete_list:

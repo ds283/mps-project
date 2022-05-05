@@ -8127,6 +8127,12 @@ class CanvasStudent(db.Model):
                              backref=db.backref('missing_canvas_students', lazy='dynamic',
                                                 cascade='all, delete, delete-orphan'))
 
+    # link to match found in our own (student) user database, or None if no matching user is present
+    student_id = db.Column(db.Integer(), db.ForeignKey('student_data.id'), nullable=True)
+    student = db.relationship('StudentData', foreign_keys=[student_id], uselist=False,
+                              backref=db.backref('missing_canvas_students', lazy='dynamic',
+                                                 cascade='all, delete, delete-orphan'))
+
     # student email
     email = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), nullable=False)
 

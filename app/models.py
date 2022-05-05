@@ -1164,14 +1164,23 @@ class User(db.Model, UserMixin):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer(), primary_key=True)
+
+    # primary email address
     email = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True, unique=True)
 
+    # username
     username = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True, unique=True)
+
+    # password
     password = db.Column(db.String(PASSWORD_HASH_LENGTH, collation='utf8_bin'), nullable=False)
 
+    # first name
     first_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
+
+    # last (family) name
     last_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
 
+    # active flag
     active = db.Column(db.Boolean(), nullable=False)
 
 
@@ -7970,6 +7979,15 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
     published = db.Column(db.Boolean())
 
 
+    # CANVAS INTEGRATION
+
+    # user id of matched canvas submission, or None if we cannot find a match
+    canvas_user_id = db.Column(db.Integer(), default=None, nullable=True)
+
+    # flag a student that is missing in the Canvas database
+    canvas_missing = db.Column(db.Integer(), default=None, nullable=True)
+
+
     @property
     def selector_config(self):
         if self.selector is not None:
@@ -8092,6 +8110,36 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
                 slot.original_talks.remove(rec)
 
 
+class CanvasStudent(db.Model):
+    """
+    Represents a student that is present in the Canvas database, but not present in the submitter list
+    """
+
+    __tablename__ = 'canvas_student'
+
+
+    # unique id for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # link to ProjectClassConfig to which we are associated
+    config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
+    config = db.relationship('ProjectClassConfig', foreign_keys=[config_id], uselist=False,
+                             backref=db.backref('missing_canvas_students', lazy='dynamic',
+                                                cascade='all, delete, delete-orphan'))
+
+    # student email
+    email = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), nullable=False)
+
+    # first name
+    first_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), default=None)
+
+    # last name
+    last_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), default=None)
+
+    # Canvas user id
+    canvas_user_id = db.Column(db.Integer(), nullable=False)
+
+
 class PresentationFeedback(db.Model):
     """
     Collect details of feedback for a student presentation
@@ -8208,6 +8256,13 @@ class SubmissionRecord(db.Model):
     report_exemplar = db.Column(db.Boolean(), default=False)
 
     # attachments incorporated via back-reference under 'attachments' data member
+
+
+    # CANVAS SYNCHRONIZATION
+
+    # is a submission available for this student?
+    # this flag is set (or cleared) by a periodically running Celery task
+    canvas_submission_available = db.Column(db.Boolean(), default=False)
 
 
     # MARKING EMAILS

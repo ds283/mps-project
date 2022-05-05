@@ -568,7 +568,8 @@ class ScheduledTaskMixin():
                        ('app.tasks.email_notifications.send_daily_notifications', 'Send daily email notifications'),
                        ('app.tasks.batch_create.garbage_collection', 'Garbage collection for batch student import'),
                        ('app.tasks.system.process_pings', 'Process pings from front end instances'),
-                       ('app.tasks.sessions.sift_sessions', 'Perform MongoDB session maintenance')]
+                       ('app.tasks.sessions.sift_sessions', 'Perform MongoDB session maintenance'),
+                       ('app.tasks.canvas_tasks.canvas_user_checkin', 'Synchronize Canvas user database with submitter databases')]
 
     task = SelectField('Task', choices=tasks_available)
 

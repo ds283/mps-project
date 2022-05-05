@@ -22,12 +22,34 @@ from ..models import ProjectClass, ProjectClassConfig, SubmissionPeriodRecord, S
 import requests
 from nameparser import HumanName
 
+def _URL_query(session, URL, **kwargs):
+    response = session.get(URL, **kwargs)
+
+    response_list = []
+    finished = False
+
+    while not finished:
+        json = response.json()
+        response_list = response_list + json
+
+        links = response.links
+        if 'next' in links:
+            next_dict = links['next']
+            if 'url' in next_dict:
+                response = session.get(next_dict['url'])
+            else:
+                finished = True
+        else:
+            finished = True
+
+    return response_list
+
 
 def register_canvas_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def canvas_user_checkin(self):
-        self.update_state(state='STARTED', meta='Initiating Canvas pull')
+        self.update_state(state='STARTED', meta='Initiating Canvas synchronization of user data')
 
         tasks = []
 
@@ -40,7 +62,7 @@ def register_canvas_tasks(celery):
                 print('** Checking Canvas integration for project class "{pcl}"'.format(pcl=pcl.name))
 
                 if config is not None and config.canvas_enabled:
-                    print('**   Canvas integration is enabled; scheduling use check-in for this project in the current cycle')
+                    print('**   Canvas integration is enabled; scheduling user check-in for this project in the current cycle')
                     tasks.append(canvas_user_checkin_module.s(config.id))
                 else:
                     print('**   Canvas integration is not enabled for this project class in the current cycle')
@@ -49,7 +71,7 @@ def register_canvas_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        self.update_state(state='STARTED', meta='Spawning Canvas subtasks')
+        self.update_state(state='STARTED', meta='Spawning Canvas subtasks for synchronization of user data')
 
         c_tasks = group(*tasks)
         c_tasks.apply_async()
@@ -57,7 +79,7 @@ def register_canvas_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def canvas_user_checkin_module(self, pid):
-        self.update_state(state='STARTED', meta='Initiating Canvas checkin for student submitters')
+        self.update_state(state='STARTED', meta='Initiating Canvas checkin for synchronization of student submitters')
 
         try:
             config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=pid).first()
@@ -74,32 +96,14 @@ def register_canvas_tasks(celery):
             return
 
         print('** Querying Canvas API for student list on module for {pcl} '
-              '(module id={mid}'.format(pcl=config.name, mid=config.canvas_id))
+              '(module id={mid})'.format(pcl=config.name, mid=config.canvas_id))
 
         # set up requests session; safe to assume config.canvas_login is not zero
         session = requests.Session()
         session.headers.update({'Authorization': 'Bearer {token}'.format(token=config.canvas_login.canvas_API_token)})
 
-        response = session.get(
-            "https://canvas.sussex.ac.uk/api/v1/courses/{course_id}/users".format(course_id=config.canvas_id),
-            params={'enrollment_type': 'student'})
-
-        user_list = []
-        finished = False
-
-        while not finished:
-            json = response.json()
-            user_list = user_list + json
-
-            links = response.links
-            if 'next' in links:
-                next_dict = links['next']
-                if 'url' in next_dict:
-                    response = session.get(next_dict['url'])
-                else:
-                    finished = True
-            else:
-                finished = True
+        API_URL = "https://canvas.sussex.ac.uk/api/v1/courses/{course_id}/users".format(course_id=config.canvas_id)
+        user_list = _URL_query(session, API_URL, params={'enrollment_type': 'student'})
 
         # now loop through recovered students, matching them to SubmittingStudent instances if possible
         print('** [{pcl}]: recovered {n} students from Canvas API'.format(pcl=config.name, n=len(user_list)))
@@ -124,9 +128,12 @@ def register_canvas_tasks(celery):
                 canvas_user_id = user['id']
 
                 # try to find a submitting student with this email address
-                match = list(filter(lambda s: s.student.user.email == email, config.submitting_students))
-
+                match = config.submitting_students \
+                    .join(StudentData, StudentData.id == SubmittingStudent.student_id) \
+                    .join(User, User.id == StudentData.id) \
+                    .filter(User.email == email).all()
                 num = len(match)
+
                 if num > 1:
                     msg = '** [{pcl}]: Found multiple matches for Canvas user with email address "{email}", ' \
                           'name={name}'.format(pcl=config.name, email=email, name=name)
@@ -138,9 +145,9 @@ def register_canvas_tasks(celery):
                           'list'.format(pcl=config.name, name=name))
 
                     # the student isn't in our submitter list; check whether we already have a record of that
-                    record = list(filter(lambda s: s.canvas_user_id == canvas_user_id, config.missing_canvas_students))
-
+                    record = config.missing_canvas_students.filter_by(canvas_user_id=canvas_user_id).all()
                     num_record = len(record)
+
                     if num_record == 0:
                         # need to add a new record
 
@@ -197,6 +204,117 @@ def register_canvas_tasks(celery):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-            msg = 'Could not synchronize submitter list with Canvas for project "{pname}" because of a database error'
+            msg = 'Could not synchronize submitter list with Canvas for project "{pname}" because of a database error'.format(pname=config.name)
             print(msg)
             current_app.logger.error(msg)
+
+        self.update_state(state='FINISHED', meta='Finished successfully')
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def canvas_submission_checkin(self):
+        self.update_state(state='STARTED', meta='Initiating Canvas synchronization of submission availability')
+
+        tasks = []
+
+        try:
+            pclasses = db.session.query(ProjectClass).filter_by(active=True).all()
+
+            for pcl in pclasses:
+                pcl: ProjectClass
+                config: ProjectClassConfig = pcl.most_recent_config
+                print('** Checking Canvas integration for project class "{pcl}"'.format(pcl=pcl.name))
+
+                if config is not None and config.canvas_enabled:
+                    period: SubmissionPeriodRecord = config.current_period
+                    print('** Checking Canvas integration for submission period "{pd}"'.format(pd=period.display_name))
+
+                    if not period.closed and period.canvas_enabled:
+                        print('**   Canvas integration is enabled; scheduling submission check-in for this project in the current cycle')
+                        tasks.append(canvas_submission_checkin_module.s(period.id))
+                    else:
+                        print('**  Canvas integration is not enabled for this submission period')
+                else:
+                    print('**   Canvas integration is not enabled for this project class in the current cycle')
+
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        self.update_state(state='STARTED', meta='Spawning Canvas subtasks for synchronization of submission availability')
+
+        c_tasks = group(*tasks)
+        c_tasks.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def canvas_submission_checkin_module(self, pid):
+        self.update_state(state='STARTED', meta='Initiating Canvas checkin for synchronization of submission availability')
+
+        try:
+            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=pid).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if period is None:
+            self.update_state(state='FAILED', meta='Could not read SubmissionPeriodRecord from database')
+            raise Ignore()
+
+        # if canvas integration is not enabled, assume we can exit
+        if not period.canvas_enabled:
+            return
+
+        config: ProjectClassConfig = period.config
+
+        print('** Querying Canvas API for submission list on module for {pcl} '
+              '(module id={mid}, assigment id={aid})'.format(pcl=config.name, mid=config.canvas_id,
+                                                             aid=period.canvas_id))
+
+        # reset the Canvas submission availability flag
+        for sub in period.submissions:
+            sub: SubmissionRecord
+            sub.canvas_submission_available = False
+
+        # set up requests session; safe to assume config.canvas_login is not zero
+        session = requests.Session()
+        session.headers.update({'Authorization': 'Bearer {token}'.format(token=config.canvas_login.canvas_API_token)})
+
+        API_URL = "https://canvas.sussex.ac.uk/api/v1/courses/{course_id}/assignments/{assign_id}/submissions".format(course_id=config.canvas_id, assign_id=period.canvas_id)
+        submission_list = _URL_query(session, API_URL)
+
+        # now loop through submissions
+        for sub in submission_list:
+            if sub['workflow_state'] == 'submitted':
+                canvas_id = sub['user_id']
+
+                # find a submitting user with this user id
+                student = config.submitting_students.filter_by(canvas_user_id=canvas_id).all()
+                num_student = len(student)
+
+                if num_student == 1:
+                    record = student[0].records.filter_by(period_id=period.id).first()
+                    sd = student[0].student
+
+                    if record is not None:
+                        print('** [{pcl}]: Student "{name}" with email address "{email}" has a Canvas submission available'.format(pcl=config.name, name=sd.user.name, email=sd.user.email))
+                        record.canvas_submission_available = True
+                    else:
+                        print('** [{pcl}]: Submission record for student "{name}" with email address "{name}" is None'.format(pcl=config.name, name=sd.user.name, email=sd.user.email))
+
+                elif num_student > 1:
+                    msg =  '** [{pcl}]: Canvas user with userid {uid} matches multiple (N={n}) submitting student records'.format(pcl=config.name, uid=canvas_id, n=num_student)
+                    print(msg)
+                    current_app.logger.warning(msg)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+            msg = 'Could not synchronize submission availability with Canvas for project "{pname}" because of a database error'.format(pname=config.name)
+            print(msg)
+            current_app.logger.error(msg)
+
+        self.update_state(state='FINISHED', meta='Finished successfully')

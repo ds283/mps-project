@@ -8841,7 +8841,9 @@ class SubmissionRecord(db.Model):
 
         # check access control status for any uploaded attachments; generally these should not be
         # available to students
-        for asset in self.attachments:
+        for attachment in self.attachments:
+            attachment: SubmissionAttachment
+            asset: SubmittedAsset = attachment.attachment
             modified = modified | self._check_access_control_users(asset, allow_student=False)
 
         return modified
@@ -8908,8 +8910,8 @@ class SubmissionRecord(db.Model):
 
 
         for item in self.attachments:
+            item: SubmissionAttachment
             _validate_attachment_access_control(item.attachment)
-
 
         return messages
 

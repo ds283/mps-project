@@ -339,10 +339,12 @@ _name = \
 <div>
     {% if show_name %}
         {% if config.canvas_enabled %}
-            {% if student.canvas_user_id is not none %}
+            {% if sub.canvas_user_id is not none %}
                 <i class="fa fa-circle me-1" style="color: green;"></i>
-            {% elif student.canvas_missing %}
+            {% elif sub.canvas_missing %}
                 <i class="fa fa-circle me-1" style="color: red;"></i>
+            {% else %}
+                <i class="fa fa-unlink me-1"></i> 
             {% endif %}
         {% endif %}
         <a class="text-decoration-none" href="mailto:{{ user.email }}">{{ user.name }}</a>

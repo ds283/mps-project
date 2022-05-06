@@ -335,9 +335,13 @@ def register_canvas_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def pull_report(self, rid, user_id):
+        user = None
+
         try:
             record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=rid).first()
-            user: User = db.session.query(User).filter_by(id=user_id).first()
+
+            if user_id is not None:
+                user: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -351,29 +355,33 @@ def register_canvas_tasks(celery):
         config: ProjectClassConfig = submitter.config
 
         if period.closed:
-            user.post_message('Can not pull report from Canvas for submitter {name} because this '
-                              'submission period has been closed.'.format(name=submitter.student.user.name),
-                              'danger', autocommit=True)
+            if user is not None:
+                user.post_message('Can not pull report from Canvas for submitter {name} because this '
+                                  'submission period has been closed.'.format(name=submitter.student.user.name),
+                                  'danger', autocommit=True)
             raise RuntimeError('Period is closed')
 
         if not period.canvas_enabled:
-            user.post_message('Can not pull report from Canvas for submitter {name} because Canvas '
-                              'integration is not currently enabled for this submission '
-                              'period.'.format(name=submitter.student.user.name),
-                              'danger', autocommit=True)
+            if user is not None:
+                user.post_message('Can not pull report from Canvas for submitter {name} because Canvas '
+                                  'integration is not currently enabled for this submission '
+                                  'period.'.format(name=submitter.student.user.name),
+                                  'danger', autocommit=True)
             raise RuntimeError('Canvas is not enabled')
 
         if record.report is not None:
-            user.post_message('Can not pull report from Canvas for submitter {name} because a report '
-                              'has already been uploaded.'.format(name=submitter.student.user.name),
-                              'warning', autocommit=True)
+            if user is not None:
+                user.post_message('Can not pull report from Canvas for submitter {name} because a report '
+                                  'has already been uploaded.'.format(name=submitter.student.user.name),
+                                  'warning', autocommit=True)
             raise RuntimeError('A report is already uploaded')
 
         if submitter.canvas_user_id is None:
-            user.post_message('Can not pull report from Canvas for submitter {name} because this record '
-                              'has not been synchronized with a Canvas user. Please contact a system '
-                              'administator.'.format(name=submitter.student.user.name),
-                              'danger', autocommit=True)
+            if user is not None:
+                user.post_message('Can not pull report from Canvas for submitter {name} because this record '
+                                  'has not been synchronized with a Canvas user. Please contact a system '
+                                  'administator.'.format(name=submitter.student.user.name),
+                                  'danger', autocommit=True)
             raise RuntimeError('Canvas user id is missing from SubmittingStudent instance')
 
         # set up requests session; safe to assume config.canvas_login is not zero
@@ -385,32 +393,36 @@ def register_canvas_tasks(celery):
         data = response.json()
 
         if data['workflow_state'] == 'unsubmitted':
-            user.post_message('Can not pull report from Canvas for submitter {name}, because the '
-                              'matched Canvas submission is in workflow state "unsubmitted".'.format(name=submitter.student.user.name),
-                              'warning', autocommit=True)
+            if user is not None:
+                user.post_message('Can not pull report from Canvas for submitter {name}, because the '
+                                  'matched Canvas submission is in workflow state "unsubmitted".'.format(name=submitter.student.user.name),
+                                  'warning', autocommit=True)
             raise RuntimeError('Canvas workflow state is "unsubmitted"')
 
         attachments = data['attachments']
 
         if len(attachments) == 0:
-            user.post_message('Can not pull report from Canvas for submitter {name} because no attachments '
-                              'are present in the Canvas record.'.format(name=submitter.student.user.name),
-                              'danger', autocommit=True)
+            if user is not None:
+                user.post_message('Can not pull report from Canvas for submitter {name} because no attachments '
+                                  'are present in the Canvas record.'.format(name=submitter.student.user.name),
+                                  'danger', autocommit=True)
             raise RuntimeError('No attachments present')
 
         elif len(attachments) > 1:
-            user.post_message('More than one attachment is present in the Canvas record for submitter {name}. '
-                              'To avoid attaching the wrong file, please upload the report for this '
-                              'submitter manually.'.format(name=submitter.student.user.name),
-                              'info', autocommit=True)
+            if user is not None:
+                user.post_message('More than one attachment is present in the Canvas record for submitter {name}. '
+                                  'To avoid attaching the wrong file, please upload the report for this '
+                                  'submitter manually.'.format(name=submitter.student.user.name),
+                                  'info', autocommit=True)
             return
 
         attachment = attachments[0]
 
         if 'url' not in attachment:
-            user.post_message('Can not pull report from Canvas for submitter {name} because no URL was present '
-                              'in the Canvas response.'.format(name=submitter.student.user.name),
-                              'danger', autocommit=True)
+            if user is not None:
+                user.post_message('Can not pull report from Canvas for submitter {name} because no URL was present '
+                                  'in the Canvas response.'.format(name=submitter.student.user.name),
+                                  'danger', autocommit=True)
             raise RuntimeError('No attachments present')
 
         print('** [Canvas, {pcl}]: Downloading attachment "{file}" for submitting student {name}'.format(pcl=config.name, file=attachment['id'], name=submitter.student.user.name))
@@ -444,6 +456,35 @@ def register_canvas_tasks(celery):
                                mimetype=attachment['content-type'],
                                license=default_report_license)
 
+        similarity_score = None
+        web_overlap = None
+        publication_overlap = None
+        student_overlap = None
+        turnitin_outcome = None
+
+        if 'turnitin_data' in data:
+            turnitin_attachments = data['turnitin_data']
+
+            if len(turnitin_attachments) >= 1:
+                key = next(iter(turnitin_attachments))
+                turnitin_data = turnitin_attachments[key]
+
+                if turnitin_data['status'] == 'scored':
+                    if 'similarity_score' in turnitin_data:
+                        similarity_score = turnitin_data['similarity_score']
+
+                    if 'web_overlap' in turnitin_data:
+                        web_overlap = turnitin_data['web_overlap']
+
+                    if 'publication_overlap' in turnitin_data:
+                        publication_overlap = turnitin_data['publication_overlap']
+
+                    if 'student_overlap' in turnitin_data:
+                        student_overlap = turnitin_data['student_overlap']
+
+                    if 'state' in turnitin_data:
+                        turnitin_outcome = turnitin_data['state']
+
         try:
             db.session.add(asset)
             db.session.commit()
@@ -453,28 +494,40 @@ def register_canvas_tasks(celery):
             abs_path.unlink()
             raise Ignore()
 
-        return asset.id
+        return {'asset_id': asset.id,
+                'turnitin_outcome': turnitin_outcome,
+                'similarity_score': similarity_score,
+                'web_overlap': web_overlap,
+                'publication_overlap': publication_overlap,
+                'student_overlap': student_overlap}
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def pull_report_finalize(self, asset_id, rid, user_id):
+    def pull_report_finalize(self, data, rid, user_id) -> bool:
+        asset_id = data['asset_id']
         if asset_id is None:
-            return
+            return False
+
+        turnitin_outcome = data['turnitin_outcome']
+        similarity_score = data['similarity_score']
+        web_overlap = data['web_overlap']
+        publication_overlap = data['publication_overlap']
+        student_overlap = data['student_overlap']
+
+        user = None
 
         try:
             record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=rid).first()
-            user: User = db.session.query(User).filter_by(id=user_id).first()
             asset: SubmittedAsset = db.session.query(SubmittedAsset).filter_by(id=asset_id).first()
+
+            if user_id is not None:
+                user: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
             self.update_state(state='FAILURE', meta='Could not load SubmissionRecord instance from database')
-            raise Ignore()
-
-        if user is None:
-            self.update_state(state='FAILURE', meta='Could not load User model from database')
             raise Ignore()
 
         if asset is None:
@@ -484,7 +537,8 @@ def register_canvas_tasks(celery):
         record.report_id = asset.id
 
         # uploading user has access
-        asset.grant_user(user_id)
+        if user_id is not None:
+            asset.grant_user(user_id)
 
         # project supervisor has access
         if record.project is not None and record.project.owner is not None:
@@ -512,6 +566,12 @@ def register_canvas_tasks(celery):
         record.timestamp = None
         record.report_exemplar = False
 
+        record.turnitin_outcome = turnitin_outcome
+        record.turnitin_score = similarity_score
+        record.turnitin_web_overlap = web_overlap
+        record.turnitin_publication_overlap = publication_overlap
+        record.turnitin_student_overlap = student_overlap
+
         try:
             db.session.commit()
         except SQLAlchemyError as e:
@@ -527,8 +587,11 @@ def register_canvas_tasks(celery):
                      finalize.si(record.id)).on_error(error.si(record.id, user_id))
         work.apply_async()
 
-        user.post_message('Successfully pulled report from Canvas for submitter '
-                          '{name}'.format(name=record.owner.student.user.name), 'success', autocommit=True)
+        if user is not None:
+            user.post_message('Successfully pulled report from Canvas for submitter '
+                              '{name}'.format(name=record.owner.student.user.name), 'success', autocommit=True)
+
+        return True
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -552,3 +615,32 @@ def register_canvas_tasks(celery):
                           'Canvas'.format(name=record.owner.student.user.name), 'danger', autocommit=True)
 
         raise RuntimeError('Errors occurred when pulling report from Canvas')
+
+
+    @celery.task(bind=True, defauly_retry_delay=30)
+    def pull_all_reports_summary(self, data, user_id):
+        try:
+            user: User = db.session.query(User).filter_by(id=user_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        success = sum(1 if x is True else 0 for x in data)
+        fail = len(data) - success
+
+        if user is None:
+            self.update_state(state='FAILURE', meta='Could not load User model from database')
+            raise Ignore()
+
+        tag = 'success' if fail == 0 else 'danger'
+
+        msg = ''
+        if success > 0:
+            msg = msg + 'Successfully pulled {n} reports from Canvas.'.format(n=success)
+
+        if fail > 0:
+            if len(msg) > 0:
+                msg = msg + ' '
+            msg = msg + 'Some reports could not be pulled automatically, and may require manual intervention.'
+
+        user.post_message(msg, tag, autocommit=True)

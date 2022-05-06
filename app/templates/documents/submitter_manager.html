@@ -249,7 +249,7 @@
                         <tbody>
                             {{ asset_line(asset, none, label='Uploaded report',
                                           download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
-                                          delete_url=url_for('documents.delete_submitter_report', sid=record.id),
+                                          delete_url=url_for('documents.delete_submitter_report', sid=record.id, url=url, text=text),
                                           edit_url=url_for('documents.edit_submitter_report', sid=record.id, url=url, text=text),
                                           acl_url=url_for('documents.attachment_acl', attach_type=2, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                           log_url=url_for('documents.attachment_download_log', attach_type=2, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),

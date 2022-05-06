@@ -33,23 +33,30 @@ def validate_is_administrator(message=True):
     return True
 
 
-def validate_is_convenor(pclass, message=True):
+def validate_is_convenor(pclass, message=True, allow_roles=None):
     """
     Validate that the logged-in user is privileged to view a convenor dashboard or use other convenor functions
     :param pclass: Project class model instance
     :return: True/False
     """
+    # any user with an admin role is OK
+    if current_user.has_role('admin') or current_user.has_role('root'):
+        return True
 
-    # if logged in user is convenor for this class, or is an admin user, then all is OK
-    if not pclass.is_convenor(current_user.id) \
-            and not current_user.has_role('admin') \
-            and not current_user.has_role('root'):
+    # convenor for this pclass is ok
+    if pclass.is_convenor(current_user.id):
+        return True
 
-        if message:
-            flash('Convenor actions are available only to project convenors and administrative users.', 'error')
-        return False
+    # if the current user has any of the specified roles, that is ok
+    if allow_roles is not None:
+        for role in allow_roles:
+            if current_user.has_role(role):
+                return True
 
-    return True
+    if message:
+        flash('Convenor actions are available only to project convenors and administrative users.', 'error')
+
+    return False
 
 
 def validate_is_admin_or_convenor(*roles):

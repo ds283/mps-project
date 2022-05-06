@@ -8284,6 +8284,24 @@ class SubmissionRecord(db.Model):
     canvas_submission_available = db.Column(db.Boolean(), default=False)
 
 
+    # TURNITIN SYNCHRONIZATION
+
+    # outcome reported by Turnitin
+    turnitin_outcome = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), default=None, nullable=True)
+
+    # final similarity score reported by Turnitin
+    turnitin_score = db.Column(db.Integer(), default=None, nullable=True)
+
+    # web overlap score reported by Turnitin
+    turnitin_web_overlap = db.Column(db.Integer(), default=None, nullable=True)
+
+    # publication overlap score reported by Turnitin
+    turnitin_publication_overlap = db.Column(db.Integer(), default=None, nullable=True)
+
+    # student overlap score reportd by Turnitin
+    turnitin_student_overlap = db.Column(db.Integer(), default=None, nullable=True)
+
+
     # MARKING EMAILS
 
     # marking email sent to supervisor?

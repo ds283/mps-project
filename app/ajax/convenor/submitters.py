@@ -268,6 +268,8 @@ _menu = \
 """
 {% set config = sub.config %}
 {% set pclass = config.project_class %}
+{% set period = config.current_period %}
+{% set record = sub.get_assignment() %}
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -308,6 +310,11 @@ _menu = \
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('documents.submitter_documents', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
             <i class="fas fa-file fa-fw"></i> Manage documents...
         </a>
+        {% if period.canvas_enabled and not period.closed and record.canvas_submission_available is true %}
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('documents.pull_report_from_canvas', rid=record.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
+                <i class="fas fa-download fa-fw"></i> Pull report
+            </a>
+        {% endif %}
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.view_feedback', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
             <i class="fas fa-comments fa-fw"></i> View feedback...
         </a>

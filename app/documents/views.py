@@ -12,10 +12,10 @@ from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
 
-from celery import chain
+from celery import chain, group, chord
 from flask import render_template, redirect, url_for, flash, request, current_app, jsonify, abort, session
-from flask_security import login_required, current_user
-from sqlalchemy import or_
+from flask_security import login_required, roles_accepted, current_user
+from sqlalchemy import or_, and_
 from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
@@ -29,7 +29,7 @@ from ..models import SubmissionRecord, SubmittedAsset, GeneratedAsset, Submissio
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.utils import redirect_url
-from ..shared.validators import validate_is_convenor
+from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor
 from ..uploads import submitted_files
 
 ATTACHMENT_TYPE_PERIOD = 0
@@ -213,6 +213,12 @@ def perform_delete_submitter_report(sid):
         record.celery_finished = None
         record.timestamp = None
 
+        record.turnitin_outcome = None
+        record.turnitin_score = None
+        record.turnitin_web_overlap = None
+        record.turnitin_publication_overlap = None
+        record.turnitin_student_overlap = None
+
         # remove exemplar flag
         record.report_exemplar = None
 
@@ -371,6 +377,39 @@ def pull_report_from_canvas(rid):
 
     if url:
         return redirect(url)
+
+    return redirect(redirect_url())
+
+
+@documents.route('/pull_all_reports_from_canvas/<int:pid>')
+@roles_accepted('root', 'admin', 'faculty', 'office')
+def pull_all_reports_from_canvas(pid):
+    # pid is a SubmissionPeriodRecord id
+    period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+
+    config: ProjectClassConfig = period.config
+    pclass: ProjectClass = config.project_class
+
+    if not validate_is_convenor(pclass, allow_roles=['office']):
+        return redirect(redirect_url())
+
+    # set up asynchronous task to pull this report
+    celery = current_app.extensions['celery']
+
+    process = celery.tasks['app.tasks.canvas.pull_report']
+    finalize = celery.tasks['app.tasks.canvas.pull_report_finalize']
+    error = celery.tasks['app.tasks.canvas.pull_report_error']
+    summary = celery.tasks['app.tasks.canvas.pull_all_reports_summary']
+
+    available = period.submissions.join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
+            .filter(and_(SubmissionRecord.report_id == None,
+                         SubmissionRecord.canvas_submission_available == True,
+                         SubmittingStudent.canvas_user_id != None)).all()
+
+    work = chord([chain(process.s(record.id, None),
+                        finalize.s(record.id, None).on_error(error.si(record.id, current_user.id))) for record in available],
+                 summary.s(current_user.id))
+    work.apply_async()
 
     return redirect(redirect_url())
 

@@ -11,6 +11,7 @@
     {% if period.canvas_enabled and period.number_submitters_canvas_report_available > 0 %}
         <div class="mt-1">
             {{ period.number_submitters_canvas_report_available }} submitters have a report that can be pulled from Canvas.
+            <a class="link-success text-decoration-none" href="{{ url_for('documents.pull_all_reports_from_canvas', pid=period.id) }}">Pull all reports...</a>
         </div>
     {% endif %}
 {% endmacro %}

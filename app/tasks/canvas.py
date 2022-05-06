@@ -189,6 +189,14 @@ def register_canvas_tasks(celery):
                     sub.canvas_missing = False
                     sub.canvas_user_id = canvas_user_id
 
+                    # sync candidate name if possible
+                    if 'sortable_name' in user:
+                        sortable_name = user['sortable_name']
+                        exam_number_prefix = 'Candidate No :  '
+                        if sortable_name.startswith(exam_number_prefix):
+                            exam_number = sortable_name.removeprefix(exam_number_prefix)
+                            sub.student.exam_number = int(exam_number)
+
                 else:
                     msg = '** [{pcl}]Unexpected number of matches for Canvas user with email address "{email}", ' \
                           'name={name}'.format(pcl=config.name, email=email, name=name)

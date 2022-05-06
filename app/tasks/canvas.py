@@ -7,20 +7,25 @@
 #
 # Contributors: ds283$ <$>
 #
+from datetime import datetime, timedelta
+from pathlib import Path
 
 from flask import current_app, flash
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from celery import group
+from celery import group, chain
 from celery.exceptions import Ignore
 
 from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SubmissionPeriodRecord, SubmissionRecord, SubmittingStudent, \
-    CanvasStudent, StudentData, User
+    CanvasStudent, StudentData, User, SubmittedAsset, AssetLicense
+from ..shared.asset_tools import make_submitted_asset_filename
 
 import requests
 from nameparser import HumanName
+from dateutil.parser import parse
+
 
 def _URL_query(session, URL, **kwargs):
     response = session.get(URL, **kwargs)
@@ -285,7 +290,7 @@ def register_canvas_tasks(celery):
 
         # now loop through submissions
         for sub in submission_list:
-            if sub['workflow_state'] == 'submitted':
+            if sub['workflow_state'] != 'unsubmitted':
                 canvas_id = sub['user_id']
 
                 # find a submitting user with this user id
@@ -318,3 +323,224 @@ def register_canvas_tasks(celery):
             current_app.logger.error(msg)
 
         self.update_state(state='FINISHED', meta='Finished successfully')
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def pull_report(self, rid, user_id):
+        try:
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=rid).first()
+            user: User = db.session.query(User).filter_by(id=user_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load SubmissionRecord instance from database')
+            raise Ignore()
+
+        period: SubmissionPeriodRecord = record.period
+        submitter: SubmittingStudent = record.owner
+        config: ProjectClassConfig = submitter.config
+
+        if period.closed:
+            user.post_message('Can not pull report from Canvas for submitter {name} because this '
+                              'submission period has been closed.'.format(name=submitter.student.user.name),
+                              'danger', autocommit=True)
+            raise RuntimeError('Period is closed')
+
+        if not period.canvas_enabled:
+            user.post_message('Can not pull report from Canvas for submitter {name} because Canvas '
+                              'integration is not currently enabled for this submission '
+                              'period.'.format(name=submitter.student.user.name),
+                              'danger', autocommit=True)
+            raise RuntimeError('Canvas is not enabled')
+
+        if record.report is not None:
+            user.post_message('Can not pull report from Canvas for submitter {name} because a report '
+                              'has already been uploaded.'.format(name=submitter.student.user.name),
+                              'warning', autocommit=True)
+            raise RuntimeError('A report is already uploaded')
+
+        if submitter.canvas_user_id is None:
+            user.post_message('Can not pull report from Canvas for submitter {name} because this record '
+                              'has not been synchronized with a Canvas user. Please contact a system '
+                              'administator.'.format(name=submitter.student.user.name),
+                              'danger', autocommit=True)
+            raise RuntimeError('Canvas user id is missing from SubmittingStudent instance')
+
+        # set up requests session; safe to assume config.canvas_login is not zero
+        session = requests.Session()
+        session.headers.update({'Authorization': 'Bearer {token}'.format(token=config.canvas_login.canvas_API_token)})
+
+        API_URL = "https://canvas.sussex.ac.uk/api/v1/courses/{course_id}/assignments/{assign_id}/submissions/{user_id}".format(course_id=config.canvas_id, assign_id=period.canvas_id, user_id=submitter.canvas_user_id)
+        response = session.get(API_URL)
+        data = response.json()
+
+        if data['workflow_state'] == 'unsubmitted':
+            user.post_message('Can not pull report from Canvas for submitter {name}, because the '
+                              'matched Canvas submission is in workflow state "unsubmitted".'.format(name=submitter.student.user.name),
+                              'warning', autocommit=True)
+            raise RuntimeError('Canvas workflow state is "unsubmitted"')
+
+        attachments = data['attachments']
+
+        if len(attachments) == 0:
+            user.post_message('Can not pull report from Canvas for submitter {name} because no attachments '
+                              'are present in the Canvas record.'.format(name=submitter.student.user.name),
+                              'danger', autocommit=True)
+            raise RuntimeError('No attachments present')
+
+        elif len(attachments) > 1:
+            user.post_message('More than one attachment is present in the Canvas record for submitter {name}. '
+                              'To avoid attaching the wrong file, please upload the report for this '
+                              'submitter manually.'.format(name=submitter.student.user.name),
+                              'info', autocommit=True)
+            return
+
+        attachment = attachments[0]
+
+        if 'url' not in attachment:
+            user.post_message('Can not pull report from Canvas for submitter {name} because no URL was present '
+                              'in the Canvas response.'.format(name=submitter.student.user.name),
+                              'danger', autocommit=True)
+            raise RuntimeError('No attachments present')
+
+        print('** [Canvas, {pcl}]: Downloading attachment "{file}" for submitting student {name}'.format(pcl=config.name, file=attachment['id'], name=submitter.student.user.name))
+
+        incoming_filename = Path(attachment['filename'])
+        extension = incoming_filename.suffix.lower()
+
+        root_subfolder = current_app.config.get('ASSETS_REPORTS_SUBFOLDER') or 'reports'
+
+        year_string = str(config.year)
+        pclass_string = config.project_class.abbreviation
+
+        subfolder = Path(root_subfolder) / Path(pclass_string) / Path(year_string)
+
+        filename, abs_path = make_submitted_asset_filename(ext=extension, subpath=subfolder)
+
+        get_pdf_report = session.get(attachment['url'])
+        pdf = open(abs_path, 'wb')
+        pdf.write(get_pdf_report.content)
+        pdf.close()
+
+        default_report_license = db.session.query(AssetLicense).filter_by(abbreviation='Exam').first()
+        if default_report_license is None:
+            default_report_license = submitter.student.user.default_license
+
+        asset = SubmittedAsset(timestamp=datetime.now(),
+                               uploaded_id=user_id,
+                               expiry=None,
+                               filename=str(subfolder / filename),
+                               target_name=attachment['filename'],
+                               mimetype=attachment['content-type'],
+                               license=default_report_license)
+
+        try:
+            db.session.add(asset)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            abs_path.unlink()
+            raise Ignore()
+
+        return asset.id
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def pull_report_finalize(self, asset_id, rid, user_id):
+        if asset_id is None:
+            return
+
+        try:
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=rid).first()
+            user: User = db.session.query(User).filter_by(id=user_id).first()
+            asset: SubmittedAsset = db.session.query(SubmittedAsset).filter_by(id=asset_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load SubmissionRecord instance from database')
+            raise Ignore()
+
+        if user is None:
+            self.update_state(state='FAILURE', meta='Could not load User model from database')
+            raise Ignore()
+
+        if asset is None:
+            self.update_state(state='FAILURE', meta='Could not load SubmittedAsset model from database')
+
+        # attach this asset as the uploaded report
+        record.report_id = asset.id
+
+        # uploading user has access
+        asset.grant_user(user_id)
+
+        # project supervisor has access
+        if record.project is not None and record.project.owner is not None:
+            asset.grant_user(record.project.owner.user)
+
+        # project examiner has access
+        if record.marker is not None:
+            asset.grant_user(record.marker.user)
+
+        # student can download their own report
+        if record.owner is not None and record.owner.student is not None:
+            asset.grant_user(record.owner.student.user)
+
+        # set up list of roles that should have access, if they exist
+        asset.grant_roles(['office', 'convenor', 'moderator', 'exam_board', 'external_examiner'])
+
+        # remove processed report, if that has not already been done
+        if record.processed_report is not None:
+            expiry_date = datetime.now() + timedelta(days=30)
+            record.processed_report.expiry = expiry_date
+            record.processed_report_id = None
+
+        record.celery_started = True
+        record.celery_finished = None
+        record.timestamp = None
+        record.report_exemplar = False
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise Ignore()
+
+        process = celery.tasks['app.tasks.process_report.process']
+        finalize = celery.tasks['app.tasks.process_report.finalize']
+        error = celery.tasks['app.tasks.process_report.error']
+
+        work = chain(process.si(record.id),
+                     finalize.si(record.id)).on_error(error.si(record.id, user_id))
+        work.apply_async()
+
+        user.post_message('Successfully pulled report from Canvas for submitter '
+                          '{name}'.format(name=record.owner.student.user.name), 'success', autocommit=True)
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def pull_report_error(self, rid, user_id):
+        try:
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=rid).first()
+            user: User = db.session.query(User).filter_by(id=user_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load SubmissionRecord instance from database')
+            raise Ignore()
+
+        if user is None:
+            self.update_state(state='FAILURE', meta='Could not load User model from database')
+            raise Ignore()
+
+        user.post_message('An error occurred when pulling the report for submitter {name} from '
+                          'Canvas'.format(name=record.owner.student.user.name), 'danger', autocommit=True)
+
+        raise RuntimeError('Errors occurred when pulling report from Canvas')

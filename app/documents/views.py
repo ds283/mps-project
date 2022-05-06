@@ -275,14 +275,6 @@ def upload_submitter_report(sid):
                                    mimetype=str(report_file.content_type),
                                    license=form.license.data)
 
-            try:
-                db.session.add(asset)
-                db.session.flush()
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                flash('Could not upload report due to a database issue. Please contact an administrator.', 'error')
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                return redirect(url_for('documents.submitter_documents', sid=record.sid))
 
             # attach this asset as the uploaded report
             record.report_id = asset.id
@@ -311,17 +303,6 @@ def upload_submitter_report(sid):
                 record.processed_report.expiry = expiry_date
                 record.processed_report_id = None
 
-            # set up asynchronous task to process this report
-            celery = current_app.extensions['celery']
-
-            process = celery.tasks['app.tasks.process_report.process']
-            finalize = celery.tasks['app.tasks.process_report.finalize']
-            error = celery.tasks['app.tasks.process_report.error']
-
-            work = chain(process.si(record.id),
-                         finalize.si(record.id)).on_error(error.si(record.id, current_user.id))
-            work.apply_async()
-
             record.celery_started = True
             record.celery_finished = None
             record.timestamp = None
@@ -336,6 +317,17 @@ def upload_submitter_report(sid):
             else:
                 flash('Report "{file}" was successfully uploaded.'.format(file=incoming_filename), 'info')
 
+            # set up asynchronous task to process this report
+            celery = current_app.extensions['celery']
+
+            process = celery.tasks['app.tasks.process_report.process']
+            finalize = celery.tasks['app.tasks.process_report.finalize']
+            error = celery.tasks['app.tasks.process_report.error']
+
+            work = chain(process.si(record.id),
+                         finalize.si(record.id)).on_error(error.si(record.id, current_user.id))
+            work.apply_async()
+
             return redirect(url_for('documents.submitter_documents', sid=sid, url=url, text=text))
 
     else:
@@ -348,6 +340,39 @@ def upload_submitter_report(sid):
             form.license.data = default_report_license
 
     return render_template('documents/upload_report.html', record=record, form=form, url=url, text=text)
+
+
+@documents.route('/pull_report_from_canvas/<int:rid>')
+@login_required
+def pull_report_from_canvas(rid):
+    # rid is a SubmissionRecord id
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(rid)
+
+    if record.report is not None:
+        flash('Can not upload a report for this submitter because an existing report is already attached.', 'info')
+        return redirect(redirect_url())
+
+    # check is convenor for the project's class, or has suitable admin/root privileges
+    if not is_uploadable(record, message=True, allow_student=False, allow_faculty=False):
+        return redirect(redirect_url())
+
+    url = request.args.get('url', None)
+
+    # set up asynchronous task to pull this report
+    celery = current_app.extensions['celery']
+
+    process = celery.tasks['app.tasks.canvas.pull_report']
+    finalize = celery.tasks['app.tasks.canvas.pull_report_finalize']
+    error = celery.tasks['app.tasks.canvas.pull_report_error']
+
+    work = chain(process.s(record.id, current_user.id),
+                 finalize.s(record.id, current_user.id)).on_error(error.si(record.id, current_user.id))
+    work.apply_async()
+
+    if url:
+        return redirect(url)
+
+    return redirect(redirect_url())
 
 
 @documents.route('/edit_submitter_report/<int:sid>', methods=['GET', 'POST'])

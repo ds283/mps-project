@@ -287,11 +287,17 @@
                     <div class="mt-1 mb-1">
                         {% call icon_block("info-circle") %}
                             <div><strong>No report has been uploaded for this submission.</strong></div>
+                            {% if report_uploadable and record.period.canvas_enabled and record.canvas_submission_available %}
+                                <div class="mt-1">
+                                    A matching submission has been made to the Canvas assignment for this submission period.
+                                    <a href="{{ url_for('documents.pull_report_from_canvas', rid=record.id, url=url) }}" class="link-success text-decoration-none">Pull report from Canvas...</a>
+                                </div>
+                            {% endif %}
                         {% endcall %}
                     </div>
                     {% if report_uploadable %}
-                        <hr class="into-divider">
-                        <div style="text-align: center;">
+                        <hr class="intro-divider">
+                        <div class="d-flex flex-row justify-content-center">
                             <a href="{{ url_for('documents.upload_submitter_report', sid=record.id, url=url, text=text) }}" class="btn btn-secondary btn-lg">
                                 <i class="fas fa-plus"></i>
                                 Upload report

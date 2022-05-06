@@ -37,12 +37,14 @@ _projects = \
         <span class="badge bg-danger">{{ label }} late</span>
     {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
     {% else %}
-        <span class="badge bg-danger">{{ label }} error &ndash; unknown state</span>
+        <span class="badge bg-danger">{{ label }} unknown state</span>
     {% endif %}        
 {% endmacro %}
 {% macro project_tag(r, show_period) %}
-    {% set pclass = r.owner.config.project_class %}
+    {% set config = r.owner.config %}
+    {% set pclass = config.project_class %}
     {% set style = pclass.make_CSS_style() %}
+    {% set period = r.period %}
     <div>
         {% if r.project is not none %}
             <div class="dropdown assignment-label">
@@ -57,7 +59,7 @@ _projects = \
                     {% endif %}
                     ({{ r.supervisor.user.last_name }})</a>
                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                    {% set disabled = r.period.is_feedback_open or r.student_engaged %}
+                    {% set disabled = period.is_feedback_open or r.student_engaged %}
                     {% if disabled %}
                         <a class="dropdown-item d-flex gap-2 disabled">Can't reassign: Feedback open or student engaged</a>
                     {% else %}
@@ -72,14 +74,14 @@ _projects = \
                         href="" role="button" aria-haspopup="true" aria-expanded="false"
                         data-bs-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}</a>
                     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                        {% if r.submission_period > r.owner.config.submission_period %}
+                        {% if r.submission_period > config.submission_period %}
                             <a class="dropdown-item d-flex gap-2 disabled">Submission period not yet open</a>
                         {% elif not r.student_engaged %}
                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_started', id=r.id) }}">
                                 <i class="fas fa-check fa-fw"></i> Mark as started
                             </a>
                         {% else %}
-                            {% set disabled = (r.owner.config.submitter_lifecycle >= r.owner.config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
+                            {% set disabled = (config.submitter_lifecycle >= config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
                             <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
                                 <i class="fas fa-times fa-fw"></i> Mark as waiting
                             </a>
@@ -88,6 +90,8 @@ _projects = \
                 </div>
                 {% if r.report is not none %}
                     <span class="badge bg-success"><i class="fas fa-check"></i> Report</span>
+                {% elif period.canvas_enabled and not period.closed and r.canvas_submission_available is true %}
+                    <a class="link-success text-decoration-none" href="{{ url_for('documents.pull_report_from_canvas', rid=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}">Pull report from Canvas...</a>
                 {% endif %}
                 {% set number_attachments = r.number_record_attachments %}
                 {% if number_attachments > 0 %}
@@ -97,23 +101,20 @@ _projects = \
         {% else %}
             <a class="badge text-decoration-none bg-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">No project allocated</a>
         {% endif %}
-    </div>
-{% endmacro %}
-{% macro tag(r, show_period) %}
-    <div>
-        {{ project_tag(r, show_period) }}
         {{ feedback_state_tag(r, r.supervisor_feedback_state, 'Feedback') }}
         {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
     </div>
 {% endmacro %}
 {% if config.uses_supervisor %}
     {% set recs = sub.ordered_assignments.all() %}
-    {% if recs|length == 1 %}
+    {% set recs_length = recs|length %}
+    {% if recs_length == 1 %}
         {{ tag(recs[0], false) }}
-    {% elif recs|length > 1 %}
+    {% elif recs_length > 1 %}
         {% for rec in recs %}
-            {% if loop.index > 1 %}<p></p>{% endif %}
-            {{ tag(rec, true) }}
+            <div {% if loop.index < recs_length %}class="mb-2"{% endif %}>
+                {{ project_tag(rec, true) }}
+            </div>
         {% endfor %}
     {% else %}
         <span class="badge bg-danger">None</span>
@@ -170,12 +171,14 @@ _markers = \
 {% endmacro %}
 {% if config.uses_marker %}
     {% set recs = sub.ordered_assignments.all() %}
-    {% if recs|length == 1 %}
+    {% set recs_length = recs|length %}
+    {% if recs_length == 1 %}
         {{ marker_tag(recs[0], false) }}
-    {% elif recs|length > 1 %}
+    {% elif recs_length > 1 %}
         {% for rec in sub.ordered_assignments %}
-            {% if loop.index > 1 %}<p></p>{% endif %}
-            {{ marker_tag(rec, true) }}
+            <div {% if loop.index < recs_length %}class="mb-2"{% endif %}>
+                {{ marker_tag(rec, true) }}
+            </div>
         {% endfor %}
     {% else %}
         <span class="badge bg-danger">None</span>

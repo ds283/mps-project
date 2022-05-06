@@ -327,7 +327,7 @@ def register_process_report_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load SubmissionRecord instance from database')
+            self.update_state(state='FAILURE', meta='Could not load SubmissionRecord instance from database')
             raise Ignore()
 
         record.celery_finished = True
@@ -340,7 +340,7 @@ def register_process_report_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        self.update_state('SUCCESS')
+        self.update_state(state='SUCCESS')
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -353,7 +353,7 @@ def register_process_report_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load SubmissionRecord instance from database')
+            self.update_state(state='FAILURE', meta='Could not load SubmissionRecord instance from database')
             raise Ignore()
 
         if user is None:
@@ -361,7 +361,7 @@ def register_process_report_tasks(celery):
             raise Ignore()
 
         user.post_message('Errors occurred when processing uploaded report for submitter '
-                          '{name}'.format(record.owner.student.user.name), autocommit=True)
+                          '{name}'.format(name=record.owner.student.user.name), 'danger', autocommit=True)
 
         # raise exception to flag the error
         raise RuntimeError('Errors occurred when processing uploaded report')

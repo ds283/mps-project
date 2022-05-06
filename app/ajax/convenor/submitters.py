@@ -109,7 +109,7 @@ _projects = \
     {% set recs = sub.ordered_assignments.all() %}
     {% set recs_length = recs|length %}
     {% if recs_length == 1 %}
-        {{ tag(recs[0], false) }}
+        {{ project_tag(recs[0], false) }}
     {% elif recs_length > 1 %}
         {% for rec in recs %}
             <div {% if loop.index < recs_length %}class="mb-2"{% endif %}>

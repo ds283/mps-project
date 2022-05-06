@@ -5519,6 +5519,19 @@ class SubmissionPeriodRecord(db.Model):
 
 
     @property
+    def number_submitters_without_reports(self):
+        return get_count(self.submissions.filter(SubmissionRecord.report_id == None))
+
+
+    @property
+    def number_submitters_canvas_report_available(self):
+        return get_count(self.submissions.join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
+                         .filter(and_(SubmissionRecord.report_id == None,
+                                      SubmissionRecord.canvas_submission_available == True,
+                                      SubmittingStudent.canvas_user_id != None)))
+
+
+    @property
     def all_markers_assigned(self):
         if not self.config.uses_marker:
             return True

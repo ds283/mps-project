@@ -2,6 +2,19 @@
 {% from "macros.html" import date_field %}
 {% from "icon_block.html" import icon_block %}
 
+{% macro report_status(period) %}
+    {% if period.number_submitters_without_reports > 0 %}
+        <div class="mt-2">
+            {{  period.number_submitters_without_reports }} submitters are waiting for reports to be uploaded.
+        </div>
+    {% endif %}
+    {% if period.canvas_enabled and period.number_submitters_canvas_report_available > 0 %}
+        <div class="mt-1">
+            {{ period.number_submitters_canvas_report_available }} submitters have a report that can be pulled from Canvas.
+        </div>
+    {% endif %}
+{% endmacro %}
+
 {% macro project_activity_banner(period, today) %}
     {% if period.start_date and period.start_date > today %}
         <div class="alert alert-secondary mt-1 mb-3">
@@ -13,12 +26,14 @@
         <div class="alert alert-secondary mt-1 mb-3">
             {% call icon_block("info-circle") %}
                 <div><strong>The hand-in date for this period is today.</strong></div>
+                {{ report_status(period) }}
             {% endcall %}
         </div>
     {% elif period.hand_in_date and period.hand_in_date < today %}
         <div class="alert alert-secondary mt-1 mb-3">
             {% call icon_block("info-circle") %}
                 <div><strong>The hand-in date for this period was {{ period.hand_in_date.strftime("%a %d %b %Y") }}.</strong></div>
+                {{ report_status(period) }}
             {% endcall %}
         </div>
     {% else %}

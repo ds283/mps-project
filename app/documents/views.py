@@ -281,6 +281,14 @@ def upload_submitter_report(sid):
                                    mimetype=str(report_file.content_type),
                                    license=form.license.data)
 
+            try:
+                db.session.add(asset)
+                db.session.flush()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                flash('Could not upload report due to a database issue. Please contact an administrator.', 'error')
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                return redirect(url_for('documents.submitter_documents', sid=record.sid))
 
             # attach this asset as the uploaded report
             record.report_id = asset.id

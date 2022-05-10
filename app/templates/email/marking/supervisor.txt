@@ -4,9 +4,8 @@ This email is automated. Please do not reply to it directly, because
 email to the sending address is not monitored.
 
 Please find attached the marking materials for your {{ pclass.abbreviation }} student
-{{ student.user.first_name }} {{ student.user.last_name }} (candidate number {{ student.exam_number }}). You should ensure
-that only the candidate number is used to identify this project when
-discussing an agreed mark with the second marker.
+{{ student.user.first_name }} {{ student.user.last_name }} (candidate number {{ student.exam_number }}).
+You will need to enter the candidate number into the online marking form.
 
 Title: {{ project.name }}
 {% if marker -%}
@@ -14,6 +13,9 @@ Marker: {{ marker.user.name }} <{{ marker.user.email }}>
 {%- else -%}
 Marker: no marker has yet been assigned
 {%- endif %}
+
+Note that the project title may well be different from the title of the
+submitted report.
 
 {% if project.aims is none or (project.aims is not none and project.aims|length == 0) -%}
 Note: You have not yet specified aims for this project. Please consider
@@ -28,40 +30,21 @@ the marks for such projects are *not* capped, and a very good review
 in the literature) should attract the same credit as any other good report.
 
 {% endif -%}
-The submitted report (or a link to download it) is attached to this email.
-After following the link, your download will begin immediately if you are
-logged in to mpsprojects.sussex.ac.uk. If not, you will be redirected to a
-login page and the download will begin automatically once you log in.
+Please download the report using the link at the bottom of this email.
+The download will begin immediately if you are logged in to
+mpsprojects.sussex.ac.uk. If not, you will be redirected to a login page
+and the download will begin automatically once you log in.
 
 Alternatively, you can download the report from your dashboard at
 https://mpsprojects.sussex.ac.uk. The convenor has requested that marking and
 feedback be completed by noon on {{ deadline.strftime("%a %d %b %Y") }}.
 
-The marking materials (see manifest below) include a similarity report.
-Please be aware that the report is intended to help you to establish if
-there is a concern regarding academic misconduct that needs to be investigated.
-A concern regarding academic misconduct should be raised based on your academic
-judgement and not on the similarity score alone. Please refer to the FAQs for
-markers provided at:
-http://www.sussex.ac.uk/adqe/standards/examsandassessment/esubmission
+When you have formed your opinion of the report, please complete the online
+marking form at:
 
-When you have formed your opinion of the report, please complete
-the attached marksheet. The exam board requires a short justification of
-the mark you assign in each category. When the sheet is complete you will
-need to agree a final mark with the second marker. Your mark schemes are
-different and there is no expectation that your marks will agree, or be
-related to each other in a simple way. However, if your marks are more
-than 10% different, you should record a brief rationale for the relative
-weighting you adopt in order to assist the exam board with their work.
+https://docs.google.com/forms/d/e/1FAIpQLSeGXjs0_TA9cuXcZmzsWE4TCJpB73qnov9x5MAY7ziZie9-CQ/viewform
 
-Both supervisor and marker sheets should be returned to the project
-convenor ({{ config.convenor_email }}), together with the agreed
-mark and its rationale. Only one copy of this is needed.
-
-Please also enter your feedback for the student online at
-https://mpsprojects.sussex.ac.uk using the 'Edit feedback' button for this
-project visible on your dashboard. By capturing your feedback electronically
-we ensure that it is pushed directly to the student by email.
+Full instructions and further guidance are included in the form.
 
 If you have been assigned further projects to mark, they will be delivered
 in separate emails to help with identifying the required marking materials

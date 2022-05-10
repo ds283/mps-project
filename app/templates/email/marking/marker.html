@@ -7,6 +7,8 @@
 <p>Title: {{ project.name }}
 <br>Supervisor: {{ supervisor.user.name }} <{{ supervisor.user.email }}></p>
 
+<p>Note that the project title may well be different from the title of the submitted report.</p>
+
 {% if project.aims and project.aims|length > 0 -%}
 <p>The supervisor has given the following statement of aims, which you may wish to bear in mind when forming your opinion of the report.</p>
 
@@ -20,15 +22,11 @@
 <p>The marks for "review only" projects are <strong>not</strong> capped, and a very good review (for example, synthesizing a subject area which has not yet been reviewed in the literature) should attract the same credit as any other good report.</p>
 {% endif -%}
 
-<p>The submitted report (or a link to download it) is attached to this email. After following the link, your download will begin immediately if you are logged in to <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a>. If not, you will be redirected to a login page and the download will begin automatically once you log in.</p>
+<p>Please download the report using the link at the bottom of this email. The download will begin immediately if you are logged in to <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a>. If not, you will be redirected to a login page and the download will begin automatically once you log in.</p>
 
 <p>Alternatively, you can download the report from your dashboard at <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a>. The convenor has requested that marking and feedback be completed by noon on {{ deadline.strftime("%a %d %b %Y") }}.</p>
 
-<p>When you have formed your opinion of the report, please complete the attached marksheet. The exam board requires a short justification of the mark you assign in each category. When the sheet is complete you will need to agree a final mark with the second marker. Your mark schemes are different and there is no expectation that your marks will agree, or be related to each other in a simple way. However, if your marks are more than 10% different, you should record a brief rationale for the relative weighting you adopt in order to assist the exam board with their work.</p>
-
-<p>Both supervisor and marker sheets should be returned to the project convenor (<a href="mailto:{{ config.convenor_email }}">{{ config.convenor_email }}</a>), together with the agreed mark and its rationale. Only one copy of this is needed.</p>
-
-<p>Please also enter your feedback for the student online at <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a> using the <em>Edit feedback</em> button for this project visible on your dashboard. By capturing your feedback electronically we ensure that it is pushed directly to the student by email.</p>
+<p>When you have formed your opinion of the report, please complete the online marking form at <a href="https://docs.google.com/forms/d/e/1FAIpQLSeIYjb-JsPAxXdJShmk0dqrOIE-0pSAaHFFCG5CZlYPKv6VeQ/viewform">this URL</a>. Full instructions and further guidance are included in the form.</p>
 
 <p>If you have been assigned further projects to mark, they will be delivered in separate emails to help with identifying the required marking materials via search.</p>
 

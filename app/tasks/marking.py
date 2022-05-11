@@ -149,8 +149,11 @@ def register_marking_tasks(celery):
                                                                number=student.exam_number)).with_suffix(extension)
             print('-- attachment filename = "{path}"'.format(path=str(filename)))
 
-            msg = Message(subject='IMPORTANT: {abbv} project marking: {stu}'.format(abbv=pclass.abbreviation,
-                                                                                    stu=student.user.name),
+            subject = 'IMPORTANT: {abbv} project marking: {stu} - DEADLINE {deadline} ' \
+                      '- DO NOT REPLY'.format(abbv=pclass.abbreviation, stu=student.user.name,
+                                              deadline=deadline.strftime("%a %d %b"))
+
+            msg = Message(subject=subject,
                           sender=current_app.config['MAIL_DEFAULT_SENDER'],
                           reply_to=pclass.convenor_email,
                           recipients=[test_email if test_email is not None else supervisor.user.email])
@@ -187,8 +190,12 @@ def register_marking_tasks(celery):
                                                                number=student.exam_number)).with_suffix(extension)
             print('-- attachment filename = "{path}"'.format(path=str(filename)))
 
-            msg = Message(subject='IMPORTANT: {abbv} project marking: '
-                                  'candidate {number}'.format(abbv=pclass.abbreviation, number=student.exam_number),
+
+            subject = 'IMPORTANT: {abbv} project marking: candidate {number} - DEADLINE {deadline} ' \
+                      '- DO NOT REPLY'.format(abbv=pclass.abbreviation, number=student.exam_number,
+                                              deadline=deadline.strftime("%a %d %b"))
+
+            msg = Message(subject=subject,
                           sender=current_app.config['MAIL_DEFAULT_SENDER'],
                           reply_to=pclass.convenor_email,
                           recipients=[test_email if test_email is not None else marker.user.email])

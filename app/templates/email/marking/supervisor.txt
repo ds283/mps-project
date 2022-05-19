@@ -37,12 +37,12 @@ and the download will begin automatically once you log in.
 
 Alternatively, you can download the report from your dashboard at
 https://mpsprojects.sussex.ac.uk. The convenor has requested that marking and
-feedback be completed by noon on {{ deadline.strftime("%a %d %b %Y") }}.
+feedback be completed by the end of {{ deadline.strftime("%a %d %b %Y") }}.
 
 When you have formed your opinion of the report, please complete the online
 marking form at:
 
-https://docs.google.com/forms/d/e/1FAIpQLSeGXjs0_TA9cuXcZmzsWE4TCJpB73qnov9x5MAY7ziZie9-CQ/viewform
+https://universityofsussex.eu.qualtrics.com/jfe/form/SV_etDQBkpWmwnURcW
 
 Full instructions and further guidance are included in the form.
 

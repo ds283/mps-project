@@ -286,7 +286,7 @@ def AssignMarkerFormFactory(live_project: LiveProject, uses_marker: bool,
     return AssignMarkerForm
 
 
-def AssignPresentationFeedbackFormFactory(record_id, slot_id):
+def AssignPresentationFeedbackFormFactory(record_id, slot_id=None):
 
     if slot_id is None:
         qf = partial(GetPresentationFeedbackFaculty, record_id)

@@ -39,24 +39,27 @@ _status = \
     <span class="badge bg-danger">No logins</span>
 {% endif %}
 {% if u.last_active is not none %}
-    <span class="badge bg-info text-dark">Last seen at {{ u.last_active.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+    <span class="small text-muted">Last seen at {{ u.last_active.strftime("%Y-%m-%d %H:%M:%S") }}</span>
 {% else %}
-    <span class="badge bg-warning text-dark">No last seen time</span>
+    <span class="small text-warning">No last seen time</span>
 {% endif %}
+/
 {% if u.last_login_at is not none %}
-    <span class="badge bg-info text-dark">Last login at {{ u.last_login_at.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+    <span class="small text-muted">Last login at {{ u.last_login_at.strftime("%Y-%m-%d %H:%M:%S") }}</span>
 {% else %}
-    <span class="badge bg-warning text-dark">No last login time</span>
+    <span class="small text-warning">No last login time</span>
 {% endif %}
+/
 {% if u.last_login_ip is not none and u.last_login_ip|length > 0 %}
-    <span class="badge bg-info text-dark">Last login IP {{ u.last_login_ip }}</span>
+    <span class="small text-muted">Last login IP {{ u.last_login_ip }}</span>
 {% else %}
-    <span class="badge bg-secondary">No last login IP</span>
+    <span class="small text-warning">No last login IP</span>
 {% endif %}
+/
 {% if u.last_precompute is not none %}
-    <span class="badge bg-info text-dark">Last precompute at {{ u.last_precompute.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+    <span class="small text-muted">Last precompute at {{ u.last_precompute.strftime("%Y-%m-%d %H:%M:%S") }}</span>
 {% else %}
-    <span class="badge bg-secondary">No last precompute time</span>
+    <span class="small text-muted">No last precompute time</span>
 {% endif %}
 """
 

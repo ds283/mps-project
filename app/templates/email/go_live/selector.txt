@@ -1,52 +1,59 @@
 Dear {{ user.first_name }}
 
-** NOTE: PROJECT SELECTION DEADLINE IS {{ deadline.strftime("%a %d %b %Y") }} **
+** NOTE: DEADLINE TO RECEIVE YOUR RANKED LIST OF PREFERENCES
+IS {{ deadline.strftime("%a %d %b %Y") }} **
 
 This email is automated. Please do not reply to it directly, because email to
 the sending address is not monitored.
 
 {% if student.is_optional -%}
-You are receiving this email because you have the option to apply or enroll
-as a participant for "{{ pclass.name }}". If you are unsure whether you
-are eligible for "{{ pclass.name }}", please seek guidance from the
-project convenor whose details are given below.
+According to our records, you are enrolled on an MPhys programme and therefore
+will carry out your final year project in Y4.
 
-If this is not relevant for you, then you need take no action and can safely
-ignore the remainder of this email.
+However, we ask Y2 MPhys students to view the BSc project list and submit a
+ranked list of preferences, just in case you need to transfer to the BSc
+programme. It is now time for BSc students to select their final year project,
+so we are also inviting you to view the project list.
+
+If you remain on an MPhys programme then these preferences will not be used:
+we will invite you to select projects from the MPhys list around the Spring
+Term of Y3. Some similar projects are offered for both MPhys and BSc, but
+there are also more advanced MPhys-only projects from which you may wish to
+choose. However, you can use this as an opportunity to see what sort of
+projects are being offered.
 {%- else -%}
-You are receiving this email because we are expecting you to participate in
-the "{{ pclass.name }}" module. This runs in Y{{ pclass.start_level.academic_year }}, and it is now
-time to select your preferred projects. If you believe this to be incorrect,
-for example if you are not expecting to undertake this type of project, please
-contact the convenor as soon as possible. Contact details are given below.
+According to our records, you are enrolled on a BSc programme and will carry
+out your final year project next year in Y3. It is now time to select your
+project, so we are inviting you to view the project list and submit a
+ranked list of your top {{ pclass.initial_choices }} preferences.
 {%- endif %}
 
-This year's project list has now been published, and can be inspected
-by logging in to our web platform: https://mpsprojects.sussex.ac.uk.
+To view the list, you need to log into the projects web portal at:
+https://mpsprojects.sussex.ac.uk.
 
-If you have used the platform before, log in with your Sussex email
-address and existing password. If not, an account has been set up for you
-using your Sussex email address and a random password that is not known to
-anyone. Use the 'Forgot password?' link to reset your password, and then
+If you have used the mpsprojects website before, log in with your Sussex
+email address and existing password. If not, an account has been set up for
+you using your Sussex email address and a random password that is not known
+to anyone. Use the 'Forgot password?' link to reset your password, and then
 log into the website in the usual way. If you experience log-in
-difficulties then please contact David Seery (D.Seery@sussex.ac.uk).
+difficulties then please contact the site maintainer David Seery
+(D.Seery@sussex.ac.uk).
 
-To view the project list, log in to your account and scroll to find the
-box labelled "{{ pclass.name }}" on your dashboard.
-Now click the green button labelled "Show available projects".
-You can search the list by entering keywords or phrases in the
-search box in the top-right, or by applying filters for keywords
-and research groups in the box labelled "Filters".
+Once you have logged in, find the box labelled "{{ pclass.name }}" on your
+dashboard. Now click the green button labelled "Show available projects".
+You can search the list by entering keywords or phrases in the search box
+in the top-right, or by applying filters for keywords and research groups
+in the box labelled "Filters".
 
 Each project has a description, and a number of key facts that detail
 recommended modules, supervision arrangements and subject information.
-If you have not taken the recommended modules then you can still apply
-for the project, but you should make arrangements to discuss with the
-supervisor beforehand. Some project descriptions may include popularity
-indicators. You can use these to get some sense of how many other students
-are interested in a project, and therefore whether it is likely to be
-oversubscribed. The popularity indicators may not be available until enough
-data has been collected.
+If you have not taken the recommended modules then you can still apply for the
+project, but you should make arrangements to discuss with the supervisor
+beforehand. Some project descriptions may include popularity indicators.
+You can use these to get some sense of how many other students are interested
+in a project, and therefore whether it is likely to be oversubscribed.
+The popularity indicators may not be available until enough data has been
+collected.
 
 Use the "bookmark" function to keep track of projects in which you
 are interested. Bookmarked projects appear on your dashboard for quick
@@ -55,23 +62,17 @@ them in order of preference. Once you have bookmarked enough projects
 you can submit your ranked list. You can do this as many times as you
 like before the selection deadline. We are asking you to select
 at least {{ student.number_choices }} projects to help us find a good match for everyone.
-{% if student.is_optional -%}
 
-The deadline for selections is {{ deadline.strftime("%a %d %b %Y") }}.
-You do not need to do anything else to apply for enrolment in the programme.
-If you do not submit a selection by the deadline we will assume that you
-do not wish to apply.
-{%- else -%}
-The deadline for selections is {{ deadline.strftime("%a %d %b %Y") }}.
-{%- endif %}
+The deadline to receive your ranked list is {{ deadline.strftime("%a %d %b %Y") }}.
 
-Some projects require more background than others. In these cases the
-project supervisor may require you to obtain a signoff before
-allowing you to submit a selection containing the project. To request
-a sign-off, use the 'Request confirmation' button. You will be notified by
-email when the supervisor responds. Use the "Settings..." option
-from the drop-down menu at the top of the page to control how often
-the website contacts you by email.
+Some projects require more background than others. In these cases the project
+supervisor may require you to obtain a signoff before allowing you to submit a
+selection containing the project. To request a sign-off, use the 'Request
+confirmation' button.
+
+It is then your responsibility to set up a meeting with the project supervisor
+to obtain their confirmation. Supervisor email addresses can be obtained from
+the project list.
 
 If you have questions or encounter difficulties, please contact the
 project convenor.

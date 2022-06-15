@@ -43,19 +43,19 @@ _status = \
 {% else %}
     <span class="small text-warning">No last seen time</span>
 {% endif %}
-/
+<span class="small text-muted">|</span>
 {% if u.last_login_at is not none %}
     <span class="small text-muted">Last login at {{ u.last_login_at.strftime("%Y-%m-%d %H:%M:%S") }}</span>
 {% else %}
     <span class="small text-warning">No last login time</span>
 {% endif %}
-/
+<span class="small text-muted">|</span>
 {% if u.last_login_ip is not none and u.last_login_ip|length > 0 %}
     <span class="small text-muted">Last login IP {{ u.last_login_ip }}</span>
 {% else %}
     <span class="small text-warning">No last login IP</span>
 {% endif %}
-/
+<span class="small text-muted">|</span>
 {% if u.last_precompute is not none %}
     <span class="small text-muted">Last precompute at {{ u.last_precompute.strftime("%Y-%m-%d %H:%M:%S") }}</span>
 {% else %}

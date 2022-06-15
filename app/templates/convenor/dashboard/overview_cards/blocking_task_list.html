@@ -1,0 +1,37 @@
+{% from "icon_block.html" import icon_block %}
+
+{% macro blocking_task_list(list) %}
+    {% set submitter = list['submitter'] %}
+    {% set selector = list['selector'] %}
+    {% set global = list['global'] %}
+    {% set number = submitter|length + selector|length + global|length %}
+    {% if number > 0 %}
+        {% call icon_block("exclamation-circle") %}
+            <div><strong>The following tasks are blocking progress.</strong></div>
+            {% if submitter|length > 0 %}
+                <div><strong>Submitters</strong></div>
+                <ul>
+                    {% for task in submitter %}
+                        <li>{{ task.name }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            {% if selector|length > 0 %}
+                <div><strong>Selectors</strong></div>
+                <ul>
+                    {% for task in selector %}
+                        <li>{{ task.name }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            {% if global|length > 0 %}
+                <div><strong>Global tasks</strong></div>
+                <ul>
+                    {% for task in global %}
+                        <li>{{ task.name }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endcall %}
+    {% endif %}
+{% endmacro %}

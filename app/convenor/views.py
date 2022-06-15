@@ -4306,11 +4306,47 @@ def go_live(id):
     return redirect(redirect_url())
 
 
+def _flash_blocking_tasks(operation: str, blocking):
+    flashed_tasks = 0
+    max_tasks_to_flash = 5
+
+    for task in blocking['submitter']:
+        task: ConvenorTask
+
+        if flashed_tasks >= max_tasks_to_flash:
+            break
+        flash('Submitter task "{name}" is blocking {operation}'.format(name=task.name, operation=operation),
+              'warning')
+        flashed_tasks += 1
+
+    if flashed_tasks >= max_tasks_to_flash:
+        return
+
+    for task in blocking['selector']:
+        task: ConvenorTask
+        if flashed_tasks >= max_tasks_to_flash:
+            break
+        flash('Selector task "{name}" is blocking {operation}'.format(name=task.name, operation=operation),
+              'warning')
+        flashed_tasks += 1
+
+    if flashed_tasks >= max_tasks_to_flash:
+        return
+
+    for task in blocking['global']:
+        task: ConvenorTask
+        if flashed_tasks >= max_tasks_to_flash:
+            break
+        flash('Global project class task "{name}" is blocking {operation}'.format(name=task.name, operation=operation),
+              'warning')
+        flashed_tasks += 1
+
+
 @convenor.route('/confirm_go_live/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def confirm_go_live(id):
     # get details for current pclass configuration
-    config = ProjectClassConfig.query.get_or_404(id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
@@ -4325,9 +4361,9 @@ def confirm_go_live(id):
               'live.'.format(name=config.project_class.name), 'error')
         return redirect(url_for('convenor.overview', id=config.pclass_id))
 
-    if config.has_blocking_tasks:
-        flash('{name} cannot yet Go Live because it has one or more blocking tasks for '
-              'the convenor'.format(name=config.name), 'error')
+    blocking, num_blocking = config.get_blocking_tasks
+    if num_blocking > 0:
+        _flash_blocking_tasks('Go-Live', blocking)
         return redirect(url_for('convenor.overview', id=config.pclass_id))
 
     close = bool(int(request.args.get('close', 0)))
@@ -4370,7 +4406,7 @@ def confirm_go_live(id):
 @roles_accepted('faculty', 'admin', 'root')
 def perform_go_live(id):
     # get details for current pclass configuration
-    config = ProjectClassConfig.query.get_or_404(id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
@@ -4385,9 +4421,9 @@ def perform_go_live(id):
               'live.'.format(name=config.project_class.name), 'error')
         return redirect(redirect_url())
 
-    if config.has_blocking_tasks:
-        flash('{name} cannot yet Go Live because it has one or more blocking tasks for '
-              'the convenor'.format(name=config.name), 'error')
+    blocking, num_blocking = config.get_blocking_tasks
+    if num_blocking > 0:
+        _flash_blocking_tasks('Go-Live', blocking)
         return redirect(redirect_url())
 
     close = bool(int(request.args.get('close', 0)))
@@ -5115,7 +5151,7 @@ def student_clear_bookmarks(sid):
 @roles_accepted('faculty', 'admin', 'root')
 def confirm_rollover(id, markers):
     # pid is a ProjectClass
-    config = ProjectClassConfig.query.get_or_404(id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(config.project_class):
@@ -5133,9 +5169,9 @@ def confirm_rollover(id, markers):
               'error')
         return redirect(redirect_url())
 
-    if config.has_blocking_tasks:
-        flash('{name} cannot yet be rolled over because it has one or more blocking tasks for '
-              'the convenor'.format(name=config.name), 'error')
+    blocking, num_blocking = config.get_blocking_tasks
+    if num_blocking > 0:
+        _flash_blocking_tasks('roll-over to next academic year', blocking)
         return redirect(redirect_url())
 
     title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.name, yeara=year, yearb=year + 1)
@@ -5157,7 +5193,7 @@ def confirm_rollover(id, markers):
 @roles_accepted('faculty', 'admin', 'root')
 def rollover(id, markers):
     # pid is a ProjectClass
-    config = ProjectClassConfig.query.get_or_404(id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
 
     url = request.args.get('url', None)
 
@@ -5177,9 +5213,9 @@ def rollover(id, markers):
         flash('{name} is not an active project class'.format(name=config.name), 'error')
         return redirect(url) if url is not None else home_dashboard()
 
-    if config.has_blocking_tasks:
-        flash('{name} cannot yet be rolled over because it has one or more blocking tasks for '
-              'the convenor'.format(name=config.name), 'error')
+    blocking, num_blocking = config.get_blocking_tasks
+    if num_blocking > 0:
+        _flash_blocking_tasks('roll-over to next academic year', blocking)
         return redirect(url) if url is not None else home_dashboard()
 
     # build task chains

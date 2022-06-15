@@ -4845,26 +4845,33 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
 
     @property
-    def has_blocking_tasks(self):
-        selector_blocking = \
-            get_count(self.selecting_students \
-                      .filter(SelectingStudent.tasks.any(and_(~ConvenorTask.complete, ~ConvenorTask.dropped,
-                                                              ConvenorTask.blocking))))
+    def get_blocking_tasks(self):
+        tasks = {}
 
-        if selector_blocking > 0:
-            return True
+        selector = \
+            self.selecting_students \
+                  .filter(SelectingStudent.tasks.any(and_(~ConvenorSelectorTask.complete,
+                                                          ~ConvenorSelectorTask.dropped,
+                                                          ConvenorSelectorTask.blocking))).all()
 
-        submitter_blocking = \
-            get_count(self.submitting_students \
-                      .filter(SubmittingStudent.tasks.any(and_(~ConvenorTask.complete, ~ConvenorTask.dropped,
-                                                               ConvenorTask.blocking))))
+        submitter = \
+            self.submitting_students \
+                  .filter(SubmittingStudent.tasks.any(and_(~ConvenorSubmitterTask.complete,
+                                                           ~ConvenorSubmitterTask.dropped,
+                                                           ConvenorSubmitterTask.blocking))).all()
 
-        if submitter_blocking > 0:
-            return True
+        glob = \
+            self.tasks.filter(and_(~ConvenorGenericTask.complete,
+                                   ~ConvenorGenericTask.dropped,
+                                   ConvenorGenericTask.blocking)).all()
 
-        project_blocking = get_count(self.tasks.filter(~ConvenorTask.complete, ~ConvenorTask.dropped, ConvenorTask.blocking))
+        tasks = {'selector': selector,
+                 'submitter': submitter,
+                 'global': glob}
 
-        return project_blocking > 0
+        num_tasks = len(selector) + len(submitter) + len(glob)
+
+        return tasks, num_tasks
 
 
     @property
@@ -8969,7 +8976,7 @@ class SubmissionRecord(db.Model):
             if exam_license is not None:
                 if asset.license_id != exam_license.id:
                     messages.append('The {what} is tagged with an unexpected license type '
-                                    '"{license}"'.format(license=rep.license.name, what=text_label))
+                                    '"{license}"'.format(license=asset.license.name, what=text_label))
 
 
         def _validate_attachment_access_control(asset):

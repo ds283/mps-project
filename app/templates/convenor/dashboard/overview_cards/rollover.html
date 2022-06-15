@@ -1,3 +1,5 @@
+{% from "convenor/dashboard/overview_cards/blocking_task_list.html" import blocking_task_list %}
+
 {% macro rollover_card(current_year, pclass, config) %}
     <div id="rollover-panel" class="card mt-3 mb-3 collapse show" aria-expanded="true">
         <div class="card-header bg-danger text-white"><strong>Rollover of academic year available</strong></div>
@@ -6,6 +8,7 @@
                 <div class="col-6">
                     Rollover of the academic year to {{ current_year }} is now available.
                 </div>
+                {{ blocking_task_list(config.get_blocking_tasks[0]) }}
                 <div class="col-6">
                     <div class="float-end">
                         <a href="{{ url_for('convenor.confirm_rollover', id=config.id, markers=0) }}"

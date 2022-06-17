@@ -4,8 +4,11 @@ This email is sent from an automated address. Please don't reply to
 it directly, because your email won't reach us.
 
 Thank you for your efforts in preparing project descriptions and accommodating
-student meetings over the last term. We now have a draft of the student
-project allocation for next academic year, {{ attempt.year+1 }}-{{ attempt.year+2 }}.
+student meetings over the last term. We now have a draft of the {{ attempt.year+1 }}-{{ attempt.year+2 }}
+student allocation for MPhys final year projects and Mathematical Physics
+projects. The matching for BSc final year projects has not yet been done and
+will follow at a later date.
+
 {% for key in matches %}
 {%- set match_list = matches[key] -%}
 {%- set config = match_list[0].selector.config %}
@@ -24,7 +27,7 @@ convenor {{ config.convenor_name }} <{{ config.convenor_email }}>
 If you anticipate any problems with this allocation, please let the
 appropriate project convenor know as soon as possible.
 
-Best wishes,
+Best wishes
 {% for convenor in convenors -%}
 {{ convenor.user.first_name }} {{ convenor.user.last_name }}
 {% endfor -%}

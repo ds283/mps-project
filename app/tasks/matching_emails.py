@@ -244,11 +244,11 @@ def register_matching_email_tasks(celery):
                                            attempt=record, matches=binned_matches, convenors=convenors)
                 msg.html = render_template('email/matching/draft_notify_faculty.html', user=user, fac=fac,
                                            attempt=record, matches=binned_matches, convenors=convenors)
-            else:
-                msg.body = render_template('email/matching/draft_unneeded_faculty.txt', user=user, fac=fac,
-                                           attempt=record)
-                msg.html = render_template('email/matching/draft_unneeded_faculty.html', user=user, fac=fac,
-                                           attempt=record)
+            # else:
+            #     msg.body = render_template('email/matching/draft_unneeded_faculty.txt', user=user, fac=fac,
+            #                                attempt=record)
+            #     msg.html = render_template('email/matching/draft_unneeded_faculty.html', user=user, fac=fac,
+            #                                attempt=record)
 
         else:
             msg.subject ='Notification: Final project allocation for ' \

@@ -14,6 +14,7 @@ from functools import partial
 from pathlib import Path
 from typing import List
 from uuid import uuid4
+from ordered_set import OrderedSet
 
 import parse
 from celery import chain
@@ -1738,7 +1739,7 @@ def enroll_submitters_ajax(id):
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
     if year_flag:
-        candidates = [s for s in candidates.all() if ((s.academic_year is None or (not s.has_graduated and s.academic_year == year_value)))]
+        candidates = [s for s in candidates.all() if s.academic_year is None or (not s.has_graduated and s.academic_year == year_value)]
     else:
         candidates = candidates.all()
 
@@ -2399,7 +2400,7 @@ def manual_attach_project(id, configid):
     # reject if desired project is not attachable
     project = Project.query.get_or_404(id)
 
-    if not config.project_class in project.project_classes:
+    if config.project_class not in project.project_classes:
         flash('Project "{p}" is not attached to "{c}". You do not have sufficient privileges to manually attached it; '
               'please consult with an administrator.'.format(p=project.name, c=config.name), 'error')
         return redirect(redirect_url())
@@ -3197,10 +3198,9 @@ def description_attach_module(did, pclass_id, mod_id, level_id):
     create = request.args.get('create', default=None)
     module = Module.query.get_or_404(mod_id)
 
-    if desc.module_available(module.id):
-        if not module in desc.modules:
-            desc.modules.append(module)
-            db.session.commit()
+    if desc.module_available(module.id) and module not in desc.modules:
+        desc.modules.append(module)
+        db.session.commit()
 
     return redirect(url_for('convenor.description_modules', did=did, pclass_id=pclass_id, level_id=level_id, create=create))
 
@@ -3223,10 +3223,9 @@ def description_detach_module(did, pclass_id, mod_id, level_id):
     create = request.args.get('create', default=None)
     module = Module.query.get_or_404(mod_id)
 
-    if desc.module_available(module.id):
-        if module in desc.modules:
-            desc.modules.remove(module)
-            db.session.commit()
+    if desc.module_available(module.id) and module in desc.modules:
+        desc.modules.remove(module)
+        db.session.commit()
 
     return redirect(url_for('convenor.description_modules', did=did, pclass_id=pclass_id, level_id=level_id, create=create))
 
@@ -5386,7 +5385,7 @@ def delete_student_bookmark(sid, bid):
 
 
 @convenor.route('/perform_delete_student_bookmark/<int:sid>/<int:bid>')
-@roles_accepted('faculty' 'admin', 'root')
+@roles_accepted('faculty', 'admin', 'root')
 def perform_delete_student_bookmark(sid, bid):
     # sid is a SelectingStudent
     sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
@@ -5632,7 +5631,7 @@ def delete_student_choice(sid, cid):
 
 
 @convenor.route('/perform_delete_student_choice/<int:sid>/<int:cid>')
-@roles_accepted('faculty' 'admin', 'root')
+@roles_accepted('faculty', 'admin', 'root')
 def perform_delete_student_choice(sid, cid):
     # sid is a SelectingStudent
     sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
@@ -5976,7 +5975,8 @@ def create_new_offer(sel_id, proj_id):
         db.session.add(offer)
         db.session.commit()
     except SQLAlchemyError as e:
-        flash('Could not create custom offer due to a database error. Please contact a system administrator', 'error')
+        flash('Could not create custom offer due to a database error. '
+              'Please contact a system administrator', 'error')
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -6002,7 +6002,13 @@ def accept_custom_offer(offer_id):
     offer.last_edit_timestamp = datetime.now()
     offer.last_edit_id = current_user.id
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not mark custom offer as accepted due to a database error. '
+              'Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return redirect(redirect_url())
 
@@ -6021,7 +6027,13 @@ def decline_custom_offer(offer_id):
     offer.last_edit_timestamp = datetime.now()
     offer.last_edit_id = current_user.id
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not mark custom offer as declined due to a database error. '
+              'Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return redirect(redirect_url())
 
@@ -6036,8 +6048,14 @@ def delete_custom_offer(offer_id):
     if not validate_is_convenor(offer.liveproject.config.project_class):
         return redirect(redirect_url())
 
-    db.session.delete(offer)
-    db.session.commit()
+    try:
+        db.session.delete(offer)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not delete custom offer due to a database error. '
+              'Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return redirect(redirect_url())
 
@@ -6209,8 +6227,14 @@ def set_hint(id, hint):
               'is ready to match', 'error')
         return redirect(redirect_url())
 
-    rec.set_hint(hint)
-    db.session.commit()
+    try:
+        rec.set_hint(hint)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not set selection hint due to a database error. '
+              'Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return redirect(redirect_url())
 
@@ -7547,10 +7571,7 @@ def teaching_groups(id):
 
     # build list of allowed submission periods
     periods = set()
-    # TODO: replace period_names with set() if and when we transition to Python 3.7
-    #  In Python 3.7, set is guaranteed to retain insertion order without having to use OrderedSet.
-    #  Currently we have to use a list in order to guarantee that the labels are displayed in the correct order
-    period_names = []
+    period_names = OrderedSet()
     for p in config.ordered_periods:
         periods.add(p.submission_period)
         period_names.append((p.submission_period, p.display_name))
@@ -7607,10 +7628,7 @@ def teaching_groups_ajax(id):
 
     # build list of allowed submission periods
     periods = set()
-    # TODO: replace period_names with set() if and when we transition to Python 3.7
-    #  In Python 3.7, set is guaranteed to retain insertion order without having to use OrderedSet.
-    #  Currently we have to use a list in order to guarantee that the labels are displayed in the correct order
-    period_names = []
+    period_names = OrderedSet()
     for p in config.ordered_periods:
         periods.add(p.submission_period)
         period_names.append((p.submission_period, p.display_name))
@@ -7722,9 +7740,8 @@ def manual_assign():
                       'Please contact a system administrator', 'error')
 
     else:
-        if request.method == 'GET':
-            if hasattr(form, 'marker') and form.marker:
-                form.marker.data = rec.marker
+        if request.method == 'GET' and hasattr(form, 'marker') and form.marker:
+            form.marker.data = rec.marker
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)
@@ -7972,10 +7989,8 @@ def assign_presentation_feedback(id):
         return redirect(redirect_url())
 
     slot = talk.schedule_slot
-    if slot is None:
-        AssignPresentationFeedbackForm = AssignPresentationFeedbackFormFactory(talk.id)
-    else:
-        AssignPresentationFeedbackForm = AssignPresentationFeedbackFormFactory(talk.id, slot.id)
+    AssignPresentationFeedbackForm = \
+        AssignPresentationFeedbackFormFactory(record_id=talk.id, slot_id=slot.id if slot is not None else None)
 
     form = AssignPresentationFeedbackForm(request.form)
 
@@ -9212,6 +9227,7 @@ def do_delete_task(tid):
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash('Could not delete task due to a database error. Please contact a system administrator.',
               'error')
 
@@ -9285,6 +9301,7 @@ def mark_task_complete(tid):
                     db.session.commit()
                 except SQLAlchemyError as e:
                     db.session.rollback()
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     flash('Could not generate repeat  task due to a database error. '
                           'Please contact a system administrator.', 'error')
 
@@ -9341,9 +9358,10 @@ def mark_task_dropped(tid):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        db.session.rollback()
         flash('Could not change dropped status for this convenor task due to a database error. '
               'Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return redirect(redirect_url())
 

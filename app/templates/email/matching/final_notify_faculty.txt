@@ -1,14 +1,17 @@
 Dear {{ user.first_name }}
 
-This email is sent from an automated address. Please don't reply to
-it directly, because your email won't reach us.
+This email is sent from an automated address. Please don't reply to it
+directly, because your email won't reach us.
 
 Thank you for your efforts in preparing project descriptions and accommodating
-student meetings in the last academic year. You may have received notification
-of a draft matching in July, which included MPhys final-year projects only.
-We now have an updated project allocation that includes BSc final-year
-projects and Mathematical Physics Projects. The students we are asking you to
-supervise this year are:
+student meetings in the last academic year.
+
+You may have received notification of a draft student allocation in June,
+which included MPhys final-year projects and Mathematical Physics projects
+only. We now have an updated project allocation that includes BSc final-year
+projects.
+
+The students we are asking you to supervise next year are:
 {% for key in matches %}
 {%- set match_list = matches[key] -%}
 {%- set config = match_list[0].selector.config %}
@@ -27,9 +30,9 @@ convenor {{ config.convenor_name }} <{{ config.convenor_email }}>
 If you anticipate any problems with this allocation, please let the
 appropriate project convenor know as soon as possible.
 
-For a small number of BSc students it was not possible to allocate projects
-until their progression outcomes were known. If you are not already being
-asked to supervise three students, it is possible that one or more
+As usual, for a small number of BSc students it is not possible to allocate
+projects until their progression outcomes are known. If you are not already
+being asked to supervise three students, it is possible that one or more
 additional students will be assigned to you over the coming days.
 
 Best wishes,

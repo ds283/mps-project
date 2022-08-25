@@ -1,6 +1,6 @@
 <p>Dear {{ user.first_name }}</p>
 
-<p><strong>This email is sent from an automated address. Please don't reply to it directly, because your email won't reach us.</strong> If you have  questions, please contact the projects convenor: <a href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor.user.name }}</a></p>
+<p><strong>This email is sent from an automated address. Please don't reply to it directly, because your email won't reach us.</strong> If you have questions, please contact the project convenor: <a href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor.user.name }}</a></p>
 
 {% set text = pclass.email_text_final_matching_preamble -%}
 {%- if text is not none and text|length > 0 -%}
@@ -26,8 +26,8 @@
 {%- endfor %}
 </ol>
 
-<p>If you have any queries about this allocation, please contact the projects convenor as soon as possible.</p>
+<p>If you have any queries about this allocation, please contact the project convenor as soon as possible.</p>
 
 <p>Best wishes<br>
-<a href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor.user.name }}</a> (the projects convenor)
+<a href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor.user.name }}</a> (the project convenor)
 </p>

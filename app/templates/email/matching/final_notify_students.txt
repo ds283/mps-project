@@ -1,8 +1,9 @@
 Dear {{ user.first_name }}
 
-This email is sent from an automated address. Please don't reply to
-it directly, because your email won't reach us. If you have
-questions, please contact the projects convenor:
+This email is sent from an automated address. Please don't reply to it
+directly, because your email won't reach us. If you have questions,
+please contact the project convenor:
+
 {{ pclass.convenor.user.name }} <{{ pclass.convenor_email }}>
 
 {% set text = pclass.email_text_final_matching_preamble -%}
@@ -34,9 +35,9 @@ You have been allocated the following projects:
 {%- endif %}
 {%- endfor %}
 
-If you have any queries about this allocation, please contact the projects
+If you have any queries about this allocation, please contact the project
 convenor as soon as possible.
 
 Best wishes
 {{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} <{{ pclass.convenor_email }}>
-(the projects convenor)
+(the project convenor)

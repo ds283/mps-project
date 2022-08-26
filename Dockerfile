@@ -7,42 +7,28 @@ RUN adduser --disabled-password --shell /bin/bash --gecos '' --uid 500 mpsprojec
 
 WORKDIR /home/mpsproject
 
-# install MuPDF; adapted from Ubuntu install script (https://github.com/pymupdf/PyMuPDF/blob/master/installation/ubuntu/ubuntu_pymupdf.sh)
-# notice the Pip installation of PyMuPDF does not seem to work, because we get a cryptic error during
-# compilation of the Python extension module
-RUN wget https://mupdf.com/downloads/archive/mupdf-1.19.0-source.tar.gz && tar -zxvf mupdf-1.19.0-source.tar.gz
-RUN wget https://github.com/pymupdf/PyMuPDF/archive/1.19.2.tar.gz && tar -zxvf 1.19.2.tar.gz
-
-# replace config file in mupdf source
-RUN rm mupdf-1.19.0-source/include/mupdf/fitz/config.h && cp PyMuPDF-1.19.2/fitz/_config.h mupdf-1.19.0-source/include/mupdf/fitz/config.h
-
-RUN cd mupdf-1.19.0-source && export XCFLAGS="-fPIC" && make HAVE_X11=no HAVE_GLFW=no HAVE_GLUT=no HAVE_LEPTONICA=no HAVE_TESSERACT=no USE_SYSTEM_FREETYPE=no USE_SYSTEM_GUMBO=no USE_SYSTEM_HARFBUZZ=no USE_SYSTEM_JBIG2DEC=no USE_SYSTEM_OPENJPEG=no prefix=/usr/local
-RUN cd mupdf-1.19.0-source && export XCFLAGS="-fPIC" && make HAVE_X11=no HAVE_GLFW=no HAVE_GLUT=no HAVE_LEPTONICA=no HAVE_TESSERACT=no USE_SYSTEM_FREETYPE=no USE_SYSTEM_GUMBO=no USE_SYSTEM_HARFBUZZ=no USE_SYSTEM_JBIG2DEC=no USE_SYSTEM_OPENJPEG=no prefix=/usr/local install
-
 # install Python dependencies
-COPY requirements.txt requirements.txt
+COPY --chown=mpsproject:mpsproject requirements.txt ./
+
 ENV VIRTUAL_ENV=/home/mpsproject/venv
+USER mpsproject
 RUN python3 -m venv ${VIRTUAL_ENV}
+
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+USER mpsproject
 RUN pip3 install -U pip setuptools wheel
+
+USER mpsproject
 RUN pip3 install -U -r requirements.txt
 
-# replace PyMuPDF setup.py with our own version that has correct paths and library specifications
-RUN rm PyMuPDF-1.19.2/setup.py
-COPY PyMuPDF-setup.py PyMuPDF-1.19.2/setup.py
+COPY --chown=mpsproject:mpsproject app ./app/
+COPY --chown=mpsproject:mpsproject migrations ./migrations/
+COPY --chown=mpsproject:mpsproject mpsproject.py serve.py celery_node.py boot.sh launch_celery.sh launch_beat.sh launch_flower.sh ./
 
-# build PyMuPDF
-RUN cd PyMuPDF-1.19.2 && python3 setup.py build && python3 setup.py install
-
-COPY app app
-COPY migrations migrations
-COPY mpsproject.py serve.py celery_node.py boot.sh launch_celery.sh launch_beat.sh launch_flower.sh ./
+USER mpsproject
 RUN chmod +x boot.sh && chmod +x launch_celery.sh && chmod +x launch_beat.sh && chmod +x launch_flower.sh
 
 ENV FLASK_APP mpsproject.py
-
-RUN chown -R mpsproject:mpsproject ./
-USER mpsproject
 
 # web app and flower monitoring tool both run on port 5000
 EXPOSE 5000

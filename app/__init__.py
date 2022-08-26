@@ -31,7 +31,7 @@ from .uploads import solution_files, batch_user_files, submitted_files
 from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
 from flask_rollbar import Rollbar
-from flask_qrcode import QRcode
+# from flask_qrcode import QRcode
 from flask_babelex import Babel
 
 from .config import app_config, site_revision, site_copyright_dates
@@ -123,15 +123,14 @@ def create_app():
     bleach = Bleach(app)
     md = Markdown(app, extensions=['smarty'])
     rb = Rollbar(app)
-    qr = QRcode(app)
+    # qr = QRcode(app)
     bbl = Babel(app)
 
     session_store = Session(app)
 
     cache.init_app(app)
 
-    # add endpoint profiler and rate limiter in production mode
-    # also add handler to direct Waitress logging output to the console
+    # add Flask-profiler and rate limiter in production mode
     if config_name == 'production':
         profiler = Profiler(app)
 

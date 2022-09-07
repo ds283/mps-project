@@ -9022,7 +9022,7 @@ def student_tasks(type, sid):
 def student_tasks_ajax(type, sid):
     try:
         obj = _get_student_task_container(type, sid)
-    except KeyError as e:
+    except KeyError:
         abort(404)
 
     config: ProjectClassConfig = obj.config

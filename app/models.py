@@ -1573,43 +1573,36 @@ def ConvenorTasksMixinFactory(subclass):
         def tasks(cls):
             return db.relationship(subclass, lazy='dynamic', backref=db.backref('parent', uselist=False))
 
-
         @property
         def available_tasks(self):
-            return self.tasks.filter(~ConvenorTask.complete,
-                                     ~ConvenorTask.dropped,
-                                     or_(ConvenorTask.defer_date == None,
-                                         and_(ConvenorTask.defer_date != None,
-                                              ConvenorTask.defer_date <= func.curdate())))
-
+            return self.tasks.filter(and_(~ConvenorTask.complete,
+                                          ~ConvenorTask.dropped,
+                                          or_(ConvenorTask.defer_date == None,
+                                              and_(ConvenorTask.defer_date != None,
+                                                   ConvenorTask.defer_date <= func.curdate()))))
 
         @property
         def overdue_tasks(self):
-            return self.tasks.filter(~ConvenorTask.complete,
-                                     ~ConvenorTask.dropped,
-                                     and_(ConvenorTask.due_date != None,
+            return self.tasks.filter(and_(~ConvenorTask.complete,
+                                          ~ConvenorTask.dropped,
+                                          ConvenorTask.due_date != None,
                                           ConvenorTask.due_date < func.curdate()))
-
 
         @property
         def number_tasks(self):
             return get_count(self.tasks)
 
-
         @property
         def number_available_tasks(self):
             return get_count(self.available_tasks)
-
 
         @property
         def number_overdue_tasks(self):
             return get_count(self.overdue_tasks)
 
-
         @staticmethod
         def TaskObjectFactory(**kwargs):
             return subclass(**kwargs)
-
 
         @staticmethod
         def polymorphic_identity():

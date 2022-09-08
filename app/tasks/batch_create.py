@@ -239,11 +239,13 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
                   'bsc physics (with an industrial placement year)': 'M3045U',
                   'bsc physics (ip)': 'M3045U',
                   'bsc physics with astrophysics': 'F3055U',
+                  'bsc physics with astrophysics (with a study abroad year)': 'F3068U',
                   'bsc physics (with a study abroad year)': 'F3067U',
                   'bsc theoretical physics': 'F3016U',
                   'bsc phys and astro (fdn)': 'F3002U',
                   'bsc physics and astronomy (with a foundation year)': 'F3002U',
                   'mphys astrophysics': 'F3029U',
+                  'mphys astrophysics (with an industrial placement year)': 'F3030U',
                   'mphys physics': 'F3028U',
                   'mphys physics (rp)': 'F3011U',
                   'mphys physics (research placement)': 'F3011U',
@@ -255,7 +257,8 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
                   'mphys theoretical physics (research placement)': 'F3062U',
                   'mphys physics (with a study abroad year)': 'F3027U',
                   'mphys physics with astrophysics (with a study abroad year)': 'F3069U',
-                  'mphys theoretical physics (with a study abroad year)': 'F3050U'}
+                  'mphys theoretical physics (with a study abroad year)': 'F3050U',
+                  'mphys theoretical phsyics (yab)': 'F3050U'}
 
     programme = None
 
@@ -264,7 +267,10 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
         programme = db.session.query(DegreeProgramme).filter_by(course_code=course_code).first()
 
     elif 'course' in row:
-        course_name = row['course'].lower()
+        course_name: str = row['course'].lower()
+
+        if course_name.endswith(' (direct entry)'):
+            course_name.removesuffix(' (direct entry)')
 
         if course_name in course_map:
             course_code = course_map[course_name]
@@ -291,10 +297,11 @@ def _guess_year_data(cohort: int, year_of_course: int, current_year: int, progra
     :param fyear_hint: hint whether foundation year was taken, or not
     :return:
     """
+
     # try to guess whether a given student has done foundation year or some number of
     # repeat years
     # of course, we don't really have enough information to work this out; what's here
-    # is a simple minded guess
+    # is a relatively simple-minded guess based on some heuristics
     #
     # return value: foundation_year(bool), repeat_years(int)
 
@@ -319,6 +326,8 @@ def _guess_year_data(cohort: int, year_of_course: int, current_year: int, progra
     fyear_shift = 1 if programme.foundation_year else 0
     estimated_year_of_course = current_year - cohort + 1 - fyear_shift
 
+    # if the programme has a year out, and our estimated year is greater than the year-out year,
+    # then we should subtract one to account for it
     if programme.year_out:
         if estimated_year_of_course > programme.year_out_value:
             estimated_year_of_course = estimated_year_of_course - 1
@@ -331,12 +340,26 @@ def _guess_year_data(cohort: int, year_of_course: int, current_year: int, progra
     difference = estimated_year_of_course - year_of_course
 
     if difference < 0:
-        print('## estimated course year was earlier than imported value '
-              '(current_year={cy}, cohort={ch}, FY={fs}, '
-              'estimated={es}, imported={im}, diff={df}'.format(cy=current_year, ch=cohort, fs=fyear_shift,
-                                                                es=estimated_year_of_course, im=year_of_course,
-                                                                df=difference))
-        raise SkipRow
+        # We guessed the student to be in an earlier year than the one actually supplied to us
+        # by the student list.
+        # In theory this shouldn't happen, but in reality Sussex Direct seems to muck around with
+        # a student's cohort: in particular, a student who arrived in year N for a foundation year
+        # (and whose cohort should therefore be N) will often have their cohort reassigned
+        # to N+1 when they progress to Y1.
+
+        # if this seems to be what has happened, adjust the cohort
+        if programme.foundation_year and difference == -1:
+            cohort -= 1
+            estimated_year_of_course += 1
+            difference = 0
+
+        else:
+            print('## estimated course year was earlier than imported value '
+                  '(current_year={cy}, cohort={ch}, FY={fs}, '
+                  'estimated={es}, imported={im}, diff={df}'.format(cy=current_year, ch=cohort, fs=fyear_shift,
+                                                                    es=estimated_year_of_course, im=year_of_course,
+                                                                    df=difference))
+            raise SkipRow
 
     if difference >= 1 and fyear_shift == 0 and fyear_hint:
         difference = difference - 1

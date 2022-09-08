@@ -19,7 +19,7 @@ from ..shared.utils import get_count
 from sqlalchemy.sql import collate, or_
 
 
-class ServerSideHandler():
+class ServerSideHandler:
 
     def __init__(self, request, query, data):
         """

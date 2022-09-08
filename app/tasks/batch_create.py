@@ -258,7 +258,7 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
                   'mphys physics (with a study abroad year)': 'F3027U',
                   'mphys physics with astrophysics (with a study abroad year)': 'F3069U',
                   'mphys theoretical physics (with a study abroad year)': 'F3050U',
-                  'mphys theoretical phsyics (yab)': 'F3050U'}
+                  'mphys theoretical physics (yab)': 'F3050U'}
 
     programme = None
 
@@ -270,7 +270,7 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
         course_name: str = row['course'].lower()
 
         if course_name.endswith(' (direct entry)'):
-            course_name.removesuffix(' (direct entry)')
+            course_name = course_name.removesuffix(' (direct entry)')
 
         if course_name in course_map:
             course_code = course_map[course_name]
@@ -337,21 +337,27 @@ def _guess_year_data(cohort: int, year_of_course: int, current_year: int, progra
               'FY={fy}'.format(cy=current_year, ch=cohort, fy=fyear_shift))
         raise SkipRow
 
+    # set up empty dictionary return object
+    rval = {}
+
     difference = estimated_year_of_course - year_of_course
 
     if difference < 0:
         # We guessed the student to be in an earlier year than the one actually supplied to us
-        # by the student list.
+        # as year_of_course (whatever its provenance may be).
         # In theory this shouldn't happen, but in reality Sussex Direct seems to muck around with
         # a student's cohort: in particular, a student who arrived in year N for a foundation year
         # (and whose cohort should therefore be N) will often have their cohort reassigned
-        # to N+1 when they progress to Y1.
+        # to N+1 when they progress to Y1, *even though* their degree programme is not changed
+        # from "with foundation year".
 
         # if this seems to be what has happened, adjust the cohort
         if programme.foundation_year and difference == -1:
             cohort -= 1
             estimated_year_of_course += 1
             difference = 0
+
+            rval |= {'new_cohort': cohort}
 
         else:
             print('## estimated course year was earlier than imported value '
@@ -366,7 +372,9 @@ def _guess_year_data(cohort: int, year_of_course: int, current_year: int, progra
     else:
         fyear_hint = False
 
-    return fyear_hint, difference
+    rval |= {'fdn_year': fyear_hint,
+             'repeated': difference}
+    return rval
 
 
 def _match_existing_student(username, email, current_line) -> (bool, StudentData):
@@ -477,8 +485,14 @@ def register_batch_create_tasks(celery):
 
                         fyear_hint = existing_record.foundation_year
 
-                    foundation_year, repeated_years = \
-                        _guess_year_data(cohort, year_of_course, current_year, programme, fyear_hint=fyear_hint)
+                    year_data = _guess_year_data(cohort, year_of_course, current_year, programme, fyear_hint=fyear_hint)
+                    foundation_year = year_data['fdn_year']
+                    repeated_years = year_data['repeated']
+
+                    # sometimes the cohort will need adjustment based on what we could guess about the
+                    # students current academic year; see discussion in _guess_year_data()
+                    if 'new_cohort' in year_data:
+                        cohort = year_data['new_cohort']
 
                     if existing_record is not None:
                         if not record.trust_registration and existing_record.registration_number is not None:
@@ -508,7 +522,7 @@ def register_batch_create_tasks(celery):
                     if item.academic_year is None:
                         if not item.programme.year_out or year_of_course != item.programme.year_out_value:
                             print('!! ERROR: computed academic year is None, but imported year of course '
-                                  'does not match year out value for this programme')
+                                  'does not match the specified year-out value for this programme')
                             raise SkipRow
                     else:
                         if item.academic_year != year_of_course:

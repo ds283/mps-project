@@ -3520,9 +3520,6 @@ class StudentBatchItem(db.Model):
         if self.email is not None and self.existing_record.user.email != self.email:
             w.append('Current email "{email}"'.format(email=self.existing_record.user.email))
 
-        if self.exam_number is not None and self.existing_record.exam_number != self.exam_number:
-            w.append('Current exam number "{num}"'.format(num=self.existing_record.exam_number))
-
         if self.registration_number is not None and self.existing_record.registration_number != self.registration_number:
             w.append('Current registration number "{num}"'.format(num=self.existing_record.registration_number))
 

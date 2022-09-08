@@ -15,11 +15,12 @@ from sqlalchemy.orm import lazyload
 # taken from https://gist.github.com/hest/8798884
 # see also https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
 def get_count(q):
-    col_one = literal_column("1")
-    count_q = q.statement.with_only_columns([func.count(col_one)]).order_by(None)
-    count = q.session.execute(count_q).scalar()
-
-    return count if count is not None else 0
+    # col_one = literal_column("1")
+    # count_q = q.statement.with_only_columns([func.count(col_one)]).order_by(None)
+    # count = q.session.execute(count_q).scalar()
+    #
+    # return count if count is not None else 0
+    return q.count()
 
 
 # taken from https://stackoverflow.com/questions/28871406/how-to-clone-a-sqlalchemy-db-object-with-new-primary-key

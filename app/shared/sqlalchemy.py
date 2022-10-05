@@ -27,11 +27,28 @@ def get_count(q):
 def clone_model(model, **kwargs):
     """Clone an arbitrary sqlalchemy model object without its primary key values."""
 
-    table = model.__table__
-    non_pk_columns = [k for k in table.columns.keys() if k not in table.primary_key]
-    data = {c: getattr(model, c) for c in non_pk_columns}
+    model_class = model.__class__
+
+    # get tuple containing model class and its possible superclasses
+    if hasattr(model_class, '__mro__'):
+        class_list = model_class.__mro__
+    else:
+        class_list = model_class.mro()
+
+    data = {}
+
+    # loop through possible classes; for those that have a table attribute, unpack any fields corresponding
+    # to columns of the table, except those that are tagged as primary key columns
+    for c in class_list:
+        if hasattr(c, '__table__'):
+            table = c.__table__
+            non_pk_columns = [k for k in table.columns.keys() if k not in table.primary_key]
+            data = data | {c: getattr(model, c) for c in non_pk_columns}
+
+    # merge any fields supplied in kwargs
     data.update(kwargs)
 
-    clone = model.__class__(**data)
+    # create a new instance of the model class using the fields/columns we have extracted
+    clone = model_class(**data)
 
     return clone

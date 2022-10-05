@@ -9321,16 +9321,18 @@ def mark_task_complete(tid):
 
                 else:
                     now = datetime.now()
+                    new_due_date = now + interval
 
                     if task.defer_date is not None:
+
                         if task.due_date is not None:
                             diff = task.due_date - task.defer_date
-                            new_task.defer_date = now + interval - diff
+                            new_task.defer_date = new_due_date - diff
                         else:
-                            new_task.defer_date = now + interval
+                            new_task.defer_date = new_due_date
 
                     if task.due_date is not None:
-                        new_task.due_date = now + interval
+                        new_task.due_date = new_due_date
 
                 try:
                     obj.tasks.append(new_task)

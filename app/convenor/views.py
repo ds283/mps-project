@@ -9315,9 +9315,9 @@ def mark_task_complete(tid):
 
                 if task.repeat_from_due_date:
                     if task.defer_date is not None:
-                        new_task.defer_date = new_task.defer_date + interval
+                        new_task.defer_date = task.defer_date + interval
                     if task.due_date is not None:
-                        new_task.due_date = new_task.due_date + interval
+                        new_task.due_date = task.due_date + interval
 
                 else:
                     now = datetime.now()

@@ -9,7 +9,7 @@
 #
 
 from flask_security.forms import Form
-from wtforms import SubmitField, DateField, IntegerField, StringField, BooleanField, TextAreaField, \
+from wtforms import SubmitField, IntegerField, StringField, BooleanField, TextAreaField, \
     DateTimeField, SelectField
 from wtforms.validators import InputRequired, Optional, Email, Length
 from wtforms_alchemy import QuerySelectField
@@ -37,7 +37,7 @@ def GoLiveFormFactory(submit_label='Go live', live_and_close_label='Go live and 
             live_and_close = SubmitField(live_and_close_label)
 
         # deadline field
-        live_deadline = DateField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
+        live_deadline = DateTimeField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
 
         # notify faculty checkbox
         notify_faculty = BooleanField('Send e-mail notifications to faculty')
@@ -72,7 +72,7 @@ def ChangeDeadlineFormFactory(submit_label='Close selections', change_label='Cha
         change = SubmitField(change_label)
 
         # deadline field
-        live_deadline = DateField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
+        live_deadline = DateTimeField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
 
         # send email notifications to convenor and office contacts?
         notify_convenor = BooleanField('On closure, send e-mail notification to convenor and office staff')
@@ -87,7 +87,7 @@ def IssueFacultyConfirmRequestFormFactory(submit_label='Issue confirmation reque
     class IssueFacultyConfirmRequestForm(Form):
 
         # deadline for confirmation responses
-        request_deadline = DateField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
+        request_deadline = DateTimeField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
 
         # skip button, if used
         if skip_label is not None:
@@ -108,7 +108,7 @@ def OpenFeedbackFormFactory(submit_label='Open feedback period',
     class OpenFeedbackForm(Form):
 
         # deadline for feedback
-        feedback_deadline = DateField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
+        feedback_deadline = DateTimeField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
 
         # CC emails to convenor?
         cc_me = BooleanField('CC myself in notification emails')
@@ -172,12 +172,12 @@ def SubmissionPeriodRecordSettingsMixinFactory(enable_canvas=True):
                                                'period, such as "Autumn Term". Leave blank to use the default name.',
                            validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
 
-        start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
-                               description="Enter an optional start date for this submission period.")
+        start_date = DateTimeField('Period start date', format='%d/%m/%Y', validators=[Optional()],
+                                   description="Enter an optional start date for this submission period.")
 
-        hand_in_date = DateField('Hand-in date', format='%d/%m/%Y', validators=[Optional()],
-                                 description="Enter an optional hand-in date for this submission period. If present, "
-                                             "this is used to show students how much time remains.")
+        hand_in_date = DateTimeField('Hand-in date', format='%d/%m/%Y', validators=[Optional()],
+                                     description="Enter an optional hand-in date for this submission period. If present, "
+                                                 "this is used to show students how much time remains.")
 
         collect_project_feedback = BooleanField('Collect project feedback online')
 

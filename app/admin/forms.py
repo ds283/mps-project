@@ -10,7 +10,7 @@
 
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, BooleanField, SubmitField, \
-    TextAreaField, DateField, DateTimeField, FloatField, RadioField, ValidationError
+    TextAreaField, DateTimeField, FloatField, RadioField, ValidationError
 from wtforms.validators import InputRequired, Optional, Length, URL
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
@@ -414,8 +414,8 @@ class SubmissionPeriodDefinitionSettingsMixin():
                                            'period, such as "Autumn Term"',
                        validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
 
-    start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
-                           description='The year will increment when a rollover takes place')
+    start_date = DateTimeField('Period start date', format='%d/%m/%Y', validators=[Optional()],
+                               description='The year will increment when a rollover takes place')
 
     collect_project_feedback = BooleanField('Collect project feedback online')
 
@@ -932,8 +932,8 @@ def EditPresentationAssessmentFormFactory(year, assessment_id):
 
 class SessionMixin():
 
-    date = DateField('Date', format='%d/%m/%Y', validators=[InputRequired()],
-                     description='Specify the date for this session')
+    date = DateTimeField('Date', format='%d/%m/%Y', validators=[InputRequired()],
+                         description='Specify the date for this session')
 
     session_type = SelectField('Session type', choices=session_choices, coerce=int)
 
@@ -1075,7 +1075,7 @@ class EditAssetLicenseForm(Form, AssetLicenseMixin, SaveChangesMixin):
 class AvailabilityForm(Form):
 
     # deadline for response
-    availability_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
+    availability_deadline = DateTimeField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
 
     # submit button: open feedback
     issue_requests = SubmitField('Issue availability requests')

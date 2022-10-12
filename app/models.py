@@ -1110,6 +1110,14 @@ submitted_acr = db.Table('acr_submitted',
                          db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True))
 
 
+## EMAIL LOG
+
+# recipient list
+recipient_list = db.Table('email_log_recipients',
+                          db.Column('email_id', db.Integer(), db.ForeignKey('email_log.id'), primary_key=True),
+                          db.Column('recipient_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
+
+
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
@@ -9376,6 +9384,11 @@ class EmailLog(db.Model):
     # id of user to whom email was sent, if it could be determined
     user_id = db.Column(db.Integer(), db.ForeignKey('users.id'), nullable=True)
     user = db.relationship('User', uselist=False, backref=db.backref('emails', lazy='dynamic'))
+
+    # list of recipients of this email
+    recipients = db.relationship('User', secondary=recipient_list,
+                                 backref=db.backref('received_emails', lazy='dynamic',
+                                                    cascade='all, delete, delete-orphan'))
 
     # recipient as a string, used if user_id could not be determined
     recipient = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), nullable=True)

@@ -91,7 +91,7 @@ kombu==5.2.4
 korean-lunar-calendar==0.2.1
 latex2markdown==0.2.1
 limits==2.7.0
-Mako==1.2.1
+Mako==1.2.2
 Markdown==3.4.1
 MarkupSafe==2.1.1
 matplotlib-inline==0.1.6

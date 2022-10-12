@@ -2219,11 +2219,13 @@ def perform_global_rollover():
     next_year = current_year + 1
 
     try:
+        # create new MainConfig instance for next year, rolling over most current settings
         new_year = MainConfig(year=next_year,
                               enable_canvas_sync=current_config.enable_canvas_sync,
                               canvas_url=current_config.canvas_url)
         db.session.add(new_year)
         db.session.commit()
+
     except SQLAlchemyError as e:
         flash('Could not complete rollover due to database error. Please check the logs.', 'error')
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

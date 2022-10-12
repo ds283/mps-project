@@ -9,12 +9,13 @@
 #
 
 import json
-
+from collections import Iterable
 from datetime import date, datetime, timedelta
 from os import path
 from time import time
-from uuid import uuid4
 from typing import List
+from urllib.parse import urljoin
+from uuid import uuid4
 
 from celery import schedules
 from flask import flash, current_app
@@ -28,14 +29,13 @@ from sqlalchemy.orm import validates, with_polymorphic
 from sqlalchemy.sql import func
 from sqlalchemy_utils import EncryptedType
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine, AesGcmEngine
+from url_normalize import url_normalize
 
 from .cache import cache
 from .database import db
 from .shared.colours import get_text_colour
 from .shared.formatters import format_size, format_time, format_readable_time
 from .shared.sqlalchemy import get_count
-
-from collections import Iterable
 
 # length of database string for typical fields, if used
 DEFAULT_STRING_LENGTH = 255
@@ -1124,6 +1124,16 @@ class MainConfig(db.Model):
 
     # globally enable Canvas sync
     enable_canvas_sync = db.Column(db.Boolean(), default=False)
+
+
+    # get Canvas API root
+    @property
+    def Canvas_API_root(self):
+        if not self.enable_canvas_sync:
+            return None
+
+        API_url = urljoin(self.canvas_url, 'api/v1')
+        return url_normalize(API_url)
 
 
 class Role(db.Model, RoleMixin, ColouredLabelMixin):

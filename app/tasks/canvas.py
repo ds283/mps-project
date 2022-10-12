@@ -10,7 +10,7 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from flask import current_app, flash
+from flask import current_app
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -19,12 +19,15 @@ from celery.exceptions import Ignore
 
 from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SubmissionPeriodRecord, SubmissionRecord, SubmittingStudent, \
-    CanvasStudent, StudentData, User, SubmittedAsset, AssetLicense
+    CanvasStudent, StudentData, User, SubmittedAsset, AssetLicense, MainConfig
 from ..shared.asset_tools import make_submitted_asset_filename
+from ..shared.utils import get_main_config
+
+from urllib.parse import urljoin
+from url_normalize import url_normalize
 
 import requests
 from nameparser import HumanName
-from dateutil.parser import parse
 
 
 def _URL_query(session, URL, **kwargs):
@@ -56,6 +59,14 @@ def register_canvas_tasks(celery):
     def canvas_user_checkin(self):
         self.update_state(state='STARTED', meta='Initiating Canvas synchronization of user data')
 
+        main_config: MainConfig = get_main_config()
+        API_root = main_config.Canvas_API_root
+
+        if API_root is None:
+            print('** Canvas API integration is not enabled; skipping')
+            self.update_state(state='FINISHED', meta='Canvas API integration is not enabled; skipped')
+            return
+
         tasks = []
 
         try:
@@ -68,7 +79,7 @@ def register_canvas_tasks(celery):
 
                 if config is not None and config.canvas_enabled:
                     print('**   Canvas integration is enabled; scheduling user check-in for this project in the current cycle')
-                    tasks.append(canvas_user_checkin_module.s(config.id))
+                    tasks.append(canvas_user_checkin_module.s(config.id, API_root))
                 else:
                     print('**   Canvas integration is not enabled for this project class in the current cycle')
 
@@ -83,7 +94,7 @@ def register_canvas_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def canvas_user_checkin_module(self, pid):
+    def canvas_user_checkin_module(self, pid, API_root: str):
         self.update_state(state='STARTED', meta='Initiating Canvas checkin for synchronization of student submitters')
 
         try:
@@ -107,7 +118,7 @@ def register_canvas_tasks(celery):
         session = requests.Session()
         session.headers.update({'Authorization': 'Bearer {token}'.format(token=config.canvas_login.canvas_API_token)})
 
-        API_URL = "https://canvas.sussex.ac.uk/api/v1/courses/{course_id}/users".format(course_id=config.canvas_id)
+        API_URL = url_normalize(urljoin(API_root, "courses/{course_id}/users".format(course_id=config.canvas_id)))
         user_list = _URL_query(session, API_URL, params={'enrollment_type': 'student'})
 
         # now loop through recovered students, matching them to SubmittingStudent instances if possible
@@ -228,6 +239,14 @@ def register_canvas_tasks(celery):
     def canvas_submission_checkin(self):
         self.update_state(state='STARTED', meta='Initiating Canvas synchronization of submission availability')
 
+        main_config: MainConfig = get_main_config()
+        API_root = main_config.Canvas_API_root
+
+        if API_root is None:
+            print('** Canvas API integration is not enabled; skipping')
+            self.update_state(state='FINISHED', meta='Canvas API integration is not enabled; skipped')
+            return
+
         tasks = []
 
         try:
@@ -244,7 +263,7 @@ def register_canvas_tasks(celery):
 
                     if not period.closed and period.canvas_enabled:
                         print('**   Canvas integration is enabled; scheduling submission check-in for this project in the current cycle')
-                        tasks.append(canvas_submission_checkin_module.s(period.id))
+                        tasks.append(canvas_submission_checkin_module.s(period.id, API_root))
                     else:
                         print('**  Canvas integration is not enabled for this submission period')
                 else:
@@ -261,7 +280,7 @@ def register_canvas_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def canvas_submission_checkin_module(self, pid):
+    def canvas_submission_checkin_module(self, pid, API_root: str):
         self.update_state(state='STARTED', meta='Initiating Canvas checkin for synchronization of submission availability')
 
         try:
@@ -293,7 +312,10 @@ def register_canvas_tasks(celery):
         session = requests.Session()
         session.headers.update({'Authorization': 'Bearer {token}'.format(token=config.canvas_login.canvas_API_token)})
 
-        API_URL = "https://canvas.sussex.ac.uk/api/v1/courses/{course_id}/assignments/{assign_id}/submissions".format(course_id=config.canvas_id, assign_id=period.canvas_id)
+        API_URL = url_normalize(
+            urljoin(API_root,
+                    "courses/{course_id}/assignments/{assign_id}/submissions".format(course_id=config.canvas_id,
+                                                                                     assign_id=period.canvas_id)))
         submission_list = _URL_query(session, API_URL)
 
         # now loop through submissions
@@ -335,6 +357,14 @@ def register_canvas_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def pull_report(self, rid, user_id):
+        main_config: MainConfig = get_main_config()
+        API_root = main_config.Canvas_API_root
+
+        if API_root is None:
+            print('** Canvas API integration is not enabled; skipping')
+            self.update_state(state='FINISHED', meta='Canvas API integration is not enabled; skipped')
+            return
+
         user = None
 
         try:
@@ -388,7 +418,11 @@ def register_canvas_tasks(celery):
         session = requests.Session()
         session.headers.update({'Authorization': 'Bearer {token}'.format(token=config.canvas_login.canvas_API_token)})
 
-        API_URL = "https://canvas.sussex.ac.uk/api/v1/courses/{course_id}/assignments/{assign_id}/submissions/{user_id}".format(course_id=config.canvas_id, assign_id=period.canvas_id, user_id=submitter.canvas_user_id)
+        API_URL = url_normalize(
+            urljoin(API_root,
+                    "courses/{course_id}/assignments/{assign_id}/"
+                    "submissions/{user_id}".format(course_id=config.canvas_id, assign_id=period.canvas_id,
+                                                   user_id=submitter.canvas_user_id)))
         response = session.get(API_URL)
         data = response.json()
 

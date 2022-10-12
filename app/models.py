@@ -8994,9 +8994,10 @@ class SubmissionRecord(db.Model):
                     messages.append('The project marker "{name}" does not have download permissions for the '
                                     '{what}'.format(name=self.marker.user.name, what=text_label))
 
-            if not asset.has_access(self.pclass.convenor.user):
-                messages.append('The project convenor "{name}" does not have download permissions for the '
-                                '{what}'.format(name=self.pclass.convenor_name, what=text_label))
+            if not asset.has_access(self.current_config.convenor.user):
+                messages.append('The project convenor for this submission period "{name}" does not have download '
+                                'permissions for the {what}'.format(name=self.current_config.convenor_name,
+                                                                    what=text_label))
 
             if exam_license is not None:
                 if asset.license_id != exam_license.id:
@@ -9017,10 +9018,10 @@ class SubmissionRecord(db.Model):
                                     'attachment "{attach}"'.format(name=self.marker.user.name,
                                                                    attach=asset.target_name))
 
-            if not asset.has_access(self.pclass.convenor.user):
-                messages.append('The project convenor "{name}" does not have download permissions for the '
-                                'attachment "{attach}'.format(name=self.pclass.convenor_name,
-                                                              attach=asset.target_name))
+            if not asset.has_access(self.current_config.convenor.user):
+                messages.append('The project convenor for this submission period "{name}" does not have download '
+                                'permissions for the attachment '
+                                '"{attach}"'.format(name=self.current_config.convenor_name, attach=asset.target_name))
 
 
         if self.period.closed and self.report is None:

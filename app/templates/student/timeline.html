@@ -39,14 +39,15 @@
                     {% set selectors = selector_records[year] %}
                     {% if selectors is not none and selectors|length > 0 %}
                         {% for rec in selectors %}
-                            {% set pclass = rec.config.project_class %}
+                            {% set config = rec.config %}
+                            {% set pclass = config.project_class %}
                             <div class="card bg-light text-dark mt-3 mb-3 {% if not rec.has_submitted %}border-danger{% endif %}">
-                                <div class="card-header">Selecting for <strong>{{ pclass.name }}</strong></div>
+                                <div class="card-header">Selecting for <strong>{{ config.name }}</strong></div>
                                 <div class="card-body">
                                     <div>
                                         Convenor for {{ year }}&ndash;{{ year+1 }}:
-                                        <a class="text-decoration-none" href="mailto:{{ pclass.convenor_email }}">
-                                            {{ pclass.convenor_name }}
+                                        <a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">
+                                            {{ config.convenor_name }}
                                         </a>
                                     </div>
                                     {% if rec.has_submitted %}
@@ -82,14 +83,15 @@
                     {% set submitters = submitter_records[year] %}
                     {% if submitters is not none and submitters|length > 0 %}
                         {% for rec in submitters %}
-                            {% set pclass = rec.config.project_class %}
+                            {% set config = rec.config %}
+                            {% set pclass = config.project_class %}
                             <div class="card bg-light text-dark mt-3 mb-3">
-                                <div class="card-header">Submitting for <strong>{{ pclass.name }}</strong></div>
+                                <div class="card-header">Submitting for <strong>{{ config.name }}</strong></div>
                                 <div class="card-body">
                                     <div>
                                         Convenor for {{ year }}&ndash;{{ year+1 }}:
-                                        <a class="text-decoration-none" href="mailto:{{ pclass.convenor_email }}">
-                                            {{ pclass.convenor_name }}
+                                        <a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">
+                                            {{ config.convenor_name }}
                                         </a>
                                         <hr class="intro-divider">
                                     </div>

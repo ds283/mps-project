@@ -36,12 +36,13 @@ _student = \
 # language=jinja2
 _pclass = \
 """
-{% set pclass = sel.config.project_class %}
+{% set config = sel.config %}
+{% set pclass = config.project_class %}
 {% set style = pclass.make_CSS_style() %}
 <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block"
    {% if style %}style="{{ style }}"{% endif %}
-   href="mailto:{{ pclass.convenor_email }}">
-    {{ pclass.abbreviation }} ({{ pclass.convenor_name }})
+   href="mailto:{{ config.convenor_email }}">
+    {{ pclass.abbreviation }} ({{ config.convenor_name }})
 </a>
 """
 

@@ -14,8 +14,9 @@ from flask import render_template_string, jsonify, url_for
 # language=jinja2
 _pclass = \
 """
+{% set pclass = config.project_class %}
 {% set style = pclass.make_CSS_style() %}
-<a class="badge text-decoration-none bg-info text-dark" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
+<a class="badge text-decoration-none bg-info text-dark" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ config.convenor_email }}">{{ pclass.abbreviation }} ({{ config.convenor_name }})</a>
 """
 
 
@@ -99,7 +100,7 @@ def submitter_session_availability_data(assessment, session, talks, editable=Fal
     data = [{'student': {'display': '<a class="text-decoration-none" href="mailto:{email}">{name}</a>'.format(email=s.submitter.owner.student.user.email,
                                                                                  name=s.submitter.owner.student.user.name),
                          'sortstring': s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name},
-             'pclass': render_template_string(_pclass, pclass=s.submitter.owner.config.project_class),
+             'pclass': render_template_string(_pclass, config=s.submitter.owner.config),
              'project': render_template_string(_project_name, p=s.submitter.project,
                                                dest_url=url_for('faculty.live_project',
                                                                 pid=s.submitter.project.id,

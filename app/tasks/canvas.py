@@ -30,8 +30,14 @@ import requests
 from nameparser import HumanName
 
 
-def _URL_query(session, URL, **kwargs):
+def _URL_query(session: requests.Session, URL, **kwargs):
+    print('>> Querying API URL: {url}'.format(url=URL))
+
     response = session.get(URL, **kwargs)
+
+    if not response:
+        print('>> API returned NOT OK response: {msg}'.format(msg=response))
+        return None
 
     response_list = []
     finished = False
@@ -66,6 +72,7 @@ def register_canvas_tasks(celery):
             print('** Canvas API integration is not enabled; skipping')
             self.update_state(state='FINISHED', meta='Canvas API integration is not enabled; skipped')
             return
+        print('** API root URL is {root}'.format(root=API_root))
 
         tasks = []
 
@@ -120,6 +127,10 @@ def register_canvas_tasks(celery):
 
         API_URL = url_normalize(urljoin(API_root, "courses/{course_id}/users".format(course_id=config.canvas_id)))
         user_list = _URL_query(session, API_URL, params={'enrollment_type': 'student'})
+
+        if user_list is None:
+            print('** [{pcl}]: recovered no students from Canvas API'.format(pcl=config.name))
+            return
 
         # now loop through recovered students, matching them to SubmittingStudent instances if possible
         print('** [{pcl}]: recovered {n} students from Canvas API'.format(pcl=config.name, n=len(user_list)))
@@ -246,6 +257,7 @@ def register_canvas_tasks(celery):
             print('** Canvas API integration is not enabled; skipping')
             self.update_state(state='FINISHED', meta='Canvas API integration is not enabled; skipped')
             return
+        print('** API root URL is {root}'.format(root=API_root))
 
         tasks = []
 
@@ -317,6 +329,10 @@ def register_canvas_tasks(celery):
                     "courses/{course_id}/assignments/{assign_id}/submissions".format(course_id=config.canvas_id,
                                                                                      assign_id=period.canvas_id)))
         submission_list = _URL_query(session, API_URL)
+
+        if submission_list is None:
+            print('** [{pcl}]: no submissions available from Canvas API'.format(pcl=config.name))
+            return
 
         # now loop through submissions
         for sub in submission_list:

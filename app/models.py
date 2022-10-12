@@ -1132,7 +1132,7 @@ class MainConfig(db.Model):
         if not self.enable_canvas_sync:
             return None
 
-        API_url = urljoin(self.canvas_url, 'api/v1')
+        API_url = urljoin(self.canvas_url, 'api/v1/')
         return url_normalize(API_url)
 
 

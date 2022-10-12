@@ -13,7 +13,7 @@ billiard==3.6.4.0
 bleach==5.0.1
 bleach-whitelist==0.0.11
 blinker==1.4
-bokeh==2.3.2
+bokeh==2.4.3
 cached-property==1.5.2
 cachelib==0.9.0
 cachetools==5.2.0

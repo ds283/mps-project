@@ -18,11 +18,12 @@ from typing import List
 
 from celery import schedules
 from flask import flash, current_app
-from flask_security import current_user, UserMixin, RoleMixin
+from flask_security import current_user, UserMixin, RoleMixin, AsaList
 from sqlalchemy import orm, or_, and_
 from sqlalchemy.event import listens_for
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import validates, with_polymorphic
 from sqlalchemy.sql import func
 from sqlalchemy_utils import EncryptedType
@@ -1142,6 +1143,9 @@ class Role(db.Model, RoleMixin, ColouredLabelMixin):
     # role description
     description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
+    # permissions list
+    permissions = db.Column(MutableList.as_mutable(AsaList()), nullable=True)
+
 
     def make_label(self, text=None, user_classes=None):
         """
@@ -1199,6 +1203,8 @@ class User(db.Model, UserMixin):
     login_count = db.Column(db.Integer())
 
     fs_uniquifier = db.Column(db.String(64), unique=True, nullable=False)
+
+    fs_webauthn_user_handle = db.Column(db.String(64), unique=True, nullable=True)
 
 
     # ROLES

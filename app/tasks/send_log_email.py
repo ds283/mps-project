@@ -74,25 +74,18 @@ def register_send_log_email(celery, mail: Mail):
                         html = content
                         break
 
-            if len(to_list) == 1:
-                # parse "to" field; email address is returned as second member of a 2-tuple
-                pair = parseaddr(to_list[0])
+            recipients = []
+            for rcpt in to_list:
+                pair = parseaddr(rcpt)
                 user = User.query.filter_by(email=pair[1]).first()
                 if user is not None:
-                    log = EmailLog(user_id=user.id,
-                                   recipient=None,
-                                   send_date=datetime.now(),
-                                   subject=msg.subject,
-                                   body=msg.body,
-                                   html=html)
+                    recipients.append(user)
 
-            if log is None:
-                log = EmailLog(user_id=None,
-                               recipient=', '.join(to_list),
-                               send_date=datetime.now(),
-                               subject=msg.subject,
-                               body=msg.body,
-                               html=html)
+            log = EmailLog(recipients=recipients,
+                           send_date=datetime.now(),
+                           subject=msg.subject,
+                           body=msg.body,
+                           html=html)
 
             db.session.add(log)
             db.session.commit()

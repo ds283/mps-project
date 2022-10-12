@@ -37,7 +37,7 @@ from flask_babelex import Babel
 from .config import app_config, site_revision, site_copyright_dates
 from .build_data import git_tag
 from .database import db
-from .models import User, EmailLog, MessageOfTheDay, Notification
+from .models import User, MessageOfTheDay, Notification
 from .task_queue import make_celery, register_task, background_task
 from .shared.utils import home_dashboard_url, get_global_context_data
 from .shared.precompute import precompute_at_login

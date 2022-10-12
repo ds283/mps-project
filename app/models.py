@@ -9382,16 +9382,9 @@ class EmailLog(db.Model):
     # unique id for this record
     id = db.Column(db.Integer(), primary_key=True)
 
-    # id of user to whom email was sent, if it could be determined
-    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'), nullable=True)
-    user = db.relationship('User', uselist=False, backref=db.backref('emails', lazy='dynamic'))
-
     # list of recipients of this email
     recipients = db.relationship('User', secondary=recipient_list,
                                  backref=db.backref('received_emails', lazy='dynamic'))
-
-    # recipient as a string, used if user_id could not be determined
-    recipient = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), nullable=True)
 
     # date of sending attempt
     send_date = db.Column(db.DateTime(), index=True)

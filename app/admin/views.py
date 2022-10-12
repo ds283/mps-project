@@ -2282,8 +2282,7 @@ def email_log_ajax():
     Ajax data point for email log
     :return:
     """
-    base_query = db.session.query(EmailLog) \
-        .join(User, User.id == EmailLog.user_id, isouter=True)
+    base_query = db.session.query(EmailLog)
 
     # set up columns for server-side processing
     recipient = {'search': func.concat(User.first_name, ' ', User.last_name),

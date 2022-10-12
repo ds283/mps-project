@@ -8,15 +8,14 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from app import create_app, db
-from app.models import TaskRecord, Notification, MatchingAttempt, PresentationAssessment, \
-    AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
-    SelectingStudent, ProjectDescription, Project, WorkflowMixin, EnrollmentRecord, ProjectClassConfig, \
-    StudentDataWorkflowHistory, ProjectDescriptionWorkflowHistory, MainConfig, StudentBatch, \
-    AssetLicense, GeneratedAsset, TemporaryAsset, SubmittedAsset
-from sqlalchemy.exc import SQLAlchemyError
+from datetime import timedelta
+from email.utils import parseaddr
 
-from datetime import datetime, timedelta
+from app import create_app, db
+from app.models import PresentationAssessment, \
+    AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
+    SelectingStudent, ProjectDescription, Project, WorkflowMixin, EnrollmentRecord, StudentDataWorkflowHistory, \
+    ProjectDescriptionWorkflowHistory, MainConfig, AssetLicense, EmailLog
 
 
 def migrate_availability_data():
@@ -335,9 +334,45 @@ def migrate_exam_numbers_back():
     db.session.commit()
 
 
+# migrate email recipients from old-style (allows only a single recipient) to new style (allows list of recipients)
+def migrate_email_recipients():
+    emails = db.session.query(EmailLog).all()
+
+    for email in emails:
+        email: EmailLog
+        email.recipients = []
+
+        subject = email.subject
+        if subject is None:
+            subject = ""
+
+        if len(subject) > 35:
+            subject = subject[:35] + '...'
+        print('** Email, subject "{subj}"'.format(subj=subject))
+
+        if email.user is not None:
+            email.recipients.append(email.user)
+            print('**  added single recipient "{usr}"'.format(usr=email.user.name))
+
+        elif email.recipient is not None:
+            recipient_string = str(email.recipient)
+            print('**  has recipient string "{str}"'.format(str=recipient_string))
+            addrs = [x.strip() for x in recipient_string.split(',') if len(x) > 0]
+
+            for addr in addrs:
+                pair = parseaddr(addr)
+                user = User.query.filter_by(email=pair[1]).first()
+
+                if user is not None:
+                    email.recipients.append(user)
+                    print('**  added multiple recipient "{usr}"'.format(usr=user.name))
+
+    db.session.commit()
+
+
 app = create_app()
 
-# with app.app_context():
+with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -355,6 +390,7 @@ app = create_app()
     # fix_null_passwords()
     # migrate_temporary_exam_numbers()
     # migrate_exam_numbers_back()
+    migrate_email_recipients()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

@@ -9388,8 +9388,7 @@ class EmailLog(db.Model):
 
     # list of recipients of this email
     recipients = db.relationship('User', secondary=recipient_list,
-                                 backref=db.backref('received_emails', lazy='dynamic',
-                                                    cascade='all, delete, delete-orphan'))
+                                 backref=db.backref('received_emails', lazy='dynamic'))
 
     # recipient as a string, used if user_id could not be determined
     recipient = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), nullable=True)

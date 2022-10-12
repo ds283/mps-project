@@ -9,7 +9,7 @@
 #
 
 from flask import current_app, render_template
-from flask_mail import Message
+from flask_mailman import EmailMultiAlternatives
 
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
@@ -440,10 +440,10 @@ def register_email_notification_tasks(celery):
 
         outstanding_crqs = _get_outstanding_faculty_confirmation_requests(user)
 
-        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[user.email],
-                      subject=notification.msg_subject())
+        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     to=[user.email],
+                                     subject=notification.msg_subject())
 
         msg.body = render_template('email/notifications/faculty/single.txt', user=user,
                                    notification=notification, outstanding=outstanding_crqs)
@@ -497,10 +497,10 @@ def register_email_notification_tasks(celery):
             raise RuntimeError('dispatch_faculty_summary_email called for {name} with no work '
                                'done'.format(name=user.name))
 
-        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[user.email],
-                      subject='Physics & Astronomy projects: summary of notifications and events')
+        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     to=[user.email],
+                                     subject='Physics & Astronomy projects: summary of notifications and events')
 
         msg.body = render_template('email/notifications/faculty/rollup.txt', user=user,
                                    notifications=notifications, outstanding=outstanding_crqs)
@@ -540,11 +540,11 @@ def register_email_notification_tasks(celery):
         # if req is None, assume ConfirmRequest has been deleted but the corresponding EmailNotification has been
         # orphaned. That means we should do nothing
         if req is not None:
-            msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                          reply_to=req.project.owner.user.email,
-                          recipients=[req.owner.student.user.email, req.project.owner.user.email],
-                          subject='{name}: project meeting request'.format(
-                              name=req.project.config.project_class.name))
+            msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                         reply_to=req.project.owner.user.email,
+                                         to=[req.owner.student.user.email, req.project.owner.user.email],
+                                         subject='{name}: project meeting request'.format(
+                                             name=req.project.config.project_class.name))
 
             msg.body = render_template('email/notifications/request_meeting.txt',
                                        supervisor=req.project.owner.user,
@@ -577,10 +577,10 @@ def register_email_notification_tasks(celery):
             self.update_state('FAILURE', meta='Could not read database records')
             raise Ignore()
 
-        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[user.email],
-                      subject=notification.msg_subject())
+        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     to=[user.email],
+                                     subject=notification.msg_subject())
 
         msg.body = render_template('email/notifications/student/single.txt', user=user, notification=notification)
 
@@ -631,10 +631,10 @@ def register_email_notification_tasks(celery):
             raise RuntimeError('dispatch_student_summary_email called for {name} with no work '
                                'done'.format(name=user.name))
 
-        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[user.email],
-                      subject='Physics & Astronomy projects: summary of notifications and events')
+        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     to=[user.email],
+                                     subject='Physics & Astronomy projects: summary of notifications and events')
 
         msg.body = render_template('email/notifications/student/rollup.txt', user=user,
                                    notifications=notifications, outstanding=outstanding_crqs)

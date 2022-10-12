@@ -13,7 +13,7 @@ from celery.exceptions import Ignore
 from sqlalchemy.exc import SQLAlchemyError
 
 from flask import current_app, render_template
-from flask_mail import Message
+from flask_mailman import EmailMultiAlternatives
 
 from ..database import db
 from ..models import User, PresentationAssessment, TaskRecord, FacultyData, EnrollmentRecord, PresentationSession, \
@@ -266,10 +266,11 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='Availability request for event {name}'.format(name=a_record.assessment.name),
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[a_record.faculty.user.email])
+        msg = EmailMultiAlternatives(
+            subject='Availability request for event {name}'.format(name=a_record.assessment.name),
+            from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+            reply_to=current_app.config['MAIL_REPLY_TO'],
+            to=[a_record.faculty.user.email])
 
         msg.body = render_template('email/scheduling/availability_request.txt', event=a_record.assessment,
                                    deadline=deadline, user=a_record.faculty.user)
@@ -572,10 +573,11 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='Reminder: availability for event {name}'.format(name=assessor.assessment.name),
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[assessor.faculty.user.email])
+        msg = EmailMultiAlternatives(
+            subject='Reminder: availability for event {name}'.format(name=assessor.assessment.name),
+            from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+            reply_to=current_app.config['MAIL_REPLY_TO'],
+            to=[assessor.faculty.user.email])
 
         msg.body = render_template('email/scheduling/availability_reminder.txt', event=assessor.assessment,
                                    user=assessor.faculty.user)

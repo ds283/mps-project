@@ -13,7 +13,7 @@ from email.utils import formataddr
 from celery import group
 from celery.exceptions import Ignore
 from flask import current_app, render_template_string, render_template
-from flask_mail import Message
+from flask_mailman import EmailMultiAlternatives
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -52,11 +52,11 @@ def register_services_tasks(celery):
         body_text = render_template_string(body, name=record.name, first_name=record.first_name,
                                            last_name=record.last_name)
 
-        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=reply_to,
-                      recipients=[formataddr((record.name, record.email))],
-                      subject=subject,
-                      body=render_template('email/services/send_email.txt', body=body_text))
+        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=reply_to,
+                                     to=[formataddr((record.name, record.email))],
+                                     subject=subject,
+                                     body=render_template('email/services/send_email.txt', body=body_text))
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send direct email to '
@@ -72,11 +72,11 @@ def register_services_tasks(celery):
     def send_notify(self, prior_result, pair, subject, body, reply_to):
         to_addr = formataddr(pair)
 
-        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=reply_to,
-                      recipients=[to_addr],
-                      subject=subject,
-                      body=render_template('email/services/cc_email.txt', body=body))
+        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=reply_to,
+                                     to=[to_addr],
+                                     subject=subject,
+                                     body=render_template('email/services/cc_email.txt', body=body))
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send copy of direct email to {addr}'.format(addr=pair[1]))
@@ -103,11 +103,11 @@ def register_services_tasks(celery):
     def send_email_addr(self, pair, subject, body, reply_to):
         to_addr = formataddr(pair)
 
-        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=reply_to,
-                      recipients=[to_addr],
-                      subject=subject,
-                      body=render_template('email/services/send_email.txt', body=body))
+        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=reply_to,
+                                     to=[to_addr],
+                                     subject=subject,
+                                     body=render_template('email/services/send_email.txt', body=body))
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send direct email to {addr}'.format(addr=pair[1]))

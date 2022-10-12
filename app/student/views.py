@@ -15,7 +15,7 @@ from functools import partial
 
 import parse
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session
-from flask_mail import Message
+from flask_mailman import EmailMultiAlternatives
 from flask_security import current_user, roles_required, roles_accepted
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.sql import func, or_
@@ -761,11 +761,11 @@ def submit(sid):
         celery = current_app.extensions['celery']
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
 
-        msg = Message(subject='Your project choices have been received '
-                              '({pcl})'.format(pcl=sel.config.project_class.name),
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[sel.student.user.email])
+        msg = EmailMultiAlternatives(subject='Your project choices have been received '
+                                             '({pcl})'.format(pcl=sel.config.project_class.name),
+                                     from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     to=[sel.student.user.email])
 
         msg.body = render_template('email/student_notifications/choices_received.txt', user=sel.student.user,
                                    pclass=sel.config.project_class, config=sel.config, sel=sel)

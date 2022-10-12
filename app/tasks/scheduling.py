@@ -20,7 +20,7 @@ import pulp.apis as pulp_apis
 from celery import group, chain
 from celery.exceptions import Ignore
 from flask import current_app, render_template
-from flask_mail import Message
+from flask_mailman import EmailMultiAlternatives
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -871,10 +871,11 @@ def _process_PuLP_solution(self, record, prob, status, solve_time, X, Y, create_
 def _send_offline_email(celery, record, user, lp_asset, mps_asset):
     send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
 
-    msg = Message(subject='Files for offline scheduling of {name} are now ready'.format(name=record.name),
-                  sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                  reply_to=current_app.config['MAIL_REPLY_TO'],
-                  recipients=[user.email])
+    msg = EmailMultiAlternatives(
+        subject='Files for offline scheduling of {name} are now ready'.format(name=record.name),
+        from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+        reply_to=current_app.config['MAIL_REPLY_TO'],
+        to=[user.email])
 
     msg.body = render_template('email/scheduling/generated.txt', name=record.name, user=user)
 
@@ -1414,9 +1415,9 @@ def register_scheduling_tasks(celery):
         event = record.owner
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[user.email])
+        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     to=[user.email])
 
         if is_draft:
             msg.subject ='Notification: Draft timetable for project assessment "{name}"'.format(name=event.name)
@@ -1504,9 +1505,9 @@ def register_scheduling_tasks(celery):
         slots = record.get_faculty_slots(faculty.id).all()
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[user.email])
+        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     to=[user.email])
 
         if is_draft:
             msg.subject = 'Notification: Draft timetable for project assessment "{name}"'.format(name=event.name)

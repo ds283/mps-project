@@ -18,7 +18,7 @@ import pulp.apis as pulp_apis
 from celery import group, chain
 from celery.exceptions import Ignore
 from flask import current_app, render_template
-from flask_mail import Message
+from flask_mailman import EmailMultiAlternatives
 from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -1664,10 +1664,10 @@ def _process_PuLP_solution(self, record, output, solve_time, X, Y, W, R, create_
 def _send_offline_email(celery, record: MatchingAttempt, user, lp_asset: GeneratedAsset, mps_asset: GeneratedAsset):
     send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
 
-    msg = Message(subject='Files for offline matching of {name} are now ready'.format(name=record.name),
-                  sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                  reply_to=current_app.config['MAIL_REPLY_TO'],
-                  recipients=[user.email])
+    msg = EmailMultiAlternatives(subject='Files for offline matching of {name} are now ready'.format(name=record.name),
+                                 from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                 reply_to=current_app.config['MAIL_REPLY_TO'],
+                                 to=[user.email])
 
     msg.body = render_template('email/matching/generated.txt', name=record.name, user=user)
 

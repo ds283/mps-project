@@ -54,7 +54,7 @@ Flask-HTMLmin==2.2.0
 Flask-HTTPAuth==4.7.0
 Flask-Limiter==2.6.3
 Flask-Login==0.6.2
-Flask-Mail==0.9.1
+flask-mailman==0.3.0
 Flask-Markdown==0.3
 Flask-Migrate==3.1.0
 Flask-Principal==0.4.0
@@ -95,6 +95,7 @@ Mako==1.2.3
 Markdown==3.4.1
 MarkupSafe==2.1.1
 matplotlib-inline==0.1.6
+mkdocs-material-extensions==1.0.3
 more-itertools==8.14.0
 mpmath==1.2.1
 mypy==0.982

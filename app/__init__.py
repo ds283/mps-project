@@ -16,7 +16,7 @@ from flask_security import current_user, SQLAlchemyUserDatastore, Security, Logi
 from flask_login.signals import user_logged_in
 from .thirdparty.flask_bootstrap5 import Bootstrap
 from .thirdparty.flask_sessionstore import Session
-from flask_mail import Mail, Message
+from flask_mailman import Mail, EmailMultiAlternatives
 from flask_assets import Environment
 from app.flask_bleach import Bleach
 from flaskext.markdown import Markdown
@@ -75,11 +75,12 @@ class PatchedMailUtil(MailUtil):
         celery = current_app.extensions['celery']
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
 
-        msg = Message(subject=subject,
-                      sender=sender,
-                      recipients=[recipient],
-                      body=body,
-                      html=html)
+        msg = EmailMultiAlternatives(subject=subject,
+                                     from_email=sender,
+                                     to=[recipient],
+                                     body=body)
+        if html:
+            msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))

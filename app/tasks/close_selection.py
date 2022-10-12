@@ -9,7 +9,7 @@
 #
 
 from flask import current_app, render_template
-from flask_mail import Message
+from flask_mailman import EmailMultiAlternatives
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -119,11 +119,11 @@ def register_close_selection_tasks(celery):
             for user in config.project_class.office_contacts:
                 recipients.add(user.email)
 
-            msg = Message(subject='[mpsprojects] "{name}": student selections now '
-                                  'closed'.format(name=config.project_class.name),
-                          sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                          reply_to=current_app.config['MAIL_REPLY_TO'],
-                          recipients=list(recipients))
+            msg = EmailMultiAlternatives(subject='[mpsprojects] "{name}": student selections now '
+                                                 'closed'.format(name=config.project_class.name),
+                                         from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                         reply_to=current_app.config['MAIL_REPLY_TO'],
+                                         to=list(recipients))
 
             data = config.selector_data
             msg.body = render_template('email/close_selection/convenor.txt', pclass=config.project_class, config=config,

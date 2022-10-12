@@ -9,7 +9,7 @@
 #
 
 from flask import current_app, render_template
-from flask_mail import Message
+from flask_mailman import EmailMultiAlternatives
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.urls import url_quote
 
@@ -153,10 +153,10 @@ def register_marking_tasks(celery):
                       '- DO NOT REPLY'.format(abbv=pclass.abbreviation, stu=student.user.name,
                                               deadline=deadline.strftime("%a %d %b"))
 
-            msg = Message(subject=subject,
-                          sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                          reply_to=pclass.convenor_email,
-                          recipients=[test_email if test_email is not None else supervisor.user.email])
+            msg = EmailMultiAlternatives(subject=subject,
+                                         from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                         reply_to=pclass.convenor_email,
+                                         to=[test_email if test_email is not None else supervisor.user.email])
 
             if cc_convenor:
                 msg.cc([config.convenor_email])
@@ -167,10 +167,12 @@ def register_marking_tasks(celery):
                                        period=period, marker=marker, supervisor=supervisor, submitter=submitter,
                                        project=record.project, student=student, record=record,
                                        deadline=deadline, attached_documents=attached_documents)
-            msg.html = render_template('email/marking/supervisor.html', config=config, pclass=pclass,
+
+            html = render_template('email/marking/supervisor.html', config=config, pclass=pclass,
                                        period=period, marker=marker, supervisor=supervisor, submitter=submitter,
                                        project=record.project, student=student, record=record,
                                        deadline=deadline, attached_documents=attached_documents)
+            msg.attach_alternative(html, "text/html")
 
             # register a new task in the database
             task_id = register_task(msg.subject,
@@ -195,10 +197,10 @@ def register_marking_tasks(celery):
                       '- DO NOT REPLY'.format(abbv=pclass.abbreviation, number=student.exam_number,
                                               deadline=deadline.strftime("%a %d %b"))
 
-            msg = Message(subject=subject,
-                          sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                          reply_to=pclass.convenor_email,
-                          recipients=[test_email if test_email is not None else marker.user.email])
+            msg = EmailMultiAlternatives(subject=subject,
+                                         from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                         reply_to=pclass.convenor_email,
+                                         to=[test_email if test_email is not None else marker.user.email])
 
             if cc_convenor:
                 msg.cc([config.convenor_email])
@@ -209,10 +211,12 @@ def register_marking_tasks(celery):
                                        period=period, marker=marker, supervisor=supervisor, submitter=submitter,
                                        project=record.project, student=student, record=record,
                                        deadline=deadline, attached_documents=attached_documents)
-            msg.html = render_template('email/marking/marker.html', config=config, pclass=pclass,
+
+            html = render_template('email/marking/marker.html', config=config, pclass=pclass,
                                        period=period, marker=marker, supervisor=supervisor, submitter=submitter,
                                        project=record.project, student=student, record=record,
                                        deadline=deadline, attached_documents=attached_documents)
+            msg.attach_alternative(html, "text/html")
 
             # register a new task in the database
             task_id = register_task(msg.subject,

@@ -21,7 +21,7 @@ from celery import chain
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session, abort
-from flask_mail import Message
+from flask_mailman import EmailMultiAlternatives
 from flask_security import roles_accepted, current_user
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
@@ -4581,11 +4581,11 @@ def submit_student_selection(sel_id):
         celery = current_app.extensions['celery']
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
 
-        msg = Message(subject='An administrator has submitted project choices on your behalf '
-                              '({pcl})'.format(pcl=sel.config.project_class.name),
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_user.email,
-                      recipients=[sel.student.user.email, current_user.email])
+        msg = EmailMultiAlternatives(subject='An administrator has submitted project choices on your behalf '
+                                             '({pcl})'.format(pcl=sel.config.project_class.name),
+                                     from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=current_user.email,
+                                     to=[sel.student.user.email, current_user.email])
 
         msg.body = render_template('email/student_notifications/choices_received_proxy.txt', user=sel.student.user,
                                    pclass=sel.config.project_class, config=sel.config, sel=sel)

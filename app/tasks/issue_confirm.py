@@ -9,7 +9,7 @@
 #
 
 from flask import current_app, render_template
-from flask_mail import Message
+from flask_mailman import EmailMultiAlternatives
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -242,19 +242,21 @@ def register_issue_confirm_tasks(celery):
             raise Ignore()
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='Please check projects for {name}'.format(name=config.project_class.name),
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[data.user.email])
+        msg = EmailMultiAlternatives(subject='Please check projects for {name}'.format(name=config.project_class.name),
+                                     from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     to=[data.user.email])
 
         projects = data.projects_offered(config.project_class)
 
         msg.body = render_template('email/project_confirmation/confirmation_requested.txt', user=data.user,
                                    pclass=config.project_class, config=config,
                                    number_projects=len(projects), projects=projects)
-        msg.html = render_template('email/project_confirmation/confirmation_requested.html', user=data.user,
-                                   pclass=config.project_class, config=config,
-                                   number_projects=len(projects), projects=projects)
+
+        html = render_template('email/project_confirmation/confirmation_requested.html', user=data.user,
+                               pclass=config.project_class, config=config,
+                               number_projects=len(projects), projects=projects)
+        msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send confirmation request email to {r}'.format(r=', '.join(msg.recipients)))
@@ -302,19 +304,22 @@ def register_issue_confirm_tasks(celery):
             raise Ignore()
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='Reminder: please check projects for {name}'.format(name=config.project_class.name),
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[data.user.email])
+        msg = EmailMultiAlternatives(
+            subject='Reminder: please check projects for {name}'.format(name=config.project_class.name),
+            from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+            reply_to=current_app.config['MAIL_REPLY_TO'],
+            to=[data.user.email])
 
         projects = data.projects_offered(config.project_class)
 
         msg.body = render_template('email/project_confirmation/confirmation_reminder.txt', user=data.user,
                                    pclass=config.project_class, config=config,
                                    number_projects=len(projects), projects=projects)
-        msg.html = render_template('email/project_confirmation/confirmation_reminder.html', user=data.user,
+
+        html = render_template('email/project_confirmation/confirmation_reminder.html', user=data.user,
                                    pclass=config.project_class, config=config,
                                    number_projects=len(projects), projects=projects)
+        msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send confirmation reminder email to {r}'.format(r=', '.join(msg.recipients)))
@@ -446,11 +451,11 @@ def register_issue_confirm_tasks(celery):
         owner = project.owner
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='Projects: please consider revising {name}/{desc}'.format(name=project.name,
-                                                                                        desc=record.label),
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_user.email,
-                      recipients=[owner.user.email])
+        msg = EmailMultiAlternatives(
+            subject='Projects: please consider revising {name}/{desc}'.format(name=project.name, desc=record.label),
+            from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+            reply_to=current_user.email,
+            to=[owner.user.email])
 
         msg.body = render_template('email/project_confirmation/revise_request.txt', user=owner.user,
                                    pclasses=record.project_classes, project=project, record=record,
@@ -545,11 +550,12 @@ def register_issue_confirm_tasks(celery):
             return
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='[mpsprojects] A comment was posted on '
-                              '"{proj}/{desc}"'.format(proj=comment.parent.parent.name, desc=comment.parent.label),
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=list(recipients))
+        msg = EmailMultiAlternatives(subject='[mpsprojects] A comment was posted on '
+                                             '"{proj}/{desc}"'.format(proj=comment.parent.parent.name,
+                                                                      desc=comment.parent.label),
+                                     from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     to=list(recipients))
 
         msg.body = render_template('email/project_confirmation/new_comment.txt', comment=comment,
                                    project=comment.parent.parent, desc=comment.parent)

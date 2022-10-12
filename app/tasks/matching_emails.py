@@ -13,7 +13,7 @@ from datetime import datetime
 
 from celery import group, chain
 from flask import current_app, render_template
-from flask_mail import Message
+from flask_mailman import EmailMultiAlternatives
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -107,9 +107,9 @@ def register_matching_email_tasks(celery):
         pclass = config.project_class
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[user.email])
+        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     to=[user.email])
 
         if is_draft:
             msg.subject ='Notification: Draft project allocation for "{name}" ' \
@@ -117,9 +117,11 @@ def register_matching_email_tasks(celery):
             msg.body = render_template('email/matching/draft_notify_students.txt', user=user,
                                        config=config, pclass=pclass, attempt=record, matches=matches,
                                        number=len(matches))
-            msg.html = render_template('email/matching/draft_notify_students.html', user=user,
-                                       config=config, pclass=pclass, attempt=record, matches=matches,
-                                       number=len(matches))
+
+            html = render_template('email/matching/draft_notify_students.html', user=user,
+                                   config=config, pclass=pclass, attempt=record, matches=matches,
+                                   number=len(matches))
+            msg.attach_alternative(html, "text/html")
 
         else:
             msg.subject ='Notification: Final project allocation for "{name}" ' \
@@ -127,9 +129,11 @@ def register_matching_email_tasks(celery):
             msg.body = render_template('email/matching/final_notify_students.txt', user=user,
                                        config=config, pclass=pclass, attempt=record, matches=matches,
                                        number=len(matches))
-            msg.html = render_template('email/matching/final_notify_students.html', user=user,
-                                       config=config, pclass=pclass, attempt=record, matches=matches,
-                                       number=len(matches))
+
+            html = render_template('email/matching/final_notify_students.html', user=user,
+                                   config=config, pclass=pclass, attempt=record, matches=matches,
+                                   number=len(matches))
+            msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send schedule email to {r}'.format(r=', '.join(msg.recipients)))
@@ -229,9 +233,9 @@ def register_matching_email_tasks(celery):
             convenors.add(match.selector.config.project_class.convenor)
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[user.email])
+        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     to=[user.email])
 
         if is_draft:
             msg.subject ='Notification: Draft project allocation for ' \
@@ -242,13 +246,19 @@ def register_matching_email_tasks(celery):
             if len(matches) > 0:
                 msg.body = render_template('email/matching/draft_notify_faculty.txt', user=user, fac=fac,
                                            attempt=record, matches=binned_matches, convenors=convenors)
-                msg.html = render_template('email/matching/draft_notify_faculty.html', user=user, fac=fac,
-                                           attempt=record, matches=binned_matches, convenors=convenors)
+
+                html = render_template('email/matching/draft_notify_faculty.html', user=user, fac=fac,
+                                       attempt=record, matches=binned_matches, convenors=convenors)
+                msg.attach_alternative(html, "text/html")
+
             else:
+
                 msg.body = render_template('email/matching/draft_unneeded_faculty.txt', user=user, fac=fac,
                                            attempt=record)
-                msg.html = render_template('email/matching/draft_unneeded_faculty.html', user=user, fac=fac,
-                                           attempt=record)
+
+                html = render_template('email/matching/draft_unneeded_faculty.html', user=user, fac=fac,
+                                       attempt=record)
+                msg.attach_alternative(html, "text/html")
 
         else:
             msg.subject ='Notification: Final project allocation for ' \
@@ -259,13 +269,19 @@ def register_matching_email_tasks(celery):
             if len(matches) > 0:
                 msg.body = render_template('email/matching/final_notify_faculty.txt', user=user, fac=fac,
                                            attempt=record, matches=binned_matches, convenors=convenors)
-                msg.html = render_template('email/matching/final_notify_faculty.html', user=user, fac=fac,
-                                           attempt=record, matches=binned_matches, convenors=convenors)
+
+                html = render_template('email/matching/final_notify_faculty.html', user=user, fac=fac,
+                                       attempt=record, matches=binned_matches, convenors=convenors)
+                msg.attach_alternative(html, "text/html")
+
             else:
+
                 msg.body = render_template('email/matching/final_unneeded_faculty.txt', user=user, fac=fac,
                                            attempt=record)
-                msg.html = render_template('email/matching/final_unneeded_faculty.html', user=user, fac=fac,
-                                           attempt=record)
+
+                html = render_template('email/matching/final_unneeded_faculty.html', user=user, fac=fac,
+                                       attempt=record)
+                msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send schedule email to {r}'.format(r=', '.join(msg.recipients)))

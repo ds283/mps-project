@@ -9,7 +9,7 @@
 #
 
 from flask import current_app, render_template
-from flask_mail import Message
+from flask_mailman import EmailMultiAlternatives
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -74,12 +74,13 @@ def register_push_feedback_tasks(celery):
         pclass = record.period.config.project_class
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='{proj}: Feedback for {name}'.format(proj=pclass.name, name=period.display_name),
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[record.owner.student.user.email],
-                      cc=[record.project.owner.user.email],
-                      bcc=[record.marker.user.email])
+        msg = EmailMultiAlternatives(
+            subject='{proj}: Feedback for {name}'.format(proj=pclass.name, name=period.display_name),
+            from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+            reply_to=current_app.config['MAIL_REPLY_TO'],
+            to=[record.owner.student.user.email],
+            cc=[record.project.owner.user.email],
+            bcc=[record.marker.user.email])
 
         msg.body = render_template('email/push_feedback/email_push.txt', student=record.owner.student,
                                    period=period, pclass=pclass, record=record)

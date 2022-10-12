@@ -52,7 +52,7 @@ Flask-Debug-API==0.1.0
 Flask-DebugToolbar==0.13.1
 Flask-HTMLmin==2.2.0
 Flask-HTTPAuth==4.7.0
-Flask-Limiter==2.6.2
+Flask-Limiter==2.6.3
 Flask-Login==0.6.2
 Flask-Mail==0.9.1
 Flask-Markdown==0.3

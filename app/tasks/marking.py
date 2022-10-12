@@ -9,7 +9,7 @@
 #
 
 from flask import current_app, render_template
-from flask_mailman import EmailMultiAlternatives
+from flask_mailman import EmailMultiAlternatives, EmailMessage
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.urls import url_quote
 
@@ -233,7 +233,7 @@ def register_marking_tasks(celery):
         return None
 
 
-    def _attach_documents(msg: Message, record: SubmissionRecord, report_filename: Path, max_attachment: int,
+    def _attach_documents(msg: EmailMessage, record: SubmissionRecord, report_filename: Path, max_attachment: int,
                           role=None):
         # track cumulative size of added assets, packed on a 'first-come, first-served' system
         attached_size = 0
@@ -288,7 +288,7 @@ def register_marking_tasks(celery):
         return attached_documents
 
 
-    def _attach_asset(msg: Message, asset: SubmittedAsset, current_size: int, attached_documents,
+    def _attach_asset(msg: EmailMessage, asset: SubmittedAsset, current_size: int, attached_documents,
                       asset_abs_path: Path, filename=None, max_attachment=None, description=None,
                       endpoint='download_submitted_asset'):
         if not asset_abs_path.exists():
@@ -305,9 +305,9 @@ def register_marking_tasks(celery):
         if max_attachment is not None \
                 and float(current_size + asset_size)/(1024*1024) > max_attachment:
             if filename is not None:
-                link = 'https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}?filename={fnam}'.format(endpoint=endpoint,
-                                                                                                      asset_id=asset.id,
-                                                                                                      fnam=url_quote(filename))
+                link = 'https://mpsprojects.sussex.ac.uk/admin/{endpoint}/' \
+                       '{asset_id}?filename={fnam}'.format(endpoint=endpoint, asset_id=asset.id,
+                                                           fnam=url_quote(filename))
             else:
                 link = 'https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}'.format(endpoint=endpoint,
                                                                                       asset_id=asset.id)
@@ -320,7 +320,7 @@ def register_marking_tasks(celery):
                     str(asset.filename)
 
             with asset_abs_path.open(mode='rb') as f:
-                msg.attach(filename=attached_name, content_type=asset.mimetype, data=f.read())
+                msg.attach(filename=attached_name, mimetype=asset.mimetype, content=f.read())
 
             attached_documents.append((True, attached_name, description))
 

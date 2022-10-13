@@ -56,13 +56,10 @@ def background_task_data(tasks):
                 else '<span class="badge bg-secondary">Nobody</span>',
              'name': t.name,
              'description': t.description,
-             'start_at': {
-                 'display': t.start_date.strftime("%a %d %b %Y %H:%M:%S"),
-                 'timestamp': t.start_date.timestamp()
-             },
+             'start_at': t.start_date.strftime("%a %d %b %Y %H:%M:%S"),
              'status': render_template_string(_state, state=t.status),
              'progress': '{c}%'.format(c=t.progress),
              'message': t.message,
              'menu': render_template_string(_menu, t=t)} for t in tasks]
 
-    return jsonify(data)
+    return data

@@ -47,3 +47,4 @@ def register_background_tasks(celery):
             raise self.retry()
 
         self.update_state(state='FINISHED')
+

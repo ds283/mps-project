@@ -3410,15 +3410,41 @@ def background_tasks():
     return render_template("admin/background_tasks.html")
 
 
-@admin.route('/background_ajax')
+@admin.route('/background_ajax', methods=['POST'])
 @roles_required('root')
 def background_ajax():
     """
     Ajax data point for background tasks view
     :return:
     """
-    tasks = TaskRecord.query.all()
-    return ajax.site.background_task_data(tasks)
+    base_query = db.session.query(TaskRecord).join(User, User.id == TaskRecord.owner_id)
+
+    identifier = {'search': TaskRecord.id,
+                  'order': TaskRecord.id}
+    name = {'search': TaskRecord.name,
+            'order': TaskRecord.id,
+            'search_collation': 'utf8_general_ci'}
+    owner = {'search': func.concat(User.first_name, ' ', User.last_name),
+             'order': [User.last_name, User.first_name],
+             'search_collation': 'utf8_general_ci'}
+    start_time = {'search': func.date_format(TaskRecord.start_date, "%a %d %b %Y %H:%M:%S"),
+                  'order': TaskRecord.start_date}
+    status = {'order': TaskRecord.status}
+    progress = {'order': TaskRecord.progress}
+    message = {'search': TaskRecord.message,
+               'order': TaskRecord.message,
+               'search_collation': 'utf8_general_ci'}
+
+    columns = {'id': identifier,
+               'name': name,
+               'owner': owner,
+               'start_at': start_time,
+               'status': status,
+               'progress': progress,
+               'message': message}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.site.background_task_data)
 
 
 @admin.route('/terminate_background_task/<string:id>')
@@ -6493,7 +6519,7 @@ def delete_schedule(id):
 @admin.route('/perform_delete_schedule/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def perform_delete_schedule(id):
-    record: SchedueAttempt = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
     if url is None:

@@ -55,29 +55,35 @@ def register_system_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def reset_background_tasks(self):
         # reset all background tasks
+        self.update_state(state='STARTED')
+
         try:
             db.session.query(TaskRecord).delete()
             db.session.commit()
+
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        return True
+        self.update_state(state='FINISHED')
 
 
     @celery.task(bind=True, default_retry_delay=30)
     def reset_notifications(self):
         # reset all notification records
+        self.update_state(state='STARTED')
+
         try:
             db.session.query(Notification).delete()
             db.session.commit()
+
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        return True
+        self.update_state(state='FINISHED')
 
 
     @celery.task(bind=True, default_retry_delay=30)

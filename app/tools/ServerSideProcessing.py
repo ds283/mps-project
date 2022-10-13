@@ -10,7 +10,7 @@
 
 
 import json
-from collections import Iterable
+from collections.abc import Iterable
 
 from flask import jsonify
 

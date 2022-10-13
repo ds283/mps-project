@@ -9,7 +9,7 @@
 #
 
 import json
-from collections import Iterable
+from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 from os import path
 from time import time

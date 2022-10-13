@@ -9,7 +9,7 @@
 #
 
 
-from collections import Iterable
+from collections.abc import Iterable
 from typing import List
 
 from flask import redirect, url_for, flash, current_app, request

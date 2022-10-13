@@ -240,6 +240,7 @@ def create_app():
     tasks.register_services_tasks(celery)
     tasks.register_process_report_tasks(celery)
     tasks.register_canvas_tasks(celery)
+    tasks.register_background_tasks(celery)
     tasks.register_test_tasks(celery)
 
 

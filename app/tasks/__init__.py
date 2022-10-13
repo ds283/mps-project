@@ -36,5 +36,6 @@ from .marking import register_marking_tasks
 from .services import register_services_tasks
 from .process_report import register_process_report_tasks
 from .canvas import register_canvas_tasks
+from .background_tasks import register_background_tasks
 
 from .test import register_test_tasks

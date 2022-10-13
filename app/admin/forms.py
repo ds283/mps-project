@@ -556,6 +556,7 @@ class ScheduledTaskMixin():
     owner = QuerySelectField('Owner', query_factory=GetSysadminUsers, get_label=BuildSysadminUserName)
 
     tasks_available = [('app.tasks.prune_email.prune_email_log', 'Prune email log'),
+                       ('app.tasks.background_tasks.prune_background_tasks', 'Prune background tasks'),
                        ('app.tasks.backup.backup', 'Perform local backup'),
                        ('app.tasks.backup.thin', 'Thin local backups'),
                        ('app.tasks.backup.limit_size', 'Enforce limit on size of backup folder'),

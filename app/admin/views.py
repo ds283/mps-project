@@ -26,6 +26,7 @@ from flask import current_app, render_template, redirect, url_for, flash, reques
     stream_with_context, send_file, abort
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 from numpy import histogram
+from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import cast
 from sqlalchemy.sql import func
@@ -3407,7 +3408,17 @@ def background_tasks():
     List all background tasks
     :return:
     """
-    return render_template("admin/background_tasks.html")
+    status_filter = request.args.get('status_filter')
+
+    if status_filter is None and session.get('background_task_status_filter'):
+        status_filter = session['background_task_status_filter']
+
+    if status_filter is not None:
+        if status_filter not in ['all', 'pending', 'running', 'success', 'failure']:
+            status_filter = 'all'
+        session['background_task_status_filter'] = status_filter
+
+    return render_template("admin/background_tasks.html", status_filter=status_filter)
 
 
 @admin.route('/background_ajax', methods=['POST'])
@@ -3417,7 +3428,20 @@ def background_ajax():
     Ajax data point for background tasks view
     :return:
     """
+    status_filter = request.args.get('status_filter')
+
     base_query = db.session.query(TaskRecord).join(User, User.id == TaskRecord.owner_id)
+
+    if status_filter == 'pending':
+        base_query = base_query.filter(TaskRecord.status == TaskRecord.PENDING)
+    elif status_filter == 'running':
+        base_query = base_query.filter(TaskRecord.status == TaskRecord.RUNNING)
+    elif status_filter == 'success':
+        base_query = base_query.filter(TaskRecord.status == TaskRecord.SUCCESS)
+    elif status_filter == 'failure':
+        base_query = \
+            base_query.filter(or_(TaskRecord.status == TaskRecord.FAILURE,
+                                  TaskRecord.status == TaskRecord.TERMINATED))
 
     identifier = {'search': TaskRecord.id,
                   'order': TaskRecord.id}

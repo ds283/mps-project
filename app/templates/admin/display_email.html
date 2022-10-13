@@ -14,13 +14,11 @@
                 <div class="card-header bg-primary text-white">{{ email.subject }}</div>
                 <div class="card-body email-display">
                     <p>To:
-                        {% set count = 0 %}
                         {% for user in email.recipients -%}
-                            {%- if count > 0 -%}, {% endif -%}
-                            <strong>{{ user.name }}</strong> <{{ user.email }}>
-                        {% else %}
-                            <span class="badge badge-secondary">Nobody</span>
-                        {% endif %}
+                            {%- if loop.index > 1 -%}, {% endif -%}<strong>{{ user.name }}</strong> <a href="mailto::{{ user.email }}">&lt;{{ user.email }}&gt;</a>
+                        {%- else -%}
+                            <span class="badge bg-secondary">Nobody</span>
+                        {%- endfor %}
                     </p>
                     <p>Sent: <strong>{{ email.send_date.strftime("%a %d %b %Y %H:%M:%S") }}</strong></p>
                     <p>Subject: <strong>{{ email.subject }}</strong></p>

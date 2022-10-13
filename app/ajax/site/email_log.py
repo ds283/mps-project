@@ -31,26 +31,28 @@ _email_log_menu = \
 
 
 # language=jinja2
-_name = \
+_names = \
 """
-{% if e.user is not none %}
-    <a href="mailto:{{ e.user.email }}" {% if e.user.last_email %}data-bs-toggle="tooltip" title="Last notification at {{ e.user.last_email.strftime("%a %d %b %Y %H:%M:%S") }}"{% endif %}>{{ e.user.name }}</a>
+{% for user in e.recipients %}
+    <div>
+        <a href="mailto:{{ user.email }}" {% if user.last_email %}data-bs-toggle="tooltip" title="Last notification at {{ user.last_email.strftime("%a %d %b %Y %H:%M:%S") }}"{% endif %}>{{ user.name }}</a>
+    </div>
 {% else %}
-    <span class="badge bg-warning text-dark">Not logged</span>
-{% endif %}
+  <span class="badge bg-warning">Not logged</span>
+{% endfor %}
 """
 
 
 # language=jinja2
-_address = \
+_addresses = \
 """
-{% if e.user is not none %}
-    <a class="text-decoration-none" href="mailto:{{ e.user.email }}">{{ e.user.email }}</a>
-{% elif e.recipient %}
-    {{ e.recipient }}
+{% for user in e.recipients %}
+    <div>
+        <a class="text-decoration-none" href="mailto:{{ user.email }}">{{ user.email }}</a>
+    </div>
 {% else %}
-    <span class="badge bg-danger">Invalid address or recipient</span>
-{% endif %}
+    <span class="badge bg-warning">Invalid/span>
+{% endfor %}
 """
 
 # language=jinja2
@@ -61,8 +63,8 @@ _subject = \
 
 
 def email_log_data(emails):
-    data = [{'recipient': render_template_string(_name, e=e),
-             'address': render_template_string(_address, e=e),
+    data = [{'recipient': render_template_string(_names, e=e),
+             'address': render_template_string(_addresses, e=e),
              'date': e.send_date.strftime("%a %d %b %Y %H:%M:%S"),
              'subject': render_template_string(_subject, e=e),
              'menu': render_template_string(_email_log_menu, e=e)} for e in emails]

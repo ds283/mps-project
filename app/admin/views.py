@@ -19,8 +19,8 @@ from typing import List
 from urllib.parse import urlsplit
 
 from bokeh.embed import components
-from bokeh.plotting import figure
 from bokeh.models import Label
+from bokeh.plotting import figure
 from celery import chain, group
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, \
     stream_with_context, send_file, abort
@@ -36,7 +36,7 @@ from werkzeug.wrappers import Response
 import app.ajax as ajax
 from . import admin
 from .actions import estimate_CATS_load, availability_CSV_generator, pair_slots
-from .forms import GlobalConfig,\
+from .forms import GlobalConfig, \
     AddResearchGroupForm, EditResearchGroupForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
@@ -2286,14 +2286,13 @@ def email_log_ajax():
 
     # set up columns for server-side processing
     recipient = {'search': func.concat(User.first_name, ' ', User.last_name),
-                 'order': [User.last_name, User.first_name],
+                 'search_collection': EmailLog.recipients,
                  'search_collation': 'utf8_general_ci'}
     address = {'search': User.email,
-               'order': User.email,
+               'search_collection': EmailLog.recipients,
                'search_collation': 'utf8_general_ci'}
     date = {'search': func.date_format(EmailLog.send_date, "%a %d %b %Y %H:%M:%S"),
-            'order': EmailLog.send_date,
-            'search_collation': 'utf8_general_ci'}
+            'order': EmailLog.send_date}
     subject = {'search': EmailLog.subject,
                'order': EmailLog.subject,
                'search_collaboration': 'utf8_general_ci'}

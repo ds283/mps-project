@@ -8,14 +8,12 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, url_for
-
-from ...database import db
-from ...models import ConfirmRequest, SelectingStudent, LiveProject, Bookmark
-from ...cache import cache
-
+from flask import render_template_string, url_for
 from sqlalchemy.event import listens_for
 
+from ...cache import cache
+from ...database import db
+from ...models import ConfirmRequest, SelectingStudent, LiveProject, Bookmark
 
 # language=jinja2
 _meeting = \

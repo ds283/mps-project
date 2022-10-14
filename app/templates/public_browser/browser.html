@@ -41,7 +41,7 @@
         }
 
         $(document).ready(function () {
-            $('#browser-table').DataTable({
+            let table = $('#browser-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 stateSave: true, serverSide: true, processing: true,
                 ajax: {
@@ -78,12 +78,12 @@
                 ],
                 order: [[0, 'asc']]
             });
-        });
 
-        $("#selector-form").submit(function (e) {
-            let table = $('#browser-table').dataTable();
-            table.fnPageChange('first');
-            return false;
+            {# reset page to first after any new load, so that we don't have a problem with e.g. the table
+               being on p. 12 from viewing the large list of MPhys projects, and then switching to
+               MPPs which have no more than 3 pages. It would be nice if DataTables was clever enough to
+               deal with that ... but it isn't #}
+            table.page('first').draw(false);
         });
     </script>
 {% endblock %}
@@ -92,7 +92,7 @@
     <div class="container-fluid">
         <div class="d-flex justify-content-center mt-5">
             <div class="public-project-browse-heading text-dark text-center">
-                Browse Physics & Astronomy projects
+                Welcome to the Physics & Astronomy public projects list
             </div>
         </div>
         <div class="row">

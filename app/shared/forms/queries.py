@@ -76,6 +76,10 @@ def GetAllProjectClasses():
     return ProjectClass.query.filter_by(active=True).order_by(ProjectClass.name.asc())
 
 
+def GetPublishedProjectClasses():
+    return ProjectClass.query.filter_by(active=True, publish=True).order_by(ProjectClass.name.asc())
+
+
 def GetConvenorProjectClasses():
     return ProjectClass.query.filter(ProjectClass.active, ProjectClass.convenor_id==current_user.id)
 

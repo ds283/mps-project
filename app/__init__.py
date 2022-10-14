@@ -458,4 +458,7 @@ def create_app():
     from .projecthub import projecthub as projecthub_blueprint
     app.register_blueprint(projecthub_blueprint, url_prefix='/projecthub')
 
+    from .public_browser import public_browser as public_browser_blueprint
+    app.register_blueprint(public_browser_blueprint, url_prefix='/public')
+
     return app

@@ -273,11 +273,9 @@ def edit_subpd_record_articles_ajax(pid):
              'order': ConvenorSubmitterArticle.title,
              'search_collation': 'utf8_general_ci'}
     published = {'search': func.date_format(ConvenorSubmitterArticle.publication_timestamp, "%a %d %b %Y %H:%M:%S"),
-                 'order': ConvenorSubmitterArticle.publication_timestamp,
-                 'search_collation': 'utf8_general_ci'}
+                 'order': ConvenorSubmitterArticle.publication_timestamp}
     last_edit = {'search': func.date_format(ConvenorSubmitterArticle.last_edit_timestamp, "%a %d %b %Y %H:%M:%S"),
-                 'order': ConvenorSubmitterArticle.last_edit_timestamp,
-                 'search_collation': 'utf8_general_ci'}
+                 'order': ConvenorSubmitterArticle.last_edit_timestamp}
 
     columns = {'title': title,
                'published': published,
@@ -420,8 +418,7 @@ def article_widget_ajax(subid):
              'order': FormattedArticle.title,
              'search_collation': 'utf8_general_ci'}
     published = {'search': func.date_format(FormattedArticle.publication_timestamp, "%a %d %b %Y %H:%M:%S"),
-                 'order': FormattedArticle.publication_timestamp,
-                 'search_collation': 'utf8_general_ci'}
+                 'order': FormattedArticle.publication_timestamp}
     author = {'search': func.concat(User.first_name, ' ', User.last_name),
               'order': [User.last_name, User.first_name],
               'search_collation': 'utf8_general_ci'}

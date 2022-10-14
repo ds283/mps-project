@@ -9058,11 +9058,9 @@ def student_tasks_ajax(type, sid):
             'order': ConvenorTask.description,
             'search_collation': 'utf8_general_ci'}
     defer_date = {'search': func.date_format(ConvenorTask.defer_date, "%a %d %b %Y %H:%M:%S"),
-                  'order': ConvenorTask.defer_date,
-                  'search_collation': 'utf8_general_ci'}
+                  'order': ConvenorTask.defer_date}
     due_date = {'search': func.date_format(ConvenorTask.due_date, "%a %d %b %Y %H:%M:%S"),
-                'order': ConvenorTask.due_date,
-                'search_collation': 'utf8_general_ci'}
+                'order': ConvenorTask.due_date}
     status = {'order': literal_column("(NOT(complete OR dropped) * (100*(due_date > CURDATE()) + 50*(defer_date > CURDATE())) + 10*complete + 1*dropped)")}
 
     columns = {'task': task,

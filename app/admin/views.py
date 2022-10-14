@@ -2472,8 +2472,7 @@ def scheduled_email_ajax():
                  'order': [User.last_name, User.first_name],
                  'search_collation': 'utf8_general_ci'}
     timestamp = {'search': func.date_format(EmailNotification.timestamp, "%a %d %b %Y %H:%M:%S"),
-                 'order': EmailNotification.timestamp,
-                 'search_collation': 'utf8_general_ci'}
+                 'order': EmailNotification.timestamp}
     type = {'order': EmailNotification.event_type}
 
     columns = {'recipient': recipient,

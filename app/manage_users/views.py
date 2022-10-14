@@ -478,8 +478,7 @@ def users_ajax():
              'order': User.email,
              'search_collation': 'utf8_general_ci'}
     confirm = {'search': func.date_format(User.confirmed_at, "%a %d %b %Y %H:%M:%S"),
-               'order': User.confirmed_at,
-               'search_collation': 'utf8_general_ci'}
+               'order': User.confirmed_at}
     active = {'order': User.active}
     details = {'order': [User.last_active, User.current_login_at, User.last_login_at]}
 

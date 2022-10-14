@@ -16,6 +16,12 @@ p.copyright {
     margin-bottom: 1rem;
 }
 
+.public-project-browse-heading {
+    font-family: 'Roboto', sans-serif;
+    font-size: 32pt;
+    margin-bottom: 1rem;
+}
+
 .selection-label {
     display: inline-block;
     margin-top: 5px;

@@ -17,4 +17,5 @@ from ..shared.forms.queries import GetPublishedProjectClasses
 
 class PublicBrowserSelectorForm(Form):
 
-    selector = QuerySelectField('Browse projects for', query_factory=GetPublishedProjectClasses, get_label='name')
+    selector = QuerySelectField('Browse projects for', query_factory=GetPublishedProjectClasses,
+                                allow_blank=True, get_label='name')

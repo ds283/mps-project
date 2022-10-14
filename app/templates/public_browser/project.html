@@ -1,0 +1,168 @@
+{% extends "bootstrap/base.html" %}
+
+{% from "icon_block.html" import icon_block %}
+
+{% block styles %}
+    {{ super() }}
+    {% assets filters="cssmin", output="gen/project-default-min.css", "css/common.css", "css/project.css", "css/default.css", "css/project-default.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+{%- endblock %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row mt-5">
+            <div class="col-1"></div>
+            <div class="col-10">
+                <div class="row sm-gap-below">
+                    <div class="col-12 project-title">
+                        {{ title }}
+                    </div>
+                </div>
+                <div class="row sm-gap-below">
+                    <div class="col-6">
+                        <div class="project-owner-name">{{ project.owner.user.name }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="float-end">
+                            {% if project.group %}
+                                <div class="research-group-banner">{{ project.group.name }}</div>
+                                {% if project.group.website and project.group.website is not none %}
+                                    <a class="research-group-webpage" href="{{ project.group.website }}">
+                                        Research group website <i class="fas fa-external-link"></i>
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <hr class="intro-divider">
+
+                <div class="card border-primary mt-3 mb-3">
+                    <div class="card-header bg-primary text-white">Project details</div>
+                    <div class="card-body">
+                        <div class="card mt-3 mb-3 ataglance-background">
+                            <div class="card-header">
+                                <div class="row vertical-align">
+                                    <div class="col-4">
+                                        Key facts
+                                    </div>
+                                    <div class="col-8">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="container-fluid">
+                                    {% if keywords and keywords|length > 0 %}
+                                        <div class="row sm-gap-below vertical-top">
+                                            <div class="col-3">Subject keywords</div>
+                                            <div class="col-9">
+                                                {% for keyword in keywords %}
+                                                    <span class="badge bg-success project-label">{{ keyword }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
+                                    {% if project.skills and project.skills.first() %}
+                                        <div class="row sm-gap-below vertical-top">
+                                            <div class="col-3">Transferable skills</div>
+                                            <div class="col-9">
+                                                {% for skill in project.ordered_skills %}
+                                                    {% if skill.is_active %}
+                                                        {{ skill.make_label(user_classes="project-label")|safe }}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
+                                    {% if project.programmes and project.programmes.first() %}
+                                        <div class="row sm-gap-below vertical-top">
+                                            <div class="col-3">Prefer degree programmes</div>
+                                            <div class="col-9">
+                                                {% for programme in project.ordered_programmes %}
+                                                    {% if programme.active %}
+                                                        {{ programme.make_label(user_classes="project-label")|safe }}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
+                                    {% if desc %}
+                                        {% set modules = desc.ordered_modules.all() if desc is not none else none %}
+                                        {% if modules and modules|length > 0 %}
+                                            <div class="row sm-gap-below vertical-top">
+                                                <div class="col-3">Recommended modules</div>
+                                                <div class="col-9">
+                                                    {% for module in modules %}
+                                                        {% if module.active %}
+                                                            {{ module.make_label(user_classes="project-label")|safe }}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
+
+                                    <div class="row vertical-top">
+                                        <div class="col-3">Supervision team</div>
+                                        <div class="col-9">
+                                            {% if desc %}
+                                                {% for role in desc.team %}
+                                                    {% set style = role.make_CSS_style() %}
+                                                    <span class="badge bg-secondary project-label"
+                                                          {% if style %}style="{{ style }}"{% endif %}>{{ role.name }}</span>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if desc.review_only %}
+                            <div class="alert alert-info mt-3 mb-3">
+                                {% call icon_block("info-circle") %}
+                                    <div><strong>This project is a literature review.</strong></div>
+                                {% endcall %}
+                            </div>
+                        {% endif %}
+
+                        <h4>Description</h4>
+                        {% if desc %}
+                            <div class="project-description">{{ desc.description|dealingwithdollars|markdown|bclean|blinkify|safe }}</div>
+
+                            {% if desc.reading and desc.reading is not none %}
+                                <hr class="intro-divider">
+                                <p><strong>Recommended resources</strong></p>
+                                {{ desc.reading|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            {% endif %}
+                        {% else %}
+                            <div class="alert alert-danger">
+                                {% call icon_block("exclamation-circle") %}
+                                    <div><strong>We encountered a problem.</strong></div>
+                                    <div class="mt-1">
+                                        We're currently having trouble showing the description for this project.
+                                        Please check back later.
+                                    </div>
+                                {% endcall %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if text and url %}
+                    <a class="text-decoration-none" href="{{ url }}">
+                        <i class="fas fa-backward"></i> Return to {{ text }}
+                    </a>
+                {% endif %}
+            </div>
+            <div class="col-1"></div>
+        </div>
+    </div>
+{% endblock %}

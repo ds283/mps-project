@@ -14,6 +14,12 @@ from flask import render_template_string
 from ...models import Project
 
 # language=jinja2
+_name = \
+"""
+<a class="text-decoration-none" href="{{ url_for('public_browser.project', pclass_id=pclass_id, proj_id=project.id) }}">{{ project.name }}</a>
+"""
+
+# language=jinja2
 _group = \
 """
 <a class="badge bg-secondary text-decoration-none" style="{{ group.make_CSS_style() }}">{{ group.name }}</a>
@@ -33,12 +39,12 @@ _skills = \
 {% endfor %}
 """
 
-def _project_list_data(p: Project):
-    return {'name': '<a class="text-decoration-none" href="#">{name}</a>'.format(name=p.name),
+def _project_list_data(pclass_id: int, p: Project):
+    return {'name': render_template_string(_name, pclass_id=pclass_id, project=p),
             'supervisor': '{name}'.format(name=p.owner.user.name),
             'group': render_template_string(_group, group=p.group),
             'skills': render_template_string(_skills, skills=p.ordered_skills)}
 
 
-def public_browser_project_list(projects: List[Project]):
-    return [_project_list_data(p) for p in projects]
+def public_browser_project_list(pclass_id: int, projects: List[Project]):
+    return [_project_list_data(pclass_id, p) for p in projects]

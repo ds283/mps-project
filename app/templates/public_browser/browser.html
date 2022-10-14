@@ -3,8 +3,9 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import on_click_selector_field %}
 {% from "datatables.html" import import_datatables %}
+{% from "icon_block.html" import icon_block %}
 
-{% if not pclass_id %}
+{% if pclass_id is not defined%}
 {% set pclass_id = none %}
 {% endif %}
 
@@ -17,6 +18,9 @@
 
 {% block scripts %}
     {{ super() }}
+    <script src="https://kit.fontawesome.com/a95036619a.js" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
+
     {{ import_datatables() }}
 
     <script>
@@ -39,7 +43,7 @@
         $(document).ready(function () {
             $('#browser-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
-                stateSave: true, serverSide: true,
+                stateSave: true, serverSide: true, processing: true,
                 ajax: {
                     url: $SCRIPT_ROOT + '/public/browse_ajax?pclass_id={{ pclass_id }}',
                     type: 'POST',
@@ -86,6 +90,11 @@
 
 {% block content %}
     <div class="container-fluid">
+        <div class="d-flex justify-content-center mt-5">
+            <div class="public-project-browse-heading text-dark text-center">
+                Browse Physics & Astronomy projects
+            </div>
+        </div>
         <div class="row">
             <div class="col-3"></div>
             <div class="col-6">
@@ -95,6 +104,20 @@
                         {{ on_click_selector_field(form.selector, true) }}
                     </div>
                 </form>
+                <div class="alert alert-info mt-3 mb-3">
+                    {% call icon_block("info-circle") %}
+                        <div><strong>
+                            We regularly review the project list to incorporate
+                            student feedback and staff expertise.
+                        </strong></div>
+                        <div class="mt-1">
+                            Every effort is made to keep the list up-to-date.
+                            However, we cannot guarantee that all projects will be
+                            available due to changes in staff availability,
+                            student demand, or changes to the curriculum.
+                        </div>
+                    {% endcall %}
+                </div>
             </div>
             <div class="col-3"></div>
         </div>

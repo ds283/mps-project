@@ -764,7 +764,7 @@ def submit(sid):
         msg = EmailMultiAlternatives(subject='Your project choices have been received '
                                              '({pcl})'.format(pcl=sel.config.project_class.name),
                                      from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     reply_to=[current_app.config['MAIL_REPLY_TO']],
                                      to=[sel.student.user.email])
 
         msg.body = render_template('email/student_notifications/choices_received.txt', user=sel.student.user,
@@ -772,7 +772,7 @@ def submit(sid):
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send project choices confirmation email '
-                                                         'to {r}'.format(r=', '.join(msg.recipients)))
+                                                         'to {r}'.format(r=', '.join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         flash('Your project preferences were submitted successfully. '

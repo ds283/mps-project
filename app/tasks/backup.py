@@ -9,29 +9,28 @@
 #
 
 
-from typing import List
-
-from os import path, makedirs, rmdir, remove, scandir
-from flask import current_app
 import errno
+import functools
+import random
 import subprocess
 import tarfile
+from datetime import datetime, timedelta
+from os import path, makedirs, rmdir, remove, scandir
+from typing import List
+
+from celery import group, chain, chord
+from celery.exceptions import Ignore
+from dateutil import parser
+from flask import current_app, render_template
+from flask_mailman import EmailMessage
+from math import floor
 from sqlalchemy.exc import SQLAlchemyError
 
-from math import floor
-
-from celery import group, chain
-from celery.exceptions import Ignore
-
+from .. import register_task
 from ..database import db
 from ..models import BackupRecord
 from ..shared.backup import get_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.formatters import format_size
-
-from datetime import datetime, timedelta
-from dateutil import parser
-
-import random
 
 
 def _count_dir_size(path):
@@ -228,22 +227,22 @@ def register_backup_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def thin_bin(self, bin):
+    def thin_bin(self, period: int, unit: str, input_bin: List[int]):
         self.update_state(state='STARTED', meta='Thinning backup bin')
 
         # 'remain' should be a list of ids for BackupRecords that need to be thinned down to just 1
-        remain = bin
+        output_bin = input_bin
 
         # keep a list of backups that we drop
         dropped = []
 
-        while len(remain) > 1:
+        while len(output_bin) > 1:
             # draw a random index corresponding to a backup that should be dropped
-            index = random.randrange(len(remain))
+            index = random.randrange(len(output_bin))
 
             # remove from list of backups remaining in the bin
-            thin_id = remain[index]
-            del remain[index]
+            thin_id = output_bin[index]
+            del output_bin[index]
             dropped.append(thin_id)
 
             try:
@@ -257,18 +256,7 @@ def register_backup_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        return {'retained': remain[0], 'dropped': dropped}
-
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def thin_bins(self, bins, name):
-        self.update_state(state='STARTED', meta='Thinning {n} backup bins'.format(n=name))
-
-        # build group of tasks for each collection of backups we need to thin
-        tasks = group(thin_bin.s(bins[k]) for k in bins.keys())
-        tasks.apply_async()
-
-        self.update_state(state='SUCCESS')
+        return {'period': period, 'unit': unit, 'retained': output_bin[0], 'dropped': dropped}
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -325,16 +313,62 @@ def register_backup_tasks(celery):
                 else:
                     weekly[age_weeks] = [record.id]
 
-        thinning = group(thin_bins.si(daily, 'daily'), thin_bins.si(weekly, 'weekly'))
-        thinning.apply_async()
+        daily_list = [thin_bin.s(k, 'days', daily[k]) for k in daily]
+        weekly_list = [thin_bin.s(k, 'weeks', weekly[k]) for k in weekly]
+
+        total_list = daily_list + weekly_list
+
+        thin_tasks = chord(group(*total_list), issue_thinning_result.s(str(now), 'D.Seery@sussex.ac.uk'))
+        raise self.replace(thin_tasks)
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def issue_thinning_result(self, thinning_result, timestamp_str: str, email: str):
+        self.update_state(state='STARTED', meta='Issue backup thinning report to {r}'.format(r=email))
+
+        # order thinning_result by bins
+        def sort_comparator(a, b):
+            a_unit = a['unit']
+            b_unit = b['unit']
+            result = a_unit > b_unit
+            if result != 0:
+                return result
+
+            a_period = a['period']
+            b_period = b['period']
+            return a_period > b_period
+
+        sorted_result = sorted(thinning_result, key=functools.cmp_to_key(sort_comparator))
+
+        for item in sorted_result:
+            item['retained_record'] = db.session.query(BackupRecord).filter_by(id=item['retained']).first()
+            item['dropped_records'] = [db.session.query(BackupRecord).filter_by(id=x).first()
+                                       for x in item['dropped']]
+
+        timestamp = parser.parse(timestamp_str)
+
+        print(sorted_result)
+
+        msg = EmailMessage(subject='[mpsprojects] Backup thinning report at '
+                                   '{time}'.format(time=timestamp.strftime("%a %d %b %Y %H:%M:%S")),
+                           from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                           reply_to=[current_app.config['MAIL_REPLY_TO']],
+                           to=[email])
+        msg.body = render_template('email/backups/report_thinning.txt', result=sorted_result)
+
+        task_id = register_task(msg.subject, description='Send backup thinning report to '
+                                                         '{r}'.format(r=', '.join(msg.to)))
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         self.update_state(state='SUCCESS')
 
 
-    @celery.task(default_retry_delay=30)
-    def thin():
+    @celery.task(bind=True, default_retry_delay=30)
+    def thin(self):
         seq = chain(drop_absent_backups.si(), do_thinning.si(), clean_up.si())
-        seq.apply_async()
+        raise self.replace(seq)
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -350,9 +384,7 @@ def register_backup_tasks(celery):
 
         # build a group of tasks, one for each backup
         seq = group(drop_backup_if_absent.si(i.id) for i in records)
-        seq.apply_async()
-
-        self.update_state(state='SUCCESS')
+        raise self.replace(seq)
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -503,7 +535,9 @@ def register_backup_tasks(celery):
             success, msg = remove_backup(id)
 
             if not success:
-                self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
+                self.update_state(state='FAILED', meta='Prune failed: {msg}'.format(msg=msg))
+            else:
+                self.update_state(state='SUCCESS', meta='Prune backup succeeded')
 
 
     @celery.task(bind=True)
@@ -524,3 +558,5 @@ def register_backup_tasks(celery):
 
         if not success:
             self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
+        else:
+            self.update_state(state='SUCCESS', meta='Delete backup succeeded')

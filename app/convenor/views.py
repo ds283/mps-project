@@ -4584,7 +4584,7 @@ def submit_student_selection(sel_id):
         msg = EmailMultiAlternatives(subject='An administrator has submitted project choices on your behalf '
                                              '({pcl})'.format(pcl=sel.config.project_class.name),
                                      from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=current_user.email,
+                                     reply_to=[current_user.email],
                                      to=[sel.student.user.email, current_user.email])
 
         msg.body = render_template('email/student_notifications/choices_received_proxy.txt', user=sel.student.user,
@@ -4592,7 +4592,7 @@ def submit_student_selection(sel_id):
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send project choices confirmation email '
-                                                         'to {r}'.format(r=', '.join(msg.recipients)))
+                                                         'to {r}'.format(r=', '.join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         flash("Project choices for this selector have been successfully stored. "

@@ -77,7 +77,7 @@ def register_push_feedback_tasks(celery):
         msg = EmailMultiAlternatives(
             subject='{proj}: Feedback for {name}'.format(proj=pclass.name, name=period.display_name),
             from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-            reply_to=current_app.config['MAIL_REPLY_TO'],
+            reply_to=[current_app.config['MAIL_REPLY_TO']],
             to=[record.owner.student.user.email],
             cc=[record.project.owner.user.email],
             bcc=[record.marker.user.email])
@@ -87,7 +87,7 @@ def register_push_feedback_tasks(celery):
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='{proj}: Push {name} feedback to '
-                                                         '{r}'.format(r=', '.join(msg.recipients),
+                                                         '{r}'.format(r=', '.join(msg.to),
                                                                       proj=pclass.name, name=period.display_name))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 

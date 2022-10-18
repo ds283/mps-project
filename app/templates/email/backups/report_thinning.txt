@@ -1,0 +1,16 @@
+Backup thinning report for {{ date }}
+
+{% for item in result -%}
+********
+Bin: {{ item['period'] }} {{ item['unit'] }}
+{%- set retained = item['retained_record'] -%}
+{%- set dropped = item['dropped_records'] %}
+
+Retained record:
+  {{ retained.date.strftime("%a %d %b %Y %H:%M:%S") }}
+
+Dropped records:
+{% for x in dropped %}
+  {{ x.date.strftime("%a %d %b %Y %H:%M:%S") }}
+{% endfor %}
+{% endfor %}

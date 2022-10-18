@@ -339,7 +339,7 @@ def register_golive_tasks(celery):
         msg = EmailMultiAlternatives(
             subject='{name}: project list now published to students'.format(name=config.project_class.name),
             from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-            reply_to=current_app.config['MAIL_REPLY_TO'],
+            reply_to=[current_app.config['MAIL_REPLY_TO']],
             to=[data.user.email])
 
         # get live projects belonging to both this project class and this faculty member
@@ -359,7 +359,7 @@ def register_golive_tasks(celery):
                                    expect_requests=(expect_requests and projects_use_signoff))
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send confirmation request email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send confirmation request email to {r}'.format(r=', '.join(msg.to)))
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         email_chain = chain(send_log_email.si(task_id, msg),
@@ -391,7 +391,7 @@ def register_golive_tasks(celery):
         msg = EmailMultiAlternatives(
             subject='{name}: project list now available'.format(name=config.project_class.name),
             from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-            reply_to=current_app.config['MAIL_REPLY_TO'],
+            reply_to=[current_app.config['MAIL_REPLY_TO']],
             to=[data.student.user.email])
 
         msg.body = render_template('email/go_live/selector.txt', user=data.student.user, student=data,
@@ -402,7 +402,7 @@ def register_golive_tasks(celery):
         msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send confirmation request email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send confirmation request email to {r}'.format(r=', '.join(msg.to)))
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         email_chain = chain(send_log_email.si(task_id, msg),
@@ -469,7 +469,7 @@ def register_golive_tasks(celery):
             msg = EmailMultiAlternatives(subject='[mpsprojects] "{name}": project list now published to '
                                                  'students'.format(name=config.project_class.name),
                                          from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                         reply_to=current_app.config['MAIL_REPLY_TO'],
+                                         reply_to=[current_app.config['MAIL_REPLY_TO']],
                                          to=list(recipients))
 
             msg.body = render_template('email/go_live/convenor.txt', pclass=config.project_class, config=config,

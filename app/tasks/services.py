@@ -52,6 +52,9 @@ def register_services_tasks(celery):
         body_text = render_template_string(body, name=record.name, first_name=record.first_name,
                                            last_name=record.last_name)
 
+        if isinstance(reply_to, str):
+            reply_to = list(reply_to)
+
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
                                      reply_to=reply_to,
                                      to=[formataddr((record.name, record.email))],
@@ -71,6 +74,9 @@ def register_services_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def send_notify(self, prior_result, pair, subject, body, reply_to):
         to_addr = formataddr(pair)
+
+        if isinstance(reply_to, str):
+            reply_to = list(reply_to)
 
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
                                      reply_to=reply_to,
@@ -102,6 +108,9 @@ def register_services_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def send_email_addr(self, pair, subject, body, reply_to):
         to_addr = formataddr(pair)
+
+        if isinstance(reply_to, str):
+            reply_to = list(reply_to)
 
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
                                      reply_to=reply_to,

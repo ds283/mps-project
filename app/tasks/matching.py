@@ -1666,7 +1666,7 @@ def _send_offline_email(celery, record: MatchingAttempt, user, lp_asset: Generat
 
     msg = EmailMultiAlternatives(subject='Files for offline matching of {name} are now ready'.format(name=record.name),
                                  from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                 reply_to=current_app.config['MAIL_REPLY_TO'],
+                                 reply_to=[current_app.config['MAIL_REPLY_TO']],
                                  to=[user.email])
 
     msg.body = render_template('email/matching/generated.txt', name=record.name, user=user)
@@ -1680,7 +1680,7 @@ def _send_offline_email(celery, record: MatchingAttempt, user, lp_asset: Generat
         msg.attach(filename=str('schedule.mps'), content_type=mps_asset.mimetype, data=fd.read())
 
     # register a new task in the database
-    task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
+    task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.to)))
     send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
 

@@ -244,7 +244,7 @@ def register_issue_confirm_tasks(celery):
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = EmailMultiAlternatives(subject='Please check projects for {name}'.format(name=config.project_class.name),
                                      from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     reply_to=[current_app.config['MAIL_REPLY_TO']],
                                      to=[data.user.email])
 
         projects = data.projects_offered(config.project_class)
@@ -259,7 +259,7 @@ def register_issue_confirm_tasks(celery):
         msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send confirmation request email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send confirmation request email to {r}'.format(r=', '.join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1
@@ -307,7 +307,7 @@ def register_issue_confirm_tasks(celery):
         msg = EmailMultiAlternatives(
             subject='Reminder: please check projects for {name}'.format(name=config.project_class.name),
             from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-            reply_to=current_app.config['MAIL_REPLY_TO'],
+            reply_to=[current_app.config['MAIL_REPLY_TO']],
             to=[data.user.email])
 
         projects = data.projects_offered(config.project_class)
@@ -322,7 +322,7 @@ def register_issue_confirm_tasks(celery):
         msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send confirmation reminder email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send confirmation reminder email to {r}'.format(r=', '.join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1
@@ -454,7 +454,7 @@ def register_issue_confirm_tasks(celery):
         msg = EmailMultiAlternatives(
             subject='Projects: please consider revising {name}/{desc}'.format(name=project.name, desc=record.label),
             from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-            reply_to=current_user.email,
+            reply_to=[current_user.email],
             to=[owner.user.email])
 
         msg.body = render_template('email/project_confirmation/revise_request.txt', user=owner.user,
@@ -462,7 +462,7 @@ def register_issue_confirm_tasks(celery):
                                    pcl_names=pcl_names, current_user=current_user)
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send description revision request to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send description revision request to {r}'.format(r=', '.join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1
@@ -554,7 +554,7 @@ def register_issue_confirm_tasks(celery):
                                              '"{proj}/{desc}"'.format(proj=comment.parent.parent.name,
                                                                       desc=comment.parent.label),
                                      from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     reply_to=[current_app.config['MAIL_REPLY_TO']],
                                      to=list(recipients))
 
         msg.body = render_template('email/project_confirmation/new_comment.txt', comment=comment,
@@ -562,7 +562,7 @@ def register_issue_confirm_tasks(celery):
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Notify watchers of new '
-                                                         'comment'.format(r=', '.join(msg.recipients)))
+                                                         'comment'.format(r=', '.join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1

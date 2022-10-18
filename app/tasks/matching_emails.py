@@ -108,7 +108,7 @@ def register_matching_email_tasks(celery):
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     reply_to=[current_app.config['MAIL_REPLY_TO']],
                                      to=[user.email])
 
         if is_draft:
@@ -136,7 +136,7 @@ def register_matching_email_tasks(celery):
             msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send schedule email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send schedule email to {r}'.format(r=', '.join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1
@@ -234,7 +234,7 @@ def register_matching_email_tasks(celery):
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     reply_to=[current_app.config['MAIL_REPLY_TO']],
                                      to=[user.email])
 
         if is_draft:
@@ -284,7 +284,7 @@ def register_matching_email_tasks(celery):
                 msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send schedule email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send schedule email to {r}'.format(r=', '.join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1

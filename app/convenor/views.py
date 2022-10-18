@@ -7743,6 +7743,8 @@ def manual_assign():
         assert rec is not None
         submitter = rec.owner
 
+    # rec should not be None at this point
+
     # reconstruct form now we are guaranteed to have the SubmissionRecord available
     AssignMarkerForm = AssignMarkerFormFactory(rec.project, new_config.uses_marker, new_config, is_admin)
     form = AssignMarkerForm(request.form)
@@ -7785,13 +7787,14 @@ def manual_assign():
         url = redirect_url()
 
     # ensure form selector reflects the record that is actually being displayed
+    period: SubmissionPeriodRecord = rec.period
     if hasattr(form, 'selector'):
-        period: SubmissionPeriodRecord = rec.period
         form.selector.data = period
 
     return render_template('convenor/dashboard/manual_assign.html', rec=rec, config=old_config, url=url, text=text,
                            form=form, submitter=submitter,
-                           allow_reassign_project=not (rec.period.is_feedback_open or rec.student_engaged))
+                           allow_reassign_project=rec.project_id is None or
+                                                  (not period.is_feedback_open and not rec.student_engaged))
 
 
 @convenor.route('/manual_assign_ajax/<int:id>', methods=['POST'])
@@ -7885,7 +7888,7 @@ def assign_from_selection(id, sel_id):
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(redirect_url())
 
-    if rec.student_engaged:
+    if rec.student_engaged and rec.project_id is not None:
         flash('Can not reassign for {name} '
               'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
         return redirect(redirect_url())
@@ -7930,7 +7933,7 @@ def assign_liveproject(id, pid):
               'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(redirect_url())
 
-    if rec.student_engaged:
+    if rec.student_engaged and rec.project_id is not None:
         flash('Can not reassign for {name} '
               'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
         return redirect(redirect_url())

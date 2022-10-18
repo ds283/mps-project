@@ -349,8 +349,6 @@ def register_backup_tasks(celery):
 
         timestamp = parser.parse(timestamp_str)
 
-        print(sorted_result)
-
         msg = EmailMessage(subject='[mpsprojects] Backup thinning report at '
                                    '{time}'.format(time=timestamp.strftime("%a %d %b %Y %H:%M:%S")),
                            from_email=current_app.config['MAIL_DEFAULT_SENDER'],

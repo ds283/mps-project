@@ -61,7 +61,7 @@ def register_send_log_email(celery, mail: Mail):
             msg.send()
 
 
-    @celery.task(bind=True, default_retry_delay=10)
+    @celery.task(bind=True, default_retry_delay=10, serializer='pickle')
     def log_email(self, task_id, msg: EmailMessage):
         progress_update(task_id, TaskRecord.RUNNING, 80, "Logging email in database...", autocommit=True)
 

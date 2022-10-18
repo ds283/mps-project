@@ -3288,6 +3288,7 @@ def manage_backups_ajax():
     initiated = {'search': func.concat(User.first_name, ' ', User.last_name),
                  'order': [User.last_name, User.first_name],
                  'search_collation': 'utf8_general_ci'}
+    type = {'order': BackupRecord.type}
     description = {'search': BackupRecord.description,
                    'order': BackupRecord.description,
                    'search_collation': 'utf8_general_ci'}
@@ -3299,6 +3300,7 @@ def manage_backups_ajax():
 
     columns = {'date': date,
                'initiated': initiated,
+               'type': type,
                'description': description,
                'filename': filename,
                'db_size': db_size,

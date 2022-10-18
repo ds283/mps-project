@@ -155,7 +155,7 @@ def register_marking_tasks(celery):
 
             msg = EmailMultiAlternatives(subject=subject,
                                          from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                         reply_to=pclass.convenor_email,
+                                         reply_to=[pclass.convenor_email],
                                          to=[test_email if test_email is not None else supervisor.user.email])
 
             if cc_convenor:
@@ -177,7 +177,7 @@ def register_marking_tasks(celery):
             # register a new task in the database
             task_id = register_task(msg.subject,
                                     description='Send supervisor marking request to '
-                                                '{r}'.format(r=', '.join(msg.recipients)))
+                                                '{r}'.format(r=', '.join(msg.to)))
 
             # set up a task to email the supervisor
             taskchain = chain(send_log_email.s(task_id, msg),
@@ -199,7 +199,7 @@ def register_marking_tasks(celery):
 
             msg = EmailMultiAlternatives(subject=subject,
                                          from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                         reply_to=pclass.convenor_email,
+                                         reply_to=[pclass.convenor_email],
                                          to=[test_email if test_email is not None else marker.user.email])
 
             if cc_convenor:
@@ -221,7 +221,7 @@ def register_marking_tasks(celery):
             # register a new task in the database
             task_id = register_task(msg.subject,
                                     description='Send examiner marking request to '
-                                                '{r}'.format(r=', '.join(msg.recipients)))
+                                                '{r}'.format(r=', '.join(msg.to)))
 
             taskchain = chain(send_log_email.s(task_id, msg),
                               mark_marker_sent.s(record_id, test_email is not None)).set(serializer='pickle')

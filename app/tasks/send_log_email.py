@@ -28,7 +28,7 @@ from email.utils import parseaddr
 
 def register_send_log_email(celery, mail: Mail):
 
-    @celery.task(bind=True, retry_backoff=True)
+    @celery.task(bind=True, retry_backoff=True, serializer='pickle')
     def send_email(self, task_id, msg: EmailMessage):
         if not current_app.config.get('EMAIL_IS_LIVE', False):
             raise Ignore()
@@ -50,6 +50,15 @@ def register_send_log_email(celery, mail: Mail):
             current_app.logger.info('-- send_mail() task SMTP exception')
             current_app.logger.exception("SMTP exception", exc_info=e)
             raise self.retry()
+
+
+    @celery.task(bind=True, retry_backoff=True, serializer='pickle')
+    def log_email_to_console(self, task_id, msg: EmailMessage):
+        progress_update(task_id, TaskRecord.RUNNING, 40, "Logging email message to the console...", autocommit=True)
+
+        with mail.get_connection(backend='console') as connection:
+            msg.connection = connection
+            msg.send()
 
 
     @celery.task(bind=True, default_retry_delay=10)
@@ -109,11 +118,12 @@ def register_send_log_email(celery, mail: Mail):
     def send_log_email(self, task_id, msg: EmailMessage):
         progress_update(task_id, TaskRecord.RUNNING, 0, "Preparing to send email...", autocommit=True)
 
-        # only send email if the EMAIL_IS_LIVE key is set in app configuration
+        # only send email (and record it in the email log) if the EMAIL_IS_LIVE key is set in app configuration
         if current_app.config.get('EMAIL_IS_LIVE', False):
             seq = chain(send_email.si(task_id, msg), log_email.si(task_id, msg),
                         email_success.si(task_id)).on_error(email_failure.si(task_id))
             raise self.replace(seq)
 
-        else:
-            print(msg.as_string())
+        seq = chain(log_email_to_console.si(task_id, msg),
+                    email_success.si(task_id)).on_error(email_failure.si(task_id))
+        raise self.replace(seq)

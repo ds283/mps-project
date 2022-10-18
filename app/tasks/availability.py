@@ -269,14 +269,14 @@ def register_availability_tasks(celery):
         msg = EmailMultiAlternatives(
             subject='Availability request for event {name}'.format(name=a_record.assessment.name),
             from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-            reply_to=current_app.config['MAIL_REPLY_TO'],
+            reply_to=[current_app.config['MAIL_REPLY_TO']],
             to=[a_record.faculty.user.email])
 
         msg.body = render_template('email/scheduling/availability_request.txt', event=a_record.assessment,
                                    deadline=deadline, user=a_record.faculty.user)
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send availability request email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send availability request email to {r}'.format(r=', '.join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1
@@ -576,14 +576,14 @@ def register_availability_tasks(celery):
         msg = EmailMultiAlternatives(
             subject='Reminder: availability for event {name}'.format(name=assessor.assessment.name),
             from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-            reply_to=current_app.config['MAIL_REPLY_TO'],
+            reply_to=[current_app.config['MAIL_REPLY_TO']],
             to=[assessor.faculty.user.email])
 
         msg.body = render_template('email/scheduling/availability_reminder.txt', event=assessor.assessment,
                                    user=assessor.faculty.user)
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send availability reminder email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send availability reminder email to {r}'.format(r=', '.join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1

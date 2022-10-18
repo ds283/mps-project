@@ -83,7 +83,7 @@ class PatchedMailUtil(MailUtil):
             msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.to)))
 
         # queue Celery task to send the email
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)

@@ -874,7 +874,7 @@ def _send_offline_email(celery, record, user, lp_asset, mps_asset):
     msg = EmailMultiAlternatives(
         subject='Files for offline scheduling of {name} are now ready'.format(name=record.name),
         from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-        reply_to=current_app.config['MAIL_REPLY_TO'],
+        reply_to=[current_app.config['MAIL_REPLY_TO']],
         to=[user.email])
 
     msg.body = render_template('email/scheduling/generated.txt', name=record.name, user=user)
@@ -888,7 +888,7 @@ def _send_offline_email(celery, record, user, lp_asset, mps_asset):
         msg.attach(filename=str('schedule.mps'), content_type=mps_asset.mimetype, data=fd.read())
 
     # register a new task in the database
-    task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
+    task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.to)))
     send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
 
@@ -1416,7 +1416,7 @@ def register_scheduling_tasks(celery):
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     reply_to=[current_app.config['MAIL_REPLY_TO']],
                                      to=[user.email])
 
         if is_draft:
@@ -1432,7 +1432,7 @@ def register_scheduling_tasks(celery):
                                        period=sub_record.period, schedule=record)
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send schedule email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send schedule email to {r}'.format(r=', '.join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1
@@ -1506,7 +1506,7 @@ def register_scheduling_tasks(celery):
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     reply_to=[current_app.config['MAIL_REPLY_TO']],
                                      to=[user.email])
 
         if is_draft:
@@ -1530,7 +1530,7 @@ def register_scheduling_tasks(celery):
                                            schedule=record)
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send schedule email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send schedule email to {r}'.format(r=', '.join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1

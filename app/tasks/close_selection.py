@@ -122,7 +122,7 @@ def register_close_selection_tasks(celery):
             msg = EmailMultiAlternatives(subject='[mpsprojects] "{name}": student selections now '
                                                  'closed'.format(name=config.project_class.name),
                                          from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                         reply_to=current_app.config['MAIL_REPLY_TO'],
+                                         reply_to=[current_app.config['MAIL_REPLY_TO']],
                                          to=list(recipients))
 
             data = config.selector_data

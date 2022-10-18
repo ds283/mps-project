@@ -441,7 +441,7 @@ def register_email_notification_tasks(celery):
         outstanding_crqs = _get_outstanding_faculty_confirmation_requests(user)
 
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     reply_to=[current_app.config['MAIL_REPLY_TO']],
                                      to=[user.email],
                                      subject=notification.msg_subject())
 
@@ -449,7 +449,7 @@ def register_email_notification_tasks(celery):
                                    notification=notification, outstanding=outstanding_crqs)
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send notification email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send notification email to {r}'.format(r=', '.join(msg.to)))
 
         # queue Celery task to send the email
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
@@ -498,7 +498,7 @@ def register_email_notification_tasks(celery):
                                'done'.format(name=user.name))
 
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     reply_to=[current_app.config['MAIL_REPLY_TO']],
                                      to=[user.email],
                                      subject='Physics & Astronomy projects: summary of notifications and events')
 
@@ -506,7 +506,7 @@ def register_email_notification_tasks(celery):
                                    notifications=notifications, outstanding=outstanding_crqs)
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send notification email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send notification email to {r}'.format(r=', '.join(msg.to)))
 
         # queue Celery task to send the email
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
@@ -541,7 +541,7 @@ def register_email_notification_tasks(celery):
         # orphaned. That means we should do nothing
         if req is not None:
             msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                         reply_to=req.project.owner.user.email,
+                                         reply_to=[req.project.owner.user.email],
                                          to=[req.owner.student.user.email, req.project.owner.user.email],
                                          subject='{name}: project meeting request'.format(
                                              name=req.project.config.project_class.name))
@@ -578,14 +578,14 @@ def register_email_notification_tasks(celery):
             raise Ignore()
 
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     reply_to=[current_app.config['MAIL_REPLY_TO']],
                                      to=[user.email],
                                      subject=notification.msg_subject())
 
         msg.body = render_template('email/notifications/student/single.txt', user=user, notification=notification)
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send notification email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send notification email to {r}'.format(r=', '.join(msg.to)))
 
         # queue Celery task to send the email
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
@@ -632,7 +632,7 @@ def register_email_notification_tasks(celery):
                                'done'.format(name=user.name))
 
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=current_app.config['MAIL_REPLY_TO'],
+                                     reply_to=[current_app.config['MAIL_REPLY_TO']],
                                      to=[user.email],
                                      subject='Physics & Astronomy projects: summary of notifications and events')
 
@@ -640,7 +640,7 @@ def register_email_notification_tasks(celery):
                                    notifications=notifications, outstanding=outstanding_crqs)
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send notification email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send notification email to {r}'.format(r=', '.join(msg.to)))
 
         # queue Celery task to send the email
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']

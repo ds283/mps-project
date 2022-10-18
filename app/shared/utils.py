@@ -616,7 +616,11 @@ def build_convenor_tasks_query(config, status_filter='all', blocking_filter='all
 
     # if only searching for available tasks, skip those that are complete or dropped.
     # also skip tasks with a defer date that has not yet passed, unless they are blocking
-    if status_filter == 'overdue':
+    if status_filter == 'default':
+        tks = tks.filter(~convenor_task.complete, ~convenor_task.dropped)
+    elif status_filter == 'completed':
+        tks = tks.filter(~convenor_task.dropped)
+    elif status_filter == 'overdue':
         tks = tks.filter(~convenor_task.complete, ~convenor_task.dropped,
                          and_(convenor_task.due_date != None,
                              convenor_task.due_date < func.curdate()))
@@ -626,8 +630,6 @@ def build_convenor_tasks_query(config, status_filter='all', blocking_filter='all
                     convenor_task.blocking,
                     and_(convenor_task.defer_date != None,
                          convenor_task.defer_date <= func.curdate())))
-    elif status_filter == 'completed':
-        tks = tks.filter(convenor_task.complete)
     elif status_filter == 'dropped':
         tks = tks.filter(convenor_task.dropped)
 

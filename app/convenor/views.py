@@ -2521,9 +2521,8 @@ def todo_list(id):
     if status_filter is None and session.get('convenor_todo_list_status_filter'):
         status_filter = session['convenor_todo_list_status_filter']
 
-    if status_filter is not None and status_filter not in ['all', 'overdue', 'available', 'dropped', 'completed']:
-        # default to 'available' view
-        status_filter = 'available'
+    if status_filter is not None and status_filter not in ['default', 'overdue', 'available', 'dropped', 'completed']:
+        status_filter = 'default'
 
     if status_filter is not None:
         session['convenor_todo_list_status_filter'] = status_filter
@@ -9001,8 +9000,8 @@ def student_tasks(type, sid):
     if status_filter is None and session.get('convenor_student_tasks_status_filter'):
         status_filter = session['convenor_student_tasks_status_filter']
 
-    if status_filter is not None and status_filter not in ['all', 'overdue', 'available', 'dropped', 'completed']:
-        status_filter = 'all'
+    if status_filter is not None and status_filter not in ['default', 'overdue', 'available', 'dropped', 'completed']:
+        status_filter = 'default'
 
     if status_filter is not None:
         session['convenor_student_tasks_status_filter'] = status_filter
@@ -9042,12 +9041,14 @@ def student_tasks_ajax(type, sid):
     status_filter = request.args.get('status_filter', 'all')
     blocking_filter = request.args.get('blocking_filter', 'all')
 
-    if status_filter == 'overdue':
+    if status_filter == 'default':
+        base_query = obj.tasks.filter(and_(~ConvenorTask.complete, ~ConvenorTask.dropped))
+    elif status_filter == 'completed':
+        base_query = obj.tasks.filter(~ConvenorTask.dropped)
+    elif status_filter == 'overdue':
         base_query = obj.overdue_tasks
     elif status_filter == 'available':
         base_query = obj.available_tasks
-    elif status_filter == 'completed':
-        base_query = obj.tasks.filter(ConvenorTask.complete)
     elif status_filter == 'dropped':
         base_query = obj.tasks.filter(ConvenorTask.dropped)
     else:

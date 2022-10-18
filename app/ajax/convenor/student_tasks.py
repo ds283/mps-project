@@ -21,6 +21,9 @@ _task = \
 {% if tk.blocking %}
     <span class="badge bg-warning text-dark"><i class="fas fa-hand-paper"></i> Blocking</span>
 {% endif %}
+{% if tk.notes and tk.notes|length > 0 %}
+    <div class="text-muted">{{ tk.notes|truncate(150) }}</div>
+{% endif %}
 """
 
 

@@ -3,7 +3,7 @@
 {% if url is not defined %}{% set url=none %}{% endif %}
 {% if text is not defined %}{% set text=none %}{% endif %}
 
-{% if status_filter is not defined %}{% set status_filter='all' %}{% endif %}
+{% if status_filter is not defined %}{% set status_filter='default' %}{% endif %}
 {% if blocking_filter is not defined %}{% set blocking_filter='all' %}{% endif %}
 
 {% from "datatables.html" import import_datatables %}
@@ -66,11 +66,15 @@
         <div class="card-body">
             <div class="card mt-3 mb-3 card-body bg-well">
                 <div class="row">
-                    <div class="col-12">
+                    <div class="col-6">
                         <p>Filter by status</p>
-                        <a class="btn btn-sm filter-btn {% if status_filter is none or status_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                            href="{{ url_for('convenor.student_tasks', type=type, sid=obj.id, url=url, text=text, status_filter='all', blocking_filter=block_filter) }}">
+                        <a class="btn btn-sm filter-btn {% if status_filter is none or status_filter == 'default' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('convenor.student_tasks', type=type, sid=obj.id, url=url, text=text, status_filter='default', blocking_filter=block_filter) }}">
                             All
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if status_filter == 'completed' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('convenor.student_tasks', type=type, sid=obj.id, url=url, text=text, status_filter='completed', blocking_filter=block_filter) }}">
+                            Show completed
                         </a>
                         <a class="btn btn-sm filter-btn {% if status_filter == 'overdue' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
                             href="{{ url_for('convenor.student_tasks', type=type, sid=obj.id, url=url, text=text, status_filter='overdue', blocking_filter=block_filter) }}">
@@ -80,19 +84,12 @@
                             href="{{ url_for('convenor.student_tasks', type=type, sid=obj.id, url=url, text=text, status_filter='available', blocking_filter=block_filter) }}">
                             Available
                         </a>
-                        <a class="btn btn-sm filter-btn {% if status_filter == 'completed' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                            href="{{ url_for('convenor.student_tasks', type=type, sid=obj.id, url=url, text=text, status_filter='completed', blocking_filter=block_filter) }}">
-                            Completed
-                        </a>
                         <a class="btn btn-sm filter-btn {% if status_filter == 'dropped' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
                             href="{{ url_for('convenor.student_tasks', type=type, sid=obj.id, url=url, text=text, status_filter='dropped', blocking_filter=block_filter) }}">
                             Dropped
                         </a>
                     </div>
-                </div>
-                <hr class="intro-divider">
-                <div class="row">
-                    <div class="col-12">
+                    <div class="col-6">
                         <p>Filter by blocking</p>
                         <a class="btn btn-sm filter-btn {% if blocking_filter is none or blocking_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
                             href="{{ url_for('convenor.student_tasks', type=type, sid=obj.id, url=url, text=text, status_filter=status_filter, blocking_filter='all') }}">

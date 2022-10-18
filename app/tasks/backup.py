@@ -241,22 +241,29 @@ def register_backup_tasks(celery):
             index = random.randrange(len(output_bin))
 
             # remove from list of backups remaining in the bin
-            thin_id = output_bin[index]
-            del output_bin[index]
-            dropped.append(thin_id)
+            drop_id = output_bin[index]
 
             try:
-                success, msg = remove_backup(thin_id)
+                drop_record: BackupRecord = db.session.query(BackupRecord).filter_by(id=drop_id).first()
+                dropped.append((drop_id, str(drop_record.date)))
+
+                success, msg = remove_backup(drop_id)
 
                 if not success:
                     self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
                     raise self.retry()
 
+                del output_bin[index]
+
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        return {'period': period, 'unit': unit, 'retained': output_bin[0], 'dropped': dropped}
+        retained_record: BackupRecord = db.session.query(BackupRecord).filter_by(id=output_bin[0]).first()
+
+        return {'period': period, 'unit': unit,
+                'retained': (retained_record.id, str(retained_record.date)),
+                'dropped': dropped}
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -339,11 +346,6 @@ def register_backup_tasks(celery):
             return a_period > b_period
 
         sorted_result = sorted(thinning_result, key=functools.cmp_to_key(sort_comparator))
-
-        for item in sorted_result:
-            item['retained_record'] = db.session.query(BackupRecord).filter_by(id=item['retained']).first()
-            item['dropped_records'] = [db.session.query(BackupRecord).filter_by(id=x).first()
-                                       for x in item['dropped']]
 
         timestamp = parser.parse(timestamp_str)
 

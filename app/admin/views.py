@@ -3235,27 +3235,79 @@ def manage_backups():
     Generate the backup-management view
     :return:
     """
+    type_filter = request.args.get('type_filter')
+
+    if type_filter is None and session.get('admin_backup_type_filter'):
+        type_filter = session['admin_backup_type_filter']
+
+    if type_filter is not None and type_filter not in ['all', 'scheduled', 'rollover', 'golive', 'close', 'confirm',
+                                                       'batch']:
+        type_filter = 'all'
+
+    if type_filter is not None:
+        session['admin_backup_type_filter'] = type_filter
+
     backup_count = get_backup_count()
 
     form = BackupManageForm(request.form)
 
-    if form.validate_on_submit():
+    if form.validate_on_submit() and form.delete_age.data is True:
+        return redirect(url_for('admin.confirm_delete_backup_cutoff', cutoff=(form.weeks.data)))
 
-        if form.delete_age.data is True:
-            return redirect(url_for('admin.confirm_delete_backup_cutoff', cutoff=(form.weeks.data)))
-
-    return render_template('admin/backup_dashboard/manage.html', pane='view', backup_count=backup_count, form=form)
+    return render_template('admin/backup_dashboard/manage.html', pane='view', backup_count=backup_count, form=form,
+                           type_filter=type_filter)
 
 
-@admin.route('/manage_backups_ajax')
+@admin.route('/manage_backups_ajax', methods=['POST'])
 @roles_required('root')
 def manage_backups_ajax():
     """
     Ajax data point for backup-management view
     :return:
     """
-    backups = db.session.query(BackupRecord)
-    return ajax.site.backups_data(backups)
+    type_filter = request.args.get('type_filter')
+
+    base_query = db.session.query(BackupRecord) \
+        .join(User, User.id == BackupRecord.owner_id)
+
+    if type_filter == 'scheduled':
+        base_query = base_query.filter(BackupRecord.type == BackupRecord.SCHEDULED_BACKUP)
+    elif type_filter == 'rollover':
+        base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_ROLLOVER_FALLBACK)
+    elif type_filter == 'golive':
+        base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_GOLIVE_FALLBACK)
+    elif type_filter == 'close':
+        base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_CLOSE_FALLBACK)
+    elif type_filter == 'confirm':
+        base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_ISSUE_CONFIRM_FALLBACK)
+    elif type_filter == 'batch':
+        base_query = base_query.filter(BackupRecord.type == BackupRecord.BATCH_IMPORT_FALLBACK)
+
+    date = {'search': func.date_format(BackupRecord.date, "%a %d %b %Y %H:%M:%S"),
+            'order': BackupRecord.date}
+    initiated = {'search': func.concat(User.first_name, ' ', User.last_name),
+                 'order': [User.last_name, User.first_name],
+                 'search_collation': 'utf8_general_ci'}
+    type = {'order': BackupRecord.type}
+    description = {'search': BackupRecord.description,
+                   'order': BackupRecord.description,
+                   'search_collation': 'utf8_general_ci'}
+    filename = {'search': BackupRecord.filename,
+                'order': BackupRecord.filename,
+                'search_collation': 'utf8_general_ci'}
+    db_size = {'order': BackupRecord.db_size}
+    archive_size = {'order': BackupRecord.archive_size}
+
+    columns = {'date': date,
+               'initiated': initiated,
+               'type': type,
+               'description': description,
+               'filename': filename,
+               'db_size': db_size,
+               'archive_size': archive_size}
+
+    with ServerSideHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.site.backups_data)
 
 
 @admin.route('/confirm_delete_all_backups')

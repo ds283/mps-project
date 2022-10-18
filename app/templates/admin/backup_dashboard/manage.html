@@ -2,6 +2,10 @@
 
 {% from "datatables.html" import import_datatables %}
 
+{% if type_filter is not defined or type_filter is none %}
+{% set type_filter = 'all' %}
+{% endif %}
+
 {% block scripts %}
     {{ super() }}
     {{ import_datatables() }}
@@ -13,22 +17,40 @@
             $('#manage-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/admin/manage_backups_ajax', dataSrc: '' },
+                serverSide: true, processing: true,
+                ajax: {
+                    url: $SCRIPT_ROOT + '/admin/manage_backups_ajax?type_filter={{ type_filter }}',
+                    type: 'POST',
+                    data: function (args) {
+                        return {"args": JSON.stringify(args)};
+                    }
+                },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'date',
-                      render: {
-                        _: 'display',
-                        sort: 'timestamp',
-                        type: 'timestamp'
-                    } },
-                    { data: 'initiated' },
-                    { data: 'type' },
-                    { data: 'description' },
-                    { data: 'filename' },
-                    { data: 'db_size' },
-                    { data: 'archive_size' },
-                    { data: 'menu' }
+                      orderable: true,
+                      searchable: true },
+                    { data: 'initiated',
+                      orderable: true,
+                      searchable: true},
+                    { data: 'type',
+                      orderable: true,
+                      searchable: false},
+                    { data: 'description',
+                      orderable: false,
+                      searchable: false},
+                    { data: 'filename',
+                      orderable: true,
+                      searchable: true},
+                    { data: 'db_size',
+                      orderable: true,
+                      searchable: false},
+                    { data: 'archive_size',
+                      orderable: true,
+                      searachable: false},
+                    { data: 'menu',
+                      orderable: false,
+                      searchable: false}
                 ],
                 deferRender: true,
                 order: [[0,'desc']]
@@ -59,20 +81,55 @@
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white">Manage backups</div>
         <div class="card-body">
-        <table id="manage-table" class="table table-striped table-bordered">
-            <thead>
-            <tr>
-                <th width="15%"> Date</th>
-                <th width="10%"> Initiated by</th>
-                <th width="10%"> Type</th>
-                <th width="19%"> Description</th>
-                <th width="15%"> Filename</th>
-                <th width="8%"> SQL file</th>
-                <th width="8%"> Archive</th>
-                <th width="15%"> Actions</th>
-            </tr>
-            </thead>
-        </table>
+            <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="row">
+                    <div class="col-12">
+                        <p>Filter by type</p>
+                        <a href="{{ url_for('admin.manage_backups', type_filter='all') }}"
+                           class="btn btn-sm filter-btn {% if type_filter is none or type_filter=='all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            All
+                        </a>
+                        <a href="{{ url_for('admin.manage_backups', type_filter='scheduled') }}"
+                           class="btn btn-sm filter-btn {% if type_filter=='scheduled' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Scheduled backup
+                        </a>
+                        <a href="{{ url_for('admin.manage_backups', type_filter='rollover') }}"
+                           class="btn btn-sm filter-btn {% if type_filter=='rollover' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Rollover restore point
+                        </a>
+                        <a href="{{ url_for('admin.manage_backups', type_filter='golive') }}"
+                           class="btn btn-sm filter-btn {% if type_filter=='golive' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Go Live restore point
+                        </a>
+                        <a href="{{ url_for('admin.manage_backups', type_filter='close') }}"
+                           class="btn btn-sm filter-btn {% if type_filter=='close' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Close feedback restore point
+                        </a>
+                        <a href="{{ url_for('admin.manage_backups', type_filter='confirm') }}"
+                           class="btn btn-sm filter-btn {% if type_filter=='confirm' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Issue confirmation requests restore point
+                        </a>
+                        <a href="{{ url_for('admin.manage_backups', type_filter='batch') }}"
+                           class="btn btn-sm filter-btn {% if type_filter=='batch' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Batch user import restore point
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <table id="manage-table" class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th width="15%"> Date</th>
+                    <th width="10%"> Initiated by</th>
+                    <th width="10%"> Type</th>
+                    <th width="19%"> Description</th>
+                    <th width="15%"> Filename</th>
+                    <th width="8%"> SQL file</th>
+                    <th width="8%"> Archive</th>
+                    <th width="15%"> Actions</th>
+                </tr>
+                </thead>
+            </table>
         </div>
     </div>
 {% endblock %}

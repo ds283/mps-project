@@ -8054,7 +8054,7 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
         return self.student.academic_year_label(self.config.year, show_details=show_details, current_year=current_year)
 
 
-    def get_assignment(self, period=None) -> SubmissionRecord:
+    def get_assignment(self, period=None):
         if period is None:
             period = self.config.current_period
 

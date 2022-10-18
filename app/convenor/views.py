@@ -7240,10 +7240,12 @@ def mark_all_started(id):
 
     data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
 
-    for sel in data:
-        record = sel.get_assignment(config.submission_period)
-        if record is not None:
-            record.student_engaged = True
+    for sub in data:
+        sub: SubmittingStudent
+        if sub.published:
+            record: SubmissionRecord = sub.get_assignment(config.submission_period)
+            if record is not None and record.project_id is not None:
+                record.student_engaged = True
 
     try:
         db.session.commit()

@@ -1139,7 +1139,7 @@ def get_automatch_pclasses():
     return pclasses
 
 
-def build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter):
+def build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter) -> List[SubmittingStudent]:
     # build a list of live students submitting work for evaluation in this project class
     submitters: List[SubmittingStudent] = config.submitting_students.filter_by(retired=False)
 

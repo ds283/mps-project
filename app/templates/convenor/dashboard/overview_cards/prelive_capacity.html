@@ -73,7 +73,7 @@
             </div>
             <div class="col-2">
                 {% if capacity > 0 %}
-                    {% if not bounded %}>= {% endif %}{{ capacity }}
+                    {% if not bounded %}&ge; {% endif %}{{ capacity }}
                 {% else %}
                     <span class="badge bg-danger">None</span>
                 {% endif %}

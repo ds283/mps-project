@@ -344,13 +344,13 @@ _name = \
 {% set student = sub.student %}
 {% set user = student.user %}
 <div>
-    {% if config.canvas_enabled %}
+    {% if config.canvas_enabled and sub is not none %}
         {% if sub.canvas_user_id is not none %}
-            <i class="fa fa-circle me-1" style="color: green;"></i>
+            <i class="fa fa-circle me-1" style="color: green;" data-bs-toggle="tooltip" title="This student is enrolled on the linked Canvas site"></i>
         {% elif sub.canvas_missing %}
-            <i class="fa fa-circle me-1" style="color: red;"></i>
+            <i class="fa fa-circle me-1" style="color: red;" data-bs-toggle="tooltip" title="This student is not enrolled on the linked Canvas site"></i>
         {% else %}
-            <i class="fa fa-unlink me-1"></i> 
+            <i class="fa fa-unlink me-1" data-bs-toggle="tooltip" title="Information associated with this student for the linked Canvas site has not yet been synchronized"></i> 
         {% endif %}
     {% endif %}
     {% if show_name %}

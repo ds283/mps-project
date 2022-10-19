@@ -179,7 +179,7 @@
     </ul>
 {% endblock %}
 
-{% macro project_card(pclass, sdata) %}
+{% macro project_card(config, pclass, sdata) %}
     <div class="row vertical-top">
         <div class="col-12">
             <span class="dashboard-project-title">{{ pclass.name }}</span>
@@ -201,32 +201,37 @@
     </div>
     <div class="row vertical-top">
         <div class="col-7">
-            {% if sdata %}
-                Your details:
-                {{ sdata.student.cohort_label|safe }}
-                {{ sdata.student.programme.label|safe }}
-                {{ sdata.academic_year_label(show_details=False)|safe }}
-            {% endif %}
+            <div class="d-flex flex-row justify-content-start gap-2">
+                {% if sdata %}
+                    {{ sdata.student.cohort_label|safe }}
+                    {{ sdata.student.programme.label|safe }}
+                    {{ sdata.academic_year_label(show_details=False)|safe }}
+                {% endif %}
+            </div>
         </div>
         <div class="col-5">
-            {% if sdata and sdata.live_deadline is defined %}
-                {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                    <div class="float-end">
+            <div class="d-flex flex-row justify-content-end gap-2">
+                {% if sdata and sdata.live_deadline is defined %}
+                    {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                         <span class="badge bg-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
                         {% if config.live_deadline %}
                             <span class="badge bg-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                         {% endif %}
-                    </div>
-                {% else %}
-                    <div class="float-end">
+                    {% else %}
                         <span class="badge bg-secondary">Student selections not open</span>
-                    </div>
+                    {% endif %}
                 {% endif %}
-            {% endif %}
+            </div>
         </div>
     </div>
 
-    <hr class="intro-divider">
+    {% if config.canvas_enabled %}
+        <hr class="intro-divider">
+        <div class="d-flex flex-row justify-content-start gap-2">
+            <a href="{{ config.canvas_course_URL }}">Go to Canvas site for this module</a>
+            <i class="text-muted fa fa-external-link"></i>
+        </div>
+    {% endif %}
 {% endmacro %}
 
 
@@ -246,7 +251,7 @@
                     {% set pclass = config.project_class %}
                         {% if pane=='select' and sel %}
                             <div class="card mt-3 mb-3 card-body bg-well">
-                                {{ project_card(pclass, sel) }}
+                                {{ project_card(config, pclass, sel) }}
                                 {{ selection_card(config, sel) }}
                             </div>
                             {% set ns.display = ns.display+1 %}
@@ -254,7 +259,7 @@
 
                         {% if pane=='submit' and sub %}
                             <div class="card mt-3 mb-3 card-body bg-well">
-                            {{ project_card(pclass, sub) }}
+                            {{ project_card(config, pclass, sub) }}
                                 {% for n in range(config.submissions) %}
                                     {{ submission_card(config, sub, n, today) }}
                                 {% else %}

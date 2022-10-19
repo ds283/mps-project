@@ -116,21 +116,19 @@
             {% endif %}
             <div class="alert {{ bgclass }} mt-1 mb-3">
                 {% call icon_block(iconclass) %}
-                    <div class="d-flex w-100 justify-content-between align-items-start">
-                        <div>
-                            <strong>{{ nproj }} active project{{ nproj_plural }} attached to this project class.</strong>
-                            {% if nproj > 0 and sel_state <= config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                                <div class="mt-1">
-                                    Projects appearing here will be included when the project list is
-                                    published.
-                                    To remove a project, use the Actions menu and select
-                                    &ldquo;Don't offer this project&rdquo;.
-                                </div>
-                            {% endif %}
+                    <div>
+                        <strong>{{ nproj }} active project{{ nproj_plural }} attached to this project class.</strong>
+                    </div>
+                    {% if nproj > 0 and sel_state <= config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                        <div class="mt-1">
+                            Projects appearing here will be included when the project list is
+                            published.
+                            To remove a project, use the Actions menu and select
+                            &ldquo;Don't offer this project&rdquo;.
                         </div>
-                        <div class="mb-3">
-                            <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-sm {% if nproj==0 %}btn-danger{% else %}btn-outline-secondary{% endif %} text-nowrap">Go to project library</a>
-                        </div>
+                    {% endif %}
+                    <div class="mt-1">
+                        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-sm {% if nproj==0 %}btn-danger{% else %}btn-outline-secondary{% endif %} text-nowrap">Go to project library</a>
                     </div>
                 {% endcall %}
             </div>

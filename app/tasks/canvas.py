@@ -65,15 +65,6 @@ def register_canvas_tasks(celery):
     def canvas_user_checkin(self):
         self.update_state(state='STARTED', meta='Initiating Canvas synchronization of user data')
 
-        main_config: MainConfig = get_main_config()
-        API_root = main_config.Canvas_API_root
-
-        if API_root is None:
-            print('** Canvas API integration is not enabled; skipping')
-            self.update_state(state='FINISHED', meta='Canvas API integration is not enabled; skipped')
-            return
-        print('** API root URL is {root}'.format(root=API_root))
-
         tasks = []
 
         try:
@@ -84,11 +75,20 @@ def register_canvas_tasks(celery):
                 config: ProjectClassConfig = pcl.most_recent_config
                 print('** Checking Canvas integration for project class "{pcl}"'.format(pcl=pcl.name))
 
+                API_root = config.main_config.canvas_root_API
+
+                if API_root is None:
+                    print('** Canvas API integration not enabled globally for cycle '
+                          '{yra}-{yrb}'.format(yra=config.year, yrb=config.year+1))
+                    break
+                print('** API root URL is {root}'.format(root=API_root))
+
                 if config is not None and config.canvas_enabled:
                     print('**   Canvas integration is enabled; scheduling user check-in for this project in the current cycle')
                     tasks.append(canvas_user_checkin_module.s(config.id, API_root))
                 else:
-                    print('**   Canvas integration is not enabled for this project class in the current cycle')
+                    print('**   Canvas integration is not enabled for this project class for cycle '
+                          '{yra}-{yrb}'.format(yra=config.year, yrb=config.year+1))
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -97,7 +97,7 @@ def register_canvas_tasks(celery):
         self.update_state(state='STARTED', meta='Spawning Canvas subtasks for synchronization of user data')
 
         c_tasks = group(*tasks)
-        c_tasks.apply_async()
+        raise self.replace(c_tasks)
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -251,7 +251,7 @@ def register_canvas_tasks(celery):
         self.update_state(state='STARTED', meta='Initiating Canvas synchronization of submission availability')
 
         main_config: MainConfig = get_main_config()
-        API_root = main_config.Canvas_API_root
+        API_root = main_config.canvas_root_API
 
         if API_root is None:
             print('** Canvas API integration is not enabled; skipping')
@@ -269,6 +269,14 @@ def register_canvas_tasks(celery):
                 config: ProjectClassConfig = pcl.most_recent_config
                 print('** Checking Canvas integration for project class "{pcl}"'.format(pcl=pcl.name))
 
+                API_root = config.main_config.canvas_root_API
+
+                if API_root is None:
+                    print('** Canvas API integration not enabled globally for cycle '
+                          '{yra}-{yrb}'.format(yra=config.year, yrb=config.year+1))
+                    break
+                print('** API root URL is {root}'.format(root=API_root))
+
                 if config is not None and config.canvas_enabled:
                     period: SubmissionPeriodRecord = config.current_period
                     print('** Checking Canvas integration for submission period "{pd}"'.format(pd=period.display_name))
@@ -277,9 +285,10 @@ def register_canvas_tasks(celery):
                         print('**   Canvas integration is enabled; scheduling submission check-in for this project in the current cycle')
                         tasks.append(canvas_submission_checkin_module.s(period.id, API_root))
                     else:
-                        print('**  Canvas integration is not enabled for this submission period')
+                        print('**  Submission period is closed, or canvas integration not enabled for this submission period')
                 else:
-                    print('**   Canvas integration is not enabled for this project class in the current cycle')
+                    print('**   Canvas integration is not enabled for this project class for cycle '
+                          '{yra}-{yrb}'.format(yra=config.year, yrb=config.year+1))
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -374,7 +383,7 @@ def register_canvas_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def pull_report(self, rid, user_id):
         main_config: MainConfig = get_main_config()
-        API_root = main_config.Canvas_API_root
+        API_root = main_config.canvas_root_API
 
         if API_root is None:
             print('** Canvas API integration is not enabled; skipping')

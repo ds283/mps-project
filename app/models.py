@@ -1130,18 +1130,55 @@ class MainConfig(db.Model):
     # URL for Canvas instance used to sync (if enabled)
     canvas_url = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
+    @validates('canvas_url')
+    def _validate_canvas_url(self, key, value):
+        self._canvas_root_API = None
+        self._canvas_root_URL =None
+
     # globally enable Canvas sync
     enable_canvas_sync = db.Column(db.Boolean(), default=False)
 
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._canvas_root_API = None
+        self._canvas_root_URL = None
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+        self._canvas_root_API = None
+        self._canvas_root_URL = None
+
+
     # get Canvas API root
     @property
-    def Canvas_API_root(self):
+    def canvas_root_API(self):
         if not self.enable_canvas_sync:
             return None
 
+        if self._canvas_root_API is not None:
+            return self._canvas_root_API
+
         API_url = urljoin(self.canvas_url, 'api/v1/')
-        return url_normalize(API_url)
+        self._canvas_root_API = url_normalize(API_url)
+
+        return self._canvas_root_API
+
+
+    # get Canvas URL root
+    @property
+    def canvas_root_URL(self):
+        if not self.enable_canvas_sync:
+            return None
+
+        if self._canvas_root_URL is not None:
+            return self._canvas_root_URL
+
+        self._canvas_root_URL = url_normalize(self.canvas_url)
+
+        return self._canvas_root_URL
 
 
 class Role(db.Model, RoleMixin, ColouredLabelMixin):
@@ -2986,7 +3023,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         # if setting to false, assume user knows what they are doing
         self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
 
-        if value == False:
+        if not value:
             return False
 
         # if programme already includes a foundation year, our own flag should be set to false
@@ -4362,7 +4399,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     convenor = db.relationship('FacultyData', uselist=False, foreign_keys=[convenor_id],
                                backref=db.backref('past_convenorships', lazy='dynamic'))
 
-    # who created this record, ie. initiated the rollover of the academic year?
+    # who created this record, i.e., initiated the rollover of the academic year?
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     created_by = db.relationship('User', uselist=False, foreign_keys=[creator_id])
 
@@ -4410,6 +4447,11 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     canvas_login_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
     canvas_login = db.relationship('FacultyData', uselist=False, foreign_keys=[canvas_login_id],
                                    backref=db.backref('canvas_logins', lazy='dynamic'))
+
+    # invalidate cached course URL if is changed
+    @validates('canvas_id')
+    def _validate_canvas_id(self, key, value):
+        self._canvas_course_URL = None
 
 
     # SELECTOR LIFECYCLE MANAGEMENT
@@ -4509,6 +4551,17 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
     # CATS awarded for presentation assessment in this year
     CATS_presentation = db.Column(db.Integer())
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._canvas_course_URL = None
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+        self._canvas_course_URL = None
 
 
     def _outstanding_descriptions_generator(self, faculty: FacultyData):
@@ -5238,6 +5291,24 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
                self.canvas_id is not None and self.canvas_login is not None
 
 
+    @property
+    def canvas_root_URL(self):
+        main_config: MainConfig = self.main_config
+        return main_config.canvas_root_URL
+
+
+    @property
+    def canvas_course_URL(self):
+        if self._canvas_course_URL is not None:
+            return self._canvas_course_URL
+
+        URL_root = self.canvas_root_URL
+        course_URL = urljoin(URL_root, 'courses/{course_id}'.format(course_id=self.canvas_id))
+        self._canvas_course_URL = url_normalize(course_URL)
+
+        return self._canvas_course_URL
+
+
 class SubmissionPeriodRecord(db.Model):
     """
     Capture details about a submission period
@@ -5258,7 +5329,7 @@ class SubmissionPeriodRecord(db.Model):
     # optional start date
     start_date = db.Column(db.Date())
 
-    # optiona hand-in date
+    # optional hand-in date
     hand_in_date = db.Column(db.Date())
 
     # alternative textual name for this period (eg. "Autumn Term", "Spring Term");
@@ -5333,10 +5404,25 @@ class SubmissionPeriodRecord(db.Model):
     # Canvas id for the assignment matching this submission period
     canvas_id = db.Column(db.Integer(), default=None, nullable=True)
 
+    # invalidate cached course URL if is changed
+    @validates('canvas_id')
+    def _validate_canvas_id(self, key, value):
+        self._canvas_assignment_URL = None
+
 
     # SUBMISSION RECORDS
 
     # 'submissions' generated by back-reference from SubmissionRecord
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._canvas_assignment_URL = None
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+        self._canvas_assignment_URL = None
 
 
     @property
@@ -5590,6 +5676,18 @@ class SubmissionPeriodRecord(db.Model):
             return False
 
         return self.canvas_id is not None
+
+
+    @property
+    def canvas_assignment_URL(self):
+        if self._canvas_assignment_URL is not None:
+            return self._canvas_assignment_URL
+
+        course_URL = self.config.canvas_course_URL
+        assignment_URL = urljoin(course_URL, 'assignments/{assign_id}'.format(assign_id=self.canvas_id))
+        self._canvas_assignment_URL = url_normalize(assignment_URL)
+
+        return self._canvas_assignment_URL
 
 
     @property

@@ -48,6 +48,11 @@
                 {% else %}
                     {{ period.display_name|safe }}
                 {% endif %}
+                {% if period.canvas_enabled %}
+                    &mdash;
+                    <a href="{{ period.canvas_assignment_URL }}">Canvas assessment page</a>
+                    <i class="text-muted fa fa-external-link"></i>
+                {% endif %}
             </div>
             <div class="card-body">
                 {% if period.closed %}
@@ -102,7 +107,7 @@
                                         {% endcall %}
                                     </div>
                                 {% else %}
-                                    <div class="alert alert-secondary mt-1 mb-2">
+                                    <div class="alert alert-info mt-1 mb-2">
                                         {% call icon_block("info-circle") %}
                                             <div><strong>This submission period commenced on {{ period.start_date.strftime("%a %d %b %Y") }}</strong></div>
                                             {% if period.hand_in_date %}

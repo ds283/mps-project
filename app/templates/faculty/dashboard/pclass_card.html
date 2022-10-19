@@ -17,41 +17,40 @@
         </div>
         <div class="row vertical-align">
             <div class="col-6">
-                <span>Convenor:
-                <a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">
-                    {{ config.convenor_name }}
-                </a></span>
+                <div class="d-flex flex-row justify-content-start gap-2">
+                    <span>Convenor:
+                        <a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">
+                        {{ config.convenor_name }}
+                        </a>
+                    </span>
+                </div>
             </div>
             <div class="col-6">
+                <div class="d-flex flex-row justify-content-end gap-2">
                 {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
                     {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                        <div class="float-end">
-                            <span class="badge bg-success">Student selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
-                            {% if config.live_deadline %}
-                                <span class="badge bg-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
-                            {% endif %}
-                        </div>
+                        <span class="badge bg-success">Student selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
+                        {% if config.live_deadline %}
+                            <span class="badge bg-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                        {% endif %}
                     {% else %}
-                        <div class="float-end">
-                            <span class="badge bg-secondary">Student selection closed</span>
-                        </div>
+                        <span class="badge bg-secondary">Student selection closed</span>
                     {% endif %}
                 {% else %}
-                    <div class="float-end">
-                        {% if record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                            <span class="badge bg-secondary">On sabbatical</span>
-                            {% if record.supervisor_reenroll is not none %}
-                                {% if pclass.reenroll_supervisors_early %}
-                                    <span class="badge bg-secondary">Re-enroll {{ record.supervisor_reenroll-1 }}</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">Re-enroll {{ record.supervisor_reenroll }}</span>
-                                {% endif %}
+                    {% if record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
+                        <span class="badge bg-secondary">On sabbatical</span>
+                        {% if record.supervisor_reenroll is not none %}
+                            {% if pclass.reenroll_supervisors_early %}
+                                <span class="badge bg-secondary">Re-enroll {{ record.supervisor_reenroll-1 }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Re-enroll {{ record.supervisor_reenroll }}</span>
                             {% endif %}
-                        {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                            <span class="badge bg-secondary">Exempt from supervision</span>
                         {% endif %}
-                    </div>
+                    {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
+                        <span class="badge bg-secondary">Exempt from supervision</span>
+                    {% endif %}
                 {% endif %}
+                </div>
             </div>
         </div>
 {#        {% if pclass.coconvenors.first() %}#}
@@ -66,6 +65,14 @@
 {#                </div>#}
 {#            </div>#}
 {#        {% endif %}#}
+        {% if config.canvas_enabled %}
+            <hr class="intro-divider">
+            <div class="d-flex flex-row justify-content-start gap-2">
+                <a href="{{ config.canvas_course_URL }}">Go to Canvas site for this module</a>
+                <i class="text-muted fa fa-external-link"></i>
+            </div>
+        {% endif %}
+
 
         {% if config.uses_supervisor %}
             {{ selector_card(data, sel_state, current_user, home_dashboard_url) }}

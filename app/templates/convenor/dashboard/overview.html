@@ -71,7 +71,7 @@
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
-            <div class="card mt-3 mb-3 card-body border-dark bg-well">
+            <div class="card mt-3 mb-3 card-body border-secondary bg-well">
                 <div class="d-flex flex-row justify-content-start align-items-start mb-4">
                     <div class="dashboard-project-title align-self-start me-2">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</div>
                     <a class="mt-1 btn btn-sm btn-outline-secondary align-self-start mt-2" href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure this cycle...</a>
@@ -258,7 +258,7 @@
             {% endif %}
 
             {% if top_to_dos is defined and top_do_dos is not none and top_to_dos|length > 0 %}
-                <div class="card mt-3 mb-3">
+                <div class="card border-secondary mt-3 mb-3">
                     {% set pl = 's' %}{% if num_to_dos == 1 %}{% set pl = '' %}{% endif %}
                     <div class="card-header bg-warning">Upcoming tasks (<strong>{{ num_to_dos }}</strong> task{{ pl }} available)</div>
                     <div class="card-body">

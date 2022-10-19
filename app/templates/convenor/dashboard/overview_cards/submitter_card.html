@@ -9,14 +9,14 @@
 
     {% if period %}
         {% set bgclass = '' %}
-        {% set borderclass = '' %}
+        {% set borderclass = 'border-secondary' %}
         {% set textclass = '' %}
         {% if n+1 == config.submission_period %}
             {% if period.closed %}
                 {# no markup required; formerly panel-default #}
             {% elif period.is_feedback_open %}
                 {% set bgclass = 'bg-danger' %}
-                {% set borderclass = 'border-danger' %}
+                {% set borderclass = 'border-secondary' %}
                 {% set textclass = 'text-white' %}
             {% elif period.start_date and period.start_date > today %}
                 {# no markup required; formerly panel-default #}

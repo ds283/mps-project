@@ -6,7 +6,7 @@
 {% from "convenor/dashboard/overview_cards/blocking_task_list.html" import blocking_task_list %}
 
 {% macro golive(config, golive_form, capacity_data, sel_count) %}
-    <div class="card border-danger mt-3 mb-3">
+    <div class="card border-secondary mt-3 mb-3">
         <div class="card-header bg-danger text-white"><strong>Student selections are not yet live</strong></div>
         <div class="card-body">
             {% set total_projects = capacity_data['projects'] %}

@@ -70,7 +70,7 @@
                         <p>Filter by status</p>
                         <a class="btn btn-sm filter-btn {% if status_filter is none or status_filter == 'default' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
                             href="{{ url_for('convenor.student_tasks', type=type, sid=obj.id, url=url, text=text, status_filter='default', blocking_filter=block_filter) }}">
-                            All
+                            Default
                         </a>
                         <a class="btn btn-sm filter-btn {% if status_filter == 'completed' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
                             href="{{ url_for('convenor.student_tasks', type=type, sid=obj.id, url=url, text=text, status_filter='completed', blocking_filter=block_filter) }}">

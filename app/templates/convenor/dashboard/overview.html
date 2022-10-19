@@ -296,8 +296,6 @@
                                                 <a class="text-decoration-none" href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.overview', id=pclass.id), text='convenor overview') }}">
                                                     {{ obj.student.user.name }}
                                                 </a>
-                                            {% elif tk_type == 3 %}
-                                                <span class="badge bg-secondary">Project task</span>
                                             {% endif %}
                                         </td>
                                         <td>
@@ -310,8 +308,6 @@
                                         <td>
                                             {% if tk.due_date is not none %}
                                                 {{ tk.due_date.strftime("%a %d %b %Y %H:%M") }}
-                                            {% else %}
-                                                <span class="badge bg-secondary">None</span>
                                             {% endif %}
                                         </td>
                                         <td>

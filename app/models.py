@@ -5303,7 +5303,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
             return self._canvas_course_URL
 
         URL_root = self.canvas_root_URL
-        course_URL = urljoin(URL_root, 'courses/{course_id}'.format(course_id=self.canvas_id))
+        course_URL = urljoin(URL_root, 'courses/{course_id}/'.format(course_id=self.canvas_id))
         self._canvas_course_URL = url_normalize(course_URL)
 
         return self._canvas_course_URL
@@ -5684,7 +5684,7 @@ class SubmissionPeriodRecord(db.Model):
             return self._canvas_assignment_URL
 
         course_URL = self.config.canvas_course_URL
-        assignment_URL = urljoin(course_URL, 'assignments/{assign_id}'.format(assign_id=self.canvas_id))
+        assignment_URL = urljoin(course_URL, 'assignments/{assign_id}/'.format(assign_id=self.canvas_id))
         self._canvas_assignment_URL = url_normalize(assignment_URL)
 
         return self._canvas_assignment_URL

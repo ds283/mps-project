@@ -551,8 +551,7 @@ def users_students_ajax():
               'order': StudentData.cohort,
               'search_collation': 'utf8_general_ci'}
     acadyear = {'search': cast(StudentData.academic_year, String),
-                'order': StudentData.academic_year,
-                'search_collation': 'utf8_general_ci'}
+                'order': StudentData.academic_year}
 
     columns = {'name': name,
                'active': active,

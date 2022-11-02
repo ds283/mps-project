@@ -8549,7 +8549,7 @@ def download_generated_asset(asset_id):
 
     abs_path = canonical_generated_asset_filename(asset.filename)
     return send_file(abs_path, as_attachment=True,
-                     attachment_filename=filename if filename is not None else asset.target_name,
+                     download_name=filename if filename is not None else asset.target_name,
                      mimetype=asset.mimetype)
 
 
@@ -8584,7 +8584,7 @@ def download_submitted_asset(asset_id):
 
     abs_path = canonical_submitted_asset_filename(asset.filename, root_folder='ASSETS_SUBMITTED_SUBFOLDER')
     return send_file(abs_path, as_attachment=True,
-                     attachment_filename=filename if filename is not None else asset.target_name,
+                     download_name=filename if filename is not None else asset.target_name,
                      mimetype=asset.mimetype)
 
 

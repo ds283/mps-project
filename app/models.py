@@ -62,6 +62,10 @@ extent_choices = [(1, '1 year'), (2, '2 years'), (3, '3 years')]
 
 # labels and keys for 'academic titles' field
 academic_titles = [(1, 'Dr'), (2, 'Professor'), (3, 'Mr'), (4, 'Ms'), (5, 'Mrs'), (6, 'Miss'), (7, 'Mx')]
+short_academic_titles = [(1, 'Dr'), (2, 'Prof'), (3, 'Mr'), (4, 'Ms'), (6, 'Mrs'), (6, 'Miss'), (7, 'Mx')]
+
+academic_titles_dict = dict(academic_titles)
+short_academic_titles_dict = dict(short_academic_titles)
 
 # labels and keys for years_history
 matching_history_choices = [(1, '1 year'), (2, '2 years'), (3, '3 years'), (4, '4 years'), (5, '5 years')]
@@ -1343,13 +1347,11 @@ class User(db.Model, UserMixin):
         prefix = ''
 
         if self.faculty_data is not None and self.faculty_data.use_academic_title:
-
-            for key, value in academic_titles:
-
-                if key == self.faculty_data.academic_title:
-
-                    prefix = value + ' '
-                    break
+            try:
+                value = short_academic_titles_dict[self.faculty_data.academic_title]
+                prefix = value + ' '
+            except KeyError:
+                pass
 
         return prefix + self.first_name + ' ' + self.last_name
 
@@ -2494,12 +2496,13 @@ class FacultyData(db.Model, EditingMetadataMixin):
         :param pclass:
         :return:
         """
-        flash('Installed {name} as convenor of {title}'.format(name=self.user.name, title=pclass.name))
+        pass
 
 
     def remove_convenorship(self, pclass):
         """
-        Remove the convenorship of the given project class from this user
+        Remove the convenorship of the given project class from this user.
+        Does not commit any changes, which should be done by the client code.
         :param pclass:
         :return:
         """
@@ -2521,10 +2524,6 @@ class FacultyData(db.Model, EditingMetadataMixin):
                 if item.project_classes.first() is None:
 
                     db.session.delete(item)
-
-        db.session.commit()
-
-        flash('Removed {name} as convenor of {title}'.format(name=self.user.name, title=pclass.name))
 
 
     @property
@@ -4986,7 +4985,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
         if not self.project_class.publish:
             return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER
 
-        # if gone live and closed, then either we are ready to match or we are read to rollover
+        # if gone live and closed, then either we are ready to match or we are ready to rollover
         if self.live and self.selection_closed:
             if self.do_matching:
 

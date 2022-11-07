@@ -82,6 +82,7 @@ def get_rollover_data(configs=None, current_year=None):
     # loop through all active project classes
     for config in configs:
         if config.project_class.publish:
+
             # if MainConfig year has already been advanced, then we shouldn't offer
             # matching or rollover options on the dashboard
             if config.year < current_year:

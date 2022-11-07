@@ -235,7 +235,7 @@ class ProjectClassMixin():
     colour = StringField('Colour', description='Assign a colour to help students identify this project class.',
                          validators=[Length(max=DEFAULT_STRING_LENGTH)])
 
-    do_matching = BooleanField('Participate in automated global matching of faculty to projects',
+    do_matching = BooleanField('Use automated global matching of faculty to projects',
                                default=True)
 
     number_assessors = IntegerField('Number of assessors required per project',

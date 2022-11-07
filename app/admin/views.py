@@ -1587,6 +1587,8 @@ def add_pclass():
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
+        flash('Set convenor for "{title}" to {name}.'.format(name=data.convenor_name, title=data.name))
+
         return redirect(url_for('admin.edit_project_classes'))
 
     else:
@@ -1617,7 +1619,7 @@ def edit_pclass(id):
     form.project_class = data
 
     # remember old convenor
-    old_convenor = data.convenor
+    old_convenor: FacultyData = data.convenor
 
     if form.validate_on_submit():
         # make sure convenor and coconvenors don't have overlap
@@ -1671,6 +1673,10 @@ def edit_pclass(id):
             flash('Could not save project class configuration because of a database error. '
                   'Please check the logs for further information.', 'error')
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        if data.convenor.id != old_convenor.id:
+            flash('Set convenor for "{title}" to {name}. The previous convenor was {oldname} and has been '
+                  'removed'.format(name=data.convenor_name, oldname=old_convenor.user.name, title=data.name))
 
         return redirect(url_for('admin.edit_project_classes'))
 

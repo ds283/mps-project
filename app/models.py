@@ -4088,6 +4088,11 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     reenroll_supervisors_early = db.Column(db.Boolean(), default=True)
 
 
+    # ATTACHED PROJECTS
+
+    # 'projects' data member added by back reference from Project model
+
+
     @orm.reconstructor
     def reconstruct(self):
         with db.session.no_autoflush:
@@ -4122,7 +4127,8 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin):
 
         # remove this project class from any projects that have been attached with it
         for proj in self.projects:
-            proj.remove_pclass(self)
+            proj: Project
+            proj.remove_project_class(self)
 
 
     def enable(self):

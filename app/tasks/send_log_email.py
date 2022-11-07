@@ -69,33 +69,31 @@ def register_send_log_email(celery, mail: Mail):
         if not current_app.config.get('EMAIL_IS_LIVE', False):
             raise Ignore()
 
+        # store message in email log
+        to_list = msg.recipients()
+
+        # extract HTML content, if any is present
+        html = None
+        if hasattr(msg, 'alternatives'):
+            for content, mimetype in self.alternatives:
+                if mimetype == 'text/html':
+                    html = content
+                    break
+
+        recipients = []
+        for rcpt in to_list:
+            pair = parseaddr(rcpt)
+            user = db.session.query(User).filter_by(email=pair[1]).first()
+            if user is not None:
+                recipients.append(user)
+
+        log = EmailLog(recipients=recipients,
+                       send_date=datetime.now(),
+                       subject=msg.subject,
+                       body=msg.body,
+                       html=html)
+
         try:
-            log = None
-
-            # store message in email log
-            to_list = msg.recipients()
-
-            # extract HTML content, if any is present
-            html = None
-            if hasattr(msg, 'alternatives'):
-                for content, mimetype in self.alternatives:
-                    if mimetype == 'text/html':
-                        html = content
-                        break
-
-            recipients = []
-            for rcpt in to_list:
-                pair = parseaddr(rcpt)
-                user = User.query.filter_by(email=pair[1]).first()
-                if user is not None:
-                    recipients.append(user)
-
-            log = EmailLog(recipients=recipients,
-                           send_date=datetime.now(),
-                           subject=msg.subject,
-                           body=msg.body,
-                           html=html)
-
             db.session.add(log)
             db.session.commit()
 

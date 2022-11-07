@@ -4127,7 +4127,7 @@ def unofferable_ajax():
 @roles_accepted('faculty', 'admin', 'root')
 def force_confirm_all(id):
     # get details for project class
-    config = ProjectClassConfig.query.get_or_404(id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
@@ -4147,25 +4147,40 @@ def force_confirm_all(id):
               'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
         return redirect(redirect_url())
 
-    celery = current_app.extensions['celery']
-    task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
-
     # because we filter on supervisor state, this won't confirm projects from any faculty who are bought-out or
     # on sabbatical
     records = db.session.query(EnrollmentRecord) \
         .filter_by(pclass_id=config.pclass_id,
                    supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED)
+
+    task_args_list = []
     for rec in records:
         if config.is_confirmation_required(rec.owner_id):
-            config.mark_confirmed(rec.owner_id, commit=False)
+            config.mark_confirmed(rec.owner_id, message=False)
 
-            # kick off a background task to check whether any other project classes in which this user is enrolled
+            # if the database commit is successful, we later want to kick off a background task
+            # to check whether any other project classes in which this user is enrolled
             # have been reduced to zero confirmations left.
             # If so, treat this 'Confirm' click as accounting for them also
-            task.apply_async(args=(rec.owner_id, config.pclass_id))
+            task_args_list.append((rec.owner_id, config.pclass_id))
 
-    db.session.commit()
-    flash('All outstanding confirmation requests have been removed.', 'success')
+    try:
+        db.session.commit()
+        flash('All outstanding confirmation requests have been removed.', 'success')
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not force confirmations for project class "{pclass}" due to a database error. '
+              'Please contact a system administrator'.format(pclass=config.name), 'error')
+
+    else:
+        celery = current_app.extensions['celery']
+        task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
+
+        # kick off background tasks as described above
+        for args in task_args_list:
+            task.apply_async(args=args)
 
     return redirect(redirect_url())
 
@@ -4174,7 +4189,8 @@ def force_confirm_all(id):
 @roles_accepted('faculty', 'admin', 'root')
 def force_confirm(id, uid):
     # get details for project class
-    config = ProjectClassConfig.query.get_or_404(id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
+    fac: FacultyData = FacultyData.query.get_or_404(uid)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
@@ -4194,16 +4210,23 @@ def force_confirm(id, uid):
               'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
         return redirect(redirect_url())
 
-    if config.is_confirmation_required(uid):
-        config.mark_confirmed(uid, commit=False)
-        db.session.commit()
+    try:
+        if config.is_confirmation_required(uid):
+            config.mark_confirmed(fac, message=False)
+            db.session.commit()
 
-    # kick off a background task to check whether any other project classes in which this user is enrolled
-    # have been reduced to zero confirmations left.
-    # If so, treat this 'Confirm' click as accounting for them also
-    celery = current_app.extensions['celery']
-    task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
-    task.apply_async(args=(uid, config.pclass_id))
+        # kick off a background task to check whether any other project classes in which this user is enrolled
+        # have been reduced to zero confirmations left.
+        # If so, treat this 'Confirm' click as accounting for them also
+        celery = current_app.extensions['celery']
+        task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
+        task.apply_async(args=(uid, config.pclass_id))
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not force confirmations for user "{user}" and project class "{pclass}" due to a database error. '
+              'Please contact a system administrator'.format(user=fac.user.name, pclass=config.name), 'error')
 
     return redirect(redirect_url())
 
@@ -4212,7 +4235,7 @@ def force_confirm(id, uid):
 @roles_accepted('faculty', 'admin', 'root')
 def confirm_description(config_id, did):
     # get details for project class
-    config = ProjectClassConfig.query.get_or_404(config_id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(config_id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
@@ -4232,20 +4255,22 @@ def confirm_description(config_id, did):
               'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
         return redirect(redirect_url())
 
-    desc = ProjectDescription.query.get_or_404(did)
+    desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
 
     # reject user if can't edit this description
     if not validate_edit_description(desc):
         return redirect(redirect_url())
 
-    desc.confirmed = True
-    db.session.commit()
+    try:
+        desc.confirmed = True
+        db.session.flush()
 
-    # if no further confirmations outstanding, mark whole configuration as confirmed
-    if desc.parent is not None and desc.parent.owner is not None:
-        if not config.has_confirmations_outstanding(desc.parent.owner):
-            config.mark_confirmed(desc.parent.owner, message=False)
-            db.session.commit()
+        # if no further confirmations outstanding, mark whole configuration as confirmed
+        if desc.parent is not None and desc.parent.owner is not None:
+            if not config.has_confirmations_outstanding(desc.parent.owner):
+                config.mark_confirmed(desc.parent.owner, message=False)
+
+        db.session.commit()
 
         # kick off a background task to check whether any other project classes in which this user is enrolled
         # have been reduced to zero confirmations left.
@@ -4253,6 +4278,12 @@ def confirm_description(config_id, did):
         celery = current_app.extensions['celery']
         task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
         task.apply_async(args=(desc.parent.owner.id, config.pclass_id))
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not confirm description "{desc}" for project "{proj}" due to a database error. '
+              'Please contact a system administrator'.format(desc=desc.label, proj=desc.parent.name), 'error')
 
     return redirect(redirect_url())
 

@@ -1508,8 +1508,20 @@ def confirm_pclass(id):
             project=config.name, yeara=config.year, yearb=config.year+1))
         return redirect(redirect_url())
 
-    config.mark_confirmed(current_user.faculty_data, message=True)
-    db.session.commit()
+    messages = []
+    try:
+        messages = config.mark_confirmed(current_user.faculty_data, message=True)
+        db.session.commit()
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not projects for class "{pclass}" due to a database error. '
+              'Please contact a system administrator'.format(pclass=config.name), 'error')
+
+    else:
+        for msg, level in messages:
+            flash(msg, level)
 
     # kick off a background task to check whether any other project classes in which this user is enrolled
     # have been reduced to zero confirmations left.
@@ -1524,7 +1536,7 @@ def confirm_pclass(id):
 @faculty.route('/confirm_description/<int:did>/<int:pclass_id>')
 @roles_required('faculty')
 def confirm_description(did, pclass_id):
-    desc = ProjectDescription.query.get_or_404(did)
+    desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
 
     # get current configuration record for this project class
     pcl: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
@@ -1544,20 +1556,33 @@ def confirm_description(did, pclass_id):
     if not validate_is_project_owner(desc.parent):
         return redirect(redirect_url())
 
-    desc.confirmed = True
-    db.session.commit()
+    messages = []
+    try:
+        desc.confirmed = True
+        db.session.flush()
 
-    # if no further confirmations outstanding, mark whole configuration as confirmed
-    if not config.has_confirmations_outstanding(current_user.faculty_data):
-        config.mark_confirmed(current_user.faculty_data, message=True)
+        # if no further confirmations outstanding, mark whole configuration as confirmed
+        if not config.has_confirmations_outstanding(current_user.faculty_data):
+            messages = config.mark_confirmed(current_user.faculty_data, message=True)
+
         db.session.commit()
 
-    # kick off a background task to check whether any other project classes in which this user is enrolled
-    # have been reduced to zero confirmations left.
-    # If so, treat this 'Confirm' click as accounting for them also
-    celery = current_app.extensions['celery']
-    task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
-    task.apply_async(args=(current_user.id, pclass_id))
+        # kick off a background task to check whether any other project classes in which this user is enrolled
+        # have been reduced to zero confirmations left.
+        # If so, treat this 'Confirm' click as accounting for them also
+        celery = current_app.extensions['celery']
+        task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
+        task.apply_async(args=(current_user.id, pclass_id))
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not confirm description "{desc}" for project "{proj}" due to a database error. '
+              'Please contact a system administrator'.format(desc=desc.label, proj=desc.parent.name), 'error')
+
+    else:
+        for msg, level in messages:
+            flash(msg, level)
 
     return redirect(redirect_url())
 

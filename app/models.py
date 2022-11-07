@@ -18,7 +18,7 @@ from urllib.parse import urljoin
 from uuid import uuid4
 
 from celery import schedules
-from flask import flash, current_app
+from flask import current_app
 from flask_security import current_user, UserMixin, RoleMixin, AsaList
 from sqlalchemy import orm, or_, and_
 from sqlalchemy.event import listens_for
@@ -4726,7 +4726,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
             or get_count(self.confirmation_required.filter_by(id=fac_data.id)) > 0
 
 
-    def mark_confirmed(self, faculty, commit=False, message=False):
+    def mark_confirmed(self, faculty, message=False):
         if isinstance(faculty, User):
             fac_data = faculty.faculty_data
         elif isinstance(faculty, int):
@@ -4739,18 +4739,18 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
         projects = fac_data.projects_offered(self.pclass_id)
         for p in projects:
-            p.mark_confirmed(self.pclass_id, commit=False)
+            p.mark_confirmed(self.pclass_id)
 
+        messages = []
         if fac_data in self.confirmation_required:
             self.confirmation_required.remove(fac_data)
 
             if message:
-                flash('Thank you. Your confirmation that projects belonging to '
-                      'class "{name}" are ready to publish has been recorded.'.format(name=self.project_class.name),
-                      'info')
+                messages.append(('Thank you for confirming that your projects belonging to '
+                                 'class "{name}" are ready to publish.'.format(name=self.project_class.name),
+                                 'info'))
 
-        if commit:
-            db.session.commit()
+        return messages
 
 
     @property
@@ -6218,7 +6218,7 @@ class Project(db.Model, EditingMetadataMixin,
         return self._warnings.values()
 
 
-    def mark_confirmed(self, pclass, commit=False):
+    def mark_confirmed(self, pclass):
         desc = self.get_description(pclass)
 
         if desc is None:
@@ -6226,8 +6226,6 @@ class Project(db.Model, EditingMetadataMixin,
 
         if not desc.confirmed:
             desc.confirmed = True
-        if commit:
-            db.session.commit()
 
 
     @property

@@ -5264,7 +5264,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
         if n is None or n <= 0 or n > self.submissions:
             return None
 
-        return self.periods.filter_by(submission_period=n).one()
+        return self.periods.filter_by(submission_period=n).first()
 
 
     @property

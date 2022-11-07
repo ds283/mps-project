@@ -1595,8 +1595,8 @@ def add_pclass():
             form.require_confirm.data = True
             form.uses_supervisor.data = True
             form.uses_marker.data = True
-            form.display_marker = True
-            form.display_presentations = True
+            form.display_marker.data = True
+            form.display_presentations.data = True
             form.auto_enroll_years.data = ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
             form.do_matching.data = True
 

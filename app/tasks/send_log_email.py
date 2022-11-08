@@ -35,9 +35,13 @@ def register_send_log_email(celery, mail: Mail):
 
         progress_update(task_id, TaskRecord.RUNNING, 40, "Sending email...", autocommit=True)
         try:
+            # a problem here is that the SMTP connection object used by Flask-Mailman uses an RLock
+            # object, which cannot be pickled.
+            # So we need NOT to have the connection object stored in msg (as it normally would be
+            # via the data member msg.connection in the Flask-Mailman workflow) when we exit, because that could
+            # affect downstream pickling
             with mail.get_connection() as connection:
-                msg.connection = connection
-                msg.send()
+                connection.send_messages([msg])
 
         except TimeoutError as e:
             current_app.logger.info('-- send_mail() task reporting TimeoutError')

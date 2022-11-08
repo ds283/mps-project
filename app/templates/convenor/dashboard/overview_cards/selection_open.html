@@ -143,11 +143,11 @@
                     <div class="col-12">
                         <div class="float-end">
                             <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
-                               class="btn btn-outline-secondary grouped-button-margin">
+                               class="btn btn-sm btn-outline-secondary grouped-button-margin">
                                 Reset popularity data
                             </a>
-                            {{ wtf.render_field(change_form.change, button_map={'change': 'outline-secondary'}) }}
-                            {{ wtf.render_field(change_form.close, button_map={'close': 'outline-primary'}) }}
+                            {{ wtf.render_field(change_form.change, button_map={'change': 'outline-secondary'}, button_size='sm') }}
+                            {{ wtf.render_field(change_form.close, button_map={'close': 'outline-primary'}, button_size='sm') }}
                         </div>
                     </div>
                 </div>

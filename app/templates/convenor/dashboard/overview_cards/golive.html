@@ -44,9 +44,9 @@
                         <div class="float-end">
                             {% if total_projects > 0 %}
                                 {% if golive_form.live_and_close is defined %}
-                                    {{ wtf.render_field(golive_form.live_and_close, button_map={'live_and_close': 'outline-secondary'}) }}
+                                    {{ wtf.render_field(golive_form.live_and_close, button_map={'live_and_close': 'outline-secondary'}, button_size='sm') }}
                                 {% endif %}
-                                {{ wtf.render_field(golive_form.live, button_map={'live': 'outline-primary'}) }}
+                                {{ wtf.render_field(golive_form.live, button_map={'live': 'outline-primary'}, button_size='sm') }}
                             {% endif %}
                         </div>
                     </div>

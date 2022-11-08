@@ -13,9 +13,9 @@
                     <div class="col-12">
                         <div class="float-end">
                             {% if issue_form.skip_button is defined %}
-                                {{ wtf.render_field(issue_form.skip_button, button_map={'skip_button': 'outline-secondary'}) }}
+                                {{ wtf.render_field(issue_form.skip_button, button_map={'skip_button': 'outline-secondary'}, button_size='sm') }}
                             {% endif %}
-                            {{ wtf.render_field(issue_form.submit_button, button_map={'submit_button': 'outline-primary'}) }}
+                            {{ wtf.render_field(issue_form.submit_button, button_map={'submit_button': 'outline-primary'}, button_size='sm') }}
                         </div>
                     </div>
                 </div>

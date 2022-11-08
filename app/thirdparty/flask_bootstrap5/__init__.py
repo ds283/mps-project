@@ -20,9 +20,9 @@ else:
         return isinstance(field, HiddenField)
 
 # central definition of used versions
-VERSION_BOOTSTRAP = '5.1.3'
-VERSION_JQUERY = '3.4.1'
-VERSION_POPPER = '2.9.2'
+VERSION_BOOTSTRAP = '5.2.2'
+VERSION_JQUERY = '3.6.1'
+VERSION_POPPER = '2.11.6'
 
 
 def get_table_titles(data, primary_key, primary_key_title):

@@ -129,8 +129,8 @@ _marking = \
                     <i class="fas fa-comments fa-fw"></i> Show feedback
                 </a>
                 
-                {% set disabled = r.period.is_feedback_open %}
-                {% if disabled %}
+                {% set no_reassign = r.period.is_feedback_open %}
+                {% if no_reassign %}
                     <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign</a>
                 {% else %}
                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">

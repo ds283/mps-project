@@ -61,10 +61,12 @@ _projects = \
                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                     {% set disabled = period.is_feedback_open or r.student_engaged %}
                     {% if disabled %}
-                        <a class="dropdown-item d-flex gap-2 disabled">Can't reassign: Feedback open or student engaged</a>
+                        <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign</a>
                     {% else %}
-                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Manually reassign</a>
-                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}">Remove assignment</a>
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
+                            <i class="fas fa-folder fa-fw"></i> Manually reassign
+                        </a>
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Remove assignment</a>
                     {% endif %}
                 </div>
             </div>
@@ -107,18 +109,13 @@ _projects = \
 {% endmacro %}
 {% if config.uses_supervisor %}
     {% set recs = sub.ordered_assignments.all() %}
-    {% set recs_length = recs|length %}
-    {% if recs_length == 1 %}
-        {{ project_tag(recs[0], false) }}
-    {% elif recs_length > 1 %}
+    <div class="d-flex flex-row justify-content-start gap-2"></div>
         {% for rec in recs %}
-            <div {% if loop.index < recs_length %}class="mb-2"{% endif %}>
-                {{ project_tag(rec, true) }}
-            </div>
+            {{ project_tag(rec, true) }}
+        {% else %}
+            <span class="badge bg-danger">None</span>
         {% endfor %}
-    {% else %}
-        <span class="badge bg-danger">None</span>
-    {% endif %}
+    </div>
 {% else %}
     <span class="badge bg-secondary">Not used</span>
 {% endif %}
@@ -156,10 +153,12 @@ _markers = \
                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                     {% set disabled = r.period.is_feedback_open %}
                     {% if disabled %}
-                        <a class="dropdown-item d-flex gap-2 disabled">Can't reassign: Feedback open or student engaged</a>
+                        <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign</a>
                     {% else %}
-                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Manually reassign</a>
-                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_marker', id=r.id) }}">Remove assignment</a>
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
+                            <i class="fas fa-folder fa-fw"></i> Manually reassign
+                        </a>
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_marker', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Remove assignment</a>
                     {% endif %}
                 </div>
             </div>
@@ -171,18 +170,13 @@ _markers = \
 {% endmacro %}
 {% if config.uses_marker %}
     {% set recs = sub.ordered_assignments.all() %}
-    {% set recs_length = recs|length %}
-    {% if recs_length == 1 %}
-        {{ marker_tag(recs[0], false) }}
-    {% elif recs_length > 1 %}
+    <div class="d-flex flex-row justify-content-start gap-2"></div>
         {% for rec in sub.ordered_assignments %}
-            <div {% if loop.index < recs_length %}class="mb-2"{% endif %}>
-                {{ marker_tag(rec, true) }}
-            </div>
+            {{ marker_tag(rec, true) }}
+        {% else %}
+            <span class="badge bg-danger">None</span>
         {% endfor %}
-    {% else %}
-        <span class="badge bg-danger">None</span>
-    {% endif %}
+    </div>
 {% else %}
     <span class="badge bg-secondary">Not used</span>
 {% endif %}
@@ -210,53 +204,55 @@ _presentations = \
 {% if config.uses_presentations %}
     {% set recs = sub.ordered_assignments.all() %}
     {% set ns = namespace(count=0) %}
-    {% for rec in recs %}
-        {% if rec.period.has_presentation %}
-            {% set pclass = rec.owner.config.project_class %}
-            {% set ns.count = ns.count + 1 %}
-            <div>
-                <span class="badge bg-primary">Pd. {{ rec.submission_period }}</span>
-                {% if rec.period.has_deployed_schedule %}
-                    {% set slot = rec.schedule_slot %}
-                    <div class="dropdown assignment-label">
-                        {% if slot is not none %}
-                            <a class="badge text-decoration-none bg-info text-dark btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                {{ slot.short_date_as_string }}
-                                {{ slot.session_type_string }}
-                            </a>
-                        {% else %}
-                            <a class="badge text-decoration-none bg-warning text-dark btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                Not attending
-                            </a>
-                        {% endif %}
-                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                            {% set disabled = not rec.can_assign_feedback %}
-                            <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=rec.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                                Add new feedback
-                            </a>
-                        </div>
-                    </div>
-                    {% if slot is not none %}
-                        {% set fns = namespace(flag=false) %}
-                        {% for a in slot.assessors %}
-                            {{ feedback_state_tag(rec, rec.presentation_feedback_state(a.id), a.user.name) }}
-                            {% if slot.feedback_state(a.id) > slot.FEEDBACK_NOT_YET %}
-                                {% set fns.flag = true %}
+    <div class="d-flex flex-row justify-content-start gap-2"></div>    
+        {% for rec in recs %}
+            {% if rec.period.has_presentation %}
+                {% set pclass = rec.owner.config.project_class %}
+                {% set ns.count = ns.count+1 %}
+                <div>
+                    <span class="badge bg-primary">Pd. {{ rec.submission_period }}</span>
+                    {% if rec.period.has_deployed_schedule %}
+                        {% set slot = rec.schedule_slot %}
+                        <div class="dropdown assignment-label">
+                            {% if slot is not none %}
+                                <a class="badge text-decoration-none bg-info text-dark btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                    {{ slot.short_date_as_string }}
+                                    {{ slot.session_type_string }}
+                                </a>
+                            {% else %}
+                                <a class="badge text-decoration-none bg-warning text-dark btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                    Not attending
+                                </a>
                             {% endif %}
-                        {% endfor %}
-                        {% if fns.flag and rec.number_presentation_feedback == 0 %}
-                            <span class="badge bg-danger">Feedback required</span>
+                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                                {% set disabled = not rec.can_assign_feedback %}
+                                <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=rec.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                                    <i class="fas fa-comments fa-fw"></i> Add new feedback
+                                </a>
+                            </div>
+                        </div>
+                        {% if slot is not none %}
+                            {% set fns = namespace(flag=false) %}
+                            {% for a in slot.assessors %}
+                                {{ feedback_state_tag(rec, rec.presentation_feedback_state(a.id), a.user.name) }}
+                                {% if slot.feedback_state(a.id) > slot.FEEDBACK_NOT_YET %}
+                                    {% set fns.flag = true %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if fns.flag and rec.number_presentation_feedback == 0 %}
+                                <span class="badge bg-danger">Feedback required</span>
+                            {% endif %}
                         {% endif %}
+                    {% else %}
+                        <span class="badge bg-secondary">Awaiting scheduling</span>
                     {% endif %}
-                {% else %}
-                    <span class="badge bg-secondary">Awaiting scheduling</span>
-                {% endif %}
-            </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+        {% if ns.count == 0 %}
+            <span class="badge bg-secondary">None</span>
         {% endif %}
-    {% endfor %}
-    {% if ns.count == 0 %}
-        <span class="badge bg-secondary">None</span>
-    {% endif %}
+    </div>
 {% else %}
     <span class="badge bg-secondary">Not used</span>
 {% endif %}

@@ -1,8 +1,8 @@
-{% macro approvals_state(capacity_data) %}
-    {% set pending = capacity_data['pending'] %}
-    {% set queued = capacity_data['queued'] %}
-    {% set approved = capacity_data['approved'] %}
-    {% set rejected = capacity_data['rejected'] %}
+{% macro approvals_state(approval_data) %}
+    {% set pending = approval_data['pending'] %}
+    {% set queued = approval_data['queued'] %}
+    {% set approved = approval_data['approved'] %}
+    {% set rejected = approval_data['rejected'] %}
     <div class="row">
         <div class="col-6">
             <div class="list-group">

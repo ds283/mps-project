@@ -58,7 +58,7 @@ from ..shared.sqlalchemy import get_count, clone_model
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
     build_enroll_submitter_candidates, build_submitters_data, redirect_url, get_convenor_todo_data, \
-    build_convenor_tasks_query, home_dashboard_url
+    build_convenor_tasks_query, home_dashboard_url, get_approval_data
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
 from ..student.actions import store_selection
@@ -246,9 +246,9 @@ _desc_menu = \
  """
 
 
-@convenor.route('/overview/<int:id>', methods=['GET', 'POST'])
+@convenor.route('/status/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def overview(id):
+def status(id):
     # get details for project class
     pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
@@ -263,12 +263,6 @@ def overview(id):
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(redirect_url())
-
-    # get record for current submission period
-    period = config.periods.filter_by(submission_period=config.submission_period).first()
-    if period is None and config.submissions > 0:
-        flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
         return redirect(redirect_url())
 
     # BUILD FORMS
@@ -295,22 +289,6 @@ def overview(id):
 
     issue_form = IssueFacultyConfirmRequestForm(request.form)
 
-    # 4. Open feedback
-    if period is not None and period.is_feedback_open:
-        OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Change deadline',
-                                                   datebox_label='The current deadline for feedback is',
-                                                   include_send_button=True,
-                                                   include_test_button=True,
-                                                   include_close_button=False)
-    else:
-        OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Open feedback and email markers',
-                                                   datebox_label='Deadline',
-                                                   include_send_button=False,
-                                                   include_test_button=True,
-                                                   include_close_button=True)
-
-    feedback_form = OpenFeedbackForm(request.form)
-
     # first time this page is displayed, populate the forms with sensible default data
     if request.method == 'GET':
         predicted_deadline = date.today() + timedelta(weeks=6)
@@ -331,6 +309,58 @@ def overview(id):
 
         change_form.notify_convenor.data = True
 
+    data = get_convenor_dashboard_data(pclass, config)
+    todo = get_convenor_todo_data(config)
+    approval_data = get_approval_data(pclass)
+
+    return render_template('convenor/dashboard/status.html', pane='overview', subpane='status',
+                           golive_form=golive_form, change_form=change_form, issue_form=issue_form,
+                           pclass=pclass, config=config, current_year=current_year,
+                           convenor_data=data, approval_data=approval_data, todo=todo)
+
+
+@convenor.route('/periods/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def periods(id):
+    # get details for project class
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    # get current configuration record for this project class
+    config: ProjectClassConfig = pclass.most_recent_config
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(redirect_url())
+
+    # get record for current submission period
+    period = config.periods.filter_by(submission_period=config.submission_period).first()
+    if period is None and config.submissions > 0:
+        flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
+        return redirect(redirect_url())
+
+    # BUILD FORMS
+
+    # 1. Open feedback
+    if period is not None and period.is_feedback_open:
+        OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Change deadline',
+                                                   datebox_label='The current deadline for feedback is',
+                                                   include_send_button=True,
+                                                   include_test_button=True,
+                                                   include_close_button=False)
+    else:
+        OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Open feedback and email markers',
+                                                   datebox_label='Deadline',
+                                                   include_send_button=False,
+                                                   include_test_button=True,
+                                                   include_close_button=True)
+
+    feedback_form = OpenFeedbackForm(request.form)
+
+    # first time this page is displayed, populate the forms with sensible default data
+    if request.method == 'GET':
         if period is not None and period.feedback_deadline is not None:
             feedback_form.feedback_deadline.data = period.feedback_deadline
         else:
@@ -339,14 +369,39 @@ def overview(id):
         feedback_form.max_attachment.data = 2
 
     data = get_convenor_dashboard_data(pclass, config)
-    todo = get_convenor_todo_data(config)
+
+    return render_template('convenor/dashboard/periods.html', pane='overview', subpane='periods',
+                           feedback_form=feedback_form, pclass=pclass, config=config,
+                           convenor_data=data, today=date.today())
+
+
+@convenor.route('/capacity/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def capacity(id):
+    # get details for project class
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    # get current configuration record for this project class
+    config: ProjectClassConfig = pclass.most_recent_config
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(redirect_url())
+
+    # get record for current submission period
+    period = config.periods.filter_by(submission_period=config.submission_period).first()
+    if period is None and config.submissions > 0:
+        flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
+        return redirect(redirect_url())
+
+    data = get_convenor_dashboard_data(pclass, config)
     capacity_data = get_capacity_data(pclass)
 
-    return render_template('convenor/dashboard/overview.html', pane='overview',
-                           golive_form=golive_form, change_form=change_form, issue_form=issue_form,
-                           feedback_form=feedback_form, pclass=pclass, config=config, current_year=current_year,
-                           convenor_data=data, capacity_data=capacity_data, today=date.today(),
-                           todo=todo)
+    return render_template('convenor/dashboard/capacity.html', pane='overview', subpane='capacity',
+                           pclass=pclass, config=config, convenor_data=data, capacity_data=capacity_data)
 
 
 @convenor.route('/attached/<int:id>')
@@ -4380,21 +4435,21 @@ def confirm_go_live(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(url_for('convenor.overview', id=config.pclass_id))
+        return redirect(url_for('convenor.status', id=config.pclass_id))
 
     # reject if project class not published
     if not validate_project_class(config.project_class):
-        return redirect(url_for('convenor.overview', id=config.pclass_id))
+        return redirect(url_for('convenor.status', id=config.pclass_id))
 
     if config.live:
         flash('A request to Go Live was ignored, because project "{name}" is already '
               'live.'.format(name=config.project_class.name), 'error')
-        return redirect(url_for('convenor.overview', id=config.pclass_id))
+        return redirect(url_for('convenor.status', id=config.pclass_id))
 
     blocking, num_blocking = config.get_blocking_tasks
     if num_blocking > 0:
         _flash_blocking_tasks('Go-Live', blocking)
-        return redirect(url_for('convenor.overview', id=config.pclass_id))
+        return redirect(url_for('convenor.status', id=config.pclass_id))
 
     close = bool(int(request.args.get('close', 0)))
     deadline = request.args.get('deadline', None)
@@ -4410,7 +4465,7 @@ def confirm_go_live(id):
     if deadline is None:
         flash('A request to Go Live was ignored because the deadline was not correctly received. '
               'Please report this issue to an administrator.', 'error')
-        redirect(url_for('convenor.overview', id=config.pclass_id))
+        redirect(url_for('convenor.status', id=config.pclass_id))
 
     deadline = parser.parse(deadline).date()
 
@@ -4495,7 +4550,7 @@ def perform_go_live(id):
                                  accommodate_matching, full_CATS),
                            task_id=task_id, link_error=golive_fail.si(task_id, current_user.id))
 
-    return redirect(url_for('convenor.overview', id=config.pclass_id))
+    return redirect(url_for('convenor.status', id=config.pclass_id))
 
 
 @convenor.route('/reverse_golive/<int:config_id>')
@@ -4517,7 +4572,7 @@ def reverse_golive(config_id):
 
     db.session.commit()
 
-    return redirect(url_for('convenor.overview', id=config.pclass_id))
+    return redirect(url_for('convenor.status', id=config.pclass_id))
 
 
 @convenor.route('/adjust_selection_deadline/<int:configid>', methods=['GET', 'POST'])
@@ -4584,7 +4639,7 @@ def adjust_selection_deadline(configid):
 
             # pclass_close task posts a user message if the close logic proceeds correctly.
 
-    return redirect(url_for('convenor.overview', id=config.pclass_id))
+    return redirect(url_for('convenor.status', id=config.pclass_id))
 
 
 @convenor.route('/submit_student_selection/<int:sel_id>')
@@ -6007,13 +6062,14 @@ def new_project_offer_ajax(proj_id):
 def create_new_offer(sel_id, proj_id):
     # proj_id is a LiveProject
     proj: LiveProject = LiveProject.query.get_or_404(proj_id)
+    config: ProjectClassConfig = proj.config
 
     # sel_id is a SelectingStudent
     sel: SelectingStudent = SelectingStudent.query.get_or_404(sel_id)
 
     url = request.args.get('url', None)
     if url is None:
-        url = url_for('convenor.overview', id=proj.config.project_class.id)
+        url = url_for('convenor.selectors', id=config.pclass_id)
 
     # check project and selector belong to the same project class
     if proj.config_id != sel.config_id:
@@ -6566,7 +6622,7 @@ def test_notifications(id):
     max_attachment = int(request.args.get('max_attachment', 2))
     url = request.args.get('url', None)
     if url is None:
-        url = url_for('convenor.overview', id=config.pclass_id)
+        url = url_for('convenor.status', id=config.pclass_id)
 
     deadline = request.args.get('deadline', None)
     if deadline is None:
@@ -6619,7 +6675,7 @@ def do_send_notifications(id):
     test_email = request.args.get('test_email', None)
     url = request.args.get('url', None)
     if url is None:
-        url = url_for('convenor.overview', id=config.pclass_id)
+        url = url_for('convenor.status', id=config.pclass_id)
 
     deadline = request.args.get('deadline', None)
     if deadline is None:
@@ -6677,7 +6733,7 @@ def do_open_feedback(id):
     max_attachment = int(request.args.get('max_attachment', 2))
     url = request.args.get('url', None)
     if url is None:
-        url = url_for('convenor.overview', id=config.pclass_id)
+        url = url_for('convenor.periods', id=config.pclass_id)
 
     deadline = request.args.get('deadline', None)
     if deadline is None:
@@ -6766,7 +6822,7 @@ def immediate_close_feedback(id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = url_for('convenor.overview', id=config.pclass_id)
+        url = url_for('convenor.periods', id=config.pclass_id)
 
     now = datetime.now()
 
@@ -6944,7 +7000,7 @@ def edit_project_config(pid):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(url_for('convenor.overview', id=config.project_class.id))
+        return redirect(url_for('convenor.status', id=config.project_class.id))
 
     else:
         if request.method == 'GET':
@@ -7023,7 +7079,7 @@ def edit_submission_period_record_settings(pid):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(url_for('convenor.overview', id=config.project_class.id))
+        return redirect(url_for('convenor.periods', id=config.project_class.id))
 
     return render_template('convenor/dashboard/edit_submission_period_record_settings.html',
                            form=edit_form, record=record, config=config)
@@ -7061,7 +7117,7 @@ def edit_submission_period_record_presentation(pid):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(url_for('convenor.overview', id=config.project_class.id))
+        return redirect(url_for('convenor.periods', id=config.project_class.id))
 
     return render_template('convenor/dashboard/edit_submission_period_record_presentation.html', form=edit_form, record=record)
 

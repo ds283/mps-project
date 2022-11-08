@@ -23,7 +23,7 @@
     {% set num_to_dos = convenor_data['todo_count'] %}
     <ul class="nav nav-pills dashboard-nav">
         <li class="nav-item">
-            <a class="nav-link {% if pane == 'overview' %}active{% endif %}" href="{{ url_for('convenor.overview', id=pclass.id) }}">
+            <a class="nav-link {% if pane == 'overview' %}active{% endif %}" href="{{ url_for('convenor.status', id=pclass.id) }}">
                 Overview
             </a>
         </li>

@@ -1,11 +1,10 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import date_field %}
 
-{% from "convenor/dashboard/overview_cards/prelive_capacity.html" import prelive_capacity %}
 {% from "convenor/dashboard/overview_cards/approvals_state.html" import approvals_state %}
 {% from "convenor/dashboard/overview_cards/blocking_task_list.html" import blocking_task_list %}
 
-{% macro golive(config, golive_form, capacity_data, sel_count) %}
+{% macro golive(config, golive_form, approval_data) %}
     <div class="card border-secondary mt-3 mb-3">
         <div class="card-header bg-danger text-white"><strong>Student selections are not yet live</strong></div>
         <div class="card-body">
@@ -27,7 +26,7 @@
             <div class="row" style="margin-top: 20px;">
                 <div class="col-1"></div>
                 <div class="col-10">
-                    {{ approvals_state(capacity_data) }}
+                    {{ approvals_state(approval_data) }}
                 </div>
                 <div class="col-1"></div>
             </div>
@@ -53,12 +52,6 @@
                     </div>
                 </div>
             </form>
-        </div>
-    </div>
-    <div class="card border-info mt-3 mb-3">
-        <div class="card-header bg-info">Approximate student capacities</div>
-        <div class="card-body">
-            {{ prelive_capacity(capacity_data, sel_count) }}
         </div>
     </div>
 {% endmacro %}

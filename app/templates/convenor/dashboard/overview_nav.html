@@ -1,0 +1,25 @@
+{% extends "convenor/dashboard/nav.html" %}
+
+{% set state = config.selector_lifecycle %}
+{% set enable_capacity = false %}
+{% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}{% set enable_capacity = true %}{% endif %}
+
+{% block tabblock %}
+    <ul class="nav nav-tabs dashboard-nav">
+        <li class="nav-item">
+            <a class="nav-link {% if subpane=='status' %}active{% endif %}" href="{{ url_for('convenor.status', id=pclass.id) }}">
+                Status
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if subpane=='periods' %}active{% endif %}" href="{{ url_for('convenor.periods', id=pclass.id) }}">
+                Submission periods
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if enable_capacity %}{% if subpane=='capacity' %}active{% endif %}{% else %}disable{% endif %}" href="{{ url_for('convenor.capacity', id=pclass.id) }}">
+                Capacity estimates
+            </a>
+        </li>
+    </ul>
+{% endblock %}

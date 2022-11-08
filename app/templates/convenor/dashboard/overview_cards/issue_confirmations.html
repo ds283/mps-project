@@ -1,9 +1,7 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import date_field %}
 
-{% from "convenor/dashboard/overview_cards/prelive_capacity.html" import prelive_capacity %}
-
-{% macro issue_confirmations(config, issue_form, capacity_data, sel_count) %}
+{% macro issue_confirmations(config, issue_form) %}
     <div class="card border-secondary mt-3 mb-3">
         <div class="card-header bg-danger text-white"><strong>Confirmation of project descriptions</strong></div>
         <div class="card-body">
@@ -22,12 +20,6 @@
                     </div>
                 </div>
             </form>
-        </div>
-    </div>
-    <div class="card border-info mt-3 mb-3">
-        <div class="card-header bg-info">Approximate student capacities</div>
-        <div class="card-body">
-            {{ prelive_capacity(capacity_data, sel_count) }}
         </div>
     </div>
 {% endmacro %}

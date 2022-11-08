@@ -730,12 +730,54 @@ def _compute_group_capacity_data(pclass_id, group_id):
             'capacity_bounded': capacity_bounded}
 
 
+@cache.memoize()
+def _compute_group_approvals_data(pclass_id, group_id):
+    # filter all 'attached' projects that are tagged with this research group, belonging to active faculty
+    # who are normally enrolled
+    ps = db.session.query(Project) \
+        .filter(Project.active == True,
+                Project.project_classes.any(id=pclass_id),
+                Project.group_id == group_id) \
+        .join(User, User.id == Project.owner_id) \
+        .join(FacultyData, FacultyData.id == Project.owner_id) \
+        .join(EnrollmentRecord,
+              and_(EnrollmentRecord.pclass_id == pclass_id, EnrollmentRecord.owner_id == Project.owner_id)) \
+        .filter(User.active) \
+        .filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+
+    # number of offerable projects in different approval workflow states
+    pending = 0
+    approved = 0
+    rejected = 0
+    queued = 0
+
+    for p in ps:
+        if p.is_offerable:
+            desc = p.get_description(pclass_id)
+            if desc is not None:
+                if not desc.confirmed:
+                    pending += 1
+                elif desc.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED:
+                    queued += 1
+                elif desc.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED:
+                    rejected += 1
+                elif desc.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED:
+                    approved += 1
+
+    return {'pending': pending,
+            'queued': queued,
+            'rejected': rejected,
+            'approved': approved}
+
+
 def _capacity_delete_ProjectDescription_cache(desc):
     for pcl in desc.project_classes:
         if desc.parent is not None:
             cache.delete_memoized(_compute_group_capacity_data, pcl.id, desc.parent.group_id)
+            cache.delete_memoized(_compute_group_approvals_data, pcl.id, desc.parent.group_id)
         else:
             cache.delete_memoized(_compute_group_capacity_data)
+            cache.delete_memoized(_compute_group_approvals_data)
 
 
 @listens_for(ProjectDescription, 'before_insert')
@@ -759,6 +801,7 @@ def _capacity_ProjectDescription_delete_handler(mapper, connection, target):
 def _capacity_delete_Project_cache(project):
     for pcl in project.project_classes:
         cache.delete_memoized(_compute_group_capacity_data, pcl.id, project.group_id)
+        cache.delete_memoized(_compute_group_approvals_data, pcl.id, project.group_id)
 
 
 @listens_for(Project, 'before_insert')
@@ -790,6 +833,7 @@ def _capacity_delete_EnrollmentRecord_cache(record):
 
     for gp in owner.affiliations.all():
         cache.delete_memoized(_compute_group_capacity_data, record.pclass_id, gp.id)
+        cache.delete_memoized(_compute_group_approvals_data, record.pclass_id, gp.id)
 
 
 @listens_for(EnrollmentRecord, 'before_insert')
@@ -816,6 +860,7 @@ def _capacity_delete_FacultyData_affiliation_cache(target, value):
 
     for pcl in pclasses:
         cache.delete_memoized(_compute_group_capacity_data, pcl.id, value.id)
+        cache.delete_memoized(_compute_group_approvals_data, pcl.id, value.id)
 
 
 @listens_for(FacultyData.affiliations, 'append')
@@ -836,6 +881,7 @@ def _capacity_delete_FacultyData_cache(fac_data):
     for pcl in pclasses:
         for gp in fac_data.affiliations:
             cache.delete_memoized(_compute_group_capacity_data, pcl.id, gp.id)
+            cache.delete_memoized(_compute_group_approvals_data, pcl.id, gp.id)
 
 
 @listens_for(FacultyData, 'before_insert')
@@ -856,20 +902,43 @@ def _capacity_FacultyData_delete_handler(mapper, connection, target):
         _capacity_delete_FacultyData_cache(target)
 
 
-def get_capacity_data(pclass):
+def get_approval_data(pclass):
     # get list of research groups
-    groups = db.session.query(ResearchGroup) \
-        .filter_by(active=True)\
-        .order_by(ResearchGroup.name) \
-        .all()
+    groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name).all()
 
     data = []
 
-    projects = 0
     pending = 0
     queued = 0
     rejected = 0
     approved = 0
+
+    for group in groups:
+        group_data = _compute_group_approvals_data(pclass.id, group.id)
+
+        # update totals
+        pending += group_data['pending']
+        queued += group_data['queued']
+        rejected += group_data['rejected']
+        approved += group_data['approved']
+
+        # store data for this research group
+        data.append({'label': group.make_label(group.name), 'data': group_data})
+
+    return {'data': data,
+            'pending': pending,
+            'queued': queued,
+            'rejected': rejected,
+            'approved': approved}
+
+
+def get_capacity_data(pclass):
+    # get list of research groups
+    groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name).all()
+
+    data = []
+
+    projects = 0
 
     faculty_offering = 0
     capacity = 0
@@ -880,10 +949,6 @@ def get_capacity_data(pclass):
 
         # update totals
         projects += group_data['projects']
-        pending += group_data['pending']
-        queued += group_data['queued']
-        rejected += group_data['rejected']
-        approved += group_data['approved']
 
         faculty_offering += group_data['faculty_offering']
         capacity += group_data['capacity']
@@ -894,10 +959,6 @@ def get_capacity_data(pclass):
 
     return {'data': data,
             'projects': projects,
-            'pending': pending,
-            'queued': queued,
-            'rejected': rejected,
-            'approved': approved,
             'faculty_offering': faculty_offering,
             'capacity': capacity,
             'capacity_bounded': capacity_bounded}

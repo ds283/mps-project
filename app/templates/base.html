@@ -278,7 +278,7 @@
         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
             <div class="dropdown-header">Convenorships</div>
             {% for project_class in pclasses %}
-                <a class="dropdown-item d-flex gap-2"href="{{ url_for('convenor.overview', id=project_class.id) }}">
+                <a class="dropdown-item d-flex gap-2"href="{{ url_for('convenor.status', id=project_class.id) }}">
                     <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}...
                 </a>
             {% endfor %}

@@ -21,7 +21,7 @@
                 <div class="row vertical-top root-dashboard-table">
                     <div class="col-3">
                         {% set style = pclass.make_CSS_style() %}
-                        <a href="{{ url_for('convenor.overview', id=pclass.id) }}" {% if style %}class="badge text-decoration-none bg-secondary" style="{{ style }}"{% endif %}>
+                        <a href="{{ url_for('convenor.status', id=pclass.id) }}" {% if style %}class="badge text-decoration-none bg-secondary" style="{{ style }}"{% endif %}>
                             {{ pclass.name }}
                         </a>
                     </div>

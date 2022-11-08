@@ -1,0 +1,32 @@
+{% extends "convenor/dashboard/overview_nav.html" %}
+
+{% from "convenor/dashboard/overview_cards/capacity_card.html" import capacity_card %}
+{% from "icon_block.html" import icon_block %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            {% if enable_capacity %}
+                {% if pclass.publish %}
+                    {# CAPACITY #}
+                    {% set sel_count = convenor_data['selectors'] %}
+                    {{ capacity_card(capacity_data, sel_count) }}
+                {% else %}
+                    <div class="alert alert-danger mt-1 mb-2">
+                        {% call icon_block("exclamation-triangle") %}
+                            <strong>This project class is not published, so its administration options are limited.</strong>
+                        {% endcall %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-danger mt-1 mb-2">
+                    {% call icon_block("exclamation-triangle") %}
+                        <strong>Capacity data is not currently available for this project class.</strong>
+                    {% endcall %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

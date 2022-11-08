@@ -1,4 +1,4 @@
-{% extends "convenor/dashboard/nav.html" %}
+{% extends "convenor/dashboard/overview_nav.html" %}
 
 {% from "macros.html" import submission_period_configure_button %}
 {% from "icon_block.html" import icon_block %}
@@ -9,7 +9,6 @@
 {% from "convenor/dashboard/overview_cards/golive.html" import golive %}
 {% from "convenor/dashboard/overview_cards/selection_open.html" import selection_open %}
 {% from "convenor/dashboard/overview_cards/selection_closed.html" import selection_closed %}
-{% from "convenor/dashboard/overview_cards/submitter_card.html" import submitter_card %}
 
 {% set rollover_in_progress = config.year < current_year %}
 
@@ -32,11 +31,6 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#feedback_datetimepicker').datetimepicker({
-                format: 'DD/MM/YYYY',
-                allowInputToggle: true
-            });
-
             $('#golive_datetimepicker').datetimepicker({
                 format: 'DD/MM/YYYY',
                 allowInputToggle: true
@@ -71,24 +65,13 @@
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
-            <div class="card mt-3 mb-3 card-body border-secondary bg-well">
+            <div class="card mt-3 mb-3 card-body border-primary bg-well">
                 <div class="d-flex flex-row justify-content-start align-items-start mb-4">
                     <div class="dashboard-project-title align-self-start me-2">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</div>
                     <a class="mt-1 btn btn-sm btn-outline-secondary align-self-start mt-2" href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure this cycle...</a>
                 </div>
                 <ul class="list-group border-0 mb-3">
                     <li class="list-group-item list-group-item-primary">
-                        {% call icon_block("coins") %}
-                            <p><strong>CATS allocations</strong></p>
-                            <p>
-                                <span class="me-2">Supervision <span class="badge bg-secondary rounded-pill">{{ config.CATS_supervision }} CATS</span> {%- if config.CATS_supervision != pclass.CATS_supervision -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%}</span>
-                                <span class="me-2">Marking <span class="badge bg-secondary rounded-pill">{{ config.CATS_marking }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%}</span>
-                                <span class="me-2">Presentation <span class="badge bg-secondary rounded-pill">{{ config.CATS_presentation }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%}</span>
-                            </p>
-                        {% endcall %}
-                    </li>
-                    <li class="list-group-item list-group-item-secondary">
-                        <h6 class="mt-2">Details</h6>
                         {% set messages = [] %}
                         {% if config.uses_project_hub %}
                             {% set tmp = messages.append('Project hub enabled') %}
@@ -130,11 +113,24 @@
                             {% set tmp = messages.append('Selection restricted to invitees') %}
                         {% endif %}
                         {% if config.full_CATS %}
-                            {% set temp = messages.append('Maximum supervisor CATS for accommodated matchings = ' + config.full_CATS|string) %}
+                            {% set tmp = messages.append('Maximum supervisor CATS for accommodated matchings = ' + config.full_CATS|string) %}
                         {% endif %}
-                        {% if messages|length > 0 %}
-                            <span class="text-muted">{{ messages|join(', ') }}</span>
-                        {% endif %}
+                        {% call icon_block("cogs") %}
+                            <p><strong>Details</strong></p>
+                            {% if messages|length > 0 %}
+                                <p>{{ messages|join(', ') }}</p>
+                            {% endif %}
+                        {% endcall %}
+                    </li>
+                    <li class="list-group-item list-group-item-secondary">
+                        {% call icon_block("coins") %}
+                            <p><strong>CATS allocations</strong></p>
+                            <p>
+                                <span class="me-2">Supervision <span class="badge bg-secondary rounded-pill">{{ config.CATS_supervision }} CATS</span> {%- if config.CATS_supervision != pclass.CATS_supervision -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%}</span>
+                                <span class="me-2">Marking <span class="badge bg-secondary rounded-pill">{{ config.CATS_marking }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%}</span>
+                                <span class="me-2">Presentation <span class="badge bg-secondary rounded-pill">{{ config.CATS_presentation }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle" style="color:red;"></i>{%- endif -%}</span>
+                            </p>
+                        {% endcall %}
                     </li>
                 </ul>
                 <ul class="list-group border-0">
@@ -293,7 +289,7 @@
                                         <td>
                                             {% if tk_type == 1 or tk_type == 2 %}
                                                 <i class="fas fa-user"></i>
-                                                <a class="text-decoration-none" href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.overview', id=pclass.id), text='convenor overview') }}">
+                                                <a class="text-decoration-none" href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.status', id=pclass.id), text='convenor dashboard') }}">
                                                     {{ obj.student.user.name }}
                                                 </a>
                                             {% endif %}
@@ -328,11 +324,11 @@
                                                 </button>
                                                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                                     {% if tk_type == 1 or tk_type == 2 %}
-                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.overview', id=pclass.id)) }}">
+                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
                                                             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
                                                         </a>
                                                     {% elif tk_type == 3 %}
-                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.overview', id=pclass.id)) }}">
+                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
                                                             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
                                                         </a>
                                                     {% endif %}
@@ -357,15 +353,13 @@
                 {# SELECTING #}
                 {# provide summary #}
 
-                {% set state = config.selector_lifecycle %}
-                {% set sel_count = convenor_data['selectors'] %}
                 {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-                    {{ issue_confirmations(config, issue_form, capacity_data, sel_count) }}
+                    {{ issue_confirmations(config, issue_form) }}
                 {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
                     {# if we get here then we can assume requests have been issued because of the outermost if #}
-                    {{ waiting_confirmations(config, issue_form, capacity_data, sel_count) }}
+                    {{ waiting_confirmations(config, issue_form, approval_data) }}
                 {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                    {{ golive(config, golive_form, capacity_data, sel_count) }}
+                    {{ golive(config, golive_form, approval_data) }}
                 {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                     {{ selection_open(config, change_form) }}
                 {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
@@ -379,18 +373,11 @@
                         </div>
                     </div>
                 {% endif %}
-
-                {# SUBMITTING #}
-                {% for n in range(config.submissions) %}
-                    <a id="submitter_card_{{ loop.index }}"></a>
-                    {{ submitter_card(config, n, today, feedback_form)  }}
-                {% endfor %}
             {% else %}
-                <div class="card mt-3 mb-3 card-body bg-well">
-                    <p>
-                        <i class="fas fa-exclamation-triangle" style="color:red;"></i>
-                        This project class is not published, so its administration options are limited.
-                    </p>
+                <div class="alert alert-danger mt-1 mb-2">
+                    {% call icon_block("exclamation-triangle") %}
+                        <strong>This project class is not published, so its administration options are limited.</strong>
+                    {% endcall %}
                 </div>
             {% endif %}
         </div>

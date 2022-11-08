@@ -1,0 +1,53 @@
+{% extends "convenor/dashboard/overview_nav.html" %}
+
+{% from "icon_block.html" import icon_block %}
+{% from "convenor/dashboard/overview_cards/submitter_card.html" import submitter_card %}
+
+{% block scripts %}
+    {{ super() }}
+
+    {% assets filters="cssmin", output="gen/tempusdominus-bootstrap-4.min.css", "css/tempusdominus-bootstrap-4.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="rjsmin", output="gen/moment.min.js", "js/moment.min.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/tempusdominus-bootstrap-4.min.js", "js/tempusdominus-bootstrap-4.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#feedback_datetimepicker').datetimepicker({
+                format: 'DD/MM/YYYY',
+                allowInputToggle: true
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            {% if pclass.publish %}
+                {# SUBMITTING #}
+                {% for n in range(config.submissions) %}
+                    <a id="submitter_card_{{ loop.index }}"></a>
+                    {{ submitter_card(config, n, today, feedback_form)  }}
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-danger mt-1 mb-2">
+                    {% call icon_block("exclamation-triangle") %}
+                        <strong>This project class is not published, so its administration options are limited.</strong>
+                    {% endcall %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

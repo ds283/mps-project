@@ -1,6 +1,7 @@
 {% extends "convenor/dashboard/live_nav.html" %}
 
 {% from "macros.html" import filter_block %}
+{% from "icon_block.html" import icon_block %}
 
 {% if state_filter is none %}{% set state_filter = 'all' %}{% endif %}
 
@@ -83,9 +84,11 @@
         <div class="row">
             <div class="col-1"></div>
                 <div class="col-10">
-                    <div class="alert alert-danger">
-                        <p>This project class has not yet gone live in this academic year.</p>
-                        <p>This section will be populated with project records when go-live is complete.</p>
+                    <div class="alert alert-info">
+                        {% call icon_block("exclamation-circle") %}
+                            <p><strong>This project class has not yet gone live in this academic year.</strong></p>
+                            <p>This section will be populated with project records when go-live is complete.</p>
+                        {% endcall %}
                     </div>
                 </div>
             <div class="col-1"></div>

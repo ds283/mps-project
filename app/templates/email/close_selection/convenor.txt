@@ -1,7 +1,7 @@
 {%- set total = data['total'] -%}
 {%- set submitted = data['have_submitted'] -%}
 {%- set missing = data['missing'] -%}
-This is an automated email from the Sussex Physics & Astronomy
+This is an automated email from the MPS
 project management web app at https://mpsprojects.sussex.ac.uk.
 
 This email is advisory only, and does not require any action.

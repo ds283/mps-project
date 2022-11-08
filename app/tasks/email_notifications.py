@@ -500,7 +500,7 @@ def register_email_notification_tasks(celery):
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
                                      reply_to=[current_app.config['MAIL_REPLY_TO']],
                                      to=[user.email],
-                                     subject='Physics & Astronomy projects: summary of notifications and events')
+                                     subject='MPS projects: summary of notifications and events')
 
         msg.body = render_template('email/notifications/faculty/rollup.txt', user=user,
                                    notifications=notifications, outstanding=outstanding_crqs)
@@ -634,7 +634,7 @@ def register_email_notification_tasks(celery):
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
                                      reply_to=[current_app.config['MAIL_REPLY_TO']],
                                      to=[user.email],
-                                     subject='Physics & Astronomy projects: summary of notifications and events')
+                                     subject='MPS projects: summary of notifications and events')
 
         msg.body = render_template('email/notifications/student/rollup.txt', user=user,
                                    notifications=notifications, outstanding=outstanding_crqs)

@@ -1,6 +1,6 @@
 For attention of: {{ user.name }}
 
-This is an automated email from the Sussex Physics & Astronomy
+This is an automated email from the MPS
 project management web app at https://mpsprojects.sussex.ac.uk.
 
 The files needed for offline matching of '{{ name }}' are now ready

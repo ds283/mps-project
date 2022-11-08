@@ -1,6 +1,6 @@
 Dear {{ user.first_name }}
 
-This is an automated email from the Sussex Physics & Astronomy
+This is an automated email from the MPS
 project management web app at https://mpsprojects.sussex.ac.uk.
 It is sent from an address that is not monitored or answered;
 please direct any queries to the project convenor.

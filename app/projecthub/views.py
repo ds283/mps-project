@@ -135,7 +135,7 @@ def hub(subid):
         plot.toolbar.active_drag = None
 
         annotation = Label(x=0, y=0, x_units='data', y_units='data',
-                           text='{p:.2g}%'.format(p=burnt_time * 100), render_mode='css',
+                           text='{p:.2g}%'.format(p=burnt_time * 100),
                            background_fill_alpha=0.0, text_align='center',
                            text_baseline='middle', text_font_style='bold')
         plot.add_layout(annotation)

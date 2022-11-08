@@ -280,9 +280,9 @@ def liveproject_analytics(proj_id):
 
 def _build_score_plot(pop_score_dates, pop_scores, title, colour):
     plot = figure(title=title,
-                  x_axis_label='Date', x_axis_type='datetime', plot_width=800, plot_height=300)
+                  x_axis_label='Date', x_axis_type='datetime', width=800, height=300)
     plot.sizing_mode = 'scale_width'
-    plot.line(pop_score_dates, pop_scores, legend=title.lower(), line_color=colour, line_width=2)
+    plot.line(pop_score_dates, pop_scores, legend_label=title.lower(), line_color=colour, line_width=2)
     plot.toolbar.logo = None
     plot.border_fill_color = None
     plot.background_fill_color = 'lightgrey'
@@ -297,9 +297,9 @@ def _build_rank_plot(pop_rank_dates, pop_ranks, total, title, colour):
     y_range = Range1d(total, -5)
 
     plot = figure(title=title,
-                  x_axis_label='Date', x_axis_type='datetime', plot_width=800, plot_height=300)
+                  x_axis_label='Date', x_axis_type='datetime', width=800, height=300)
     plot.sizing_mode = 'scale_width'
-    plot.line(pop_rank_dates, pop_ranks, legend=title.lower(), line_color=colour, line_width=2)
+    plot.line(pop_rank_dates, pop_ranks, legend_label=title.lower(), line_color=colour, line_width=2)
     plot.toolbar.logo = None
     plot.border_fill_color = None
     plot.background_fill_color = 'lightgrey'

@@ -3161,9 +3161,9 @@ def backups_overview():
 
         archive_plot = figure(title='Archive size as a function of time',
                               x_axis_label='Time of backup', x_axis_type='datetime',
-                              plot_width=800, plot_height=300)
+                              width=800, height=300)
         archive_plot.sizing_mode = 'scale_width'
-        archive_plot.line(dates, arc_size, legend='archive size in Mb',
+        archive_plot.line(dates, arc_size, legend_label='archive size in Mb',
                           line_color='blue', line_width=2)
         archive_plot.toolbar.logo = None
         archive_plot.border_fill_color = None
@@ -3172,9 +3172,9 @@ def backups_overview():
 
         backup_plot = figure(title='Total backup size as a function of time',
                              x_axis_label='Time of backup', x_axis_type='datetime',
-                             plot_width=800, plot_height=300)
+                             width=800, height=300)
         backup_plot.sizing_mode = 'scale_width'
-        backup_plot.line(dates, bk_size, legend='backup size in Mb',
+        backup_plot.line(dates, bk_size, legend_label='backup size in Mb',
                           line_color='red', line_width=2)
         backup_plot.toolbar.logo = None
         backup_plot.border_fill_color = None
@@ -3216,7 +3216,7 @@ def backups_overview():
         gauge.toolbar.active_drag = None
 
         annotation = Label(x=0, y=0, x_units='data', y_units='data',
-                           text='{p:.2g}%'.format(p=how_full * 100), render_mode='css',
+                           text='{p:.2g}%'.format(p=how_full * 100),
                            background_fill_alpha=0.0, text_align='center',
                            text_baseline='middle', text_font_style='bold')
         gauge.add_layout(annotation)
@@ -4673,7 +4673,7 @@ def match_dists_view(id):
     CATS_tot = [fsum(record.get_faculty_CATS(f.id, pclass_value if flag else None)) for f in record.faculty]
 
     CATS_plot = figure(title='Workload distribution',
-                       x_axis_label='CATS', plot_width=800, plot_height=300)
+                       x_axis_label='CATS', width=800, height=300)
     CATS_hist, CATS_edges = histogram(CATS_tot, bins='auto')
     CATS_plot.quad(top=CATS_hist, bottom=0, left=CATS_edges[:-1], right=CATS_edges[1:],
                    fill_color="#036564", line_color="#033649")
@@ -4691,7 +4691,7 @@ def match_dists_view(id):
     deltas = [x[1] for x in delta_data_set if x[1] is not None]
 
     delta_plot = figure(title='Delta distribution',
-                       x_axis_label='Total delta', plot_width=800, plot_height=300)
+                       x_axis_label='Total delta', width=800, height=300)
     delta_hist, delta_edges = histogram(deltas, bins='auto')
     delta_plot.quad(top=delta_hist, bottom=0, left=delta_edges[:-1], right=delta_edges[1:],
                    fill_color="#036564", line_color="#033649")

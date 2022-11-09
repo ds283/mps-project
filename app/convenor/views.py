@@ -63,7 +63,7 @@ from ..shared.validators import validate_is_convenor, validate_is_administrator,
     validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
 from ..student.actions import store_selection
 from ..task_queue import register_task
-from ..tools import ServerSideHandler
+from ..tools import ServerSideSQLHandler, ServerSideInMemoryHandler
 from ..uploads import submitted_files
 
 STUDENT_TASKS_SELECTOR = SelectingStudent.polymorphic_identity()
@@ -2640,7 +2640,7 @@ def todo_list_ajax(id):
                'due_date': due_date,
                'status': status}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.convenor.todo_list_data, pclass.id))
 
 
@@ -7616,12 +7616,35 @@ def faculty_workload_ajax(id):
         .join(FacultyData, FacultyData.id == User.id) \
         .join(faculty_ids, User.id == faculty_ids.c.owner_id)
 
-    name = {'search': func.concat(User.first_name, ' ', User.last_name),
-            'order': [User.last_name, User.first_name],
-            'search_collation': 'utf8_general_ci'}
-    columns = {'name': name}
+    def search_name(row):
+        u: User
+        fd: FacultyData
+        u, fd = row
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+        return u.first_name + ' ' + u.last_name
+
+    def sort_name(row):
+        u: User
+        fd: FacultyData
+        u, fd = row
+
+        return [u.last_name, u.first_name]
+
+    def sort_workload(row):
+        u: User
+        fd: FacultyData
+        u, fd = row
+
+        CATS_sup, CATS_mark, CATS_pres = fd.CATS_assignment(config)
+        return CATS_sup + CATS_mark + CATS_pres
+
+    name = {'search': search_name,
+            'order': sort_name}
+    workload = {'order': sort_workload}
+    columns = {'name': name,
+               'workload': workload}
+
+    with ServerSideInMemoryHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.convenor.faculty_workload_data, config))
 
 
@@ -7876,7 +7899,7 @@ def manual_assign_ajax(id):
     columns = {'project': project,
                'supervisor': supervisor}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.convenor.manual_assign_data, rec))
 
 
@@ -9125,7 +9148,7 @@ def student_tasks_ajax(type, sid):
 
     return_url = url_for('convenor.student_tasks', type=type, sid=sid, url=url, text=text)
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.convenor.student_task_data, type, sid, return_url))
 
 

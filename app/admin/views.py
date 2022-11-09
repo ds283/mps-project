@@ -84,7 +84,7 @@ from ..shared.utils import get_current_year, home_dashboard, get_matching_dashbo
 from ..shared.validators import validate_is_admin_or_convenor, validate_match_inspector, \
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..task_queue import register_task, progress_update
-from ..tools import ServerSideHandler
+from ..tools import ServerSideSQLHandler
 from ..uploads import solution_files
 
 
@@ -161,7 +161,7 @@ def groups_ajax():
                'colour': colour,
                'website': website}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.admin.groups_data)
 
 
@@ -354,7 +354,7 @@ def edit_levels_ajax():
                'academic_year': academic_year,
                'status': status}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.admin.FHEQ_levels_data)
 
 
@@ -383,7 +383,7 @@ def degree_types_ajax():
                'colour': colour,
                'active': active}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.admin.degree_types_data)
 
 
@@ -419,7 +419,7 @@ def degree_programmes_ajax():
         .filter_by(active=True) \
         .order_by(FHEQ_Level.academic_year.asc()).all()
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.admin.degree_programmes_data, levels))
 
 
@@ -449,7 +449,7 @@ def modules_ajax():
                'level': level,
                'status': status}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.admin.modules_data)
 
 
@@ -2309,7 +2309,7 @@ def email_log_ajax():
                'date': date,
                'subject': subject}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.site.email_log_data)
 
 
@@ -2485,7 +2485,7 @@ def scheduled_email_ajax():
                'timestamp': timestamp,
                'type': type}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.site.scheduled_email)
 
 
@@ -3312,7 +3312,7 @@ def manage_backups_ajax():
                'db_size': db_size,
                'archive_size': archive_size}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.site.backups_data)
 
 
@@ -3524,7 +3524,7 @@ def background_ajax():
                'progress': progress,
                'message': message}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.site.background_task_data)
 
 

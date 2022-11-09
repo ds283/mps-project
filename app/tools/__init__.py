@@ -8,4 +8,4 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from .ServerSideProcessing import ServerSideHandler
+from .ServerSideProcessing import ServerSideSQLHandler, ServerSideInMemoryHandler

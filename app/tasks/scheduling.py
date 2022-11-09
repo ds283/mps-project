@@ -555,7 +555,7 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
             # also have to require that assessors for each talk are drawn from those faculty enrolled
             # as presentation assessors
             # We don't have to do this for 'all_assessors_in_pool' = True, since being in the assessor pool
-            # for a project already implies enrollment
+            # for a project already implies enrolment
             for j in range(number_assessors):
                 assessor = assessor_dict[j]
                 enrollment = assessor.get_enrollment_record(talk.project.config.pclass_id)

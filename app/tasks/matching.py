@@ -124,8 +124,8 @@ def _enumerate_selectors_primary(configs, include_only_submitted=False):
         # So in this case too, we shouldn't forward the selector for matching
 
         opt_in_type = config.selection_open_to_all
-        enroll_previous_year = config.auto_enroll_years == ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
-        enroll_any_year = config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ANY_YEAR
+        enroll_previous_year = config.auto_enroll_years == ProjectClass.AUTO_ENROLL_FIRST_YEAR
+        enroll_any_year = config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ALL_YEARS
         carryover = config.supervisor_carryover
 
         selectors = db.session.query(SelectingStudent) \
@@ -258,7 +258,7 @@ def _enumerate_liveprojects_primary(configs):
     for config in configs:
         # get LiveProject instances that belong to this config instance and are associated with
         # a supervisor who is still enrolled
-        # (eg. enrollment status may have changed since the projects went live)
+        # (eg. enrolment status may have changed since the projects went live)
         projects = db.session.query(LiveProject).filter_by(config_id=config.id) \
             .join(ProjectClassConfig, ProjectClassConfig.id == LiveProject.config_id) \
             .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == LiveProject.owner_id,

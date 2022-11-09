@@ -262,7 +262,7 @@ class EnrollmentRecordMixin():
 
     supervisor_reenroll = IntegerField('Re-enroll in academic year',
                                    description='Optional. For faculty on sabbatical or buy-outs, enter a year in which '
-                                               'automatic re-enrollment should occur.',
+                                               'automatic re-enrolment should occur.',
                                    validators=[Optional()])
 
     supervisor_comment = TextAreaField('Comment', render_kw={"rows": 3},
@@ -276,7 +276,7 @@ class EnrollmentRecordMixin():
 
     marker_reenroll = IntegerField('Re-enroll in academic year',
                                    description='Optional. For faculty on sabbatical or buy-outs, enter a year in which '
-                                               'automatic re-enrollment should occur.',
+                                               'automatic re-enrolment should occur.',
                                    validators=[Optional()])
 
     marker_comment = TextAreaField('Comment', render_kw={"rows": 3},
@@ -290,7 +290,7 @@ class EnrollmentRecordMixin():
 
     presentations_reenroll = IntegerField('Re-enroll in academic year',
                                          description='Optional. For faculty on sabbatical or buy-outs, enter a year '
-                                                     'in which automatic re-enrollment should occur.',
+                                                     'in which automatic re-enrolment should occur.',
                                          validators=[Optional()])
 
     presentations_comment = TextAreaField('Comment', render_kw={"rows": 3},

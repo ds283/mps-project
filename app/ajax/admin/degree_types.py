@@ -65,6 +65,7 @@ _duration = \
 def degree_types_data(types):
 
     data = [{'name': render_template_string(_name, t=t),
+             'level': 'UG' if t.level == t.LEVEL_UG else 'PGT' if t.level == t.LEVEL_PGT else 'PGR' if t.level == t.level_PGR else 'Unknown',
              'duration': render_template_string(_duration, t=t),
              'active': render_template_string(_active, t=t),
              'colour': t.make_label(t.colour),

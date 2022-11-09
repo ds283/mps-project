@@ -40,7 +40,7 @@
             <div class="card mt-3 mb-3 card-body bg-well">
                 <div class="row">
                     <div class="col-12">
-                        <p>Filter by enrollment status</p>
+                        <p>Filter by enrolment status</p>
                         <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter='all', state_filter=state_filter) }}"
                            class="btn btn-sm filter-btn {% if enroll_filter is none or enroll_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             All

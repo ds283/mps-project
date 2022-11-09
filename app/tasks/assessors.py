@@ -50,8 +50,8 @@ def register_assessor_tasks(celery):
         if record.marker_state != EnrollmentRecord.MARKER_ENROLLED \
                 and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
             user.post_message('Cannot attach {name} as an assessor for projects in class "{pclass}" because they '
-                              'do not have an appropriate enrollment.'.format(name=faculty.user.name,
-                                                                              pclass=record.pclass.name), 'error',
+                              'do not have an appropriate enrolment.'.format(name=faculty.user.name,
+                                                                             pclass=record.pclass.name), 'error',
                               autocommit=True)
             raise Ignore
 
@@ -106,8 +106,8 @@ def register_assessor_tasks(celery):
         if record.marker_state != EnrollmentRecord.MARKER_ENROLLED \
                 and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
             user.post_message('Cannot attach {name} as an assessor for projects in class "{pclass}" because they '
-                              'do not have an appropriate enrollment.'.format(name=faculty.user.name,
-                                                                              pclass=record.pclass.name), 'error',
+                              'do not have an appropriate enrolment.'.format(name=faculty.user.name,
+                                                                             pclass=record.pclass.name), 'error',
                               autocommit=True)
             raise Ignore
 

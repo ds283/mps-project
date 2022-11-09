@@ -13,7 +13,6 @@ import re
 from collections import deque
 from datetime import date, datetime, timedelta
 from functools import partial
-from math import pi
 from pathlib import Path
 from typing import List
 from urllib.parse import urlsplit
@@ -25,6 +24,7 @@ from celery import chain, group
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, \
     stream_with_context, send_file, abort
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
+from math import pi
 from numpy import histogram
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
@@ -370,6 +370,7 @@ def degree_types_ajax():
     name = {'search': DegreeType.name,
             'order': DegreeType.name,
             'search_collation': 'utf8_general_ci'}
+    level = {'order': DegreeType.level}
     duration = {'search': cast(DegreeType.duration, String),
                 'order': DegreeType.duration,
                 'search_collation': 'utf8_general_ci'}
@@ -379,6 +380,7 @@ def degree_types_ajax():
     active = {'order': DegreeType.active}
 
     columns = {'name': name,
+               'level': level,
                'duration': duration,
                'colour': colour,
                'active': active}
@@ -467,6 +469,7 @@ def add_degree_type():
                                  abbreviation=form.abbreviation.data,
                                  colour=form.colour.data,
                                  duration=form.duration.data,
+                                 level=form.level.data,
                                  active=True,
                                  creator_id=current_user.id,
                                  creation_timestamp=datetime.now())
@@ -503,6 +506,7 @@ def edit_degree_type(id):
         type.abbreviation = form.abbreviation.data
         type.colour = form.colour.data
         type.duration = form.duration.data
+        type.level = form.level.data
         type.last_edit_id = current_user.id
         type.last_edit_timestamp = datetime.now()
 
@@ -1481,6 +1485,7 @@ def add_pclass():
                                 do_matching=form.do_matching.data,
                                 number_assessors=form.number_assessors.data,
                                 use_project_hub=form.use_project_hub.data,
+                                student_level=form.student_level.data,
                                 start_level=form.start_level.data,
                                 extent=form.extent.data,
                                 require_confirm=form.require_confirm.data,
@@ -1495,7 +1500,9 @@ def add_pclass():
                                 convenor=form.convenor.data,
                                 coconvenors=coconvenors,
                                 office_contacts=form.office_contacts.data,
+                                select_in_previous_cycle=form.select_in_previous_cycle.data,
                                 selection_open_to_all=form.selection_open_to_all.data,
+                                auto_enrol_enable=form.auto_enrol_enable.data,
                                 auto_enroll_years=form.auto_enroll_years.data,
                                 programmes=form.programmes.data,
                                 initial_choices=form.initial_choices.data,
@@ -1599,7 +1606,7 @@ def add_pclass():
             form.uses_marker.data = True
             form.display_marker.data = True
             form.display_presentations.data = True
-            form.auto_enroll_years.data = ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
+            form.auto_enroll_years.data = ProjectClass.AUTO_ENROLL_FIRST_YEAR
             form.do_matching.data = True
 
     return render_template('admin/edit_project_class.html', pclass_form=form, title='Add new project class')
@@ -1630,6 +1637,7 @@ def edit_pclass(id):
         data.name = form.name.data
         data.abbreviation = form.abbreviation.data
         data.use_project_hub = form.use_project_hub.data
+        data.student_level = form.student_level.data
         data.start_level = form.start_level.data
         data.colour = form.colour.data
         data.do_matching = form.do_matching.data
@@ -1647,7 +1655,9 @@ def edit_pclass(id):
         data.convenor = form.convenor.data
         data.coconvenors = coconvenors
         data.office_contacts = form.office_contacts.data
+        data.select_in_previous_cycle = form.select_in_previous_cycle.data
         data.selection_open_to_all = form.selection_open_to_all.data
+        data.auto_enrol_enable = form.auto_enrol_enable.data
         data.auto_enroll_years = form.auto_enroll_years.data
         data.programmes = form.programmes.data
         data.initial_choices = form.initial_choices.data

@@ -53,6 +53,9 @@ PASSWORD_HASH_LENGTH = 255
 SERIALIZED_LAYOUT_LENGTH = 2048
 
 
+# labels and keys for student 'level' field
+student_level_choices = [(0, 'UG'), (1, 'PGT'), (2, 'PGR')]
+
 # labels and keys for 'year' field; it's not possible to join in Y1; treat students as
 # joining in Y2
 year_choices = [(2, 'Year 2'), (3, 'Year 3'), (4, 'Year 4')]
@@ -87,8 +90,8 @@ email_freq_choices = [(1, '1 day'), (2, '2 days'), (3, '3 days'), (4, '4 days'),
                       (6, '6 days'), (7, '7 days')]
 
 # auto-enroll selectors
-auto_enroll_year_choices = [(0, 'The year before students join the project'),
-                            (1, 'Every year for which students are eligible')]
+auto_enrol_year_choices = [(0, 'The first year for which they are eligible'),
+                           (1, 'Every year for which students are eligible')]
 
 
 # for encrypted fields, extract encryption key from configuration variables
@@ -2350,7 +2353,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     def is_enrolled(self, pclass):
         """
-        Check whether this FacultyData record has an enrollment for a given project class
+        Check whether this FacultyData record has an enrolment for a given project class
         :param pclass:
         :return:
         """
@@ -2366,11 +2369,11 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     def remove_enrollment(self, pclass):
         """
-        Remove an enrollment from a faculty member
+        Remove an enrolment from a faculty member
         :param pclass:
         :return:
         """
-        # find enrollment record for this project class
+        # find enrolment record for this project class
         record = self.get_enrollment_record(pclass)
         if record is not None:
             db.session.delete(record)
@@ -2395,7 +2398,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     def add_enrollment(self, pclass):
         """
-        Add an enrollment to this faculty member
+        Add an enrolment to this faculty member
         :param pclass:
         :return:
         """
@@ -3617,6 +3620,22 @@ class DegreeType(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     # number of years before graduation
     duration = db.Column(db.Integer())
 
+    # degree level (UG, PGR, PGT)
+    LEVEL_UG = 0
+    LEVEL_PGT = 1
+    LEVEL_PGR = 2
+    level = db.Column(db.Integer(), default=LEVEL_UG)
+
+    @validates('level')
+    def _validate_level(self, key, value):
+        if value < self.LEVEL_UG:
+            value = self.LEVEL_UG
+
+        if value > self.LEVEL_PGR:
+            value = self.LEVEL_UG
+
+        return value
+
     # active flag
     active = db.Column(db.Boolean())
 
@@ -3951,28 +3970,48 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     # enable project hub by default?
     use_project_hub = db.Column(db.Boolean(), default=True)
 
+    # what student level is this project associated with (UG, PGT, PGR)
+    LEVEL_UG = 0
+    LEVEL_PGT = 1
+    LEVEL_PGR = 2
+    student_level = db.Column(db.Integer(), default=LEVEL_UG)
+
+    @validates('student_level')
+    def _validate_level(self, key, value):
+        if value < self.LEVEL_UG:
+            value = self.LEVEL_UG
+
+        if value > self.LEVEL_PGR:
+            value = self.LEVEL_UG
+
+        return value
+
     # in which academic year/FHEQ level does this project class begin?
     start_level_id = db.Column(db.Integer(), db.ForeignKey('fheq_levels.id'))
     start_level = db.relationship('FHEQ_Level', foreign_keys=[start_level_id], uselist=False,
                                   backref=db.backref('pclasses', lazy='dynamic'))
 
     # how many years does the project extend? usually 1, but RP is more
-    extent = db.Column(db.Integer())
+    extent = db.Column(db.Integer(), default=1)
+
+    # selection runs in previous academic cycle?
+    # This is the default for FYPs and MPPs, but not usually for MSc projects
+    select_in_previous_cycle = db.Column(db.Boolean(), default=True)
 
     # are projects supervised (or just marked?)
-    uses_supervisor = db.Column(db.Boolean())
+    uses_supervisor = db.Column(db.Boolean(), default=True)
 
     # are the submissions second marked?
-    uses_marker = db.Column(db.Boolean())
+    uses_marker = db.Column(db.Boolean(), default=True)
 
     # display second marker information in UI?
-    display_marker = db.Column(db.Boolean())
+    display_marker = db.Column(db.Boolean(), default=True)
 
     # are there presentations?
-    uses_presentations = db.Column(db.Boolean())
+    uses_presentations = db.Column(db.Boolean(), default=False)
 
     # display presentation information in UI?
-    display_presentations = db.Column(db.Boolean())
+    display_presentations = db.Column(db.Boolean(), default=True)
 
     # how many initial_choices should students make?
     initial_choices = db.Column(db.Integer())
@@ -3984,12 +4023,25 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     faculty_maximum = db.Column(db.Integer())
 
     # is project selection open to all students?
-    selection_open_to_all = db.Column(db.Boolean())
+    selection_open_to_all = db.Column(db.Boolean(), default=False)
+
+    # auto-enrol selectors during rollover of the academic year?
+    auto_enrol_enable = db.Column(db.Boolean(), default=True)
 
     # in which years should students be auto-enrolled as selectors?
-    AUTO_ENROLL_PREVIOUS_YEAR = 0
-    AUTO_ENROLL_ANY_YEAR = 1
-    auto_enroll_years = db.Column(db.Integer(), default=AUTO_ENROLL_PREVIOUS_YEAR)
+    AUTO_ENROLL_FIRST_YEAR = 0
+    AUTO_ENROLL_ALL_YEARS = 1
+    auto_enroll_years = db.Column(db.Integer(), default=AUTO_ENROLL_FIRST_YEAR)
+
+    @validates('auto_enroll_years')
+    def _validate_auto_enroll_years(self, key, value):
+        if value < self.AUTO_ENROLL_FIRST_YEAR:
+            value = self.AUTO_ENROLL_FIRST_YEAR
+
+        if value > self.AUTO_ENROLL_ALL_YEARS:
+            value = self.AUTO_ENROLL_FIRST_YEAR
+
+        return value
 
 
     # SELECTOR CARD TEXT
@@ -5725,14 +5777,14 @@ class SubmissionPeriodRecord(db.Model):
 
 class EnrollmentRecord(db.Model, EditingMetadataMixin):
     """
-    Capture details about a faculty member's enrollment in a single project class
+    Capture details about a faculty member's enrolment in a single project class
     """
 
     __tablename__ = 'enrollment_record'
 
     id = db.Column(db.Integer(), primary_key=True)
 
-    # pointer to project class for which this is an enrollment record
+    # pointer to project class for which this is an enrolment record
     pclass_id = db.Column(db.Integer(), db.ForeignKey('project_classes.id'))
     pclass = db.relationship('ProjectClass', uselist=False, foreign_keys=[pclass_id])
 
@@ -5744,7 +5796,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
     # SUPERVISOR STATUS
 
-    # enrollment for supervision
+    # enrolment for supervision
     SUPERVISOR_ENROLLED = 1
     SUPERVISOR_SABBATICAL = 2
     SUPERVISOR_EXEMPT = 3
@@ -5762,7 +5814,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
     # MARKER STATUS
 
-    # enrollment for 2nd marking
+    # enrolment for 2nd marking
     MARKER_ENROLLED = 1
     MARKER_SABBATICAL = 2
     MARKER_EXEMPT = 3
@@ -5780,7 +5832,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
     # PRESENTATION ASSESSOR STATUS
 
-    # enrollment for assessing talks
+    # enrolment for assessing talks
     PRESENTATIONS_ENROLLED = 1
     PRESENTATIONS_SABBATICAL = 2
     PRESENTATIONS_EXEMPT = 3

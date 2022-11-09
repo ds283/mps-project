@@ -103,7 +103,7 @@ def AllResearchGroups():
 
 
 def CurrentUserProjectClasses():
-    # build list of enrollment records for the current user
+    # build list of enrolment records for the current user
     sq = EnrollmentRecord.query.filter_by(owner_id=current_user.id).subquery()
 
     # join to project class table

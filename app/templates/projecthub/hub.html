@@ -55,8 +55,8 @@
             });
 
             $('#article-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: '<f<t>>',
-                stateSave: true, serverSide: true, paging: false,
+                responsive: true, bAutoWidth: false, colReorder: true, dom: '<f<tr>>',
+                stateSave: true, serverSide: true, processing: true, paging: false,
                 ajax: { url: $SCRIPT_ROOT + '/projecthub/article_widget_ajax/{{ record.id }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

@@ -67,7 +67,7 @@ _projects = \
                             <i class="fas fa-check fa-fw"></i> Mark as started
                         </a>
                     {% else %}
-                        <a class="dropdown-item d-flex gap-2 href="{{ url_for('convenor.mark_waiting', id=r.id) }}">
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_waiting', id=r.id) }}">
                             <i class="fas fa-times fa-fw"></i> Mark as waiting
                         </a>
                     {% endif %}

@@ -79,7 +79,7 @@ class Bootstrap(object):
 
         if serve_local:
             href = url_for('bootstrap.static',
-                           filename='css/%s/%s' % ('default', css_filename))
+                           filename='css/%s' % css_filename)
             css = '<link rel="stylesheet" href="%s" type="text/css">' % href
         else:
             href = 'https://cdn.jsdelivr.net/npm/bootstrap@%s/dist/css/%s' % (version, css_filename)
@@ -100,8 +100,12 @@ class Bootstrap(object):
         :param with_popper: Include Popper.js or not.
         """
         js_filename = 'bootstrap.min.js'
-        jquery_filename = 'jquery.min.js'
-        popper_filename = 'popper.min.js'
+
+        jquery_local_filename = 'jquery-{%s}.min.js' % VERSION_JQUERY
+        popper_local_filename = 'popper-{%s}.min.js' % VERSION_POPPER
+
+        jquery_cdn_filename = 'jquery.min.js'
+        popper_cdn_filename = 'popper.min.js'
 
         serve_local = current_app.config['BOOTSTRAP_SERVE_LOCAL']
 
@@ -113,20 +117,20 @@ class Bootstrap(object):
 
         if with_jquery:
             if serve_local:
-                jquery = '<script src="%s"></script>' % url_for('bootstrap.static', filename=jquery_filename)
+                jquery = '<script src="%s"></script>' % url_for('bootstrap.static', filename=jquery_local_filename)
             else:
                 jquery = '<script src="https://cdn.jsdelivr.net/npm/jquery@%s/dist/%s">' \
-                 '</script>' % (jquery_version, jquery_filename)
+                 '</script>' % (jquery_version, jquery_cdn_filename)
         else:
             jquery = ''
 
         if with_popper:
             if serve_local:
-                popper = '<script src="%s"></script>' % url_for('bootstrap.static', filename=popper_filename)
+                popper = '<script src="%s"></script>' % url_for('bootstrap.static', filename=popper_local_filename)
             else:
 
                 popper = '<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@%s/dist/umd/%s">' \
-                     '</script>' % (popper_version, popper_filename)
+                     '</script>' % (popper_version, popper_cdn_filename)
         else:
             popper = ''
         return Markup('''%s

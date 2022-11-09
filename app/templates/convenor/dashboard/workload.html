@@ -10,9 +10,9 @@
 
         $(document).ready(function () {
             $('#workload-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                serverSide: true,
+                serverSide: true, processing: true,
                 ajax: { url: $SCRIPT_ROOT + '/convenor/faculty_workload_ajax/{{ pclass.id }}?enroll_filter={{ enroll_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
@@ -31,7 +31,7 @@
                       orderable: false,
                       searchable: false },
                     { data: 'workload',
-                      orderable: false,
+                      orderable: true,
                       searchable: false }
                 ],
                 order: [[0, 'asc']]

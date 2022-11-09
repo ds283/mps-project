@@ -10,7 +10,7 @@
 
 from flask import render_template_string
 
-from ...models import ProjectClassConfig
+from ...models import ProjectClassConfig, User, FacultyData
 
 # language=jinja2
 _projects = \
@@ -234,6 +234,9 @@ def faculty_workload_data(config: ProjectClassConfig, faculty):
     data = []
 
     count = 0
+
+    u: User
+    d: FacultyData
     for u, d in faculty:
         count += 1
 

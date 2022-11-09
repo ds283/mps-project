@@ -19,7 +19,7 @@ from ..ajax.public_browser.project_list_data import public_browser_project_list
 from ..database import db
 from ..models import ProjectClass, Project, FacultyData, User, ResearchGroup
 from ..shared.conversions import is_integer
-from ..tools import ServerSideHandler
+from ..tools import ServerSideSQLHandler
 
 
 @public_browser.route('/browse', methods=['GET', 'POST'])
@@ -75,7 +75,7 @@ def browse_ajax():
                'supervisor': supervisor,
                'group': group}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(public_browser_project_list, pclass_id))
 
 

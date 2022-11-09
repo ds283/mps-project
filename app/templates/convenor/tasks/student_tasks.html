@@ -17,9 +17,9 @@
 
         $(document).ready(function () {
             $('#student-tasks-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                serverSide: true,
+                serverSide: true, processing: true,
                 ajax: { url: $SCRIPT_ROOT + '/convenor/student_tasks_ajax/{{ type }}/{{ obj.id }}?url={{ url|urlencode }}&text={{ text|urlencode }}&status_filter={{ status_filter }}&blocking_filter={{ blocking_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

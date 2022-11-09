@@ -16,9 +16,9 @@
 
         $(document).ready(function () {
             $('#year-groups-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                serverSide: true,
+                serverSide: true, processing: true,
                 ajax: { url: $SCRIPT_ROOT + '/reports/year_groups_ajax?year_filter={{ year_filter }}&prog_filter={{ prog_filter }}&cohort_filter={{ cohort_filter }}&type_filter={{ type_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

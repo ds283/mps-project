@@ -17,9 +17,9 @@
 
         $(document).ready(function () {
             $('#background').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                serverSide: true,
+                serverSide: true, processing: true,
                 ajax: { url: $SCRIPT_ROOT + '/admin/background_ajax?status_filter={{ status_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

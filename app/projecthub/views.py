@@ -33,7 +33,7 @@ from ..models import SubmissionRecord, SubmittingStudent, StudentData, ProjectCl
     SubmissionPeriodRecord, ProjectHubLayout, ConvenorSubmitterArticle, FormattedArticle, ProjectSubmitterArticle, User
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
-from ..tools import ServerSideHandler
+from ..tools import ServerSideSQLHandler
 
 
 @projecthub.route('/hub/<int:subid>')
@@ -283,7 +283,7 @@ def edit_subpd_record_articles_ajax(pid):
 
     return_url = url_for('projecthub.edit_subpd_record_articles', pid=pid)
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.projecthub.article_list_data, return_url, 'submission period articles',
                                              'projecthub.edit_subpd_record_article'))
 
@@ -430,5 +430,5 @@ def article_widget_ajax(subid):
     url = url_for('projecthub.hub', subid=subid)
     text = 'project hub'
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.projecthub.widgets.articles, url, text))

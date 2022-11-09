@@ -11,9 +11,9 @@
 
         $(document).ready(function () {
             $('#module-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                serverSide: true,
+                serverSide: true, processing: true,
                 ajax: { url: $SCRIPT_ROOT + '/admin/modules_ajax',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

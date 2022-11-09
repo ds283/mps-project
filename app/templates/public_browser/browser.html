@@ -42,7 +42,7 @@
 
         $(document).ready(function () {
             let table = $('#browser-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 stateSave: true, serverSide: true, processing: true,
                 ajax: {
                     url: $SCRIPT_ROOT + '/public/browse_ajax?pclass_id={{ pclass_id }}',

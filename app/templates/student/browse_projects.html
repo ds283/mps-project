@@ -27,8 +27,8 @@
 
         $(document).ready(function () {
             $('#liveprojects-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
-                stateSave: true, serverSide: true,
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
+                stateSave: true, serverSide: true, processing: true,
                 ajax: { url: $SCRIPT_ROOT + '{{ ajax_endpoint }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

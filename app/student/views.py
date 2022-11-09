@@ -33,7 +33,7 @@ from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, LivePro
 from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects, get_count, redirect_url
 from ..shared.validators import validate_is_convenor, validate_submission_viewable
 from ..task_queue import register_task
-from ..tools import ServerSideHandler
+from ..tools import ServerSideSQLHandler
 
 
 @student.route('/dashboard')
@@ -281,7 +281,7 @@ def _project_list_endpoint(config: ProjectClassConfig, sel: SelectingStudent, ro
                'group': group,
                'meeting': meeting}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(row_formatter)
 
 

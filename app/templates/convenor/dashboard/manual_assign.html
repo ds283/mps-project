@@ -14,9 +14,9 @@
 
         $(document).ready(function () {
             $('#manual-assign-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],stateSave: true,
-                serverSide: true,
+                serverSide: true, processing: true,
                 ajax: { url: $SCRIPT_ROOT + '/convenor/manual_assign_ajax/{{ rec.id }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

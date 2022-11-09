@@ -22,7 +22,7 @@ from ..models import User, FacultyData, ResearchGroup, SkillGroup, ProjectClass,
 from ..shared.conversions import is_integer
 from ..shared.utils import redirect_url, get_current_year
 
-from ..tools import ServerSideHandler
+from ..tools import ServerSideSQLHandler
 
 import app.ajax as ajax
 
@@ -449,7 +449,7 @@ def year_groups_ajax():
         if flag:
             base_query = base_query.filter(DegreeType.id == value)
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.reports.year_groups)
 
 
@@ -514,5 +514,5 @@ def sabbaticals_ajax():
                'pclass': pclass,
                'exemptions': exemptions}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.reports.sabbaticals)

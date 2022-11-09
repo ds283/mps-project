@@ -43,7 +43,7 @@ from ..shared.sqlalchemy import func
 from ..shared.utils import get_current_year, get_main_config, home_dashboard_url, redirect_url
 from ..shared.validators import validate_is_convenor
 from ..task_queue import register_task, progress_update
-from ..tools import ServerSideHandler
+from ..tools import ServerSideSQLHandler
 from ..uploads import batch_user_files
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
@@ -489,7 +489,7 @@ def users_ajax():
                'active': active,
                'details': details}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.users.build_accounts_data, current_user.id))
 
 
@@ -558,7 +558,7 @@ def users_students_ajax():
                'cohort': cohort,
                'acadyear': acadyear}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.users.build_student_data, current_user.id))
 
 
@@ -599,7 +599,7 @@ def users_faculty_ajax():
                'active': active,
                'office': office}
 
-    with ServerSideHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.users.build_faculty_data, current_user.id))
 
 

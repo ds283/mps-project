@@ -7,19 +7,18 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from datetime import datetime, timedelta
+from typing import List
+from uuid import uuid1
 
+from celery import chain, group
+from dateutil import parser
 from flask import current_app
+from math import floor
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import LiveProject, ProjectClass, ProjectClassConfig, PopularityRecord
-
-from math import floor
-
-from celery import chain, group
-
-from datetime import datetime, timedelta
-from uuid import uuid1
 
 
 def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
@@ -233,7 +232,7 @@ def register_popularity_tasks(celery):
             pcl: ProjectClass = db.session.query(ProjectClass).filter_by(id=pid).first()
             config: ProjectClassConfig = pcl.most_recent_config
 
-        except SQLAlchemyError as e:
+        except SQLAlchemyError:
             raise self.retry()
 
         self.update_state(state='STARTED',
@@ -251,13 +250,12 @@ def register_popularity_tasks(celery):
             compute = group(compute_popularity_data.si(proj.id, datestamp, uuid, num_live)
                             for proj in config.live_projects)
 
-            job = chain([compute, compute_popularity_score_rank.si(config.id, uuid, num_live),
-                                  store_lowest_popularity_score_rank.s(config.id, uuid, num_live),
-                                  compute_views_rank.si(config.id, uuid, num_live),
-                                  compute_bookmarks_rank.si(config.id, uuid, num_live),
-                                  compute_selections_rank.si(config.id, uuid, num_live)])
-
-            job.apply_async()
+            tasks = chain([compute, compute_popularity_score_rank.si(config.id, uuid, num_live),
+                           store_lowest_popularity_score_rank.s(config.id, uuid, num_live),
+                           compute_views_rank.si(config.id, uuid, num_live),
+                           compute_bookmarks_rank.si(config.id, uuid, num_live),
+                           compute_selections_rank.si(config.id, uuid, num_live)])
+            raise self.replace(tasks)
 
         self.update_state(state='SUCCESS')
 
@@ -275,34 +273,45 @@ def register_popularity_tasks(celery):
             raise self.retry()
 
         tasks = group(update_project_popularity_data.si(i.id) for i in pclass_ids)
-        tasks.apply_async()
-
-        self.update_state(state='SUCCESS')
+        raise self.replace(tasks)
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def thin_bin(self, bin):
+    def thin_bin(self, period: int, unit: str, input_bin: List[(int, str)]):
+        self.update_state(state='STARTED', meta='Thinning popularity record bin for '
+                                                '{period} {unit}'.format(period=period, unit=unit))
 
-        self.update_state(state='STARTED', meta='Thinning record bin')
+        # sort records from the bin into order, then retain the record with the highest score
+        # This means that re-running the thinning task is idempotent and stable under small changes in binning.
+        # output_bin will eventually contain the retained record from this bin
+        # Currently the second member of each tuple in input_bin isn't used; this is the datestamp of the
+        # corresponding record, but currently we don't use that.
+        # In the counterpart task for thinning backups we retain the oldest backup, but here we retain the highest
+        # score. Both approaches are idempotent.
+
+        # keep a list of records that we drop
+        dropped = []
 
         try:
             # retain popularity record with the highest score
-            records = [db.session.query(PopularityRecord).filter_by(id=id).first() for id in bin]
+            records: List[PopularityRecord] = \
+                [db.session.query(PopularityRecord).filter_by(id=r[1]).first() for r in bin]
 
             highest_score = None
-            retain_id = None
+            retained_record = None
 
             for record in records:
 
                 if record is not None and (highest_score is None or record.score > highest_score):
                     highest_score = record.score
-                    retain_id = record.id
+                    retained_record = record
 
-            if retain_id is not None:
+            if retained_record is not None:
 
                 for record in records:
 
-                    if record is not None and record.id != retain_id:
+                    if record.id is not None and record.id != retained_record.id:
+                        dropped.append((record.id, str(record.datestamp)))
                         db.session.delete(record)
 
                 db.session.commit()
@@ -313,18 +322,9 @@ def register_popularity_tasks(celery):
             raise self.retry()
 
         self.update_state(state='SUCCESS')
-
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def thin_bins(self, bins, name):
-
-        self.update_state(state='STARTED', meta='Thinning {n} record bins'.format(n=name))
-
-        # build group of tasks for each bin that requires thinning
-        job = group(thin_bin.s(bins[k]) for k in bins.keys())
-        job.apply_async()
-
-        self.update_state(state='SUCCESS')
+        return {'period': period, 'unit': unit,
+                'retained': (retained_record.id, str(retained_record.datestamp)),
+                'dropped': dropped}
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -334,7 +334,7 @@ def register_popularity_tasks(celery):
                           meta='Building list of popularity records for LiveProject id={id}'.format(id=liveid))
 
         try:
-            liveproject = db.session.query(LiveProject).filter_by(id=liveid).first()
+            liveproject: LiveProject = db.session.query(LiveProject).filter_by(id=liveid).first()
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -360,31 +360,38 @@ def register_popularity_tasks(celery):
 
         # loop through all PopularityRecords attached to this LiveProject
         for record in liveproject.popularity_data:
+            record: PopularityRecord
+
+            # deduce current age of this record
             age = now - record.datestamp
 
             if age < max_hourly_age:
-
                 # do nothing; we retain all hourly records younger than the cutoff
                 pass
 
             elif max_daily_age is None or (max_daily_age is not None and age < max_daily_age):
 
                 if age.days in daily:
-                    daily[age.days].append(record.id)
+                    daily[age.days].append((record.id, record.datestamp))
                 else:
-                    daily[age.days] = [record.id]
+                    daily[age.days] = [(record.id, record.datestamp)]
 
             else:
 
                 # work out age in weeks (as an integer)
                 age_weeks = floor(float(age.days) / float(7))   # returns an Integer in Python3
                 if age_weeks in weekly:
-                    weekly[age_weeks].append(record.id)
+                    weekly[age_weeks].append((record.id, record.datestamp))
                 else:
-                    weekly[age_weeks] = [record.id]
+                    weekly[age_weeks] = [(record.id, record.datestamp)]
 
-        job = group(thin_bins.si(daily, 'daily'), thin_bins.si(weekly, 'weekly'))
-        job.apply_async()
+        daily_list = [thin_bin.s(k, 'days', daily[k]) for k in daily]
+        weekly_list = [thin_bin.s(k, 'weeks', weekly[k]) for k in weekly]
+
+        total_list = daily_list + weekly_list
+
+        thin_tasks = group(*total_list)
+        raise self.replace(thin_tasks)
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -408,8 +415,8 @@ def register_popularity_tasks(celery):
 
         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
 
-            job = group(thin_popularity_data.si(proj.id) for proj in config.live_projects)
-            job.apply_async()
+            tasks = group(thin_popularity_data.si(proj.id) for proj in config.live_projects)
+            raise self.replace(tasks)
 
         self.update_state(state='SUCCESS')
 
@@ -427,6 +434,4 @@ def register_popularity_tasks(celery):
             raise self.retry()
 
         tasks = group(thin_project_popularity_data.si(i.id) for i in pclass_ids)
-        tasks.apply_async()
-
-        self.update_state(state='SUCCESS')
+        raise self.replace(tasks)

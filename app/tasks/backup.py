@@ -11,10 +11,10 @@
 
 import errno
 import functools
-import random
 import subprocess
 import tarfile
 from datetime import datetime, timedelta
+from operator import itemgetter
 from os import path, makedirs, rmdir, remove, scandir
 from typing import List
 
@@ -227,21 +227,22 @@ def register_backup_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def thin_bin(self, period: int, unit: str, input_bin: List[int]):
-        self.update_state(state='STARTED', meta='Thinning backup bin')
+    def thin_bin(self, period: int, unit: str, input_bin: List[(int, str)]):
+        self.update_state(state='STARTED', meta='Thinning backup bin for '
+                                                '{period} {unit}'.format(period=period, unit=unit))
 
-        # 'remain' should be a list of ids for BackupRecords that need to be thinned down to just 1
-        output_bin = input_bin
+        # sort records from the bin into order, then retain the oldest record.
+        # This means that re-running the thinning task is idempotent and stable under small changes in binning.
+        # output_bin will eventually contain the retained record from this bin
+        output_bin = sorted(((r[0], parser.parse(r[1])) for r in input_bin), key=itemgetter(1), reverse=True)
 
         # keep a list of backups that we drop
         dropped = []
 
         while len(output_bin) > 1:
-            # draw a random index corresponding to a backup that should be dropped
-            index = random.randrange(len(output_bin))
-
-            # remove from list of backups remaining in the bin
-            drop_id = output_bin[index]
+            # get the last element
+            drop_element = output_bin.pop()
+            drop_id = drop_element[0]
 
             try:
                 drop_record: BackupRecord = db.session.query(BackupRecord).filter_by(id=drop_id).first()
@@ -253,14 +254,13 @@ def register_backup_tasks(celery):
                     self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
                     raise self.retry()
 
-                del output_bin[index]
-
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
         retained_record: BackupRecord = db.session.query(BackupRecord).filter_by(id=output_bin[0]).first()
 
+        self.update_state(state='SUCCESS')
         return {'period': period, 'unit': unit,
                 'retained': (retained_record.id, str(retained_record.date)),
                 'dropped': dropped}
@@ -273,7 +273,7 @@ def register_backup_tasks(celery):
         keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
 
         max_hourly_age = timedelta(days=keep_hourly)
-        max_daily_age = max_hourly_age + timedelta(weeks=keep_daily)
+        max_daily_age = None if keep_daily is None else max_hourly_age + timedelta(weeks=keep_daily)
 
         # bin backups into categories (but only those tagged as ordinary scheduled backups; ie., we don't thin backups
         # that have been taken for special purposes, such as snapshots constructed before rolling over
@@ -303,12 +303,12 @@ def register_backup_tasks(celery):
                 # do nothing; in this period we just keep all backups
                 pass
 
-            elif age < max_daily_age:
+            elif max_daily_age is None or (max_daily_age is not None and age < max_daily_age):
                 # bin into groups based on age in days
                 if age.days in daily:
-                    daily[age.days].append(record.id)
+                    daily[age.days].append((record.id, str(record.date)))
                 else:
-                    daily[age.days] = [record.id]
+                    daily[age.days] = [(record.id, str(record.date))]
 
             else:
                 # work out age in weeks (as an integer)
@@ -316,9 +316,9 @@ def register_backup_tasks(celery):
 
                 # bin into groups based on age in weeks
                 if age_weeks in weekly:
-                    weekly[age_weeks].append(record.id)
+                    weekly[age_weeks].append((record.id, str(record.date)))
                 else:
-                    weekly[age_weeks] = [record.id]
+                    weekly[age_weeks] = [(record.id, str(record.date))]
 
         daily_list = [thin_bin.s(k, 'days', daily[k]) for k in daily]
         weekly_list = [thin_bin.s(k, 'weeks', weekly[k]) for k in weekly]
@@ -492,10 +492,10 @@ def register_backup_tasks(celery):
                 'limit': backup_max}
 
 
-    @celery.task(default_retry_delay=30)
-    def limit_size():
+    @celery.task(bind=True, default_retry_delay=30)
+    def limit_size(self):
         seq = chain(drop_absent_backups.si(), apply_size_limit.si(), clean_up.si())
-        seq.apply_async()
+        raise self.replace(seq)
 
 
     @celery.task(bind=True, default_retry_delay=30)

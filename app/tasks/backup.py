@@ -258,7 +258,7 @@ def register_backup_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        retained_record: BackupRecord = db.session.query(BackupRecord).filter_by(id=output_bin[0]).first()
+        retained_record: BackupRecord = db.session.query(BackupRecord).filter_by(id=(output_bin[0])[0]).first()
 
         self.update_state(state='SUCCESS')
         return {'period': period, 'unit': unit,

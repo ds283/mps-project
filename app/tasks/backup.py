@@ -16,7 +16,7 @@ import tarfile
 from datetime import datetime, timedelta
 from operator import itemgetter
 from os import path, makedirs, rmdir, remove, scandir
-from typing import List
+from typing import List, Tuple
 
 from celery import group, chain, chord
 from celery.exceptions import Ignore
@@ -227,7 +227,7 @@ def register_backup_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def thin_bin(self, period: int, unit: str, input_bin: List[(int, str)]):
+    def thin_bin(self, period: int, unit: str, input_bin: List[Tuple[int, str]]):
         self.update_state(state='STARTED', meta='Thinning backup bin for '
                                                 '{period} {unit}'.format(period=period, unit=unit))
 

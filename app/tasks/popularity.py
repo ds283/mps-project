@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Tuple
 from uuid import uuid1
 
 from celery import chain, group
@@ -277,7 +277,7 @@ def register_popularity_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def thin_bin(self, period: int, unit: str, input_bin: List[(int, str)]):
+    def thin_bin(self, period: int, unit: str, input_bin: List[Tuple[int, str]]):
         self.update_state(state='STARTED', meta='Thinning popularity record bin for '
                                                 '{period} {unit}'.format(period=period, unit=unit))
 
@@ -295,7 +295,7 @@ def register_popularity_tasks(celery):
         try:
             # retain popularity record with the highest score
             records: List[PopularityRecord] = \
-                [db.session.query(PopularityRecord).filter_by(id=r[1]).first() for r in bin]
+                [db.session.query(PopularityRecord).filter_by(id=r[0]).first() for r in input_bin]
 
             highest_score = None
             retained_record = None

@@ -234,7 +234,7 @@ def register_backup_tasks(celery):
         # sort records from the bin into order, then retain the oldest record.
         # This means that re-running the thinning task is idempotent and stable under small changes in binning.
         # output_bin will eventually contain the retained record from this bin
-        output_bin = sorted(((r[0], parser.parse(r[1])) for r in input_bin), key=itemgetter(1), reverse=True)
+        output_bin = sorted(((r[0], parser.parse(r[1])) for r in input_bin), key=itemgetter(1))
 
         # keep a list of backups that we drop
         dropped = []

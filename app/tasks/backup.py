@@ -325,7 +325,10 @@ def register_backup_tasks(celery):
 
         total_list = daily_list + weekly_list
 
-        thin_tasks = chord(group(*total_list), issue_thinning_result.s(str(now), 'D.Seery@sussex.ac.uk'))
+        # issue_thinning_result() will email a report to a specific email address; this is used for debugging,
+        # but we don't usually want it running on the production version
+        # thin_tasks = chord(group(*total_list), issue_thinning_result.s(str(now), 'D.Seery@sussex.ac.uk'))
+        thin_tasks = group(*total_list)
         raise self.replace(thin_tasks)
 
 

@@ -73,6 +73,7 @@ def register_rollover_tasks(celery):
     def pclass_rollover(self, task_id, use_markers, current_id, convenor_id):
         progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to rollover...', autocommit=True)
 
+        # if use_markers is not directly a boolean type, try to cast it to something boolean
         if not isinstance(use_markers, bool):
             use_markers = bool(int(use_markers))
 
@@ -87,6 +88,7 @@ def register_rollover_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
+        # if could not read database records for config and convenor, can hardly proceed
         if convenor is None or config is None:
             if convenor is not None:
                 convenor.post_message('Rollover failed because some database records could not be loaded.',
@@ -100,6 +102,7 @@ def register_rollover_tasks(celery):
 
             raise self.replace(rollover_fail.s(task_id, convenor_id))
 
+        # if selector lifecycle is not ready to rollover, bail out
         if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
             convenor.post_message('Cannot yet rollover for {name} {yra}-{yrb} '
                                   'because not all selector activities have been '
@@ -109,6 +112,7 @@ def register_rollover_tasks(celery):
             self.update_state('FAILURE', meta='Selector lifecycle state is not ready for rollover')
             raise self.replace(rollover_fail.s(task_id, convenor_id))
 
+        # if submitter lifecycle is not ready to rollover, bail out
         if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
             convenor.post_message('Cannot yet rollover for {name} {yra}-{yrb} '
                                   'because not all submitter activities have been '
@@ -118,7 +122,8 @@ def register_rollover_tasks(celery):
             self.update_state('FAILURE', meta='Submitter lifecycle state is not ready for rollover')
             raise self.replace(rollover_fail.s(task_id, convenor_id))
 
-        # find selected MatchingAttempt that contains allocations for this project class, if used
+        # if automated matching is being used, find the selected MatchingAttempt that contains allocations for this
+        # project class
         match = None
         if config.do_matching:
             match = config.allocated_match
@@ -140,6 +145,8 @@ def register_rollover_tasks(celery):
         # these will attach all new SelectingStudent instances, and mop up any eligible
         # SubmittingStudent instances that weren't automatically created by conversion of
         # SelectingStudent instances
+
+        # students contains all active student records (so this does not scale well as the number of users goes up)
         students = db.session.query(StudentData) \
             .join(User, User.id == StudentData.id) \
             .filter(User.active == True).all()
@@ -176,6 +183,7 @@ def register_rollover_tasks(celery):
             if desc is not None:
                 project_descs.add(desc.id)
 
+        # build set of tasks to reset project descriptions
         descs_group = group(reset_project_description.s(d_id) for d_id in project_descs)
 
         # remove ConfirmRequest items that were never actioned
@@ -531,7 +539,7 @@ def register_rollover_tasks(celery):
             # clear out list of go live notification recipients to keep association table trim
             rec.golive_notified = []
 
-            # move any tasks that are marked as rollover
+            # attach any tasks that are marked as rolling over to the new ProjectClassConfig instance
             rollover_tasks = set()
             for tk in old_config.tasks:
                 tk: ConvenorGenericTask

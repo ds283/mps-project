@@ -63,6 +63,9 @@ year_choices = [(2, 'Year 2'), (3, 'Year 3'), (4, 'Year 4')]
 # labels and keys for 'extent' field
 extent_choices = [(1, '1 year'), (2, '2 years'), (3, '3 years')]
 
+# labels and keys for the 'start year' field
+start_year_choices = [(1, 'Y1'), (2, 'Y2'), (3, 'Y3'), (4, 'Y4')]
+
 # labels and keys for 'academic titles' field
 academic_titles = [(1, 'Dr'), (2, 'Professor'), (3, 'Mr'), (4, 'Ms'), (5, 'Mrs'), (6, 'Miss'), (7, 'Mx')]
 short_academic_titles = [(1, 'Dr'), (2, 'Prof'), (3, 'Mr'), (4, 'Ms'), (6, 'Mrs'), (6, 'Miss'), (7, 'Mx')]
@@ -629,7 +632,7 @@ def ProjectDescriptionMixinFactory(team_mapping_table, team_backref, module_mapp
             return db.session.query(Module) \
                 .join(query, query.c.module_id == Module.id) \
                 .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
-                .order_by(FHEQ_Level.academic_year.asc(),
+                .order_by(FHEQ_Level.numeric_level.asc(),
                           Module.semester.asc(), Module.name.asc())
 
     return ProjectDescriptionMixin
@@ -4046,7 +4049,7 @@ class DegreeProgramme(db.Model, EditingMetadataMixin):
         return db.session.query(Module) \
             .join(query, query.c.module_id == Module.id) \
             .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
-            .order_by(FHEQ_Level.academic_year.asc(),
+            .order_by(FHEQ_Level.numeric_level.asc(),
                       Module.semester.asc(), Module.name.asc())
 
 
@@ -4250,9 +4253,7 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
         return value
 
     # in which academic year/FHEQ level does this project class begin?
-    start_level_id = db.Column(db.Integer(), db.ForeignKey('fheq_levels.id'))
-    start_level = db.relationship('FHEQ_Level', foreign_keys=[start_level_id], uselist=False,
-                                  backref=db.backref('pclasses', lazy='dynamic'))
+    start_year = db.Column(db.Integer(), default=3)
 
     # how many years does the project extend? usually 1, but RP is more
     extent = db.Column(db.Integer(), default=1)
@@ -4588,12 +4589,19 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
 
     def module_available(self, module_id):
         # the module should be at an FHEQ level which is less than or equal to our starting level
-        q = db.session.query(Module) \
-            .filter(Module.id == module_id) \
-            .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
-            .filter(FHEQ_Level.academic_year <= self.start_level.academic_year)
-        if get_count(q) == 0:
-            return False
+
+        # all modules are availabel for PGR or PGT
+        if self.student_level == self.LEVEL_UG:
+            # check if module's start level maps to our starting year
+            # note that the FHEQ numerical level (3, 4, 5, 6, 7) maps to undergraduate years as year = level-3,
+            # with Y0 as foundation year
+            q = db.session.query(Module) \
+                .filter(Module.id == module_id) \
+                .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
+                .filter(FHEQ_Level.numeric_level <= self.start_year+3)
+
+            if get_count(q) == 0:
+                return False
 
         # the module should be included in at least one programme attached to this project class
         for prog in self.programmes:
@@ -5168,7 +5176,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
     @property
     def start_year(self):
-        return self.project_class.start_level.academic_year
+        return self.project_class.start_year
 
 
     @property
@@ -13745,8 +13753,8 @@ class FHEQ_Level(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     # short version of name
     short_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
 
-    # corresponding academic year
-    academic_year = db.Column(db.Integer(), unique=True)
+    # numerical level
+    numeric_level = db.Column(db.Integer(), unique=True)
 
     # active flag
     active = db.Column(db.Boolean())

@@ -180,10 +180,10 @@ _submissions = \
 # language=jinja2
 _timing = \
 """
-{% if p.start_level is not none %}
-    <span class="badge bg-primary">Y{{ p.start_level.academic_year }}</span>
+{% if p.start_year is not none %}
+    <span class="badge bg-primary">Join Y{{ p.start_year }}</span>
 {% else %}
-    <span class="badge bg-danger">Start level missing</span>
+    <span class="badge bg-danger">Start year missing</span>
 {% endif %}
 {% if p.select_in_previous_cycle %}
     <span class="badge bg-secondary">Select: Previous cycle</span>

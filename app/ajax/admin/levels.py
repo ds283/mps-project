@@ -51,7 +51,7 @@ def FHEQ_levels_data(levels):
 
     data = [{'name': l.name,
              'short_name': l.short_name,
-             'academic_year': 'Y{n}'.format(n=l.academic_year),
+             'numeric_level': '{n}'.format(n=l.numeric_level),
              'colour': l.make_label(l.colour),
              'status': render_template_string(_status, l=l),
              'menu': render_template_string(_types_menu, l=l)} for l in levels]

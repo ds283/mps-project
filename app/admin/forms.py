@@ -36,7 +36,7 @@ from ..shared.forms.wtf_validators import globally_unique_group_name, unique_or_
     globally_unique_module_code, unique_or_original_module_code, \
     globally_unique_FHEQ_level_name, unique_or_original_FHEQ_level_name, \
     globally_unique_FHEQ_short_name, unique_or_original_FHEQ_short_name, \
-    globally_unique_FHEQ_year, unique_or_original_FHEQ_year, \
+    globally_unique_FHEQ_numeric_level, unique_or_original_FHEQ_numeric_level, \
     globally_unique_license_name, unique_or_original_license_name, \
     globally_unique_license_abbreviation, unique_or_original_license_abbreviation, \
     per_license_unique_version, per_license_unique_or_original_version, \
@@ -46,7 +46,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
-    GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, BuildFHEQYearLabel, \
+    GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, \
     ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules, \
     BuildPossibleOfficeContacts, BuildOfficeContactName
 
@@ -54,7 +54,7 @@ from ..shared.forms.mixins import SaveChangesMixin, SubmissionPeriodPresentation
 
 from ..models import BackupConfiguration, ScheduleAttempt, extent_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices, auto_enrol_year_choices, \
-    student_level_choices, DEFAULT_STRING_LENGTH
+    student_level_choices, DEFAULT_STRING_LENGTH, start_year_choices
 
 from functools import partial
 
@@ -257,9 +257,9 @@ class ProjectClassMixin():
                                 description='Select whether this project type applies to UG, PGT or PGR students.',
                                 choices=student_level_choices, coerce=int)
 
-    start_level = QuerySelectField('Starts in academic year',
-                                   description='Select the academic year in which students join the project.',
-                                   query_factory=GetFHEQLevels, get_label=BuildFHEQYearLabel)
+    start_year = SelectField('Starts in academic year',
+                             description='Select the academic year in which students join the project.',
+                             choices=start_year_choices, coerce=int)
 
     extent = SelectField('Duration', choices=extent_choices, coerce=int,
                          description='For how many academic years do students participate in the project?')
@@ -1250,7 +1250,7 @@ class AddFHEQLevelForm(Form, FHEQLevelMixin):
                                          globally_unique_FHEQ_short_name])
 
     academic_year = IntegerField('Academic year', validators=[InputRequired(message='Please specify a year'),
-                                                              globally_unique_FHEQ_year])
+                                                              globally_unique_FHEQ_numeric_level])
 
     submit = SubmitField('Create new level')
 
@@ -1267,8 +1267,9 @@ class EditFHEQLevelForm(Form, FHEQLevelMixin, SaveChangesMixin):
                                          Length(max=DEFAULT_STRING_LENGTH),
                                          unique_or_original_FHEQ_short_name])
 
-    academic_year = IntegerField('Academic year', validators=[InputRequired(message='Please specify a year'),
-                                                              unique_or_original_FHEQ_year])
+    numeric_level = IntegerField('Numerical level',
+                                 validators=[InputRequired(message='Please specify a numerical level'),
+                                             unique_or_original_FHEQ_numeric_level])
 
 
 def PublicScheduleFormFactory(schedule):

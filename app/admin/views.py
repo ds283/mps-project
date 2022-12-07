@@ -343,15 +343,15 @@ def edit_levels_ajax():
     colour = {'search': FHEQ_Level.colour,
               'order': FHEQ_Level.colour,
               'search_collation': 'utf8_general_ci'}
-    academic_year = {'order': FHEQ_Level.academic_year,
-                     'search': cast(FHEQ_Level.academic_year, String),
+    numeric_level = {'order': FHEQ_Level.numeric_level,
+                     'search': cast(FHEQ_Level.numeric_level, String),
                      'search_collation': 'utf8_general_ci'}
     status = {'order': FHEQ_Level.active}
 
     columns = {'name': name,
                'short_name': short_name,
                'colour': colour,
-               'academic_year': academic_year,
+               'numeric_level': numeric_level,
                'status': status}
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
@@ -419,7 +419,7 @@ def degree_programmes_ajax():
 
     levels = db.session.query(FHEQ_Level) \
         .filter_by(active=True) \
-        .order_by(FHEQ_Level.academic_year.asc()).all()
+        .order_by(FHEQ_Level.numeric_level.asc()).all()
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.admin.degree_programmes_data, levels))
@@ -713,7 +713,7 @@ def attach_modules(id, level_id=None):
         if level_id is None:
             form.selector.data = FHEQ_Level.query \
                 .filter(FHEQ_Level.active == True) \
-                .order_by(FHEQ_Level.academic_year.asc()).first()
+                .order_by(FHEQ_Level.numeric_level.asc()).first()
         else:
             form.selector.data = FHEQ_Level.query \
                 .filter(FHEQ_Level.active == True, FHEQ_Level.id == level_id).first()
@@ -729,7 +729,7 @@ def attach_modules(id, level_id=None):
 
     level_id = form.selector.data.id if form.selector.data is not None else None
 
-    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.academic_year.asc()).all()
+    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.numeric_level.asc()).all()
 
     return render_template('admin/degree_types/attach_modules.html', prog=programme, modules=modules, form=form,
                            level_id=level_id, levels=levels, title='Attach modules')
@@ -799,7 +799,7 @@ def add_level():
     if form.validate_on_submit():
         level = FHEQ_Level(name=form.name.data,
                            short_name=form.short_name.data,
-                           academic_year=form.academic_year.data,
+                           numeric_level=form.numeric_level.data,
                            colour=form.colour.data,
                            active=True,
                            creator_id=current_user.id,
@@ -835,7 +835,7 @@ def edit_level(id):
     if form.validate_on_submit():
         level.name = form.name.data
         level.short_name = form.short_name.data
-        level.academic_year = form.academic_year.data
+        level.numeric_level = form.numeric_level.data
         level.colour = form.colour.data
         level.last_edit_id = current_user.id
         level.last_edit_timestamp = datetime.now()
@@ -1486,7 +1486,7 @@ def add_pclass():
                                 number_assessors=form.number_assessors.data,
                                 use_project_hub=form.use_project_hub.data,
                                 student_level=form.student_level.data,
-                                start_level=form.start_level.data,
+                                start_year=form.start_year.data,
                                 extent=form.extent.data,
                                 require_confirm=form.require_confirm.data,
                                 supervisor_carryover=form.supervisor_carryover.data,
@@ -1638,7 +1638,7 @@ def edit_pclass(id):
         data.abbreviation = form.abbreviation.data
         data.use_project_hub = form.use_project_hub.data
         data.student_level = form.student_level.data
-        data.start_level = form.start_level.data
+        data.start_year = form.start_year.data
         data.colour = form.colour.data
         data.do_matching = form.do_matching.data
         data.number_assessors = form.number_assessors.data

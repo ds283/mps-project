@@ -186,21 +186,21 @@ _timing = \
     <span class="badge bg-danger">Start year missing</span>
 {% endif %}
 {% if p.select_in_previous_cycle %}
-    <span class="badge bg-secondary">Select: Previous cycle</span>
+    <span class="badge bg-success">Select: Previous cycle</span>
 {% else %}
-    <span class="badge bg-secondary">Select: Same cycle</span>
+    <span class="badge bg-info">Select: Same cycle</span>
 {% endif %}
 <span class="badge bg-secondary">Extent: {{ p.extent }} yr</span>
 {% if p.auto_enrol_enable %}
     {% if p.selection_open_to_all %}
-        <span class="badge bg-secondary">Enrolment: open</span>
+        <span class="badge bg-info">Enrolment: open</span>
     {% else %}
-        <span class="badge bg-secondary">Enrolment: programme</span>
+        <span class="badge bg-success">Enrolment: programme</span>
     {% endif %}
     {% if p.auto_enroll_years == p.AUTO_ENROLL_FIRST_YEAR %}
-        <span class="badge bg-secondary">Enrolment: first year</span>
+        <span class="badge bg-info">Enrolment: first year</span>
     {% elif p.auto_enroll_years == p.AUTO_ENROLL_ALL_YEARS %}
-        <span class="badge bg-secondary">Enrolment: all years</span>
+        <span class="badge bg-sucess">Enrolment: all years</span>
     {% else %}
         <span class="badge bg-danger">Enrolment: unknown</span>
     {% endif %}

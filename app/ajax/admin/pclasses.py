@@ -186,23 +186,23 @@ _timing = \
     <span class="badge bg-danger">Start year missing</span>
 {% endif %}
 {% if p.select_in_previous_cycle %}
-    <span class="badge bg-success">Select: Previous cycle</span>
+    <span class="badge bg-success">Select: previous</span>
 {% else %}
-    <span class="badge bg-info">Select: Same cycle</span>
+    <span class="badge bg-success">Select: same</span>
 {% endif %}
 <span class="badge bg-secondary">Extent: {{ p.extent }} yr</span>
 {% if p.auto_enrol_enable %}
     {% if p.selection_open_to_all %}
-        <span class="badge bg-info">Enrolment: open</span>
+        <span class="badge bg-primary">Enrol: open</span>
     {% else %}
-        <span class="badge bg-success">Enrolment: programme</span>
+        <span class="badge bg-primary">Enrol: programme</span>
     {% endif %}
     {% if p.auto_enroll_years == p.AUTO_ENROLL_FIRST_YEAR %}
-        <span class="badge bg-info">Enrolment: first year</span>
+        <span class="badge bg-primary">Enrolment: first year</span>
     {% elif p.auto_enroll_years == p.AUTO_ENROLL_ALL_YEARS %}
-        <span class="badge bg-sucess">Enrolment: all years</span>
+        <span class="badge bg-primary">Enrol: all years</span>
     {% else %}
-        <span class="badge bg-danger">Enrolment: unknown</span>
+        <span class="badge bg-danger">Enrol: unknown</span>
     {% endif %}
 {% else %}
     <span class="badge bg-secondary">No auto-enrolment</span>

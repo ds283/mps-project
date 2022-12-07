@@ -22,7 +22,7 @@ from ..database import db
 from ..models import User, TaskRecord, ProjectClassConfig, \
     SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, SubmissionRecord, \
     SubmissionPeriodRecord, add_notification, EmailNotification, ProjectClass, Project, \
-    ProjectDescription, ConfirmRequest, ConvenorGenericTask, MatchingRecord
+    ProjectDescription, ConfirmRequest, ConvenorGenericTask, MatchingRecord, DegreeProgramme, DegreeType
 from ..shared.convenor import add_selector, add_blank_submitter
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import get_current_year
@@ -146,11 +146,14 @@ def register_rollover_tasks(celery):
         # SubmittingStudent instances that weren't automatically created by conversion of
         # SelectingStudent instances
 
-        # students contains all active student records (so this does not scale well as the number of users goes up)
+        # students contains all active student records (so this does not scale well as the number of users goes up);
+        # we want to process these to attach submitters/selectors, bearing in mind that some submitter
+        # records will have been generated from conversion of selector records via convert_selectors
+        # TODO: probably want to do this in a more intelligent way!
         students = db.session.query(StudentData) \
             .join(User, User.id == StudentData.id) \
             .filter(User.active == True).all()
-        attach_group = group(attach_records.s(current_id, s.id, year) for s in students)
+        attach_group = group(attach_selectors_submitters.s(current_id, s.id, year) for s in students)
 
         # build group of tasks to perform retirements: these will be done *last*
         retire_selectors = [retire_selector.s(s.id) for s in config.selecting_students]
@@ -792,7 +795,7 @@ def register_rollover_tasks(celery):
 
 
     @celery.task(bind=True)
-    def attach_records(self, new_config_id, old_config_id, sid, current_year):
+    def attach_selectors_submitters(self, new_config_id, old_config_id, sid, current_year):
         # get current configuration record
         try:
             config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=new_config_id).first()
@@ -815,21 +818,31 @@ def register_rollover_tasks(celery):
 
         if academic_year is not None:
             try:
-                # generate selector records for students:
-                #  - if student is an an appropriate academic year, either the year before the project first runs
-                #    or any year for the extent of the project, depending what auto-enroll settings are in force
-                #  - the student is on an appropriate programme or selection is open to all
-                if (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_FIRST_YEAR
-                    and academic_year == config.start_year - 1) \
-                        or (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ALL_YEARS
-                            and config.start_year <= academic_year <= config.start_year + config.extent - 1):
+                # only enrol selectors if auto-enrolment is enabled
+                if config.auto_enrol_enable:
+                    # generate selector records for students:
+                    #  - if student is in an appropriate academic year, at an appropriate level (UG, PGT, PGT),
+                    #    depending what auto-enroll settings are in force
+                    #  - the student is on an appropriate programme or selection is open to all
+                    programme: DegreeProgramme = student.programme
+                    programme_type: DegreeType = programme.degree_type
 
-                    if config.selection_open_to_all or (student.programme in config.programmes):
-                        # check whether a SelectingStudent has already been generated for this student
-                        # (eg. could happen if the task is accidentally run twice)
-                        count = get_count(student.selecting.filter_by(retired=False, config_id=new_config_id))
-                        if count == 0:
-                            add_selector(student, new_config_id, autocommit=False)
+                    attach = True
+
+                    if programme_type.level != config.student_level:
+                        attach = False
+
+                    if (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_FIRST_YEAR
+                        and academic_year == config.start_year - 1) \
+                            or (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ALL_YEARS
+                                and config.start_year <= academic_year <= config.start_year + config.extent - 1):
+
+                        if config.selection_open_to_all or (student.programme in config.programmes):
+                            # check whether a SelectingStudent has already been generated for this student
+                            # (eg. could happen if the task is accidentally run twice)
+                            count = get_count(student.selecting.filter_by(retired=False, config_id=new_config_id))
+                            if count == 0:
+                                add_selector(student, new_config_id, autocommit=False)
 
 
                 # generate submitter records for students, only if no existing submitter record exists

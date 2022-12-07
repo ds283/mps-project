@@ -5150,6 +5150,11 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
 
     @property
+    def student_level(self):
+        return self.project_class.student_level
+
+
+    @property
     def do_matching(self):
         return self.project_class.do_matching and not self.skip_matching
 
@@ -5192,6 +5197,11 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     @property
     def selection_open_to_all(self):
         return self.project_class.selection_open_to_all
+
+
+    @property
+    def auto_enrol_enable(self):
+        return self.project_class.auto_enrol_enable
 
 
     @property

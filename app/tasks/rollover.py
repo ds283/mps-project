@@ -158,7 +158,7 @@ def register_rollover_tasks(celery):
 
         retire_group = group(retire_selectors + retire_submitters)
 
-        # build group of tasks to check for faculty re-enrollment after buyout or sabbatical
+        # build group of tasks to check for faculty re-enrolment after buyout or sabbatical
         reenroll_query = db.session.query(EnrollmentRecord.id) \
             .filter(EnrollmentRecord.pclass_id == config.pclass_id,
                     or_(EnrollmentRecord.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED,
@@ -292,7 +292,7 @@ def register_rollover_tasks(celery):
             self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
-        progress_update(task_id, TaskRecord.RUNNING, 50, 'Checking for faculty re-enrollments...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 50, 'Checking for faculty re-enrolments...', autocommit=True)
         return new_config_id
 
 
@@ -819,9 +819,9 @@ def register_rollover_tasks(celery):
                 #  - if student is an an appropriate academic year, either the year before the project first runs
                 #    or any year for the extent of the project, depending what auto-enroll settings are in force
                 #  - the student is on an appropriate programme or selection is open to all
-                if (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
+                if (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_FIRST_YEAR
                     and academic_year == config.start_year - 1) \
-                        or (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ANY_YEAR
+                        or (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ALL_YEARS
                             and config.start_year <= academic_year <= config.start_year + config.extent - 1):
 
                     if config.selection_open_to_all or (student.programme in config.programmes):
@@ -858,7 +858,7 @@ def register_rollover_tasks(celery):
 
     @celery.task(bind=True)
     def enrollment_maintenance(self, new_config_id, rec_id):
-        # get faculty enrollment record
+        # get faculty enrolment record
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=rec_id).first()
         except SQLAlchemyError as e:
@@ -886,7 +886,7 @@ def register_rollover_tasks(celery):
 
     @celery.task(bind=True)
     def reenroll_faculty(self, new_config_id, rec_id, current_year):
-        # get faculty enrollment record
+        # get faculty enrolment record
         try:
             record: EnrollmentRecord = db.session.query(EnrollmentRecord).filter_by(id=rec_id).first()
         except SQLAlchemyError as e:

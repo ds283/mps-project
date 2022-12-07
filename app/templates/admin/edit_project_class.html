@@ -67,6 +67,7 @@
 {#        {{ wtf.form_errors(pclass_form) }}#}
 
         <div class="card mt-3 mb-3 card-body bg-well">
+            <p class="form-group-heading">General settings</p>
             {{ wtf.render_field(pclass_form.name) }}
 
             <div class="row vertical-top">
@@ -77,10 +78,16 @@
                     {{ colour_field(pclass_form.colour, 'colour-group') }}
                 </div>
             </div>
+            <div class="mt-2">
+                {{ wtf.render_field(pclass_form.use_project_hub) }}
+            </div>
+            <div class="mt-2">
+                {{ wtf.render_field(pclass_form.number_assessors) }}
+            </div>
         </div>
 
         <div class="card mt-3 mb-3 card-body bg-well">
-            <p class="form-group-heading">Personnel</p>
+            <p class="form-group-heading">Project administration and convening team</p>
             {{ wtf.render_field(pclass_form.convenor) }}
 
             <div class="row vertical-top">
@@ -94,35 +101,35 @@
         </div>
 
         <div class="card mt-3 mb-3 card-body bg-well">
+            <p class="form-group-heading">Selector enrolment</p>
+            {{ wtf.render_field(pclass_form.auto_enrol_enable) }}
+            <div class="mt-2">
+                {{ wtf.render_field(pclass_form.select_in_previous_cycle) }}
+            </div>
+            <div class="mt-2">
+                {{ wtf.render_field(pclass_form.selection_open_to_all) }}
+            </div>
+            <div class="mt-2">
+                {{ wtf.render_field(pclass_form.auto_enroll_years) }}
+            </div>
+            <div class="mt-3">
+                {{ wtf.render_field(pclass_form.programmes) }}
+            </div>
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
             <p class="form-group-heading">Configuration</p>
-            {{ wtf.render_field(pclass_form.programmes) }}
-            <div class="row vertical-top">
+            {{ wtf.render_field(pclass_form.student_level) }}
+            <div class="row vertical-top mt-2">
                 <div class="col-6">
-                    {{ wtf.render_field(pclass_form.start_level) }}
+                    {{ wtf.render_field(pclass_form.start_year) }}
                 </div>
                 <div class="col-6">
                     {{ wtf.render_field(pclass_form.extent) }}
                 </div>
             </div>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.selection_open_to_all) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.include_available) }}
-                </div>
-            </div>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.use_project_hub) }}
-                </div>
-                <div class="col-6"></div>
-            </div>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.number_assessors) }}
-                </div>
-                <div class="col-6"></div>
+            <div class="mt-2">
+                {{ wtf.render_field(pclass_form.include_available) }}
             </div>
         </div>
         <div class="card mt-3 mb-3 card-body bg-well">
@@ -134,12 +141,6 @@
                 <div class="col-6">
                     {{ wtf.render_field(pclass_form.do_matching) }}
                 </div>
-            </div>
-            <div class="row vertical-top mt-1">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.auto_enroll_years) }}
-                </div>
-                <div class="col-6"></div>
             </div>
             <p class="form-group-heading mt-2">Rollover</p>
             <div class="row vertical-top">
@@ -169,6 +170,7 @@
         </div>
 
         <div class="card mt-3 mb-3 card-body bg-well">
+            <p class="form-group-heading mt-2">Supervision and assessment</p>
             <div class="alert alert-info mb-4">
                 {% call icon_block("info-circle") %}
                     <div>
@@ -181,7 +183,6 @@
                     </div>
                 {% endcall %}
             </div>
-            <p class="form-group-heading mt-2">Supervision and assessment</p>
             <div class="row vertical-top">
                 <div class="col-6">
                     {{ wtf.render_field(pclass_form.uses_supervisor) }}

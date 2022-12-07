@@ -36,7 +36,7 @@ from ..shared.forms.wtf_validators import globally_unique_group_name, unique_or_
     globally_unique_module_code, unique_or_original_module_code, \
     globally_unique_FHEQ_level_name, unique_or_original_FHEQ_level_name, \
     globally_unique_FHEQ_short_name, unique_or_original_FHEQ_short_name, \
-    globally_unique_FHEQ_year, unique_or_original_FHEQ_year, \
+    globally_unique_FHEQ_numeric_level, unique_or_original_FHEQ_numeric_level, \
     globally_unique_license_name, unique_or_original_license_name, \
     globally_unique_license_abbreviation, unique_or_original_license_abbreviation, \
     per_license_unique_version, per_license_unique_or_original_version, \
@@ -46,15 +46,15 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
-    GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, BuildFHEQYearLabel, \
+    GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, \
     ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules, \
     BuildPossibleOfficeContacts, BuildOfficeContactName
 
 from ..shared.forms.mixins import SaveChangesMixin, SubmissionPeriodPresentationsMixin
 
 from ..models import BackupConfiguration, ScheduleAttempt, extent_choices, \
-    matching_history_choices, solver_choices, session_choices, semester_choices, auto_enroll_year_choices, \
-    DEFAULT_STRING_LENGTH
+    matching_history_choices, solver_choices, session_choices, semester_choices, auto_enrol_year_choices, \
+    student_level_choices, DEFAULT_STRING_LENGTH, start_year_choices
 
 from functools import partial
 
@@ -105,6 +105,9 @@ class DegreeTypeMixin:
 
     duration = IntegerField('Duration', description='Enter the number of years study before a student graduates.',
                             validators=[InputRequired(message='Degree duration is required')])
+
+    level = SelectField('Student level', description='Is this degree type associated with UG, PGT or PGT students?',
+                        choices=student_level_choices, coerce=int)
 
 
 class AddDegreeTypeForm(Form, DegreeTypeMixin):
@@ -250,9 +253,13 @@ class ProjectClassMixin():
                                                'and to-do list. It is a central '
                                                'location to manage projects.')
 
-    start_level = QuerySelectField('Starts in academic year',
-                                   description='Select the academic year in which students join the project.',
-                                   query_factory=GetFHEQLevels, get_label=BuildFHEQYearLabel)
+    student_level = SelectField('Student level',
+                                description='Select whether this project type applies to UG, PGT or PGR students.',
+                                choices=student_level_choices, coerce=int)
+
+    start_year = SelectField('Starts in academic year',
+                             description='Select the academic year in which students join the project.',
+                             choices=start_year_choices, coerce=int)
 
     extent = SelectField('Duration', choices=extent_choices, coerce=int,
                          description='For how many academic years do students participate in the project?')
@@ -343,17 +350,26 @@ class ProjectClassMixin():
                                                            'project lifecycle.',
                                                validators=[Optional()])
 
-    selection_open_to_all = BooleanField('This is an opt-in project open to all eligible undergraduates',
-                                         description='By default, selectors are auto-enrolled based on their degree programme '
-                                                     'and participation is mandatory. '
-                                                     'If this option is selected then all selectors from eligible years will be '
+    select_in_previous_cycle = BooleanField('Project selection occurs in previous cycle',
+                                            description='Select this option if selectors submit their preferences in the '
+                                                        'academic cycle before the project runs. This is commonly the case for UG '
+                                                        'projects, but not for PGT projects.')
+
+    selection_open_to_all = BooleanField('This is an opt-in project open to all students, regardless of their degree programme',
+                                         description='By default, selectors are auto-enrolled based on their degree programme. '
+                                                     'If this option is selected then selectors from all eligible years will be '
                                                      'auto-enrolled as selectors. If no project selection is made, the selector '
-                                                     'is assumed not to have opted-in.')
+                                                     'is deemed not to have opted-in.')
 
-    auto_enroll_years = RadioField('Auto enroll students as selectors in which years?',
-                                   choices=auto_enroll_year_choices, coerce=int)
+    auto_enrol_enable = BooleanField('Automatically enrol selectors during rollover',
+                                     description='If selected, students participating in the specified programmes and '
+                                                 'at the appropriate stage will automatically be enrolled as '
+                                                 'selectors during rollover of the academic year.')
 
-    programmes = QuerySelectMultipleField('Auto-enroll students from degree programmes',
+    auto_enroll_years = RadioField('In which years should students be auto-enrolled as selectors?',
+                                   choices=auto_enrol_year_choices, coerce=int)
+
+    programmes = QuerySelectMultipleField('Auto-enrol students as selectors from degree programmes',
                                           query_factory=GetActiveDegreeProgrammes,
                                           get_label=BuildDegreeProgrammeName)
 
@@ -1234,7 +1250,7 @@ class AddFHEQLevelForm(Form, FHEQLevelMixin):
                                          globally_unique_FHEQ_short_name])
 
     academic_year = IntegerField('Academic year', validators=[InputRequired(message='Please specify a year'),
-                                                              globally_unique_FHEQ_year])
+                                                              globally_unique_FHEQ_numeric_level])
 
     submit = SubmitField('Create new level')
 
@@ -1251,8 +1267,9 @@ class EditFHEQLevelForm(Form, FHEQLevelMixin, SaveChangesMixin):
                                          Length(max=DEFAULT_STRING_LENGTH),
                                          unique_or_original_FHEQ_short_name])
 
-    academic_year = IntegerField('Academic year', validators=[InputRequired(message='Please specify a year'),
-                                                              unique_or_original_FHEQ_year])
+    numeric_level = IntegerField('Numerical level',
+                                 validators=[InputRequired(message='Please specify a numerical level'),
+                                             unique_or_original_FHEQ_numeric_level])
 
 
 def PublicScheduleFormFactory(schedule):

@@ -7,7 +7,7 @@ please direct any queries to the project convenor.
 
 You are receiving this email because you are enrolled as a supervisor for
 projects of type "{{ pclass.name }}". If you believe this to be
-incorrect, please contact the project convenor to have your enrollment
+incorrect, please contact the project convenor to have your enrolment
 status changed.
 
 Thank you for preparing your project library for projects of type

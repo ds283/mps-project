@@ -403,16 +403,16 @@ def unique_or_original_FHEQ_short_name(form, field):
     return globally_unique_FHEQ_short_name(form, field)
 
 
-def globally_unique_FHEQ_year(form, field):
-    if FHEQ_Level.query.filter_by(academic_year=field.data).first():
-        raise ValidationError('Y{year} is already in use for a FHEQ level'.format(year=field.data))
+def globally_unique_FHEQ_numeric_level(form, field):
+    if FHEQ_Level.query.filter_by(numeric_level=field.data).first():
+        raise ValidationError('Numeric level #{n} is already in use for a FHEQ level'.format(n=field.data))
 
 
-def unique_or_original_FHEQ_year(form, field):
-    if field.data == form.level.academic_year:
+def unique_or_original_FHEQ_numeric_level(form, field):
+    if field.data == form.level.numeric_level:
         return
 
-    return globally_unique_FHEQ_year(form, field)
+    return globally_unique_FHEQ_numeric_level(form, field)
 
 
 def globally_unique_license_name(form, field):

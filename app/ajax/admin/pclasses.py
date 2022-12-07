@@ -180,23 +180,32 @@ _submissions = \
 # language=jinja2
 _timing = \
 """
-{% if p.start_level is not none %}
-    <span class="badge bg-primary">Y{{ p.start_level.academic_year }}</span>
+{% if p.start_year is not none %}
+    <span class="badge bg-primary">Join Y{{ p.start_year }}</span>
 {% else %}
-    <span class="badge bg-danger">Start level missing</span>
+    <span class="badge bg-danger">Start year missing</span>
 {% endif %}
-<span class="badge bg-secondary">extent: {{ p.extent }} yr</span>
-{% if p.selection_open_to_all %}
-    <span class="badge bg-secondary">enroll: open</span>
+{% if p.select_in_previous_cycle %}
+    <span class="badge bg-secondary">Select: Previous cycle</span>
 {% else %}
-    <span class="badge bg-secondary">enroll: degree</span>
+    <span class="badge bg-secondary">Select: Same cycle</span>
 {% endif %}
-{% if p.auto_enroll_years == p.AUTO_ENROLL_PREVIOUS_YEAR %}
-    <span class="badge bg-secondary">enroll: prev</span>
-{% elif p.auto_enroll_years == p.AUTO_ENROLL_ANY_YEAR %}
-    <span class="badge bg-secondary">enroll: any</span>
+<span class="badge bg-secondary">Extent: {{ p.extent }} yr</span>
+{% if p.auto_enrol_enable %}
+    {% if p.selection_open_to_all %}
+        <span class="badge bg-secondary">Enrolment: open</span>
+    {% else %}
+        <span class="badge bg-secondary">Enrolment: programme</span>
+    {% endif %}
+    {% if p.auto_enroll_years == p.AUTO_ENROLL_FIRST_YEAR %}
+        <span class="badge bg-secondary">Enrolment: first year</span>
+    {% elif p.auto_enroll_years == p.AUTO_ENROLL_ALL_YEARS %}
+        <span class="badge bg-secondary">Enrolment: all years</span>
+    {% else %}
+        <span class="badge bg-danger">Enrolment: unknown</span>
+    {% endif %}
 {% else %}
-    <span class="badge bg-danger">enroll: unknown</span>
+    <span class="badge bg-secondary">No auto-enrolment</span>
 {% endif %}
 """
 
@@ -205,7 +214,16 @@ _timing = \
 _name = \
 """
 {{ p.name }} {{ p.make_label(p.abbreviation)|safe }}
-<div>
+{% if p.student_level == p.LEVEL_UG %}
+    <span class="badge bg-secondary">UG</span>
+{% elif p.student_level == p.LEVEL_PGT %}
+    <span class="badge bg-secondary">PGT</span>
+{% elif p.student_level == p.LEVEL_PGR %}
+    <span class="badge bg-secondary">PGR</span>
+{% else %}
+    <span class="badge bg-danger">Unknown</span>
+{% endif %}
+<div class="mt-2">
 {% if p.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}

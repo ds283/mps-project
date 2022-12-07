@@ -45,7 +45,7 @@
 
         {{ wtf.render_field(form.name) }}
         {{ wtf.render_field(form.short_name) }}
-        {{ wtf.render_field(form.academic_year) }}
+        {{ wtf.render_field(form.numeric_level) }}
         {{ colour_field(form.colour, 'colour-group') }}
 
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}

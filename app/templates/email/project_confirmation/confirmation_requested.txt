@@ -8,7 +8,7 @@ projects of type "{{ pclass.name }}". If you believe this to be
 incorrect, please contact the project convenor ({{ pclass.convenor.user.email }}).
 
 We are now preparing to publish project descriptions to this year's
-Y{{ pclass.start_level.academic_year-1 }} cohort. To help us, we would like to ask you to confirm the projects
+Y{{ pclass.start_year-1 }} cohort. To help us, we would like to ask you to confirm the projects
 you wish to offer in this cycle.
 
 To check your projects, please log in to the project management web app

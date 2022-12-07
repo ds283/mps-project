@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block formtitle %}
-    Edit enrollments for <i class="fas fa-user"></i> <strong>{{ user.name }}</strong>
+    Edit enrolments for <i class="fas fa-user"></i> <strong>{{ user.name }}</strong>
 {% endblock %}
 
 {% block form_content %}
@@ -29,10 +29,10 @@
                                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                     <div class="dropdown-header">Admin</div>
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.remove_enrollment', userid=user.id, pclassid=pclass.id) }}">
-                                        <i class="fas fa-trash fa-fw"></i> Remove enrollment
+                                        <i class="fas fa-trash fa-fw"></i> Remove enrolment
                                     </a>
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_enrollment', id=record.id, url=url_for('manage_users.edit_enrollments', id=record.owner_id, pane=pane), pane=pane) }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Edit enrollment
+                                        <i class="fas fa-cogs fa-fw"></i> Edit enrolment
                                     </a>
                                     <div role="separator" class="dropdown-divider"></div>
                                     <div class="dropdown-header">Operations</div>
@@ -50,7 +50,7 @@
                 </div>
                 </h4>
             {% else %}
-                <p>No current enrollments</p>
+                <p>No current enrolments</p>
             {% endif %}
         </div>
         <div class="card-footer">

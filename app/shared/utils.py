@@ -1066,7 +1066,7 @@ def build_assessor_query(proj, state_filter, pclass_filter, group_filter):
     if flag:
         query = query.filter(FacultyData.affiliations.any(ResearchGroup.id == value))
 
-    # add filters for enrollment in a particular project class
+    # add filters for enrolment in a particular project class
     flag, value = is_integer(pclass_filter)
 
     if flag:
@@ -1112,7 +1112,7 @@ def detuple(x):
 
 def build_enroll_selector_candidates(config, disable_programme_filter=False):
     """
-    Build a query that returns possible candidates for manual enrollment as selectors
+    Build a query that returns possible candidates for manual enrolment as selectors
     :param disable_programme_filter:
     :param config:
     :return:
@@ -1122,7 +1122,7 @@ def build_enroll_selector_candidates(config, disable_programme_filter=False):
 
 def build_enroll_submitter_candidates(config, disable_programme_filter=False):
     """
-    Build a query that returns possible candidate for manual enrollment as submitters
+    Build a query that returns possible candidate for manual enrolment as submitters
     :param config:
     :return:
     """
@@ -1131,7 +1131,7 @@ def build_enroll_submitter_candidates(config, disable_programme_filter=False):
 
 def _build_generic_enroll_candidate(config, year_offset, StudentRecordType, disable_programme_filter=False):
     """
-    Build a query that returns missing candidates for manual enrollment
+    Build a query that returns missing candidates for manual enrolment
     :param disable_programme_filter:
     :param config: ProjectClassConfig instance to which we wish to add manually enrolled students
     :param year_offset: offset in years to be applied to the year range. Should be -1 for selectors or 0 for submitters.

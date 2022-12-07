@@ -133,7 +133,7 @@ def populate_new_fields():
 
     for pcl in pclasses:
         if pcl.auto_enroll_years is None:
-            pcl.auto_enroll_years = ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
+            pcl.auto_enroll_years = ProjectClass.AUTO_ENROLL_FIRST_YEAR
 
     selectors = db.session.query(SelectingStudent).all()
     for sel in selectors:

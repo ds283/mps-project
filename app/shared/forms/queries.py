@@ -103,7 +103,7 @@ def AllResearchGroups():
 
 
 def CurrentUserProjectClasses():
-    # build list of enrollment records for the current user
+    # build list of enrolment records for the current user
     sq = EnrollmentRecord.query.filter_by(owner_id=current_user.id).subquery()
 
     # join to project class table
@@ -331,11 +331,7 @@ def GetPresentationAssessorFaculty(record_id, slot_id):
 
 
 def GetFHEQLevels():
-    return db.session.query(FHEQ_Level).filter(FHEQ_Level.active).order_by(FHEQ_Level.academic_year.asc())
-
-
-def BuildFHEQYearLabel(level):
-    return 'Year {n}'.format(n=level.academic_year)
+    return db.session.query(FHEQ_Level).filter(FHEQ_Level.active).order_by(FHEQ_Level.numeric_level.asc())
 
 
 def ScheduleSessionQuery(schedule_id):

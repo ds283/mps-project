@@ -22,7 +22,7 @@ _faculty_menu = \
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         {% if userdata.is_enrolled(pclass) %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.unenroll', userid=user.id, pclassid=pclass.id) }}">
-                <i class="fas fa-trash fa-fw"></i> Remove enrollment
+                <i class="fas fa-trash fa-fw"></i> Remove enrolment
             </a>
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.enroll', userid=user.id, pclassid=pclass.id) }}">
@@ -31,7 +31,7 @@ _faculty_menu = \
         {% endif %}
         {% set record = userdata.get_enrollment_record(pclass) %}
         <a class="dropdown-item d-flex gap-2 {% if record is none %}disabled{% endif %}" {% if record is not none %}href="{{ url_for('manage_users.edit_enrollment', id=record.id, url=url_for('convenor.faculty', id=pclass.id)) }}"{% endif %}>
-            <i class="fas fa-cogs fa-fw"></i> Edit enrollment...
+            <i class="fas fa-cogs fa-fw"></i> Edit enrolment...
         </a>
         <a class="dropdown-item d-flex gap-2 {% if record is none %}disabled{% endif %}" {% if record is not none %}href="{{ url_for('convenor.custom_CATS_limits', record_id=record.id) }}"{% endif %}>
             <i class="fas fa-cogs fa-fw"></i> Custom CATS limits...

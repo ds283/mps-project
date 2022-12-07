@@ -53,12 +53,18 @@ PASSWORD_HASH_LENGTH = 255
 SERIALIZED_LAYOUT_LENGTH = 2048
 
 
+# labels and keys for student 'level' field
+student_level_choices = [(0, 'UG'), (1, 'PGT'), (2, 'PGR')]
+
 # labels and keys for 'year' field; it's not possible to join in Y1; treat students as
 # joining in Y2
 year_choices = [(2, 'Year 2'), (3, 'Year 3'), (4, 'Year 4')]
 
 # labels and keys for 'extent' field
 extent_choices = [(1, '1 year'), (2, '2 years'), (3, '3 years')]
+
+# labels and keys for the 'start year' field
+start_year_choices = [(1, 'Y1'), (2, 'Y2'), (3, 'Y3'), (4, 'Y4')]
 
 # labels and keys for 'academic titles' field
 academic_titles = [(1, 'Dr'), (2, 'Professor'), (3, 'Mr'), (4, 'Ms'), (5, 'Mrs'), (6, 'Miss'), (7, 'Mx')]
@@ -87,8 +93,8 @@ email_freq_choices = [(1, '1 day'), (2, '2 days'), (3, '3 days'), (4, '4 days'),
                       (6, '6 days'), (7, '7 days')]
 
 # auto-enroll selectors
-auto_enroll_year_choices = [(0, 'The year before students join the project'),
-                            (1, 'Every year for which students are eligible')]
+auto_enrol_year_choices = [(0, 'The first year for which they are eligible'),
+                           (1, 'Every year for which students are eligible')]
 
 
 # for encrypted fields, extract encryption key from configuration variables
@@ -157,16 +163,29 @@ class ColouredLabelMixin():
         return element
 
 
-class WorkflowMixin():
+class WorkflowStatesMixin:
+    """
+    Single point of definition for workflow states
+    """
+    WORKFLOW_APPROVAL_QUEUED = 2
+    WORKFLOW_APPROVAL_REJECTED = 1
+    WORKFLOW_APPROVAL_VALIDATED = 0
+
+    WORKFLOW_CONFIRMED = 10
+
+    _labels = {WORKFLOW_CONFIRMED: 'Confirmed',
+               WORKFLOW_APPROVAL_QUEUED: 'Queued for approval',
+               WORKFLOW_APPROVAL_REJECTED: 'Rejected',
+               WORKFLOW_APPROVAL_VALIDATED: 'Approved'}
+
+
+class WorkflowMixin(WorkflowStatesMixin):
     """
     Capture workflow state
     """
 
     # workflow status
-    WORKFLOW_APPROVAL_QUEUED = 2
-    WORKFLOW_APPROVAL_REJECTED = 1
-    WORKFLOW_APPROVAL_VALIDATED = 0
-    workflow_state = db.Column(db.Integer(), default=WORKFLOW_APPROVAL_QUEUED)
+    workflow_state = db.Column(db.Integer(), default=WorkflowStatesMixin.WORKFLOW_APPROVAL_QUEUED)
 
     # who validated this record, if it is validated?
     @declared_attr
@@ -206,27 +225,16 @@ class WorkflowMixin():
                                                      year=_get_current_year(),
                                                      user_id=self.validator_id,
                                                      timestamp=now,
-                                                     event=WorkflowHistoryMixin.map[value])
+                                                     event=value)
                     db.session.add(history)
 
             return value
 
 
-class WorkflowHistoryMixin():
-
-    WORKFLOW_CONFIRMED = 10
-    WORKFLOW_APPROVAL_QUEUED = 2
-    WORKFLOW_APPROVAL_REJECTED = 1
-    WORKFLOW_APPROVAL_VALIDATED = 0
-
-    map = {WorkflowMixin.WORKFLOW_APPROVAL_QUEUED: WORKFLOW_APPROVAL_QUEUED,
-           WorkflowMixin.WORKFLOW_APPROVAL_REJECTED: WORKFLOW_APPROVAL_REJECTED,
-           WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED: WORKFLOW_APPROVAL_VALIDATED}
-
-    _labels = {WORKFLOW_CONFIRMED: 'Confirmed',
-               WORKFLOW_APPROVAL_QUEUED: 'Queued for approval',
-               WORKFLOW_APPROVAL_REJECTED: 'Rejected',
-               WORKFLOW_APPROVAL_VALIDATED: 'Approved'}
+class WorkflowHistoryMixin(WorkflowStatesMixin):
+    """
+    Capture a workflow history
+    """
 
     # workflow event
     event = db.Column(db.Integer())
@@ -624,7 +632,7 @@ def ProjectDescriptionMixinFactory(team_mapping_table, team_backref, module_mapp
             return db.session.query(Module) \
                 .join(query, query.c.module_id == Module.id) \
                 .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
-                .order_by(FHEQ_Level.academic_year.asc(),
+                .order_by(FHEQ_Level.numeric_level.asc(),
                           Module.semester.asc(), Module.name.asc())
 
     return ProjectDescriptionMixin
@@ -821,6 +829,301 @@ def AssetMixinFactory(acl_name, acr_name):
                 self.revoke_role(role)
 
     return AssetMixin
+
+
+class StudentLevelsMixin:
+    """
+    StudentLeveLMixin encapsulates common programme level indicators; we only want to have one copy of these,
+    in order to ensure consistency between different places where they are used in the implmentation
+    """
+    LEVEL_PGR = 2
+    LEVEL_PGT = 1
+    LEVEL_UG = 0
+
+
+class AutoEnrolMixin:
+    """
+    AutoEnrollMixin encapsulates common auto-enroll choices; we only want a single place where these are
+    defined
+    """
+    AUTO_ENROLL_FIRST_YEAR = 0
+    AUTO_ENROLL_ALL_YEARS = 1
+
+
+class RepeatIntervalsMixin:
+    """
+    Single point of definition for task repeat intervals
+    """
+    REPEAT_DAILY = 0
+    REPEAT_MONTHLY = 1
+    REPEAT_YEARLY = 2
+
+
+class EmailNotificationsMixin:
+    """
+    Single point of definition for email notification types
+    """
+    CONFIRMATION_REQUEST_CREATED = 0
+    CONFIRMATION_REQUEST_CANCELLED = 1
+
+    CONFIRMATION_REQUEST_DELETED = 2
+    CONFIRMATION_GRANT_DELETED = 3
+    CONFIRMATION_DECLINE_DELETED = 4
+    CONFIRMATION_GRANTED = 5
+    CONFIRMATION_DECLINED = 6
+    CONFIRMATION_TO_PENDING = 7
+
+    FACULTY_REENROLL_SUPERVISOR = 8
+    FACULTY_REENROLL_MARKER = 9
+    FACULTY_REENROLL_PRESENTATIONS = 10
+
+    _events = {CONFIRMATION_REQUEST_CREATED: ('primary', 'Create confirm request'),
+               CONFIRMATION_REQUEST_CANCELLED: ('danger', 'Confirm request cancel'),
+               CONFIRMATION_REQUEST_DELETED: ('danger', 'Confirm request deleted'),
+               CONFIRMATION_GRANT_DELETED: ('warning', 'Confirmation deleted'),
+               CONFIRMATION_DECLINE_DELETED: ('secondary', 'Confirm decline deleted'),
+               CONFIRMATION_GRANTED: ('success', 'Confirm granted'),
+               CONFIRMATION_DECLINED: ('ddanger', 'Confirm declined'),
+               CONFIRMATION_TO_PENDING: ('secondary', 'Confirm request pending'),
+               FACULTY_REENROLL_SUPERVISOR: ('secondary', 'Re-enroll as supervisor'),
+               FACULTY_REENROLL_MARKER: ('secondary', 'Re-enroll as marker'),
+               FACULTY_REENROLL_PRESENTATIONS: ('secondary', 'Re-enroll as assessor')}
+
+
+class SelectorLifecycleStatesMixin:
+    """
+    Single point of definition for selector lifecycle states
+    """
+    SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED = 1
+    SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS = 2
+    SELECTOR_LIFECYCLE_READY_GOLIVE = 3
+    SELECTOR_LIFECYCLE_SELECTIONS_OPEN = 4
+    SELECTOR_LIFECYCLE_READY_MATCHING = 5
+    SELECTOR_LIFECYCLE_READY_ROLLOVER = 6
+
+
+class SubmitterLifecycleStatesMixin:
+    """
+    Single point of definition for submitter lifecycle states
+    """
+    SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY = 0
+    SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY = 1
+    SUBMITTER_LIFECYCLE_READY_ROLLOVER = 2
+
+
+class ProjectApprovalStatesMixin:
+    """
+    Single point of definition for project approvals workflow states
+    """
+    DESCRIPTIONS_APPROVED = 0
+    SOME_DESCRIPTIONS_QUEUED = 1
+    SOME_DESCRIPTIONS_REJECTED = 2
+    SOME_DESCRIPTIONS_UNCONFIRMED = 3
+    APPROVALS_NOT_ACTIVE = 10
+    APPROVALS_NOT_OFFERABLE = 11
+    APPROVALS_UNKNOWN = 100
+
+
+class ApprovalCommentVisibilityStatesMixin:
+    """
+    Single point of definition for visibility states associated with approvals comments
+    """
+    VISIBILITY_EVERYONE = 0
+    VISIBILITY_APPROVALS_TEAM = 1
+    VISIBILITY_PUBLISHED_BY_APPROVALS = 2
+
+
+class ConfirmRequestStatesMixin:
+    """
+    Single point of definition for confirmation states associated with student requests
+    """
+    REQUESTED = 0
+    CONFIRMED = 1
+    DECLINED = 2
+
+
+class SubmissionFeedbackStatesMixin:
+    """
+    Single point of definition for workflow states associated with submission feedback
+    """
+    FEEDBACK_NOT_REQUIRED = 0
+    FEEDBACK_NOT_YET = 1
+    FEEDBACK_WAITING = 2
+    FEEDBACK_ENTERED = 3
+    FEEDBACK_LATE = 4
+    FEEDBACK_SUBMITTED = 5
+
+
+class SubmissionAttachmentTypesMixin:
+    """
+    Single point of definition for attachment types that can be associated with submissions
+    """
+    ATTACHMENT_TYPE_UNSET = 0
+    ATTACHMENT_MARKING_REPORT = 1
+    ATTACHMENT_SIMILARITY_REPORT = 2
+    ATTACHMENT_OTHER = 3
+
+    _labels = {ATTACHMENT_TYPE_UNSET: 'Unset',
+               ATTACHMENT_MARKING_REPORT: 'Marking report',
+               ATTACHMENT_SIMILARITY_REPORT: 'Similarity report',
+               ATTACHMENT_OTHER: 'Other'}
+
+    def type_label(self):
+        if self.type is None:
+            return None
+
+        if self.type in self._labels:
+            return self._labels[self.type]
+
+        return None
+
+
+class SelectHintTypesMixin:
+    """
+    Single point of definition for hint types associated with student selections
+    """
+    SELECTION_HINT_NEUTRAL = 0
+    SELECTION_HINT_REQUIRE = 1
+    SELECTION_HINT_FORBID = 2
+    SELECTION_HINT_ENCOURAGE = 3
+    SELECTION_HINT_DISCOURAGE = 4
+    SELECTION_HINT_ENCOURAGE_STRONG = 5
+    SELECTION_HINT_DISCOURAGE_STRONG = 6
+
+    _icons = {SELECTION_HINT_NEUTRAL: '',
+              SELECTION_HINT_REQUIRE: '<i class="fas fa-check fa-fw"></i>',
+              SELECTION_HINT_FORBID: '<i class="fas fa-times fa-fw"></i>',
+              SELECTION_HINT_ENCOURAGE: '<i class="fas fa-plus fa-fw"></i>',
+              SELECTION_HINT_DISCOURAGE: '<i class="fas fa-minus fa-fw"></i>',
+              SELECTION_HINT_ENCOURAGE_STRONG: '<i class="fas fa-plus fa-fw"></i> <i class="fas fa-plus fa-fw"></i>',
+              SELECTION_HINT_DISCOURAGE_STRONG: '<i class="fas fa-minus fa-fw"></i> <i class="fas fa-minus fa-fw"></i>'}
+
+    _menu_items = {SELECTION_HINT_NEUTRAL: 'Neutral',
+                   SELECTION_HINT_REQUIRE: 'Require',
+                   SELECTION_HINT_FORBID: 'Forbid',
+                   SELECTION_HINT_ENCOURAGE: 'Encourage',
+                   SELECTION_HINT_DISCOURAGE: 'Discourage',
+                   SELECTION_HINT_ENCOURAGE_STRONG: 'Strongly encourage',
+                   SELECTION_HINT_DISCOURAGE_STRONG: 'Strongly discourage'}
+
+    _menu_order = [SELECTION_HINT_NEUTRAL,
+                   "Force fit",
+                   SELECTION_HINT_REQUIRE,
+                   SELECTION_HINT_FORBID,
+                   "Fitting hints",
+                   SELECTION_HINT_ENCOURAGE,
+                   SELECTION_HINT_DISCOURAGE,
+                   SELECTION_HINT_ENCOURAGE_STRONG,
+                   SELECTION_HINT_DISCOURAGE_STRONG]
+
+
+class CustomOfferStatesMixin:
+    """
+    Single point of definition for states associated with custom offers
+    """
+    OFFERED = 0
+    ACCEPTED = 1
+    DECLINED = 2
+
+
+class TaskWorkflowStatesMixin:
+    """
+    Single point of definition for workflow states associated with background/scheduled tasks
+    """
+    PENDING = 0
+    RUNNING = 1
+    SUCCESS = 2
+    FAILURE = 3
+    TERMINATED = 4
+    STATES = { PENDING: 'PENDING',
+               RUNNING: 'RUNNING',
+               SUCCESS: 'SUCCESS',
+               FAILURE: 'FAILURE',
+               TERMINATED: 'TERMINATED'}
+
+
+class NotificationTypesMixin:
+    """
+    Single point of definition for live notifications on the website
+    """
+    TASK_PROGRESS = 1
+    USER_MESSAGE = 2
+    SHOW_HIDE_REQUEST = 100
+    REPLACE_TEXT_REQUEST = 101
+
+
+class PuLPStatusMixin:
+    """
+    Single point of definition for PuLP status/outcome types
+    """
+    # outcome report from PuLP
+    OUTCOME_OPTIMAL = 0
+    OUTCOME_NOT_SOLVED = 1
+    OUTCOME_INFEASIBLE = 2
+    OUTCOME_UNBOUNDED = 3
+    OUTCOME_UNDEFINED = 4
+    OUTCOME_FEASIBLE = 5
+
+    SOLVER_CBC_PACKAGED = 0
+    SOLVER_CBC_CMD = 1
+    SOLVER_GLPK_CMD = 2
+    SOLVER_CPLEX_CMD = 3
+    SOLVER_GUROBI_CMD = 4
+    SOLVER_SCIP_CMD = 5
+
+    # solver names
+    _solvers = {SOLVER_CBC_PACKAGED: 'PuLP-packaged CBC',
+                SOLVER_CBC_CMD: 'CBC external',
+                SOLVER_GLPK_CMD: 'GLPK external',
+                SOLVER_CPLEX_CMD: 'CPLEX external (requires license)',
+                SOLVER_GUROBI_CMD: 'Gurobi external (requires license)',
+                SOLVER_SCIP_CMD: 'SCIP external (requires license)'}
+
+
+class AvailabilityRequestStateMixin:
+    """
+    Single point of definition for availability request states
+    """
+    AVAILABILITY_NOT_REQUESTED = 0
+    AVAILABILITY_REQUESTED = 1
+    AVAILABILITY_CLOSED = 2
+
+
+class PresentationSessionTypesMixin:
+    """
+    Single point of definition for presentation session types
+    """
+    MORNING_SESSION = 0
+    AFTERNOON_SESSION = 1
+
+    SESSION_TO_TEXT = {MORNING_SESSION: 'morning',
+                       AFTERNOON_SESSION: 'afternoon'}
+
+    SESSION_LABEL_TYPES = {MORNING_SESSION: 'bg-light text-dark',
+                           AFTERNOON_SESSION: 'bg-dark'}
+
+
+class ScheduleEnumerationTypesMixin:
+    """
+    Single point of definition for schedule enumeration types
+    """
+    ASSESSOR = 0
+    SUBMITTER = 1
+    SLOT = 2
+    PERIOD = 3
+
+
+class MatchingEnumerationTypesMixin:
+    """
+    Single point of definition for matching enumeration types
+    """
+    SELECTOR = 0
+    LIVEPROJECT = 1
+    LIVEPROJECT_GROUP = 2
+    SUPERVISOR = 3
+    MARKER = 4
+    SUPERVISOR_LIMITS = 5
+    MARKER_LIMITS = 6
 
 
 # roll our own get_main_config() and get_current_year(), which we cannot import because it creates a dependency cycle
@@ -1588,7 +1891,7 @@ class ConvenorSubmitterTask(ConvenorTask):
     __mapper_args__ = {'polymorphic_identity': 2}
 
 
-class ConvenorGenericTask(ConvenorTask):
+class ConvenorGenericTask(ConvenorTask, RepeatIntervalsMixin):
     """
     Derived from ConvenorTask. Represents a task record attached to a specific ProjectClassConfig
     """
@@ -1606,13 +1909,10 @@ class ConvenorGenericTask(ConvenorTask):
     repeat = db.Column(db.Boolean(), default=False)
 
     # repeat period
-    REPEAT_DAILY = 0
-    REPEAT_MONTHLY = 1
-    REPEAT_YEARLY = 2
-    repeat_options = [(REPEAT_DAILY, 'Daily'),
-                      (REPEAT_MONTHLY, 'Monthly'),
-                      (REPEAT_YEARLY, 'Yearly')]
-    repeat_interval = db.Column(db.Integer(), default=REPEAT_DAILY)
+    repeat_options = [(RepeatIntervalsMixin.REPEAT_DAILY, 'Daily'),
+                      (RepeatIntervalsMixin.REPEAT_MONTHLY, 'Monthly'),
+                      (RepeatIntervalsMixin.REPEAT_YEARLY, 'Yearly')]
+    repeat_interval = db.Column(db.Integer(), default=RepeatIntervalsMixin.REPEAT_DAILY)
 
     # repeat frequency
     repeat_frequency = db.Column(db.Integer())
@@ -1686,7 +1986,7 @@ def ConvenorTasksMixinFactory(subclass):
     return ConvenorTasksMixin
 
 
-class EmailNotification(db.Model):
+class EmailNotification(db.Model, EmailNotificationsMixin):
     """
     Represent an event for which the user should be notified by email
     """
@@ -1701,32 +2001,6 @@ class EmailNotification(db.Model):
     owner = db.relationship('User', foreign_keys=[owner_id], uselist=False,
                             backref=db.backref('email_notifications', lazy='dynamic',
                                                cascade='all, delete, delete-orphan'))
-
-    CONFIRMATION_REQUEST_CREATED = 0
-    CONFIRMATION_REQUEST_CANCELLED = 1
-
-    CONFIRMATION_REQUEST_DELETED = 2
-    CONFIRMATION_GRANT_DELETED = 3
-    CONFIRMATION_DECLINE_DELETED = 4
-    CONFIRMATION_GRANTED = 5
-    CONFIRMATION_DECLINED = 6
-    CONFIRMATION_TO_PENDING = 7
-
-    FACULTY_REENROLL_SUPERVISOR = 8
-    FACULTY_REENROLL_MARKER = 9
-    FACULTY_REENROLL_PRESENTATIONS = 10
-
-    _events = {CONFIRMATION_REQUEST_CREATED: ('primary', 'Create confirm request'),
-               CONFIRMATION_REQUEST_CANCELLED: ('danger', 'Confirm request cancel'),
-               CONFIRMATION_REQUEST_DELETED: ('danger', 'Confirm request deleted'),
-               CONFIRMATION_GRANT_DELETED: ('warning', 'Confirmation deleted'),
-               CONFIRMATION_DECLINE_DELETED: ('secondary', 'Confirm decline deleted'),
-               CONFIRMATION_GRANTED: ('success', 'Confirm granted'),
-               CONFIRMATION_DECLINED: ('ddanger', 'Confirm declined'),
-               CONFIRMATION_TO_PENDING: ('secondary', 'Confirm request pending'),
-               FACULTY_REENROLL_SUPERVISOR: ('secondary', 'Re-enroll as supervisor'),
-               FACULTY_REENROLL_MARKER: ('secondary', 'Re-enroll as marker'),
-               FACULTY_REENROLL_PRESENTATIONS: ('secondary', 'Re-enroll as assessor')}
 
     # notification type
     event_type = db.Column(db.Integer())
@@ -1764,7 +2038,7 @@ class EmailNotification(db.Model):
     assign = lambda table, key: lambda f: table.setdefault(key, f)
 
 
-    @assign(str_operations, CONFIRMATION_REQUEST_CREATED)
+    @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_REQUEST_CREATED)
     def _request_created(self):
         req = db.session.query(ConfirmRequest).filter_by(id=self.data_1).first()
         if req is None:
@@ -1776,7 +2050,7 @@ class EmailNotification(db.Model):
                                  time=req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S"))
 
 
-    @assign(str_operations, CONFIRMATION_REQUEST_CANCELLED)
+    @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_REQUEST_CANCELLED)
     def _request_cancelled(self):
         user = db.session.query(User).filter_by(id=self.data_1).first()
         proj = db.session.query(LiveProject).filter_by(id=self.data_2).first()
@@ -1788,7 +2062,7 @@ class EmailNotification(db.Model):
                                              pclass=proj.config.project_class.name)
 
 
-    @assign(str_operations, CONFIRMATION_REQUEST_DELETED)
+    @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_REQUEST_DELETED)
     def _request_deleted(self):
         proj = db.session.query(LiveProject).filter_by(id=self.data_1).first()
         if proj is None:
@@ -1800,7 +2074,7 @@ class EmailNotification(db.Model):
                                   pclass=proj.config.project_class.name)
 
 
-    @assign(str_operations, CONFIRMATION_GRANT_DELETED)
+    @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_GRANT_DELETED)
     def _grant_deleted(self):
         proj = db.session.query(LiveProject).filter_by(id=self.data_1).first()
         if proj is None:
@@ -1812,7 +2086,7 @@ class EmailNotification(db.Model):
                                   pclass=proj.config.project_class.name)
 
 
-    @assign(str_operations, CONFIRMATION_DECLINE_DELETED)
+    @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_DECLINE_DELETED)
     def _decline_deleted(self):
         proj = db.session.query(LiveProject).filter_by(id=self.data_1).first()
         if proj is None:
@@ -1825,7 +2099,7 @@ class EmailNotification(db.Model):
                                                                 pclass=proj.config.project_class.name)
 
 
-    @assign(str_operations, CONFIRMATION_GRANTED)
+    @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_GRANTED)
     def _request_granted(self):
         req = db.session.query(ConfirmRequest).filter_by(id=self.data_1).first()
         if req is None:
@@ -1838,7 +2112,7 @@ class EmailNotification(db.Model):
                                  pclass=req.project.config.project_class.name)
 
 
-    @assign(str_operations, CONFIRMATION_DECLINED)
+    @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_DECLINED)
     def _request_declined(self):
         req = db.session.query(ConfirmRequest).filter_by(id=self.data_1).first()
         if req is None:
@@ -1850,7 +2124,7 @@ class EmailNotification(db.Model):
                                   pclass=req.project.config.project_class.name)
 
 
-    @assign(str_operations, CONFIRMATION_TO_PENDING)
+    @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_TO_PENDING)
     def _request_to_pending(self):
         req = db.session.query(ConfirmRequest).filter_by(id=self.data_1).first()
         if req is None:
@@ -1862,7 +2136,7 @@ class EmailNotification(db.Model):
                                   pclass=req.project.config.project_class.name)
 
 
-    @assign(str_operations, FACULTY_REENROLL_SUPERVISOR)
+    @assign(str_operations, EmailNotificationsMixin.FACULTY_REENROLL_SUPERVISOR)
     def _request_reenroll_supervisor(self):
         record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
         if record is None:
@@ -1874,7 +2148,7 @@ class EmailNotification(db.Model):
                'activities in the *next* academic year. If you wish to offer projects, ' \
                'you will need to do so in the next selection cycle.'.format(proj=record.pclass.name)
 
-    @assign(str_operations, FACULTY_REENROLL_MARKER)
+    @assign(str_operations, EmailNotificationsMixin.FACULTY_REENROLL_MARKER)
     def _request_reenroll_marker(self):
         record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
         if record is None:
@@ -1886,7 +2160,7 @@ class EmailNotification(db.Model):
                'activities in the *next* academic year.'.format(proj=record.pclass.name)
 
 
-    @assign(str_operations, FACULTY_REENROLL_PRESENTATIONS)
+    @assign(str_operations, EmailNotificationsMixin.FACULTY_REENROLL_PRESENTATIONS)
     def _request_reenroll_presentations(self):
         record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
         if record is None:
@@ -1898,57 +2172,57 @@ class EmailNotification(db.Model):
                'activities in the *next* academic year.'.format(proj=record.pclass.name)
 
 
-    @assign(subject_operations, CONFIRMATION_REQUEST_CREATED)
+    @assign(subject_operations, EmailNotificationsMixin.CONFIRMATION_REQUEST_CREATED)
     def _subj_request_created(self):
         return 'New meeting confirmation request'
 
 
-    @assign(subject_operations, CONFIRMATION_REQUEST_CANCELLED)
+    @assign(subject_operations, EmailNotificationsMixin.CONFIRMATION_REQUEST_CANCELLED)
     def _subj_request_cancelled(self):
         return 'Meeting confirmation request cancelled'
 
 
-    @assign(subject_operations, CONFIRMATION_REQUEST_DELETED)
+    @assign(subject_operations, EmailNotificationsMixin.CONFIRMATION_REQUEST_DELETED)
     def _subj_request_deleted(self):
         return 'Meeting confirmation request deleted'
 
 
-    @assign(subject_operations, CONFIRMATION_GRANT_DELETED)
+    @assign(subject_operations, EmailNotificationsMixin.CONFIRMATION_GRANT_DELETED)
     def _subj_grant_deleted(self):
         return 'Meeting confirmation deleted'
 
 
-    @assign(subject_operations, CONFIRMATION_DECLINE_DELETED)
+    @assign(subject_operations, EmailNotificationsMixin.CONFIRMATION_DECLINE_DELETED)
     def _subj_decline_deleted(self):
         return 'Declined meeting confirmation deleted'
 
 
-    @assign(subject_operations, CONFIRMATION_GRANTED)
+    @assign(subject_operations, EmailNotificationsMixin.CONFIRMATION_GRANTED)
     def _subj_granted(self):
         return 'Meeting confirmation signed off'
 
 
-    @assign(subject_operations, CONFIRMATION_DECLINED)
+    @assign(subject_operations, EmailNotificationsMixin.CONFIRMATION_DECLINED)
     def _subj_declined(self):
         return 'Meeting confirmation declined'
 
 
-    @assign(subject_operations, CONFIRMATION_TO_PENDING)
+    @assign(subject_operations, EmailNotificationsMixin.CONFIRMATION_TO_PENDING)
     def _subj_to_pending(self):
         return 'Meeting confirmation changed to "pending"'
 
 
-    @assign(subject_operations, FACULTY_REENROLL_SUPERVISOR)
+    @assign(subject_operations, EmailNotificationsMixin.FACULTY_REENROLL_SUPERVISOR)
     def _subj_reenroll_supervisor(self):
         return 'You have been re-enrolled as a project supervisor'
 
 
-    @assign(subject_operations, FACULTY_REENROLL_MARKER)
+    @assign(subject_operations, EmailNotificationsMixin.FACULTY_REENROLL_MARKER)
     def _subj_reenroll_marker(self):
         return 'You have been re-enrolled as a project marker'
 
 
-    @assign(subject_operations, FACULTY_REENROLL_PRESENTATIONS)
+    @assign(subject_operations, EmailNotificationsMixin.FACULTY_REENROLL_PRESENTATIONS)
     def _subj_reenroll_presentations(self):
         return 'You have been re-enrolled as a project presentation assessor'
 
@@ -2350,7 +2624,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     def is_enrolled(self, pclass):
         """
-        Check whether this FacultyData record has an enrollment for a given project class
+        Check whether this FacultyData record has an enrolment for a given project class
         :param pclass:
         :return:
         """
@@ -2366,11 +2640,11 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     def remove_enrollment(self, pclass):
         """
-        Remove an enrollment from a faculty member
+        Remove an enrolment from a faculty member
         :param pclass:
         :return:
         """
-        # find enrollment record for this project class
+        # find enrolment record for this project class
         record = self.get_enrollment_record(pclass)
         if record is not None:
             db.session.delete(record)
@@ -2395,7 +2669,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     def add_enrollment(self, pclass):
         """
-        Add an enrollment to this faculty member
+        Add an enrolment to this faculty member
         :param pclass:
         :return:
         """
@@ -3598,7 +3872,7 @@ class StudentBatchItem(db.Model):
         return w
 
 
-class DegreeType(db.Model, ColouredLabelMixin, EditingMetadataMixin):
+class DegreeType(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLevelsMixin):
     """
     Model a degree type
     """
@@ -3616,6 +3890,19 @@ class DegreeType(db.Model, ColouredLabelMixin, EditingMetadataMixin):
 
     # number of years before graduation
     duration = db.Column(db.Integer())
+
+    # degree level (UG, PGR, PGT)
+    level = db.Column(db.Integer(), default=StudentLevelsMixin.LEVEL_UG)
+
+    @validates('level')
+    def _validate_level(self, key, value):
+        if value < self.LEVEL_UG:
+            value = self.LEVEL_UG
+
+        if value > self.LEVEL_PGR:
+            value = self.LEVEL_UG
+
+        return value
 
     # active flag
     active = db.Column(db.Boolean())
@@ -3762,7 +4049,7 @@ class DegreeProgramme(db.Model, EditingMetadataMixin):
         return db.session.query(Module) \
             .join(query, query.c.module_id == Module.id) \
             .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
-            .order_by(FHEQ_Level.academic_year.asc(),
+            .order_by(FHEQ_Level.numeric_level.asc(),
                       Module.semester.asc(), Module.name.asc())
 
 
@@ -3923,7 +4210,8 @@ class TransferableSkill(db.Model, EditingMetadataMixin):
         return self.group.make_label(self.name)
 
 
-class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin):
+class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLevelsMixin,
+                   AutoEnrolMixin):
     """
     Model a single project class
     """
@@ -3951,28 +4239,43 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     # enable project hub by default?
     use_project_hub = db.Column(db.Boolean(), default=True)
 
+    # what student level is this project associated with (UG, PGT, PGR)
+    student_level = db.Column(db.Integer(), default=StudentLevelsMixin.LEVEL_UG)
+
+    @validates('student_level')
+    def _validate_level(self, key, value):
+        if value < self.LEVEL_UG:
+            value = self.LEVEL_UG
+
+        if value > self.LEVEL_PGR:
+            value = self.LEVEL_UG
+
+        return value
+
     # in which academic year/FHEQ level does this project class begin?
-    start_level_id = db.Column(db.Integer(), db.ForeignKey('fheq_levels.id'))
-    start_level = db.relationship('FHEQ_Level', foreign_keys=[start_level_id], uselist=False,
-                                  backref=db.backref('pclasses', lazy='dynamic'))
+    start_year = db.Column(db.Integer(), default=3)
 
     # how many years does the project extend? usually 1, but RP is more
-    extent = db.Column(db.Integer())
+    extent = db.Column(db.Integer(), default=1)
+
+    # selection runs in previous academic cycle?
+    # This is the default for FYPs and MPPs, but not usually for MSc projects
+    select_in_previous_cycle = db.Column(db.Boolean(), default=True)
 
     # are projects supervised (or just marked?)
-    uses_supervisor = db.Column(db.Boolean())
+    uses_supervisor = db.Column(db.Boolean(), default=True)
 
     # are the submissions second marked?
-    uses_marker = db.Column(db.Boolean())
+    uses_marker = db.Column(db.Boolean(), default=True)
 
     # display second marker information in UI?
-    display_marker = db.Column(db.Boolean())
+    display_marker = db.Column(db.Boolean(), default=True)
 
     # are there presentations?
-    uses_presentations = db.Column(db.Boolean())
+    uses_presentations = db.Column(db.Boolean(), default=False)
 
     # display presentation information in UI?
-    display_presentations = db.Column(db.Boolean())
+    display_presentations = db.Column(db.Boolean(), default=True)
 
     # how many initial_choices should students make?
     initial_choices = db.Column(db.Integer())
@@ -3984,12 +4287,23 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     faculty_maximum = db.Column(db.Integer())
 
     # is project selection open to all students?
-    selection_open_to_all = db.Column(db.Boolean())
+    selection_open_to_all = db.Column(db.Boolean(), default=False)
+
+    # auto-enrol selectors during rollover of the academic year?
+    auto_enrol_enable = db.Column(db.Boolean(), default=True)
 
     # in which years should students be auto-enrolled as selectors?
-    AUTO_ENROLL_PREVIOUS_YEAR = 0
-    AUTO_ENROLL_ANY_YEAR = 1
-    auto_enroll_years = db.Column(db.Integer(), default=AUTO_ENROLL_PREVIOUS_YEAR)
+    auto_enroll_years = db.Column(db.Integer(), default=AutoEnrolMixin.AUTO_ENROLL_FIRST_YEAR)
+
+    @validates('auto_enroll_years')
+    def _validate_auto_enroll_years(self, key, value):
+        if value < self.AUTO_ENROLL_FIRST_YEAR:
+            value = self.AUTO_ENROLL_FIRST_YEAR
+
+        if value > self.AUTO_ENROLL_ALL_YEARS:
+            value = self.AUTO_ENROLL_FIRST_YEAR
+
+        return value
 
 
     # SELECTOR CARD TEXT
@@ -4275,12 +4589,19 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin):
 
     def module_available(self, module_id):
         # the module should be at an FHEQ level which is less than or equal to our starting level
-        q = db.session.query(Module) \
-            .filter(Module.id == module_id) \
-            .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
-            .filter(FHEQ_Level.academic_year <= self.start_level.academic_year)
-        if get_count(q) == 0:
-            return False
+
+        # all modules are availabel for PGR or PGT
+        if self.student_level == self.LEVEL_UG:
+            # check if module's start level maps to our starting year
+            # note that the FHEQ numerical level (3, 4, 5, 6, 7) maps to undergraduate years as year = level-3,
+            # with Y0 as foundation year
+            q = db.session.query(Module) \
+                .filter(Module.id == module_id) \
+                .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
+                .filter(FHEQ_Level.numeric_level <= self.start_year+3)
+
+            if get_count(q) == 0:
+                return False
 
         # the module should be included in at least one programme attached to this project class
         for prog in self.programmes:
@@ -4378,7 +4699,8 @@ class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
         return 'Submission Period #{n}'.format(n=self.period)
 
 
-class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask)):
+class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask),
+                         SelectorLifecycleStatesMixin, SubmitterLifecycleStatesMixin):
     """
     Model current configuration options for each project class
     """
@@ -4854,7 +5176,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
     @property
     def start_year(self):
-        return self.project_class.start_level.academic_year
+        return self.project_class.start_year
 
 
     @property
@@ -4971,14 +5293,6 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     def previous_config(self):
         return self._previous_config_query.first()
 
-
-    SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED = 1
-    SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS = 2
-    SELECTOR_LIFECYCLE_READY_GOLIVE = 3
-    SELECTOR_LIFECYCLE_SELECTIONS_OPEN = 4
-    SELECTOR_LIFECYCLE_READY_MATCHING = 5
-    SELECTOR_LIFECYCLE_READY_ROLLOVER = 6
-
     @property
     def selector_lifecycle(self):
         # an unpublished project class is always ready for rollover
@@ -5020,11 +5334,6 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
                 return ProjectClassConfig.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED
 
         return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE
-
-
-    SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY = 0
-    SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY = 1
-    SUBMITTER_LIFECYCLE_READY_ROLLOVER = 2
 
     @property
     def submitter_lifecycle(self):
@@ -5725,14 +6034,14 @@ class SubmissionPeriodRecord(db.Model):
 
 class EnrollmentRecord(db.Model, EditingMetadataMixin):
     """
-    Capture details about a faculty member's enrollment in a single project class
+    Capture details about a faculty member's enrolment in a single project class
     """
 
     __tablename__ = 'enrollment_record'
 
     id = db.Column(db.Integer(), primary_key=True)
 
-    # pointer to project class for which this is an enrollment record
+    # pointer to project class for which this is an enrolment record
     pclass_id = db.Column(db.Integer(), db.ForeignKey('project_classes.id'))
     pclass = db.relationship('ProjectClass', uselist=False, foreign_keys=[pclass_id])
 
@@ -5744,7 +6053,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
     # SUPERVISOR STATUS
 
-    # enrollment for supervision
+    # enrolment for supervision
     SUPERVISOR_ENROLLED = 1
     SUPERVISOR_SABBATICAL = 2
     SUPERVISOR_EXEMPT = 3
@@ -5762,7 +6071,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
     # MARKER STATUS
 
-    # enrollment for 2nd marking
+    # enrolment for 2nd marking
     MARKER_ENROLLED = 1
     MARKER_SABBATICAL = 2
     MARKER_EXEMPT = 3
@@ -5780,7 +6089,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
     # PRESENTATION ASSESSOR STATUS
 
-    # enrollment for assessing talks
+    # enrolment for assessing talks
     PRESENTATIONS_ENROLLED = 1
     PRESENTATIONS_SABBATICAL = 2
     PRESENTATIONS_EXEMPT = 3
@@ -6061,7 +6370,7 @@ def _Project_num_assessors(pid, pclass_id):
     return get_count(project.assessor_list_query(pclass_id))
 
 
-class Project(db.Model, EditingMetadataMixin,
+class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
               ProjectConfigurationMixinFactory('projects', 'unique', project_skills, project_skills.c.skill_id,
                                                project_skills.c.project_id, 'allow', project_programmes,
                                                project_programmes.c.programme_id, project_programmes.c.project_id,
@@ -6450,15 +6759,6 @@ class Project(db.Model, EditingMetadataMixin,
             return True
 
         return most_recent[0] > record.last_viewed
-
-
-    DESCRIPTIONS_APPROVED = 0
-    SOME_DESCRIPTIONS_QUEUED = 1
-    SOME_DESCRIPTIONS_REJECTED = 2
-    SOME_DESCRIPTIONS_UNCONFIRMED = 3
-    APPROVALS_NOT_ACTIVE = 10
-    APPROVALS_NOT_OFFERABLE = 11
-    APPROVALS_UNKNOWN = 100
 
     @property
     def approval_state(self):
@@ -6871,7 +7171,7 @@ def _ProjectDescription_delete_handler(mapper, connection, target):
                 cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
 
 
-class DescriptionComment(db.Model):
+class DescriptionComment(db.Model, ApprovalCommentVisibilityStatesMixin):
     """
     Comment attached to ProjectDescription, eg. used by approvals team
     """
@@ -6901,12 +7201,8 @@ class DescriptionComment(db.Model):
 
     # VISIBILITY
 
-    VISIBILITY_EVERYONE = 0
-    VISIBILITY_APPROVALS_TEAM = 1
-    VISIBILITY_PUBLISHED_BY_APPROVALS = 2
-
     # indicate the visbility status of this comment
-    visibility = db.Column(db.Integer(), default=VISIBILITY_EVERYONE)
+    visibility = db.Column(db.Integer(), default=ApprovalCommentVisibilityStatesMixin.VISIBILITY_EVERYONE)
 
     # deleted flag
     deleted = db.Column(db.Boolean(), default=False)
@@ -7529,7 +7825,7 @@ def _LiveProject_assessors_append_handler(target, value, initiator):
                 cache.delete_memoized(_PresentationAssessment_is_valid, slot.owner.owner_id)
 
 
-class ConfirmRequest(db.Model):
+class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
     """
     Model a confirmation request from a student
     """
@@ -7550,9 +7846,6 @@ class ConfirmRequest(db.Model):
     project = db.relationship('LiveProject', foreign_keys=[project_id], uselist=False,
                               backref=db.backref('confirmation_requests', lazy='dynamic'))
 
-    REQUESTED = 0
-    CONFIRMED = 1
-    DECLINED = 2
 
     # confirmation state
     state = db.Column(db.Integer())
@@ -8329,7 +8622,7 @@ class PresentationFeedback(db.Model):
     timestamp = db.Column(db.DateTime())
 
 
-class SubmissionRecord(db.Model):
+class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     """
     Collect details for a student submission
     """
@@ -8663,14 +8956,6 @@ class SubmissionRecord(db.Model):
     @property
     def is_feedback_valid(self):
         return self.is_supervisor_valid or self.is_marker_valid
-
-
-    FEEDBACK_NOT_REQUIRED = 0
-    FEEDBACK_NOT_YET = 1
-    FEEDBACK_WAITING = 2
-    FEEDBACK_ENTERED = 3
-    FEEDBACK_LATE = 4
-    FEEDBACK_SUBMITTED = 5
 
 
     def _feedback_state(self, valid, submitted):
@@ -9143,7 +9428,7 @@ class SubmissionRecord(db.Model):
 
 
 
-class SubmissionAttachment(db.Model):
+class SubmissionAttachment(db.Model, SubmissionAttachmentTypesMixin):
     """
     Model an attachment to a submission
     """
@@ -9176,27 +9461,9 @@ class SubmissionAttachment(db.Model):
     include_supervisor_emails = db.Column(db.Boolean(), default=False)
 
 
-    ATTACHMENT_TYPE_UNSET = 0
-    ATTACHMENT_MARKING_REPORT = 1
-    ATTACHMENT_SIMILARITY_REPORT = 2
-    ATTACHMENT_OTHER = 3
-
-    _labels = {ATTACHMENT_TYPE_UNSET: 'Unset',
-               ATTACHMENT_MARKING_REPORT: 'Marking report',
-               ATTACHMENT_SIMILARITY_REPORT: 'Similarity report',
-               ATTACHMENT_OTHER: 'Other'}
+    # ATTACHMENT TYPE
 
     type = db.Column(db.Integer(), default=0, nullable=True)
-
-
-    def type_label(self):
-        if self.type is None:
-            return None
-
-        if self.type in self._labels:
-            return self._labels[self.type]
-
-        return None
 
 
 
@@ -9272,7 +9539,7 @@ class Bookmark(db.Model):
         return self.owner.student.user.name
 
 
-class SelectionRecord(db.Model):
+class SelectionRecord(db.Model, SelectHintTypesMixin):
     """
     Model an ordered list of project selections
     """
@@ -9301,39 +9568,8 @@ class SelectionRecord(db.Model):
     # was this record converted from a bookmark when selections were closed?
     converted_from_bookmark = db.Column(db.Boolean())
 
-    SELECTION_HINT_NEUTRAL = 0
-    SELECTION_HINT_REQUIRE = 1
-    SELECTION_HINT_FORBID = 2
-    SELECTION_HINT_ENCOURAGE = 3
-    SELECTION_HINT_DISCOURAGE = 4
-    SELECTION_HINT_ENCOURAGE_STRONG = 5
-    SELECTION_HINT_DISCOURAGE_STRONG = 6
 
-    _icons = {SELECTION_HINT_NEUTRAL: '',
-              SELECTION_HINT_REQUIRE: '<i class="fas fa-check fa-fw"></i>',
-              SELECTION_HINT_FORBID: '<i class="fas fa-times fa-fw"></i>',
-              SELECTION_HINT_ENCOURAGE: '<i class="fas fa-plus fa-fw"></i>',
-              SELECTION_HINT_DISCOURAGE: '<i class="fas fa-minus fa-fw"></i>',
-              SELECTION_HINT_ENCOURAGE_STRONG: '<i class="fas fa-plus fa-fw"></i> <i class="fas fa-plus fa-fw"></i>',
-              SELECTION_HINT_DISCOURAGE_STRONG: '<i class="fas fa-minus fa-fw"></i> <i class="fas fa-minus fa-fw"></i>'}
-
-    _menu_items = {SELECTION_HINT_NEUTRAL: 'Neutral',
-                   SELECTION_HINT_REQUIRE: 'Require',
-                   SELECTION_HINT_FORBID: 'Forbid',
-                   SELECTION_HINT_ENCOURAGE: 'Encourage',
-                   SELECTION_HINT_DISCOURAGE: 'Discourage',
-                   SELECTION_HINT_ENCOURAGE_STRONG: 'Strongly encourage',
-                   SELECTION_HINT_DISCOURAGE_STRONG: 'Strongly discourage'}
-
-    _menu_order = [SELECTION_HINT_NEUTRAL,
-                   "Force fit",
-                   SELECTION_HINT_REQUIRE,
-                   SELECTION_HINT_FORBID,
-                   "Fitting hints",
-                   SELECTION_HINT_ENCOURAGE,
-                   SELECTION_HINT_DISCOURAGE,
-                   SELECTION_HINT_ENCOURAGE_STRONG,
-                   SELECTION_HINT_DISCOURAGE_STRONG]
+    # HINTING
 
     # convenor hint for this match
     hint = db.Column(db.Integer())
@@ -9441,7 +9677,7 @@ def _SelectionRecord_delete_handler(mapper, connection, target):
         cache.delete_memoized(_MatchingAttempt_hint_status)
 
 
-class CustomOffer(db.Model, EditingMetadataMixin):
+class CustomOffer(db.Model, EditingMetadataMixin, CustomOfferStatesMixin):
     """
     Model a customized offer to an individual student
     """
@@ -9464,12 +9700,8 @@ class CustomOffer(db.Model, EditingMetadataMixin):
     selector = db.relationship('SelectingStudent', foreign_keys=[selector_id], uselist=False,
                                backref=db.backref('custom_offers', lazy='dynamic'))
 
-    OFFERED = 0
-    ACCEPTED = 1
-    DECLINED = 2
-
     # status of offer
-    status = db.Column(db.Integer(), default=OFFERED, nullable=False)
+    status = db.Column(db.Integer(), default=CustomOfferStatesMixin.OFFERED, nullable=False)
 
 
 class EmailLog(db.Model):
@@ -9667,7 +9899,7 @@ class BackupRecord(db.Model):
         return format_size(self.backup_size) if self.backup_size is not None else "<unset>"
 
 
-class TaskRecord(db.Model):
+class TaskRecord(db.Model, TaskWorkflowStatesMixin):
 
     __tablename__ = 'tasks'
 
@@ -9689,16 +9921,6 @@ class TaskRecord(db.Model):
     description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # status flag
-    PENDING = 0
-    RUNNING = 1
-    SUCCESS = 2
-    FAILURE = 3
-    TERMINATED = 4
-    STATES = { PENDING: 'PENDING',
-               RUNNING: 'RUNNING',
-               SUCCESS: 'SUCCESS',
-               FAILURE: 'FAILURE',
-               TERMINATED: 'TERMINATED'}
     status = db.Column(db.Integer())
 
     # percentage complete (if used)
@@ -9708,7 +9930,7 @@ class TaskRecord(db.Model):
     message = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
 
-class Notification(db.Model):
+class Notification(db.Model, NotificationTypesMixin):
 
     __tablename__ = 'notifications'
 
@@ -9716,10 +9938,6 @@ class Notification(db.Model):
     # unique id for this notificatgion
     id = db.Column(db.Integer(), primary_key=True)
 
-    TASK_PROGRESS = 1
-    USER_MESSAGE = 2
-    SHOW_HIDE_REQUEST = 100
-    REPLACE_TEXT_REQUEST = 101
     type = db.Column(db.Integer())
 
     # notifications are identified by the user they are intended for, plus a tag identifying
@@ -10046,37 +10264,14 @@ def _MatchingAttempt_is_valid(id):
     return is_valid, student_issues, faculty_issues, errors, warnings
 
 
-class PuLPMixin():
+class PuLPMixin(PuLPStatusMixin):
     # METADATA
-
-    # outcome report from PuLP
-    OUTCOME_OPTIMAL = 0
-    OUTCOME_NOT_SOLVED = 1
-    OUTCOME_INFEASIBLE = 2
-    OUTCOME_UNBOUNDED = 3
-    OUTCOME_UNDEFINED = 4
-    OUTCOME_FEASIBLE = 5
 
     # outcome of calculation
     outcome = db.Column(db.Integer())
 
-    SOLVER_CBC_PACKAGED = 0
-    SOLVER_CBC_CMD = 1
-    SOLVER_GLPK_CMD = 2
-    SOLVER_CPLEX_CMD = 3
-    SOLVER_GUROBI_CMD = 4
-    SOLVER_SCIP_CMD = 5
-
     # which solver are we using?
     solver = db.Column(db.Integer())
-
-    # solver names
-    _solvers = {SOLVER_CBC_PACKAGED: 'PuLP-packaged CBC',
-                SOLVER_CBC_CMD: 'CBC external',
-                SOLVER_GLPK_CMD: 'GLPK external',
-                SOLVER_CPLEX_CMD: 'CPLEX external (requires license)',
-                SOLVER_GUROBI_CMD: 'Gurobi external (requires license)',
-                SOLVER_SCIP_CMD: 'SCIP external (requires license)'}
 
     @property
     def solver_name(self):
@@ -11271,10 +11466,6 @@ class PresentationAssessment(db.Model, EditingMetadataMixin):
         self._warnings = {}
 
 
-    AVAILABILITY_NOT_REQUESTED = 0
-    AVAILABILITY_REQUESTED = 1
-    AVAILABILITY_CLOSED = 2
-
     @property
     def availability_lifecycle(self):
         if self.requested_availability is False:
@@ -12081,7 +12272,7 @@ def _SubmitterAttendanceData_unavailable_remove_handler(target, value, initiator
                 cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
 
 
-class PresentationSession(db.Model, EditingMetadataMixin):
+class PresentationSession(db.Model, EditingMetadataMixin, PresentationSessionTypesMixin):
     """
     Store data about a presentation session
     """
@@ -12101,15 +12292,6 @@ class PresentationSession(db.Model, EditingMetadataMixin):
     date = db.Column(db.Date())
 
     # morning or afternoon
-    MORNING_SESSION = 0
-    AFTERNOON_SESSION = 1
-
-    SESSION_TO_TEXT = {MORNING_SESSION: 'morning',
-                       AFTERNOON_SESSION: 'afternoon'}
-
-    SESSION_LABEL_TYPES = {MORNING_SESSION: 'bg-light text-dark',
-                           AFTERNOON_SESSION: 'bg-dark'}
-
     session_type = db.Column(db.Integer())
 
     # rooms available for this session
@@ -12146,6 +12328,7 @@ class PresentationSession(db.Model, EditingMetadataMixin):
             label_type = 'bg-secondary'
 
         return '<span class="badge {type}">{text}</span>'.format(type=label_type, text=text)
+
 
     @property
     def label(self):
@@ -13076,7 +13259,7 @@ def _ScheduleSlot_is_valid(id):
     return True, errors, warnings
 
 
-class ScheduleSlot(db.Model):
+class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
     """
     Model a single slot in a schedule
     """
@@ -13267,21 +13450,6 @@ class ScheduleSlot(db.Model):
         return talk.assessor_CATS
 
 
-    FEEDBACK_NOT_REQUIRED = 0
-    FEEDBACK_NOT_YET = 1
-    FEEDBACK_WAITING = 2
-    FEEDBACK_ENTERED = 3
-    FEEDBACK_LATE = 4
-    FEEDBACK_SUBMITTED = 5
-
-    feedback_map = {SubmissionRecord.FEEDBACK_NOT_REQUIRED: FEEDBACK_NOT_REQUIRED,
-                    SubmissionRecord.FEEDBACK_NOT_YET: FEEDBACK_NOT_YET,
-                    SubmissionRecord.FEEDBACK_WAITING: FEEDBACK_WAITING,
-                    SubmissionRecord.FEEDBACK_ENTERED: FEEDBACK_ENTERED,
-                    SubmissionRecord.FEEDBACK_LATE: FEEDBACK_LATE,
-                    SubmissionRecord.FEEDBACK_SUBMITTED: FEEDBACK_SUBMITTED}
-
-
     def feedback_state(self, faculty_id):
         # determine whether feedback is enabled for the SubmissionPeriodRecord shared
         # by our talks
@@ -13298,7 +13466,9 @@ class ScheduleSlot(db.Model):
 
         state = []
         for talk in self.talks:
-            state.append(ScheduleSlot.feedback_map[talk.presentation_feedback_state(faculty_id)])
+            # feedback types for SubmissionRecord are the same as for ScheduleSlot, since both are controlled
+            # from SubmissionFeedbackStatesMixin
+            state.append(talk.presentation_feedback_state(faculty_id))
 
         # state is defined to be the earliest lifecycle state, taken over all the talks, except that
         # we use ENTERED rather than WAITING if possible
@@ -13583,8 +13753,8 @@ class FHEQ_Level(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     # short version of name
     short_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
 
-    # corresponding academic year
-    academic_year = db.Column(db.Integer(), unique=True)
+    # numerical level
+    numeric_level = db.Column(db.Integer(), unique=True)
 
     # active flag
     active = db.Column(db.Boolean())
@@ -13810,7 +13980,7 @@ class AssetLicense(db.Model, ColouredLabelMixin, EditingMetadataMixin):
         #  all to the "unset" condition
 
 
-class ScheduleEnumeration(db.Model):
+class ScheduleEnumeration(db.Model, ScheduleEnumerationTypesMixin):
     """
     Record mapping of record ids to enumeration values used in scheduling
     """
@@ -13822,10 +13992,6 @@ class ScheduleEnumeration(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # enumeration type
-    ASSESSOR = 0
-    SUBMITTER = 1
-    SLOT = 2
-    PERIOD = 3
     category = db.Column(db.Integer())
 
     # enumerated value
@@ -13840,7 +14006,7 @@ class ScheduleEnumeration(db.Model):
                                backref=db.backref('enumerations', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
 
-class MatchingEnumeration(db.Model):
+class MatchingEnumeration(db.Model, MatchingEnumerationTypesMixin):
     """
     Record mapping of record ids to enumeration values used in matching
     """
@@ -13852,13 +14018,6 @@ class MatchingEnumeration(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # enumeration type
-    SELECTOR = 0
-    LIVEPROJECT = 1
-    LIVEPROJECT_GROUP = 2
-    SUPERVISOR = 3
-    MARKER = 4
-    SUPERVISOR_LIMITS = 5
-    MARKER_LIMITS = 6
     category = db.Column(db.Integer())
 
     # enumerated value

@@ -1344,7 +1344,7 @@ def edit_affiliations(id):
 @roles_accepted('manage_users', 'root')
 def edit_enrollments(id):
     """
-    View to edit project class enrollments for a faculty member
+    View to edit project class enrolments for a faculty member
     :param id:
     :return:
     """
@@ -1364,7 +1364,7 @@ def edit_enrollments(id):
 @roles_accepted('faculty', 'manage_users', 'root')
 def edit_enrollment(id):
     """
-    Edit enrollment details
+    Edit enrolment details
     :param id:
     :return:
     """
@@ -1406,13 +1406,13 @@ def edit_enrollment(id):
 
         celery = current_app.extensions['celery']
 
-        # if supervisor enrollment state has changed, check whether we need to adjust our
+        # if supervisor enrolment state has changed, check whether we need to adjust our
         # project confirmation state
         if old_supervisor_state != record.supervisor_state:
             adjust_task = celery.tasks['app.tasks.issue_confirm.enroll_adjust']
             adjust_task.apply_async(args=(record.id, old_supervisor_state, get_current_year()))
 
-        # if presentation enrollment state has changed, check whether we need to adjust our
+        # if presentation enrolment state has changed, check whether we need to adjust our
         # availability status for any presentation assessment events.
         # To do that we kick off a background task via celery.
         if old_presentations_state != record.presentations_state:
@@ -1493,7 +1493,7 @@ def remove_affiliation(userid, groupid):
 @roles_accepted('manage_users', 'root')
 def add_enrollment(userid, pclassid):
     """
-    View to add a project class enrollment to a faculty member
+    View to add a project class enrolment to a faculty member
     :param userid:
     :param pclassid:
     :return:
@@ -1511,7 +1511,7 @@ def add_enrollment(userid, pclassid):
 @roles_accepted('manage_users', 'root')
 def remove_enrollment(userid, pclassid):
     """
-    View to remove a project class enrollment from a faculty member
+    View to remove a project class enrolment from a faculty member
     :param userid:
     :param pclassid:
     :return:

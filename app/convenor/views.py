@@ -519,10 +519,10 @@ def attached_ajax(id):
         .join(User, User.id == Project.owner_id) \
         .filter(User.active == True).subquery()
 
-    # build list of enrollments attached to this project class
+    # build list of enrolments attached to this project class
     eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id).filter_by(pclass_id=id).subquery()
 
-    # pair up projects with the corresponding enrollment records
+    # pair up projects with the corresponding enrolment records
     jq = db.session.query(pq.c.id.label('pid'), eq.c.id.label('eid')).join(eq, eq.c.owner_id == pq.c.owner_id).subquery()
 
     # can't find a better way of getting the ORM to construct a tuple of mapped objects here.
@@ -953,7 +953,7 @@ def enroll_selectors(id):
 
     if not (current_user.has_role('admin') or current_user.has_role('root')) \
             and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-        flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
+        flash('Manual enrolment of selectors is only possible before student choices are closed', 'error')
         return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
@@ -1088,7 +1088,7 @@ def enroll_all_selectors(configid):
 
     if not (current_user.has_role('admin') or current_user.has_role('root')) \
             and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-        flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
+        flash('Manual enrolment of selectors is only possible before student choices are closed', 'error')
         return redirect(redirect_url())
 
     convert = bool(int(request.args.get('convert', 1)))
@@ -1154,7 +1154,7 @@ def enroll_selector(sid, configid):
 
     if not (current_user.has_role('admin') or current_user.has_role('root')) \
             and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-        flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
+        flash('Manual enrolment of selectors is only possible before student choices are closed', 'error')
         return redirect(redirect_url())
 
     convert = bool(int(request.args.get('convert', 1)))
@@ -1687,7 +1687,7 @@ def enroll_submitters(id):
         return redirect(redirect_url())
 
     if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash('Manual enrollment of selectors is no longer possible at this stage in the project lifecycle.', 'error')
+        flash('Manual enrolment of selectors is no longer possible at this stage in the project lifecycle.', 'error')
         return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
@@ -1814,7 +1814,7 @@ def enroll_all_submitters(configid):
         return redirect(redirect_url())
 
     if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
-        flash('Manual enrollment of submitters is only possible during normal project activity', 'error')
+        flash('Manual enrolment of submitters is only possible during normal project activity', 'error')
         return redirect(redirect_url())
 
     cohort_filter = request.args.get('cohort_filter')
@@ -1882,7 +1882,7 @@ def enroll_submitter(sid, configid):
 
     if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
         if not validate_is_administrator(message=False):
-            flash('Manual enrollment of submitters is only possible during normal project activity. '
+            flash('Manual enrolment of submitters is only possible during normal project activity. '
                   'Please contact an administrator to perform this operation.', 'error')
             return redirect(redirect_url())
 
@@ -3215,7 +3215,7 @@ def description_modules(did, pclass_id, level_id=None):
         if level_id is None:
             form.selector.data = FHEQ_Level.query \
                 .filter(FHEQ_Level.active == True) \
-                .order_by(FHEQ_Level.academic_year.asc()).first()
+                .order_by(FHEQ_Level.numeric_level.asc()).first()
         else:
             form.selector.data = FHEQ_Level.query \
                 .filter(FHEQ_Level.active == True, FHEQ_Level.id == level_id).first()
@@ -3227,7 +3227,7 @@ def description_modules(did, pclass_id, level_id=None):
         modules = []
 
     level_id = form.selector.data.id if form.selector.data is not None else None
-    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.academic_year.asc()).all()
+    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.numeric_level.asc()).all()
 
     return render_template('convenor/description_modules.html', project=desc.parent, desc=desc, form=form,
                            pclass_id=pclass_id, title='Attach recommended modules', levels=levels, create=create,

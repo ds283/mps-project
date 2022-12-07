@@ -198,7 +198,7 @@ _timing = \
         <span class="badge bg-primary">Enrol: programme</span>
     {% endif %}
     {% if p.auto_enroll_years == p.AUTO_ENROLL_FIRST_YEAR %}
-        <span class="badge bg-primary">Enrolment: first year</span>
+        <span class="badge bg-primary">Enrol: first year</span>
     {% elif p.auto_enroll_years == p.AUTO_ENROLL_ALL_YEARS %}
         <span class="badge bg-primary">Enrol: all years</span>
     {% else %}

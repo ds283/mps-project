@@ -282,6 +282,7 @@ class ServerSideInMemoryHandler(ServerSideBase):
         # pull in all rows
         if row_filter is not None:
             self._raw_rows = [x for x in query.all() if row_filter(x)]
+            self._number_total_rows = len(self._raw_rows)
         else:
             self._raw_rows = query.all()
 
@@ -295,7 +296,7 @@ class ServerSideInMemoryHandler(ServerSideBase):
             self._request_filter = self._request_filter.lower()
             self._filtered_rows = [row for row in self._mapped_rows if _filter_row(row, self._request_filter)]
 
-        if not hasattr(self, '_filtered_column'):
+        else:
             self._filtered_rows = self._mapped_rows
 
         self._number_filtered_rows = len(self._filtered_rows)

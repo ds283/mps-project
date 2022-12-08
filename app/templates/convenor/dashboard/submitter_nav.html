@@ -11,7 +11,7 @@
         </li>
         <li class="nav-item">
             <a class="nav-link {% if show_manual_enroll %}{% if subpane == 'enroll' %}active{% endif %}{% else %}disabled{% endif %}"
-               {% if show_manual_enroll %}href="{{ url_for('convenor.enroll_submitters', id=pclass.id) }}"{% endif %}>
+               {% if show_manual_enroll %}href="{{ url_for('convenor.enrol_submitters', id=pclass.id) }}"{% endif %}>
                 Manual enrolment
             </a>
         </li>

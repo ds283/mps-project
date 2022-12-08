@@ -1110,7 +1110,7 @@ def detuple(x):
     return x
 
 
-def build_enroll_selector_candidates(config: ProjectClassConfig, disable_programme_filter: bool=False):
+def build_enrol_selector_candidates(config: ProjectClassConfig, disable_programme_filter: bool=False):
     """
     Build a query that returns possible candidates for manual enrolment as selectors
     :param disable_programme_filter:
@@ -1121,7 +1121,7 @@ def build_enroll_selector_candidates(config: ProjectClassConfig, disable_program
     return _build_generic_enroll_candidate(config, year_offset, SelectingStudent, disable_programme_filter=disable_programme_filter)
 
 
-def build_enroll_submitter_candidates(config: ProjectClassConfig, disable_programme_filter: bool=False):
+def build_enrol_submitter_candidates(config: ProjectClassConfig, disable_programme_filter: bool=False):
     """
     Build a query that returns possible candidate for manual enrolment as submitters
     :param config:

@@ -12,8 +12,8 @@ from .add_bookmark import add_student_bookmark
 from .add_ranking import add_student_ranking
 from .faculty import faculty_data
 from .selectors import selectors_data
-from .enroll_selectors import enroll_selectors_data
-from .enroll_submitters import enroll_submitters_data
+from .enrol_selectors import enrol_selectors_data
+from .enrol_submitters import enrol_submitters_data
 from .submitters import submitters_data
 from .liveprojects import liveprojects_data
 from .outstanding_confirm import outstanding_confirm_data

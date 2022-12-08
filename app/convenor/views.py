@@ -56,8 +56,8 @@ from ..shared.conversions import is_integer
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.sqlalchemy import get_count, clone_model
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
-    filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
-    build_enroll_submitter_candidates, build_submitters_data, redirect_url, get_convenor_todo_data, \
+    filter_projects, get_convenor_filter_record, filter_assessors, build_enrol_selector_candidates, \
+    build_enrol_submitter_candidates, build_submitters_data, redirect_url, get_convenor_todo_data, \
     build_convenor_tasks_query, home_dashboard_url, get_approval_data
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
@@ -935,9 +935,9 @@ def _build_selector_data(config, cohort_filter, prog_filter, state_filter, conve
     return data
 
 
-@convenor.route('/enroll_selectors/<int:id>')
+@convenor.route('/enrol_selectors/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def enroll_selectors(id):
+def enrol_selectors(id):
     # get details for project class
     pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
@@ -964,8 +964,8 @@ def enroll_selectors(id):
         prog_filter = session['convenor_sel_enroll_prog_filter']
 
     candidates = \
-        build_enroll_selector_candidates(config,
-                                         disable_programme_filter=True if isinstance(prog_filter, str)
+        build_enrol_selector_candidates(config,
+                                        disable_programme_filter=True if isinstance(prog_filter, str)
                                                                   and prog_filter.lower() == 'off' else False)
 
     # build list of available cohorts and degree programmes
@@ -1015,15 +1015,15 @@ def enroll_selectors(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template('convenor/dashboard/enroll_selectors.html', pane='selectors', subpane='enroll',
+    return render_template('convenor/dashboard/enrol_selectors.html', pane='selectors', subpane='enroll',
                            pclass=pclass, config=config, convenor_data=data, cohorts=sorted(cohorts), progs=progs,
                            years=sorted(years), cohort_filter=cohort_filter, prog_filter=prog_filter,
                            year_filter=year_filter)
 
 
-@convenor.route('/enroll_selectors_ajax/<int:id>')
+@convenor.route('/enrol_selectors_ajax/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def enroll_selectors_ajax(id):
+def enrol_selectors_ajax(id):
     """
     Ajax data point for enroll selectors view
     :param id:
@@ -1051,7 +1051,7 @@ def enroll_selectors_ajax(id):
         return jsonify({})
 
     disable = True if (isinstance(prog_filter, str) and prog_filter.lower() == 'off') else False
-    candidates = build_enroll_selector_candidates(config, disable_programme_filter=disable)
+    candidates = build_enrol_selector_candidates(config, disable_programme_filter=disable)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
@@ -1071,12 +1071,12 @@ def enroll_selectors_ajax(id):
     else:
         candidates = candidates.all()
 
-    return ajax.convenor.enroll_selectors_data(candidates, config)
+    return ajax.convenor.enrol_selectors_data(candidates, config)
 
 
 @convenor.route('/enroll_all_selectors/<int:configid>')
 @roles_accepted('faculty', 'admin', 'root')
-def enroll_all_selectors(configid):
+def enrol_all_selectors(configid):
     config = ProjectClassConfig.query.get_or_404(configid)
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
@@ -1098,8 +1098,8 @@ def enroll_all_selectors(configid):
     year_filter = request.args.get('year_filter')
 
     candidates = \
-        build_enroll_selector_candidates(config,
-                                         disable_programme_filter=True if isinstance(prog_filter, str)
+        build_enrol_selector_candidates(config,
+                                        disable_programme_filter=True if isinstance(prog_filter, str)
                                                                   and prog_filter.lower() == 'off' else False)
 
     # filter by cohort and programme if required
@@ -1134,9 +1134,9 @@ def enroll_all_selectors(configid):
     return redirect(redirect_url())
 
 
-@convenor.route('/enroll_selector/<int:sid>/<int:configid>')
+@convenor.route('/enrol_selector/<int:sid>/<int:configid>')
 @roles_accepted('faculty', 'admin', 'root')
-def enroll_selector(sid, configid):
+def enrol_selector(sid, configid):
     """
     Manually enroll a student as a selector
     :param sid:
@@ -1667,9 +1667,9 @@ def submitters_ajax(id):
     return ajax.convenor.submitters_data(data, config, show_name, show_number, sort_number)
 
 
-@convenor.route('/enroll_submitters/<int:id>')
+@convenor.route('/enrol_submitters/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def enroll_submitters(id):
+def enrol_submitters(id):
     # get details for project class
     pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
@@ -1694,7 +1694,7 @@ def enroll_submitters(id):
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
 
-    candidates = build_enroll_submitter_candidates(config)
+    candidates = build_enrol_submitter_candidates(config)
 
     # build list of available cohorts and degree programmes
     cohorts = set()
@@ -1745,15 +1745,15 @@ def enroll_submitters(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template('convenor/dashboard/enroll_submitters.html', pane='submitters', subpane='enroll',
+    return render_template('convenor/dashboard/enrol_submitters.html', pane='submitters', subpane='enroll',
                            pclass=pclass, config=config, convenor_data=data, current_year=current_year,
                            cohorts=sorted(cohorts), progs=progs, years=sorted(years),
                            cohort_filter=cohort_filter, prog_filter=prog_filter, year_filter=year_filter)
 
 
-@convenor.route('/enroll_submitters_ajax/<int:id>', methods=['GET', 'POST'])
+@convenor.route('/enrol_submitters_ajax/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def enroll_submitters_ajax(id):
+def enrol_submitters_ajax(id):
     """
     Ajax data point for enroll submitters view
     :param id:
@@ -1780,7 +1780,7 @@ def enroll_submitters_ajax(id):
     if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         return jsonify({})
 
-    candidates = build_enroll_submitter_candidates(config)
+    candidates = build_enrol_submitter_candidates(config)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
@@ -1798,12 +1798,12 @@ def enroll_submitters_ajax(id):
     else:
         candidates = candidates.all()
 
-    return ajax.convenor.enroll_submitters_data(candidates, config)
+    return ajax.convenor.enrol_submitters_data(candidates, config)
 
 
 @convenor.route('/enroll_all_submitters/<int:configid>')
 @roles_accepted('faculty', 'admin', 'root')
-def enroll_all_submitters(configid):
+def enrol_all_submitters(configid):
     config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
@@ -1825,7 +1825,7 @@ def enroll_all_submitters(configid):
     current_year = get_current_year()
     old_config: ProjectClassConfig = config.pclass.get_config(config.year-1)
 
-    candidates = build_enroll_submitter_candidates(config)
+    candidates = build_enrol_submitter_candidates(config)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
@@ -1859,9 +1859,9 @@ def enroll_all_submitters(configid):
     return redirect(redirect_url())
 
 
-@convenor.route('/enroll_submitter/<int:sid>/<int:configid>')
+@convenor.route('/enrol_submitter/<int:sid>/<int:configid>')
 @roles_accepted('faculty', 'admin', 'root')
-def enroll_submitter(sid, configid):
+def enrol_submitter(sid, configid):
     """
     Manually enroll a student as a submitter
     :param sid:

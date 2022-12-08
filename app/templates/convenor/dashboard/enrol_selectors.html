@@ -16,7 +16,7 @@
             $('#add-selectors-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/enroll_selectors_ajax/{{ pclass.id }}?cohort_filter={{ cohort_filter }}&year_filter={{ year_filter }}&prog_filter={{ prog_filter }}', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/convenor/enrol_selectors_ajax/{{ pclass.id }}?cohort_filter={{ cohort_filter }}&year_filter={{ year_filter }}&prog_filter={{ prog_filter }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
@@ -74,12 +74,12 @@
                                     {% endif %}
                                         <p>Filter by cohort</p>
                                         <a class="btn btn-sm filter-btn {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                                            href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter='all', year_filter=year_filter, prog_filter=prog_filter) }}">
+                                            href="{{ url_for('convenor.enrol_selectors', id=pclass.id, cohort_filter='all', year_filter=year_filter, prog_filter=prog_filter) }}">
                                             All
                                         </a>
                                         {% for cohort in cohorts %}
                                             <a class="btn btn-sm filter-btn {% if cohort_filter == cohort|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                                                href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort, year_filter=year_filter, prog_filter=prog_filter) }}">
+                                                href="{{ url_for('convenor.enrol_selectors', id=pclass.id, cohort_filter=cohort, year_filter=year_filter, prog_filter=prog_filter) }}">
                                                 {{ cohort }}
                                             </a>
                                         {% endfor %}
@@ -93,12 +93,12 @@
                                     {% endif %}
                                         <p>Filter by academic year</p>
                                         <a class="btn btn-sm filter-btn {% if year_filter is none or year_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                                            href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter='all', prog_filter=prog_filter) }}">
+                                            href="{{ url_for('convenor.enrol_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter='all', prog_filter=prog_filter) }}">
                                             All
                                         </a>
                                         {% for year in years %}
                                             <a class="btn btn-sm filter-btn {% if year_filter == year|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                                                href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year, prog_filter=prog_filter) }}">
+                                                href="{{ url_for('convenor.enrol_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year, prog_filter=prog_filter) }}">
                                                 Y{{ year }}
                                             </a>
                                         {% endfor %}
@@ -117,18 +117,18 @@
                         <p>Filter by degree programme</p>
                         <div>
                             <a class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                                href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='all') }}">
+                                href="{{ url_for('convenor.enrol_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='all') }}">
                                 All attached programmes
                             </a>
                             <a class="btn btn-sm filter-btn {% if prog_filter == 'off' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                                href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='off') }}">
+                                href="{{ url_for('convenor.enrol_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='off') }}">
                                 Don't filter by programme
                             </a>
                         </div>
                         <div>
                             {% for prog in progs %}
                                 <a class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                                    href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog.id) }}">
+                                    href="{{ url_for('convenor.enrol_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog.id) }}">
                                     {{ prog.full_name }}
                                 </a>
                             {% endfor %}
@@ -141,11 +141,11 @@
             <div class="row vertical-align">
                 <div class="col-12">
                     <div class="float-end">
-                        <a href="{{ url_for('convenor.enroll_all_selectors', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, convert=0) }}"
+                        <a href="{{ url_for('convenor.enrol_all_selectors', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, convert=0) }}"
                            class="btn btn-sm btn-outline-primary">
                             <i class="fas fa-plus"></i> Enroll all without conversion
                         </a>
-                        <a href="{{ url_for('convenor.enroll_all_selectors', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, convert=1) }}"
+                        <a href="{{ url_for('convenor.enrol_all_selectors', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, convert=1) }}"
                            class="btn btn-sm btn-outline-primary">
                             <i class="fas fa-plus"></i> Enroll all
                         </a>

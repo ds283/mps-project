@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+
 from typing import List
 
 from flask import render_template_string, jsonify
@@ -15,27 +16,16 @@ from flask import render_template_string, jsonify
 from ...models import StudentData
 from ...shared.utils import get_current_year
 
-
 # language=jinja2
 _enroll_action = \
 """
-<div class="dropdown">
-    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle table-button" type="button" data-bs-toggle="dropdown">
-        Actions
-    </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id, convert=1) }}">
-            <i class="fas fa-plus fa-fw"></i> Enroll
-        </a>
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id, convert=0) }}">
-            <i class="fas fa-plus fa-fw"></i> Enroll without conversion
-        </a>
-    </div>
-</dic>
+<a href="{{ url_for('convenor.enrol_submitter', sid=s.id, configid=config.id) }}" class="btn btn-warning btn-sm">
+    <i class="fas fa-plus"></i> Manually enroll
+</a>
 """
 
 
-def enroll_selectors_data(students: List[StudentData], config):
+def enrol_submitters_data(students: List[StudentData], config):
     current_year = get_current_year()
 
     data = [{'name': {

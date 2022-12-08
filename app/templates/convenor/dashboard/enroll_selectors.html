@@ -115,20 +115,24 @@
                 <div class="row">
                     <div class="col-12">
                         <p>Filter by degree programme</p>
-                        <a class="btn btn-sm filter-btn {% if prog_filter == 'off' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                            href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='off') }}">
-                            Don't filter by programme
-                        </a>
-                        <a class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                            href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='all') }}">
-                            All attached programmes
-                        </a>
-                        {% for prog in progs %}
-                            <a class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                                href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog.id) }}">
-                                {{ prog.full_name }}
+                        <div>
+                            <a class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='all') }}">
+                                All attached programmes
                             </a>
-                        {% endfor %}
+                            <a class="btn btn-sm filter-btn {% if prog_filter == 'off' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='off') }}">
+                                Don't filter by programme
+                            </a>
+                        </div>
+                        <div>
+                            {% for prog in progs %}
+                                <a class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                    href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog.id) }}">
+                                    {{ prog.full_name }}
+                                </a>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -138,12 +142,12 @@
                 <div class="col-12">
                     <div class="float-end">
                         <a href="{{ url_for('convenor.enroll_all_selectors', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, convert=0) }}"
-                           class="btn btn-secondary">
-                            <i class="fas fa-check"></i> Enroll all without conversion
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-plus"></i> Enroll all without conversion
                         </a>
                         <a href="{{ url_for('convenor.enroll_all_selectors', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, convert=1) }}"
-                           class="btn btn-secondary">
-                            <i class="fas fa-check"></i> Enroll all
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-plus"></i> Enroll all
                         </a>
                     </div>
                 </div>

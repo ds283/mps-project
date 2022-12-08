@@ -1110,17 +1110,18 @@ def detuple(x):
     return x
 
 
-def build_enroll_selector_candidates(config, disable_programme_filter=False):
+def build_enroll_selector_candidates(config: ProjectClassConfig, disable_programme_filter: bool=False):
     """
     Build a query that returns possible candidates for manual enrolment as selectors
     :param disable_programme_filter:
     :param config:
     :return:
     """
-    return _build_generic_enroll_candidate(config, -1, SelectingStudent, disable_programme_filter=disable_programme_filter)
+    year_offset = -1 if config.select_in_previous_cycle else 0
+    return _build_generic_enroll_candidate(config, year_offset, SelectingStudent, disable_programme_filter=disable_programme_filter)
 
 
-def build_enroll_submitter_candidates(config, disable_programme_filter=False):
+def build_enroll_submitter_candidates(config: ProjectClassConfig, disable_programme_filter: bool=False):
     """
     Build a query that returns possible candidate for manual enrolment as submitters
     :param config:
@@ -1129,12 +1130,14 @@ def build_enroll_submitter_candidates(config, disable_programme_filter=False):
     return _build_generic_enroll_candidate(config, 0, SubmittingStudent, disable_programme_filter=disable_programme_filter)
 
 
-def _build_generic_enroll_candidate(config, year_offset, StudentRecordType, disable_programme_filter=False):
+def _build_generic_enroll_candidate(config: ProjectClassConfig, year_offset: int, StudentRecordType,
+                                    disable_programme_filter: bool=False):
     """
     Build a query that returns missing candidates for manual enrolment
     :param disable_programme_filter:
     :param config: ProjectClassConfig instance to which we wish to add manually enrolled students
-    :param year_offset: offset in years to be applied to the year range. Should be -1 for selectors or 0 for submitters.
+    :param year_offset: offset in years to be applied to the year range. Should be -1 for selectors, if selection
+     takes places in the previous cycle, or 0 for submitters.
     :param StudentRecordType: Student model. Usually SubmittingStudent for submitters and SelectingStudent for selectors.
     :return:
     """
@@ -1142,22 +1145,24 @@ def _build_generic_enroll_candidate(config, year_offset, StudentRecordType, disa
     start_year = config.start_year
     extent = config.extent
 
-    # earliest year: academic year in which students can be selectors
-    first_allowed_year = start_year + year_offset
+    # earliest year: academic year in which students can be enrolled (either as selectors or submitters, depending on
+    # year_offset)
+    first_year = start_year + year_offset
 
-    # latest year: last academic year in which students can be a selector
-    last_allowed_year = start_year + (extent - 1) + year_offset
+    # latest year: last academic year in which students can be enrolled (either as selectors or submitters, depending on
+    # year_offset)
+    last_year = start_year + extent + year_offset
 
-    if not disable_programme_filter and not config.selection_open_to_all:
+    if disable_programme_filter or config.selection_open_to_all:
+        allowed_programmes = None
+    else:
         allowed_programmes = config.project_class.programmes.with_entities(DegreeProgramme.id).distinct().all()
         allowed_programmes = set(detuple(x) for x in allowed_programmes)
-    else:
-        allowed_programmes = None
 
     # build a list of eligible students who are not already attached as selectors
-    candidate_students = _build_candidates(allowed_programmes, first_allowed_year, last_allowed_year)
+    candidate_students = _build_candidates(allowed_programmes, config.student_level, first_year, last_year)
 
-    # build a list of existing selecting students
+    # build a list of existing selecting students associated with this ProjectClassConfig instance
     existing_students = db.session.query(StudentRecordType.student_id) \
         .filter(StudentRecordType.config_id == config.id,
                 ~StudentRecordType.retired)
@@ -1174,20 +1179,27 @@ def _build_generic_enroll_candidate(config, year_offset, StudentRecordType, disa
     return missing_students
 
 
-def _build_candidates(allowed_programmes, first_allowed_year, last_allowed_year):
+def _build_candidates(allowed_programmes, student_level: int, first_year: int, last_year: int):
     candidates = db.session.query(StudentData) \
         .join(User, StudentData.id == User.id) \
-        .filter(User.active == True)
+        .filter(User.active == True) \
+        .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
 
+    # if allowed programmes are specified, filter the candidates according to this allowed set (which should all
+    # be at a consistent level, e.g. UG, PGT, PGR)
     if allowed_programmes is not None and len(allowed_programmes) > 0:
         candidates = candidates.filter(StudentData.programme_id.in_(allowed_programmes))
 
-    candidates = candidates.join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
-        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
-        .filter(or_(StudentData.academic_year == None,
-                    StudentData.academic_year <= DegreeType.duration,
-                    and_(StudentData.academic_year >= first_allowed_year,
-                         StudentData.academic_year <= last_allowed_year)))
+    # otherwise, filter candidates by the level of the project class
+    else:
+        candidates = candidates.filter(DegreeType.level == student_level)
+
+    # restrict to candidates who have not graduated, and who fall between the allowed years from enrolment
+    candidates = candidates.filter(or_(StudentData.academic_year == None,
+                                       StudentData.academic_year <= DegreeType.duration,
+                                       and_(StudentData.academic_year >= first_year,
+                                            StudentData.academic_year <= last_year)))
 
     return candidates
 
@@ -1252,5 +1264,4 @@ def build_submitters_data(config, cohort_filter, prog_filter, state_filter, year
         data = [s for s in data if (s.academic_year is None or s.academic_year == year_value)]
 
     return data
-
 

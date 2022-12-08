@@ -33,7 +33,7 @@ def register_assessor_tasks(celery):
 
         if record is None:
             self.update_state(state='FAILURE', meta='Could not load EnrollmentRecord record from database')
-            raise Ignore
+            raise Ignore()
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -43,7 +43,7 @@ def register_assessor_tasks(celery):
 
         if user is None:
             self.update_state(state='FAILURE', meta='Could not load User record from database')
-            raise Ignore
+            raise Ignore()
 
         faculty = record.owner
 
@@ -53,7 +53,7 @@ def register_assessor_tasks(celery):
                               'do not have an appropriate enrolment.'.format(name=faculty.user.name,
                                                                              pclass=record.pclass.name), 'error',
                               autocommit=True)
-            raise Ignore
+            raise Ignore()
 
         projects = db.session.query(Project).filter(Project.project_classes.any(id=pclass_id)).all()
 
@@ -89,7 +89,7 @@ def register_assessor_tasks(celery):
 
         if record is None:
             self.update_state(state='FAILURE', meta='Could not load EnrollmentRecord record from database')
-            raise Ignore
+            raise Ignore()
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -99,7 +99,7 @@ def register_assessor_tasks(celery):
 
         if user is None:
             self.update_state(state='FAILURE', meta='Could not load User record from database')
-            raise Ignore
+            raise Ignore()
 
         faculty = record.owner
 
@@ -109,7 +109,7 @@ def register_assessor_tasks(celery):
                               'do not have an appropriate enrolment.'.format(name=faculty.user.name,
                                                                              pclass=record.pclass.name), 'error',
                               autocommit=True)
-            raise Ignore
+            raise Ignore()
 
         projects = db.session.query(LiveProject) \
             .join(ProjectClassConfig, ProjectClassConfig.id == LiveProject.config_id) \

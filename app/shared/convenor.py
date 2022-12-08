@@ -79,6 +79,7 @@ def add_liveproject(number, project, config_id, autocommit=False):
     db.session.add(live_item)
 
     if autocommit:
+        # can expect exceptions to be caught by the client code
         db.session.commit()
 
 
@@ -99,13 +100,18 @@ def add_selector(student, config_id, convert=True, autocommit=False):
                                 submission_time=None,
                                 submission_IP=None)
     db.session.add(selector)
+    db.session.flush()
+
+    generated_id = selector.id
 
     if autocommit:
+        # can expect exceptions to be caught by the client code
         db.session.commit()
 
+    return generated_id
 
-def add_blank_submitter(student, old_config_id, new_config_id, autocommit=False):
 
+def add_blank_submitter(student, selecting_config_id, submitting_config_id, autocommit=False, linked_selector_id=None):
     # get StudentData instance
     if isinstance(student, StudentData):
         item = student
@@ -115,14 +121,18 @@ def add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
         if item is None:
             raise KeyError('Missing database record for StudentData id={id}'.format(id=student))
 
-    config = ProjectClassConfig.query.filter_by(id=new_config_id).one()
+    config = ProjectClassConfig.query.filter_by(id=submitting_config_id).one()
+    if config is None:
+        raise LookupError('Missing database record for ProjectClassConfig id={id}'.format(id=submitting_config_id))
 
     # generate new SubmittingStudent instance
-    submitter = SubmittingStudent(config_id=new_config_id,
+    submitter = SubmittingStudent(config_id=submitting_config_id,
                                   student_id=item.id,
-                                  selector_id=None,  # this record not generated from a selector
+                                  selector_id=linked_selector_id,
                                   published=False,
                                   retired=False)
+
+    # can expect exceptions to be caught by the client code
     db.session.add(submitter)
     db.session.flush()
 
@@ -133,7 +143,7 @@ def add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
                                   owner_id=submitter.id,
                                   project_id=None,
                                   marker_id=None,
-                                  selection_config_id=old_config_id,
+                                  selection_config_id=selecting_config_id,
                                   matching_record_id=None,
                                   student_engaged=False,
                                   report_id=None,
@@ -158,6 +168,7 @@ def add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
         db.session.add(record)
 
     if autocommit:
+        # can expect exceptions to be caught by the client code
         db.session.commit()
 
     celery = current_app.extensions['celery']

@@ -5190,6 +5190,11 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
 
     @property
+    def select_in_previous_cycle(self):
+        return self.project_class.select_in_previous_cycle
+
+
+    @property
     def submissions(self):
         return self.project_class.submissions
 
@@ -6580,7 +6585,7 @@ class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
 
     def validate_programmes(self):
         """
-        Validate that the degree programmes associated with this project
+        Check that the degree programmes associated with this project
         are valid, given the current project class associations
         :return:
         """

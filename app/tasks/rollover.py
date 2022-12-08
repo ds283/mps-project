@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import List
 
 from celery import chain, group
+from celery.exceptions import Ignore
 from dateutil.relativedelta import relativedelta
 from flask import current_app
 from sqlalchemy import or_
@@ -805,65 +806,122 @@ def register_rollover_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state('FAILURE', meta='Could not load rolled-over ProjectClassConfig record '
-                                              'while attaching student records')
-            return new_config_id
+            print("attach_selectors_submitters: could not load rolled-over ProjectClassConfig "
+                  "record, new_config_id = {n}".format(n=new_config_id))
+            raise self.retry()
 
         if student is None:
-            self.update_state('FAILURE', meta='Could not load StudentData record while attaching student records')
-            return new_config_id
+            print("attach_selectors_submittres: could not load StudentData record, "
+                  "new_config_id = {n}".format(n=new_config_id))
+            raise self.retry()
 
         # compute current academic year for this student
         academic_year = student.compute_academic_year(current_year)
 
-        if academic_year is not None:
-            try:
-                # only enrol selectors if auto-enrolment is enabled
-                if config.auto_enrol_enable:
-                    # generate selector records for students:
-                    #  - if student is in an appropriate academic year, at an appropriate level (UG, PGT, PGT),
-                    #    depending what auto-enroll settings are in force
-                    #  - the student is on an appropriate programme or selection is open to all
-                    programme: DegreeProgramme = student.programme
-                    programme_type: DegreeType = programme.degree_type
+        # cache student's programme and programme type (BSc, MPhys, etc.)
+        programme: DegreeProgramme = student.programme
+        programme_type: DegreeType = programme.degree_type
 
-                    attach = True
+        # if we succeeded in obtaining the academic year, try to auto-enroll selectors and submitters
+        if academic_year is None:
+            msg = 'Could not compute academic year (new_config_id={nid}, old_config_id={oid}, sid={sid}, ' \
+                  'current_year={cyr}'.format(nid=new_config_id, oid=old_config_id, sid=sid, cyr=current_year)
+            self.update_state('FAILURE', msg)
+            print(msg)
+            raise Ignore()
 
+        # keep track of the selector id that was generated (if we generate one)
+        # when submission is in the same cycle as selection, we can use this to link the
+        # submitter and selector records
+        generated_selector_id = None
+
+        try:
+            # enrol selectors if auto-enrolment is enabled
+            if config.auto_enrol_enable:
+
+                # define a function to test whether a student meets the criteria to attach as a selector
+                def check_attach_selector():
+                    # if student is not at the correct level (UG, PGT, PGR), do not attach
                     if programme_type.level != config.student_level:
-                        attach = False
+                        return False
 
-                    if (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_FIRST_YEAR
-                        and academic_year == config.start_year - 1) \
-                            or (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ALL_YEARS
-                                and config.start_year <= academic_year <= config.start_year + config.extent - 1):
+                    # do not attach if student's programme is not associated with the project type
+                    if not config.selection_open_to_all and programme not in config.programmes:
+                        return False
 
-                        if config.selection_open_to_all or (student.programme in config.programmes):
-                            # check whether a SelectingStudent has already been generated for this student
-                            # (eg. could happen if the task is accidentally run twice)
-                            count = get_count(student.selecting.filter_by(retired=False, config_id=new_config_id))
-                            if count == 0:
-                                add_selector(student, new_config_id, autocommit=False)
+                    # does selection occur in the same academic cycle as submission, or the one before?
+                    # this determines the first and last years when students are eligible to select
+                    first_year = config.start_year
+                    last_year = config.start_year + config.extent
+                    if config.select_in_previous_cycle:
+                        first_year = first_year - 1
+                        last_year = last_year - 1
 
+                    # if only enrolling in the first year, check whether there is a match
+                    if config.auto_enroll_years == ProjectClass.AUTO_ENROLL_FIRST_YEAR:
+                        if academic_year != first_year:
+                            return False
 
-                # generate submitter records for students, only if no existing submitter record exists
-                # (eg. generated by conversion from a previous SelectingStudent record)
-                if config.start_year <= academic_year < config.start_year + config.extent \
-                        and student.programme in config.programmes:
+                    # otherwise, check whether this student falls in the first-to-last window
+                    elif config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ALL_YEARS:
+                        if academic_year < first_year or academic_year > last_year:
+                            return False
 
-                    # check whether a SubmittingStudent has already been generated for this student
-                    count_sub = get_count(student.submitting.filter_by(retired=False, config_id=new_config_id))
-                    # check whether there is a SelectingStudent that has been marked to disable
+                    else:
+                        # should not get here
+                        assert False
+
+                    return True
+
+                # if this student meets all the criteria, generate a selector for them
+                if check_attach_selector():
+                    # check whether a SelectingStudent has already been generated for this student
+                    # (eg. could happen if the task is accidentally run twice)
+                    count = get_count(student.selecting.filter_by(retired=False, config_id=new_config_id))
+                    if count == 0:
+                        generated_selector_id = add_selector(student, new_config_id, autocommit=False)
+
+            # define a function to test whether a student meets the criteria to attach as a submitter
+            def check_attach_submitter():
+                # if student is not at the correct level (UG, PGT, PGR), do not attach
+                if programme_type.level != config.student_level:
+                    return False
+
+                first_year = config.start_year
+                last_year = config.start_year + config.extent
+
+                # auto-attach only if student's programme is associated with the project type
+                if programme not in config.programmes:
+                    return False
+
+                if academic_year < first_year or academic_year > last_year:
+                    return False
+
+                return True
+
+            # if this student meets all the criteria, generate a submitter record *provided* no existing
+            # submitter record exists, e.g., perhaps generated by conversion from a SelectingStudent
+            # record in the previous cycle
+            if check_attach_submitter():
+                # check whether a SubmittingStudent has already been generated for this student
+                count_sub = get_count(student.submitting.filter_by(retired=False, config_id=new_config_id))
+
+                # check whether there is a SelectingStudent record from a previous cycle that has been marked
+                # as disabled; if there is, we should not generate the SubmittingStudent instance
+                if config.select_in_previous_cycle:
                     count_disable = get_count(student.selecting.filter_by(retired=False, config_id=old_config_id,
                                                                           convert_to_submitter=False))
-                    if count_sub == 0 and count_disable == 0:
-                        add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
+                if count_sub == 0 and count_disable == 0:
+                    selecting_config_id = old_config_id if config.select_in_previous_cycle else new_config_id
+                    add_blank_submitter(student, selecting_config_id, new_config_id, autocommit=False,
+                                        linked_selector_id=generated_selector_id)
 
-                db.session.commit()
+            db.session.commit()
 
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         self.update_state(state='SUCCESS')
         return new_config_id

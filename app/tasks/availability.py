@@ -483,7 +483,7 @@ def register_availability_tasks(celery):
 
         if data is None:
             self.update_state('FAILURE', meta='Could not load PresentationAssessment record from database')
-            raise Ignore
+            raise Ignore()
 
         self.update_state(state='STARTED',
                           meta='Looking up PresentationSession record for id={id}'.format(id=sess_id))
@@ -535,7 +535,7 @@ def register_availability_tasks(celery):
 
         if data is None:
             self.update_state('FAILURE', meta='Could not load PresentationAssessment record from database')
-            raise Ignore
+            raise Ignore()
 
         recipients = set()
 
@@ -561,7 +561,7 @@ def register_availability_tasks(celery):
 
         if assessor is None:
             self.update_status('FAILURE', meta='Could not load AssessorAttendanceData record from database')
-            raise Ignore
+            raise Ignore()
 
         try:
             assessor.reminder_email_sent = True

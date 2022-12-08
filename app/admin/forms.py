@@ -54,7 +54,7 @@ from ..shared.forms.mixins import SaveChangesMixin, SubmissionPeriodPresentation
 
 from ..models import BackupConfiguration, ScheduleAttempt, extent_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices, auto_enrol_year_choices, \
-    student_level_choices, DEFAULT_STRING_LENGTH, start_year_choices
+    student_level_choices, DEFAULT_STRING_LENGTH, start_year_choices, ProjectClassConfig, DegreeProgramme, DegreeType
 
 from functools import partial
 
@@ -373,13 +373,25 @@ class ProjectClassMixin():
                                           query_factory=GetActiveDegreeProgrammes,
                                           get_label=BuildDegreeProgrammeName)
 
+    # validate_programmes() is an inline validator that is called automatically by WTForms to validate
+    # the programmes field; see https://wtforms.readthedocs.io/en/2.3.x/forms/#inline-validators
     @staticmethod
     def validate_programmes(form, field):
+        # if selection is open to anyone, there is no need to specify a particular set of programmes
         if form.selection_open_to_all.data:
             return
 
+        # otherwise, at least one programme should be specified
         if field.data is None or (isinstance(field.data, list) and len(field.data) == 0):
-            raise ValidationError('At least one degree programme should be selected')
+            raise ValidationError("At least one degree programme should be selected")
+
+        # check all programmes are consistent with the specified project level
+        for programme in field.data:
+            programme: DegreeProgramme
+            programme_type: DegreeType = programme.degree_type
+            if programme_type.level != form.student_level.data:
+                raise ValidationError("The selected degree programmes are not consistent with the required "
+                                      "student level")
 
 
 class AddProjectClassForm(Form, ProjectClassMixin):

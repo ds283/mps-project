@@ -442,6 +442,7 @@ def edit_project(id):
         proj.last_edit_id = current_user.id
         proj.last_edit_timestamp = datetime.now()
 
+        # check that the specified programmes
         proj.validate_programmes()
 
         db.session.commit()

@@ -232,16 +232,22 @@ def _compare_rows(ordering_data, row_A, row_B):
         row_A_value = row_A_col_properties['order']
         row_B_value = row_B_col_properties['order']
 
-        if not isinstance(row_A_value, Iterable):
+        if isinstance(row_A_value, str) or not isinstance(row_A_value, Iterable):
             row_A_value = [row_A_value]
 
-        if not isinstance(row_B_value, Iterable):
+        if isinstance(row_B_value, str) or not isinstance(row_B_value, Iterable):
             row_B_value = [row_B_value]
 
         if len(row_A_value) != len(row_B_value):
             raise TypeError
 
         for a, b in zip(row_A_value, row_B_value):
+            if b is None:
+                return -1 * dir_factor
+
+            if a is None:
+                return +1 * dir_factor
+
             if a < b:
                 return -1 * dir_factor
 
@@ -260,11 +266,12 @@ class ServerSideInMemoryHandler(ServerSideBase):
     difficult or impossible to execute purely within SQL
     """
 
-    def __init__(self, request, query, data):
+    def __init__(self, request, query, data, row_filter=None):
         """
         :param request: Flask 'request' instance, needs to be parsed to extract DataTables parameters
         :param query: base query defining the set of records we consider (i.e. rows of the table)
         :param data: dictionary specifying columns to query and sort
+        :param row_filter: optional predicate used to filter rows after loading them from the database
         """
         # invoke superclass constructor
         super().__init__(request, query)
@@ -273,7 +280,10 @@ class ServerSideInMemoryHandler(ServerSideBase):
         self._data = data
 
         # pull in all rows
-        self._raw_rows = query.all()
+        if row_filter is not None:
+            self._raw_rows = [x for x in query.all() if row_filter(x)]
+        else:
+            self._raw_rows = query.all()
 
         # use these to build a list of dictionaries, with members corresponding to the filter/sort
         # values determined by the column data

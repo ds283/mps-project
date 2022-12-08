@@ -10,11 +10,10 @@
 
 from typing import List
 
-from flask import render_template_string, jsonify
+from flask import render_template_string
 
-from ...models import StudentData
+from ...models import StudentData, ProjectClassConfig
 from ...shared.utils import get_current_year
-
 
 # language=jinja2
 _enroll_action = \
@@ -35,22 +34,14 @@ _enroll_action = \
 """
 
 
-def enrol_selectors_data(students: List[StudentData], config):
+def enrol_selectors_data(config: ProjectClassConfig, students: List[StudentData]):
     current_year = get_current_year()
 
-    data = [{'name': {
-                'display': s.user.name,
-                'sortstring': s.user.last_name + s.user.first_name
-             },
+    data = [{'name': s.user.name,
              'programme': s.programme.label,
-             'cohort': {
-                 'display': s.cohort_label,
-                 'sortvalue': s.cohort
-             },
-             'acadyear': {
-                 'display': s.academic_year_label(desired_year=config.year, show_details=True, current_year=current_year),
-                 'sortvalue': s.compute_academic_year(desired_year=config.year, current_year=current_year)
-             },
+             'cohort': s.cohort_label,
+             'current_year': s.academic_year_label(desired_year=config.year, show_details=True,
+                                                   current_year=current_year),
              'actions': render_template_string(_enroll_action, s=s, config=config)} for s in students]
 
-    return jsonify(data)
+    return data

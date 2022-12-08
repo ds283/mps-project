@@ -23,7 +23,7 @@ from dateutil.relativedelta import relativedelta
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session, abort
 from flask_mailman import EmailMultiAlternatives
 from flask_security import roles_accepted, current_user
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, cast, String
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm import with_polymorphic
 from sqlalchemy.orm.exc import StaleDataError
@@ -1021,7 +1021,7 @@ def enrol_selectors(id):
                            year_filter=year_filter)
 
 
-@convenor.route('/enrol_selectors_ajax/<int:id>')
+@convenor.route('/enrol_selectors_ajax/<int:id>', methods=['POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def enrol_selectors_ajax(id):
     """
@@ -1066,12 +1066,75 @@ def enrol_selectors_ajax(id):
     elif prog_filter.lower() == 'all':
         candidates = candidates.filter(or_(StudentData.programme_id == p.id for p in pclass.programmes))
 
-    if year_flag:
-        candidates = [s for s in candidates.all() if (s.academic_year is None or (not s.has_graduated and s.academic_year == year_value))]
-    else:
-        candidates = candidates.all()
+    if not year_flag:
+        # use SQL server-side handler for performance if it is possible
+        # (we can't use SQL to filter by the available years because this also tests for students that have
+        # graduated)
+        return enrol_selectors_ajax_handler(request, candidates, config)
 
-    return ajax.convenor.enrol_selectors_data(candidates, config)
+    return enrol_selectors_ajax_handler(request, candidates, config,  year_value)
+
+
+def _filter_candidates(year: int, row: StudentData):
+    if row.has_graduated:
+        return False
+
+    if year is None or row.academic_year is None:
+        return True     # to avoid not offering students who should be visible
+
+    if row.academic_year != year:
+        return False
+
+    return True
+
+
+def enrol_selectors_ajax_handler(request, candidates, config: ProjectClassConfig, year_value: int=None):
+
+    def search_name(row: StudentData):
+        u: User = row.user
+        return u.first_name + ' ' + u.last_name
+
+    def sort_name(row: StudentData):
+        u: User = row.user
+        return [u.last_name, u.first_name]
+
+    def search_programme(row: StudentData):
+        p: DegreeProgramme = row.programme
+        return p.name
+
+    def sort_programme(row: StudentData):
+        p: DegreeProgramme = row.programme
+        return p.name
+
+    def search_cohort(row: StudentData):
+        return row.cohort
+
+    def sort_cohort(row: StudentData):
+        return row.cohort
+
+    def search_current_year(row: StudentData):
+        return row.academic_year
+
+    def sort_current_year(row: StudentData):
+        return row.academic_year
+
+    name = {'search': search_name,
+            'order': sort_name}
+    programme = {'search': search_programme,
+                 'order': sort_programme}
+    cohort = {'search': search_cohort,
+              'order': sort_cohort}
+    current_year = {'search': search_current_year,
+                    'order': sort_current_year}
+
+    columns = {'name': name,
+               'programme': programme,
+               'cohort': cohort,
+               'current_year': current_year}
+
+    with ServerSideInMemoryHandler(request, candidates, columns,
+                                   row_filter=partial(_filter_candidates, year_value)) as handler:
+        return handler.build_payload(partial(ajax.convenor.enrol_selectors_data, config))
 
 
 @convenor.route('/enroll_all_selectors/<int:configid>')
@@ -1113,12 +1176,10 @@ def enrol_all_selectors(configid):
     if prog_flag:
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
-    if year_flag:
-        candidates = [s for s in candidates.all() if (s.academic_year is None or (not s.has_graduated and s.academic_year == year_value))]
-    else:
-        candidates = candidates.all()
+    year = year_value if year_flag else None
+    c_list = [x for x in candidates.all() if _filter_candidates(year, x)]
 
-    for c in candidates:
+    for c in c_list:
         add_selector(c, configid, convert=convert, autocommit=False)
 
     try:

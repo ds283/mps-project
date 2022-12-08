@@ -344,8 +344,7 @@ def edit_levels_ajax():
               'order': FHEQ_Level.colour,
               'search_collation': 'utf8_general_ci'}
     numeric_level = {'order': FHEQ_Level.numeric_level,
-                     'search': cast(FHEQ_Level.numeric_level, String),
-                     'search_collation': 'utf8_general_ci'}
+                     'search': cast(FHEQ_Level.numeric_level, String)}
     status = {'order': FHEQ_Level.active}
 
     columns = {'name': name,
@@ -372,8 +371,7 @@ def degree_types_ajax():
             'search_collation': 'utf8_general_ci'}
     level = {'order': DegreeType.level}
     duration = {'search': cast(DegreeType.duration, String),
-                'order': DegreeType.duration,
-                'search_collation': 'utf8_general_ci'}
+                'order': DegreeType.duration}
     colour = {'search': DegreeType.colour,
               'order': DegreeType.colour,
               'search_collation': 'utf8_general_ci'}

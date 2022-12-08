@@ -1107,13 +1107,13 @@ def enrol_selectors_ajax_handler(request, candidates, config: ProjectClassConfig
         return p.name
 
     def search_cohort(row: StudentData):
-        return row.cohort
+        return str(row.cohort)
 
     def sort_cohort(row: StudentData):
         return row.cohort
 
     def search_current_year(row: StudentData):
-        return row.academic_year
+        return str(row.academic_year)
 
     def sort_current_year(row: StudentData):
         return row.academic_year

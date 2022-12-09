@@ -48,7 +48,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
     GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, \
     ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules, \
-    BuildPossibleOfficeContacts, BuildOfficeContactName
+    BuildPossibleOfficeContacts, BuildOfficeContactName, BuildPossibleApprovers, BuildApproverName
 
 from ..shared.forms.mixins import SaveChangesMixin, SubmissionPeriodPresentationsMixin
 
@@ -254,11 +254,11 @@ class ProjectClassMixin():
                                                'location to manage projects.')
 
     student_level = SelectField('Student level',
-                                description='Select whether this project type applies to UG, PGT or PGR students.',
+                                description='Determines whether this project type applies to UG, PGT or PGR students.',
                                 choices=student_level_choices, coerce=int)
 
     start_year = SelectField('Starts in academic year',
-                             description='Select the academic year in which students join the project.',
+                             description='Determines the academic year in which students join the project.',
                              choices=start_year_choices, coerce=int)
 
     extent = SelectField('Duration', choices=extent_choices, coerce=int,
@@ -350,6 +350,19 @@ class ProjectClassMixin():
                                                            'project lifecycle.',
                                                validators=[Optional()])
 
+    approvals_team = QuerySelectMultipleField('Approvals team', query_factory=BuildPossibleApprovers,
+                                              get_label=BuildApproverName,
+                                              description='Specify one or members of the approvals pool '
+                                                          'who will be able to approve changes to project '
+                                                          'descriptions.',
+                                              allow_blank=False)
+
+    @staticmethod
+    def validate_approvals_team(form, field):
+        if field.data is None or not isinstance(field.data, list) or len(field.data) == 0:
+            raise ValidationError("At least one member of the approvals pool should be selected to join the "
+                                  "approvals team.")
+
     select_in_previous_cycle = BooleanField('Project selection occurs in previous cycle',
                                             description='Select this option if selectors submit their preferences in the '
                                                         'academic cycle before the project runs. This is commonly the case for UG '
@@ -382,7 +395,7 @@ class ProjectClassMixin():
             return
 
         # otherwise, at least one programme should be specified
-        if field.data is None or (isinstance(field.data, list) and len(field.data) == 0):
+        if field.data is None or not isinstance(field.data, list) or len(field.data) == 0:
             raise ValidationError("At least one degree programme should be selected")
 
         # check all programmes are consistent with the specified project level

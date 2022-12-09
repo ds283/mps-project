@@ -31,6 +31,9 @@
             $('#office_contacts').chosen({
                 placeholder_text_multiple: 'Select zero or more office staff...'
             })
+            $('#approvals_team').chosen({
+                placeholder_text_multiple: 'Select one or more members of the approvals pool...'
+            })
 
             $('#colour-group').colorpicker({
                 format: 'hex',
@@ -89,6 +92,9 @@
         <div class="card mt-3 mb-3 card-body bg-well">
             <p class="form-group-heading">Project administration and convening team</p>
             {{ wtf.render_field(pclass_form.convenor) }}
+            <div class="mt-2">
+                {{ wtf.render_field(pclass_form.approvals_team) }}
+            </div>
 
             <div class="row vertical-top">
                 <div class="col-6">

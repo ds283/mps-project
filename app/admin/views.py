@@ -1498,6 +1498,7 @@ def add_pclass():
                                 convenor=form.convenor.data,
                                 coconvenors=coconvenors,
                                 office_contacts=form.office_contacts.data,
+                                approvals_team=form.approvals_team.data,
                                 select_in_previous_cycle=form.select_in_previous_cycle.data,
                                 selection_open_to_all=form.selection_open_to_all.data,
                                 auto_enrol_enable=form.auto_enrol_enable.data,
@@ -1657,6 +1658,7 @@ def edit_pclass(id):
         data.convenor = form.convenor.data
         data.coconvenors = coconvenors
         data.office_contacts = form.office_contacts.data
+        data.approvals_team = form.approvals_team.data
         data.select_in_previous_cycle = form.select_in_previous_cycle.data
         data.selection_open_to_all = form.selection_open_to_all.data
         data.auto_enrol_enable = form.auto_enrol_enable.data

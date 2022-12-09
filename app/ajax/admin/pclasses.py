@@ -211,7 +211,7 @@ _timing = \
         <span class="badge bg-danger">Enrol: unknown</span>
     {% endif %}
 {% else %}
-    <span class="badge bg-warning text-dark">No auto-enrolment</span>
+    <span class="badge bg-warning text-dark">No auto-enrol</span>
 {% endif %}
 """
 
@@ -223,6 +223,8 @@ _name = \
 <span class="badge {% if p.student_level >= p.LEVEL_UG and p.student_level <= p.LEVEL_PGR %}bg-secondary{% else %}bg-danger{% endif %}">
     {{ p._level_text(p.student_level) }}
 </span>
+{% set num_approvers = p.number_approvals_team %}
+<span class="badge {% if num_approvers > 0 %}bg-secondary{% else %}bg-danger{% endif %}">{{ num_approvers }} approver{%- if num_approvers != 1 -%}s{%- endif -%}</span>
 <div class="mt-2">
 {% if p.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>

@@ -36,7 +36,7 @@ def GetActiveSkillGroups():
     return SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc())
 
 
-def BuildDegreeProgrammeName(programme):
+def BuildDegreeProgrammeName(programme: DegreeProgramme):
     return programme.full_name
 
 
@@ -60,15 +60,26 @@ def BuildPossibleOfficeContacts():
         .order_by(User.last_name, User.first_name)
 
 
-def BuildActiveFacultyName(fac):
+def BuildPossibleApprovers():
+    return db.session.query(User) \
+        .filter(User.active, or_(User.roles.any(name='project_approver'),
+                                 User.roles.any(name='root'))) \
+        .order_by(User.last_name, User.first_name)
+
+
+def BuildActiveFacultyName(fac: FacultyData):
     return fac.user.name
 
 
-def BuildConvenorRealName(fac):
+def BuildConvenorRealName(fac: FacultyData):
     return fac.user.name
 
 
-def BuildOfficeContactName(user):
+def BuildOfficeContactName(user: User):
+    return user.name
+
+
+def BuildApproverName(user: User):
     return user.name
 
 
@@ -89,7 +100,7 @@ def GetSysadminUsers():
         .order_by(User.last_name, User.first_name)
 
 
-def BuildSysadminUserName(user):
+def BuildSysadminUserName(user: User):
     return user.name_and_username
 
 

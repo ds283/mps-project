@@ -1190,6 +1190,12 @@ office_contacts = db.Table('office_contacts',
                            db.Column('office_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
 
 
+# association table giving approvals team for a project class
+approvals_team = db.Table('approvals_team',
+                          db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
+                          db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
+
+
 # track who has received a Go Live email notification so that we don't double-post
 golive_emails = db.Table('golive_emails',
                          db.Column('config_id', db.Integer(), db.ForeignKey('project_class_config.id'), primary_key=True),
@@ -4407,6 +4413,14 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     # between convenors
     coconvenors = db.relationship('FacultyData', secondary=pclass_coconvenors, lazy='dynamic',
                                   backref=db.backref('coconvenor_for', lazy='dynamic'))
+
+    # approvals team
+    approvals_team = db.relationship('User', secondary=approvals_team, lazy='dynamic',
+                                     backref=db.backref('approver_for', lazy='dynamic'))
+
+    @property
+    def number_approvals_team(self):
+        return get_count(self.approvals_team)
 
     # School Office contacts
     office_contacts = db.relationship('User', secondary=office_contacts, lazy='dynamic',

@@ -1512,6 +1512,8 @@ def add_pclass():
                                 CATS_presentation=form.CATS_presentation.data,
                                 keep_hourly_popularity=form.keep_hourly_popularity.data,
                                 keep_daily_popularity=form.keep_daily_popularity.data,
+                                advertise_research_group=form.advertise_research_group.data,
+                                use_project_tags=form.use_project_tags.data,
                                 card_text_noninitial=None,
                                 card_text_normal=None,
                                 card_text_optional=None,
@@ -1606,6 +1608,8 @@ def add_pclass():
             form.display_presentations.data = True
             form.auto_enroll_years.data = ProjectClass.AUTO_ENROLL_FIRST_YEAR
             form.do_matching.data = True
+            form.advertise_research_group = True
+            form.use_project_tags = False
 
     return render_template('admin/edit_project_class.html', pclass_form=form, title='Add new project class')
 
@@ -1657,6 +1661,8 @@ def edit_pclass(id):
         data.selection_open_to_all = form.selection_open_to_all.data
         data.auto_enrol_enable = form.auto_enrol_enable.data
         data.auto_enroll_years = form.auto_enroll_years.data
+        data.advertise_research_group = form.advertise_research_group.data
+        data.use_project_tags = form.use_project_tags.data
         data.programmes = form.programmes.data
         data.initial_choices = form.initial_choices.data
         data.switch_choices = form.switch_choices.data
@@ -1703,6 +1709,10 @@ def edit_pclass(id):
                 form.display_marker.data = True
             if form.display_presentations.data is None:
                 form.display_presentations = True
+            if form.advertise_research_group.data is None:
+                form.advertise_research_group.data = True
+            if form.use_project_tags.data is None:
+                form.use_project_tags.data = False
 
     return render_template('admin/edit_project_class.html', pclass_form=form, pclass=data,
                            title='Edit project class')

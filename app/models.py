@@ -4293,6 +4293,7 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     auto_enrol_enable = db.Column(db.Boolean(), default=True)
 
     # in which years should students be auto-enrolled as selectors?
+    # takes values from AutoEnrolMixin (AUTO_ENROLL_FIRST_YEAR, AUTO_ENROLL_ALL_YEARS)
     auto_enroll_years = db.Column(db.Integer(), default=AutoEnrolMixin.AUTO_ENROLL_FIRST_YEAR)
 
     @validates('auto_enroll_years')
@@ -4304,6 +4305,15 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
             value = self.AUTO_ENROLL_FIRST_YEAR
 
         return value
+
+
+    # INFORMATION PRESENTED TO STUDENTS
+
+    # advertise research group information for each project
+    advertise_research_group = db.Column(db.Boolean(), default=True)
+
+    # use tags for each project
+    use_project_tags = db.Column(db.Boolean(), default=False)
 
 
     # SELECTOR CARD TEXT
@@ -5212,6 +5222,16 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     @property
     def auto_enroll_years(self):
         return self.project_class.auto_enroll_years
+
+
+    @property
+    def advertise_research_group(self):
+        return self.project_class.advertise_research_group
+
+
+    @property
+    def use_project_tags(self):
+        return self.project_class.use_project_tags
 
 
     @property

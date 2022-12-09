@@ -129,9 +129,16 @@
                 </div>
             </div>
             <div class="mt-2">
+                {{ wtf.render_field(pclass_form.advertise_research_group) }}
+            </div>
+            <div class="mt-2">
+                {{ wtf.render_field(pclass_form.use_project_tags) }}
+            </div>
+            <div class="mt-2">
                 {{ wtf.render_field(pclass_form.include_available) }}
             </div>
         </div>
+
         <div class="card mt-3 mb-3 card-body bg-well">
             <p class="form-group-heading">Project lifecycle</p>
             <div class="row vertical-top">

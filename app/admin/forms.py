@@ -393,6 +393,16 @@ class ProjectClassMixin():
                 raise ValidationError("The selected degree programmes are not consistent with the required "
                                       "student level")
 
+    advertise_research_group = BooleanField('Advertise research group affiliations to students',
+                                            description='If selected, students will be shown the research group '
+                                                        'associated with each project. For example, this could be '
+                                                        'used to drive improved awareness of research teams '
+                                                        'within the department.')
+
+    use_project_tags = BooleanField('Use tags',
+                                    description='If selected, each project variant can be given one or more '
+                                                'tags. The tags are advertised to students.')
+
 
 class AddProjectClassForm(Form, ProjectClassMixin):
 

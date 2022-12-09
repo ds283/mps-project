@@ -1,17 +1,19 @@
 {% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
-{% from "chosen.html" import import_chosen %}
+{% from "select2.html" import import_select2 %}
 
 {% block scripts %}
     {{ super() }}
-    {{ import_chosen() }}
+    {{ import_select2() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#destination').chosen();
+            $('#destination').select2({
+                theme: 'bootstrap-5'
+            });
         });
     </script>
 {% endblock %}

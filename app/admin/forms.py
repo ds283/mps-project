@@ -342,10 +342,12 @@ class ProjectClassMixin():
                                                        'helping with administration during a transition period.',
                                            validators=[Optional()])
 
-    office_contacts = QuerySelectMultipleField('School Office contacts', query_factory=BuildPossibleOfficeContacts,
+    office_contacts = QuerySelectMultipleField('Professional Services contacts', query_factory=BuildPossibleOfficeContacts,
                                                get_label=BuildOfficeContactName,
-                                               description='Specify one or more members of the office team '
-                                                           'who act as contacts for this project type. Office contacts '
+                                               description='Specify one or more members of the professional services '
+                                                           '(School Office) team '
+                                                           'who act as contacts for this project type. Professional '
+                                                           'services contacts '
                                                            'receive email updates to keep them appraised of the '
                                                            'project lifecycle.',
                                                validators=[Optional()])

@@ -1,19 +1,25 @@
 {% extends "security/index.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
-{% from "chosen.html" import import_chosen %}
+{% from "select2.html" import import_select2 %}
 
 {% block scripts %}
     {{ super() }}
-    {{ import_chosen() }}
+    {{ import_select2() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#programme').chosen();
-            $('#academic_title').chosen();
-            $('#default_license').chosen();
+            $('#programme').select2({
+                theme: 'bootstrap-5'
+            });
+            $('#academic_title').select2({
+                theme: 'bootstrap-5'
+            });
+            $('#default_license').select2({
+                theme: 'bootstrap-5'
+            });
         });
     </script>
 {% endblock %}

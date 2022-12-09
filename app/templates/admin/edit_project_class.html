@@ -3,7 +3,7 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, colour_field %}
 {% from "icon_block.html" import icon_block %}
-{% from "chosen.html" import import_chosen %}
+{% from "select2.html" import import_select2 %}
 
 {% block scripts %}
     {{ super() }}
@@ -15,24 +15,38 @@
         <script src="{{ ASSET_URL }}"></script>
     {% endassets %}
 
-    {{ import_chosen() }}
+    {{ import_select2() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#programmes').chosen({
-                placeholder_text_multiple: 'Select one or more degree programmes...'
+            $('#programmes').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select one or more degree programmes...'
             })
-            $('#convenor').chosen()
-            $('#coconvenors').chosen({
-                placeholder_text_multiple: 'Select zero or more faculty members...'
+            $('#convenor').select2({
+                theme: 'bootstrap-5'
             })
-            $('#office_contacts').chosen({
-                placeholder_text_multiple: 'Select zero or more office staff...'
+            $('#coconvenors').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select zero or more faculty members...'
             })
-            $('#approvals_team').chosen({
-                placeholder_text_multiple: 'Select one or more members of the approvals pool...'
+            $('#office_contacts').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select zero or more office staff...'
+            })
+            $('#approvals_team').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select one or more members of the approvals pool...'
             })
 
             $('#colour-group').colorpicker({
@@ -95,14 +109,11 @@
             <div class="mt-2">
                 {{ wtf.render_field(pclass_form.approvals_team) }}
             </div>
-
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.coconvenors) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.office_contacts) }}
-                </div>
+            <div class="mt-2">
+                {{ wtf.render_field(pclass_form.coconvenors) }}
+            </div>
+            <div class="mt-2>">
+                {{ wtf.render_field(pclass_form.office_contacts) }}
             </div>
         </div>
 

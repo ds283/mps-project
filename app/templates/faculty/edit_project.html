@@ -2,20 +2,27 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
-{% from "chosen.html" import import_chosen %}
+{% from "select2.html" import import_select2 %}
 
 {% block scripts %}
     {{ super() }}
-    {{ import_chosen() }}
+    {{ import_select2() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#group').chosen();
-            $('#owner').chosen();
-            $('#project_classes').chosen({
-                placeholder_text_multiple: 'Select one or more project classes...'
+            $('#group').select2({
+                theme: 'bootstrap-5'
+            });
+            $('#owner').select2({
+                theme: 'bootstrap-5'
+            });
+            $('#project_classes').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select one or more project classes...'
             });
         });
     </script>
@@ -58,27 +65,33 @@
             {{ wtf.render_field(project_form.owner) }}
         {% endif %}
 
-        {{ wtf.render_field(project_form.project_classes) }}
-
-        <div class="card mt-3 mb-3 card-body bg-well">
-            {{ wtf.render_field(project_form.meeting_reqd) }}
-            {{ wtf.render_field(project_form.enforce_capacity) }}
-            {{ wtf.render_field(project_form.dont_clash_presentations) }}
-            <div class="form-group-heading mt-2">Should the project page include popularity information?</div>
-            <div class="form-text text-muted mb-3">
-                This information is intended to help students gauge whether a project is likely to be
-                oversubscribed.
-            </div>
-            {{ wtf.render_field(project_form.show_popularity) }}
-            {{ wtf.render_field(project_form.show_bookmarks) }}
-            {{ wtf.render_field(project_form.show_selections) }}
+        <div class="mt-2">
+            {{ wtf.render_field(project_form.project_classes) }}
         </div>
 
-        {{ wtf.render_field(project_form.submit, button_map={'submit': 'primary'}) }}
-        {% if project_form.save_and_exit %}
-            {{ wtf.render_field(project_form.save_and_exit, button_map={'save_and_exit': 'secondary'}) }}
-        {% endif %}
-        {{ wtf.render_field(project_form.save_and_preview, button_map={'save_and_preview': 'secondary'}) }}
+        <span class="form-group-heading mt-4">Configuration</span>
+        <div class="mt-2">
+            {{ wtf.render_field(project_form.meeting_reqd) }}
+        </div>
+        {{ wtf.render_field(project_form.enforce_capacity) }}
+        {{ wtf.render_field(project_form.dont_clash_presentations) }}
+
+        <div class="form-group-heading mt-4">Should the project page include popularity information?</div>
+        <div class="form-text text-muted mb-2">
+            This information is intended to help students gauge whether a project is likely to be
+            oversubscribed.
+        </div>
+        {{ wtf.render_field(project_form.show_popularity) }}
+        {{ wtf.render_field(project_form.show_bookmarks) }}
+        {{ wtf.render_field(project_form.show_selections) }}
+
+        <div class="mt-3">
+            {{ wtf.render_field(project_form.submit, button_map={'submit': 'primary'}) }}
+            {% if project_form.save_and_exit %}
+                {{ wtf.render_field(project_form.save_and_exit, button_map={'save_and_exit': 'secondary'}) }}
+            {% endif %}
+            {{ wtf.render_field(project_form.save_and_preview, button_map={'save_and_preview': 'secondary'}) }}
+        </div>
 
     </form>
 {% endblock %}

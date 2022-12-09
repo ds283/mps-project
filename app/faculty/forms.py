@@ -47,8 +47,10 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
         # allow the project_class list to be empty (but then the project is not offered)
         project_classes = QuerySelectMultipleField('Select the project classes for which you wish to offer this project',
                                                    query_factory=project_classes_qf, get_label='name',
-                                                   description='Set up descriptions for the different "flavours" of '
-                                                               'this project in the "Variants" view.')
+                                                   description='Set up descriptions for versions of this '
+                                                               'project that apply to different programmes (or groups '
+                                                               'of programmes) using the "Variants" option from the'
+                                                               '"Actions" dropdown in your project library view.')
 
         # project options
 
@@ -58,13 +60,15 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
         meeting_reqd = SelectField('Meeting required?', choices=meeting_options, coerce=int)
 
         enforce_capacity = BooleanField('Enforce maximum capacity', default=True,
-                                        description='Select if you wish to prevent the automated matching algorithm '
+                                        description='Enable this option if you wish to prevent the '
+                                                    'automated matching algorithm '
                                                     'allocating more students to your projects than a specified '
                                                     'maximum.')
 
         dont_clash_presentations = BooleanField("Prevent co-scheduling presentation with multiple students taking "
                                                 "the same project", default=True,
-                                                description='Select if you wish to prevent multiple students taking '
+                                                description='Enable this option if you wish to prevent multiple '
+                                                            'students taking '
                                                             'this project from being scheduled to give presentations '
                                                             'in the same session. Students often prefer this '
                                                             'arrangement, so by default it is usually enabled. '

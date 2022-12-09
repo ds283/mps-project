@@ -2,12 +2,12 @@
 
 {% from "macros.html" import on_click_selector_field %}
 {% from "datatables.html" import import_datatables %}
-{% from "chosen.html" import import_chosen %}
+{% from "select2.html" import import_select2 %}
 
 {% block scripts %}
     {{ super() }}
     {{ import_datatables() }}
-    {{ import_chosen() }}
+    {{ import_select2() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -37,8 +37,11 @@
                 ],
                 order: [[0, 'asc']]
             });
-            $('#marker').chosen({
-                placeholder_text_single: 'Select a marker for this project...'
+            $('#marker').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select a marker for this project...'
             });
         });
     </script>

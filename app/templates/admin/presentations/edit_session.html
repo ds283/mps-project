@@ -2,11 +2,11 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, date_field %}
-{% from "chosen.html" import import_chosen %}
+{% from "select2.html" import import_select2 %}
 
 {% block scripts %}
     {{ super() }}
-    {{ import_chosen() }}
+    {{ import_select2() }}
 
     {% assets filters="cssmin", output="gen/tempusdominus-bootstrap-4.min.css", "css/tempusdominus-bootstrap-4.css" -%}
         <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
@@ -28,8 +28,11 @@
                 format: 'DD/MM/YYYY',
                 allowInputToggle: true
             });
-            $('#rooms').chosen({
-                placeholder_text_multiple: 'Select all available rooms...'
+            $('#rooms').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select all available rooms...'
             });
         });
     </script>

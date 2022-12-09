@@ -2,21 +2,27 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
-{% from "chosen.html" import import_chosen %}
+{% from "select2.html" import import_select2 %}
 
 {% block scripts %}
     {{ super() }}
-    {{ import_chosen() }}
+    {{ import_select2() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#project_classes').chosen({
-                placeholder_text_multiple: 'Select one or more project classes...'
+            $('#project_classes').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select one or more project classes...'
             });
-            $('#team').chosen({
-                placeholder_text_multiple: 'Select one or more supervision team members...'
+            $('#team').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select one or more supervision team members...'
             });
         });
     </script>

@@ -297,16 +297,17 @@ class ProjectDescriptionWorkflowHistory(db.Model, WorkflowHistoryMixin):
                             backref=db.backref('workflow_history', lazy='dynamic'))
 
 
-def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping_table, skills_mapped_column,
-                                     skills_self_column, allow_edit_skills, programmes_mapping_table,
-                                     programme_mapped_column, programme_self_column, allow_edit_programmes,
+def ProjectConfigurationMixinFactory(backref_label, force_unique_names,
+                                     skills_mapping_table, skills_mapped_column, skills_self_column, allow_edit_skills,
+                                     programmes_mapping_table, programmes_mapped_column, programmes_self_column, allow_edit_programmes,
+                                     tags_mapping_table, tags_mapped_column, tags_self_column, allow_edit_tags,
                                      assessor_mapping_table, assessor_mapped_column, assessor_self_column,
                                      assessor_backref_label, allow_edit_assessors):
 
     class ProjectConfigurationMixin():
         # project name
         name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'),
-                         unique=(unique_names=='unique'), index=True)
+                         unique=(force_unique_names == 'unique'), index=True)
 
         # which faculty member owns this project?
         @declared_attr
@@ -325,10 +326,33 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
         # free keywords describing scientific area
         keywords = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
+        # normalized tags associated with this project (if any)
+        @declared_attr
+        def tags(cls):
+            return db.relationship('ProjectTag', secondary=tags_mapping_table, lazy='dynamic',
+                                   backref=db.backref(backref_label, lazy='dynamic'))
+
+        if allow_edit_tags == 'allow':
+            def add_tag(self, tag):
+                self.tags.append(tag)
+
+            def remove_tag(self, tag):
+                self.tags.remove(tag)
+
+
+        @property
+        def ordered_tags(self):
+            query = db.session.query(tags_mapped_column.label('tag_id')) \
+                .filter(tags_self_column == self.id).subquery()
+
+            return db.session.query(ProjectTag) \
+                .join(query, query.c.tag_id == ProjectTag.id) \
+                .order_by(ProjectTag.name.asc())
+
         # which research group is associated with this project?
         @declared_attr
         def group_id(cls):
-            return db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
+            return db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True, nullable=True)
 
 
         @declared_attr
@@ -346,7 +370,6 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
         if allow_edit_skills == 'allow':
             def add_skill(self, skill):
                 self.skills.append(skill)
-
 
             def remove_skill(self, skill):
                 self.skills.remove(skill)
@@ -375,15 +398,14 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
             def add_programme(self, prog):
                 self.programmes.append(prog)
 
-
             def remove_programme(self, prog):
                 self.programmes.remove(prog)
 
 
         @property
         def ordered_programmes(self):
-            query = db.session.query(programme_mapped_column.label('programme_id')) \
-                .filter(programme_self_column == self.id).subquery()
+            query = db.session.query(programmes_mapped_column.label('programme_id')) \
+                .filter(programmes_self_column == self.id).subquery()
 
             return db.session.query(DegreeProgramme) \
                 .join(query, query.c.programme_id == DegreeProgramme.id) \
@@ -564,7 +586,8 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
     return ProjectConfigurationMixin
 
 
-def ProjectDescriptionMixinFactory(team_mapping_table, team_backref, module_mapping_table, module_backref,
+def ProjectDescriptionMixinFactory(team_mapping_table, team_backref,
+                                   module_mapping_table, module_backref,
                                    module_mapped_column, module_self_column):
 
     class ProjectDescriptionMixin():
@@ -1261,6 +1284,11 @@ description_to_modules = db.Table('description_to_modules',
                                   db.Column('description_id', db.Integer(), db.ForeignKey('descriptions.id'), primary_key=True),
                                   db.Column('module_id', db.Integer(), db.ForeignKey('modules.id'), primary_key=True))
 
+# association table linking projects to tags
+project_tags = db.Table('project_to_tags',
+                        db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
+                        db.Column('tag_id', db.Integer(), db.ForeignKey('project_tags.id'), primary_key=True))
+
 
 # PROJECT ASSOCIATIONS (LIVE)
 
@@ -1289,6 +1317,11 @@ live_assessors = db.Table('live_project_to_assessors',
 live_project_to_modules = db.Table('live_project_to_modules',
                                    db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
                                    db.Column('module_id', db.Integer(), db.ForeignKey('modules.id'), primary_key=True))
+
+# association table linking projects to tags
+live_project_tags = db.Table('live_project_to_tags',
+                             db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
+                             db.Column('tag_id', db.Integer(), db.ForeignKey('project_tags.id'), primary_key=True))
 
 
 # CONVENOR FILTERS
@@ -6453,11 +6486,12 @@ def _Project_num_assessors(pid, pclass_id):
 
 
 class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
-              ProjectConfigurationMixinFactory('projects', 'unique', project_skills, project_skills.c.skill_id,
-                                               project_skills.c.project_id, 'allow', project_programmes,
-                                               project_programmes.c.programme_id, project_programmes.c.project_id,
-                                               'allow', project_assessors, project_assessors.c.faculty_id,
-                                               project_assessors.c.project_id, 'assessor_for', 'allow')):
+              ProjectConfigurationMixinFactory(backref_label='projects', force_unique_names='unique',
+                                               skills_mapping_table=project_skills, skills_mapped_column=project_skills.c.skill_id, skills_self_column=project_skills.c.project_id, allow_edit_skills='allow',
+                                               programmes_mapping_table=project_programmes, programmes_mapped_column=project_programmes.c.programme_id, programmes_self_column=project_programmes.c.project_id, allow_edit_programmes='allow',
+                                               tags_mapping_table=project_tags, tags_mapped_column=project_tags.c.tag_id, tags_self_column=project_tags.c.project_id, allow_edit_tags='allow',
+                                               assessor_mapping_table=project_assessors, assessor_mapped_column=project_assessors.c.faculty_id, assessor_self_column=project_assessors.c.project_id,
+                                               assessor_backref_label='assessor_for', allow_edit_assessors='allow')):
     """
     Model a project
     """
@@ -6947,9 +6981,9 @@ def _ProjectDescription_is_valid(id):
 
 
 class ProjectDescription(db.Model, EditingMetadataMixin,
-                         ProjectDescriptionMixinFactory(description_supervisors, 'descriptions', description_to_modules,
-                                                        'tagged_descriptions', description_to_modules.c.module_id,
-                                                        description_to_modules.c.description_id),
+                         ProjectDescriptionMixinFactory(team_mapping_table=description_supervisors, team_backref='descriptions',
+                                                        module_mapping_table=description_to_modules, module_backref='tagged_descriptions',
+                                                        module_mapped_column=description_to_modules.c.module_id, module_self_column=description_to_modules.c.description_id),
                          WorkflowMixin):
     """
     Capture a project description. Projects can have multiple descriptions, each
@@ -7349,16 +7383,15 @@ class LastViewingTime(db.Model):
 
 
 class LiveProject(db.Model,
-                  ProjectConfigurationMixinFactory('live_projects', 'arbitrary', live_project_skills,
-                                                   live_project_skills.c.skill_id, live_project_skills.c.project_id,
-                                                   'disallow', live_project_programmes,
-                                                   live_project_programmes.c.programme_id,
-                                                   live_project_programmes.c.project_id, 'disallow', live_assessors,
-                                                   live_assessors.c.faculty_id, live_assessors.c.project_id,
-                                                   'assessor_for_live', 'disallow'),
-                  ProjectDescriptionMixinFactory(live_project_supervision, 'live_projects', live_project_to_modules,
-                                                 'tagged_live_projects', live_project_to_modules.c.module_id,
-                                                 live_project_to_modules.c.project_id)):
+                  ProjectConfigurationMixinFactory(backref_label='live_projects', force_unique_names='arbitrary',
+                                                   skills_mapping_table=live_project_skills, skills_mapped_column=live_project_skills.c.skill_id, skills_self_column=live_project_skills.c.project_id, allow_edit_skills='disallow',
+                                                   programmes_mapping_table=live_project_programmes, programmes_mapped_column=live_project_programmes.c.programme_id, programmes_self_column=live_project_programmes.c.project_id, allow_edit_programmes='disallow',
+                                                   tags_mapping_table=live_project_tags, tags_mapped_column=live_project_tags.c.tag_id, tags_self_column=live_project_tags.c.project_id, allow_edit_tags='disallow',
+                                                   assessor_mapping_table=live_assessors, assessor_mapped_column=live_assessors.c.faculty_id, assessor_self_column=live_assessors.c.project_id,
+                                                   assessor_backref_label='assessor_for_live', allow_edit_assessors='disallow'),
+                  ProjectDescriptionMixinFactory(team_mapping_table=live_project_supervision, team_backref='live_projects',
+                                                 module_mapping_table=live_project_to_modules, module_backref='tagged_live_projects',
+                                                 module_mapped_column=live_project_to_modules.c.module_id, module_self_column=live_project_to_modules.c.project_id)):
     """
     The definitive live project table
     """

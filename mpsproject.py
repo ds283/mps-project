@@ -391,6 +391,7 @@ app = create_app()
     # migrate_temporary_exam_numbers()
     # migrate_exam_numbers_back()
     # migrate_email_recipients()
+    # migrate_project_tags()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

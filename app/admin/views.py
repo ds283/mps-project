@@ -2107,7 +2107,7 @@ def edit_supervisors():
     return render_template('admin/edit_supervisors.html')
 
 
-@admin.route('/supervisors_ajax')
+@admin.route('/supervisors_ajax', methods=['POST'])
 @roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def supervisors_ajax():
     """
@@ -2117,8 +2117,18 @@ def supervisors_ajax():
     if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
-    roles = Supervisor.query.all()
-    return ajax.admin.supervisors_data(roles)
+    base_query = db.session.query(Supervisor)
+
+    role = {'search': Supervisor.name,
+            'order': Supervisor.name,
+            'search_collation': 'utf8_general_ci'}
+    active = {'order': Supervisor.active}
+
+    columns = {'role': role,
+               'active': active}
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.admin.supervisors_data)
 
 
 @admin.route('/add_supervisor', methods=['GET', 'POST'])

@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
+from flask import render_template_string
 
 
 # language=jinja2
@@ -69,4 +69,4 @@ def supervisors_data(roles):
              'active': render_template_string(_active, r=r),
              'menu': render_template_string(_supervisors_menu, role=r)} for r in roles]
 
-    return jsonify(data)
+    return data

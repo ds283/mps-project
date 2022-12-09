@@ -6377,6 +6377,23 @@ class Supervisor(db.Model, ColouredLabelMixin, EditingMetadataMixin):
         return self._make_label(text, user_classes)
 
 
+class ProjectTag(db.Model, ColouredLabelMixin, EditingMetadataMixin):
+    """
+    Normalize a tag that can be attached to a project
+    """
+    __tablename__ = "project_tags"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # name of tag
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+
+    def make_label(self, user_classes=None):
+        return self._make_label(text=self.name, user_classes=user_classes)
+
+
 @cache.memoize()
 def _Project_is_offerable(pid):
     """

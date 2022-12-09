@@ -6414,7 +6414,10 @@ def _Project_is_offerable(pid):
 
     # CONSTRAINT 2. The affiliated research group should be active
     if project.group is None:
-        errors['groups'] = "No active research group affiliated with project"
+        errors['groups'] = "No research group affiliated with project"
+
+        if not project.group.active:
+            errors['groups'] = "The project's affiliated research group is not active"
 
     # CONSTRAINT 3. For each attached project class, we should have enough assessors.
     # Also, there should be a project description

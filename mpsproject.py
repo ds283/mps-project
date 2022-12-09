@@ -7,15 +7,15 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-
-from datetime import timedelta
+import re
+from datetime import timedelta, datetime
 from email.utils import parseaddr
 
 from app import create_app, db
 from app.models import PresentationAssessment, \
     AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
     SelectingStudent, ProjectDescription, Project, WorkflowMixin, EnrollmentRecord, StudentDataWorkflowHistory, \
-    ProjectDescriptionWorkflowHistory, MainConfig, AssetLicense, EmailLog
+    ProjectDescriptionWorkflowHistory, MainConfig, AssetLicense, EmailLog, ProjectTag
 
 
 def migrate_availability_data():
@@ -370,9 +370,38 @@ def migrate_email_recipients():
     db.session.commit()
 
 
+def migrate_project_tags():
+    projects = db.session.query(Project).all()
+
+    for p in projects:
+        p: Project
+
+        keywords = p.keywords
+        if keywords is not None:
+            keywords = [kw.strip() for kw in re.split("[;,]", keywords)]
+            keywords = [w for w in keywords if len(w) > 0]
+
+            for kw in keywords:
+                tag = db.session.query(ProjectTag).filter_by(name=kw).first()
+
+                if tag is not None:
+                    if tag not in p.tags:
+                        p.add_tag(tag)
+                else:
+                    tag = ProjectTag(name=kw,
+                                     colour=None,
+                                     creator_id=p.owner.user.id,
+                                     creation_timestamp=datetime.now())
+                    db.session.add(tag)
+                    db.session.flush()
+                    p.add_tag(tag)
+
+    db.session.commit()
+
+
 app = create_app()
 
-# with app.app_context():
+with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -391,7 +420,7 @@ app = create_app()
     # migrate_temporary_exam_numbers()
     # migrate_exam_numbers_back()
     # migrate_email_recipients()
-    # migrate_project_tags()
+    migrate_project_tags()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

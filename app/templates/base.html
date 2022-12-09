@@ -427,7 +427,9 @@
                                         <div role="separator" class="dropdown-divider"></div>
                                         {% set needs_divider = false %}
                                     {% endif %}
-                                    <div class="dropdown-header">Sysadmin only</div>
+                                    {% if matching_ready or has_assessments %}
+                                        <div class="dropdown-header">Scheduling</div>
+                                    {% endif %}
                                     {% if matching_ready %}
                                         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.manage_matching') }}">
                                             <i class="fas fa-tools fa-fw"></i> Manage matching...
@@ -438,6 +440,7 @@
                                             <i class="fas fa-tools fa-fw"></i> Manage assessments...
                                         </a>
                                     {% endif %}
+                                    <div class="dropdown-header">Database configuration</div>
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_project_classes') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Project classes...
                                     </a>

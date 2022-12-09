@@ -102,6 +102,12 @@ _options = \
 {% if p.reenroll_supervisors_early %}
     <span class="badge bg-secondary">Re-enroll early</span>
 {% endif %}
+{% if p.advertise_research_group %}
+    <span class="badge bg-secondary">Research groups</span>
+{% endif %}
+{% if p.use_project_tags %}
+    <span class="badge bg-secondary">Tags</span>
+{% endif %}
 """
 
 # language=jinja2
@@ -205,7 +211,7 @@ _timing = \
         <span class="badge bg-danger">Enrol: unknown</span>
     {% endif %}
 {% else %}
-    <span class="badge bg-secondary">No auto-enrolment</span>
+    <span class="badge bg-warning text-dark">No auto-enrolment</span>
 {% endif %}
 """
 
@@ -214,15 +220,9 @@ _timing = \
 _name = \
 """
 {{ p.name }} {{ p.make_label(p.abbreviation)|safe }}
-{% if p.student_level == p.LEVEL_UG %}
-    <span class="badge bg-secondary">UG</span>
-{% elif p.student_level == p.LEVEL_PGT %}
-    <span class="badge bg-secondary">PGT</span>
-{% elif p.student_level == p.LEVEL_PGR %}
-    <span class="badge bg-secondary">PGR</span>
-{% else %}
-    <span class="badge bg-danger">Unknown</span>
-{% endif %}
+<span class="badge {% if p.student_level >= p.LEVEL_UG and p.student_level <= p.LEVEL_PGR %}bg-secondary{% else %}bg-danger{% endif %}">
+    {{ p._level_text(p.student_level) }}
+</span>
 <div class="mt-2">
 {% if p.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>

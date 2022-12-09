@@ -97,7 +97,7 @@ _name = \
 def degree_programmes_data(levels, programmes):
 
     data = [{'name': render_template_string(_name, p=p, levels=levels),
-             'type': p.degree_type.name,
+             'type': p.degree_type.make_label(show_type=True),
              'show_type': render_template_string(_show_type, p=p),
              'course_code': p.course_code,
              'active': render_template_string(_active, p=p),

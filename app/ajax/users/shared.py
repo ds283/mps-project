@@ -17,15 +17,9 @@ name = \
     {{ 'REPACTIVE'|safe }}
     {% set sd = u.student_data %}
     {% if sd and sd is not none %}
-        {% if sd.level == sd.LEVEL_UG %}
-            <span class="badge bg-primary">UG</span>
-        {% elif sd.level == sd.LEVEL_PGT %}
-            <span class="badge bg-primary">PGT</span>
-        {% elif sd.level == sd.LEVEL_PGR %}
-            <span class="badge bg-primary">PGR</span>
-        {% else %}
-            <span class="badge bg-danger">Unknown</span>
-        {% endif %}
+        <span class="badge {% if sd.level >= sd.LEVEL_UG and sd.level <= sd.LEVEL_PGR %}bg-secondary{% else %}bg-danger{% endif %}">
+            {{ sd._level_text(sd.level) }}
+        </span>
         {% if sd.intermitting %}
             <span class="badge bg-warning text-dark">TWD</span>
         {% endif %}

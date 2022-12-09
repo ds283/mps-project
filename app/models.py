@@ -836,9 +836,19 @@ class StudentLevelsMixin:
     StudentLeveLMixin encapsulates common programme level indicators; we only want to have one copy of these,
     in order to ensure consistency between different places where they are used in the implmentation
     """
-    LEVEL_PGR = 2
-    LEVEL_PGT = 1
     LEVEL_UG = 0
+    LEVEL_PGT = 1
+    LEVEL_PGR = 2
+
+    _level_text_map = {LEVEL_UG: 'UG',
+                       LEVEL_PGT: 'PGT',
+                       LEVEL_PGR: 'PGR'}
+
+    def _level_text(self, level: int):
+        if level in self._level_text_map:
+            return self._level_text_map[level]
+
+        return 'Unknown'
 
 
 class AutoEnrolMixin:
@@ -3928,9 +3938,12 @@ class DegreeType(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLeve
         self.active = True
 
 
-    def make_label(self, text=None, user_classes=None):
+    def make_label(self, text=None, user_classes=None, show_type=False):
         if text is None:
-            text = self.abbreviation
+            if show_type:
+                text = '{abbrv} ({type})'.format(abbrv=self.abbreviation, type=self._level_text(self.level))
+            else:
+                text = self.abbreviation
 
         return self._make_label(text, user_classes)
 

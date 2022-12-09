@@ -422,40 +422,22 @@
                                     </a>
                                     {% set needs_divider = true %}
                                 {% endif %}
-                                {% if is_root %}
+                                {% if is_root and (matching_ready or has_assessments) %}
                                     {% if needs_divider %}
                                         <div role="separator" class="dropdown-divider"></div>
                                         {% set needs_divider = false %}
                                     {% endif %}
-                                    {% if matching_ready or has_assessments %}
-                                        <div class="dropdown-header">Scheduling</div>
-                                    {% endif %}
+                                    <div class="dropdown-header">Scheduling</div>
                                     {% if matching_ready %}
                                         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.manage_matching') }}">
-                                            <i class="fas fa-tools fa-fw"></i> Manage matching...
+                                            <i class="fas fa-calendar fa-fw"></i> Manage matching...
                                         </a>
                                     {% endif %}
                                     {% if has_assessments %}
                                         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.manage_assessments') }}">
-                                            <i class="fas fa-tools fa-fw"></i> Manage assessments...
+                                            <i class="fas fa-calendar fa-fw"></i> Manage assessments...
                                         </a>
                                     {% endif %}
-                                    <div class="dropdown-header">Database configuration</div>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_project_classes') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Project classes...
-                                    </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_groups') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Research groups...
-                                    </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_degree_programmes') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Degree programmes...
-                                    </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_rooms') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Presentation venues...
-                                    </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_licenses') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Asset licenses...
-                                    </a>
                                 {% endif %}
                             </div>
                         </li>
@@ -499,6 +481,22 @@
                                         <i class="fas fa-wrench fa-fw"></i> Manage backups...
                                     </a>
                                     <div role="separator" class="dropdown-divider"></div>
+                                    <div class="dropdown-header">Database configuration</div>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_project_classes') }}">
+                                        <i class="fas fa-cogs fa-fw"></i> Project classes...
+                                    </a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_groups') }}">
+                                        <i class="fas fa-cogs fa-fw"></i> Research groups...
+                                    </a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_degree_programmes') }}">
+                                        <i class="fas fa-cogs fa-fw"></i> Degree programmes...
+                                    </a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_rooms') }}">
+                                        <i class="fas fa-cogs fa-fw"></i> Presentation venues...
+                                    </a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_licenses') }}">
+                                        <i class="fas fa-cogs fa-fw"></i> Asset licenses...
+                                    </a>
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_roles') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Role editor...
                                     </a>

@@ -13,17 +13,28 @@
 
         $(document).ready(function () {
             $('#skills').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/admin/skills_ajax', dataSrc: '' },
+                serverSide: true, processing: true,
+                ajax: { url: $SCRIPT_ROOT + '/admin/skills_ajax',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'name' },
-                    { data: 'group' },
-                    { data: 'active', },
-                    { data: 'menu' }
+                    { data: 'name',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'group',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'active',
+                      orderable: true,
+                      searchable: false },
+                    { data: 'menu',
+                      orderable: false,
+                      searchable: false }
                 ],
-                deferRender: true
+                order: [[0, 'asc']]
             });
         });
     </script>

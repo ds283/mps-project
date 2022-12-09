@@ -1033,7 +1033,7 @@ def edit_skills():
     return render_template('admin/transferable_skills/edit_skills.html', subpane='skills')
 
 
-@admin.route('/skills_ajax')
+@admin.route('/skills_ajax', methods=['POST'])
 @roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def skills_ajax():
     """
@@ -1043,8 +1043,23 @@ def skills_ajax():
     if not validate_is_admin_or_convenor('edit_tags'):
         return jsonify({})
 
-    skills = TransferableSkill.query.all()
-    return ajax.admin.skills_data(skills)
+    base_query = db.session.query(TransferableSkill) \
+        .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id)
+
+    name = {'search': TransferableSkill.name,
+            'order': TransferableSkill.name,
+            'search_collation': 'utf8_general_ci'}
+    group = {'search': SkillGroup.name,
+             'order': SkillGroup.name,
+             'search_collation': 'utf8_general_ci'}
+    active = {'order': TransferableSkill.active}
+
+    columns = {'name': name,
+               'group': group,
+               'active': active}
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.admin.skills_data)
 
 
 @admin.route('/add_skill', methods=['GET', 'POST'])
@@ -1186,7 +1201,7 @@ def edit_skill_groups():
     return render_template('admin/transferable_skills/edit_skill_groups.html', subpane='groups')
 
 
-@admin.route('/skill_groups_ajax')
+@admin.route('/skill_groups_ajax', methods=['POST'])
 @roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def skill_groups_ajax():
     """
@@ -1196,8 +1211,20 @@ def skill_groups_ajax():
     if not validate_is_admin_or_convenor('edit_tags'):
         return jsonify({})
 
-    groups = SkillGroup.query.all()
-    return ajax.admin.skill_groups.skill_groups_data(groups)
+    base_query = db.session.query(SkillGroup)
+
+    name = {'search': SkillGroup.name,
+            'order': SkillGroup.name,
+            'search_collation': 'utf8_general_ci'}
+    include = {'order': SkillGroup.add_group}
+    active = {'order': SkillGroup.active}
+
+    columns = {'name': name,
+               'include': include,
+               'active': active}
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.admin.skill_groups.skill_groups_data)
 
 
 @admin.route('/add_skill_group', methods=['GET', 'POST'])

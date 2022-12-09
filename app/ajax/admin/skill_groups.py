@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
+from flask import render_template_string
 
 
 # language=jinja2
@@ -67,4 +67,4 @@ def skill_groups_data(groups):
              'include': render_template_string(_include_name, g=g),
              'menu': render_template_string(_menu, group=g)} for g in groups]
 
-    return jsonify(data)
+    return data

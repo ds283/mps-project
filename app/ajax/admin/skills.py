@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
+from flask import render_template_string
 
 
 # language=jinja2
@@ -59,4 +59,4 @@ def skills_data(skills):
              'active': render_template_string(_active, a=s),
              'menu': render_template_string(_menu, skill=s)} for s in skills]
 
-    return jsonify(data)
+    return data

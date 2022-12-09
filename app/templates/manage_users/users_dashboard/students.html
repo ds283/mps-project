@@ -1,5 +1,9 @@
 {% extends "manage_users/users_dashboard/nav.html" %}
 
+{% if not level_filter or level_filter is none %}
+    {% set level_filter = 'all' %}
+{% endif %}
+
 {% if not prog_filter or prog_filter is none %}
     {% set prog_filter = 'all' %}
 {% endif %}
@@ -40,7 +44,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true, processing: true,
-                ajax: { url: $SCRIPT_ROOT + '/manage_users/users_students_ajax?prog_filter={{ prog_filter }}&cohort_filter={{ cohort_filter }}&year_filter={{ year_filter }}&valid_filter={{ valid_filter }}&&filter_TWD={{ filter_TWD_coded }}&&filter_SEND={{ filter_SEND_coded }}',
+                ajax: { url: $SCRIPT_ROOT + '/manage_users/users_students_ajax?level={{ level_filter }}&prog={{ prog_filter }}&cohort={{ cohort_filter }}&year={{ year_filter }}&valid={{ valid_filter }}&&TWD={{ filter_TWD_coded }}&&SEND={{ filter_SEND_coded }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
@@ -85,12 +89,12 @@
                     <div class="row">
                         <div class="col-12">
                             <p>Filter by programme</p>
-                            <a href="{{ url_for('manage_users.edit_users_students', prog_filter='all', cohort_filter=cohort_filter, year_filter=year_filter, valid_filter=valid_filter, filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                            <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog='all', cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                                class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                 All
                             </a>
                             {% for prog in programmes %}
-                                <a href="{{ url_for('manage_users.edit_users_students', prog_filter=prog.id, cohort_filter=cohort_filter, year_filter=year_filter, valid_filter=valid_filter, filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                                <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog.id, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                                    class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     {{ prog.full_name }}
                                 </a>
@@ -104,46 +108,46 @@
                 <div class="row">
                     <div class="col-6">
                         <p>Filter by academic year</p>
-                        <a href="{{ url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter='all', valid_filter=valid_filter, filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                        <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year='all', valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                            class="btn btn-sm filter-btn {% if year_filter is none or year_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             All
                         </a>
-                        <a href="{{ url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter='1', valid_filter=valid_filter, filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                        <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year='1', valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                            class="btn btn-sm filter-btn {% if year_filter == '1' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Y1
                         </a>
-                        <a href="{{ url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter='2', valid_filter=valid_filter, filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                        <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year='2', valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                            class="btn btn-sm filter-btn {% if year_filter == '2' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Y2
                         </a>
-                        <a href="{{ url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter='3', valid_filter=valid_filter, filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                        <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year='3', valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                            class="btn btn-sm filter-btn {% if year_filter == '3' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Y3
                         </a>
-                        <a href="{{ url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter='4', valid_filter=valid_filter, filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                        <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year='4', valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                            class="btn btn-sm filter-btn {% if year_filter == '4' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Y4
                         </a>
-                        <a href="{{ url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter='grad', valid_filter=valid_filter, filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                        <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year='grad', valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                            class="btn btn-sm filter-btn {% if year_filter == 'grad' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Graduated
                         </a>
                     </div>
                     <div class="col-6">
                         <p>Filter by validation status</p>
-                        <a href="{{  url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter, valid_filter='all', filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                        <a href="{{  url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid='all', TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                            class="btn btn-sm filter-btn {% if valid_filter is none or valid_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             All
                         </a>
-                        <a href="{{  url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter, valid_filter='valid', filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                        <a href="{{  url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid='valid', TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                            class="btn btn-sm filter-btn {% if valid_filter == 'valid' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Validated
                         </a>
-                        <a href="{{  url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter, valid_filter='not-valid', filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                        <a href="{{  url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid='not-valid', TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                            class="btn btn-sm filter-btn {% if valid_filter == 'not-valid' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Queued
                         </a>
-                        <a href="{{  url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter, valid_filter='reject', filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                        <a href="{{  url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid='reject', TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                            class="btn btn-sm filter-btn {% if valid_filter == 'reject' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Rejected
                         </a>
@@ -156,12 +160,12 @@
                     <div class="row">
                         <div class="col-12">
                             <p>Filter by cohort</p>
-                            <a href="{{ url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter='all', year_filter=year_filter, valid_filter=valid_filter, filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                            <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort='all', year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                                class="btn btn-sm filter-btn {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                 All
                             </a>
                             {% for cohort in cohorts %}
-                                <a href="{{ url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort|string, year_filter=year_filter, valid_filter=valid_filter, filter_TWD=filter_TWD_coded, filter_SEND=filter_SEND_coded) }}"
+                                <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort|string, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
                                    class="btn btn-sm filter-btn {% if cohort_filter == cohort|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     {{ cohort }}
                                 </a>
@@ -173,15 +177,34 @@
                 {% if needs_hrule %}<hr class="intro-divider">{% endif %}
                 {% set needs_hrule = true %}
                 <div class="row">
-                    <div class="col-12">
+                    <div class="col-6">
                         <p>Filter by properties</p>
-                        <a href="{{ url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter, valid_filter=valid_filter, filter_TWD='0' if filter_TWD else '1', filter_SEND=filter_SEND_coded) }}"
+                        <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD='0' if filter_TWD else '1', SEND=filter_SEND_coded) }}"
                            class="btn btn-sm filter-btn {% if filter_TWD %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Intermitting/TWD
                         </a>
-                        <a href="{{ url_for('manage_users.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter, valid_filter=valid_filter, filter_TWD=filter_TWD_coded, filter_SEND='0' if filter_SEND else '1') }}"
+                        <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND='0' if filter_SEND else '1') }}"
                            class="btn btn-sm filter-btn {% if filter_SEND %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             SEND stickers
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <p>Filter by level</p>
+                        <a href="{{ url_for('manage_users.edit_users_students', level='all', prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
+                           class="btn btn-sm filter-btn {% if level_filter is none or level_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            All
+                        </a>
+                        <a href="{{ url_for('manage_users.edit_users_students', level='UG', prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
+                           class="btn btn-sm filter-btn {% if level_filter == 'UG' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            UG
+                        </a>
+                        <a href="{{ url_for('manage_users.edit_users_students', level='PGT', prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
+                           class="btn btn-sm filter-btn {% if level_filter == 'PGT' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            PGT
+                        </a>
+                        <a href="{{ url_for('manage_users.edit_users_students', level='PGR', prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded) }}"
+                           class="btn btn-sm filter-btn {% if level_filter == 'PGR' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            PGR
                         </a>
                     </div>
                 </div>

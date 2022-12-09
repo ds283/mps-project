@@ -272,12 +272,12 @@ def create_student(role):
 
             form.random_password.data = True
 
-            license = db.session.query(AssetLicense) \
+            lic = db.session.query(AssetLicense) \
                 .filter_by(abbreviation=current_app.config['STUDENT_DEFAULT_LICENSE']).first()
-            form.default_license.data = license
+            form.default_license.data = lic
 
             form.dyspraxia_sticker.data = False
-            form.dyslexia_sticker.data  =False
+            form.dyslexia_sticker.data = False
 
     return render_template('security/register_user.html', user_form=form, role=role, pane=pane,
                            title='Register a new {r} user account'.format(r=role))
@@ -292,15 +292,15 @@ def edit_users():
     :return: HTML string
     """
 
-    filter = request.args.get('filter')
+    role_filter = request.args.get('filter')
 
-    if filter is None and session.get('accounts_role_filter'):
-        filter = session['accounts_role_filter']
+    if role_filter is None and session.get('accounts_role_filter'):
+        role_filter = session['accounts_role_filter']
 
-    if filter is not None:
-        session['accounts_role_filter'] = filter
+    if role_filter is not None:
+        session['accounts_role_filter'] = role_filter
 
-    return render_template("manage_users/users_dashboard/accounts.html", filter=filter, pane='accounts')
+    return render_template("manage_users/users_dashboard/accounts.html", filter=role_filter, pane='accounts')
 
 
 @manage_users.route('/edit_users_students')
@@ -308,10 +308,18 @@ def edit_users():
 @limiter.limit('1000/day')
 def edit_users_students():
     """
-    View function that handles listing of all registered students
+    View function handling listing of all registered student accounts
     :return: HTML string
     """
-    prog_filter = request.args.get('prog_filter')
+    level_filter = request.args.get('level')
+
+    if level_filter is None and session.get('accounts_level_filter'):
+        level_filter = session['accounts_level_filter']
+
+    if level_filter is not None:
+        session['accounts_level_filter'] = level_filter
+
+    prog_filter = request.args.get('prog')
 
     if prog_filter is None and session.get('accounts_prog_filter'):
         prog_filter = session['accounts_prog_filter']
@@ -319,7 +327,7 @@ def edit_users_students():
     if prog_filter is not None:
         session['accounts_prog_filter'] = prog_filter
 
-    cohort_filter = request.args.get('cohort_filter')
+    cohort_filter = request.args.get('cohort')
 
     if cohort_filter is None and session.get('accounts_cohort_filter'):
         cohort_filter = session['accounts_cohort_filter']
@@ -327,7 +335,7 @@ def edit_users_students():
     if cohort_filter is not None:
         session['accounts_cohort_filter'] = cohort_filter
 
-    year_filter = request.args.get('year_filter')
+    year_filter = request.args.get('year')
 
     if year_filter is None and session.get('accounts_year_filter'):
         year_filter = session['accounts_year_filter']
@@ -335,7 +343,7 @@ def edit_users_students():
     if year_filter is not None:
         session['accounts_year_filter'] = year_filter
 
-    valid_filter = request.args.get('valid_filter')
+    valid_filter = request.args.get('valid')
 
     if valid_filter is None and session.get('accounts_valid_filter'):
         valid_filter = session['accounts_valid_filter']
@@ -343,7 +351,7 @@ def edit_users_students():
     if valid_filter is not None:
         session['accounts_valid_filter'] = valid_filter
 
-    filter_TWD_pre = request.args.get('filter_TWD')
+    filter_TWD_pre = request.args.get('TWD')
 
     if filter_TWD_pre is None:
         if session.get('accounts_filter_TWD'):
@@ -355,7 +363,7 @@ def edit_users_students():
 
     session['accounts_filter_TWD'] = filter_TWD
 
-    filter_SEND_pre = request.args.get('filter_SEND')
+    filter_SEND_pre = request.args.get('SEND')
 
     if filter_SEND_pre is None:
         if session.get('accounts_filter_SEND'):
@@ -368,6 +376,7 @@ def edit_users_students():
     session['accounts_filter_SEND'] = filter_SEND
 
     prog_query = db.session.query(StudentData.programme_id).distinct().subquery()
+
     programmes = db.session.query(DegreeProgramme) \
         .join(prog_query, prog_query.c.programme_id == DegreeProgramme.id) \
         .filter(DegreeProgramme.active == True) \
@@ -378,12 +387,13 @@ def edit_users_students():
     cohort_data = db.session.query(StudentData.cohort) \
         .join(User, User.id == StudentData.id) \
         .filter(User.active == True).distinct().all()
+
     cohorts = [c[0] for c in cohort_data]
 
     return render_template("manage_users/users_dashboard/students.html", filter=prog_filter, pane='students',
-                           prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter,
-                           valid_filter=valid_filter, filter_TWD=filter_TWD, filter_SEND=filter_SEND,
-                           programmes=programmes, cohorts=sorted(cohorts))
+                           level_filter=level_filter, prog_filter=prog_filter, cohort_filter=cohort_filter,
+                           year_filter=year_filter, valid_filter=valid_filter, filter_TWD=filter_TWD,
+                           filter_SEND=filter_SEND, programmes=programmes, cohorts=sorted(cohorts))
 
 
 @manage_users.route('/edit_users_faculty')
@@ -394,7 +404,7 @@ def edit_users_faculty():
     View function that handles listing of all registered faculty
     :return: HTML string
     """
-    group_filter = request.args.get('group_filter')
+    group_filter = request.args.get('group')
 
     if group_filter is None and session.get('accounts_group_filter'):
         group_filter = session['accounts_group_filter']
@@ -402,7 +412,7 @@ def edit_users_faculty():
     if group_filter is not None:
         session['accounts_group_filter'] = group_filter
 
-    pclass_filter = request.args.get('pclass_filter')
+    pclass_filter = request.args.get('pclass')
 
     if pclass_filter is None and session.get('accounts_pclass_filter'):
         pclass_filter = session['accounts_pclass_filter']
@@ -410,7 +420,7 @@ def edit_users_faculty():
     if pclass_filter is not None:
         session['accounts_pclass_filter'] = pclass_filter
 
-    filter_CATS_pre = request.args.get('filter_CATS')
+    filter_CATS_pre = request.args.get('CATS')
 
     if filter_CATS_pre is None:
         if session.get('accounts_filter_CATS'):
@@ -423,12 +433,14 @@ def edit_users_faculty():
     session['accounts_filter_CATS'] = filter_CATS
 
     groups_ids = db.session.query(faculty_affiliations.c.group_id).distinct().subquery()
+
     groups = db.session.query(ResearchGroup) \
         .join(groups_ids, groups_ids.c.group_id == ResearchGroup.id) \
         .filter(ResearchGroup.active == True) \
         .order_by(ResearchGroup.name.asc()).all()
 
     pclass_ids = db.session.query(EnrollmentRecord.pclass_id).distinct().subquery()
+
     pclasses = db.session.query(ProjectClass) \
         .join(pclass_ids, pclass_ids.c.pclass_id == ProjectClass.id) \
         .filter(ProjectClass.active == True) \
@@ -497,17 +509,25 @@ def users_ajax():
 @roles_accepted('manage_users', 'root')
 @limiter.limit('1000/day')
 def users_students_ajax():
-    prog_filter = request.args.get('prog_filter')
-    cohort_filter = request.args.get('cohort_filter')
-    year_filter = request.args.get('year_filter')
-    valid_filter = request.args.get('valid_filter')
-    filter_TWD_pre = request.args.get('filter_TWD')
-    filter_SEND_pre = request.args.get('filter_SEND')
+    level_filter = request.args.get('level')
+    prog_filter = request.args.get('prog')
+    cohort_filter = request.args.get('cohort')
+    year_filter = request.args.get('year')
+    valid_filter = request.args.get('valid')
+    filter_TWD_pre = request.args.get('TWD')
+    filter_SEND_pre = request.args.get('SEND')
 
     base_query = db.session.query(StudentData.id) \
         .join(User, User.id == StudentData.id) \
         .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
+
+    if level_filter == 'UG':
+        base_query = base_query.filter(DegreeType.level == DegreeType.LEVEL_UG)
+    elif level_filter == 'PGT':
+        base_query = base_query.filter(DegreeType.level == DegreeType.LEVEL_PGT)
+    elif level_filter == 'PGR':
+        base_query = base_query.filter(DegreeType.level == DegreeType.LEVEL_PGR)
 
     flag, prog_value = is_integer(prog_filter)
     if flag:
@@ -566,9 +586,9 @@ def users_students_ajax():
 @roles_accepted('manage_users', 'root')
 @limiter.limit('1000/day')
 def users_faculty_ajax():
-    group_filter = request.args.get('group_filter')
-    pclass_filter = request.args.get('pclass_filter')
-    filter_CATS_pre = request.args.get('filter_CATS')
+    group_filter = request.args.get('group')
+    pclass_filter = request.args.get('pclass')
+    filter_CATS_pre = request.args.get('CATS')
 
     base_query = db.session.query(FacultyData.id) \
         .join(User, User.id == FacultyData.id)

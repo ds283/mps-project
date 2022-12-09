@@ -225,7 +225,7 @@ _name = \
 </span>
 {% set num_approvers = p.number_approvals_team %}
 <span class="badge {% if num_approvers > 0 %}bg-secondary{% else %}bg-danger{% endif %}"
-    {% if num_approvers > 0 %}data-bs-toggle="tooltip" data-bs-html="true" title="{% for u in p.approvals_team %}<p>{{ u.name }}</p>{% endfor %}"{% endif %}>
+    {% if num_approvers > 0 %}data-bs-toggle="tooltip" data-bs-html="true" title="{% for u in p.approvals_team %}{{ u.name }}<br/>{% endfor %}"{% endif %}>
     {{ num_approvers }} approver{%- if num_approvers != 1 -%}s{%- endif -%}
 </span>
 <div class="mt-2">

@@ -25,7 +25,7 @@ _name = \
         <span class="badge bg-primary">Assignment limit {{ a.assigned_limit }}</span>
     {% endif %}
     {% if a.comment is not none and a.comment|length > 0 %}
-        <span class="badge bg-info text-dark" data-bs-toggle="tooltip" title="{{ a.comment }}">Comment</button>
+        <span class="badge bg-info text-dark" data-bs-toggle="tooltip" title="{{ a.comment }}">Comment</span>
     {% endif %}
 </div>
 """

@@ -364,3 +364,13 @@ p.copyright {
   margin-right: -5px;
   margin-left: -5px;
 }
+
+
+/* disable link change on hover */
+.text-nohover-light {
+    color: rgba(var(--bs-light-rgb))!important;
+}
+
+.text-nohover-dark {
+    color: rgba(var(--bs-dark-rgb))!important;
+}

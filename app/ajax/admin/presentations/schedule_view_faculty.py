@@ -38,7 +38,7 @@ _sessions = \
     <div style="display: inline-block; margin-bottom:2px; margin-right:2px;">
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
             {% set style = slot.session.get_label_type() %}
-            <a class="badge text-decoration-none {% if style is not none %}{{ style }}{% else %}bg-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+            <a class="badge text-decoration-none text-nohover-light {% if style is not none %}{{ style }}{% else %}bg-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                 {{ slot.session.short_date_as_string }} {{ slot.session.session_type_string }}
             </a>
             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
@@ -55,7 +55,7 @@ _sessions = \
         {% for talk in slot.talks %}
             <div class="dropdown schedule-assign-button" style="display: inline-block;">
                 {% set style = talk.pclass.make_CSS_style() %}
-                <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                <a class="badge text-decoration-none text-nohover-light {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                     {{ talk.owner.student.user.name }}
                 </a>
                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">

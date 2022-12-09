@@ -39,7 +39,7 @@ _pclass = \
 {% set config = sel.config %}
 {% set pclass = config.project_class %}
 {% set style = pclass.make_CSS_style() %}
-<a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block"
+<a class="badge text-decoration-none text-nohover-light {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block"
    {% if style %}style="{{ style }}"{% endif %}
    href="mailto:{{ config.convenor_email }}">
     {{ pclass.abbreviation }} ({{ config.convenor_name }})
@@ -67,7 +67,7 @@ _project = \
     {% set proj_overassigned = r.is_project_overassigned %}
     <div>
         <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-            <a class="badge text-decoration-none {% if proj_overassigned %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
+            <a class="badge text-decoration-none text-nohover-light {% if proj_overassigned %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
                     {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
                     {% if adjustable %}data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }}
                 (No. {{ r.project.number }})</a>
@@ -166,7 +166,7 @@ _marker = \
 {% macro marker_tag(r, show_period) %}
     {% if r.marker %}
         <div class="dropdown match-assign-button" style="display: inline-block;">
-            <a class="badge text-decoration-none bg-light text-dark dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+            <a class="badge text-decoration-none text-nohover-dark bg-light dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.marker.user.name }}
             </a>
             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">

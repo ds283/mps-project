@@ -49,7 +49,7 @@ _projects = \
                 {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
                 {% if not_confirmed %}
                     <div class="dropdown" style="display: inline-block;">
-                        <a class="badge text-decoration-none bg-secondary dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
+                        <a class="badge text-decoration-none text-nohover-light bg-secondary dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
                         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fas fa-check"></i> Confirm</a>
                         </div>

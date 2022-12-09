@@ -28,7 +28,7 @@ _assessors = \
 {% for assessor in s.assessors %}
     <div>
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
-            <a class="badge text-decoration-none bg-light text-dark" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+            <a class="badge text-decoration-none text-nohover-dark bg-light" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                 {{ assessor.user.name }}
             </a>
             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
@@ -55,7 +55,7 @@ _talks = \
     {% set ns.count = ns.count + 1 %}
     <div class="dropdown schedule-assign-button" style="display: inline-block;">
         {% set style = talk.pclass.make_CSS_style() %}
-        <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+        <a class="badge text-decoration-none text-nohover-light {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
             {{ talk.owner.student.user.name }}
         </a>
         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
@@ -117,7 +117,7 @@ _room = \
 """
 {% set style = s.room.building.make_CSS_style() %}
 <div class="dropdown schedule-assign-button">
-    <a class="badge text-decoration-none {% if style is none %}bg-info{% else %}bg-secondary{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+    <a class="badge text-decoration-none text-nohover-light {% if style is none %}bg-info{% else %}bg-secondary{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
         {{ s.room.full_name }}
     </a>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">

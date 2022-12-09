@@ -88,7 +88,7 @@ _projects = \
     {% set style = pclass.make_CSS_style() %}
     {% set proj_overassigned = r.is_project_overassigned %}
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="badge text-decoration-none {% if proj_overassigned %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
+        <a class="badge text-decoration-none text-nohover-light {% if proj_overassigned %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
                 {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
                 {% if adjustable %}data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>#{{ r.submission_period }}:
             {{ r.selector.student.user.name }} (No. {{ r.project.number }})</a>
@@ -153,7 +153,7 @@ _marking = \
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     <div class="dropdown match-assign-button" style="display: inline-block;">
-        <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown"
+        <a class="badge text-decoration-none text-nohover-light {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown"
             href="" role="button" aria-haspopup="true" aria-expanded="false">
             #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})
         </a>

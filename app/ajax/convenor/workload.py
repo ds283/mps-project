@@ -44,7 +44,7 @@ _projects = \
     {% endif %}
     <div>
         <div class="dropdown assignment-label">
-            <a class="badge text-decoration-none {{ colour }} btn-table-block dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">
+            <a class="badge text-decoration-none text-nohover-light {{ colour }} btn-table-block dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">
                 {% if enable_engagement %}
                     {% if r.student_engaged %}
                         <i class="fas fa-check"></i>
@@ -124,7 +124,7 @@ _marking = \
     {% set pclass = r.owner.config.project_class %}
     <div>
         <div class="dropdown assignment-label">
-            <a class="badge text-decoration-none bg-secondary btn-table-block dropdown-toggle" href="" role="button" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
+            <a class="badge text-decoration-none text-nohover-light bg-secondary btn-table-block dropdown-toggle" href="" role="button" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {{ r.owner.student.user.name }}
             </a>
@@ -182,7 +182,7 @@ _presentations = \
     {% for slot in slots %}
         <div {% if loop.index < loop.length %}style="padding-bottom: 10px;"{% endif %}>
             <div class="dropdown assignment-label">
-                <a class="badge text-decoration-none bg-info text-dark btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                <a class="badge text-decoration-none text-nohover-light bg-info text-dark btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                     {{ slot.short_date_as_string }}
                     {{ slot.session_type_string }}
                     {{ slot.room_full_name }}

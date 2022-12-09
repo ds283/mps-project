@@ -16,7 +16,7 @@ _pclass = \
 """
 {% set pclass = config.project_class %}
 {% set style = pclass.make_CSS_style() %}
-<a class="badge text-decoration-none bg-info text-dark" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ config.convenor_email }}">{{ pclass.abbreviation }} ({{ config.convenor_name }})</a>
+<a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ config.convenor_email }}">{{ pclass.abbreviation }} ({{ config.convenor_name }})</a>
 """
 
 
@@ -88,7 +88,7 @@ _project_name = \
         <a class="text-decoration-none" href="{{ dest_url }}">{{ p.name }}</a>
     </div>
     <div>
-        <a class="badge text-decoration-none bg-info text-dark" href="{{ url_for('convenor.attach_assessors', id=p.parent_id, pclass_id=p.config.pclass_id, url=url, text=text) }}">
+        <a class="badge text-decoration-none text-nohover-dark bg-info" href="{{ url_for('convenor.attach_assessors', id=p.parent_id, pclass_id=p.config.pclass_id, url=url, text=text) }}">
             {{ p.number_assessors }} assessors
         </a>
     </div>

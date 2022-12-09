@@ -74,14 +74,14 @@
 
 {% macro record_label(item, text, url) %}
     {% if item.submission_period == rec.submission_period %}
-        <a class="badge text-decoration-none bg-success" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">#{{ item.submission_period }}</a>
+        <a class="badge text-decoration-none text-nohover-light bg-success" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">#{{ item.submission_period }}</a>
         {% if item.project is not none %}
             <i class="fas fa-check"></i>
         {% else %}
             <i class="fas fa-times"></i>
         {% endif %}
     {% else %}
-        <a class="badge text-decoration-none bg-secondary" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">#{{ item.submission_period }}</a>
+        <a class="badge text-decoration-none text-nohover-light bg-secondary" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">#{{ item.submission_period }}</a>
     {% endif %}
 {% endmacro %}
 
@@ -127,7 +127,7 @@
                                                     </a>
                                                 {% else %}
                                                     {{ record_label(item, text, url) }}
-                                                    <a class="badge text-decoration-none bg-danger" {% if allow_reassign_project %}href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}"{% endif %}>No project allocated</a>
+                                                    <a class="badge text-decoration-none text-nohover-light bg-danger" {% if allow_reassign_project %}href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}"{% endif %}>No project allocated</a>
                                                 {% endif %}
                                             </div>
                                             <div class="col-3">

@@ -99,7 +99,7 @@
                                 {% set running_counterpart = data.running_counterpart(config.id) %}
                                 {% if running_counterpart is not none %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
-                                        <a class="badge text-decoration-none bg-danger dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                        <a class="badge text-decoration-none text-nohover-light bg-danger dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                             RUNNING {{ running_counterpart.number_assessors }}
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
@@ -111,7 +111,7 @@
                                 {% endif %}
                                 {% if live_counterpart is not none %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
-                                        <a class="badge text-decoration-none bg-success dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                        <a class="badge text-decoration-none text-nohover-light bg-success dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                             SELECTING {{ live_counterpart.number_assessors }}
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
@@ -126,11 +126,11 @@
                                 {% for marker in project_assessor_list %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
                                         {% if running_counterpart is not none and running_counterpart.is_assessor(marker.id) %}
-                                            <a class="badge text-decoration-none bg-danger dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                            <a class="badge text-decoration-none text-nohover-light bg-danger dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% elif live_counterpart is not none and live_counterpart.is_assessor(marker.id) %}
-                                            <a class="badge text-decoration-none bg-success dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                            <a class="badge text-decoration-none text-nohover-light bg-success dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% else %}
-                                            <a class="badge text-decoration-none bg-secondary dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                            <a class="badge text-decoration-none text-nohover-light bg-secondary dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% endif %}
                                         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                             <div class="dropdown-header">Attached assessor</div>
@@ -168,7 +168,7 @@
                                     {% for marker in running_counterpart.assessor_list %}
                                         {% if not data.is_assessor(marker.id) %}
                                             <div class="dropdown project-status-button" style="display: inline-block;">
-                                                <a class="badge text-decoration-none bg-warning text-dark" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                                <a class="badge text-decoration-none text-nohover-dark bg-warning" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                                     <div class="dropdown-header">Not attached to library version</div>
                                                     {% set disabled = not data.can_enroll_assessor(marker) %}
@@ -197,7 +197,7 @@
                                     {% for marker in live_counterpart.assessor_list %}
                                         {% if not data.is_assessor(marker.id) and (running_counterpart is none or (running_counterpart is not none and not running_counterpart.is_assessor(marker.id))) %}
                                             <div class="dropdown project-status-button" style="display: inline-block;">
-                                                <a class="badge text-decoration-none bg-warning text-dark" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
+                                                <a class="badge text-decoration-none text-nohover-dark bg-warning" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                                     <div class="dropdown-header">Not attached to library version</div>
                                                     {% set disabled = not data.can_enroll_assessor(marker) %}

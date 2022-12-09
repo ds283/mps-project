@@ -30,7 +30,7 @@ _project_menu = \
 _pclass = \
 """
 {% set style = config.project_class.make_CSS_style() %}
-<a class="badge text-decoration-none bg-info text-dark" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ config.convenor_email }}">
+<a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ config.convenor_email }}">
     {{ config.project_class.abbreviation }} ({{ config.convenor_name }})
 </a>
 """

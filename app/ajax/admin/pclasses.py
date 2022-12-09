@@ -145,11 +145,11 @@ _personnel = \
         <div>Convenor</div>
     {% endif %}
     {% set style = p.make_CSS_style() %}
-    <a class="badge text-decoration-none bg-info text-dark" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ p.convenor_email }}">
+    <a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ p.convenor_email }}">
         {{ p.convenor_name }}
     </a>
     {% for fac in p.coconvenors %}
-        <a class="badge text-decoration-none bg-secondary" href="mailto:{{ fac.user.email }}">
+        <a class="badge text-decoration-none text-nohover-light bg-secondary" href="mailto:{{ fac.user.email }}">
             {{ fac.user.name }}
         </a>
     {% endfor %}
@@ -158,7 +158,7 @@ _personnel = \
     <div class="personnel-container">
         <div>Office contacts</div>
         {% for user in p.office_contacts %}
-            <a class="badge text-decoration-none bg-info text-dark" href="mailto:{{ user.email }}">
+            <a class="badge text-decoration-none text-nohover-dark bg-info" href="mailto:{{ user.email }}">
                 {{ user.name }}
             </a>
         {% endfor %}

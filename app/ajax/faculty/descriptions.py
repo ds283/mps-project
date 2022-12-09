@@ -22,7 +22,7 @@ _pclasses = \
 {% for pclass in d.project_classes %}
     {% if pclass.active %}
         {% set style = pclass.make_CSS_style() %}
-        <a class="badge text-decoration-none bg-info text-dark" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
+        <a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
         {% set ns.count = ns.count + 1 %}
     {% endif %}
 {% endfor %}

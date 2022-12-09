@@ -48,7 +48,7 @@ _project_name_labels = \
     {% for pclass in project.project_classes %}
         {% if pclass.active %}
             {% set style = pclass.make_CSS_style() %}
-            <a class="badge text-decoration-none bg-info text-dark" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
+            <a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
         {% endif %}
     {% else %}
         <span class="badge bg-danger">No project classes</span>
@@ -125,7 +125,7 @@ _project_pclasses = \
 """
 {% for pclass in project.project_classes %}
     {% set style = pclass.make_CSS_style() %}
-    <a class="badge text-decoration-none bg-info text-dark" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
+    <a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
 {% endfor %}
 """
 
@@ -496,7 +496,7 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                     if desc.requires_confirmation and not desc.confirmed:
                         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
                             repapprove = """<div class="dropdown" style="display: inline-block;">
-                                                <a class="badge text-decoration-none bg-light text-dark dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
+                                                <a class="badge text-decoration-none text-nohover-dark bg-light dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
                                                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                                     <a class="dropdown-item d-flex gap-2" href="{url}"><i class="fas fa-check fa-fw"></i> Confirm</a>
                                                 </div>

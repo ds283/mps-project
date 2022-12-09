@@ -48,7 +48,7 @@ _projects = \
     <div>
         {% if r.project is not none %}
             <div class="dropdown assignment-label">
-                <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block dropdown-toggle"
+                <a class="badge text-decoration-none text-nohover-light {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block dropdown-toggle"
                         {% if style %}style="{{ style }}"{% endif %}
                         href="" role="button" aria-haspopup="true" aria-expanded="false"
                         data-bs-toggle="dropdown">{% if show_period %}#{{ r.submission_period }}: {% endif %}
@@ -72,7 +72,7 @@ _projects = \
             </div>
             {% if sub.published %}
                 <div class="dropdown assignment-label">
-                    <a class="badge text-decoration-none {% if r.student_engaged %}bg-success{% else %}bg-warning text-dark{% endif %} btn-table-block dropdown-toggle"
+                    <a class="badge text-decoration-none {% if r.student_engaged %}bg-success text-nohover-light{% else %}bg-warning text-nohover-dark{% endif %} btn-table-block dropdown-toggle"
                         href="" role="button" aria-haspopup="true" aria-expanded="false"
                         data-bs-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}</a>
                     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
@@ -101,7 +101,7 @@ _projects = \
                 {% endif %}
             {% endif %}
         {% else %}
-            <a class="badge text-decoration-none bg-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">No project allocated</a>
+            <a class="badge text-decoration-none text-nohover-light bg-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">No project allocated</a>
         {% endif %}
         {{ feedback_state_tag(r, r.supervisor_feedback_state, 'Feedback') }}
         {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
@@ -146,7 +146,7 @@ _markers = \
     <div>
         {% if r.marker is not none %}
             <div class="dropdown assignment-label">
-                <a class="badge text-decoration-none {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                <a class="badge text-decoration-none text-nohover-light {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                     {% if show_period %}#{{ r.submission_period }}: {% endif %}
                     {{ r.marker.user.name }}
                 </a>
@@ -163,7 +163,7 @@ _markers = \
                 </div>
             </div>
         {% else %}
-            <a class="badge text-decoration-none bg-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">{% if r.project is none %}No project allocated{% else %}No marker allocated{% endif %}</a>
+            <a class="badge text-decoration-none text-nohover-light bg-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">{% if r.project is none %}No project allocated{% else %}No marker allocated{% endif %}</a>
         {% endif %}
         {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
     </div>
@@ -215,12 +215,12 @@ _presentations = \
                         {% set slot = rec.schedule_slot %}
                         <div class="dropdown assignment-label">
                             {% if slot is not none %}
-                                <a class="badge text-decoration-none bg-info text-dark btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                <a class="badge text-decoration-none text-nohover-dark bg-info btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                     {{ slot.short_date_as_string }}
                                     {{ slot.session_type_string }}
                                 </a>
                             {% else %}
-                                <a class="badge text-decoration-none bg-warning text-dark btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                <a class="badge text-decoration-none text-nohover-dark bg-warning btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                     Not attending
                                 </a>
                             {% endif %}

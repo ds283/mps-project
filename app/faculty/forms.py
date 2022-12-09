@@ -45,7 +45,7 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
                                              'will be working.')
 
         # allow the project_class list to be empty (but then the project is not offered)
-        project_classes = QuerySelectMultipleField('Select the project classes for which you wish to offer this project',
+        project_classes = QuerySelectMultipleField('For which project types do you wish to offer this project?',
                                                    query_factory=project_classes_qf, get_label='name',
                                                    description='Set up descriptions for versions of this '
                                                                'project that apply to different programmes (or groups '
@@ -136,7 +136,7 @@ def DescriptionSettingsMixinFactory(query_factory):
     class DescriptionSettingsMixin():
 
         # allow the project_class list to be empty (but then the project is not offered)
-        project_classes = QuerySelectMultipleField('Select the project classes for which this description should be made available',
+        project_classes = QuerySelectMultipleField('For which project types should this description be made available?',
                                                    query_factory=query_factory, get_label='name')
 
         capacity = IntegerField('Maximum student capacity',

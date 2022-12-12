@@ -92,7 +92,7 @@ _desc_label = \
         <span class="badge bg-secondary">Approval: Not confirmed</span>
     {% else %}
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
-            <span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>
+            <span class="badge bg-success"><i class="fas fa-check"></i>Approved</span>
         {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
             <span class="badge bg-warning text-dark">Approval: Queued</span>
         {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
@@ -100,7 +100,7 @@ _desc_label = \
         {% else %}
             <span class="badge bg-danger">Unknown approval state</span>
         {% endif %}
-        {% if current_user.has_role('project_approver') and d.validated_by %}
+        {% if state == d.WORKFLOW_APPROVAL_VALIDATED and current_user.has_role('project_approver') and d.validated_by %}
             <div>
                 <span class="badge bg-info text-dark">Signed-off: {{ d.validated_by.name }}</span>
                 {% if d.validated_timestamp %}
@@ -1380,7 +1380,8 @@ def project_preview(id):
     # defaults for comments pane
     form.limit_visibility.data = True if current_user.has_role('project_approver') else False
 
-    allow_approval = current_user.has_role('project_approver') and desc is not None and allow_approvals(desc.id)
+    allow_approval = (current_user.has_role('project_approver') or current_user.has_role('root')) \
+                     and desc is not None and allow_approvals(desc.id)
 
     if desc is not None:
         if all_workflow:

@@ -26,7 +26,7 @@ from urllib import parse
 _actions = \
 """
 <a href="{{ url_for('project_approver.approve', id=r.id, url=url) }}" class="btn btn-sm btn-success btn-table-block">Approve</a>
-<a href="{{ url_for('project_approver.reject', id=r.id, url=url) }}" class="btn btn-sm btn-danger btn-table-block">Reject</a>
+<a href="{{ url_for('project_approver.reject', id=r.id, url=url) }}" class="btn btn-sm btn-outline-danger btn-table-block">Reject</a>
 """
 
 

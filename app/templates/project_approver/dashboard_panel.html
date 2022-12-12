@@ -10,16 +10,14 @@
             {% if queued == 0 %}
                 <p>No project descriptions currently require validation.</p>
             {% else %}
-                <div class="row vertical-top">
-                    <div class="col-8">
+                <div class="d-flex flex-row justify-content-between align-content-end gap-2">
+                    <div>
                         You have validation tasks to perform.
                     </div>
-                    <div class="col-4">
-                        <div class="float-end">
-                            <a href="{{ url_for('project_approver.validate') }}" class="btn btn-secondary">
-                                Approve projects
-                            </a>
-                        </div>
+                    <div>
+                        <a href="{{ url_for('project_approver.validate') }}" class="btn btn-sm btn-outline-secondary">
+                            Approve projects
+                        </a>
                     </div>
                 </div>
             {% endif %}
@@ -35,16 +33,14 @@
                 {% if rejected == 0 %}
                     <p>No project descriptions have been rejected.</p>
                 {% else %}
-                    <div class="row vertical-top">
-                        <div class="col-8">
+                    <div class="d-flex flex-row justify-content-between align-content-end gap-2">
+                        <div>
                             You have rejected projects to review.
                         </div>
-                        <div class="col-4">
-                            <div class="float-end">
-                                <a href="{{ url_for('project_approver.rejected') }}" class="btn btn-secondary">
-                                    Review projects
-                                </a>
-                            </div>
+                        <div>
+                            <a href="{{ url_for('project_approver.rejected') }}" class="btn btn-sm btn-outline-secondary">
+                                Review projects
+                            </a>
                         </div>
                     </div>
                 {% endif %}

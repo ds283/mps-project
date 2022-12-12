@@ -232,12 +232,12 @@ def get_approvals_data():
 
 def _get_user_approvals_data():
     to_approve = get_count(db.session.query(StudentData). \
-                           filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
+                           filter(StudentData.workflow_state == StudentData.WORKFLOW_APPROVAL_QUEUED,
                                   or_(and_(StudentData.last_edit_id == None, StudentData.creator_id != current_user.id),
                                       and_(StudentData.last_edit_id != None, StudentData.last_edit_id != current_user.id))))
 
     to_correct = get_count(db.session.query(StudentData). \
-                           filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED,
+                           filter(StudentData.workflow_state == StudentData.WORKFLOW_APPROVAL_REJECTED,
                                   or_(and_(StudentData.last_edit_id == None, StudentData.creator_id == current_user.id),
                                       and_(StudentData.last_edit_id != None, StudentData.last_edit_id == current_user.id))))
 
@@ -251,9 +251,12 @@ def build_project_approval_queues():
     # We ignore descriptions that have already been validated, or which belong to inactive projects
     descriptions = db.session.query(ProjectDescription) \
         .join(Project, Project.id == ProjectDescription.parent_id) \
-        .join(ProjectClass, Project.project_classes.any(id=ProjectClass.id)) \
-        .filter(ProjectDescription.workflow_state != WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED,
-                Project.active == True).all()
+        .join(FacultyData, FacultyData.id == Project.owner_id) \
+        .join(User, User.id == FacultyData.id) \
+        .filter(ProjectDescription.confirmed,
+                ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED,
+                Project.active == True,
+                User.active == True).all()
 
     queued = []
     rejected = []
@@ -271,19 +274,19 @@ def build_project_approval_queues():
 
 @cache.memoize()
 def allow_approvals(desc_id):
-    desc = db.session.query(ProjectDescription).filter_by(id=desc_id).first()
+    desc: ProjectDescription = db.session.query(ProjectDescription).filter_by(id=desc_id).first()
 
     if desc is None:
         return False
 
-    faculty = desc.parent.owner
+    owner: FacultyData = desc.parent.owner
 
     # no-one should approve their own projects
-    if faculty.id == current_user.id:
+    if owner.id == current_user.id:
         return False
 
     # don't include inactive faculty
-    if not faculty.user.active:
+    if not owner.user.active:
         return False
 
     # don't include inactive projects
@@ -297,9 +300,16 @@ def allow_approvals(desc_id):
         return False
 
     for pcl in desc.project_classes:
+        pcl: ProjectClass
+
         # ensure pcl is also in list of project classes for parent project
         if pcl in desc.parent.project_classes:
-            config = pcl.most_recent_config
+            # check user is root or in approvals team for this project class
+            in_team = current_user.has_role('root') or get_count(pcl.approvals_team.filter_by(id=current_user.id)) > 0
+            if not in_team:
+                continue
+
+            config: ProjectClassConfig = pcl.most_recent_config
 
             if config is not None and pcl.active and pcl.publish:
                 # don't include projects for project classes that have already gone live
@@ -307,7 +317,7 @@ def allow_approvals(desc_id):
                     continue
 
                 # don't include projects if user is not enrolled normally as a supervisor
-                record = faculty.get_enrollment_record(pcl.id)
+                record: EnrollmentRecord = owner.get_enrollment_record(pcl.id)
                 if record is None or record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
                     continue
 
@@ -316,11 +326,6 @@ def allow_approvals(desc_id):
                     # don't include projects if confirmation is required and requests haven't been issued.
                     if not config.requests_issued:
                         continue
-
-                    # don't include projects if requests have been issued, but project owner hasn't yet confirmed
-                    # TODO: Why? This doesn't seem to make sense
-                    # if get_count(config.confirmation_required.filter_by(id=faculty.id)) > 0:
-                    #     continue
 
                     # don't include descriptions that have not been confirmed by their owner
                     if not desc.confirmed:
@@ -348,7 +353,7 @@ def _approvals_ProjectDescription_update_handler(mapper, connection, target):
         _approvals_ProjectDescription_delete_cache(target)
 
 
-@listens_for(ProjectDescription, 'before_update')
+@listens_for(ProjectDescription, 'before_delete')
 def _approvals_ProjectDescription_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _approvals_ProjectDescription_delete_cache(target)

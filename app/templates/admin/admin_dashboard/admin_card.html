@@ -94,11 +94,11 @@
 
                         {% if sel_state <= config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
                             {% if capacity < num_sel %}
-                                <span class="badge bg-danger">Capacity {% if not bounded %}>= {% endif %}{{ capacity }}</span>
+                                <span class="badge bg-danger">Capacity {% if not bounded %}&ge; {% endif %}{{ capacity }}</span>
                             {% elif capacity < 1.15*num_sel %}
-                                <span class="badge bg-warning text-dark">Capacity {% if not bounded %}>= {% endif %}{{ capacity }}</span>
+                                <span class="badge bg-warning text-dark">Capacity {% if not bounded %}&ge; {% endif %}{{ capacity }}</span>
                             {% else %}
-                                <span class="badge bg-success">Capacity {% if not bounded %}>= {% endif %}{{ capacity }}</span>
+                                <span class="badge bg-success">Capacity {% if not bounded %}&ge; {% endif %}{{ capacity }}</span>
                             {% endif %}
                         {% endif %}
                     </div>

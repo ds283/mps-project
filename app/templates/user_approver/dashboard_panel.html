@@ -10,16 +10,14 @@
                 {% if to_approve == 0 %}
                     <p>No student records currently require validation.</p>
                 {% else %}
-                    <div class="row vertical-top">
-                        <div class="col-8">
+                    <div class="d-flex flex-row justify-content-between align-content-end gap-2">
+                        <div>
                             You have validation tasks to perform.
                         </div>
-                        <div class="col-4">
-                            <div class="float-end">
-                                <a href="{{ url_for('user_approver.validate') }}" class="btn btn-secondary">
-                                    Approve records
-                                </a>
-                            </div>
+                        <div>
+                            <a href="{{ url_for('user_approver.validate') }}" class="btn btn-sm btn-outline-secondary">
+                                Approve records
+                            </a>
                         </div>
                     </div>
                 {% endif %}
@@ -35,16 +33,14 @@
                 {% if to_correct == 0 %}
                     <p>None of your student record edits have been flagged for corrections.</p>
                 {% else %}
-                    <div class="row vertical-bottom">
+                    <div class="d-flex flex-row justify-content-between align-content-end gap-2">
                         <div class="col-8">
                             One or more student records edited by you have been flagged for correction.
                         </div>
-                        <div class="col-4">
-                            <div class="float-end">
-                                <a href="{{ url_for('user_approver.correct') }}" class="btn btn-secondary">
-                                    Correct records
-                                </a>
-                            </div>
+                        <div>
+                            <a href="{{ url_for('user_approver.correct') }}" class="btn btn-sm btn-outline-secondary">
+                                Correct records
+                            </a>
                         </div>
                     </div>
                 {% endif %}

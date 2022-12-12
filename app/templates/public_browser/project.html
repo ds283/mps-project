@@ -18,26 +18,24 @@
         <div class="row mt-5">
             <div class="col-1"></div>
             <div class="col-10">
-                <div class="row sm-gap-below">
-                    <div class="col-12 project-title">
+                <div class="d-flex flex-row justify-content-start sm-gap-below">
+                    <div class="project-title">
                         {{ title }}
                     </div>
                 </div>
-                <div class="row sm-gap-below">
-                    <div class="col-6">
+                <div class="d-flex flex-row justify-content-between align-content-start sm-gap-below">
+                    <div>
                         <div class="project-owner-name">{{ project.owner.user.name }}</div>
                     </div>
-                    <div class="col-6">
-                        <div class="float-end">
-                            {% if project.group %}
-                                <div class="research-group-banner">{{ project.group.name }}</div>
-                                {% if project.group.website and project.group.website is not none %}
-                                    <a class="research-group-webpage" href="{{ project.group.website }}">
-                                        Research group website <i class="fas fa-external-link"></i>
-                                    </a>
-                                {% endif %}
+                    <div>
+                        {% if project.group %}
+                            <div class="research-group-banner">{{ project.group.name }}</div>
+                            {% if project.group.website and project.group.website is not none %}
+                                <a class="research-group-webpage" href="{{ project.group.website }}">
+                                    Research group website <i class="fas fa-external-link"></i>
+                                </a>
                             {% endif %}
-                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <hr class="intro-divider">

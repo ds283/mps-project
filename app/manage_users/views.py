@@ -493,13 +493,17 @@ def users_ajax():
                'order': User.confirmed_at}
     active = {'order': User.active}
     details = {'order': [User.last_active, User.current_login_at, User.last_login_at]}
+    role = {'search': Role.name,
+            'search_collection': User.roles,
+            'search_collation': 'utf8_general_ci'}
 
     columns = {'name': name,
                'user': user,
                'email': email,
                'confirm': confirm,
                'active': active,
-               'details': details}
+               'details': details,
+               'role': role}
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.users.build_accounts_data, current_user.id))

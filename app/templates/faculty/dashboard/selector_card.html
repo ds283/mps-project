@@ -20,41 +20,39 @@
     {% else %}
         {% set nproj_plural = 's' %}
     {% endif %}
-    {% set bgclass = '' %}
-    {% set borderclass = '' %}
-    {% set textclass = '' %}
+    {% set ns = namespace(bgclass = '', borderclass = '', textclass = '') %}
     {% if is_sabbatical or is_exempt %}
         {# no markup required; formerly panel-default #}
     {% else %}
         {% if nproj == 0 %}
-            {% set bgclass = 'bg-danger' %}
-            {% set borderclass = 'border-danger' %}
-            {% set textclass = 'text-white' %}
+            {% set ns.bgclass = 'bg-danger' %}
+            {% set ns.borderclass = 'border-danger' %}
+            {% set ns.textclass = 'text-white' %}
         {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
             {# no markup required; formerly bg-success #}
-{#            {% set bgclass = 'bg-success' %}#}
-{#            {% set borderclass = 'border-success' %}#}
-{#            {% set textclass = 'text-white' %}#}
+{#            {% set ns.bgclass = 'bg-success' %}#}
+{#            {% set ns.borderclass = 'border-success' %}#}
+{#            {% set ns.textclass = 'text-white' %}#}
         {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
             {# no markup required; formerly panel-default #}
         {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
             {% if confirm_required %}
-                {% set bgclass = 'bg-danger' %}
-                {% set borderclass = 'border-danger' %}
-                {% set textclass = 'text-white' %}
+                {% set ns.bgclass = 'bg-danger' %}
+                {% set ns.borderclass = 'border-danger' %}
+                {% set ns.textclass = 'text-white' %}
             {% else %}
-                {% set bgclass = 'bg-info' %}
-                {% set borderclass = 'border-info' %}
-                {% set textclass = 'text-white' %}
+                {% set ns.bgclass = 'bg-info' %}
+                {% set ns.borderclass = 'border-info' %}
+                {% set ns.textclass = 'text-white' %}
             {% endif %}
         {% else %}
-            {% set bgclass = 'bg-info' %}
-            {% set borderclass = 'border-info' %}
-            {% set textclass = 'text-white' %}
+            {% set ns.bgclass = 'bg-info' %}
+            {% set ns.borderclass = 'border-info' %}
+            {% set ns.textclass = 'text-white' %}
         {% endif %}
     {% endif %}
-    <div class="card {{ borderclass }} mt-3 mb-3">
-        <div class="card-header {{ bgclass }} {{ textclass }}">
+    <div class="card {{ ns.borderclass }} mt-3 mb-3">
+        <div class="card-header {{ ns.bgclass }} {{ ns.textclass }}">
             {% if is_sabbatical %}
                 Student selections: <strong>on sabbatical</strong> [no response required]
             {% elif is_exempt %}
@@ -85,37 +83,34 @@
             {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
                 <div class="alert alert-danger mt-1 mb-2">
                     {% call icon_block('exclamation-circle') %}
-                        <div class="d-flex w-100 justify-content-between align-items-end">
-                            <div>
-                                <strong>
-                                    Please review your projects to ensure their descriptions are up-to-date,
-                                    and those you wish to offer next year are listed below.
-                                </strong>
-                                {% if config.request_deadline %}
-                                    <div class="mt-1">
-                                        The project convenor has set a deadline of
-                                        <strong>{{ config.request_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
-                                        <strong>{{ config.time_to_request_deadline }}</strong> from now.
-                                    </div>
-                                {% endif %}
+                        <div>
+                            <strong>
+                                Please review your projects to ensure their descriptions are up-to-date,
+                                and those you wish to offer next year are listed below.
+                            </strong>
+                        </div>
+                        {% if config.request_deadline %}
+                            <div class="mt-1">
+                                The project convenor has set a deadline of
+                                <strong>{{ config.request_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
+                                <strong>{{ config.time_to_request_deadline }}</strong> from now.
                             </div>
-                            <div class="mb-3">
-                                <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-sm btn-success text-nowrap">Confirm all projects</a>
-                            </div>
+                        {% endif %}
+                        <div class="mt-2">
+                            <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-sm btn-success text-nowrap">Confirm all projects</a>
                         </div>
                     {% endcall %}
                 </div>
             {% endif %}
 
             {# show basic details about this project class #}
-            {% set bgclass = 'alert-secondary' %}
-            {% set iconclass = 'info-circle' %}
+            {% set ns = namespace(bgclass='alert-secondary', iconclass='info-circle') %}
             {% if nproj == 0 and not (is_sabbatical or is_exempt) %}
-                {% set bgclass = 'alert-danger' %}
-                {% set iconclass = 'exclamation-circle' %}
+                {% set ns.bgclass = 'alert-danger' %}
+                {% set ns.iconclass = 'exclamation-circle' %}
             {% endif %}
-            <div class="alert {{ bgclass }} mt-1 mb-3">
-                {% call icon_block(iconclass) %}
+            <div class="alert {{ ns.bgclass }} mt-1 mb-3">
+                {% call icon_block(ns.iconclass) %}
                     <div>
                         <strong>{{ nproj }} active project{{ nproj_plural }} attached to this project class.</strong>
                     </div>

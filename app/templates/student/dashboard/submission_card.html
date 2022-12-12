@@ -3,30 +3,28 @@
 {% macro submission_card(config, sub, n, today) %}
     {% set period = config.get_period(n+1) %}
     {% if period %}
-        {% set bgclass = '' %}
-        {% set borderclass = '' %}
-        {% set textclass = '' %}
+        {% set ns = namespace(bgclass = '', borderclass = '', textclass = '') %}
         {% if n+1 == config.submission_period %}
             {% if period.closed %}
-                {% set bgclass = 'bg-secondary' %}
-                {% set borderclass = 'border-secondary' %}
+                {% set ns.bgclass = 'bg-secondary' %}
+                {% set ns.borderclass = 'border-secondary' %}
             {% elif period.is_feedback_open %}
-                {% set bgclass = 'bg-info' %}
-                {% set borderclass = 'border-info' %}
-                {% set textclass = 'text-white' %}
+                {% set ns.bgclass = 'bg-info' %}
+                {% set ns.borderclass = 'border-info' %}
+                {% set ns.textclass = 'text-white' %}
             {% elif period.start_date and period.start_date > today %}
                 {# no markup required; formerly panel-default #}
             {% else %}
                 {# no markup required; formerly bg-success #}
-{#                {% set bgclass = 'bg-success' %}#}
-{#                {% set borderclass = 'border-success' %}#}
-{#                {% set textclass = 'text-white' %}#}
+{#                {% set ns.bgclass = 'bg-success' %}#}
+{#                {% set ns.borderclass = 'border-success' %}#}
+{#                {% set ns.textclass = 'text-white' %}#}
             {% endif %}
         {% else %}
             {# no markup required; formerly panel-default #}
         {% endif %}
-        <div class="card {{ borderclass }} mt-3 mb-3">
-            <div class="card-header {{ bgclass }} {{ textclass }}">
+        <div class="card {{ ns.borderclass }} mt-3 mb-3">
+            <div class="card-header {{ ns.bgclass }} {{ ns.textclass }}">
                 {% if period.submission_period == config.submission_period %}
                     <strong>{{ period.display_name|safe }}</strong>
                 {% else %}

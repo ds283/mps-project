@@ -4009,10 +4009,10 @@ def liveproject_remove_assessor(live_id, fac_id):
     if not validate_is_convenor(live_project.config.project_class):
         return redirect(redirect_url())
 
-    faculty = FacultyData.query.get_or_404(fac_id)
+    fd = FacultyData.query.get_or_404(fac_id)
 
-    if faculty in live_project.assessors:
-        live_project.assessors.remove(faculty)
+    if fd in live_project.assessors:
+        live_project.assessors.remove(fd)
         db.session.commit()
 
     return redirect(redirect_url())
@@ -4034,20 +4034,16 @@ def issue_confirm_requests(id):
 
     year = get_current_year()
 
-    if not config.project_class.publish:
-        flash('A request to issue project confirmations was ignored. Project class "{name}" is not published '
-              'to students'.format(name=config.name), 'error')
-
     IssueFacultyConfirmRequestForm = IssueFacultyConfirmRequestFormFactory()
     form = IssueFacultyConfirmRequestForm(request.form)
 
     if form.is_submitted():
         if form.submit_button.data is True:
             now = date.today()
+            deadline = form.request_deadline.data.date()
 
             # if requests already issued, all we need do is adjust the deadline
             if config.requests_issued:
-                deadline = form.request_deadline.data
                 if deadline < now:
                     deadline = now + timedelta(days=1)
 
@@ -4080,7 +4076,6 @@ def issue_confirm_requests(id):
                                         owner=current_user,
                                         description='Issue project confirmations for "{proj}"'.format(proj=config.name))
 
-                deadline = form.request_deadline.data
                 if deadline < now:
                     deadline = now + timedelta(weeks=2)
 

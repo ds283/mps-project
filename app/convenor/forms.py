@@ -8,6 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from functools import partial
+
 from flask_security.forms import Form
 from wtforms import SubmitField, IntegerField, StringField, BooleanField, TextAreaField, \
     DateTimeField, SelectField
@@ -15,14 +17,12 @@ from wtforms.validators import InputRequired, Optional, Email, Length
 from wtforms_alchemy import QuerySelectField
 
 from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig, ConvenorGenericTask
+from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodPresentationsMixin, \
+    PeriodSelectorMixinFactory
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
     GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses, GetAccommodatableMatchings, \
     GetCanvasEnabledConvenors, BuildCanvasLoginUserName
-from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodPresentationsMixin, \
-    PeriodSelectorMixinFactory
 from ..shared.forms.wtf_validators import NotOptionalIf
-
-from functools import partial
 
 
 def GoLiveFormFactory(submit_label='Go live', live_and_close_label='Go live and immediately close',

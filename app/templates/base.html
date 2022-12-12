@@ -566,7 +566,12 @@
                                 </a>
                                 <div role="separator" class="dropdown-divider"></div>
                                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('auth.logout') }}">
-                                    <i class="fas fa-sign-out-alt fa-fw"></i> Logout
+                                    <i class="fas fa-sign-out-alt fa-fw"></i>
+                                    {% if real_user %}
+                                        Return to normal role
+                                    {% else %}
+                                        Logout
+                                    {% endif %}
                                 </a>
                             </div>
                         </li>
@@ -625,7 +630,7 @@
     <nav class="navbar navbar-expand {% if real_user %}navbar-dark bg-dark{% else %}navbar-light bg-light{% endif %} fixed-bottom" role="navigation">
         <div class="container-fluid">
             <div class="d-flex justify-content-between w-100">
-                <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} School of Mathematics & Physical Sciences, University of Sussex</span>
+                <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} MPS, University of Sussex</span>
                 {% if real_user %}
                     <span class="navbar-text small" style="float: right;">You
                         are viewing as <i class="fas fa-user"></i>

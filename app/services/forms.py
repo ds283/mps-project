@@ -9,10 +9,8 @@
 #
 
 from flask_security.forms import Form
-from wtforms import StringField, IntegerField, SelectField, BooleanField, SubmitField, \
-    TextAreaField, DateField, DateTimeField, FloatField, RadioField, ValidationError
-from wtforms.validators import InputRequired, Optional, Length
-from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
+from wtforms import StringField, SubmitField, TextAreaField
+from wtforms.validators import InputRequired, Optional
 
 
 def SendEmailFormFactory(use_recipients=True):

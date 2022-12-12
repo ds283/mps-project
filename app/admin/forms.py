@@ -1040,7 +1040,6 @@ def EditPresentationAssessmentFormFactory(year, assessment_id):
 
 
 class SessionMixin():
-
     date = DateTimeField('Date', format='%d/%m/%Y', validators=[InputRequired()],
                          description='Specify the date for this session')
 

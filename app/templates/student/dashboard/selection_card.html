@@ -312,22 +312,20 @@
 
 
 {% macro selection_card(config, sel) %}
-    {% set bgclass = '' %}
-    {% set borderclass = '' %}
-    {% set textclass = '' %}
+    {% set ns = namespace(bgclass = '', borderclass = '', textclass = '') %}
     {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-        {% set bgclass = 'bg-primary' %}
-        {% set borderclass = 'border-primary' %}
-        {% set textclass = 'text-white' %}
+        {% set ns.bgclass = 'bg-primary' %}
+        {% set ns.borderclass = 'border-primary' %}
+        {% set ns.textclass = 'text-white' %}
     {% elif config.selector_lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
-        {% set bgclass = 'bg-secondary' %}
-        {% set borderclass = 'border-secondary' %}
-        {% set textclass = 'text-white' %}
+        {% set ns.bgclass = 'bg-secondary' %}
+        {% set ns.borderclass = 'border-secondary' %}
+        {% set ns.textclass = 'text-white' %}
     {% else %}
         {# no markup required; formerly panel-default #}
     {% endif %}
-   <div class="card {{ borderclass }} %}mt-3 mb-3">
-        <div class="card-header {{ bgclass }} {{ textclass }}">
+   <div class="card {{ ns.borderclass }} %}mt-3 mb-3">
+        <div class="card-header {{ ns.bgclass }} {{ ns.textclass }}">
             {% if sub %}
                 <strong>Request to switch projects</strong>
             {% else %}

@@ -503,7 +503,7 @@
                         <div class="row vertical-align">
                             <div class="col-12">
                                 <div class="float-end">
-                                    {% if desc and current_user.has_role('admin') or current_user.has_role('root') %}
+                                    {% if desc and (current_user.has_role('admin') or current_user.has_role('root')) %}
                                         <a href="{{ url_for('project_approver.clean_comments', id=desc.id) }}" class="btn btn-warning">Remove deleted comments</a>
                                     {% endif %}
                                     {{ wtf.render_field(form.post_comment, button_map={'post_comment': 'primary'}) }}

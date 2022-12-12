@@ -10,21 +10,19 @@
 
 import json
 
-from usernames import is_safe_username
-from wtforms import ValidationError
-from wtforms.validators import Optional
+from flask import current_app
 from flask_security import password_length_validator, password_complexity_validator, \
     password_breached_validator
+from usernames import is_safe_username
+from werkzeug.local import LocalProxy
+from wtforms import ValidationError
+from wtforms.validators import Optional
 
-from zxcvbn import zxcvbn
-
+from ... import db
 from ...models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, SkillGroup, ProjectClass, \
     Supervisor, Role, StudentData, MatchingAttempt, PresentationAssessment, Building, Room, \
-    ScheduleAttempt, Module, Project, ProjectDescription, FHEQ_Level, StudentBatchItem, AssetLicense
-
-from flask import current_app
-from werkzeug.local import LocalProxy
-
+    ScheduleAttempt, Module, Project, ProjectDescription, FHEQ_Level, StudentBatchItem, AssetLicense, ProjectTagGroup, \
+    ProjectTag
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -155,7 +153,7 @@ def unique_or_original_programme_abbreviation(form, field):
 def globally_unique_transferable_skill(form, field):
     if TransferableSkill.query.filter(TransferableSkill.name == field.data,
                                       TransferableSkill.group_id == form.group.data.id).first():
-        raise ValidationError('{name} is already associated with a transferable skill'.format(name=field.data))
+        raise ValidationError('{name} is already in use for a transferable skill'.format(name=field.data))
 
 
 def unique_or_original_transferable_skill(form, field):
@@ -167,7 +165,7 @@ def unique_or_original_transferable_skill(form, field):
 
 def globally_unique_skill_group(form, field):
     if SkillGroup.query.filter_by(name=field.data).first():
-        raise ValidationError('{name} is already associated with a skill group'.format(name=field.data))
+        raise ValidationError('{name} is already in use for a skill group'.format(name=field.data))
 
 
 def unique_or_original_skill_group(form, field):
@@ -175,6 +173,30 @@ def unique_or_original_skill_group(form, field):
         return
 
     return globally_unique_skill_group(form, field)
+
+
+def globally_unique_project_tag_group(form, field):
+    if db.session.query(ProjectTagGroup).filter_by(name=field.data).first():
+        raise ValidationError('{name} is already in use for a project tag group'.format(name=field.data))
+
+
+def unique_or_original_project_tag_group(form, field):
+    if field.data == form.group.name:
+        return
+
+    return globally_unique_project_tag_group(form, field)
+
+
+def globally_unique_project_tag(form, field):
+    if db.session.query(ProjectTag).filter_by(name=field.data).first():
+        raise ValidationError('{name} is already in use for a project tag'.format(name=field.data))
+
+
+def unique_or_original_project_tag(form, field):
+    if field.data == form.tag.name:
+        return
+
+    return globally_unique_project_tag(form, field)
 
 
 def globally_unique_project_class(form, field):

@@ -3,14 +3,14 @@
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
         <li class="nav-item">
-            <a class="nav-link {% if subpane=='skills' %}active{% endif %}"
-               href="{{ url_for('admin.edit_skills') }}">
-                Transferable skills
+            <a class="nav-link {% if subpane=='tags' %}active{% endif %}"
+               href="{{ url_for('admin.edit_project_tags') }}">
+                Project tags
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link {% if subpane=='groups' %}active{% endif %}"
-               href="{{ url_for('admin.edit_skill_groups') }}">
+               href="{{ url_for('admin.edit_project_tag_groups') }}">
                 Groups
             </a>
         </li>

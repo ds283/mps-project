@@ -8,6 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import re
+from functools import partial
+
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, BooleanField, SubmitField, \
     TextAreaField, DateTimeField, FloatField, RadioField, ValidationError
@@ -15,11 +18,23 @@ from wtforms.validators import InputRequired, Optional, Length, URL
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..manage_users.forms import ResearchGroupMixin
-
-from ..shared.forms.wtf_validators import globally_unique_group_name, unique_or_original_group_name, \
+from ..models import BackupConfiguration, ScheduleAttempt, extent_choices, \
+    matching_history_choices, solver_choices, session_choices, semester_choices, auto_enrol_year_choices, \
+    student_level_choices, DEFAULT_STRING_LENGTH, start_year_choices, DegreeProgramme, DegreeType
+from ..shared.forms.mixins import SaveChangesMixin, SubmissionPeriodPresentationsMixin
+from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
+    BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
+    GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
+    GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
+    GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, \
+    ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules, \
+    BuildPossibleOfficeContacts, BuildOfficeContactName, BuildPossibleApprovers, BuildApproverName, \
+    GetActiveProjectTagGroups
+from ..shared.forms.wtf_validators import valid_json, NotOptionalIf, \
+    globally_unique_group_name, unique_or_original_group_name, \
     globally_unique_group_abbreviation, unique_or_original_group_abbreviation, \
-    globally_unique_degree_type, unique_or_original_degree_type,\
-    globally_unique_degree_abbreviation, unique_or_original_degree_abbreviation,\
+    globally_unique_degree_type, unique_or_original_degree_type, \
+    globally_unique_degree_abbreviation, unique_or_original_degree_abbreviation, \
     globally_unique_degree_programme, unique_or_original_degree_programme, \
     globally_unique_course_code, unique_or_original_course_code, \
     globally_unique_programme_abbreviation, unique_or_original_programme_abbreviation, \
@@ -40,25 +55,8 @@ from ..shared.forms.wtf_validators import globally_unique_group_name, unique_or_
     globally_unique_license_name, unique_or_original_license_name, \
     globally_unique_license_abbreviation, unique_or_original_license_abbreviation, \
     per_license_unique_version, per_license_unique_or_original_version, \
-    valid_json, NotOptionalIf
-
-from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
-    BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
-    GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
-    GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
-    GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, \
-    ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules, \
-    BuildPossibleOfficeContacts, BuildOfficeContactName, BuildPossibleApprovers, BuildApproverName
-
-from ..shared.forms.mixins import SaveChangesMixin, SubmissionPeriodPresentationsMixin
-
-from ..models import BackupConfiguration, ScheduleAttempt, extent_choices, \
-    matching_history_choices, solver_choices, session_choices, semester_choices, auto_enrol_year_choices, \
-    student_level_choices, DEFAULT_STRING_LENGTH, start_year_choices, ProjectClassConfig, DegreeProgramme, DegreeType
-
-from functools import partial
-
-import re
+    globally_unique_project_tag_group, unique_or_original_project_tag_group, \
+    globally_unique_project_tag, unique_or_original_project_tag
 
 
 class GlobalConfig(Form):
@@ -145,7 +143,7 @@ class DegreeProgrammeMixin:
     foundation_year = BooleanField('Includes foundation year', default=False)
 
     year_out = BooleanField('Includes year out', default=False,
-                            description="Select if this programme includes a year abroad, and industrial "
+                            description="Select if this programme includes a year abroad, an industrial "
                                         "placement year, or another type of year away from the University")
 
     year_out_value = IntegerField("Year out", default=3,
@@ -210,27 +208,6 @@ class EditModuleForm(Form, ModuleMixin, SaveChangesMixin):
     code = StringField('Module code', validators=[InputRequired(message='Module code is required'),
                                                   Length(max=DEFAULT_STRING_LENGTH),
                                                   unique_or_original_module_code])
-
-
-class TransferableSkillMixin():
-
-    group = QuerySelectField('Skill group', query_factory=GetActiveSkillGroups, get_label='name')
-
-
-class AddTransferableSkillForm(Form, TransferableSkillMixin):
-
-    name = StringField('Skill', validators=[InputRequired(message='Name of transferable skill is required'),
-                                            Length(max=DEFAULT_STRING_LENGTH),
-                                            globally_unique_transferable_skill])
-
-    submit = SubmitField('Add new transferable skill')
-
-
-class EditTransferableSkillForm(Form, TransferableSkillMixin, SaveChangesMixin):
-
-    name = StringField('Skill', validators=[InputRequired(message='Name of transferable skill is required'),
-                                            Length(max=DEFAULT_STRING_LENGTH),
-                                            unique_or_original_transferable_skill])
 
 
 class ProjectClassMixin():
@@ -741,26 +718,93 @@ class SkillGroupMixin():
                          description='Assign a colour to help students identify skills belonging to this group')
 
     add_group = BooleanField('Add group name to skill labels',
-                             description='Select if you wish skills in this group to be labelled as <group name>: <skill name>')
+                             description='Skills in this group to be labelled as group-name: skill-name')
 
 
 class AddSkillGroupForm(Form, SkillGroupMixin):
 
-    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the group'),
+    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for this group'),
                                            Length(max=DEFAULT_STRING_LENGTH),
                                            globally_unique_skill_group])
 
-    submit = SubmitField('Add new skill')
+    submit = SubmitField('Add new group')
 
 
 class EditSkillGroupForm(Form, SkillGroupMixin, SaveChangesMixin):
 
-    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the group'),
+    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for this group'),
                                            Length(max=DEFAULT_STRING_LENGTH),
                                            unique_or_original_skill_group])
 
 
-class PuLPSolverMixin():
+class TransferableSkillMixin:
+
+    group = QuerySelectField('Skill group', query_factory=GetActiveSkillGroups, get_label='name')
+
+
+class AddTransferableSkillForm(Form, TransferableSkillMixin):
+
+    name = StringField('Skill', validators=[InputRequired(message='Name of transferable skill is required'),
+                                            Length(max=DEFAULT_STRING_LENGTH),
+                                            globally_unique_transferable_skill])
+
+    submit = SubmitField('Add new transferable skill')
+
+
+class EditTransferableSkillForm(Form, TransferableSkillMixin, SaveChangesMixin):
+
+    name = StringField('Skill', validators=[InputRequired(message='Name of transferable skill is required'),
+                                            Length(max=DEFAULT_STRING_LENGTH),
+                                            unique_or_original_transferable_skill])
+
+
+class ProjectTagGroupMixin:
+
+    add_group = BooleanField('Add group name to tag labels',
+                             description='Tags in this group will be labelled as group-name: tag-name')
+
+
+class AddProjectTagGroupForm(Form, ProjectTagGroupMixin):
+
+    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for this group'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
+                                           globally_unique_project_tag_group])
+
+    submit = SubmitField('Add new group')
+
+
+class EditProjectTagGroupForm(Form, ProjectTagGroupMixin, SaveChangesMixin):
+
+    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for this group'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
+                                           unique_or_original_project_tag_group])
+
+
+class ProjectTagMixin:
+
+    group = QuerySelectField('Tag group', query_factory=GetActiveProjectTagGroups, get_label='name')
+
+    colour = StringField('Colour', validators=[Length(max=DEFAULT_STRING_LENGTH)],
+                         description='Assign a colour to help students recognize this tag')
+
+
+class AddProjectTagForm(Form, ProjectTagMixin):
+
+    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for this tag'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
+                                           globally_unique_project_tag])
+
+    submit = SubmitField('Add new tag')
+
+
+class EditProjectTagForm(Form, ProjectTagMixin, SaveChangesMixin):
+
+    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for this tag'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
+                                           unique_or_original_project_tag])
+
+
+class PuLPSolverMixin:
 
     solver = SelectField('Solver', choices=solver_choices, coerce=int,
                          description='The optimizer can use a number of different solvers. If in doubt, use the '

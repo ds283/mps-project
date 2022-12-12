@@ -1,6 +1,6 @@
 #
-# Created by David Seery on 05/06/2018.
-# Copyright (c) 2018 University of Sussex. All rights reserved.
+# Created by David Seery on 12/12/2022.
+# Copyright (c) 2022 University of Sussex. All rights reserved.
 #
 # This file is part of the MPS-Project platform developed in
 # the School of Mathematics & Physical Sciences, University of Sussex.
@@ -19,16 +19,16 @@ _menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_skill', id=skill.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_project_tag', tid=tag.id) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit details...
         </a>
-        {% if skill.group is not none and skill.group.active %}
+        {% if tag.group is not none and tag.group.active %}
             {% if skill.active %}
-                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_skill', id=skill.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_project_tag', tid=tag.id) }}">
                     <i class="fas fa-wrench fa-fw"></i> Make inactive
                 </a>
             {% else %}
-                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_skill', id=skill.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_project_tag', tid=tag.id) }}">
                     <i class="fas fa-wrench fa-fw"></i> Make active
                 </a>
             {% endif %}
@@ -43,7 +43,7 @@ _menu = \
 # language=jinja2
 _active = \
 """
-{% if s.active %}
+{% if t.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
     <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Inactive</span>
@@ -51,10 +51,11 @@ _active = \
 """
 
 
-def skills_data(skills):
-    data = [{'name': s.name,
-             'group': s.group.make_label() if s.group is not None else '<span class="badge bg-danger">None</span>',
-             'active': render_template_string(_active, s=s),
-             'menu': render_template_string(_menu, skill=s)} for s in skills]
+def tags_data(tags):
+    data = [{'name': t.name,
+             'colour': t.make_label(t.colour),
+             'group': t.group.make_label() if t.group is not None else '<span class="badge bg-danger">None</span>',
+             'active': render_template_string(_active, t=t),
+             'menu': render_template_string(_menu, tag=t)} for t in tags]
 
     return data

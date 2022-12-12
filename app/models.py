@@ -6423,6 +6423,9 @@ class ProjectTagGroup(db. Model, ColouredLabelMixin, EditingMetadataMixin):
     # active flag
     active = db.Column(db.Boolean(), default=True)
 
+    # add group name to labels
+    add_group = db.Column(db.Boolean())
+
 
     def _make_label(self, user_classes=None):
         return self._make_label(text=self.name, user_classes=user_classes)

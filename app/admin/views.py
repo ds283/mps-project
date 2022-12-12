@@ -59,7 +59,8 @@ from .forms import GlobalConfig, \
     ImposeConstraintsScheduleFormFactory, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
     PublicScheduleFormFactory, CompareScheduleFormFactory, \
-    AddAssetLicenseForm, EditAssetLicenseForm
+    AddAssetLicenseForm, EditAssetLicenseForm, AddProjectTagGroupForm, EditProjectTagGroupForm, \
+    AddProjectTagForm, EditProjectTagForm
 from ..cache import cache
 from ..database import db
 from ..limiter import limiter
@@ -70,7 +71,8 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset, \
-    AssetLicense, SubmittedAssetDownloadRecord, GeneratedAssetDownloadRecord, SelectingStudent, EmailNotification
+    AssetLicense, SubmittedAssetDownloadRecord, GeneratedAssetDownloadRecord, SelectingStudent, EmailNotification, \
+    ProjectTagGroup, ProjectTag
 from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
     canonical_submitted_asset_filename
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
@@ -1059,7 +1061,7 @@ def skills_ajax():
                'active': active}
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(ajax.admin.skills_data)
+        return handler.build_payload(ajax.admin.skills.skills_data)
 
 
 @admin.route('/add_skill', methods=['GET', 'POST'])
@@ -1073,7 +1075,7 @@ def add_skill():
         return home_dashboard()
 
     # check whether any skill groups exist, and raise an error if not
-    if not SkillGroup.query.filter_by(active=True).first():
+    if not db.session.query(SkillGroup).filter_by(active=True).first():
         flash('No skill groups are available. Set up at least one active skill group before adding a '
               'transferable skill.', 'error')
         return redirect(redirect_url())
@@ -1093,7 +1095,7 @@ def add_skill():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash('Could not add a skill group because of a database error. Please contact a system '
+            flash('Could not add this skill group because of a database error. Please contact a system '
                   'administrator', 'error')
 
         return redirect(url_for('admin.edit_skills'))
@@ -1157,7 +1159,7 @@ def activate_skill(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash('Could not save changes because of a database error. Please contact a system '
+        flash('Could not activate this transferable skill because of a database error. Please contact a system '
               'administrator', 'error')
 
     return redirect(redirect_url())
@@ -1182,7 +1184,7 @@ def deactivate_skill(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash('Could not save changes because of a database error. Please contact a system '
+        flash('Could not deactivate this transferable skill because of a database error. Please contact a system '
               'administrator', 'error')
 
     return redirect(redirect_url())
@@ -1240,14 +1242,21 @@ def add_skill_group():
     form = AddSkillGroupForm(request.form)
 
     if form.validate_on_submit():
-        skill = SkillGroup(name=form.name.data,
+        group = SkillGroup(name=form.name.data,
                            colour=form.colour.data,
                            add_group=form.add_group.data,
                            active=True,
                            creator_id=current_user.id,
                            creation_timestamp=datetime.now())
-        db.session.add(skill)
-        db.session.commit()
+
+        try:
+            db.session.add(group)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add new transferable skill group because of a database error. '
+                  'Please contact a system administrator.', 'error')
 
         return redirect(url_for('admin.edit_skill_groups'))
 
@@ -1277,7 +1286,13 @@ def edit_skill_group(id):
         group.last_edit_id = current_user.id
         group.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes because of a database error. '
+                  'Please contact a system administrator.', 'error')
 
         return redirect(url_for('admin.edit_skill_groups'))
 
@@ -1298,7 +1313,14 @@ def activate_skill_group(id):
 
     group = SkillGroup.query.get_or_404(id)
     group.enable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not activate this skill group because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -1316,7 +1338,342 @@ def deactivate_skill_group(id):
 
     group = SkillGroup.query.get_or_404(id)
     group.disable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not deactivate this skill group because of a database error. Please contact a system '
+              'administrator', 'error')
+
+    return redirect(redirect_url())
+
+
+@admin.route('/edit_project_tag_groups')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
+def edit_project_tag_groups():
+    """
+    Project tag group list
+    :return:
+    """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return home_dashboard()
+
+    return render_template('admin/project_tags/edit_tag_groups.html', subpane='groups')
+
+
+@admin.route('/edit_project_tag_groups_ajax', methods=['POST'])
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
+def edit_project_tag_groups_ajax():
+    """
+    AJAX endpoint for project tag groups table
+    :return:
+    """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return jsonify({})
+
+    base_query = db.session.query(ProjectTagGroup)
+
+    name = {'name': ProjectTagGroup.name,
+            'order': ProjectTagGroup.name,
+            'search_collation': 'utf8_general_ci'}
+    include = {'order': ProjectTagGroup.add_group}
+    active = {'order': ProjectTagGroup.active}
+
+    columns = {'name': name,
+               'include': include,
+               'active': active}
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.admin.project_tag_groups.tag_groups_data)
+
+
+@admin.route('/add_project_tag_group', methods=['GET', 'POST'])
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
+def add_project_tag_group():
+    """
+    Add a new project tag group
+    :return:
+    """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return home_dashboard()
+
+    form = AddProjectTagGroupForm(request.form)
+
+    if form.validate_on_submit():
+        group = ProjectTagGroup(name=form.name.data,
+                                add_group=form.add_group.data,
+                                active=True,
+                                creator_id=current_user.id,
+                                creation_timestamp=datetime.now())
+
+        try:
+            db.session.add(group)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add new project tag group because of a database error. '
+                  'Please contact a system administrator.', 'error')
+
+        return redirect(url_for('admin.edit_project_tag_groups'))
+
+    return render_template('admin/project_tags/edit_tag_group.html',
+                           group_form=form, title='Add new project tag group')
+
+
+@admin.route('/edit_project_tag_group/<int:gid>', methods=['GET', 'POST'])
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
+def edit_project_tag_group(gid):
+    """
+    Edit an existing project tag group
+    :param gid:
+    :return:
+    """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return home_dashboard()
+
+    group = ProjectTagGroup.query.get_or_404(gid)
+    form = EditProjectTagGroupForm(obj=group)
+
+    form.group = group
+
+    if form.validate_on_submit():
+        group.name = form.name.data
+        group.add_group = form.add_group.data
+        group.last_edit_id = current_user.id
+        group.last_edit_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes because of a database error. '
+                  'Please contact a system administrator.', 'error')
+
+        return redirect(url_for('admin.edit_project_tag_groups'))
+
+    return render_template('admin/project_tags/edit_tag_group.html', group=group,
+                           group_form=form, title='Edit project tag group')
+
+
+@admin.route('/activate_project_tag_group/<int:gid>')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
+def activate_project_tag_group(gid):
+    """
+    Make a project tag group active
+    :param gid:
+    :return:
+    """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return home_dashboard()
+
+    group = ProjectTagGroup.query.get_or_404(gid)
+    group.enable()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not activate this project tag group because of a database error. Please contact a system '
+              'administrator', 'error')
+
+    return redirect(redirect_url())
+
+
+@admin.route('/deactivate_project_tag_group/<int:gid>')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
+def deactivate_project_tag_group(gid):
+    """
+    Make a project tag group inactive
+    :param gid:
+    :return:
+    """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return home_dashboard()
+
+    group = ProjectTagGroup.query.get_or_404(gid)
+    group.disable()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not disable this project tag group because of a database error. Please contact a system '
+              'administrator', 'error')
+
+    return redirect(redirect_url())
+
+
+@admin.route('/edit_project_tags')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
+def edit_project_tags():
+    """
+    Project tags list
+    :return:
+    """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return home_dashboard()
+
+    return render_template('admin/project_tags/edit_tags.html', subpane='tags')
+
+
+@admin.route('edit_project_tags_ajax', methods=['POST'])
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
+def edit_project_tags_ajax():
+    """
+    AJAX endpoint for project tags table
+    :return:
+    """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return jsonify({})
+
+    base_query = db.session.query(ProjectTag) \
+        .join(ProjectTagGroup, ProjectTagGroup.id == ProjectTag.group_id)
+
+    name = {'name': ProjectTag.name,
+            'order': ProjectTag.name,
+            'search_collation': 'utf8_general_ci'}
+    group = {'name': ProjectTagGroup.name,
+             'order': ProjectTagGroup.name,
+             'search_collation': 'utf8_general_ci'}
+    active = {'order': ProjectTag.active}
+
+    columns = {'name': name,
+               'group': group,
+               'active': active}
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.admin.project_tags.tags_data)
+
+
+@admin.route('/add_project_tag', methods=['GET', 'POST'])
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
+def add_project_tag():
+    """
+    Create a new project tag
+    :return:
+    """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return home_dashboard()
+
+    # check whether any ProjectTagGroups exist, and raise an error if not
+    if not db.session.query(ProjectTagGroup).filter_by(active=True).first():
+        flash('No project tag groups are available. Set up at least one active tag group before adding a '
+              'tag.', 'error')
+        return redirect(redirect_url())
+
+    form = AddProjectTagForm(request.form)
+
+    if form.validate_on_submit():
+        tag = ProjectTag(name=form.name.data,
+                         group=form.group.data,
+                         colour=form.colour.data,
+                         active=True,
+                         creator_id=current_user.id,
+                         creation_timestamp=datetime.now())
+
+        try:
+            db.session.add(tag)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add this project tag because of a database error. Please contact a system '
+                  'administrator', 'error')
+
+        return redirect(url_for('admin.edit_project_tags'))
+
+    return render_template('admin/project_tags/edit_tag.html', tag_form=form, title='Add new project tag')
+
+
+@admin.route('/edit_project_tag/<int:tid>', methods=['GET', 'POST'])
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
+def edit_project_tag(tid):
+    """
+    Edit an existing project tag
+    :param tid:
+    :return:
+    """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return home_dashboard()
+
+    tag = ProjectTag.query.get_or_404(tid)
+    form = EditProjectTagForm(obj=tag)
+
+    form.tag = tag
+
+    if form.validate_on_submit():
+        tag.name = form.name.data
+        tag.group = form.group.data
+        tag.colour = form.colour.data
+        tag.last_edit_id = current_user.id
+        tag.last_edit_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes because of a database error. Please contact a system '
+                  'administrator', 'error')
+
+        return redirect(url_for('admin.edit_project_tags'))
+
+    return render_template('admin/project_tags/edit_tag.html', tag=tag, tag_form=form,
+                           title='Edit project tag')
+
+
+@admin.route('/activate_project_tag/<int:tid>')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
+def activate_project_tag(tid):
+    """
+    Make a project tag active
+    :param tid:
+    :return:
+    """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return home_dashboard()
+
+    tag = ProjectTag.query.get_or_404(tid)
+    tag.enable()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not activate this project tag because of a database error. Please contact a system '
+              'administrator', 'error')
+
+    return redirect(redirect_url())
+
+
+@admin.route('/deactivate_project_tag/<int:tid>')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
+def deactivate_project_tag(tid):
+    """
+    Make a project tag inactive
+    :param tid:
+    :return:
+    """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return home_dashboard()
+
+    tag = ProjectTag.query.get_or_404(tid)
+    tag.disable()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not disable this project tag because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 

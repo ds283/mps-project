@@ -23,6 +23,8 @@ from .skill_groups import skill_groups_data
 from .skills import skills_data
 from .supervisors import supervisors_data
 from .licenses import licenses_data
+from .project_tag_groups import tag_groups_data
+from .project_tags import tags_data
 
 from .matching.compare_matches import compare_match_data
 from .matching.match_view_faculty import faculty_view_data

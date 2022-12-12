@@ -10,18 +10,16 @@
 
 
 from flask_login import current_user
+from sqlalchemy import or_
 
+from ..utils import get_current_year
 from ...database import db
-from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role,\
+from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role, \
     ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, \
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
     Building, Room, PresentationFeedback, FHEQ_Level, ScheduleSlot, PresentationSession, \
-    ScheduleAttempt, AssetLicense
+    ScheduleAttempt, AssetLicense, ProjectTagGroup
 from ...models import project_pclasses, description_pclasses, roles_to_users
-
-from ..utils import get_current_year
-
-from sqlalchemy import or_
 
 
 def GetActiveDegreeTypes():
@@ -34,6 +32,10 @@ def GetActiveDegreeProgrammes():
 
 def GetActiveSkillGroups():
     return SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc())
+
+
+def GetActiveProjectTagGroups():
+    return db.session.query(ProjectTagGroup).filter_by(active=True).order_by(ProjectTagGroup.name.asc())
 
 
 def BuildDegreeProgrammeName(programme: DegreeProgramme):

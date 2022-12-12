@@ -420,6 +420,9 @@
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_supervisors') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Supervisory team...
                                     </a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_project_tags') }}">
+                                        <i class="fas fa-cogs fa-fw"></i> Project tags...
+                                    </a>
                                     {% set needs_divider = true %}
                                 {% endif %}
                                 {% if is_root and (matching_ready or has_assessments) %}

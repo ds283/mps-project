@@ -1,0 +1,36 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {{ title }}
+{% endblock %}
+
+{% block form_content %}
+    {% if group %}
+        <form action="{{ url_for('admin.edit_project_tag_group', gid=group.id) }}" method="POST" name="group_form">
+    {% else %}
+        <form action="{{ url_for('admin.add_project_tag_group') }}" method="POST" name="group_form">
+    {% endif %}
+
+        {{ group_form.hidden_tag() }}
+
+        {{ wtf.render_field(group_form.name) }}
+        {{ wtf.render_field(group_form.add_group) }}
+
+        <div class="mt-2">
+            {{ wtf.render_field(group_form.submit, button_map={'submit': 'primary'}) }}
+        </div>
+
+    </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(group) }}
+    {{ super() }}
+{% endblock %}

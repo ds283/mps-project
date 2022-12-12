@@ -2,9 +2,11 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, colour_field %}
+{% from "select2.html" import import_select2 %}
 
 {% block scripts %}
     {{ super() }}
+    {{ import_select2 }}
     {% assets filters="cssmin", output="gen/bootstrap-colorpicker-min.css", "css/bootstrap-colorpicker.css" -%}
         <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
     {% endassets %}
@@ -14,7 +16,12 @@
     {% endassets %}
 
     <script>
-        $(function () {
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#group').select2({
+                theme: 'bootstrap-5'
+            });
             $('#colour-group').colorpicker({
                 format: 'hex',
                 useAlpha: false
@@ -32,26 +39,24 @@
 {% endblock %}
 
 {% block form_content %}
-    {% if group %}
-        <form action="{{ url_for('admin.edit_skill_group', id=group.id) }}" method="POST" name="group_form">
+    {% if tag %}
+        <form action="{{ url_for('admin.edit_tag', tid=tag.id) }}" method="POST" name="tag_form">
     {% else %}
-        <form action="{{ url_for('admin.add_skill_group') }}" method="POST" name="group_form">
+        <form action="{{ url_for('admin.add_tag') }}" method="POST" name="tag_form">
     {% endif %}
 
-        {{ group_form.hidden_tag() }}
+        {{ tag_form.hidden_tag() }}
 
-{#        {{ wtf.form_errors(group_form) }}#}
+        {{ wtf.render_field(tag_form.name) }}
+        {{ colour_field(tag_form.colour, 'colour-group') }}
+        {{ wtf.render_field(tag_form.group) }}
 
-        {{ wtf.render_field(group_form.name) }}
-        {{ colour_field(group_form.colour, 'colour-group') }}
-        {{ wtf.render_field(group_form.add_group) }}
-
-        {{ wtf.render_field(group_form.submit, button_map={'submit': 'primary'}) }}
+        {{ wtf.render_field(tag_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}
 
 {% block footer %}
-    {{ edit_data(group) }}
+    {{ edit_data(skill) }}
     {{ super() }}
 {% endblock %}

@@ -1,6 +1,6 @@
 #
-# Created by David Seery on 2018-10-02.
-# Copyright (c) 2018 University of Sussex. All rights reserved.
+# Created by David Seery on 12/12/2022.
+# Copyright (c) 2022 University of Sussex. All rights reserved.
 #
 # This file is part of the MPS-Project platform developed in
 # the School of Mathematics & Physical Sciences, University of Sussex.
@@ -19,15 +19,15 @@ _menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_skill_group', id=group.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_project_tag_group', gid=group.id) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit details...
         </a>
         {% if group.active %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_skill_group', id=group.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_project_tag_group', gid=group.id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make inactive
             </a>
         {% else %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_skill_group', id=group.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_project_tag_group', gid=group.id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make active
             </a>
         {% endif %}
@@ -57,10 +57,8 @@ _include_name = \
 {% endif %}
 """
 
-
-def skill_groups_data(groups):
+def tag_groups_data(groups):
     data = [{'name': g.name,
-             'colour': g.make_label(g.colour),
              'active': render_template_string(_active, g=g),
              'include': render_template_string(_include_name, g=g),
              'menu': render_template_string(_menu, group=g)} for g in groups]

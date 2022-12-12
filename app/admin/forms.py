@@ -395,6 +395,14 @@ class ProjectClassMixin():
                                     description='Each project variant can be given one or more '
                                                 'tags, which are advertised to students.')
 
+    force_tag_groups = QuerySelectMultipleField('Require tags from specific groups',
+                                                query_factory=GetActiveProjectTagGroups,
+                                                get_label='name',
+                                                description='Forces projects to be tagged with at least one tag '
+                                                            'from a specified set of groups. For instance, this '
+                                                            'could be used '
+                                                            'to enforce a consistent labelling convention.')
+
 
 class AddProjectClassForm(Form, ProjectClassMixin):
 

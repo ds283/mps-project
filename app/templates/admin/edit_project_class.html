@@ -48,6 +48,12 @@
                 dropdownCssClass: 'select2--small',
                 placeholder: 'Select one or more members of the approvals pool...'
             })
+            $('#force_tag_groups').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select zero or mode groups...'
+            })
 
             $('#colour-group').colorpicker({
                 format: 'hex',
@@ -150,6 +156,7 @@
             </div>
             <div class="mt-2">
                 {{ wtf.render_field(pclass_form.use_project_tags) }}
+                {{ wtf.render_field(pclass_form.force_tag_groups) }}
             </div>
             <div class="mt-2">
                 {{ wtf.render_field(pclass_form.include_available) }}

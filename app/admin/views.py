@@ -1928,6 +1928,7 @@ def add_pclass():
                                 keep_daily_popularity=form.keep_daily_popularity.data,
                                 advertise_research_group=form.advertise_research_group.data,
                                 use_project_tags=form.use_project_tags.data,
+                                force_tag_groups=form.force_tag_groups.data,
                                 card_text_noninitial=None,
                                 card_text_normal=None,
                                 card_text_optional=None,
@@ -2022,8 +2023,9 @@ def add_pclass():
             form.display_presentations.data = True
             form.auto_enroll_years.data = ProjectClass.AUTO_ENROLL_FIRST_YEAR
             form.do_matching.data = True
-            form.advertise_research_group = True
-            form.use_project_tags = False
+            form.advertise_research_group.data = True
+            form.use_project_tags.data = False
+            form.force_tag_groups.data = []
 
     return render_template('admin/edit_project_class.html', pclass_form=form, title='Add new project class')
 
@@ -2078,6 +2080,7 @@ def edit_pclass(id):
         data.auto_enroll_years = form.auto_enroll_years.data
         data.advertise_research_group = form.advertise_research_group.data
         data.use_project_tags = form.use_project_tags.data
+        data.force_tag_groups = form.force_tag_groups.data
         data.programmes = form.programmes.data
         data.initial_choices = form.initial_choices.data
         data.switch_choices = form.switch_choices.data

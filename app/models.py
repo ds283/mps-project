@@ -1222,6 +1222,12 @@ golive_emails = db.Table('golive_emails',
                          db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
 
 
+# force tagging with a specific tag group
+force_tag_groups = db.Table('force_tag_groups',
+                            db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
+                            db.Column('tag_group_id', db.Integer(), db.ForeignKey('project_tag_groups.id'), primary_key=True))
+
+
 # SYSTEM MESSAGES
 
 
@@ -4465,6 +4471,11 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     reenroll_supervisors_early = db.Column(db.Boolean(), default=True)
 
 
+    # ENFORCE TAGGING
+    force_tag_groups = db.relationship('ProjectTagGroup', secondary=force_tag_groups, lazy='dynamic',
+                                       backref=db.backref('force_tags_for', lazy='dynamic'))
+
+
     # ATTACHED PROJECTS
 
     # 'projects' data member added by back reference from Project model
@@ -5286,6 +5297,11 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     @property
     def use_project_tags(self):
         return self.project_class.use_project_tags
+
+
+    @property
+    def force_tag_groups(self):
+        return self.project_class.force_tag_groups
 
 
     @property

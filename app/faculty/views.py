@@ -34,6 +34,7 @@ from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
     WorkflowMixin, ProjectDescriptionWorkflowHistory, StudentData, SubmittingStudent
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
+from ..shared.projects import create_new_tags
 from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_assessors, \
     get_current_year, get_count, get_approvals_data, allow_approvals, redirect_url, get_main_config
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
@@ -358,8 +359,10 @@ def add_project():
     form = AddProjectForm(request.form)
 
     if form.validate_on_submit():
+        tag_list = create_new_tags(form)
+
         data = Project(name=form.name.data,
-                       tags=form.tags.data,
+                       tags=tag_list,
                        active=True,
                        owner_id=current_user.faculty_data.id,
                        group=form.group.data,
@@ -375,8 +378,14 @@ def add_project():
                        creator_id=current_user.id,
                        creation_timestamp=datetime.now())
 
-        db.session.add(data)
-        db.session.commit()
+        try:
+            db.session.add(data)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add new project due to a database error. '
+                  'Please contact a system administrator', 'error')
 
         if form.submit.data:
             return redirect(url_for('faculty.edit_descriptions', id=data.id, create=1))
@@ -429,8 +438,10 @@ def edit_project(id):
     form.project = project
 
     if form.validate_on_submit():
+        tag_list = create_new_tags(form)
+
         project.name = form.name.data
-        project.tags = form.tags.data
+        project.tags = tag_list
         project.group = form.group.data
         project.project_classes = form.project_classes.data
         project.meeting_reqd = form.meeting_reqd.data
@@ -445,7 +456,13 @@ def edit_project(id):
         # check that the specified programmes
         project.validate_programmes()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes due to a database error. '
+                  'Please contact a system administrator', 'error')
 
         if form.save_and_preview.data:
             return redirect(url_for('faculty.project_preview', id=id, text=text, url=url))

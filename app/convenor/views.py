@@ -48,7 +48,8 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Bookmark, \
-    ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask
+    ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask, ProjectTagGroup, ProjectTag
+from ..shared.projects import create_new_tags
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
@@ -2886,9 +2887,9 @@ def add_project(pclass_id):
     form = AddProjectForm(request.form)
 
     if form.validate_on_submit():
-
+        tag_list  = create_new_tags(form)
         data = Project(name=form.name.data,
-                       tags=form.tags.data,
+                       tags=tag_list,
                        active=True,
                        owner=form.owner.data,
                        group=form.group.data,
@@ -2993,9 +2994,11 @@ def edit_project(id, pclass_id):
     form.project = project
 
     if form.validate_on_submit():
+        tag_list  = create_new_tags(form)
+
         project.name = form.name.data
         project.owner = form.owner.data
-        project.tags = form.tags.data
+        project.tags = tag_list
         project.group = form.group.data
         project.project_classes = form.project_classes.data
         project.meeting_reqd = form.meeting_reqd.data

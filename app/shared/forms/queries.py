@@ -428,3 +428,7 @@ def GetActiveTags():
 
 def BuildTagName(tag: ProjectTag):
     return tag.display_name
+
+
+def BuildTagGroup(tag: ProjectTag):
+    return tag.group.name if tag.group is not None else '<unknown>'

@@ -13,7 +13,7 @@ from functools import partial
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, SubmitField, TextAreaField, BooleanField
 from wtforms.validators import InputRequired, Optional, Length, ValidationError
-from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
+from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField, GroupedQuerySelectMultipleField
 
 from ..models import DEFAULT_STRING_LENGTH, ProjectClass
 from ..models import Project
@@ -22,7 +22,8 @@ from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLast
 from ..shared.forms.queries import GetActiveFaculty, BuildActiveFacultyName, CurrentUserResearchGroups, \
     AllResearchGroups, CurrentUserProjectClasses, AllProjectClasses, GetSupervisorRoles, GetSkillGroups, \
     AvailableProjectDescriptionClasses, ProjectDescriptionClasses, GetMaskableRoles, GetDestinationProjects, \
-    GetDestinationProjectsPClass, GetActiveTags, BuildTagName
+    GetDestinationProjectsPClass, GetActiveTags, BuildTagName, BuildTagGroup
+from ..shared.forms.widgets import TagSelectField
 from ..shared.forms.wtf_validators import globally_unique_project, unique_or_original_project, project_unique_label, \
     project_unique_or_original_label
 
@@ -34,10 +35,11 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
         if convenor_editing:
             owner = QuerySelectField('Project owner', query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName)
 
-        tags = QuerySelectMultipleField('Add tags to help classify your project', query_factory=GetActiveTags,
-                                        get_label=BuildTagName,
-                                        description='Use tags to help students understand the general area of '
-                                                    'your project, and what it might involve.')
+        tags = TagSelectField('Add tags to help classify your project', query_factory=GetActiveTags,
+                              get_label=BuildTagName, get_group=BuildTagGroup,
+                              description='Use tags to help students understand the general area of '
+                                          'your project, and what it might involve. Separate tags '
+                                          'with commas or semicolons.')
 
         @staticmethod
         def validate_tags(form, field):
@@ -49,7 +51,11 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
 
                 for group in pclass.force_tag_groups:
                     found = False
-                    for tag in field.data:
+
+                    # field.data is a tuple consisting of: (matched, unmatched)
+                    # we only want to search among the matched list
+                    tag_data = field.data
+                    for tag in tag_data(0):
                         if tag.group_id == group.id:
                             found = True
                             break

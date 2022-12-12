@@ -3,7 +3,7 @@
         <div class="row vertical-align final-selection-table">
             <div class="col-1"><strong>Rank</strong></div>
             <div class="col-5"><strong>Project title</strong></div>
-            <div class="col-3"><strong>Research group</strong></div>
+            <div class="col-3"><strong>Affiliation</strong></div>
             <div class="col-3"><strong>Supervisor</strong></div>
         </div>
         {% for item in list %}
@@ -19,8 +19,17 @@
                         </a>
                     </div>
                     <div class="col-3">
+                        {% set ns = namespace(affiliation=false) %}
                         {% if project.group %}
-                            {{ project.group.make_label(project.group.name)|safe }}
+                            {{ project.group.make_label()|safe }}
+                            {% set ns.affiliation = true %}
+                        {% endif %}
+                        {% for tag in project.forced_group_tags %}
+                            {{ tag.make_label()|safe }}
+                            {% set ns.affiliation = true %}
+                        {% endfor %}
+                        {% if not ns.affiliation %}
+                            <span class="badge bg-warning text-dark">No affiliations</span>
                         {% endif %}
                     </div>
                     <div class="col-3">

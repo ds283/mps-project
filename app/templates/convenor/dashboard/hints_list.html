@@ -59,10 +59,17 @@
                                             {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.liveproject.name }}
                                         </a>
                                     </div>
+                                    {% set ns = namespace(affiliation=false) %}
                                     {% if project.group %}
-                                        <div>
-                                            {{ project.group.make_label(project.group.name)|safe }}
-                                        </div>
+                                        {{ project.group.make_label()|safe }}
+                                        {% set ns.affiliation = true %}
+                                    {% endif %}
+                                    {% for tag in project.forced_group_tags %}
+                                        {{ tag.make_label()|safe }}
+                                        {% set ns.affiliation = true %}
+                                    {% endfor %}
+                                    {% if not ns.affiliation %}
+                                        <span class="badge bg-warning text-dark">No affiliations</span>
                                     {% endif %}
                                 </div>
                             </div>

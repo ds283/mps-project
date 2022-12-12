@@ -192,14 +192,21 @@
                                 {% elif project.meeting_reqd == project.MEETING_NONE %}
                                     <span class="badge bg-success">Meeting not required</span>
                                 {% endif %}
-                                {% if project.group  %}
+                                {% set ns = namespace(affiliation=false) %}
+                                {% if project.group %}
                                     {{ project.group.make_label()|safe }}
-                                {% else %}
-                                    <span class="badge bg-warning text-dark">Missing research group</span>
+                                    {% set ns.affiliation = true %}
+                                {% endif %}
+                                {% for tag in project.forced_group_tags %}
+                                    {{ tag.make_label()|safe }}
+                                    {% set ns.affiliation = true %}
+                                {% endfor %}
+                                {% if not ns.affiliation %}
+                                    <span class="badge bg-warning text-dark">No affiliations</span>
                                 {% endif %}
                                 {% set num_assessors = project.number_assessors(pclass) %}
                                 {% if num_assessors > 0 %}
-                                    <span class="badge bg-info text-dark" data-bs-toggle="tooltip" data-bs-html="true" title="{% for assessor in project.get_assessor_list(pclass) %}<div>{{ assessor.user.name }}</div>{% endfor %}">{{ num_assessors }} assessors</span>
+                                    <span class="badge bg-info text-dark" data-bs-toggle="tooltip" data-bs-html="true" title="{% for assessor in project.get_assessor_list(pclass) %}<div>{{ assessor.user.name }}</div>{% endfor %}">{{ num_assessors }} assessor{%- if num_assessors != 1 -%}s{%- endif -%}</span>
                                 {% else %}
                                     <span class="badge bg-danger">No assessors assigned</span>
                                 {% endif %}

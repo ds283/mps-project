@@ -38,7 +38,7 @@ _project = \
 _owner = \
 """
 <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
-{{ project.group.make_label()|safe }}
+{% if project.group %}{{ project.group.make_label()|safe }}{% endif %}
 """
 
 

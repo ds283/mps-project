@@ -2876,14 +2876,14 @@ def add_project(pclass_id):
 
     else:
         # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
+        pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
         # if the logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
     # set up form
-    AddProjectForm = AddProjectFormFactory(convenor_editing=True)
+    AddProjectForm = AddProjectFormFactory(convenor_editing=True, uses_tags=True, uses_research_groups=True)
     form = AddProjectForm(request.form)
 
     if form.validate_on_submit():
@@ -2989,7 +2989,7 @@ def edit_project(id, pclass_id):
     # set up form
     project: Project = Project.query.get_or_404(id)
 
-    EditProjectForm = EditProjectFormFactory(convenor_editing=True)
+    EditProjectForm = EditProjectFormFactory(convenor_editing=True, uses_tags=True, uses_research_groups=True)
     form = EditProjectForm(obj=project)
     form.project = project
 

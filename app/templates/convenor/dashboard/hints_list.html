@@ -59,9 +59,11 @@
                                             {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.liveproject.name }}
                                         </a>
                                     </div>
-                                    <div>
-                                        {{ project.group.make_label(project.group.name)|safe }}
-                                    </div>
+                                    {% if project.group %}
+                                        <div>
+                                            {{ project.group.make_label(project.group.name)|safe }}
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         {% else %}

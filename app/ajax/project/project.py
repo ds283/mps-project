@@ -168,6 +168,24 @@ _project_skills = \
 
 
 # language=jinja2
+_affiliation = \
+"""
+{% set ns = namespace(affiliation=false) %}
+{% if project.group %}
+    {{ project.group.make_label()|safe }}
+    {% set ns.affiliation = true %}
+{% endif %}
+{% for tag in project.forced_group_tags %}
+    {{ tag.make_label()|safe }}
+    {% set ns.affiliation = true %}
+{% endfor %}
+{% if not ns.affiliation %}
+    <span class="badge bg-warning text-dark">No affiliations</span>
+{% endif %}
+"""
+
+
+# language=jinja2
 _faculty_menu = \
 """
 <div class="dropdown">
@@ -375,8 +393,7 @@ def _element(project_id, menu_template, in_current):
              'status': render_template_string(_project_status, project=p),
              'pclasses': render_template_string(_project_pclasses, project=p),
              'meeting': render_template_string(_project_meetingreqd, project=p),
-             'group': p.group.make_label() if p.group is not None \
-                 else '<span class="badge bg-warning text-dark">Missing research group</span>',
+             'group': render_template_string(_affiliation, project=p),
              'prefer': render_template_string(_project_prefer, project=p),
              'skills': render_template_string(_project_skills, skills=p.ordered_skills),
              'menu': render_template_string(menu_string, project=p, config_id=_config_proxy, pclass_id=_pclass_proxy,

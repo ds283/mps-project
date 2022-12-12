@@ -19,7 +19,9 @@
                         </a>
                     </div>
                     <div class="col-3">
-                        {{ project.group.make_label(project.group.name)|safe }}
+                        {% if project.group %}
+                            {{ project.group.make_label(project.group.name)|safe }}
+                        {% endif %}
                     </div>
                     <div class="col-3">
                         <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">

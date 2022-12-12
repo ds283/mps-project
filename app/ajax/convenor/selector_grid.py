@@ -34,7 +34,11 @@ _selections = \
         {% for item in sel.ordered_selections %}
             {% set project = item.liveproject %}
             <div class="dropdown">
-                {% set style = project.group.make_CSS_style() %}
+                {% if project.group %}
+                    {% set style = project.group.make_CSS_style() %}
+                {% else %}
+                    {% set style = none %}
+                {% endif %}
                 <a class="badge text-decoration-none text-nohover-dark bg-info dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">#{{ item.rank }}
                     {{ item.format_project()|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}</a>
                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">

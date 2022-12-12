@@ -28,47 +28,66 @@ from ..shared.forms.wtf_validators import globally_unique_project, unique_or_ori
     project_unique_or_original_label
 
 
-def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
+def ProjectMixinFactory(convenor_editing: bool, uses_tags: bool, uses_research_groups: bool,
+                        project_classes_qf, group_qf):
 
     class ProjectMixin():
 
         if convenor_editing:
             owner = QuerySelectField('Project owner', query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName)
 
-        tags = TagSelectField('Add tags to help classify your project', query_factory=GetActiveTags,
-                              get_label=BuildTagName, get_group=BuildTagGroup,
-                              description='Use tags to help students understand the general area of '
-                                          'your project, and what it might involve. Separate tags '
-                                          'with commas or semicolons.')
+        if uses_tags:
+            tags = TagSelectField('Add tags to help classify your project', query_factory=GetActiveTags,
+                                  get_label=BuildTagName, get_group=BuildTagGroup,
+                                  description='Use tags to help students understand the general area of '
+                                              'your project, and what it might involve. Separate tags '
+                                              'with commas or semicolons.')
 
-        @staticmethod
-        def validate_tags(form, field):
-            for pclass in form.project_classes.data:
-                pclass: ProjectClass
+            @staticmethod
+            def validate_tags(form, field):
+                for pclass in form.project_classes.data:
+                    pclass: ProjectClass
 
-                if not pclass.use_project_tags:
-                    continue
+                    if not pclass.use_project_tags:
+                        continue
 
-                for group in pclass.force_tag_groups:
-                    found = False
+                    for group in pclass.force_tag_groups:
+                        found = False
 
-                    # field.data is a tuple consisting of: (matched, unmatched)
-                    # we only want to search among the matched list
-                    tag_data = field.data
-                    for tag in tag_data(0):
-                        if tag.group_id == group.id:
-                            found = True
-                            break
+                        # field.data is a tuple consisting of: (matched, unmatched)
+                        # we only want to search among the matched list
+                        tag_data = field.data
+                        for tag in tag_data[0]:
+                            if tag.group_id == group.id:
+                                found = True
+                                break
 
-                    if not found:
-                        raise ValidationError("Projects attached to class '{cl}' must be tagged with at least "
-                                              "one tag from the group '{group}'".format(cl=pclass.name, group=group.name))
+                        if not found:
+                            raise ValidationError("Projects attached to class '{cl}' must be tagged with at least "
+                                                  "one tag from the group '{group}'".format(cl=pclass.name, group=group.name))
 
+        if uses_research_groups:
+            group = QuerySelectField('Research group', query_factory=group_qf, get_label='name',
+                                     allow_blank=True,
+                                     description='For some project classes, the project list presented to students '
+                                                 'is organized by research group. This is intended to help undergraduates '
+                                                 'understand the research we do, and where it is done. You can use this '
+                                                 'to highlight or advertise particular research groups, or to indicate '
+                                                 'to students to approximate area in which they will be working. '
+                                                 'Leave blank if the chosen project classes do not use research groups.')
 
-        group = QuerySelectField('Research group', query_factory=group_qf, get_label='name',
-                                 description='Projects are organized by research group when offered to students. '
-                                             'Use this to indicate to students the approximate area in which they '
-                                             'will be working.')
+            @staticmethod
+            def validate_group(form, field):
+                for pclass in form.project_classes.data:
+                    pclass: ProjectClass
+
+                    if not pclass.advertise_research_group:
+                        continue
+
+                    if field.data is None:
+                        raise ValidationError("Projects attached to class '{cl}' are advertised by research group. "
+                                              "Please specify a research group affiliation for this "
+                                              "project.".format(cl=pclass.name))
 
         # allow the project_class list to be empty (but then the project is not offered)
         project_classes = QuerySelectMultipleField('For which project types do you wish to offer this project?',
@@ -88,8 +107,9 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
         enforce_capacity = BooleanField('Enforce maximum capacity', default=True,
                                         description='Enable this option if you wish to prevent the '
                                                     'automated matching algorithm '
-                                                    'allocating more students to your projects than a specified '
-                                                    'maximum.')
+                                                    'allocating too many students to your project. '
+                                                    'Set the maximum number allowed when defining your project '
+                                                    'descriptions.')
 
         dont_clash_presentations = BooleanField("Prevent co-scheduling presentation with multiple students taking "
                                                 "the same project", default=True,
@@ -119,9 +139,9 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
     return ProjectMixin
 
 
-def AddProjectFormFactory(convenor_editing=False):
+def AddProjectFormFactory(convenor_editing=False, uses_tags=True, uses_research_groups=True):
 
-    Mixin = ProjectMixinFactory(convenor_editing,
+    Mixin = ProjectMixinFactory(convenor_editing, uses_tags, uses_research_groups,
                                 AllProjectClasses if convenor_editing else CurrentUserProjectClasses,
                                 AllResearchGroups if convenor_editing else CurrentUserResearchGroups)
 
@@ -140,9 +160,9 @@ def AddProjectFormFactory(convenor_editing=False):
     return AddProjectForm
 
 
-def EditProjectFormFactory(convenor_editing=False):
+def EditProjectFormFactory(convenor_editing=False, uses_tags=True, uses_research_groups=True):
 
-    Mixin = ProjectMixinFactory(convenor_editing,
+    Mixin = ProjectMixinFactory(convenor_editing, uses_tags, uses_research_groups,
                                 AllProjectClasses if convenor_editing else CurrentUserProjectClasses,
                                 AllResearchGroups if convenor_editing else CurrentUserResearchGroups)
 

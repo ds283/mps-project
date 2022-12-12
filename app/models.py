@@ -6550,10 +6550,13 @@ def _Project_is_offerable(pid):
     if get_count(project.project_classes.filter(ProjectClass.active)) == 0:
         errors['pclass'] = "No active project types assigned to project"
 
-    # CONSTRAINT 2. The affiliated research group should be active
+    # CONSTRAINT 2. The affiliated research group should be active, if this project is attached to any
+    # classes that uses research groups
     if project.group is None:
-        errors['groups'] = "No research group affiliated with project"
+        if get_count(project.project_classes.filter(ProjectClass.advertise_research_group)) > 0:
+            errors['groups'] = "No research group affiliated with project"
 
+    else:
         if not project.group.active:
             errors['groups'] = "The project's affiliated research group is not active"
 
@@ -6613,6 +6616,17 @@ class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
     # which project classes are associated with this description?
     project_classes = db.relationship('ProjectClass', secondary=project_pclasses, lazy='dynamic',
                                       backref=db.backref('projects', lazy='dynamic'))
+
+    @property
+    def forced_group_tags(self):
+        tags = set()
+        for pcl in self.project_classes:
+            for group in pcl.force_tag_groups:
+                assigned_tags = self.tags.filter_by(group_id=group.id).all()
+                for tag in assigned_tags:
+                    tags.add(tag)
+
+        return tags
 
     # tags, group_id and skills inherited from ProjectConfigurationMixin
     @validates('tags', 'group_id', 'skills', include_removes=True)
@@ -6919,6 +6933,11 @@ class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
 
 
     def prior_counterpart(self, cfg):
+        query = self._prior_counterpart_query(cfg)
+
+        if query is None:
+            return None
+
         return self._prior_counterpart_query(cfg).first()
 
 
@@ -7511,6 +7530,16 @@ class LiveProject(db.Model,
     config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
     config = db.relationship('ProjectClassConfig', uselist=False,
                              backref=db.backref('live_projects', lazy='dynamic'))
+
+    @property
+    def forced_group_tags(self):
+        tags = set()
+        for group in self.config.project_class.force_tag_groups:
+            assigned_tags = self.tags.filter_by(group_id=group.id).all()
+            for tag in assigned_tags:
+                tags.add(tag)
+
+        return tags
 
     # key linking to parent project
     parent_id = db.Column(db.Integer(), db.ForeignKey('projects.id'))

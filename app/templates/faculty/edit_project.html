@@ -66,8 +66,12 @@
 {#        {{ wtf.form_errors(project_form) }}#}
 
         {{ wtf.render_field(project_form.name) }}
-        {{ wtf.render_field(project_form.tags) }}
-        {{ wtf.render_field(project_form.group) }}
+        {% if project_form.tags %}
+            {{ wtf.render_field(project_form.tags) }}
+        {% endif %}
+        {% if project_form.group %}
+            {{ wtf.render_field(project_form.group) }}
+        {% endif %}
 
         {% if project_form.owner %}
             {{ wtf.render_field(project_form.owner) }}

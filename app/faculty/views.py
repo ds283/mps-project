@@ -351,21 +351,47 @@ def descriptions_ajax(id):
     return ajax.faculty.descriptions_data(descs, _desc_label, _desc_menu, create=create)
 
 
+def enrolled_for_pclasses_using_tags(fd: FacultyData):
+    for item in fd.enrollments:
+        item: EnrollmentRecord
+        pclass: ProjectClass = item.pclass
+        if pclass.use_project_tags:
+            return True
+
+    return False
+
+
+def enrolled_for_pclasses_using_research_groups(fd: FacultyData):
+    for item in fd.enrollments:
+        item: EnrollmentRecord
+        pclass: ProjectClass = item.pclass
+        if pclass.advertise_research_group:
+            return True
+
+    return False
+
+
 @faculty.route('/add_project', methods=['GET', 'POST'])
 @roles_required('faculty')
 def add_project():
+    fd: FacultyData = current_user.faculty_data
+
+    uses_tags = enrolled_for_pclasses_using_tags(fd)
+    uses_research_groups = enrolled_for_pclasses_using_research_groups(fd)
+
     # set up form
-    AddProjectForm = AddProjectFormFactory(convenor_editing=False)
+    AddProjectForm = AddProjectFormFactory(convenor_editing=False, uses_tags=uses_tags,
+                                           uses_research_groups=uses_research_groups)
     form = AddProjectForm(request.form)
 
     if form.validate_on_submit():
         tag_list = create_new_tags(form)
 
         data = Project(name=form.name.data,
-                       tags=tag_list,
+                       tags=tag_list if uses_tags else None,
                        active=True,
                        owner_id=current_user.faculty_data.id,
-                       group=form.group.data,
+                       group=form.group.data if uses_research_groups else None,
                        project_classes=form.project_classes.data,
                        skills=[],
                        programmes=[],
@@ -420,6 +446,11 @@ def add_project():
 @faculty.route('/edit_project/<int:id>', methods=['GET', 'POST'])
 @roles_required('faculty')
 def edit_project(id):
+    fd: FacultyData = current_user.faculty_data
+
+    uses_tags = enrolled_for_pclasses_using_tags(fd)
+    uses_research_groups = enrolled_for_pclasses_using_research_groups(fd)
+
     # set up form
     project: Project = Project.query.get_or_404(id)
 
@@ -433,7 +464,8 @@ def edit_project(id):
         url = url_for('faculty.edit_projects')
         text = 'project library'
 
-    EditProjectForm = EditProjectFormFactory(convenor_editing=False)
+    EditProjectForm = EditProjectFormFactory(convenor_editing=False, uses_tags=uses_tags,
+                                             uses_research_groups=uses_research_groups)
     form = EditProjectForm(obj=project)
     form.project = project
 
@@ -441,8 +473,8 @@ def edit_project(id):
         tag_list = create_new_tags(form)
 
         project.name = form.name.data
-        project.tags = tag_list
-        project.group = form.group.data
+        project.tags = tag_list if uses_tags else None
+        project.group = form.group.data if uses_research_groups else None
         project.project_classes = form.project_classes.data
         project.meeting_reqd = form.meeting_reqd.data
         project.enforce_capacity = form.enforce_capacity.data

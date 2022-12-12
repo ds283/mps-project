@@ -12,10 +12,10 @@ from functools import partial
 
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, SubmitField, TextAreaField, BooleanField
-from wtforms.validators import InputRequired, Optional, Length
+from wtforms.validators import InputRequired, Optional, Length, ValidationError
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
-from ..models import DEFAULT_STRING_LENGTH
+from ..models import DEFAULT_STRING_LENGTH, ProjectClass
 from ..models import Project
 from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLastNameMixin, \
     FacultyDataMixinFactory, FeedbackMixin, EmailSettingsMixin, DefaultLicenseMixin
@@ -38,6 +38,26 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
                                         get_label=BuildTagName,
                                         description='Use tags to help students understand the general area of '
                                                     'your project, and what it might involve.')
+
+        @staticmethod
+        def validate_tags(form, field):
+            for pclass in form.project_classes.data:
+                pclass: ProjectClass
+
+                if not pclass.use_project_tags:
+                    continue
+
+                for group in pclass.force_tag_groups:
+                    found = False
+                    for tag in field.data:
+                        if tag.group_id == group.id:
+                            found = True
+                            break
+
+                    if not found:
+                        raise ValidationError("Projects attached to class '{cl}' must be tagged with at least "
+                                              "one tag from the group '{group}'".format(cl=pclass.name, group=group.name))
+
 
         group = QuerySelectField('Research group', query_factory=group_qf, get_label='name',
                                  description='Projects are organized by research group when offered to students. '

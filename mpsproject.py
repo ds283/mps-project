@@ -424,7 +424,7 @@ def migrate_liveproject_tags():
 
 app = create_app()
 
-with app.app_context():
+# with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -444,7 +444,7 @@ with app.app_context():
     # migrate_exam_numbers_back()
     # migrate_email_recipients()
     # migrate_project_tags()
-    migrate_liveproject_tags()
+    # migrate_liveproject_tags()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

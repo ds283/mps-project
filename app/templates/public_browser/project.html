@@ -57,12 +57,14 @@
                             </div>
                             <div class="card-body">
                                 <div class="container-fluid">
-                                    {% if keywords and keywords|length > 0 %}
+                                    {% if project.tags and project.tags.first() %}
                                         <div class="row sm-gap-below vertical-top">
                                             <div class="col-3">Subject keywords</div>
                                             <div class="col-9">
-                                                {% for keyword in keywords %}
-                                                    <span class="badge bg-success project-label">{{ keyword }}</span>
+                                                {% for tag in project.ordered_tags %}
+                                                    {% if tag.is_active %}
+                                                        {{ tag.make_label(user_classes="project-label")|safe }}
+                                                    {% endif %}
                                                 {% endfor %}
                                             </div>
                                         </div>

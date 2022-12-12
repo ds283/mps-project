@@ -18,6 +18,11 @@
             $('#owner').select2({
                 theme: 'bootstrap-5'
             });
+            $('#tags').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select tags...'            });
             $('#project_classes').select2({
                 theme: 'bootstrap-5',
                 selectionCssClass: 'select2--small',
@@ -58,7 +63,7 @@
 {#        {{ wtf.form_errors(project_form) }}#}
 
         {{ wtf.render_field(project_form.name) }}
-        {{ wtf.render_field(project_form.keywords) }}
+        {{ wtf.render_field(project_form.tags) }}
         {{ wtf.render_field(project_form.group) }}
 
         {% if project_form.owner %}

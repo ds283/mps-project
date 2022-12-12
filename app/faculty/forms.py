@@ -8,25 +8,23 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from functools import partial
+
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, SubmitField, TextAreaField, BooleanField
 from wtforms.validators import InputRequired, Optional, Length
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
+from ..models import DEFAULT_STRING_LENGTH
 from ..models import Project
-
 from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLastNameMixin, \
     FacultyDataMixinFactory, FeedbackMixin, EmailSettingsMixin, DefaultLicenseMixin
-from ..shared.forms.wtf_validators import globally_unique_project, unique_or_original_project, project_unique_label, \
-    project_unique_or_original_label
 from ..shared.forms.queries import GetActiveFaculty, BuildActiveFacultyName, CurrentUserResearchGroups, \
     AllResearchGroups, CurrentUserProjectClasses, AllProjectClasses, GetSupervisorRoles, GetSkillGroups, \
     AvailableProjectDescriptionClasses, ProjectDescriptionClasses, GetMaskableRoles, GetDestinationProjects, \
-    GetDestinationProjectsPClass
-
-from functools import partial
-
-from ..models import DEFAULT_STRING_LENGTH
+    GetDestinationProjectsPClass, GetActiveTags, BuildTagName
+from ..shared.forms.wtf_validators import globally_unique_project, unique_or_original_project, project_unique_label, \
+    project_unique_or_original_label
 
 
 def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
@@ -36,8 +34,10 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
         if convenor_editing:
             owner = QuerySelectField('Project owner', query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName)
 
-        keywords = StringField('Keywords', validators=[Length(max=DEFAULT_STRING_LENGTH)],
-                               description='Optional. Separate with commas or semicolons.')
+        tags = QuerySelectMultipleField('Add tags to help classify your project', query_factory=GetActiveTags,
+                                        get_label=BuildTagName,
+                                        description='Use tags to help students understand the general area of '
+                                                    'your project, and what it might involve.')
 
         group = QuerySelectField('Research group', query_factory=group_qf, get_label='name',
                                  description='Projects are organized by research group when offered to students. '

@@ -2888,7 +2888,7 @@ def add_project(pclass_id):
     if form.validate_on_submit():
 
         data = Project(name=form.name.data,
-                       keywords=form.keywords.data,
+                       tags=form.tags.data,
                        active=True,
                        owner=form.owner.data,
                        group=form.group.data,
@@ -2986,41 +2986,41 @@ def edit_project(id, pclass_id):
         text = 'attached projects view'
 
     # set up form
-    data = Project.query.get_or_404(id)
+    project: Project = Project.query.get_or_404(id)
 
     EditProjectForm = EditProjectFormFactory(convenor_editing=True)
-    form = EditProjectForm(obj=data)
-    form.project = data
+    form = EditProjectForm(obj=project)
+    form.project = project
 
     if form.validate_on_submit():
-        data.name = form.name.data
-        data.owner = form.owner.data
-        data.keywords = form.keywords.data
-        data.group = form.group.data
-        data.project_classes = form.project_classes.data
-        data.meeting_reqd = form.meeting_reqd.data
-        data.enforce_capacity = form.enforce_capacity.data
-        data.show_popularity = form.show_popularity.data
-        data.show_bookmarks = form.show_bookmarks.data
-        data.show_selections = form.show_selections.data
-        data.dont_clash_presentations = form.dont_clash_presentations.data
-        data.last_edit_id = current_user.id
-        data.last_edit_timestamp = datetime.now()
+        project.name = form.name.data
+        project.owner = form.owner.data
+        project.tags = form.tags.data
+        project.group = form.group.data
+        project.project_classes = form.project_classes.data
+        project.meeting_reqd = form.meeting_reqd.data
+        project.enforce_capacity = form.enforce_capacity.data
+        project.show_popularity = form.show_popularity.data
+        project.show_bookmarks = form.show_bookmarks.data
+        project.show_selections = form.show_selections.data
+        project.dont_clash_presentations = form.dont_clash_presentations.data
+        project.last_edit_id = current_user.id
+        project.last_edit_timestamp = datetime.now()
 
-        if pclass_id != 0 and len(data.project_classes.all()) == 0 and not pclass.uses_supervisor:
-            data.project_classes.append(pclass)
+        if pclass_id != 0 and len(project.project_classes.all()) == 0 and not pclass.uses_supervisor:
+            project.project_classes.append(pclass)
 
         # ensure that list of preferred degree programmes is now consistent
-        data.validate_programmes()
+        project.validate_programmes()
 
         try:
             db.session.commit()
 
             # auto-enroll if implied by current project class associations
-            for pclass in data.project_classes:
-                if not data.owner.is_enrolled(pclass):
-                    data.owner.add_enrollment(pclass)
-                    flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.user.name, pclass=pclass.name))
+            for pclass in project.project_classes:
+                if not project.owner.is_enrolled(pclass):
+                    project.owner.add_enrollment(pclass)
+                    flash('Auto-enrolled {name} in {pclass}'.format(name=project.owner.user.name, pclass=pclass.name))
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -3030,7 +3030,7 @@ def edit_project(id, pclass_id):
 
         return redirect(url)
 
-    return render_template('faculty/edit_project.html', project_form=form, project=data, pclass_id=pclass_id, title='Edit project details',
+    return render_template('faculty/edit_project.html', project_form=form, project=project, pclass_id=pclass_id, title='Edit project details',
                            url=url, text=text)
 
 

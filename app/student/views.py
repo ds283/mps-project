@@ -431,20 +431,8 @@ def selector_view_project(sid, pid):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    # build list of keywords
-    if isinstance(project.keywords, str):
-        keywords = _extract_keywords(project.keywords)
-    elif project.keywords is None:
-        keywords = []
-    else:
-        try:
-            keywords = _extract_keywords(project.keywords.decode('utf-8'))
-        except AttributeError:
-            keywords = []
-
     return render_template('student/show_project.html', title=project.name, sel=sel, project=project, desc=project,
-                           keywords=keywords, text='project list',
-                           url=url_for('student.selector_browse_projects', id=sel.id))
+                           text='project list', url=url_for('student.selector_browse_projects', id=sel.id))
 
 
 @student.route('/submitter_view_project/<int:sid>/<int:pid>')
@@ -475,26 +463,9 @@ def submitter_view_project(sid, pid):
     if not verify_open(config, message=True):
         return redirect(redirect_url())
 
-    # build list of keywords
-    if isinstance(project.keywords, str):
-        keywords = _extract_keywords(project.keywords)
-    elif project.keywords is None:
-        keywords = []
-    else:
-        try:
-            keywords = _extract_keywords(project.keywords.decode('utf-8'))
-        except AttributeError:
-            keywords = []
-
     return render_template('student/show_project.html', title=project.name, sel=None, project=project, desc=project,
-                           keywords=keywords, text='project list', archived=True,
+                           text='project list', archived=True,
                            url=url_for('student.submitter_browse_projects', id=sub.id))
-
-
-def _extract_keywords(field):
-    keywords = [kw.strip() for kw in re.split("[;,]", field)]
-    keywords = [w for w in keywords if len(w) > 0]
-    return keywords
 
 
 @student.route('/add_bookmark/<int:sid>/<int:pid>')

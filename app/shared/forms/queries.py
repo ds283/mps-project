@@ -18,7 +18,7 @@ from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData
     ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, \
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
     Building, Room, PresentationFeedback, FHEQ_Level, ScheduleSlot, PresentationSession, \
-    ScheduleAttempt, AssetLicense, ProjectTagGroup
+    ScheduleAttempt, AssetLicense, ProjectTagGroup, ProjectTag
 from ...models import project_pclasses, description_pclasses, roles_to_users
 
 
@@ -418,3 +418,13 @@ def GetCanvasEnabledConvenors(config: ProjectClassConfig):
 
 def BuildCanvasLoginUserName(data: FacultyData):
     return data.user.name_and_username
+
+
+def GetActiveTags():
+    return db.session.query(ProjectTag) \
+        .join(ProjectTagGroup, ProjectTagGroup.id == ProjectTag.group_id) \
+        .filter(ProjectTagGroup.active == True, ProjectTag.active == True)
+
+
+def BuildTagName(tag: ProjectTag):
+    return tag.display_name

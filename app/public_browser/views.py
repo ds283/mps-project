@@ -93,14 +93,8 @@ def project(pclass_id, proj_id):
 
     desc = project.get_description(pclass.id)
 
-    if project.keywords is not None:
-        keywords = [kw.strip() for kw in re.split("[;,]", project.keywords)]
-        keywords = [w for w in keywords if len(w) > 0]
-    else:
-        keywords = []
-
     text = 'browse projects view'
     url = url_for('public_browser.browse', pclass_id=pclass.id)
 
     return render_template("public_browser/project.html", title=project.name, project=project,
-                           desc=desc, keywords=keywords, text=text, url=url)
+                           desc=desc, text=text, url=url)

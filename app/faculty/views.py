@@ -359,7 +359,7 @@ def add_project():
 
     if form.validate_on_submit():
         data = Project(name=form.name.data,
-                       keywords=form.keywords.data,
+                       tags=form.tags.data,
                        active=True,
                        owner_id=current_user.faculty_data.id,
                        group=form.group.data,
@@ -412,10 +412,10 @@ def add_project():
 @roles_required('faculty')
 def edit_project(id):
     # set up form
-    proj = Project.query.get_or_404(id)
+    project: Project = Project.query.get_or_404(id)
 
     # if project owner is not logged in user, object
-    if not validate_is_project_owner(proj):
+    if not validate_is_project_owner(project):
         return redirect(redirect_url())
 
     url = request.args.get('url', None)
@@ -425,25 +425,25 @@ def edit_project(id):
         text = 'project library'
 
     EditProjectForm = EditProjectFormFactory(convenor_editing=False)
-    form = EditProjectForm(obj=proj)
-    form.project = proj
+    form = EditProjectForm(obj=project)
+    form.project = project
 
     if form.validate_on_submit():
-        proj.name = form.name.data
-        proj.keywords = form.keywords.data
-        proj.group = form.group.data
-        proj.project_classes = form.project_classes.data
-        proj.meeting_reqd = form.meeting_reqd.data
-        proj.enforce_capacity = form.enforce_capacity.data
-        proj.show_popularity = form.show_popularity.data
-        proj.show_bookmarks = form.show_bookmarks.data
-        proj.show_selections = form.show_selections.data
-        proj.dont_clash_presentations = form.dont_clash_presentations.data
-        proj.last_edit_id = current_user.id
-        proj.last_edit_timestamp = datetime.now()
+        project.name = form.name.data
+        project.tags = form.tags.data
+        project.group = form.group.data
+        project.project_classes = form.project_classes.data
+        project.meeting_reqd = form.meeting_reqd.data
+        project.enforce_capacity = form.enforce_capacity.data
+        project.show_popularity = form.show_popularity.data
+        project.show_bookmarks = form.show_bookmarks.data
+        project.show_selections = form.show_selections.data
+        project.dont_clash_presentations = form.dont_clash_presentations.data
+        project.last_edit_id = current_user.id
+        project.last_edit_timestamp = datetime.now()
 
         # check that the specified programmes
-        proj.validate_programmes()
+        project.validate_programmes()
 
         db.session.commit()
 
@@ -452,7 +452,7 @@ def edit_project(id):
         else:
             return redirect(url)
 
-    return render_template('faculty/edit_project.html', project_form=form, project=proj, title='Edit project settings',
+    return render_template('faculty/edit_project.html', project_form=form, project=project, title='Edit project settings',
                            url=url, text=text)
 
 

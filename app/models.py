@@ -6482,8 +6482,18 @@ class ProjectTag(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     active = db.Column(db.Boolean(), default=True)
 
 
+    @property
+    def display_name(self):
+        if self.group is not None and self.group.add_group:
+            return '{group}: {tag}'.format(group=self.group.name, tag=self.name)
+
+        return self.name
+
+
     def make_label(self, text=None, user_classes=None):
-        return self._make_label(text=text if text is not None else self.name, user_classes=user_classes)
+        label_text = text if text is not None else self.display_name
+
+        return self._make_label(text=label_text, user_classes=user_classes)
 
 
     @property
@@ -6591,8 +6601,8 @@ class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
     project_classes = db.relationship('ProjectClass', secondary=project_pclasses, lazy='dynamic',
                                       backref=db.backref('projects', lazy='dynamic'))
 
-    # keywords, group_id and skills inherited from ProjectConfigurationMixin
-    @validates('keywords', 'group_id', 'skills', include_removes=True)
+    # tags, group_id and skills inherited from ProjectConfigurationMixin
+    @validates('tags', 'group_id', 'skills', include_removes=True)
     def _tags_validate(self, key, value, is_remove):
         with db.session.no_autoflush:
             for desc in self.descriptions:

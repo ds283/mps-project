@@ -4212,7 +4212,6 @@ class TransferableSkill(db.Model, EditingMetadataMixin):
 
     @property
     def is_active(self):
-
         if self.group is None:
             return self.active
 
@@ -4224,7 +4223,6 @@ class TransferableSkill(db.Model, EditingMetadataMixin):
         Disable this transferable skill and cascade, ie. remove from any projects that have been labelled with it
         :return:
         """
-
         self.active = False
 
         # remove this skill from any projects that have been labelled with it
@@ -4237,7 +4235,6 @@ class TransferableSkill(db.Model, EditingMetadataMixin):
         Enable this transferable skill
         :return:
         """
-
         self.active = True
 
 
@@ -6410,6 +6407,48 @@ class Supervisor(db.Model, ColouredLabelMixin, EditingMetadataMixin):
         return self._make_label(text, user_classes)
 
 
+class ProjectTagGroup(db. Model, ColouredLabelMixin, EditingMetadataMixin):
+    """
+    Normalize a set of tag groups, used to collect tags applied to projects.
+    If desired, project classes can be set to allow tags only from specific groups.
+    """
+    __tablename__ = "project_tag_groups"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # name of group
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
+
+    # active flag
+    active = db.Column(db.Boolean(), default=True)
+
+
+    def _make_label(self, user_classes=None):
+        return self._make_label(text=self.name, user_classes=user_classes)
+
+
+    def enable(self):
+        """
+        Activate this tag group and cascade, i.e., enable any tags associated with this group
+        :return:
+        """
+        self.active = True
+
+        for tag in self.tags:
+            tag.enable()
+
+    def disable(self):
+        """
+        Deactivate this tag group and cascade, i.e., disable any tags associated with this group
+        :return:
+        """
+        self.active = False
+
+        for tag in self.tags:
+            tag.disable()
+
+
 class ProjectTag(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Normalize a tag that can be attached to a project
@@ -6420,11 +6459,42 @@ class ProjectTag(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name of tag
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
+
+    # group that this tag belongs to
+    group_id = db.Column(db.Integer(), db.ForeignKey('project_tag_groups.id'))
+    group = db.relationship('ProjectTagGroup', foreign_keys=[group_id], uselist=False,
+                            backref=db.backref('tags', lazy='dynamic'))
+
+    # active flag
+    active = db.Column(db.Boolean(), default=True)
 
 
     def make_label(self, user_classes=None):
         return self._make_label(text=self.name, user_classes=user_classes)
+
+
+    @property
+    def is_active(self):
+        if self.group is None:
+            return self.active
+
+        return self.active and self.group.active
+
+
+    def enable(self):
+        """
+        Activate this tag
+        :return:
+        """
+        self.active = True
+
+    def disable(self):
+        """
+        Deactivate this tag
+        :return:
+        """
+        self.active = False
 
 
 @cache.memoize()

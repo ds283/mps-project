@@ -17,8 +17,10 @@ name = \
     {{ 'REPACTIVE'|safe }}
     {% set sd = u.student_data %}
     {% if sd and sd is not none %}
-        <span class="badge {% if sd.level >= sd.LEVEL_UG and sd.level <= sd.LEVEL_PGR %}bg-secondary{% else %}bg-danger{% endif %}">
-            {{ sd._level_text(sd.level) }}
+        {% set programme = sd.programme %}
+        {% set type = programme.degree_type %}
+        <span class="badge {% if type.level >= type.LEVEL_UG and type.level <= type.LEVEL_PGR %}bg-secondary{% else %}bg-danger{% endif %}">
+            {{ type._level_text(type.level) }}
         </span>
         {% if sd.intermitting %}
             <span class="badge bg-warning text-dark">TWD</span>

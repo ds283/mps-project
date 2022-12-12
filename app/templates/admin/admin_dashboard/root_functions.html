@@ -22,7 +22,7 @@
                     </div>
                     <div class="col-4">
                         <div class="float-end">
-                            <a href="{{ url_for('admin.manage_assessments') }}" class="btn btn-secondary">
+                            <a href="{{ url_for('admin.manage_assessments') }}" class="btn btn-sm btn-outline-secondary">
                                 Manage assessments
                             </a>
                         </div>
@@ -43,11 +43,11 @@
                     <div class="col-4">
                         <div class="float-end text-right">
                             {% if not rollover_ready %}
-                                <a href="{{ url_for('admin.skip_matching') }}" class="btn btn-secondary btn-table-block">
+                                <a href="{{ url_for('admin.skip_matching') }}" class="btn btn-sm btn-outline-secondary btn-table-block">
                                     Skip matching
                                 </a>
                             {% endif %}
-                            <a href="{{ url_for('admin.manage_matching') }}" class="btn btn-warning btn-table-block">
+                            <a href="{{ url_for('admin.manage_matching') }}" class="btn btn-sm btn-outline-warning btn-table-block">
                                 Manage matching
                             </a>
                         </div>
@@ -67,7 +67,7 @@
                     </div>
                     <div class="col-4">
                         <div class="float-end">
-                            <a href="{{ url_for('admin.confirm_global_rollover') }}" class="btn btn-danger">
+                            <a href="{{ url_for('admin.confirm_global_rollover') }}" class="btn btn-sm btn-outline-danger">
                                 Rollover academic year
                             </a>
                         </div>
@@ -86,11 +86,11 @@
                         <div class="container-fluid">
                             <div class="row vertical-top">
                                 <div class="col-9">
-                                    Clear contents of Redis cache.
+                                    Clear contents of the Redis cache
                                 </div>
                                 <div class="col-3">
                                     <div class="float-end">
-                                        <a href="{{ url_for('admin.clear_redis_cache') }}" class="btn btn-sm btn-danger services-btn">Clear</a>
+                                        <a href="{{ url_for('admin.clear_redis_cache') }}" class="btn btn-sm btn-outline-danger services-btn">Clear</a>
                                     </div>
                                 </div>
                             </div>
@@ -100,11 +100,11 @@
                         <div class="container-fluid">
                             <div class="row vertical-top">
                                 <div class="col-9">
-                                    Reset stored precompute time for all users.
+                                    Reset stored precompute time for all users
                                 </div>
                                 <div class="col-3">
                                     <div class="float-end">
-                                        <a href="{{ url_for('admin.reset_precompute') }}" class="btn btn-sm btn-warning services-btn">Reset</a>
+                                        <a href="{{ url_for('admin.reset_precompute') }}" class="btn btn-sm btn-outline-warning services-btn">Reset</a>
                                     </div>
                                 </div>
                             </div>

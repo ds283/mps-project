@@ -93,10 +93,10 @@
             {% endif %}
 
             {% if pane == 'approve' %}
-                {% if is_user_approver or (approvals_data['approval_user_rejected'] > 0 and (is_manage_users or is_root)) %}
+                {% if is_user_approver or ((is_manage_users or is_root) and approvals_data['approval_user_rejected'] > 0) %}
                     {{ user_approver_panel(approvals_data, current_user) }}
                 {% endif %}
-                {% if is_project_approver %}
+                {% if is_project_approver or is_root %}
                     {{ project_approver_panel(approvals_data) }}
                 {% endif %}
             {% endif %}

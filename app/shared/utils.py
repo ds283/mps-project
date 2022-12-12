@@ -215,10 +215,10 @@ def get_pclass_config_data(configs=None):
 def get_approvals_data():
     data = {}
 
-    if current_user.has_role('user_approver'):
+    if current_user.has_role('user_approver') or current_user.has_role('root') or current_user.has_role('manage_users'):
         data.update(_get_user_approvals_data())
 
-    if current_user.has_role('project_approver'):
+    if current_user.has_role('project_approver') or current_user.has_role('root'):
         data.update(_get_project_approvals_data())
 
     total = 0

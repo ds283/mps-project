@@ -1496,7 +1496,7 @@ def dashboard():
             else:
                 pane = None
     elif pane == 'approve':
-        if not (current_user.has_role('user_approver')
+        if not (current_user.has_role('user_approver') or current_user.has_role('project_approver')
                 or current_user.has_role('admin') or current_user.has_role('root')):
             if len(valid_panes) > 0:
                 pane = valid_panes[0]
@@ -1511,7 +1511,7 @@ def dashboard():
 
         # mark any unviewed confirmation requests as viewed, but do it with a 15 sec delay so that the
         # NEW labels don't disappear immediately
-        if pane is not None:
+        if pane is not None and pane not in ['system', 'approve']:
             celery = current_app.extensions['celery']
             remove_new = celery.tasks['app.tasks.selecting.remove_new']
             remove_new.apply_async(args=(int(pane), current_user.id), countdown=15)

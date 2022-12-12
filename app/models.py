@@ -323,9 +323,6 @@ def ProjectConfigurationMixinFactory(backref_label, force_unique_names,
 
         # TAGS AND METADATA
 
-        # free keywords describing scientific area
-        keywords = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
-
         # normalized tags associated with this project (if any)
         @declared_attr
         def tags(cls):

@@ -23,7 +23,7 @@ _menu = \
             <i class="fas fa-pencil-alt fa-fw"></i> Edit details...
         </a>
         {% if tag.group is not none and tag.group.active %}
-            {% if skill.active %}
+            {% if tag.active %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_project_tag', tid=tag.id) }}">
                     <i class="fas fa-wrench fa-fw"></i> Make inactive
                 </a>
@@ -51,10 +51,21 @@ _active = \
 """
 
 
+# language=jinja2
+_group = \
+"""
+{% if t.group %}
+    <span class="badge bg-secondary">{{ t.group.name }}</span>
+{% else %}
+    <span class="badge bg-danger">None</span>
+{% endif %}
+"""
+
+
 def tags_data(tags):
     data = [{'name': t.name,
-             'colour': t.make_label(t.colour),
-             'group': t.group.make_label() if t.group is not None else '<span class="badge bg-danger">None</span>',
+             'colour': '<span class="badge bg-secondary">None</span>' if t.colour is None else t.make_label(text=t.colour),
+             'group': render_template_string(_group, t=t),
              'active': render_template_string(_active, t=t),
              'menu': render_template_string(_menu, tag=t)} for t in tags]
 

@@ -26,7 +26,7 @@ from flask import current_app, render_template, redirect, url_for, flash, reques
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 from math import pi
 from numpy import histogram
-from sqlalchemy import or_
+from sqlalchemy import or_, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import cast
 from sqlalchemy.sql import func
@@ -1375,7 +1375,7 @@ def edit_project_tag_groups_ajax():
 
     base_query = db.session.query(ProjectTagGroup)
 
-    name = {'name': ProjectTagGroup.name,
+    name = {'search': ProjectTagGroup.name,
             'order': ProjectTagGroup.name,
             'search_collation': 'utf8_general_ci'}
     include = {'order': ProjectTagGroup.add_group}
@@ -1399,16 +1399,24 @@ def add_project_tag_group():
     if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
-    form = AddProjectTagGroupForm(request.form)
+    form: AddProjectTagGroupForm = AddProjectTagGroupForm(request.form)
 
     if form.validate_on_submit():
         group = ProjectTagGroup(name=form.name.data,
                                 add_group=form.add_group.data,
+                                default=form.default.data,
                                 active=True,
                                 creator_id=current_user.id,
                                 creation_timestamp=datetime.now())
 
         try:
+            # unset default from all other groups, if this one is the new defaut
+            if group.default:
+                db.session.execute(
+                    update(ProjectTagGroup)
+                    .values(default=False)
+                )
+
             db.session.add(group)
             db.session.commit()
         except SQLAlchemyError as e:
@@ -1434,18 +1442,27 @@ def edit_project_tag_group(gid):
     if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
-    group = ProjectTagGroup.query.get_or_404(gid)
-    form = EditProjectTagGroupForm(obj=group)
+    group: ProjectTagGroup = ProjectTagGroup.query.get_or_404(gid)
+    form: EditProjectTagGroupForm = EditProjectTagGroupForm(obj=group)
 
     form.group = group
+    form.was_default = group.default
 
     if form.validate_on_submit():
         group.name = form.name.data
         group.add_group = form.add_group.data
+        group.default = form.default.data
         group.last_edit_id = current_user.id
         group.last_edit_timestamp = datetime.now()
 
         try:
+            if group.default and not form.was_default:
+                db.session.execute(
+                    update(ProjectTagGroup)
+                    .where(ProjectTagGroup.id != group.id)
+                    .values(default=False)
+                )
+
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1470,7 +1487,7 @@ def activate_project_tag_group(gid):
     if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
-    group = ProjectTagGroup.query.get_or_404(gid)
+    group: ProjectTagGroup = ProjectTagGroup.query.get_or_404(gid)
     group.enable()
 
     try:
@@ -1495,7 +1512,13 @@ def deactivate_project_tag_group(gid):
     if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
-    group = ProjectTagGroup.query.get_or_404(gid)
+    group: ProjectTagGroup = ProjectTagGroup.query.get_or_404(gid)
+
+    if group.default:
+        flash('Cannot disable this project tag group becuase it is currently the default group for new tags',
+              'info')
+        return redirect(redirect_url())
+
     group.disable()
 
     try:
@@ -1535,10 +1558,10 @@ def edit_project_tags_ajax():
     base_query = db.session.query(ProjectTag) \
         .join(ProjectTagGroup, ProjectTagGroup.id == ProjectTag.group_id)
 
-    name = {'name': ProjectTag.name,
+    name = {'search': ProjectTag.name,
             'order': ProjectTag.name,
             'search_collation': 'utf8_general_ci'}
-    group = {'name': ProjectTagGroup.name,
+    group = {'search': ProjectTagGroup.name,
              'order': ProjectTagGroup.name,
              'search_collation': 'utf8_general_ci'}
     active = {'order': ProjectTag.active}
@@ -1567,7 +1590,7 @@ def add_project_tag():
               'tag.', 'error')
         return redirect(redirect_url())
 
-    form = AddProjectTagForm(request.form)
+    form: AddProjectTagForm = AddProjectTagForm(request.form)
 
     if form.validate_on_submit():
         tag = ProjectTag(name=form.name.data,
@@ -1576,6 +1599,9 @@ def add_project_tag():
                          active=True,
                          creator_id=current_user.id,
                          creation_timestamp=datetime.now())
+
+        if isinstance(tag.colour, str) and len(tag.colour) == 0:
+            tag.colour = None
 
         try:
             db.session.add(tag)
@@ -1602,8 +1628,8 @@ def edit_project_tag(tid):
     if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
-    tag = ProjectTag.query.get_or_404(tid)
-    form = EditProjectTagForm(obj=tag)
+    tag: ProjectTag = ProjectTag.query.get_or_404(tid)
+    form: EditProjectTagForm = EditProjectTagForm(obj=tag)
 
     form.tag = tag
 
@@ -1613,6 +1639,9 @@ def edit_project_tag(tid):
         tag.colour = form.colour.data
         tag.last_edit_id = current_user.id
         tag.last_edit_timestamp = datetime.now()
+
+        if isinstance(tag.colour, str) and len(tag.colour) == 0:
+            tag.colour = None
 
         try:
             db.session.commit()
@@ -1639,7 +1668,7 @@ def activate_project_tag(tid):
     if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
-    tag = ProjectTag.query.get_or_404(tid)
+    tag: ProjectTag = ProjectTag.query.get_or_404(tid)
     tag.enable()
 
     try:
@@ -1664,7 +1693,7 @@ def deactivate_project_tag(tid):
     if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
-    tag = ProjectTag.query.get_or_404(tid)
+    tag: ProjectTag = ProjectTag.query.get_or_404(tid)
     tag.disable()
 
     try:

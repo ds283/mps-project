@@ -763,6 +763,9 @@ class ProjectTagGroupMixin:
     add_group = BooleanField('Add group name to tag labels',
                              description='Tags in this group will be labelled as group-name: tag-name')
 
+    default = BooleanField('Default group for new tags',
+                           description='New dynamically generated tags will be added to this group')
+
 
 class AddProjectTagGroupForm(Form, ProjectTagGroupMixin):
 
@@ -784,7 +787,7 @@ class ProjectTagMixin:
 
     group = QuerySelectField('Tag group', query_factory=GetActiveProjectTagGroups, get_label='name')
 
-    colour = StringField('Colour', validators=[Length(max=DEFAULT_STRING_LENGTH)],
+    colour = StringField('Colour', validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
                          description='Assign a colour to help students recognize this tag')
 
 

@@ -6,7 +6,7 @@
 
 {% block scripts %}
     {{ super() }}
-    {{ import_select2 }}
+    {{ import_select2() }}
     {% assets filters="cssmin", output="gen/bootstrap-colorpicker-min.css", "css/bootstrap-colorpicker.css" -%}
         <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
     {% endassets %}
@@ -40,9 +40,9 @@
 
 {% block form_content %}
     {% if tag %}
-        <form action="{{ url_for('admin.edit_tag', tid=tag.id) }}" method="POST" name="tag_form">
+        <form action="{{ url_for('admin.edit_project_tag', tid=tag.id) }}" method="POST" name="tag_form">
     {% else %}
-        <form action="{{ url_for('admin.add_tag') }}" method="POST" name="tag_form">
+        <form action="{{ url_for('admin.add_project_tag') }}" method="POST" name="tag_form">
     {% endif %}
 
         {{ tag_form.hidden_tag() }}
@@ -51,8 +51,9 @@
         {{ colour_field(tag_form.colour, 'colour-group') }}
         {{ wtf.render_field(tag_form.group) }}
 
-        {{ wtf.render_field(tag_form.submit, button_map={'submit': 'primary'}) }}
-
+        <div class="mt-2">
+            {{ wtf.render_field(tag_form.submit, button_map={'submit': 'primary'}) }}
+        </div>
     </form>
 {% endblock %}
 

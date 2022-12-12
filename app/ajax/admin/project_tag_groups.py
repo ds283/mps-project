@@ -23,9 +23,15 @@ _menu = \
             <i class="fas fa-pencil-alt fa-fw"></i> Edit details...
         </a>
         {% if group.active %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_project_tag_group', gid=group.id) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make inactive
-            </a>
+            {% if not group.default %}
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_project_tag_group', gid=group.id) }}">
+                    <i class="fas fa-wrench fa-fw"></i> Make inactive
+                </a>
+            {% else %}
+                <a class="dropdown-item d-flex gap-w disabled">
+                    <i class="fas fa-wrench fa-fw"></i> Make inactive
+                </a>
+            {% endif %}
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_project_tag_group', gid=group.id) }}">
                 <i class="fas fa-wrench fa-fw"></i> Make active
@@ -57,8 +63,18 @@ _include_name = \
 {% endif %}
 """
 
+
+# language=jinja2
+_name = \
+"""
+{{ g.name }}
+{% if g.default %}
+    <span class="badge bg-success">Default</span>
+{% endif %}
+"""
+
 def tag_groups_data(groups):
-    data = [{'name': g.name,
+    data = [{'name': render_template_string(_name, g=g),
              'active': render_template_string(_active, g=g),
              'include': render_template_string(_include_name, g=g),
              'menu': render_template_string(_menu, group=g)} for g in groups]

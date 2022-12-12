@@ -6426,6 +6426,9 @@ class ProjectTagGroup(db. Model, ColouredLabelMixin, EditingMetadataMixin):
     # add group name to labels
     add_group = db.Column(db.Boolean())
 
+    # default group for new tags?
+    default = db.Column(db.Boolean(), default=False)
+
 
     def _make_label(self, user_classes=None):
         return self._make_label(text=self.name, user_classes=user_classes)
@@ -6438,6 +6441,9 @@ class ProjectTagGroup(db. Model, ColouredLabelMixin, EditingMetadataMixin):
         """
         self.active = True
 
+        # should not steal the default from any existing default group
+        self.default = False
+
         for tag in self.tags:
             tag.enable()
 
@@ -6447,6 +6453,9 @@ class ProjectTagGroup(db. Model, ColouredLabelMixin, EditingMetadataMixin):
         :return:
         """
         self.active = False
+
+        # for safety, ensure default field is false; this should be true anyway
+        self.default = False
 
         for tag in self.tags:
             tag.disable()
@@ -6473,8 +6482,8 @@ class ProjectTag(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     active = db.Column(db.Boolean(), default=True)
 
 
-    def make_label(self, user_classes=None):
-        return self._make_label(text=self.name, user_classes=user_classes)
+    def make_label(self, text=None, user_classes=None):
+        return self._make_label(text=text if text is not None else self.name, user_classes=user_classes)
 
 
     @property

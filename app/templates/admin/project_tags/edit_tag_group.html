@@ -22,6 +22,7 @@
 
         {{ wtf.render_field(group_form.name) }}
         {{ wtf.render_field(group_form.add_group) }}
+        {{ wtf.render_field(group_form.default) }}
 
         <div class="mt-2">
             {{ wtf.render_field(group_form.submit, button_map={'submit': 'primary'}) }}

@@ -35,7 +35,7 @@ def verify_submission_record(rec: SubmissionRecord, message: bool=False):
 
 def verify_selector(sel: SelectingStudent, message=False):
     """
-    Validate that the logged in user is allowed to perform operations on a particular SelectingStudent
+    Validate that the logged-in user is allowed to perform operations on a particular SelectingStudent
     :param message:
     :param sel:
     :return:

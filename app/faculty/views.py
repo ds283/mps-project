@@ -323,7 +323,7 @@ def marking_ajax():
 def edit_descriptions(id):
     project = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(project):
         return redirect(redirect_url())
 
@@ -340,7 +340,7 @@ def edit_descriptions(id):
 def descriptions_ajax(id):
     project = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(project):
         return jsonify({})
 
@@ -423,7 +423,7 @@ def edit_project(id):
     # set up form
     project: Project = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(project):
         return redirect(redirect_url())
 
@@ -480,7 +480,7 @@ def remove_project_pclass(proj_id, pclass_id):
     proj = Project.query.get_or_404(proj_id)
     pclass = ProjectClass.query.get_or_404(pclass_id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
@@ -500,7 +500,7 @@ def activate_project(id):
     # get project details
     proj = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
@@ -516,7 +516,7 @@ def deactivate_project(id):
     # get project details
     data = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(data):
         return redirect(redirect_url())
 
@@ -532,7 +532,7 @@ def delete_project(id):
     # get project details
     data = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(data):
         return redirect(redirect_url())
 
@@ -560,7 +560,7 @@ def perform_delete_project(id):
     if url is None:
         url = url_for('faculty.edit_projects')
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(data):
         return redirect(url)
 
@@ -987,7 +987,7 @@ def attach_skills(id, sel_id=None):
     # get project details
     proj = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
@@ -1025,7 +1025,7 @@ def add_skill(projectid, skillid, sel_id):
     # get project details
     proj = Project.query.get_or_404(projectid)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
@@ -1046,7 +1046,7 @@ def remove_skill(projectid, skillid, sel_id):
     # get project details
     proj = Project.query.get_or_404(projectid)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
@@ -1067,7 +1067,7 @@ def attach_programmes(id):
     # get project details
     proj = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
@@ -1084,7 +1084,7 @@ def add_programme(id, prog_id):
     # get project details
     proj = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
@@ -1103,7 +1103,7 @@ def remove_programme(id, prog_id):
     # get project details
     proj = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
@@ -1122,7 +1122,7 @@ def attach_assessors(id):
     # get project details
     proj = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
@@ -1176,7 +1176,7 @@ def attach_assessors_ajax(id):
     # get project details
     proj = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user, return empty json
+    # if project owner is not logged-in user, return empty json
     if not validate_is_project_owner(proj):
         return jsonify({})
 
@@ -1196,7 +1196,7 @@ def add_assessor(proj_id, mid):
     # get project details
     proj = Project.query.get_or_404(proj_id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
@@ -1213,7 +1213,7 @@ def remove_assessor(proj_id, mid):
     # get project details
     proj = Project.query.get_or_404(proj_id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
@@ -1230,7 +1230,7 @@ def attach_all_assessors(proj_id):
     # get project details
     proj = Project.query.get_or_404(proj_id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
@@ -1254,7 +1254,7 @@ def remove_all_assessors(proj_id):
     # get project details
     proj = Project.query.get_or_404(proj_id)
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
         return redirect(redirect_url())
 
@@ -1278,7 +1278,7 @@ def project_preview(id):
     # get project details
     data = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
+    # if project owner is not logged-in user or a suitable convenor, or an administrator, object
     if not validate_edit_project(data, 'project_approver'):
         return redirect(redirect_url())
 
@@ -1570,7 +1570,7 @@ def confirm_description(did, pclass_id):
               'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
         return redirect(redirect_url())
 
-    # if project owner is not logged in user, object
+    # if project owner is not logged-in user, object
     if not validate_is_project_owner(desc.parent):
         return redirect(redirect_url())
 

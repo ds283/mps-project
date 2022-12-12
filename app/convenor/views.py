@@ -2818,7 +2818,7 @@ def edit_descriptions(id, pclass_id):
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -2849,7 +2849,7 @@ def descriptions_ajax(id, pclass_id):
         # get project class details
         pclass: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if pclass is not None and not validate_is_convenor(pclass):
             return jsonify({})
 
@@ -2878,7 +2878,7 @@ def add_project(pclass_id):
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if the logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -2976,7 +2976,7 @@ def edit_project(id, pclass_id):
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -3054,7 +3054,7 @@ def activate_project(id, pclass_id):
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -3085,11 +3085,11 @@ def deactivate_project(id, pclass_id):
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
-    # if logged in user is not a suitable convenor, or an administrator, object
+    # if logged-in user is not a suitable convenor, or an administrator, object
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
@@ -3120,7 +3120,7 @@ def add_description(pid, pclass_id):
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -3267,7 +3267,7 @@ def description_modules(did, pclass_id, level_id=None):
             return redirect(redirect_url())
 
     else:
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_edit_description(desc):
             return redirect(redirect_url())
 
@@ -3309,7 +3309,7 @@ def description_attach_module(did, pclass_id, mod_id, level_id):
             return redirect(redirect_url())
 
     else:
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_edit_description(desc):
             return redirect(redirect_url())
 
@@ -3334,7 +3334,7 @@ def description_detach_module(did, pclass_id, mod_id, level_id):
             return redirect(redirect_url())
 
     else:
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_edit_description(desc):
             return redirect(redirect_url())
 
@@ -3359,7 +3359,7 @@ def delete_description(did, pclass_id):
             return redirect(redirect_url())
 
     else:
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_edit_description(desc):
             return redirect(redirect_url())
 
@@ -3386,7 +3386,7 @@ def duplicate_description(did, pclass_id):
             return redirect(redirect_url())
 
     else:
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_edit_description(desc):
             return redirect(redirect_url())
 
@@ -3443,7 +3443,7 @@ def move_description(did, pclass_id):
             return redirect(redirect_url())
 
     else:
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_edit_description(desc):
             return redirect(redirect_url())
 
@@ -3538,7 +3538,7 @@ def make_default_description(pid, pclass_id, did=None):
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -3574,7 +3574,7 @@ def attach_skills(id, pclass_id, sel_id=None):
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -3610,7 +3610,7 @@ def add_skill(projectid, skillid, pclass_id, sel_id):
     # get project details
     proj = Project.query.get_or_404(projectid)
 
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
+    # if project owner is not logged-in user or a suitable convenor, or an administrator, object
     if not validate_edit_project(proj):
         return redirect(redirect_url())
 
@@ -3631,7 +3631,7 @@ def remove_skill(projectid, skillid, pclass_id, sel_id):
     # get project details
     proj = Project.query.get_or_404(projectid)
 
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
+    # if project owner is not logged-in user or a suitable convenor, or an administrator, object
     if not validate_edit_project(proj):
         return redirect(redirect_url())
 
@@ -3661,7 +3661,7 @@ def attach_programmes(id, pclass_id):
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -3688,7 +3688,7 @@ def add_programme(id, pclass_id, prog_id):
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -3716,7 +3716,7 @@ def remove_programme(id, pclass_id, prog_id):
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -3744,7 +3744,7 @@ def attach_assessors(id, pclass_id):
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -3821,7 +3821,7 @@ def attach_assessors_ajax(id, pclass_id):
         # get project class details
         pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return jsonify({})
 
@@ -3852,7 +3852,7 @@ def add_assessor(proj_id, pclass_id, mid):
         # get project class details
         pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -3878,7 +3878,7 @@ def remove_assessor(proj_id, pclass_id, mid):
         # get project class details
         pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -3904,7 +3904,7 @@ def attach_all_assessors(proj_id, pclass_id):
         # get project class details
         pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -3937,7 +3937,7 @@ def remove_all_assessors(proj_id, pclass_id):
         # get project class details
         pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
-        # if logged in user is not a suitable convenor, or an administrator, object
+        # if logged-in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
@@ -3965,7 +3965,7 @@ def liveproject_sync_assessors(proj_id, live_id):
     live_project: LiveProject = LiveProject.query.get_or_404(live_id)
     # get project class details
 
-    # if logged in user is not a suitable convenor, or an administrator, object
+    # if logged-in user is not a suitable convenor, or an administrator, object
     if not validate_is_convenor(live_project.config.project_class):
         return redirect(redirect_url())
 
@@ -3984,7 +3984,7 @@ def liveproject_attach_assessor(live_id, fac_id):
     live_project: LiveProject = LiveProject.query.get_or_404(live_id)
     # get project class details
 
-    # if logged in user is not a suitable convenor, or an administrator, object
+    # if logged-in user is not a suitable convenor, or an administrator, object
     if not validate_is_convenor(live_project.config.project_class):
         return redirect(redirect_url())
 
@@ -4005,7 +4005,7 @@ def liveproject_remove_assessor(live_id, fac_id):
     live_project: LiveProject = LiveProject.query.get_or_404(live_id)
     # get project class details
 
-    # if logged in user is not a suitable convenor, or an administrator, object
+    # if logged-in user is not a suitable convenor, or an administrator, object
     if not validate_is_convenor(live_project.config.project_class):
         return redirect(redirect_url())
 

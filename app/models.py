@@ -7073,7 +7073,7 @@ def _Project_insert_handler(mapper, connection, target):
 
 @cache.memoize()
 def _ProjectDescription_is_valid(id):
-    obj = ProjectDescription.query.filter_by(id=id).one()
+    obj: ProjectDescription = ProjectDescription.query.filter_by(id=id).one()
 
     errors = {}
     warnings = {}
@@ -7094,9 +7094,17 @@ def _ProjectDescription_is_valid(id):
             errors[('module', module.id)] = 'Tagged recommended module "{name}" is not available for this ' \
                                             'description'.format(name=module.name)
 
-    # CONSTRAINT 4 - Aims should be specified
+    # CONSTRAINT 4 - Description should be specified
+    if obj.description is None or len(obj.description) == 0:
+        errors['description'] = 'No project description. Use the "Edit content..." menu item to specify it.'
+
+    # CONSTRAINT 5 - Resource should be specified
+    if obj.reading is None or len(obj.reading) == 0:
+        warnings['reading'] = 'No project resources specified. Use the "Edit content..." menu item to add details.'
+
+    # CONSTRAINT 6 - Aims should be specified
     if obj.aims is None or len(obj.aims) == 0:
-        warnings['aims'] = 'Project aims are not specified'
+        warnings['aims'] = 'No project aims. Use the "Settings..." menu item to specify them.'
 
     if len(errors) > 0:
         return False, errors, warnings

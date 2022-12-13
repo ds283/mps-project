@@ -526,7 +526,7 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                         elif state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
                             repapprove = '<span class="badge bg-warning text-dark">Approval: Queued</span>'
                         elif state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
-                            repapprove = '<span class="badge bg-danger">Approval: Rejected</span>'
+                            repapprove = '<span class="badge bg-info text-dark">Approval: In progress</span>'
                         else:
                             repapprove = '<span class="badge bg-danger">Unknown approval state</span>'
 

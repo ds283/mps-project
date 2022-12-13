@@ -7,8 +7,11 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from typing import List, Tuple
 
-from flask import render_template_string, jsonify
+from flask import render_template_string
+
+from app.models import ProjectClass, ProjectClassConfig, User, FacultyData
 
 
 # language=jinja2
@@ -26,7 +29,7 @@ _faculty_menu = \
             </a>
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.enroll', userid=user.id, pclassid=pclass.id) }}">
-                <i class="fas fa-plus fa-fw"></i> Enroll
+                <i class="fas fa-plus fa-fw"></i> Enrol
             </a>
         {% endif %}
         {% set record = userdata.get_enrollment_record(pclass) %}
@@ -114,15 +117,13 @@ _enrollments = \
 """
 
 
-def faculty_data(faculty, pclass, config):
-
-    data = [{'name': {'display': render_template_string(_name, u=u, d=d, pclass_id=pclass.id),
-                      'sortstring': u.last_name + u.first_name},
+def faculty_data(pclass: ProjectClass, config: ProjectClassConfig, row_list: List[Tuple[User, FacultyData]]):
+    data = [{'name': render_template_string(_name, u=u, d=d, pclass_id=pclass.id),
              'email': '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=u.email),
              'user': u.username,
              'enrolled': render_template_string(_enrollments, d=d, pclass_id=pclass.id),
              'projects': render_template_string(_projects, d=d, pclass=pclass),
              'golive': render_template_string(_golive, config=config, pclass=pclass, user=u, userdata=d),
-             'menu': render_template_string(_faculty_menu, pclass=pclass, user=u, userdata=d)} for u, d in faculty]
+             'menu': render_template_string(_faculty_menu, pclass=pclass, user=u, userdata=d)} for u, d in row_list]
 
-    return jsonify(data)
+    return data

@@ -603,7 +603,7 @@ def faculty(id):
                            faculty=faculty, convenor_data=data, enroll_filter=enroll_filter, state_filter=state_filter)
 
 
-@convenor.route('faculty_ajax/<int:id>')
+@convenor.route('faculty_ajax/<int:id>', methods=['POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def faculty_ajax(id):
     # get details for project class
@@ -628,7 +628,7 @@ def faculty_ajax(id):
             .filter(EnrollmentRecord.pclass_id == id).subquery()
 
         # get User, FacultyData pairs for this list
-        faculty = db.session.query(User, FacultyData) \
+        base_query = db.session.query(User, FacultyData) \
             .filter(User.active) \
             .join(FacultyData, FacultyData.id == User.id) \
             .join(faculty_ids, User.id == faculty_ids.c.owner_id)
@@ -639,7 +639,7 @@ def faculty_ajax(id):
             .filter(EnrollmentRecord.pclass_id == id).subquery()
 
         # join to main User and FacultyData records and select pairs that have no counterpart in faculty_ids
-        faculty = db.session.query(User, FacultyData) \
+        base_query = db.session.query(User, FacultyData) \
             .filter(User.active) \
             .join(FacultyData, FacultyData.id == User.id) \
             .join(faculty_ids, faculty_ids.c.owner_id == User.id, isouter=True) \
@@ -674,28 +674,106 @@ def faculty_ajax(id):
         faculty_ids_q = faculty_ids.subquery()
 
         # get User, FacultyData pairs for this list
-        faculty = db.session.query(User, FacultyData) \
+        base_query = db.session.query(User, FacultyData) \
             .filter(User.active) \
             .join(FacultyData, FacultyData.id == User.id) \
             .join(faculty_ids_q, User.id == faculty_ids_q.c.owner_id)
 
     else:
         # build list of all active faculty, together with their FacultyData records
-        faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id == User.id)
+        base_query = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id == User.id)
 
-    # results from the 'faculty' query are (User, FacultyData) pairs, so the FacultyData record is rec[1]
-    if state_filter == 'no-projects' and pclass.uses_supervisor:
-        data = [rec for rec in faculty.all() if rec[1].number_projects_offered(pclass) == 0]
-    elif state_filter == 'no-marker' and pclass.uses_supervisor:
-        data = [rec for rec in faculty.all() if rec[1].number_assessor == 0]
-    elif state_filter == 'unofferable':
-        data = [rec for rec in faculty.all() if rec[1].projects_unofferable > 0]
-    elif state_filter == 'custom-cats':
-        data = [rec for rec in faculty.all() if _has_custom_CATS(rec[1], pclass)]
-    else:
-        data = faculty.all()
+    return _faculty_ajax_handler(base_query, pclass, config, state_filter)
 
-    return ajax.convenor.faculty_data(data, pclass, config)
+
+def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClassConfig, state_filter: str):
+    def search_name(row):
+        u, fd = row
+        u: User
+        fd: FacultyData
+
+        return u.name
+
+    def sort_name(row):
+        u, fd = row
+        u: User
+        fd: FacultyData
+
+        return [u.last_name, u.first_name]
+
+    def search_email(row):
+        u, fd = row
+        u: User
+        fd: FacultyData
+
+        return u.email
+
+    def sort_email(row):
+        u, fd = row
+        u: User
+        fd: FacultyData
+
+        return u.email
+
+    def sort_enrolled(row):
+        u, fd = row
+        u: User
+        fd: FacultyData
+
+        er: EnrollmentRecord = fd.get_enrollment_record(pclass)
+        if er is None:
+            return 0
+
+        count = 0
+        if er.supervisor_state == er.SUPERVISOR_ENROLLED:
+            count += 1
+        if er.marker_state == er.MARKER_ENROLLED:
+            count += 1
+        if er.presentations_state == er.PRESENTATIONS_ENROLLED:
+            count += 1
+
+        return count
+
+    def sort_golive(row):
+        u, fd = row
+        u: User
+        fd: FacultyData
+
+        return config.require_confirm and config.requests_issued and config.is_confirmation_required(fd)
+
+    name = {'search': search_name,
+            'order': sort_name}
+    email = {'search': search_email,
+             'order': sort_email}
+    enrolled = {'order': sort_enrolled}
+    golive = {'order': sort_golive}
+    columns = {'name': name,
+               'email': email,
+               'enrolled': enrolled,
+               'golive': golive}
+
+    def _filter(state_filter: str, pclass: ProjectClass, row):
+        u, fd = row
+        u: User
+        fd: FacultyData
+
+        if state_filter == 'no-projects' and pclass.uses_supervisor:
+            return fd.number_projects_offered(pclass) == 0
+
+        if state_filter == 'no-marker' and pclass.uses_marker:
+            return fd.number_assessor == 0
+
+        if state_filter == 'unofferable':
+            return fd.projects_unofferable > 0
+
+        if state_filter == 'custom-cats':
+            return _has_custom_CATS(fd, pclass)
+
+        return True
+
+    with ServerSideInMemoryHandler(request, base_query, columns,
+                                   row_filter=partial(_filter, state_filter, pclass)) as handler:
+        return handler.build_payload(partial(ajax.convenor.faculty_data, pclass, config))
 
 
 def _has_custom_CATS(fac_data, pclass):
@@ -1074,9 +1152,9 @@ def enrol_selectors_ajax(id):
         # use SQL server-side handler for performance if it is possible
         # (we can't use SQL to filter by the available years because this also tests for students that have
         # graduated)
-        return enrol_selectors_ajax_handler(request, candidates, config)
+        return _enrol_selectors_ajax_handler(request, candidates, config)
 
-    return enrol_selectors_ajax_handler(request, candidates, config,  year_value)
+    return _enrol_selectors_ajax_handler(request, candidates, config, year_value)
 
 
 def _filter_candidates(year: int, row: StudentData):
@@ -1092,11 +1170,11 @@ def _filter_candidates(year: int, row: StudentData):
     return True
 
 
-def enrol_selectors_ajax_handler(request, candidates, config: ProjectClassConfig, year_value: int=None):
+def _enrol_selectors_ajax_handler(request, candidates, config: ProjectClassConfig, year_value: int=None):
 
     def search_name(row: StudentData):
         u: User = row.user
-        return u.first_name + ' ' + u.last_name
+        return u.name
 
     def sort_name(row: StudentData):
         u: User = row.user

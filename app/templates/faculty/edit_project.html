@@ -13,7 +13,9 @@
 
         $(document).ready(function () {
             $('#group').select2({
-                theme: 'bootstrap-5'
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small'
             });
             $('#owner').select2({
                 theme: 'bootstrap-5'
@@ -66,6 +68,15 @@
 {#        {{ wtf.form_errors(project_form) }}#}
 
         {{ wtf.render_field(project_form.name) }}
+        {% if project_form.owner %}
+            {{ wtf.render_field(project_form.owner) }}
+        {% endif %}
+        <div class="mt-2">
+            {{ wtf.render_field(project_form.project_classes) }}
+        </div>
+        <hr class="intro-divider">
+
+        <span class="form-group-heading mt-4 mb-2">Classification</span>
         {% if project_form.tags %}
             {{ wtf.render_field(project_form.tags) }}
         {% endif %}
@@ -73,18 +84,8 @@
             {{ wtf.render_field(project_form.group) }}
         {% endif %}
 
-        {% if project_form.owner %}
-            {{ wtf.render_field(project_form.owner) }}
-        {% endif %}
-
-        <div class="mt-2">
-            {{ wtf.render_field(project_form.project_classes) }}
-        </div>
-
-        <span class="form-group-heading mt-4">Configuration</span>
-        <div class="mt-2">
-            {{ wtf.render_field(project_form.meeting_reqd) }}
-        </div>
+        <span class="form-group-heading mt-4 mb-2">Configuration</span>
+        {{ wtf.render_field(project_form.meeting_reqd) }}
         {{ wtf.render_field(project_form.enforce_capacity) }}
         {{ wtf.render_field(project_form.dont_clash_presentations) }}
 

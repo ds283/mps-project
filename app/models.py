@@ -7080,13 +7080,13 @@ def _ProjectDescription_is_valid(id):
 
     # CONSTRAINT 1 - At least one supervisory role must be specified
     if get_count(obj.team.filter(Supervisor.active)) == 0:
-        errors['supervisors'] = 'No active supervisory roles assigned'
+        errors['supervisors'] = 'No active supervisory roles assigned. Use the "Settings..." menu to specify them.'
 
     # CONSTRAINT 2 - If parent project enforces capacity limits, a capacity must be specified
     if obj.parent.enforce_capacity:
         if obj.capacity is None or obj.capacity <= 0:
             errors['capacity'] = 'Capacity is zero or unset, but enforcement is enabled for ' \
-                                 'parent project'
+                                 'parent project. Use the "Settings..." menu to specify a maximum capcity.'
 
     # CONSTRAINT 3 - All tagged recommended modules should be valid
     for module in obj.modules:

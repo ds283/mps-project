@@ -741,16 +741,26 @@ def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClass
 
         return config.require_confirm and config.requests_issued and config.is_confirmation_required(fd)
 
+    def sort_projects(row):
+        u, fd = row
+        u: User
+        fd: FacultyData
+
+        return fd.number_projects_offered(pclass)
+
     name = {'search': search_name,
             'order': sort_name}
     email = {'search': search_email,
              'order': sort_email}
     enrolled = {'order': sort_enrolled}
     golive = {'order': sort_golive}
+    projects = {'order': sort_projects}
+
     columns = {'name': name,
                'email': email,
                'enrolled': enrolled,
-               'golive': golive}
+               'golive': golive,
+               'projects': projects}
 
     def _filter(state_filter: str, pclass: ProjectClass, row):
         u, fd = row

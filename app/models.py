@@ -7086,7 +7086,7 @@ def _ProjectDescription_is_valid(id):
     if obj.parent.enforce_capacity:
         if obj.capacity is None or obj.capacity <= 0:
             errors['capacity'] = 'Capacity is zero or unset, but enforcement is enabled for ' \
-                                 'parent project. Use the "Settings..." menu to specify a maximum capcity.'
+                                 'parent project. Use the "Settings..." menu to specify a maximum capacity.'
 
     # CONSTRAINT 3 - All tagged recommended modules should be valid
     for module in obj.modules:

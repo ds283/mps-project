@@ -73,7 +73,7 @@ def ProjectMixinFactory(convenor_editing: bool, uses_tags: bool, uses_research_g
                                                  'is organized by research group. This is intended to help undergraduates '
                                                  'understand the research we do, and where it is done. You can use this '
                                                  'to highlight or advertise particular research groups, or to indicate '
-                                                 'to students to approximate area in which they will be working. '
+                                                 'to students the approximate area in which they will be working. '
                                                  'Leave blank if the chosen project classes do not use research groups.')
 
             @staticmethod

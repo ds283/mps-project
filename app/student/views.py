@@ -155,8 +155,11 @@ def selector_browse_projects(id):
         return redirect(redirect_url())
 
     # supply list of transferable skill groups and research groups that can be filtered against
-    groups = db.session.query(ResearchGroup) \
-        .filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+    if config.advertise_research_group:
+        groups = db.session.query(ResearchGroup) \
+            .filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+    else:
+        groups = None
 
     skills = db.session.query(TransferableSkill) \
         .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
@@ -259,7 +262,7 @@ def _project_list_endpoint(config: ProjectClassConfig, sel: SelectingStudent, ro
         .join(ResearchGroup, ResearchGroup.id == LiveProject.group_id)
 
     if sel is not None:
-        if sel.group_filters.first():
+        if config.advertise_research_group and sel.group_filters.first():
             base_query = base_query.filter(or_(ResearchGroup.id == g.id for g in sel.group_filters))
 
         if sel.skill_filters.first():

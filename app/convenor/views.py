@@ -438,8 +438,11 @@ def attached(id):
     data = get_convenor_dashboard_data(pclass, config)
 
     # supply list of transferable skill groups and research groups that can be filtered against
-    groups = db.session.query(ResearchGroup) \
-        .filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+    if pclass.advertise_research_group:
+        groups = db.session.query(ResearchGroup) \
+            .filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+    else:
+        groups = None
 
     skills = db.session.query(TransferableSkill) \
         .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
@@ -546,7 +549,7 @@ def attached_ajax(id):
     filter_record = get_convenor_filter_record(config)
 
     plist = zip(ps, es)
-    projects = filter_projects(plist, filter_record.group_filters.all(),
+    projects = filter_projects(plist, filter_record.group_filters.all() if pclass.advertise_research_group else [],
                                filter_record.skill_filters.all(),
                                getter=lambda x: x[0],
                                setter=lambda x: (x[0].id, x[1].id))
@@ -2128,8 +2131,11 @@ def liveprojects(id):
     data = get_convenor_dashboard_data(pclass, config)
 
     # supply list of transferable skill groups and research groups that can be filtered against
-    groups = db.session.query(ResearchGroup) \
-        .filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+    if pclass.advertise_research_group:
+        groups = db.session.query(ResearchGroup) \
+            .filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+    else:
+        groups = None
 
     skills = db.session.query(TransferableSkill) \
         .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
@@ -2177,7 +2183,8 @@ def liveprojects_ajax(id):
     # get FilterRecord for currently logged-in user
     filter_record = get_convenor_filter_record(config)
 
-    projects = filter_projects(config.live_projects.all(), filter_record.group_filters.all(),
+    projects = filter_projects(config.live_projects.all(),
+                               filter_record.group_filters.all() if pclass.advertise_research_group else [],
                                filter_record.skill_filters.all())
 
     if state_filter == 'submitted':

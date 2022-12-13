@@ -295,56 +295,54 @@
             </div>
             <div id="collapseFilter" class="collapse show">
                 <div class="card-body">
-                    <div class="card mt-3 mb-3">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-9"><span class="filter-title">Research group filters</span></div>
-                                <div class="col-3">
-                                    {% set enabled = true %}
-                                    {% if not sel.group_filters.first() %}{% set enabled = false %}{% endif %}
-                                    <div class="float-end">
+                    {% if groups %}
+                        <div class="card mt-3 mb-3">
+                            <div class="card-body">
+                                <div class="d-flex flex-row justify-content-between align-content-end">
+                                    <div><span class="filter-title">Research group filters</span></div>
+                                    <div>
+                                        {% set enabled = true %}
+                                        {% if not sel.group_filters.first() %}{% set enabled = false %}{% endif %}
                                         <a class="btn btn-sm btn-secondary {% if not enabled %}disabled{% endif %}"
                                            {% if enabled %}href="{{ url_for(clear_group, id=sel.id) }}"{% endif %}>
                                             Clear all
                                         </a>
                                     </div>
                                 </div>
+                                {% for group in groups %}
+                                    {% if group in sel.group_filters %}
+                                        <a href="{{ url_for(remove_group, id=sel.id, gid=group.id) }}"
+                                           class="badge bg-secondary selection-label text-decoration-none" style="{{ group.make_CSS_style()|safe }}">
+                                            <i class="fas fa-times"></i>
+                                            {{ group.name }}
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
                             </div>
-                            {% for group in groups %}
-                                {% if group in sel.group_filters %}
-                                    <a href="{{ url_for(remove_group, id=sel.id, gid=group.id) }}"
-                                       class="badge bg-secondary selection-label text-decoration-none" style="{{ group.make_CSS_style()|safe }}">
-                                        <i class="fas fa-times"></i>
-                                        {{ group.name }}
-                                    </a>
-                                {% endif %}
-                            {% endfor %}
+                            <div class="card-footer">
+                                {% for group in groups %}
+                                    {% if group not in sel.group_filters %}
+                                        <a href="{{ url_for(add_group, id=sel.id, gid=group.id) }}"
+                                           class="badge bg-secondary selection-label text-decoration-none" style="{{ group.make_CSS_style()|safe }}">
+                                            <i class="fas fa-plus"></i>
+                                            {{ group.name }}
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
                         </div>
-                        <div class="card-footer">
-                            {% for group in groups %}
-                                {% if group not in sel.group_filters %}
-                                    <a href="{{ url_for(add_group, id=sel.id, gid=group.id) }}"
-                                       class="badge bg-secondary selection-label text-decoration-none" style="{{ group.make_CSS_style()|safe }}">
-                                        <i class="fas fa-plus"></i>
-                                        {{ group.name }}
-                                    </a>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
+                    {% endif %}
                     <div class="card mt-3 mb-3">
                         <div class="card-body">
-                            <div class="row">
-                                <div class="col-9"><span class="filter-title">Transferable skill filters</span></div>
-                                <div class="col-3">
+                            <div class="d-flex flex-row justify-content-between align-content-end">
+                                <div><span class="filter-title">Transferable skill filters</span></div>
+                                <div>
                                     {% set enabled = true %}
                                     {% if not sel.skill_filters.first() %}{% set enabled = false %}{% endif %}
-                                    <div class="float-end">
-                                        <a class="btn btn-sm btn-secondary {% if not enabled %}disabled{% endif %}"
-                                           {% if enabled %}href="{{ url_for(clear_skill, id=sel.id) }}"{% endif %}>
-                                            Clear all
-                                        </a>
-                                    </div>
+                                    <a class="btn btn-sm btn-secondary {% if not enabled %}disabled{% endif %}"
+                                       {% if enabled %}href="{{ url_for(clear_skill, id=sel.id) }}"{% endif %}>
+                                        Clear all
+                                    </a>
                                 </div>
                             </div>
                             {% for sgroup in skill_groups %}

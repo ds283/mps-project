@@ -13,7 +13,7 @@ from sqlalchemy.event import listens_for
 
 from ...cache import cache
 from ...database import db
-from ...models import ConfirmRequest, SelectingStudent, LiveProject, Bookmark
+from ...models import ConfirmRequest, SelectingStudent, LiveProject, Bookmark, ProjectClassConfig
 
 # language=jinja2
 _meeting = \
@@ -171,10 +171,20 @@ _project_skills = \
 # language=jinja2
 _project_group = \
 """
-{% if sel %}
-    {% set href = url_for('student.add_group_filter', id=sel.id, gid=group.id) %}
+{% set ns = namespace(affiliation=false) %}
+{% if project.group and config.advertise_research_group %}
+    {% if sel %}
+        {% set href = url_for('student.add_group_filter', id=sel.id, gid=project.group.id) %}
+    {% endif %}
+    <a {% if href %}href="{{ href }}"{% endif %} class="badge bg-secondary text-decoration-none" style="{{ group.make_CSS_style() }}">{{ project.group.name }}</a>
 {% endif %}
-<a {% if href %}href="{{ href }}"{% endif %} class="badge bg-secondary text-decoration-none" style="{{ group.make_CSS_style() }}">{{ group.name }}</a>
+{% for tag in project.forced_group_tags %}
+    {{ tag.make_label()|safe }}
+    {% set ns.affiliation = true %}
+{% endfor %}
+{% if not ns.affiliation %}
+    <span class="badge bg-warning text-dark">No affiliations</span>
+{% endif %}
 """
 
 
@@ -187,13 +197,15 @@ _not_live = \
 
 @cache.memoize()
 def _selector_element(sel_id, project_id, is_live):
-    sel = db.session.query(SelectingStudent).filter_by(id=sel_id).one() if sel_id is not None else None
-    p = db.session.query(LiveProject).filter_by(id=project_id).one()
+    sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sel_id).one() if sel_id is not None else None
+    p: LiveProject = db.session.query(LiveProject).filter_by(id=project_id).one()
+
+    config: ProjectClassConfig = p.config
 
     base = {'name': '<a class="text-decoration-none" href="{url}">{name}</a>' \
                 .format(name=p.name, url=url_for('student.selector_view_project', sid=sel.id, pid=p.id)),
             'supervisor': '{name} <a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(name=p.owner.user.name, em=p.owner.user.email),
-            'group': render_template_string(_project_group, sel=sel, group=p.group),
+            'group': render_template_string(_project_group, sel=sel, project=p, config=config),
             'skills': render_template_string(_project_skills, sel=sel, skills=p.ordered_skills),
             'prefer': render_template_string(_project_prefer, project=p),
             'menu': render_template_string(_selector_menu, sel=sel, project=p, is_live=is_live)}
@@ -209,12 +221,14 @@ def _selector_element(sel_id, project_id, is_live):
 
 @cache.memoize()
 def _submitter_element(sub_id, project_id):
-    p = db.session.query(LiveProject).filter_by(id=project_id).one()
+    p: LiveProject = db.session.query(LiveProject).filter_by(id=project_id).one()
+
+    config: ProjectClassConfig = p.config
 
     return {'name': '<a class="text-decoration-none" href="{url}">{name}</a>' \
                 .format(name=p.name, url=url_for('student.submitter_view_project', sid=sub_id, pid=p.id)),
             'supervisor': '{name} <a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(name=p.owner.user.name, em=p.owner.user.email),
-            'group': render_template_string(_project_group, sel=None, group=p.group),
+            'group': render_template_string(_project_group, sel=None, project=p, config=config),
             'skills': render_template_string(_project_skills, sel=None, skills=p.ordered_skills),
             'prefer': render_template_string(_project_prefer, project=p),
             'menu': render_template_string(_submitter_menu, sub_id=sub_id, project=p)}

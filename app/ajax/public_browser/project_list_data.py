@@ -22,7 +22,17 @@ _name = \
 # language=jinja2
 _group = \
 """
-<a class="badge bg-secondary text-decoration-none" style="{{ group.make_CSS_style() }}">{{ group.name }}</a>
+{% set ns = namespace(affiliation=false) %}
+{% if project.group %}
+    <a {% if href %}href="{{ href }}"{% endif %} class="badge bg-secondary text-decoration-none" style="{{ group.make_CSS_style() }}">{{ project.group.name }}</a>
+{% endif %}
+{% for tag in project.forced_group_tags %}
+    {{ tag.make_label()|safe }}
+    {% set ns.affiliation = true %}
+{% endfor %}
+{% if not ns.affiliation %}
+    <span class="badge bg-warning text-dark">No affiliations</span>
+{% endif %}
 """
 
 # language=jinja2
@@ -42,7 +52,7 @@ _skills = \
 def _project_list_data(pclass_id: int, p: Project):
     return {'name': render_template_string(_name, pclass_id=pclass_id, project=p),
             'supervisor': '{name}'.format(name=p.owner.user.name),
-            'group': render_template_string(_group, group=p.group),
+            'group': render_template_string(_group, project=p),
             'skills': render_template_string(_skills, skills=p.ordered_skills)}
 
 

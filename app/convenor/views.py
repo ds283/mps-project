@@ -3760,6 +3760,9 @@ def attach_assessors(id, pclass_id):
 
     create = request.args.get('create', default=None)
 
+
+    # DISCOVER APPLIED FILTERS
+
     state_filter = request.args.get('state_filter')
     pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
@@ -3768,37 +3771,28 @@ def attach_assessors(id, pclass_id):
     if state_filter is None and session.get('convenor_marker_state_filter'):
         state_filter = session['convenor_marker_state_filter']
 
-    # write state filter into session if it is not empty
-    if state_filter is not None:
-        session['convenor_marker_state_filter'] = state_filter
-
     # if no pclass filter supplied, check if one is stored in session
     if pclass_filter is None and session.get('convenor_marker_pclass_filter'):
         pclass_filter = session['convenor_marker_pclass_filter']
-
-    # write pclass filter into session if it is not empty
-    if pclass_filter is not None:
-        session['convenor_marker_pclass_filter'] = pclass_filter
 
     # if no group filter supplied, check if one is stored in session
     if group_filter is None and session.get('convenor_marker_group_filter'):
         group_filter = session['convenor_marker_group_filter']
 
-    # write group filter into session if it is not empty
-    if group_filter is not None:
-        session['convenor_marker_group_filter'] = group_filter
 
-    # get list of available research groups
-    groups: ResearchGroup = ResearchGroup.query.filter_by(active=True).all()
+    # GET ALLOWED PROJECT CLASSES CLASSES
 
     # get list of project classes to which this project is attached, and which require assignment of
     # second markers
-    pclasses = proj.project_classes.filter(and_(ProjectClass.active == True,
-                                                or_(ProjectClass.uses_marker == True,
-                                                    ProjectClass.uses_presentations == True))).all()
+    pclasses: List[ProjectClass] = proj.project_classes.filter(and_(ProjectClass.active == True,
+                                                                    or_(ProjectClass.uses_marker == True,
+                                                                        ProjectClass.uses_presentations == True))).all()
 
     pcl_list = []
+    pclass_filter_allowed = ['all']
     for pcl in pclasses:
+        pcl: ProjectClass
+
         # get current configuration record for this project class
         config: ProjectClassConfig = pcl.most_recent_config
         if config is None:
@@ -3807,6 +3801,48 @@ def attach_assessors(id, pclass_id):
             return redirect(redirect_url())
 
         pcl_list.append((pcl, config))
+        pclass_filter_allowed.append(str(pcl.id))
+
+
+    # GET ALLOWED RESEARCH GROUPS
+
+    # get list of available research groups
+    groups: List[ResearchGroup] = ResearchGroup.query.filter_by(active=True).all()
+
+    group_filter_allowed = ['all']
+    for g in groups:
+        g: ResearchGroup
+        group_filter_allowed.append(str(g.id))
+
+    # VALIDATE FILTERS
+
+    # if no filter is set, and there is only one allowed project class, default to that class
+    if pclass_filter is None and len(pclass_filter_allowed) == 1:
+        pclass_filter = str(pclass_filter_allowed[0])
+
+    if pclass_filter not in pclass_filter_allowed:
+        pclass_filter = 'all'
+
+    if state_filter not in ['all', 'attached', 'not-attached']:
+        state_filter = 'all'
+
+    if group_filter not in group_filter_allowed:
+        group_filter = 'all'
+
+
+    # CACHE FILTERS
+
+    # write pclass filter into session if it is not empty
+    if pclass_filter is not None:
+        session['convenor_marker_pclass_filter'] = pclass_filter
+
+    # write state filter into session if it is not empty
+    if state_filter is not None:
+        session['convenor_marker_state_filter'] = state_filter
+
+    # write group filter into session if it is not empty
+    if group_filter is not None:
+        session['convenor_marker_group_filter'] = group_filter
 
     return render_template('convenor/attach_assessors.html', data=proj, pclass_id=pclass_id, groups=groups,
                            pclasses=pcl_list, state_filter=state_filter, pclass_filter=pclass_filter,

@@ -305,20 +305,29 @@ def ProjectConfigurationMixinFactory(backref_label, force_unique_names,
                                      assessor_backref_label, allow_edit_assessors):
 
     class ProjectConfigurationMixin():
-        # project name
+        # NAME
+
         name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'),
                          unique=(force_unique_names == 'unique'), index=True)
 
+
+        # OWNERSHIP
+
         # which faculty member owns this project?
+        # can be null if this is a generic project (one with a pool of faculty)
         @declared_attr
         def owner_id(cls):
-            return db.Column(db.Integer(), db.ForeignKey('faculty_data.id'), index=True)
+            return db.Column(db.Integer(), db.ForeignKey('faculty_data.id'), index=True, nullable=True)
 
 
         @declared_attr
         def owner(cls):
             return db.relationship('FacultyData', primaryjoin=lambda: FacultyData.id == cls.owner_id,
                                    backref=db.backref(backref_label, lazy='dynamic'))
+
+        # positively flag this as a generic project
+        # (generic projects can only be set up by convenors)
+        generic = db.Column(db.Boolean(), default=False)
 
 
         # TAGS AND METADATA

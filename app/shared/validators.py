@@ -116,7 +116,7 @@ def validate_edit_description(description, *roles):
     project = description.parent
 
     # if project owner is currently logged-in user, all is ok
-    if project.owner_id == current_user.id:
+    if project.owner_id is not None and project.owner_id == current_user.id:
         return True
 
     # admin and root users can always edit everything

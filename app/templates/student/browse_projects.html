@@ -2,7 +2,7 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import filter_block %}
-{% from "datatables.html" import import_datatables %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
 
 {% block scripts %}
     {{ super() }}
@@ -29,6 +29,7 @@
             $('#liveprojects-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 stateSave: true, serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
                 ajax: { url: $SCRIPT_ROOT + '{{ ajax_endpoint }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

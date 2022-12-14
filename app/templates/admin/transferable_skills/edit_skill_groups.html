@@ -2,7 +2,7 @@
 
 {% extends "admin/transferable_skills/nav.html" %}
 
-{% from "datatables.html" import import_datatables %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
 
 {% block scripts %}
     {{ super() }}
@@ -16,6 +16,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
                 ajax: { url: $SCRIPT_ROOT + '/admin/skill_groups_ajax',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

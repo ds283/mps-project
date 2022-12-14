@@ -34,7 +34,21 @@ def ProjectMixinFactory(convenor_editing: bool, uses_tags: bool, uses_research_g
     class ProjectMixin():
 
         if convenor_editing:
-            owner = QuerySelectField('Project owner', query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName)
+            # convenors can assign projects to any owner; ordinary faculty membes can only edit their own
+            # projects (and currently cannot reassign them to other owners)
+            owner = QuerySelectField('Project owner', query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName,
+                                     allow_blank=True, description='Leave blank for a generic project')
+
+            # flag the project as generic
+            generic = BooleanField('This is a generic project',
+                                   description='Generic projects are not owned by an individual faculty member. '
+                                               'Students allocated to a generic projects will be matched to a '
+                                               'supervision group with a supervisor drawn from the assessor pool.')
+
+            @staticmethod
+            def validate_owner(form, field):
+                if field.data is None and not form.generic.data:
+                    raise ValidationError('This project is not generic. Please assign an owner.')
 
         if uses_tags:
             tags = TagSelectField('Add tags to help classify your project', query_factory=GetActiveTags,
@@ -92,17 +106,16 @@ def ProjectMixinFactory(convenor_editing: bool, uses_tags: bool, uses_research_g
         # allow the project_class list to be empty (but then the project is not offered)
         project_classes = QuerySelectMultipleField('For which project types do you wish to offer this project?',
                                                    query_factory=project_classes_qf, get_label='name',
-                                                   description='Set up descriptions for versions of this '
-                                                               'project that apply to different programmes (or groups '
-                                                               'of programmes) using the "Variants" option from the'
+                                                   description='You can have alternative versions of this project that '
+                                                               'are offered to students from each different project '
+                                                               'type. To do so, set up suitable descriptions '
+                                                               'using the "Variants" option from the '
                                                                '"Actions" dropdown in your project library view.')
 
         # project options
 
-        meeting_options = [(Project.MEETING_REQUIRED, "Meeting required"),
-                           (Project.MEETING_OPTIONAL, "Meeting optional"),
-                           (Project.MEETING_NONE, "Prefer not to meet")]
-        meeting_reqd = SelectField('Meeting required?', choices=meeting_options, coerce=int)
+        meeting_reqd = SelectField('Meeting required?', choices=Project.MEETING_OPTIONS, coerce=int,
+                                   description='Not used for generic projects.')
 
         enforce_capacity = BooleanField('Enforce maximum capacity', default=True,
                                         description='Enable this option if you wish to prevent the '

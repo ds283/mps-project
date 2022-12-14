@@ -2,7 +2,7 @@
 
 {% import "bootstrap/form.html" as wtf %}
 
-{% from "datatables.html" import import_datatables %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
 
 {% block scripts %}
     {{ super() }}
@@ -13,26 +13,41 @@
 
         $(document).ready(function () {
             $('#unattached-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/convenor/unofferable_ajax', dataSrc: '' },
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: { 'url': $SCRIPT_ROOT + '/convenor/unofferable_ajax',
+                         type: 'POST',
+                         data: function (args) { return { "args": JSON.stringify(args) }; }},
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'name' },
+                    { data: 'name',
+                      searchable: true,
+                      orderable: true },
                     { data: 'owner',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'
-                    } },
-                    { data: 'status' },
-                    { data: 'meeting' },
-                    { data: 'group' },
-                    { data: 'prefer' },
-                    { data: 'skills' },
-                    { data: 'menu' }
+                      searchable: true,
+                      orderable: true },
+                    { data: 'status',
+                      searchable: false,
+                      orderable: true },
+                    { data: 'meeting',
+                      searchable: false,
+                      orderable: true },
+                    { data: 'group',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'prefer',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'skills',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'menu',
+                      searchable: false,
+                      orderable: false}
                 ],
-                deferRender: true
+                order: [[0, 'asc']]
             });
         });
     </script>
@@ -44,7 +59,7 @@
 
 {% block bodyblock %}
     <div class="card mt-3 mb-3 border-warning">
-        <div class="card-header bg-warning text-white">Unofferable projects</div>
+        <div class="card-header bg-warning text-dark">Unofferable projects</div>
         <div class="card-body">
             <table id="unattached-table" class="table table-striped table-bordered">
                 <thead>

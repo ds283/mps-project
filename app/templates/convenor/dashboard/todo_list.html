@@ -20,6 +20,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
                 ajax: { url: $SCRIPT_ROOT + '/convenor/todo_list_ajax/{{ pclass.id }}?status_filter={{ status_filter }}&blocking_filter={{ blocking_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

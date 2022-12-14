@@ -216,7 +216,7 @@ class ProductionConfig(Config):
     # our own, hand-rolled profiler:
     # determine whether to use Werkzeug profiler to write a .prof to disc
     # (from where we can use eg. SnakeViz as a GUI tool)
-    PROFILE_TO_DISK = False
+    PROFILE_TO_DISK = True
     PROFILE_DIRECTORY = os.environ.get('PROFILE_DIRECTORY') or "./profiling"
 
     # use Dozer to perform memory profiling?

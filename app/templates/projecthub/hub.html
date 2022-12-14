@@ -2,7 +2,7 @@
 
 {% from "bokeh.html" import import_bokeh %}
 {% from "gridstack.html" import import_gridstack %}
-{% from "datatables.html" import import_datatables %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
 {% from "projecthub/resources.html" import resources_widget %}
 {% from "projecthub/articles.html" import articles_widget %}
 
@@ -57,6 +57,7 @@
             $('#article-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: '<f<tr>>',
                 stateSave: true, serverSide: true, processing: true, paging: false,
+                language: {{ bootstrap_spinner() }},
                 ajax: { url: $SCRIPT_ROOT + '/projecthub/article_widget_ajax/{{ record.id }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

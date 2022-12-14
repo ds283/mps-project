@@ -34,7 +34,7 @@ from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
     WorkflowMixin, ProjectDescriptionWorkflowHistory, StudentData, SubmittingStudent
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
-from ..shared.projects import create_new_tags
+from ..shared.projects import create_new_tags, project_list_ajax_handler
 from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_assessors, \
     get_current_year, get_count, get_approvals_data, allow_approvals, redirect_url, get_main_config
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
@@ -265,19 +265,20 @@ def edit_projects():
     return render_template('faculty/edit_projects.html', groups=groups)
 
 
-@faculty.route('/projects_ajax')
+@faculty.route('/projects_ajax', methods=['POST'])
 @roles_required('faculty')
 def projects_ajax():
     """
-    Ajax data point for Edit Projects view
+    AJAX endpoint for Edit Projects view
     :return:
     """
 
-    pq = db.session.query(Project.id).filter_by(owner_id=current_user.id).all()
-    data = [(p[0], None) for p in pq]
+    base_query = db.session.query(Project).filter_by(owner_id=current_user.id)
 
-    return ajax.project.build_data(data, current_user_id=current_user.id, menu_template='faculty',
-                                   text='projects list', url=url_for('faculty.edit_projects'))
+    return project_list_ajax_handler(request, base_query, current_user_id=current_user.id,
+                                     menu_template='faculty', name_labels=True,
+                                     text='projects list', url=url_for('faculty.edit_projects'),
+                                     show_approvals=True, show_errors=True)
 
 
 @faculty.route('/assessor_for')
@@ -299,23 +300,22 @@ def assessor_for():
     return render_template('faculty/assessor_for.html', groups=groups, pclasses=pclasses, pclass_filter=pclass_filter)
 
 
-@faculty.route('/marking_ajax')
+@faculty.route('/marking_ajax', methods=['POST'])
 @roles_required('faculty')
 def marking_ajax():
     """
-    Ajax data point for Assessor pool view
+    AJAX endpoint for Assessor pool view
     :return:
     """
     pclass_filter = request.args.get('pclass_filter')
     flag, pclass_value = is_integer(pclass_filter)
 
-    pq = current_user.faculty_data.assessor_for
+    base_query = current_user.faculty_data.assessor_for
     if flag:
-        pq = pq.filter(Project.project_classes.any(id=pclass_value))
+        base_query = base_query.filter(Project.project_classes.any(id=pclass_value))
 
-    data = [(p.id, None) for p in pq.all()]
-
-    return ajax.project.build_data(data, current_user_id=current_user.id, show_approvals=False, show_errors=False)
+    return project_list_ajax_handler(request, base_query,
+                                     current_user_id=current_user.id, show_approvals=False, show_errors=False)
 
 
 @faculty.route('/edit_descriptions/<int:id>')
@@ -391,6 +391,7 @@ def add_project():
                        tags=tag_list if uses_tags else None,
                        active=True,
                        owner_id=current_user.faculty_data.id,
+                       generic=False,
                        group=form.group.data if uses_research_groups else None,
                        project_classes=form.project_classes.data,
                        skills=[],

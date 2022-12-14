@@ -2,7 +2,7 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import on_click_selector_field %}
-{% from "datatables.html" import import_datatables %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
 {% from "icon_block.html" import icon_block %}
 
 {% if pclass_id is not defined%}
@@ -44,6 +44,7 @@
             let table = $('#browser-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 stateSave: true, serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
                 ajax: {
                     url: $SCRIPT_ROOT + '/public/browse_ajax?pclass_id={{ pclass_id }}',
                     type: 'POST',

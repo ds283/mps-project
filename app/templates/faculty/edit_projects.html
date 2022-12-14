@@ -3,7 +3,7 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import skill_groups_key %}
 
-{% from "datatables.html" import import_datatables %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
 
 {% block scripts %}
     {{ super() }}
@@ -14,21 +14,41 @@
 
         $(document).ready(function () {
             $('#projects-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/faculty/projects_ajax', dataSrc: '' },
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: { 'url': $SCRIPT_ROOT + '/faculty/projects_ajax',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; }},
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'name' },
-                    { data: 'status' },
-                    { data: 'pclasses' },
-                    { data: 'meeting' },
-                    { data: 'group' },
-                    { data: 'prefer' },
-                    { data: 'skills' },
-                    { data: 'menu' }
+                    { data: 'name',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'status',
+                      searchable: false,
+                      orderable: true },
+                    { data: 'pclasses',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'meeting',
+                      searchable: false,
+                      orderable: true },
+                    { data: 'group',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'prefer',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'skills',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'menu',
+                      searchable: false,
+                      orderable: false}
                 ],
-                deferRender: true
+                order: [[0, 'asc']]
             });
         });
     </script>

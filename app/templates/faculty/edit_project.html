@@ -68,6 +68,10 @@
 {#        {{ wtf.form_errors(project_form) }}#}
 
         {{ wtf.render_field(project_form.name) }}
+
+        {% if project_form.generic %}
+            {{ wtf.render_field(project_form.generic) }}
+        {% endif %}
         {% if project_form.owner %}
             {{ wtf.render_field(project_form.owner) }}
         {% endif %}

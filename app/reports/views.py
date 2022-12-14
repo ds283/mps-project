@@ -20,6 +20,7 @@ from ..models import User, FacultyData, ResearchGroup, SkillGroup, ProjectClass,
     Project, LiveProject, StudentData, DegreeProgramme, DegreeType, EnrollmentRecord
 
 from ..shared.conversions import is_integer
+from ..shared.projects import project_list_ajax_handler
 from ..shared.utils import redirect_url, get_current_year
 
 from ..tools import ServerSideSQLHandler
@@ -134,11 +135,11 @@ def all_projects():
                            valid_filter=valid_filter, state_filter=state_filter, active_filter=active_filter)
 
 
-@reports.route('/all_projects_ajax')
+@reports.route('/all_projects_ajax', methods=['POST'])
 @roles_accepted('admin', 'root', 'reports')
 def all_projects_ajax():
     """
-    Ajax data point for All Projects report
+    AJAX endpoint for All Projects report
     :return:
     """
     pclass_filter = request.args.get('pclass_filter')
@@ -148,41 +149,47 @@ def all_projects_ajax():
 
     flag, pclass_value = is_integer(pclass_filter)
 
-    pq = db.session.query(Project) \
+    base_query = db.session.query(Project) \
         .join(FacultyData, FacultyData.id == Project.owner_id) \
         .join(User, User.id == FacultyData.id) \
         .filter(User.active == True)
     if flag:
-        pq = pq.filter(Project.project_classes.any(id=pclass_value))
+        base_query = base_query.filter(Project.project_classes.any(id=pclass_value))
 
     if state_filter == 'active':
-        pq = pq.filter(Project.project_classes.any(active=True))
+        base_query = base_query.filter(Project.project_classes.any(active=True))
     elif state_filter == 'inactive':
-        pq = pq.filter(~Project.project_classes.any(active=True))
+        base_query = base_query.filter(~Project.project_classes.any(active=True))
     elif state_filter == 'published':
-        pq = pq.filter(Project.project_classes.any(active=True, publish=True))
+        base_query = base_query.filter(Project.project_classes.any(active=True, publish=True))
     elif state_filter == 'unpublished':
-        pq = pq.filter(~Project.project_classes.any(active=True, publish=True))
+        base_query = base_query.filter(~Project.project_classes.any(active=True, publish=True))
 
     if active_filter == 'active':
-        pq = pq.filter(Project.active == True)
+        base_query = base_query.filter(Project.active == True)
     elif active_filter == 'inactive':
-        pq = pq.filter(Project.active == False)
+        base_query = base_query.filter(Project.active == False)
 
-    data = pq.all()
+    def row_filter(row: Project):
+        if valid_filter == 'valid':
+            if row.approval_state != Project.DESCRIPTIONS_APPROVED:
+                return False
 
-    if valid_filter == 'valid':
-        data = [(x.id, None) for x in data if x.approval_state == Project.DESCRIPTIONS_APPROVED]
-    elif valid_filter == 'not-valid':
-        data = [(x.id, None) for x in data if x.approval_state == Project.SOME_DESCRIPTIONS_QUEUED]
-    elif valid_filter == 'reject':
-        data = [(x.id, None) for x in data if x.approval_state == Project.SOME_DESCRIPTIONS_REJECTED]
-    elif valid_filter == 'pending':
-        data = [(x.id, None) for x in data if x.approval_state == Project.SOME_DESCRIPTIONS_UNCONFIRMED]
-    else:
-        data = [(x.id, None) for x in data]
+        if valid_filter == 'not-valid':
+            if row.approval_state != Project.SOME_DESCRIPTIONS_QUEUED:
+                return False
 
-    return ajax.project.build_data(data, current_user_id=current_user.id)
+        if valid_filter == 'reject':
+            if row.approval_state != Project.SOME_DESCRIPTIONS_REJECTED:
+                return False
+
+        if valid_filter == 'pending':
+            if row.approval_state != Project.SOME_DESCRIPTIONS_UNCONFIRMED:
+                return False
+
+    return project_list_ajax_handler(request, base_query, row_filter=row_filter,
+                                     current_user_id=current_user.id, name_labels=True,
+                                     show_approvals=True, show_errors=True)
 
 
 _analyse_labels = {'popularity': ('Popularity rank', 'Popularity score'),

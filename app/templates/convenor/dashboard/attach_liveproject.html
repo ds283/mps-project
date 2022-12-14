@@ -8,51 +8,83 @@
 
         $(document).ready(function () {
             $('#add-liveproject-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/attach_liveproject_ajax/{{ pclass.id }}', dataSrc: '' },
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: { url: $SCRIPT_ROOT + '/convenor/attach_liveproject_ajax/{{ pclass.id }}',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; }},
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'name' },
+                    { data: 'name',
+                      searchable: true,
+                      orderable: true },
                     { data: 'owner',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'
-                    } },
-                    { data: 'status' },
-                    { data: 'meeting' },
-                    { data: 'group' },
-                    { data: 'prefer' },
-                    { data: 'skills' },
-                    { data: 'menu' }
+                      searchable: true,
+                      orderable: true },
+                    { data: 'status',
+                      searchable: false,
+                      orderable: true },
+                    { data: 'meeting',
+                      searchable: false,
+                      orderable: true },
+                    { data: 'group',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'prefer',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'skills',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'menu',
+                      searchable: false,
+                      orderable: false}
                 ],
-                deferRender: true
+                order: [[0, 'asc']]
             });
 
             {% if current_user.has_role('admin') or current_user.has_role('root') %}
                 $('#other-pclasses-table').DataTable({
-                    responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                    responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                     buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                    ajax: { url: $SCRIPT_ROOT + '/convenor/attach_liveproject_other_ajax/{{ pclass.id }}', dataSrc: '' },
+                    serverSide: true, processing: true,
+                    language: {{ bootstrap_spinner() }},
+                    ajax: { url: $SCRIPT_ROOT + '/convenor/attach_liveproject_other_ajax/{{ pclass.id }}',
+                            type: 'POST',
+                            data: function (args) { return { "args": JSON.stringify(args) }; }},
                     "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
-                columns: [
-                        { data: 'name' },
+                    columns: [
+                        { data: 'name',
+                          searchable: true,
+                          orderable: true },
                         { data: 'owner',
-                          render: {
-                            _: 'display',
-                            sort: 'sortvalue',
-                            type: 'sortvalue'
-                        } },
-                        { data: 'status' },
-                        { data: 'pclasses' },
-                        { data: 'meeting' },
-                        { data: 'group' },
-                        { data: 'prefer' },
-                        { data: 'skills' },
-                        { data: 'menu' }
+                          searchable: true,
+                          orderable: true },
+                        { data: 'status',
+                          searchable: false,
+                          orderable: true },
+                        { data: 'pclasses',
+                          searchable: true,
+                          orderable: true },
+                        { data: 'meeting',
+                          searchable: false,
+                          orderable: true },
+                        { data: 'group',
+                          searchable: true,
+                          orderable: true },
+                        { data: 'prefer',
+                          searchable: true,
+                          orderable: true },
+                        { data: 'skills',
+                          searchable: true,
+                          orderable: true },
+                        { data: 'menu',
+                          searchable: false,
+                          orderable: false}
                     ],
-                    deferRender: true
+                    order: [[0, 'asc']]
                 });
             {% endif %}
         });

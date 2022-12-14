@@ -304,7 +304,7 @@ def ProjectConfigurationMixinFactory(backref_label, force_unique_names,
                                      assessor_mapping_table, assessor_mapped_column, assessor_self_column,
                                      assessor_backref_label, allow_edit_assessors):
 
-    class ProjectConfigurationMixin():
+    class ProjectConfigurationMixin(ProjectMeetingChoicesMixin):
         # NAME
 
         name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'),
@@ -422,11 +422,7 @@ def ProjectConfigurationMixinFactory(backref_label, force_unique_names,
         # SELECTION
 
         # is a meeting required before selecting this project?
-        MEETING_REQUIRED = 1
-        MEETING_OPTIONAL = 2
-        MEETING_NONE = 3
-
-        # store status flag
+        # takes values from ProjectMeetingChoicesMixin
         meeting_reqd = db.Column(db.Integer())
 
 
@@ -1163,6 +1159,19 @@ class MatchingEnumerationTypesMixin:
     MARKER = 4
     SUPERVISOR_LIMITS = 5
     MARKER_LIMITS = 6
+
+
+class ProjectMeetingChoicesMixin:
+    """
+    Single point of definition for choices
+    """
+    MEETING_REQUIRED = 1
+    MEETING_OPTIONAL = 2
+    MEETING_NONE = 3
+
+    MEETING_OPTIONS = [(MEETING_REQUIRED, "Meeting required"),
+                       (MEETING_OPTIONAL, "Meeting optional"),
+                       (MEETING_NONE, "Prefer not to meet")]
 
 
 # roll our own get_main_config() and get_current_year(), which we cannot import because it creates a dependency cycle

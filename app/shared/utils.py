@@ -976,58 +976,6 @@ def get_matching_dashboard_data():
     return matches
 
 
-def filter_projects(plist, groups, skills, getter=None, setter=None):
-    projects = []
-
-    for item in plist:
-        if getter is not None:
-            proj = getter(item)
-        else:
-            proj = item
-
-        append = True
-
-        if len(groups) > 0:
-            # check if any of the items in the filter list matches this project's group affiliation
-            match = False
-
-            for group in groups:
-                if proj.group_id == group.id:
-                    match = True
-                    break
-
-            # nothing matched, kill append
-            if not match:
-                append = False
-
-        if append and len(skills) > 0:
-            # check if any of the items in the skill list matches one of this project's transferable skills
-            match = False
-
-            for skill in skills:
-                inner_match = False
-
-                for sk in proj.skills:
-                    if sk.id == skill.id:
-                        inner_match = True
-                        break
-
-                if inner_match:
-                    match = True
-                    break
-
-            if not match:
-                append = False
-
-        if append:
-            if setter is not None:
-                projects.append(setter(item))
-            else:
-                projects.append(item)
-
-    return projects
-
-
 def build_assessor_query(proj, state_filter, pclass_filter, group_filter):
     """
     Build a query for FacultyData records suitable to populate the 2nd marker view

@@ -5,7 +5,7 @@
     <div class="card mt-3 mb-3">
         {% set pl = 's' %}{% if queued == 1 %}{% set pl = '' %}{% endif  %}
         {% set anti_pl = '' %}{% if queued == 1 %}{% set anti_pl = 's' %}{% endif %}
-        <div class="card-header {% if queued > 0 %}bg-warning text-white{% endif %}}">{{ queued }} project description{{ pl }} require{{ anti_pl }} validation</div>
+        <div class="card-header {% if queued > 0 %}bg-warning text-dark{% endif %}}">{{ queued }} project description{{ pl }} require{{ anti_pl }} validation</div>
         <div class="card-body">
             {% if queued == 0 %}
                 <p>No project descriptions currently require validation.</p>

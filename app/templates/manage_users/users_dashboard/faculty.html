@@ -13,7 +13,7 @@
 {% endif %}
 {% set filter_CATS_coded = '1' if filter_CATS else '0' %}
 
-{% from "datatables.html" import import_datatables %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
 
 {% block scripts %}
     {{ super() }}
@@ -27,6 +27,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
                 ajax: { url: $SCRIPT_ROOT + '/manage_users/users_faculty_ajax?pclass={{ pclass_filter }}&group={{ group_filter }}&&CATS={{ filter_CATS_coded }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

@@ -26,6 +26,21 @@ _name = \
 
 
 # language=jinja2
+_owner = \
+"""
+{% if project.generic %}
+    <span class="badge bg-info">Generic</span>
+{% else %}
+    {% if project.owner is not none %}
+        <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
+    {% else %}
+        <span class="badge bg-danger">Missing</span>
+    {% endif %}
+{% endif %}
+"""
+
+
+# language=jinja2
 _bookmarks = \
 """
 {% set bookmarks = project.number_bookmarks %}
@@ -207,40 +222,17 @@ _menu = \
 """
 
 
-def liveprojects_data(config: ProjectClassConfig, projects, url=None, text=None):
-
+def liveprojects_data(projects, config: ProjectClassConfig, url=None, text=None):
     lifecycle = config.selector_lifecycle
-    require_live = (lifecycle==ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN)
+    require_live = (lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN)
 
-    def get_popularity_rank(p):
-        data = p.popularity_rank(live=require_live)
-
-        if data is None:
-            return -1
-
-        rank, total = data
-        return rank
-
-    data = [{'number': '{c}'.format(c=p.number),
-             'name': render_template_string(_name, project=p, config=config),
-             'owner': '<a class="text-decoration-none" href="mailto:{em}">{name}</a>'.format(em=p.owner.user.email, name=p.owner.user.name),
+    data = [{'name': render_template_string(_name, project=p, config=config),
+             'owner': render_template_string(_owner, project=p),
              'group': p.group.make_label(),
-             'bookmarks': {
-                 'display': render_template_string(_bookmarks, project=p),
-                 'value': p.number_bookmarks
-             },
-             'selections': {
-                 'display': render_template_string(_selections, project=p),
-                 'value': p.number_selections
-             },
-             'confirmations': {
-                 'display': render_template_string(_confirmations, project=p),
-                 'value': p.number_pending + p.number_confirmed
-             },
-             'popularity': {
-                 'display': render_template_string(_popularity, project=p, require_live=require_live, url=url, text=text),
-                 'value': get_popularity_rank(p)
-             },
+             'bookmarks': render_template_string(_bookmarks, project=p),
+             'selections': render_template_string(_selections, project=p),
+             'confirmations': render_template_string(_confirmations, project=p),
+             'popularity': render_template_string(_popularity, project=p, require_live=require_live, url=url, text=text),
              'menu': render_template_string(_menu, project=p, config=config, url=url, text=text)} for p in projects]
 
-    return jsonify(data)
+    return data

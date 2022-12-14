@@ -30,7 +30,7 @@ from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, LiveProject, \
     Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SubmissionRecord, TransferableSkill, \
     User, EmailNotification, add_notification, CustomOffer, Project, SubmittingStudent
-from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects, get_count, redirect_url
+from ..shared.utils import home_dashboard, home_dashboard_url, get_count, redirect_url
 from ..shared.validators import validate_is_convenor, validate_submission_viewable
 from ..task_queue import register_task
 from ..tools import ServerSideSQLHandler

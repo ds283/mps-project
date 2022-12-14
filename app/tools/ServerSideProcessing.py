@@ -190,7 +190,7 @@ class ServerSideSQLHandler(ServerSideBase):
                             'error': self._fail_msg})
 
 
-def _map_row(row, data):
+def _slow_map_row(row, data):
     """
     Takes a raw row and uses the column data to build a dictionary with filter/sort fields
     :param row:
@@ -205,16 +205,35 @@ def _map_row(row, data):
     return mapped_row
 
 
+def _fast_map_row(row):
+    """
+    Row mapper for when we don't need to do anything expensive
+    :param row:
+    :param data:
+    :return:
+    """
+    return {'row': row}
+
+
 def _filter_row(row, search_value):
     columns = row['columns']
 
-    # iterate over column
+    # iterate over columns
     for properties in columns.values():
         if 'search' in properties:
-            value = properties['search'].lower()
+            value = properties['search']
 
-            if search_value in value:
-                return True
+            # if the searchable value for this row is a list, check whether search_value
+            # matches any element in the list
+            # (can't yet do and/or logic - implement that later if needed)
+            if isinstance(value, Iterable):
+                if any(search_value in x.lower() for x in value):
+                    return True
+
+            # otherwise, test whether search_value is in the searchable singlet
+            else:
+                if search_value in value.lower():
+                    return True
 
     return False
 
@@ -288,10 +307,19 @@ class ServerSideInMemoryHandler(ServerSideBase):
 
         # use these to build a list of dictionaries, with members corresponding to the filter/sort
         # values determined by the column data
-        self._mapped_rows = [_map_row(row, data) for row in self._raw_rows]
+        has_filtering = hasattr(self, '_request_filter') and self._request_filter is not None \
+                        and len(self._request_filter) > 0
+        has_ordering = hasattr(self, '_request_order') and self._request_order is not None
+
+        needs_slow_map = has_ordering or has_filtering
+
+        if needs_slow_map:
+            self._mapped_rows = [_slow_map_row(row, data) for row in self._raw_rows]
+        else:
+            self._mapped_rows = [_fast_map_row(row) for row in self._raw_rows]
 
         # was a filter supplied? if so, then use it to filter rows from self._mapped_rows
-        if hasattr(self, '_request_filter') and self._request_filter is not None and len(self._request_filter) > 0:
+        if has_filtering:
             # convert search value to lower case; note it's guaranteed to be a str
             self._request_filter = self._request_filter.lower()
             self._filtered_rows = [row for row in self._mapped_rows if _filter_row(row, self._request_filter)]
@@ -302,7 +330,7 @@ class ServerSideInMemoryHandler(ServerSideBase):
         self._number_filtered_rows = len(self._filtered_rows)
 
         # was an ordering supplied? if so, then we should apply it
-        if hasattr(self, '_request_order') and self._request_order is not None:
+        if has_ordering:
             ordering_data = []
             for item in self._request_order:
                 # col_id is an index into the _request_columns array
@@ -317,7 +345,7 @@ class ServerSideInMemoryHandler(ServerSideBase):
             self._ordered_rows = sorted(self._filtered_rows,
                                         key=functools.cmp_to_key(functools.partial(_compare_rows, ordering_data)))
 
-        if not hasattr(self, '_ordered_rows'):
+        else:
             self._ordered_rows = self._filtered_rows
 
         if self._request_start < self._number_filtered_rows:

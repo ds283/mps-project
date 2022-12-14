@@ -5,7 +5,7 @@
 {% if cohort_filter is not defined %}{% set cohort_filter = 'all' %}{% endif %}
 {% if type_filter is not defined %}{% set type_filter = 'all' %}{% endif %}
 
-{% from "datatables.html" import import_datatables %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
 
 {% block scripts %}
     {{ super() }}
@@ -19,6 +19,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
                 ajax: { url: $SCRIPT_ROOT + '/reports/year_groups_ajax?year_filter={{ year_filter }}&prog_filter={{ prog_filter }}&cohort_filter={{ cohort_filter }}&type_filter={{ type_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

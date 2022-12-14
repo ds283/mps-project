@@ -374,3 +374,9 @@ p.copyright {
 .text-nohover-dark {
     color: rgba(var(--bs-dark-rgb))!important;
 }
+
+
+/*!* disable default DataTable processing indicator; needed when using bootstrap_spinner() *!*/
+/*div.dataTables_processing div:last-child div {*/
+/*  display: none;*/
+/*}*/

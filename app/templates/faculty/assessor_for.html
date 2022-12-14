@@ -8,7 +8,7 @@
     {% set pclass_filter = 'all' %}
 {% endif %}
 
-{% from "datatables.html" import import_datatables %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
 
 {% block scripts %}
     {{ super() }}
@@ -19,26 +19,41 @@
 
         $(document).ready(function () {
             $('#second-marker-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/faculty/marking_ajax?pclass_filter={{ pclass_filter }}', dataSrc: '' },
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: { 'url': $SCRIPT_ROOT + '/faculty/marking_ajax?pclass_filter={{ pclass_filter }}',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; }},
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'name' },
+                    { data: 'name',
+                      searchable: true,
+                      orderable: true },
                     { data: 'owner',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'
-                    } },
-                    { data: 'status' },
-                    { data: 'pclasses' },
-                    { data: 'meeting' },
-                    { data: 'group' },
-                    { data: 'prefer' },
-                    { data: 'skills' },
+                      searchable: true,
+                      orderable: true },
+                    { data: 'status',
+                      searchable: false,
+                      orderable: true },
+                    { data: 'pclasses',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'meeting',
+                      searchable: false,
+                      orderable: true },
+                    { data: 'group',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'prefer',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'skills',
+                      searchable: true,
+                      orderable: true },
                 ],
-                deferRender: true
+                order: [[0, 'asc']]
             });
         });
     </script>

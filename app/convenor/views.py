@@ -23,7 +23,7 @@ from dateutil.relativedelta import relativedelta
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session, abort
 from flask_mailman import EmailMultiAlternatives
 from flask_security import roles_accepted, current_user
-from sqlalchemy import and_, or_, cast, String
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm import with_polymorphic
 from sqlalchemy.orm.exc import StaleDataError
@@ -48,8 +48,9 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Bookmark, \
-    ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask, ProjectTagGroup, ProjectTag
-from ..shared.projects import create_new_tags
+    ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask
+from ..shared.projects import create_new_tags, get_filter_list_for_groups_and_skills, \
+    project_list_ajax_handler, apply_group_and_skills_filters
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
@@ -57,7 +58,7 @@ from ..shared.conversions import is_integer
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.sqlalchemy import get_count, clone_model
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
-    filter_projects, get_convenor_filter_record, filter_assessors, build_enrol_selector_candidates, \
+    get_convenor_filter_record, filter_assessors, build_enrol_selector_candidates, \
     build_enrol_submitter_candidates, build_submitters_data, redirect_url, get_convenor_todo_data, \
     build_convenor_tasks_query, home_dashboard_url, get_approval_data
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
@@ -438,22 +439,7 @@ def attached(id):
     data = get_convenor_dashboard_data(pclass, config)
 
     # supply list of transferable skill groups and research groups that can be filtered against
-    if pclass.advertise_research_group:
-        groups = db.session.query(ResearchGroup) \
-            .filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
-    else:
-        groups = None
-
-    skills = db.session.query(TransferableSkill) \
-        .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
-        .filter(TransferableSkill.active == True, SkillGroup.active == True) \
-        .order_by(SkillGroup.name.asc(), TransferableSkill.name.asc()).all()
-
-    skill_list = {}
-    for skill in skills:
-        if skill_list.get(skill.group.name, None) is None:
-            skill_list[skill.group.name] = []
-        skill_list[skill.group.name].append(skill)
+    groups, skill_list = get_filter_list_for_groups_and_skills(pclass)
 
     # get filter record
     filter_record = get_convenor_filter_record(config)
@@ -464,11 +450,11 @@ def attached(id):
                            filter_record=filter_record, valid_filter=valid_filter)
 
 
-@convenor.route('/attached_ajax/<int:id>', methods=['GET', 'POST'])
+@convenor.route('/attached_ajax/<int:id>', methods=['POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def attached_ajax(id):
     """
-    Ajax data point for attached projects view
+    AJAX endpoint for attached projects view
     :return:
     """
     # get details for project class
@@ -487,76 +473,59 @@ def attached_ajax(id):
     valid_filter = request.args.get('valid_filter')
 
     # build list of projects attached to this project class
-    pq = db.session.query(Project.id, Project.owner_id) \
+    base_query = db.session.query(Project) \
         .filter(Project.project_classes.any(id=id))
-
-    workflow_in_progress = (valid_filter == 'valid' or valid_filter == 'not-valid' or valid_filter == 'reject')
-
-    if workflow_in_progress or valid_filter == 'pending':
-        desc_query = db.session.query(ProjectDescription.parent_id) \
-            .filter(ProjectDescription.project_classes.any(id=id))
-
-        if pclass.require_confirm:
-            if valid_filter == 'pending':
-                desc_query = desc_query.filter(ProjectDescription.confirmed == False)
-            else:
-                desc_query = desc_query.filter(ProjectDescription.confirmed == True)
-
-        if valid_filter == 'valid':
-            desc_query = desc_query \
-                .filter(ProjectDescription.workflow_state != WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
-                        ProjectDescription.workflow_state != WorkflowMixin.WORKFLOW_APPROVAL_REJECTED)
-        elif valid_filter == 'not-valid':
-            desc_query = desc_query \
-                .filter(ProjectDescription.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED)
-        elif valid_filter == 'reject':
-            desc_query = desc_query \
-                .filter(ProjectDescription.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED)
-
-        desc_query = desc_query.distinct().subquery()
-        pq = pq.join(desc_query, desc_query.c.parent_id == Project.id) \
-                .filter(desc_query.c.parent_id != None) \
-                .filter(Project.active == True)
-
-    # restrict query to projects owned by active users
-    pq = pq \
-        .join(User, User.id == Project.owner_id) \
-        .filter(User.active == True).subquery()
-
-    # build list of enrolments attached to this project class
-    eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id).filter_by(pclass_id=id).subquery()
-
-    # pair up projects with the corresponding enrolment records
-    jq = db.session.query(pq.c.id.label('pid'), eq.c.id.label('eid')).join(eq, eq.c.owner_id == pq.c.owner_id).subquery()
-
-    # can't find a better way of getting the ORM to construct a tuple of mapped objects here.
-    # in principle we want something like
-    #
-    # projects = db.session.query(Project, EnrollmentRecord). \
-    #     join(jq, and_(Project.id == jq.c.pid, EnrollmentRecord.id == jq.c.eid))
-    #
-    # The ORM implements this as a CROSS JOIN constrained by an INNER JOIN which causes at least MariaDB
-    # to fail
-
-    # extract list of Project and Enrollment objects
-    pq2 = db.session.query(jq.c.pid, Project).join(Project, Project.id == jq.c.pid)
-    eq2 = db.session.query(jq.c.pid, EnrollmentRecord).join(EnrollmentRecord, EnrollmentRecord.id == jq.c.eid)
-
-    ps = [x[1] for x in pq2.all()]
-    es = [x[1] for x in eq2.all()]
 
     # get FilterRecord for currently logged-in user
     filter_record = get_convenor_filter_record(config)
 
-    plist = zip(ps, es)
-    projects = filter_projects(plist, filter_record.group_filters.all() if pclass.advertise_research_group else [],
-                               filter_record.skill_filters.all(),
-                               getter=lambda x: x[0],
-                               setter=lambda x: (x[0].id, x[1].id))
+    def row_filter(row: Project):
+        desc: ProjectDescription = row.get_description(id)
+        if desc is None:
+            return False
 
-    return ajax.project.build_data(projects, current_user_id=current_user.id, menu_template='convenor', config=config,
-                                   text='attached projects list', url=url_for('convenor.attached', id=id),
-                                   name_labels=True)
+        # apply workflow status filters
+        if valid_filter == 'valid' or valid_filter == 'not-valid' or valid_filter == 'reject' \
+            or valid_filter == 'pending':
+
+            if pclass.require_confirm:
+                if valid_filter == 'pending':
+                    if desc.confirmed:
+                        return False
+                else:
+                    if not desc.confirmed:
+                        return False
+
+            if valid_filter == 'valid':
+                if desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED \
+                        or desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
+                    return False
+
+            if valid_filter == 'not-valid':
+                if desc.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
+                    return False
+
+            if valid_filter == 'reject':
+                if desc.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
+                    return False
+
+        # only show projects belonging to active users
+        if not row.generic:
+            if row.owner is None:
+                return False
+
+            if not row.owner.user.active:
+                return False
+
+        return apply_group_and_skills_filters(row,
+                                              filter_record.group_filters.all() if pclass.advertise_research_group else [],
+                                              filter_record.skill_filters.all())
+
+    return project_list_ajax_handler(request, base_query, row_filter=row_filter,
+                                     current_user_id=current_user.id, config=config, menu_template='convenor',
+                                     name_labels=True, text='attached projects list',
+                                     url=url_for('convenor.attached', id=id),
+                                     show_approvals=True, show_errors=True)
 
 
 @convenor.route('/faculty/<int:id>')
@@ -2219,22 +2188,7 @@ def liveprojects(id):
     data = get_convenor_dashboard_data(pclass, config)
 
     # supply list of transferable skill groups and research groups that can be filtered against
-    if pclass.advertise_research_group:
-        groups = db.session.query(ResearchGroup) \
-            .filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
-    else:
-        groups = None
-
-    skills = db.session.query(TransferableSkill) \
-        .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
-        .filter(TransferableSkill.active == True, SkillGroup.active == True) \
-        .order_by(SkillGroup.name.asc(), TransferableSkill.name.asc()).all()
-
-    skill_list = {}
-    for skill in skills:
-        if skill_list.get(skill.group.name, None) is None:
-            skill_list[skill.group.name] = []
-        skill_list[skill.group.name].append(skill)
+    groups, skill_list = get_filter_list_for_groups_and_skills(pclass)
 
     # get filter record
     filter_record = get_convenor_filter_record(config)
@@ -2245,11 +2199,11 @@ def liveprojects(id):
                            filter_record=filter_record, state_filter=state_filter)
 
 
-@convenor.route('/liveprojects_ajax/<int:id>', methods=['GET', 'POST'])
+@convenor.route('/liveprojects_ajax/<int:id>', methods=['POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def liveprojects_ajax(id):
     """
-    Ajax data point for liveprojects fiew
+    AJAX endpoint for liveprojects fiew
     :param id:
     :return:
     """
@@ -2271,22 +2225,111 @@ def liveprojects_ajax(id):
     # get FilterRecord for currently logged-in user
     filter_record = get_convenor_filter_record(config)
 
-    projects = filter_projects(config.live_projects.all(),
-                               filter_record.group_filters.all() if pclass.advertise_research_group else [],
-                               filter_record.skill_filters.all())
+    base_query = config.live_projects
 
-    if state_filter == 'submitted':
-        data = [rec for rec in projects if rec.number_selections > 0]
-    elif state_filter == 'bookmarks':
-        data = [rec for rec in projects if rec.number_selections == 0 and rec.number_bookmarks > 0]
-    elif state_filter == 'none':
-        data = [rec for rec in projects if rec.number_selections == 0 and rec.number_bookmarks == 0]
-    elif state_filter == 'confirmations':
-        data = [rec for rec in projects if rec.number_pending > 0]
-    else:
-        data = projects
+    return _liveprojects_ajax_handler(base_query, config, state_filter)
 
-    return ajax.convenor.liveprojects_data(config, data, url=url_for('convenor.liveprojects', id=id), text='convenor LiveProjects view')
+
+def _liveprojects_ajax_handler(base_query, config: ProjectClassConfig, state_filter: str):
+    def search_name(row: LiveProject):
+        return row.name
+
+    def sort_name(row: LiveProject):
+        return row.name
+
+    def search_owner(row: LiveProject):
+        if not row.generic and row.owner is not None:
+            return row.owner.name
+
+        return 'generic'
+
+    def sort_owner(row: LiveProject):
+        if row.generic or row.owner is None:
+            return ['generic', 'generic']
+
+        return [row.owner.user.last_name, row.owner.user.first_name]
+
+    def search_group(row: LiveProject):
+        search_values = []
+
+        if row.group is not None:
+            search_values.append(row.group.name)
+
+        for tag in row.forced_group_tags:
+            search_values.append(tag.name)
+
+        return search_values
+
+    def sort_group(row: LiveProject):
+        sort_value = str()
+
+        if row.group is not None:
+            sort_value += row.group.name
+
+        for tag in row.forced_group_tags:
+            sort_value += tag.name
+
+        return sort_value
+
+    def sort_bookmarks(row: LiveProject):
+        return row.number_bookmarks
+
+    def sort_selections(row: LiveProject):
+        return row.number_selections
+
+    def sort_confirmations(row: LiveProject):
+        return row.number_pending
+
+    def sort_popularity(row: LiveProject):
+        data = row.popularity_rank(live=True)
+
+        if data is None:
+            return -1
+
+        rank, total = data
+        return rank
+
+    name = {'search': search_name,
+            'order': sort_name}
+    owner = {'search': search_owner,
+             'sort': sort_owner}
+    group = {'search': search_group,
+             'order': sort_group}
+    bookmarks = {'order': sort_bookmarks}
+    selections = {'order': sort_selections}
+    confirmations = {'order': sort_confirmations}
+    popularity = {'order': sort_popularity}
+
+    columns = {'name': name,
+               'owner': owner,
+               'group': group,
+               'bookmarks': bookmarks,
+               'selections': selections,
+               'confirmations': confirmations,
+               'popularity': popularity}
+
+    def _filter(row: LiveProject):
+        if state_filter == 'submitted' and row.number_selections == 0:
+            return False
+
+        if state_filter == 'bookmarks' and row.number_selections > 0 or row.number_bookmarks == 0:
+            return False
+
+        if state_filter == 'none' and row.number_selections > 0 or row.number_bookmarks > 0:
+            return False
+
+        if state_filter == 'confirmations' and row.number_pending == 0:
+            return False
+
+        return True
+
+    with ServerSideInMemoryHandler(request, base_query, columns, row_filter=_filter) as handler:
+        def row_formatter(liveprojects):
+            return ajax.convenor.liveprojects_data(liveprojects, config,
+                                                   url=url_for('convenor.liveprojects', id=config.pclass_id),
+                                                   text='convenor LiveProjects view')
+
+        return handler.build_payload(row_formatter)
 
 
 @convenor.route('/delete_live_project/<int:pid>')
@@ -2537,11 +2580,11 @@ def attach_liveproject(id):
                            pclass=pclass, config=config, convenor_data=data)
 
 
-@convenor.route('/attach_liveproject_ajax/<int:id>')
+@convenor.route('/attach_liveproject_ajax/<int:id>', methods=['POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def attach_liveproject_ajax(id):
     """
-    Ajax datapoint for attach_liveproject view - projects available to be attached
+    AJAX endpoint for attach_liveproject view - projects available to be attached
     :param id:
     :return:
     """
@@ -2562,30 +2605,27 @@ def attach_liveproject_ajax(id):
         return jsonify({})
 
     # get existing liveprojects
-    current_projects = config.live_projects.subquery()
-
-    # get all projects attached to this class
-    attached = pclass.projects.subquery()
+    current_projects = [p.parent_id for p in config.live_projects]
 
     # compute all active attached projects that do not have a LiveProject equivalent
-    pq = db.session.query(attached.c.id, attached.c.owner_id) \
-        .filter(attached.c.active) \
-        .join(current_projects, current_projects.c.parent_id == attached.c.id, isouter=True) \
-        .filter(current_projects.c.id == None).subquery()
+    base_query = pclass.projects
 
-    eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id).filter_by(pclass_id=id).subquery()
-    jq = db.session.query(pq.c.id.label('pid'), eq.c.id.label('eid')).join(eq, eq.c.owner_id == pq.c.owner_id).subquery()
+    def row_filter(row: Project):
+        # don't show attached projects
+        if row.id in current_projects:
+            return False
 
-    # match original tables to these primary keys
-    pq2 = db.session.query(jq.c.pid, Project.id).join(Project, Project.id == jq.c.pid)
-    eq2 = db.session.query(jq.c.pid, EnrollmentRecord.id).join(EnrollmentRecord, EnrollmentRecord.id == jq.c.eid)
+        # don't show projects belonging to inactive users
+        if not row.generic and row.owner is not None and not row.owner.user.active:
+            return False
 
-    ps = [x[1] for x in pq2.all()]
-    es = [x[1] for x in eq2.all()]
+        return True
 
-    return ajax.project.build_data(zip(ps, es), current_user_id=current_user.id, menu_template='attach', config=config,
-                                   text='attach view', url=url_for('convenor.attach_liveproject', id=id),
-                                   name_labels=True)
+    return project_list_ajax_handler(request, base_query, row_filter=row_filter,
+                                     current_user_id=current_user.id, config=config, menu_template='attach',
+                                     name_labels=True, text='attach projects view',
+                                     url=url_for('convenor.attach_liveproject', id=id),
+                                     show_approvals=True, show_errors=True)
 
 
 @convenor.route('/manual_attach_project/<int:id>/<int:configid>')
@@ -2625,11 +2665,11 @@ def manual_attach_project(id, configid):
     return redirect(redirect_url())
 
 
-@convenor.route('/attach_liveproject_other_ajax/<int:id>')
+@convenor.route('/attach_liveproject_other_ajax/<int:id>', methods=['POST'])
 @roles_accepted('admin', 'root')
 def attach_liveproject_other_ajax(id):
     """
-    Ajax datapoint for attach_liveproject view - projects attached to *other* project classes that we might wish to attach
+    AJAX endpoint for attach_liveproject view - projects attached to *other* project classes that we might wish to attach
     :param id:
     :return:
     """
@@ -2646,42 +2686,34 @@ def attach_liveproject_other_ajax(id):
     if not config.live:
         return jsonify({})
 
-    # find all projects that do not have a LiveProject equivalent
+    # find all projects, not already attached as LiveProjects, that are not attached to
+    # this project class
+    base_query = db.session.query(Project) \
+        .filter(Project.active == True)
 
     # get existing liveprojects
-    current_projects = config.live_projects.subquery()
+    current_projects = [p.parent_id for p in config.live_projects]
 
-    # this time the SQL is a bit harder
-    # we want to find all active projects that do not have a LiveProject equivalent and are *not*
-    # attached to this pclass
+    def row_filter(row: Project):
+        # don't show projects attached to this project class
+        if pclass.id in [p.id for p in row.project_classes]:
+            return False
 
-    # first compute all projects that *are* attached to this pclass
-    attached = pclass.projects.subquery()
+        # don't show attached projects
+        if row.id in current_projects:
+            return False
 
-    # join this sublist back to the main Projects table to determine projects that *are not* attached to this pclass;
-    # we keep only the project IDs since we will requery later to build complete Project records including all
-    # relationship data
-    active_not_attached = db.session.query(Project.id, Project.owner_id) \
-        .join(attached, attached.c.id == Project.id, isouter=True) \
-        .filter(Project.active, attached.c.id == None).subquery()
+        # don't show projects belonging to inactive users
+        if not row.generic and row.owner is not None and not row.owner.user.active:
+            return False
 
-    # finally join against list of current projects to find those that do not have a LiveProject equivalent
-    pq = db.session.query(active_not_attached) \
-        .join(current_projects, current_projects.c.parent_id == active_not_attached.c.id, isouter=True) \
-        .filter(current_projects.c.id == None).subquery()
+        return True
 
-    eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id).filter_by(pclass_id=id).subquery()
-    jq = db.session.query(pq.c.id.label('pid'), eq.c.id.label('eid')).join(eq, eq.c.owner_id == pq.c.owner_id).subquery()
-
-    pq2 = db.session.query(jq.c.pid, Project.id).join(Project, Project.id == jq.c.pid)
-    eq2 = db.session.query(jq.c.pid, EnrollmentRecord.id).join(EnrollmentRecord, EnrollmentRecord.id == jq.c.eid)
-
-    ps = [x[1] for x in pq2.all()]
-    es = [x[1] for x in eq2.all()]
-
-    return ajax.project.build_data(zip(ps, es), current_user_id=current_user.id, menu_template='attach_other',
-                                   config=config, text='attach view', url=url_for('convenor.attach_liveproject', id=id),
-                                   name_labels=True)
+    return project_list_ajax_handler(request, base_query,
+                                     current_user_id=current_user.id, config=config, menu_template='attach_other',
+                                     name_labels=True, text='attach projects view',
+                                     url=url_for('convenor.attach_liveproject', id=id),
+                                     show_approvals=True, show_errors=True)
 
 
 @convenor.route('/manual_attach_other_project/<int:id>/<int:configid>')
@@ -2983,31 +3015,32 @@ def add_project(pclass_id):
 
     if form.validate_on_submit():
         tag_list  = create_new_tags(form)
-        data = Project(name=form.name.data,
-                       tags=tag_list,
-                       active=True,
-                       owner=form.owner.data,
-                       group=form.group.data,
-                       project_classes=form.project_classes.data,
-                       skills=[],
-                       programmes=[],
-                       meeting_reqd=form.meeting_reqd.data,
-                       enforce_capacity=form.enforce_capacity.data,
-                       show_popularity=form.show_popularity.data,
-                       show_bookmarks=form.show_bookmarks.data,
-                       show_selections=form.show_selections.data,
-                       dont_clash_presentations=form.dont_clash_presentations.data,
-                       creator_id=current_user.id,
-                       creation_timestamp=datetime.now())
+        project = Project(name=form.name.data,
+                          tags=tag_list,
+                          active=True,
+                          owner=form.owner.data if not form.generic.data else None,
+                          generic=form.generic.data,
+                          group=form.group.data,
+                          project_classes=form.project_classes.data,
+                          skills=[],
+                          programmes=[],
+                          meeting_reqd=form.meeting_reqd.data,
+                          enforce_capacity=form.enforce_capacity.data,
+                          show_popularity=form.show_popularity.data,
+                          show_bookmarks=form.show_bookmarks.data,
+                          show_selections=form.show_selections.data,
+                          dont_clash_presentations=form.dont_clash_presentations.data,
+                          creator_id=current_user.id,
+                          creation_timestamp=datetime.now())
 
-        if pclass_id != 0 and len(data.project_classes.all()) == 0 and not pclass.uses_supervisor:
-            data.project_classes.append(pclass)
+        if pclass_id != 0 and len(project.project_classes.all()) == 0 and not pclass.uses_supervisor:
+            project.project_classes.append(pclass)
 
         # ensure that list of preferred degree programmes is consistent
-        data.validate_programmes()
+        project.validate_programmes()
 
         try:
-            db.session.add(data)
+            db.session.add(project)
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -3016,18 +3049,21 @@ def add_project(pclass_id):
                   'Please contact a system administrator', 'error')
 
         # auto-enroll if implied by current project class associations
-        owner = data.owner
-        for pclass in data.project_classes:
-            if not owner.is_enrolled(pclass):
-                owner.add_enrollment(pclass)
-                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.user.name, pclass=pclass.name))
+        if not project.generic:
+            owner = project.owner
+            assert(owner is not None)
+
+            for pclass in project.project_classes:
+                if not owner.is_enrolled(pclass):
+                    owner.add_enrollment(pclass)
+                    flash('Auto-enrolled {name} in {pclass}'.format(name=project.owner.user.name, pclass=pclass.name))
 
         if form.submit.data:
-            return redirect(url_for('convenor.edit_descriptions', id=data.id, pclass_id=pclass_id, create=1))
+            return redirect(url_for('convenor.edit_descriptions', id=project.id, pclass_id=pclass_id, create=1))
         elif form.save_and_exit.data:
             return redirect(url_for('convenor.attached', id=pclass_id))
         elif form.save_and_preview:
-            return redirect(url_for('faculty.project_preview', id=data.id,
+            return redirect(url_for('faculty.project_preview', id=project.id,
                                     text='attached projects list',
                                     url=url_for('convenor.attached', id=pclass_id)))
         else:
@@ -3092,7 +3128,8 @@ def edit_project(id, pclass_id):
         tag_list  = create_new_tags(form)
 
         project.name = form.name.data
-        project.owner = form.owner.data
+        project.owner = form.owner.data if not form.generic.data else None
+        project.generic = form.generic.data
         project.tags = tag_list
         project.group = form.group.data
         project.project_classes = form.project_classes.data
@@ -3115,10 +3152,13 @@ def edit_project(id, pclass_id):
             db.session.commit()
 
             # auto-enroll if implied by current project class associations
-            for pclass in project.project_classes:
-                if not project.owner.is_enrolled(pclass):
-                    project.owner.add_enrollment(pclass)
-                    flash('Auto-enrolled {name} in {pclass}'.format(name=project.owner.user.name, pclass=pclass.name))
+            if not project.generic:
+                for pclass in project.project_classes:
+                    assert(project.owner is not None)
+
+                    if not project.owner.is_enrolled(pclass):
+                        project.owner.add_enrollment(pclass)
+                        flash('Auto-enrolled {name} in {pclass}'.format(name=project.owner.user.name, pclass=pclass.name))
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -4350,22 +4390,34 @@ def show_unofferable():
     return render_template('convenor/unofferable.html')
 
 
-@convenor.route('/unofferable_ajax')
+@convenor.route('/unofferable_ajax', methods=['POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def unofferable_ajax():
     """
-    Ajax data point for show-unattached view
+    AJAX endpoint for show-unattached view
     :return:
     """
 
     if not validate_is_administrator():
         return jsonify({})
 
-    projects = [(p.id, None) for p in db.session.query(Project).filter_by(active=True).all() if not p.is_offerable]
+    base_query = db.session.query(Project) \
+        .filter(Project.active == True)
 
-    return ajax.project.build_data(projects, current_user_id=current_user.id, menu_template='unofferable',
-                                   text='attached projects list', url=url_for('convenor.show_unofferable'),
-                                   name_labels=True)
+    def row_filter(row: Project):
+        # don't show offerable projects
+        if p.is_offerable:
+            return False
+
+        # don't show projects belonging to inactive users
+        if not row.generic and row.owner is not None and not row.owner.user.active:
+            return False
+
+    return project_list_ajax_handler(request, base_query, row_filter=row_filter,
+                                     current_user_id=current_user.id, menu_template='unofferable',
+                                     name_labels=True, text='unofferable projects list',
+                                     url=url_for('convenor.show_unofferable'),
+                                     show_approvals=False, show_errors=True)
 
 
 @convenor.route('/force_confirm_all/<int:id>')

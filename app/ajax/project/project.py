@@ -104,6 +104,21 @@ _project_error_block = \
 
 
 # language=jinja2
+_owner = \
+"""
+{% if project.generic %}
+    <span class="badge bg-info">Generic</span>
+{% else %}
+    {% if project.owner is not none %}
+        <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
+    {% else %}
+        <span class="badge bg-danger">Missing</span>
+    {% endif %}
+{% endif %}
+"""
+
+
+# language=jinja2
 _project_status = \
 """
 {% if project.is_offerable %}
@@ -387,9 +402,7 @@ def _element(project_id, menu_template, in_current):
     menu_string = _menus[menu_template]
 
     return {'name': render_template_string(_project_name, project=p, text='REPTEXT', url='REPURL'),
-             'owner': {
-                 'display': '<a class="text-decoration-none" href="mailto:{em}">{nm}</a>'.format(em=p.owner.user.email, nm=p.owner.user.name),
-                 'sortvalue': p.owner.user.last_name + p.owner.user.first_name},
+             'owner': render_template_string(_owner, project=p),
              'status': render_template_string(_project_status, project=p),
              'pclasses': render_template_string(_project_pclasses, project=p),
              'meeting': render_template_string(_project_meetingreqd, project=p),
@@ -400,12 +413,13 @@ def _element(project_id, menu_template, in_current):
                                             in_current=in_current, text='REPTEXT', url='REPURL')}
 
 
-def _process(project_id, enrollment_id, current_user_id, menu_template, config, text_enc, url_enc, name_labels,
+def _process(project_id, config, current_user_id, menu_template, name_labels, text_enc, url_enc,
              show_approvals, show_errors):
     p = db.session.query(Project).filter_by(id=project_id).one()
 
-    if enrollment_id is not None:
-        e = db.session.query(EnrollmentRecord).filter_by(id=enrollment_id).first()
+    if config is not None and not p.generic and p.owner is not None:
+        e = db.session.query(EnrollmentRecord).filter_by(owner_id=current_user_id,
+                                                         pclass_id=config.pclass_id).first()
     else:
         e = None
 
@@ -768,8 +782,12 @@ def _DegreeType_delete_handler(mapper, connection, target):
             _invalidate_cache(p_id)
 
 
-def build_data(projects, menu_template=None, current_user_id=None, config=None, text=None, url=None, name_labels=False,
-               show_approvals=True, show_errors=True):
+# projects argument could be a list of Project or LiveProject instances
+def build_data(projects,
+               config: ProjectClassConfig=None, current_user_id: int=None,
+               menu_template: str=None, name_labels: bool=False,
+               text: str=None, url: str=None,
+               show_approvals: bool=False, show_errors: bool=True):
     bleach = current_app.extensions['bleach']
 
     def urlencode(s):
@@ -780,7 +798,7 @@ def build_data(projects, menu_template=None, current_user_id=None, config=None, 
     url_enc = urlencode(url) if url is not None else ''
     text_enc = urlencode(text) if text is not None else ''
 
-    data = [_process(p_id, e_id, current_user_id, menu_template, config, text_enc, url_enc, name_labels,
-                     show_approvals, show_errors) for p_id, e_id in projects]
+    data = [_process(p_id, config, current_user_id, menu_template, name_labels, text_enc, url_enc, show_approvals,
+                     show_errors) for p_id in projects]
 
-    return jsonify(data)
+    return data

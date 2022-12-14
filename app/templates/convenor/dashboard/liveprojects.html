@@ -29,40 +29,39 @@
             $('#liveprojects-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/liveprojects_ajax/{{ pclass.id }}?state_filter={{ state_filter }}', dataSrc: '' },
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: { url: $SCRIPT_ROOT + '/convenor/liveprojects_ajax/{{ pclass.id }}?state_filter={{ state_filter }}',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; }},
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'number' },
-                    { data: 'name' },
-                    { data: 'owner' },
-                    { data: 'group' },
+                    { data: 'name',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'owner',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'group',
+                      searchable: true,
+                      orderable: true },
                     { data: 'bookmarks',
-                      render: {
-                        _: 'display',
-                        sort: 'value',
-                        type: 'value'
-                    } },
+                      searchable: false,
+                      orderable: true },
                     { data: 'selections',
-                      render: {
-                        _: 'display',
-                        sort: 'value',
-                        type: 'value'
-                    } },
+                      searchable: false,
+                      orderable: true },
                     { data: 'confirmations',
-                      render: {
-                        _: 'display',
-                       sort: 'value',
-                       type: 'value'
-                    } },
+                      searchable: false,
+                      orderable: true },
                     { data: 'popularity',
-                      render: {
-                        _: 'display',
-                        sort: 'value',
-                        type: 'value'
-                    } },
-                    { data: 'menu' }
+                      searchable: false,
+                      orderable: true },
+                    { data: 'menu',
+                      searchable: false,
+                      orderable: false }
                 ],
-                deferRender: true
+                order: [[0, 'asc']]
             });
 
             let filter_state = localStorage.getItem('mps-project-filter-open');

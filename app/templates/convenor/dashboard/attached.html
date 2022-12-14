@@ -29,26 +29,41 @@
 
         $(document).ready(function () {
             $('#attached-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/attached_ajax/{{ pclass.id }}?valid_filter={{ valid_filter }}', dataSrc: '' },
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: { url: $SCRIPT_ROOT + '/convenor/attached_ajax/{{ pclass.id }}?valid_filter={{ valid_filter }}',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; }},
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'name' },
+                    { data: 'name',
+                      searchable: true,
+                      orderable: true },
                     { data: 'owner',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'
-                    } },
-                    { data: 'status' },
-                    { data: 'meeting' },
-                    { data: 'group' },
-                    { data: 'prefer' },
-                    { data: 'skills' },
-                    { data: 'menu' }
+                      searchable: true,
+                      orderable: true },
+                    { data: 'status',
+                      searchable: false,
+                      orderable: true },
+                    { data: 'meeting',
+                      searchable: false,
+                      orderable: true },
+                    { data: 'group',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'prefer',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'skills',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'menu',
+                      searchable: false,
+                      orderable: false}
                 ],
-                deferRender: true
+                order: [[0, 'asc']]
             });
 
             let filter_state = localStorage.getItem('mps-project-filter-open');

@@ -506,8 +506,6 @@ def sabbaticals_ajax():
         if flag:
             base_query = base_query.filter(EnrollmentRecord.pclass_id == value)
 
-    base_query = base_query.join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id)
-
     name = {'search': func.concat(User.first_name + ' ' + User.last_name),
             'order': [User.last_name, User.first_name],
             'search_collation': 'utf8_general_ci'}

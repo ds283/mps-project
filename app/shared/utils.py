@@ -979,7 +979,7 @@ def get_matching_dashboard_data():
 
 def build_assessor_query(proj, state_filter, pclass_filter, group_filter):
     """
-    Build a query for FacultyData records suitable to populate the 2nd marker view
+    Build a query for FacultyData records suitable to populate the marker view
     :param proj:
     :param state_filter:
     :param pclass_filter:

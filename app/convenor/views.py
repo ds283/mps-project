@@ -749,14 +749,15 @@ def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClass
 
 
 def _has_custom_CATS(fac_data, pclass):
-    record = fac_data.get_enrollment_record(pclass)
+    record: EnrollmentRecord = fac_data.get_enrollment_record(pclass)
 
     if record is None:
         return False
 
     return record.CATS_supervision is not None \
-           or record.CATS_marking is not None \
-           or record.CATS_presentation is not None
+        or record.CATS_marking is not None \
+        or record.CATS_moderation is not None \
+        or record.CATS_presentation is not None
 
 
 @convenor.route('/selectors/<int:id>')
@@ -7171,6 +7172,7 @@ def edit_project_config(pid):
 
         config.CATS_supervision = form.CATS_supervision.data
         config.CATS_marking = form.CATS_marking.data
+        config.CATS_moderation = form.CATS_moderation.data
         config.CATS_presentation = form.CATS_presentation.data
 
         if hasattr(form, 'canvas_module_id'):
@@ -8802,6 +8804,7 @@ def update_CATS(config_id):
 
     config.CATS_supervision = config.project_class.CATS_supervision
     config.CATS_marking = config.project_class.CATS_marking
+    config.CATS_moderation = config.project_class.CATS_moderation
     config.CATS_presentation = config.project_class.CATS_presentation
 
     db.session.commit()
@@ -8859,6 +8862,7 @@ def custom_CATS_limits(record_id):
     if form.validate_on_submit():
         record.CATS_supervision = form.CATS_supervision.data
         record.CATS_marking = form.CATS_marking.data
+        record.CATS_moderation = form.CATS_moderation.data
         record.CATS_presentation = form.CATS_presentation.data
 
         record.last_edit_id = current_user.id

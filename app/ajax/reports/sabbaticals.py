@@ -52,6 +52,12 @@ _exemptions = \
         {{ display(rec.marker_state, rec.MARKER_SABBATICAL, rec.MARKER_EXEMPT, rec.marker_reenroll, rec.marker_comment) }}
     </div>
 {% endif %}
+{% if rec.pclass.uses_moderator and rec.moderator_state != rec.MODERATOR_ENROLLED %}
+    <div class="mb-2">
+        <strong class="mr-1">Moderating</strong>
+        {{ display(rec.moderator_state, rec.MODERATOR_SABBATICAL, rec.MODERATOR_EXEMPT, rec.moderator_reenroll, rec.moderator_comment) }}
+    </div>
+{% endif %}
 {% if rec.pclass.uses_presentations and rec.presentations_state != rec.PRESENTATIONS_ENROLLED %}
     <div class="mb-2">
         <strong class="mr-1">Presentations</strong>

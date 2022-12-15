@@ -487,9 +487,15 @@ def sabbaticals_ajax():
     pclass_filter = request.args.get('pclass_filter')
 
     base_query = db.session.query(EnrollmentRecord) \
-        .filter(or_(EnrollmentRecord.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED,
-                    EnrollmentRecord.marker_state != EnrollmentRecord.MARKER_ENROLLED,
-                    EnrollmentRecord.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED)) \
+        .join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id) \
+        .filter(or_(and_(ProjectClass.uses_supervisor,
+                         EnrollmentRecord.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED),
+                    and_(ProjectClass.uses_marker,
+                         EnrollmentRecord.marker_state != EnrollmentRecord.MARKER_ENROLLED),
+                    and_(ProjectClass.uses_moderator,
+                         EnrollmentRecord.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED),
+                    and_(ProjectClass.uses_presentations,
+                         EnrollmentRecord.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED))) \
         .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id) \
         .join(User, User.id == FacultyData.id) \
         .filter(User.active)
@@ -507,9 +513,9 @@ def sabbaticals_ajax():
             'search_collation': 'utf8_general_ci'}
     pclass = {'order': ProjectClass.name}
     exemptions = {'search': func.concat(EnrollmentRecord.supervisor_comment, EnrollmentRecord.marker_comment,
-                                        EnrollmentRecord.presentations_comment),
+                                        EnrollmentRecord.moderator_comment, EnrollmentRecord.presentations_comment),
                   'order': [EnrollmentRecord.supervisor_reenroll, EnrollmentRecord.marker_reenroll,
-                            EnrollmentRecord.presentations_reenroll],\
+                            EnrollmentRecord.moderator_reenroll, EnrollmentRecord.presentations_reenroll],\
                   'search_collation': 'utf8_general_ci'}
 
     columns = {'name': name,

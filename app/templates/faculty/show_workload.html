@@ -25,32 +25,42 @@
     </div>
 
     <div class="row vertical-top">
-        <div class="col-4">
-            Supervising
+        <div class="col-3">
+            Supervision
         </div>
-        <div class="col-4">
-            2nd-marking
+        <div class="col-3">
+            Marking
         </div>
-        <div class="col-4">
+        <div class="col-3">
+            Moderation
+        </div>
+        <div class="col-3">
             Presentation assessment
         </div>
     </div>
     <div class="row vertical-top">
-        <div class="col-4">
+        <div class="col-3">
             {% if data.CATS_supervision is none or data.CATS_supervision == 0 %}
                 <span class="badge bg-secondary">Default</span>
             {% else %}
                 <span class="badge bg-info text-dark">{{ data.CATS_supervision }} CATS</span>
             {% endif %}
         </div>
-        <div class="col-4">
+        <div class="col-3">
             {% if data.CATS_marking is none or data.CATS_marking == 0 %}
                 <span class="badge bg-secondary">Default</span>
             {% else %}
                 <span class="badge bg-info text-dark">{{ data.CATS_marking }} CATS</span>
             {% endif %}
         </div>
-        <div class="col-4">
+        <div class="col-3">
+            {% if data.CATS_moderation is none or data.CATS_moderation == 0 %}
+                <span class="badge bg-secondary">Default</span>
+            {% else %}
+                <span class="badge bg-info text-dark">{{ data.CATS_moderation }} CATS</span>
+            {% endif %}
+        </div>
+        <div class="col-3">
             {% if data.CATS_presentation is none or data.CATS_presentation == 0 %}
                 <span class="badge bg-secondary">Default</span>
             {% else %}

@@ -55,18 +55,21 @@
                         </div>
                         <hr class="intro-divider mb-2">
                         <div class="row vertical-top mb-2">
-                            <div class="col-4">
-                                Supervising
+                            <div class="col-3">
+                                Supervision
                             </div>
-                            <div class="col-4">
-                                2nd-marking
+                            <div class="col-3">
+                                Marking
                             </div>
-                            <div class="col-4">
-                                Presentation assessment
+                            <div class="col-3">
+                                Moderation
+                            </div>
+                            <div class="col-3">
+                                Presentations
                             </div>
                         </div>
                         <div class="row vertical-top">
-                            <div class="col-4">
+                            <div class="col-3">
                                 {% if record.pclass.uses_supervisor %}
                                     {% if record.supervisor_state == record.SUPERVISOR_ENROLLED  %}
                                         <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Enrolled</span>
@@ -86,7 +89,7 @@
                                     <span class="badge bg-secondary">Not used</span>
                                 {% endif %}
                             </div>
-                            <div class="col-4">
+                            <div class="col-3">
                                 {% if record.pclass.uses_marker %}
                                     {% if record.marker_state == record.MARKER_ENROLLED %}
                                         <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Enrolled</span>
@@ -106,7 +109,27 @@
                                     <span class="badge bg-secondary">Not used</span>
                                 {% endif %}
                             </div>
-                            <div class="col-4">
+                            <div class="col-3">
+                                {% if record.pclass.uses_moderator %}
+                                    {% if record.moderator_state == record.MODERATOR_ENROLLED %}
+                                        <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Enrolled</span>
+                                    {% elif record.moderator_state == record.MODERATOR_SABBATICAL %}
+                                        <span class="badge bg-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
+                                        {% if record.moderator_reenroll is not none %}
+                                            <span class="badge bg-secondary">ends {{ record.marker_reenroll }}</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">no end date</span>
+                                        {% endif %}
+                                    {% elif record.moderator_state == record.MODERATOR_EXEMPT %}
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Exempt</span>
+                                    {% else %}
+                                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-secondary">Not used</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-3">
                                 {% if record.pclass.uses_presentations %}
                                     {% if record.presentations_state == record.PRESENTATIONS_ENROLLED %}
                                         <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Enrolled</span>

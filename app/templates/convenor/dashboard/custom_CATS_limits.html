@@ -18,11 +18,26 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        {{ wtf.render_field(form.CATS_supervision) }}
-        {{ wtf.render_field(form.CATS_marking) }}
-        {{ wtf.render_field(form.CATS_presentation) }}
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(form.CATS_supervision) }}
+            </div>
+            <div class="col-6">
+                {{ wtf.render_field(form.CATS_marking) }}
+            </div>
+        </div>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(form.CATS_moderation) }}
+            </div>
+            <div class="col-6">
+                {{ wtf.render_field(form.CATS_presentation) }}
+            </div>
+        </div>
 
-        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        <div class="mt-4">
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        </div>
 
     </form>
 {% endblock %}

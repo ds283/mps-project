@@ -152,15 +152,19 @@ class TestOpenFeedbackForm(Form):
 class CustomCATSLimitForm(Form, SaveChangesMixin):
 
     # custom CATS limit for supervision
-    CATS_supervision = IntegerField('Maximum CATS allocated for supervision',
+    CATS_supervision = IntegerField('Maximum CATS allocation for supervision',
                                     validators=[Optional()])
 
     # custom CATS limit for marking
-    CATS_marking = IntegerField('Maximum CATS allocated for marking',
+    CATS_marking = IntegerField('Maximum CATS allocation for marking',
                                 validators=[Optional()])
 
+    # custom CATS limit for moderation
+    CATS_moderation = IntegerField('Maximum CATS allocation for moderation',
+                                   validators=[Optional()])
+
     # custom CATS limit for presentations
-    CATS_presentation = IntegerField('Maximum CATS allocated for presentation assessment',
+    CATS_presentation = IntegerField('Maximum CATS allocation for presentation assessment',
                                      validators=[Optional()])
 
 
@@ -273,11 +277,14 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
         CATS_supervision = IntegerField('CATS awarded for project supervision',
                                         validators=[InputRequired(message='Please enter an integer value')])
 
-        CATS_marking = IntegerField('CATS awarded for project 2nd marking',
-                                    validators=[Optional()])
+        CATS_marking = IntegerField('CATS awarded for marking submissions',
+                                    validators=[InputRequired(message='Please enter an integer value')])
+
+        CATS_moderation = IntegerField('CATS awarded for moderating submissions',
+                                       validators=[InputRequired(message='Please enter an integer value')])
 
         CATS_presentation = IntegerField('CATS awarded for assessing presentations',
-                                         validators=[Optional()])
+                                         validators=[InputRequired(message='Please enter an integer value')])
 
         # only include Canvas-related fields if Canvas integration is actually switched on
         if canvas_enabled:
@@ -298,8 +305,8 @@ def AssignMarkerFormFactory(live_project: LiveProject, uses_marker: bool,
     class AssignMarkerForm(Form, PeriodSelectorMixinFactory(config, is_admin)):
 
         if uses_marker:
-            # 2nd marker
-            marker = QuerySelectField('Assign 2nd marker', query_factory=partial(MarkerQuery, live_project),
+            # marker
+            marker = QuerySelectField('Assign marker', query_factory=partial(MarkerQuery, live_project),
                                       get_label=BuildMarkerLabel, allow_blank=True)
 
     return AssignMarkerForm

@@ -1924,6 +1924,7 @@ def add_pclass():
                                 active=True,
                                 CATS_supervision=form.CATS_supervision.data,
                                 CATS_marking=form.CATS_marking.data,
+                                CATS_moderation=form.CATS_moderation.data,
                                 CATS_presentation=form.CATS_presentation.data,
                                 keep_hourly_popularity=form.keep_hourly_popularity.data,
                                 keep_daily_popularity=form.keep_daily_popularity.data,
@@ -1965,6 +1966,7 @@ def add_pclass():
                                         selection_closed=False,
                                         CATS_supervision=data.CATS_supervision,
                                         CATS_marking=data.CATS_marking,
+                                        CATS_moderation=data.CATS_moderation,
                                         CATS_presentation=data.CATS_presentation,
                                         creator_id=current_user.id,
                                         creation_timestamp=datetime.now(),
@@ -2093,6 +2095,7 @@ def edit_pclass(id):
         data.faculty_maximum = form.faculty_maximum.data
         data.CATS_supervision = form.CATS_supervision.data
         data.CATS_marking = form.CATS_marking.data
+        data.CATS_moderation = form.CATS_moderation.data
         data.CATS_presentation = form.CATS_presentation.data
         data.keep_hourly_popularity = form.keep_hourly_popularity.data
         data.keep_daily_popularity = form.keep_daily_popularity.data
@@ -4345,12 +4348,9 @@ def create_match():
                 form.strong_discourage_bias.data = base_match.strong_discourage_bias
 
     # estimate equitable CATS loading
-    supervising_CATS, marking_CATS, presentation_CATS, \
-        num_supervisors, num_markers, num_presentations = estimate_CATS_load()
+    data = estimate_CATS_load()
 
-    return render_template('admin/matching/create.html', pane='create', info=info, form=form,
-                           supervising_CATS=supervising_CATS, marking_CATS=marking_CATS,
-                           num_supervisors=num_supervisors, num_markers=num_markers,
+    return render_template('admin/matching/create.html', pane='create', info=info, form=form, data=data,
                            base_match=base_match)
 
 
@@ -5313,7 +5313,7 @@ def reassign_match_marker(id, mid):
 
     if count == 0:
         marker = FacultyData.query.get_or_404(mid)
-        flash('Could not assign {name} as 2nd marker since '
+        flash('Could not assign {name} as marker since '
               'not tagged as available for assigned project "{proj}"'.format(name=marker.user.name,
                                                                              proj=record.project.name), 'error')
 

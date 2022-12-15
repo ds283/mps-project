@@ -50,27 +50,33 @@ _name = \
             {% set rec = enrollments.get(config.pclass_id) %}
             {% if rec is not none %}
                 {% set pcl = rec.pclass %}
-                {% if rec.CATS_supervision is not none or rec.CATS_marking is not none %}
+                {% if rec.CATS_supervision is not none or rec.CATS_marking is not none or rec.CATS_moderation is not none %}
                     {% set style = pcl.make_CSS_style() %}
                     <span class="badge {% if style is not none %}bg-secondary{% else %}bg-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
                         {%- if rec.CATS_supervision is not none %}
                             S {{ rec.CATS_supervision }}
                         {%- endif -%}
                         {%- if rec.CATS_marking is not none %}
-                            M {{ rec.CATS_marking }}
+                            Mk {{ rec.CATS_marking }}
+                        {%- endif -%}
+                        {%- if rec.cats_moderation is not none %}
+                            Mo {{ rec.CATS_moderation }}
                         {%- endif -%}
                     </span>
                 {% endif %}
             {% endif %}
         {% endif %}
     {% endfor %}
-    {% if f.CATS_supervision is not none or f.CATS_marking is not none %}
+    {% if f.CATS_supervision is not none or f.CATS_marking is not none or f.CATS_moderation is not none %}
         <span class="badge bg-primary">Global
             {%- if f.CATS_supervision is not none %}
                 S {{ f.CATS_supervision }}
             {%- endif -%}
             {%- if f.CATS_marking is not none %}
-                M {{ f.CATS_marking }}
+                Mk {{ f.CATS_marking }}
+            {%- endif -%}
+            {%- if f.CATS_moderation is not none %}
+                Mo {{ f.CATS_moderation }}
             {%- endif -%}
         </span>
     {% endif %}
@@ -158,7 +164,7 @@ _marking = \
             #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})
         </a>
         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-            <div class="dropdown-header">Reassign 2nd marker</div>
+            <div class="dropdown-header">Reassign marker</div>
             {% set assessor_list = r.project.assessor_list %}
             {% for marker in assessor_list %}
                 {% set disabled = false %}
@@ -295,6 +301,8 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
                                                      'limit {n}'.format(name=f.user.name, n=rec.CATS_marking)
                 overassigned = True
                 mark_overassigned = True
+
+            # UPDATE MODERATE CATS
 
         sup_err_msgs = sup_errors.values()
         mark_err_msgs = mark_errors.values()

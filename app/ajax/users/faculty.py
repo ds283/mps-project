@@ -57,12 +57,17 @@ _settings = \
     <span class="badge bg-secondary">S: Default CATS</span>
 {% endif %}
 {% if f.CATS_marking is not none %}
-    <span class="badge bg-warning text-dark">M {{ f.CATS_marking }} CATS</span>
+    <span class="badge bg-warning text-dark">Mk {{ f.CATS_marking }} CATS</span>
 {% else %}
-    <span class="badge bg-secondary">M: Default CATS</span>
+    <span class="badge bg-secondary">Mk: Default CATS</span>
+{% endif %}
+{% if f.CATS_moderation is not none %}
+    <span class="badge bg-warning text-dark">Mo {{ f.CATS_moderation }} CATS</span>
+{% else %}
+    <span class="badge bg-secondary">Mo: Default</span>
 {% endif %}
 {% if f.CATS_presentation is not none %}
-    <span class="badge bg-warning text-dark">P {{ f.CATS_marking }} CATS</span>
+    <span class="badge bg-warning text-dark">P {{ f.CATS_presentation }} CATS</span>
 {% else %}
     <span class="badge bg-secondary">P: Default CATS</span>
 {% endif %}

@@ -23,7 +23,8 @@ from ..database import db
 from ..models import User, TaskRecord, ProjectClassConfig, \
     SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, SubmissionRecord, \
     SubmissionPeriodRecord, add_notification, EmailNotification, ProjectClass, Project, \
-    ProjectDescription, ConfirmRequest, ConvenorGenericTask, MatchingRecord, DegreeProgramme, DegreeType
+    ProjectDescription, ConfirmRequest, ConvenorGenericTask, MatchingRecord, DegreeProgramme, DegreeType, \
+    SubmissionPeriodDefinition
 from ..shared.convenor import add_selector, add_blank_submitter
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import get_current_year
@@ -504,6 +505,7 @@ def register_rollover_tasks(celery):
                                             selection_closed=False,
                                             CATS_supervision=pclass.CATS_supervision,
                                             CATS_marking=pclass.CATS_marking,
+                                            CATS_moderation=pclass.CATS_moderation,
                                             CATS_presentation=pclass.CATS_presentation,
                                             submission_period=1,
                                             canvas_module_id=None,
@@ -946,6 +948,7 @@ def register_rollover_tasks(celery):
 
         record.CATS_supervision = None
         record.CATS_marking = None
+        record.CATS_moderation = None
         record.CATS_presentation = None
 
         try:
@@ -986,22 +989,42 @@ def register_rollover_tasks(celery):
                 record.supervisor_state = EnrollmentRecord.SUPERVISOR_ENROLLED
                 record.supervisor_reenroll = None
                 record.supervisor_comment = 'Automatically re-enrolled during academic year rollover'
-                add_notification(record.owner, EmailNotification.FACULTY_REENROLL_SUPERVISOR, record)
+                if record.pclass.uses_supervisor:
+                    add_notification(record.owner, EmailNotification.FACULTY_REENROLL_SUPERVISOR, record)
 
-        # markers (and presentation assessors) re-enroll in the year they come off sabbatical
+        # re-enrol markers in the year they come off sabbatical
         if record.marker_state != EnrollmentRecord.MARKER_ENROLLED:
             if record.marker_reenroll is not None and record.marker_reenroll <= current_year:
                 record.marker_state = EnrollmentRecord.MARKER_ENROLLED
                 record.marker_reenroll = None
                 record.marker_comment = 'Automatically re-enrolled during academic year rollover'
-                add_notification(record.owner, EmailNotification.FACULTY_REENROLL_MARKER, record)
+                if record.pclass.uses_marker:
+                    add_notification(record.owner, EmailNotification.FACULTY_REENROLL_MARKER, record)
 
+        # re-enrol moderator in the year they come off sabbatical
+        if record.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED:
+            if record.moderator_reenroll is not None and record.moderator_reenroll <= current_year:
+                record.moderator_state = EnrollmentRecord.MODERATOR_ENROLLED
+                record.moderator_reenroll = None
+                record.moderator_comment = 'Automatically re-enrolled during academic year rollover'
+                if record.pclass.uses_moderator:
+                    add_notification(record.owner, EmailNotification.FACULTY_REENROLL_MODERATOR, record)
+
+        # re-enrol presentation assessors in the year they come off sabbatical
         if record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
             if record.presentations_reenroll is not None and record.presentations_reenroll <= current_year:
                 record.presentations_state = EnrollmentRecord.PRESENTATIONS_ENROLLED
                 record.presentations_reenroll = None
                 record.presentations_comment = 'Automatically re-enrolled during academic year rollover'
-                add_notification(record.owner, EmailNotification.FACULTY_REENROLL_PRESENTATIONS, record)
+
+                notify = False
+                for p in record.pclass.period:
+                    p: SubmissionPeriodDefinition
+                    if p.has_presentation:
+                        notify = True
+                        break
+                if notify:
+                    add_notification(record.owner, EmailNotification.FACULTY_REENROLL_PRESENTATIONS, record)
 
         try:
             db.session.commit()

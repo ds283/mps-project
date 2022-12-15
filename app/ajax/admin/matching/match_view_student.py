@@ -170,7 +170,7 @@ _marker = \
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.marker.user.name }}
             </a>
             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                <div class="dropdown-header">Reassign 2nd marker</div>
+                <div class="dropdown-header">Reassign marker</div>
                 {% set assessor_list = r.project.assessor_list %}
                 {% for marker in assessor_list %}
                     {% set disabled = false %}

@@ -258,11 +258,10 @@ def validate_submission_marker(record):
     :param record:
     :return:
     """
-
     if record.marker_id == current_user.id:
         return True
 
-    flash('Only 2nd markers can perform this operation', 'error')
+    flash('Only markers can perform this operation', 'error')
     return False
 
 
@@ -307,7 +306,7 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool=True):
         return True
 
     if message:
-        flash('Only current supervisors, 2nd markers and presentation assessors can perform this operation', 'error')
+        flash('Only current supervisors, markers and presentation assessors can perform this operation', 'error')
 
     return False
 

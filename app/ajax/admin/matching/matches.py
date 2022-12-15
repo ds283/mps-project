@@ -71,7 +71,7 @@ _status = \
 _info = \
 """
 <span class="badge bg-info text-dark">Supervisor <i class="fas fa-less-than-equal"></i> {{ m.supervising_limit }} CATS</span>
-<span class="badge bg-info text-dark">2nd mark <i class="fas fa-less-than-equal"></i> {{ m.marking_limit }} CATS</span>
+<span class="badge bg-info text-dark">Marker <i class="fas fa-less-than-equal"></i> {{ m.marking_limit }} CATS</span>
 <span class="badge bg-info text-dark">Marker multiplicity <i class="fas fa-less-than-equal"></i> {{ m.max_marking_multiplicity }}</span>
 {% if m.ignore_per_faculty_limits %}
     <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Ignore per-faculty limits</span>

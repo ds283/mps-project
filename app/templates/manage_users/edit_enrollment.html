@@ -28,10 +28,19 @@
 
     {% if record.pclass.uses_marker %}
         <div class="card mt-3 mb-3 card-body bg-well">
-            <p><strong>Role: 2nd marker</strong></p>
+            <p><strong>Role: Marker</strong></p>
             {{ wtf.render_field(form.marker_state) }}
             {{ wtf.render_field(form.marker_reenroll) }}
             {{ wtf.render_field(form.marker_comment) }}
+        </div>
+    {% endif %}
+
+    {% if record.pclass.uses_moderator %}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <p><strong>Role: Moderator</strong></p>
+            {{ wtf.render_field(form.moderator_state) }}
+            {{ wtf.render_field(form.moderator_reenroll) }}
+            {{ wtf.render_field(form.moderator_comment) }}
         </div>
     {% endif %}
 

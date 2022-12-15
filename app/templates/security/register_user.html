@@ -179,7 +179,7 @@
             </div>
         {% endif %}
 
-        {% if user_form.CATS_supervision is defined or user_form.CATS_marking is defined %}
+        {% if user_form.CATS_supervision is defined or user_form.CATS_marking is defined or user_form.CATS_moderation is defined or user_form.CATS_presentation is defined %}
             <div class="card mt-3 mb-3 card-body bg-well">
                 <div class="form-group-heading">Workload model</div>
                 {% if user_form.CATS_supervision is defined %}
@@ -187,6 +187,9 @@
                 {% endif %}
                 {% if user_form.CATS_marking is defined %}
                     {{ wtf.render_field(user_form.CATS_marking) }}
+                {% endif %}
+                {% if user_form.CATS_moderation is defined %}
+                    {{ wtf.render_field(user_form.CATS_moderation) }}
                 {% endif %}
                 {% if user_form.CATS_presentation is defined %}
                     {{ wtf.render_field(user_form.CATS_presentation) }}

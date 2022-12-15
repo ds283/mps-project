@@ -219,7 +219,7 @@ class ProjectClassMixin():
                                default=True)
 
     number_assessors = IntegerField('Number of assessors required per project',
-                                    description='Assessors are used to assign 2nd markers and presentation assessors. '
+                                    description='Assessors are used to assign markers, moderators and presentation assessors. '
                                                 'Significantly more than one assessor is required per project to allow '
                                                 'sufficient flexibility during matching.',
                                     validators=[NotOptionalIf('do_matching')])
@@ -284,11 +284,14 @@ class ProjectClassMixin():
     CATS_supervision = IntegerField('CATS awarded for project supervision',
                                     validators=[InputRequired(message='Please enter an integer value')])
 
-    CATS_marking = IntegerField('CATS awarded for project 2nd marking',
-                                validators=[Optional()])
+    CATS_marking = IntegerField('CATS awarded for marking submissions',
+                                validators=[InputRequired(message='Please enter an integer value')])
+
+    CATS_moderation = IntegerField('CATS awarded for moderating submissions',
+                                   validators=[InputRequired(message='Please enter an integer value')])
 
     CATS_presentation = IntegerField('CATS awarded for assessing presentations',
-                                     validators=[Optional()])
+                                     validators=[InputRequired(message='Please enter an integer value')])
 
     hourly_choices = [(1, '1 day'),
                       (2, '2 days'),
@@ -866,8 +869,8 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                                      validators=[InputRequired(message='Please specify the maximum number of CATS '
                                                                        'that can be allocated per faculty')])
 
-        max_marking_multiplicity = IntegerField('Maximum multiplicity for 2nd markers',
-                                                description='2nd markers may be assigned multiple instances of the same '
+        max_marking_multiplicity = IntegerField('Maximum multiplicity for markers',
+                                                description='Markers may be assigned multiple instances of the same '
                                                             'project, up to the maximum multiplicity specified',
                                                 validators=[InputRequired(message='Please specify a multiplicity')])
 

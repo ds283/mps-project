@@ -164,6 +164,7 @@ def create_faculty(role):
                            dont_clash_presentations=form.dont_clash_presentations.data,
                            CATS_supervision=form.CATS_supervision.data,
                            CATS_marking=form.CATS_marking.data,
+                           CATS_moderation=form.CATS_moderation.data,
                            CATS_presentation=form.CATS_presentation.data,
                            office=form.office.data,
                            creator_id=current_user.id,
@@ -609,6 +610,7 @@ def users_faculty_ajax():
     if flag and filter_CATS:
         base_query = base_query.filter(or_(FacultyData.CATS_supervision != None,
                                            FacultyData.CATS_marking != None,
+                                           FacultyData.CATS_moderation != None,
                                            FacultyData.CATS_presentation != None))
 
     name = {'search': func.concat(User.first_name, ' ', User.last_name),
@@ -1221,6 +1223,7 @@ def edit_faculty(id):
 
         data.CATS_supervision = form.CATS_supervision.data
         data.CATS_marking = form.CATS_marking.data
+        data.CATS_moderation = form.CATS_moderation.data
         data.CATS_presentation = form.CATS_presentation.data
 
         data.last_edit_id = current_user.id
@@ -1255,6 +1258,7 @@ def edit_faculty(id):
 
             form.CATS_supervision.data = data.CATS_supervision
             form.CATS_marking.data = data.CATS_marking
+            form.CATS_moderation.data = data.CATS_moderation
             form.CATS_presentation.data = data.CATS_presentation
 
             if form.project_capacity.data is None and form.enforce_capacity.data:
@@ -1393,12 +1397,12 @@ def edit_enrollment(id):
     :return:
     """
     # check logged-in user is administrator or a convenor for the project
-    record = EnrollmentRecord.query.get_or_404(id)
+    record: EnrollmentRecord = EnrollmentRecord.query.get_or_404(id)
 
     if not validate_is_convenor(record.pclass):
         return redirect(redirect_url())
 
-    form = EnrollmentRecordForm(obj=record)
+    form: EnrollmentRecordForm = EnrollmentRecordForm(obj=record)
 
     url = request.args.get('url')
     if url is None:
@@ -1417,6 +1421,11 @@ def edit_enrollment(id):
         record.marker_reenroll = None if record.marker_state != EnrollmentRecord.MARKER_SABBATICAL \
             else form.marker_reenroll.data
         record.marker_comment = form.marker_comment.data
+
+        record.moderator_state = form.moderator_state.data
+        record.moderator_reenroll = None if record.moderator_state != EnrollmentRecord.MODERATOR_SABBATICAL \
+            else form.moderator_reenroll.data
+        record.moderator_comment = form.moderator_comment.data
 
         record.presentations_state = form.presentations_state.data
         record.presentations_reenroll = None if record.presentations_state != EnrollmentRecord.PRESENTATIONS_SABBATICAL \

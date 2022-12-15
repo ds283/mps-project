@@ -441,7 +441,7 @@ def ProjectConfigurationMixinFactory(backref_label, force_unique_names,
         if allow_edit_assessors:
             def add_assessor(self, faculty, autocommit=False):
                 """
-                Add a FacultyData instance as a 2nd marker
+                Add a FacultyData instance as a marker
                 :param faculty:
                 :return:
                 """
@@ -456,7 +456,7 @@ def ProjectConfigurationMixinFactory(backref_label, force_unique_names,
 
             def remove_assessor(self, faculty, autocommit=False):
                 """
-                Remove a FacultyData instance as a 2nd marker
+                Remove a FacultyData instance as a marker
                 :param faculty:
                 :return:
                 """
@@ -911,6 +911,7 @@ class EmailNotificationsMixin:
     FACULTY_REENROLL_SUPERVISOR = 8
     FACULTY_REENROLL_MARKER = 9
     FACULTY_REENROLL_PRESENTATIONS = 10
+    FACULTY_REENROLL_MODERATOR = 11
 
     _events = {CONFIRMATION_REQUEST_CREATED: ('primary', 'Create confirm request'),
                CONFIRMATION_REQUEST_CANCELLED: ('danger', 'Confirm request cancel'),
@@ -920,9 +921,10 @@ class EmailNotificationsMixin:
                CONFIRMATION_GRANTED: ('success', 'Confirm granted'),
                CONFIRMATION_DECLINED: ('ddanger', 'Confirm declined'),
                CONFIRMATION_TO_PENDING: ('secondary', 'Confirm request pending'),
-               FACULTY_REENROLL_SUPERVISOR: ('secondary', 'Re-enroll as supervisor'),
-               FACULTY_REENROLL_MARKER: ('secondary', 'Re-enroll as marker'),
-               FACULTY_REENROLL_PRESENTATIONS: ('secondary', 'Re-enroll as assessor')}
+               FACULTY_REENROLL_SUPERVISOR: ('secondary', 'Re-enrol as supervisor'),
+               FACULTY_REENROLL_MARKER: ('secondary', 'Re-enrol as marker'),
+               FACULTY_REENROLL_MODERATOR: ('secondary', 'Re-enrol as moderator'),
+               FACULTY_REENROLL_PRESENTATIONS: ('secondary', 'Re-enrol as assessor')}
 
 
 class SelectorLifecycleStatesMixin:
@@ -2224,7 +2226,18 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
         if record is None:
             return '<missing database row>'
 
-        return 'You have been automatically re-enrolled as an examiner (second marker) for the project class "{proj}". ' \
+        return 'You have been automatically re-enrolled as a marker for the project class "{proj}". ' \
+               'This has occurred because you previously had a buyout or sabbatical arrangement, ' \
+               'but according to our records it is expected that you will become available for normal ' \
+               'activities in the *next* academic year.'.format(proj=record.pclass.name)
+
+    @assign(str_operations, EmailNotificationsMixin.FACULTY_REENROLL_MODERATOR)
+    def _request_reenroll_moderator(self):
+        record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
+        if record is None:
+            return '<missing database row>'
+
+        return 'You have been automatically re-enrolled as a moderator for the project class "{proj}". ' \
                'This has occurred because you previously had a buyout or sabbatical arrangement, ' \
                'but according to our records it is expected that you will become available for normal ' \
                'activities in the *next* academic year.'.format(proj=record.pclass.name)
@@ -2289,12 +2302,17 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
 
     @assign(subject_operations, EmailNotificationsMixin.FACULTY_REENROLL_MARKER)
     def _subj_reenroll_marker(self):
-        return 'You have been re-enrolled as a project marker'
+        return 'You have been re-enrolled as a marker'
+
+
+    @assign(subject_operations, EmailNotificationsMixin.FACULTY_REENROLL_MODERATOR)
+    def _subj_reenroll_marker(self):
+        return 'You have been re-enrolled as a moderator'
 
 
     @assign(subject_operations, EmailNotificationsMixin.FACULTY_REENROLL_PRESENTATIONS)
     def _subj_reenroll_presentations(self):
-        return 'You have been re-enrolled as a project presentation assessor'
+        return 'You have been re-enrolled as a presentation assessor'
 
 
     def __str__(self):
@@ -2549,8 +2567,11 @@ class FacultyData(db.Model, EditingMetadataMixin):
     # supervision CATS capacity
     CATS_supervision = db.Column(db.Integer())
 
-    # 2nd-marking CATS capacity
+    # marking CATS capacity
     CATS_marking = db.Column(db.Integer())
+
+    # moderation CATS capacity
+    CATS_moderation = db.Column(db.Integer())
 
     # presentation assessment CATS capacity
     CATS_presentation = db.Column(db.Integer())
@@ -2752,11 +2773,15 @@ class FacultyData(db.Model, EditingMetadataMixin):
                                   marker_state=EnrollmentRecord.MARKER_ENROLLED,
                                   marker_comment=None,
                                   marker_reenroll=None,
+                                  moderator_state=EnrollmentRecord.MODERATOR_ENROLLED,
+                                  moderator_comment=None,
+                                  moderator_reenroll=None,
                                   presentations_state=EnrollmentRecord.PRESENTATIONS_ENROLLED,
                                   presentations_comment=None,
                                   presentations_reenroll=None,
                                   CATS_supervision=None,
                                   CATS_marking=None,
+                                  CATS_moderation=None,
                                   CATS_presentation=None,
                                   creator_id=current_user.id,
                                   creation_timestamp=datetime.now(),
@@ -2880,13 +2905,12 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
 
     @property
-    def marker_label(self):
+    def assessor_label(self):
         """
         Generate a label for the number of projects to which we are attached as a second marker
         :param pclass:
         :return:
         """
-
         num = self.number_assessor
 
         if num == 0:
@@ -2939,7 +2963,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     def marker_assignments(self, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
         """
-        Return a list of current SubmissionRecord instances for which we are 2nd marker
+        Return a list of current SubmissionRecord instances for which we are marker
         :return:
         """
         # at most one of config_id, config, pclass_id, pclass should be defined
@@ -4436,8 +4460,11 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     # CATS awarded for supervising
     CATS_supervision = db.Column(db.Integer())
 
-    # CATS awarded for 2nd marking
+    # CATS awarded for marking
     CATS_marking = db.Column(db.Integer())
+
+    # CATS awarded for moderation
+    CATS_moderation = db.Column(db.Integer())
 
     # CATS awarded for presentation assessment
     CATS_presentation = db.Column(db.Integer())
@@ -4986,8 +5013,11 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     # CATS awarded for supervising in this year
     CATS_supervision = db.Column(db.Integer())
 
-    # CATS awarded for 2nd marking in this year
+    # CATS awarded for marking in this year
     CATS_marking = db.Column(db.Integer())
+
+    # CATS awarded for moderating in this year
+    CATS_moderation = db.Column(db.Integer())
 
     # CATS awarded for presentation assessment in this year
     CATS_presentation = db.Column(db.Integer())
@@ -6360,13 +6390,13 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
     # comment (eg. can be used to note circumstances of exemptions)
     supervisor_comment = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
-    # sabbatical auto re-enroll year (after sabbatical)
+    # sabbatical auto re-enrol year (after sabbatical)
     supervisor_reenroll = db.Column(db.Integer())
 
 
     # MARKER STATUS
 
-    # enrolment for 2nd marking
+    # enrolment for marking
     MARKER_ENROLLED = 1
     MARKER_SABBATICAL = 2
     MARKER_EXEMPT = 3
@@ -6378,8 +6408,26 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
     # comment (eg. can be used to note circumstances of exemption)
     marker_comment = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
-    # marker auto re-enroll year (after sabbatical)
+    # marker auto re-enrol year (after sabbatical)
     marker_reenroll = db.Column(db.Integer())
+
+
+    # MODERATOR STATUS
+
+    # enrolment for moderation
+    MODERATOR_ENROLLED = 1
+    MODERATOR_SABBATICAL = 2
+    MODERATOR_EXEMPT = 3
+    moderator_choices = [(MODERATOR_ENROLLED, 'Normally enrolled'),
+                         (MODERATOR_SABBATICAL, 'On sabbatical or buy-out'),
+                         (MODERATOR_EXEMPT, 'Exempt')]
+    moderator_state = db.Column(db.Integer(), index=True)
+
+    # comment (e.g. can be used to note circumstances of exemption)
+    moderator_comment = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # moderator auto re-enrol year (after sabbatical)
+    moderator_reenroll = db.Column(db.Integer())
 
 
     # PRESENTATION ASSESSOR STATUS
@@ -6396,7 +6444,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
     # comment (eg. can be used to note circumstances of exemption)
     presentations_comment = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
-    # marker auto re-enroll year (after sabbatical)
+    # marker auto re-enrol year (after sabbatical)
     presentations_reenroll = db.Column(db.Integer())
 
 
@@ -6407,6 +6455,9 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
     # custom limit for marking
     CATS_marking = db.Column(db.Integer())
+
+    # custom limit for moderation
+    CATS_moderation = db.Column(db.Integer())
 
     # custom limit for presentations
     CATS_presentation = db.Column(db.Integer())
@@ -6464,6 +6515,13 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
 
     @property
+    def moderator_label(self):
+        return self._generic_label('Moderator', self.moderator_state, self.moderator_reenroll, self.moderator_comment,
+                                   EnrollmentRecord.MODERATOR_ENROLLED, EnrollmentRecord.MODERATOR_SABBATICAL,
+                                   EnrollmentRecord.MODERATOR_EXEMPT)
+
+
+    @property
     def presentation_label(self):
         return self._generic_label('Presentations', self.presentations_state,
                                    self.presentations_reenroll, self.presentations_comment,
@@ -6482,9 +6540,16 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
     @property
     def short_marker_label(self):
-        return self._generic_label('M', self.marker_state, self.marker_reenroll, self.marker_comment,
+        return self._generic_label('Mk', self.marker_state, self.marker_reenroll, self.marker_comment,
                                    EnrollmentRecord.MARKER_ENROLLED, EnrollmentRecord.MARKER_SABBATICAL,
                                    EnrollmentRecord.MARKER_EXEMPT)
+
+
+    @property
+    def short_moderator_label(self):
+        return self._generic_label('Mo', self.moderator_state, self.moderator_reenroll, self.moderator_comment,
+                                   EnrollmentRecord.MODERATOR_ENROLLED, EnrollmentRecord.MODERATOR_SABBATICAL,
+                                   EnrollmentRecord.MODERATOR_EXEMPT)
 
 
     @property
@@ -6502,6 +6567,8 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
             label += (' ' if len(label) > 0 else '') + self.supervisor_label
         if self.pclass.uses_marker:
             label += (' ' if len(label) > 0 else '') + self.marker_label
+        if self.pclass.uses_moderator:
+            label += (' ' if len(label) > 0 else '') + self.moderator_label
         if self.pclass.uses_presentations:
             label += (' ' if len(label) > 0 else '') + self.presentation_label
 
@@ -9641,6 +9708,16 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
 
     @property
+    def moderation_CATS(self):
+        config = self.previous_config
+
+        if config is not None:
+            return config.CATS_moderation
+
+        return None
+
+
+    @property
     def assessor_CATS(self):
         config = self.previous_config
 
@@ -10565,6 +10642,7 @@ def _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id):
 def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
     CATS_sup = _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id)
     CATS_mark = _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id)
+    # UPDATE MODERATE CATS
 
     return CATS_sup, CATS_mark
 
@@ -10624,7 +10702,7 @@ def _MatchingAttempt_is_valid(id):
     obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
     # there are several steps:
-    #   1. Validate that each MatchingRecord is valid (2nd marker is not supervisor,
+    #   1. Validate that each MatchingRecord is valid (marker is not supervisor,
     #      LiveProject is attached to right class).
     #      These errors are fatal
     #   2. Validate that project capacity constraints are not violated.
@@ -10701,6 +10779,8 @@ def _MatchingAttempt_is_valid(id):
                     errors[('custom_mark', fac.id)] = 'Assignment to {name} violates their custom marking CATS ' \
                                                         'limit {n}'.format(name=fac.user.name, n=rec.CATS_marking)
                     faculty_issues = True
+
+                # UPDATE MODERATE CATS
 
     is_valid = (not student_issues) and (not faculty_issues)
 
@@ -10856,7 +10936,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     # global 2nd-marking CATS limit
     marking_limit = db.Column(db.Integer())
 
-    # maximum multiplicity for 2nd markers
+    # maximum multiplicity for markers
     max_marking_multiplicity = db.Column(db.Integer())
 
 
@@ -11526,7 +11606,7 @@ def _MatchingRecord_is_valid(id):
         count = get_count(project.assessor_list_query.filter(FacultyData.id == obj.marker_id))
 
         if count != 1:
-            errors[('assignment', 3)] = 'Assigned 2nd marker is not compatible with assigned project'
+            errors[('assignment', 3)] = 'Assigned marker is not compatible with assigned project'
 
     # 8. ASSIGNED MARKER SHOULD BE ENROLLED FOR THIS PROJECT CLASS
     if marker is not None:

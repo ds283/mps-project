@@ -79,7 +79,7 @@ _projects = \
 """
 {{ d.projects_offered_label(pclass)|safe }}
 {{ d.projects_unofferable_label|safe }}
-{{ d.marker_label|safe }}
+{{ d.assessor_label|safe }}
 """
 
 # language=jinja2
@@ -98,17 +98,22 @@ _enrollments = \
         {% if f.CATS_supervision is not none %}
             <span class="badge bg-warning text-dark">S: {{ f.CATS_supervision }} CATS</span>
         {% else %}
-            <span class="badge bg-secondary">S: Default CATS</span>
+            <span class="badge bg-secondary">S: Default</span>
         {% endif %}
         {% if f.CATS_marking is not none %}
-            <span class="badge bg-warning text-dark">M {{ f.CATS_marking }} CATS</span>
+            <span class="badge bg-warning text-dark">Mk {{ f.CATS_marking }} CATS</span>
         {% else %}
-            <span class="badge bg-secondary">M: Default CATS</span>
+            <span class="badge bg-secondary">Mk: Default</span>
+        {% endif %}
+        {% if f.CATS_moderation is not none %}
+            <span class="badge bg-warning text-dark">Mo {{ f.CATS_moderation }} CATS</span>
+        {% else %}
+            <span class="badge bg-secondary">Mo: Default</span>
         {% endif %}
         {% if f.CATS_presentation is not none %}
-            <span class="badge bg-warning text-dark">P {{ f.CATS_marking }} CATS</span>
+            <span class="badge bg-warning text-dark">P {{ f.CATS_presentation }} CATS</span>
         {% else %}
-            <span class="badge bg-secondary">P: Default CATS</span>
+            <span class="badge bg-secondary">P: Default</span>
         {% endif %}
     </div>
 {% else %}

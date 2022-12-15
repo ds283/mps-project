@@ -66,7 +66,7 @@
                                 <div class="alert alert-warning mt-1 mb-2">
                                     {% call icon_block("info-circle") %}
                                         <div><strong>Marking and feedback for this submission period is now underway.</strong></div>
-                                        <div class="mt-1">Please enter feedback for each project you supervise or 2nd mark.</div>
+                                        <div class="mt-1">Please enter feedback for each project you supervise or assess.</div>
                                         {% if period.feedback_deadline %}
                                             <div class="mt-1">
                                                 The project convenor has set a deadline of
@@ -84,7 +84,7 @@
                                     <div class="mt-1">
                                         These are not being collected on <strong>mpsprojects.sussex.ac.uk</strong>
                                         for this submission period.
-                                        Please follow the convenor's instructions for each project you supervise or 2nd mark.
+                                        Please follow the convenor's instructions for each project you supervise or assess.
                                     </div>
                                 {% endcall %}
                             </div>
@@ -144,7 +144,7 @@
 
                 {# show marker assignments #}
                 {% if period.uses_marker_feedback %}
-                    <span class="dashboard-subtitle">2nd marking</span>
+                    <span class="dashboard-subtitle">Marking</span>
                     {{ marker_assignments(period, current_user, mark_sabbatical, mark_exempt, record.marker_reenroll) }}
                 {% endif %}
 
@@ -152,6 +152,9 @@
                 {% if period.uses_presentation_feedback %}
                     {{ presentation_assignments(period, current_user.id, pres_sabbatical, pres_exempt, record.presentations_reenroll) }}
                 {% endif %}
+
+{#                UPDATE MODERATE#}
+
             </div>
         </div>
     {% else %}

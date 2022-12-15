@@ -231,6 +231,8 @@ def _enumerate_liveprojects_serialized(record):
 
         project_dict[n] = lp
 
+        # UPDATE MODERATE CATS
+
     group_data = db.session.query(MatchingEnumeration) \
         .filter_by(category=MatchingEnumeration.LIVEPROJECT_GROUP, matching_id=record.id).all()
     for record in group_data:
@@ -767,7 +769,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
                          record, sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
                          mark_only_numbers, sup_and_mark_numbers, mean_CATS_per_project):
     """
-    Generate a PuLP problem to find an optimal assignment of projects+2nd markers to students
+    Generate a PuLP problem to find an optimal assignment of projects+markers to students
     :param sel_dict:
     :param sup_dict:
     :param mark_dict:
@@ -1100,7 +1102,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
     else:
         prob += maxProjects == 0
 
-    # maxMarking should be larger than the total number of projects assigned for 2nd marking to
+    # maxMarking should be larger than the total number of projects assigned for marking to
     # any individual faculty member
     if number_mark > 0:
         for i in range(number_mark):
@@ -1240,7 +1242,7 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
             # note we intentionally go out to the default ProjectClass.uses_marker setting, rather than using
             # the current ProjectClassConfig.uses_marker value
             if project.config.project_class.uses_marker:
-                # pop a 2nd marker from the back of the stack associated with this project
+                # pop a marker from the back of the stack associated with this project
                 if proj_id not in markers:
                     raise RuntimeError('PuLP solution error: marker stack unexpectedly empty or missing')
 

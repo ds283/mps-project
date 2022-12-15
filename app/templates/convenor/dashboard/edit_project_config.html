@@ -73,13 +73,18 @@
 
         <p class="form-group-heading mt-2">Workload model support</p>
         <div class="row vertical-top">
-            <div class="col-4">
+            <div class="col-6">
                 {{ show_default_field(form.CATS_supervision, config.project_class.CATS_supervision) }}
             </div>
-            <div class="col-4">
+            <div class="col-6">
                 {{ show_default_field(form.CATS_marking, config.project_class.CATS_marking) }}
             </div>
-            <div class="col-4">
+        </div>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ show_default_field(form.CATS_moderation, config.project_class.CATS_moderation) }}
+            </div>
+            <div class="col-6">
                 {{ show_default_field(form.CATS_presentation, config.project_class.CATS_presentation) }}
             </div>
         </div>

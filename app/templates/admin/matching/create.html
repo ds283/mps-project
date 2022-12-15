@@ -48,24 +48,35 @@
                             <p>Workload guidance (does not account for constraints)</p>
                             <div class="row">
                                 <div class="col-4">
-                                    <strong>Supervising CATS</strong>: {{ supervising_CATS }}
+                                    <strong>Supervision CATS</strong>: {{ data['supervision_CATS'] }}
                                 </div>
                                 <div class="col-4">
-                                    <strong>Available supervisors</strong>: {{ num_supervisors }}
+                                    <strong>#Supervisors</strong>: {{ data['supervision_faculty'] }}
                                 </div>
                                 <div class="col-4">
-                                    <strong>Mean workload</strong>: {{ (supervising_CATS/num_supervisors)|round(precision=0) }} CATS
+                                    <strong>Mean workload</strong>: {{ (data['supervision_CATS']/data['supervision_faculty'])|round(precision=0) }} CATS
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-4">
-                                    <strong>Marking CATS</strong>: {{ marking_CATS }}
+                                    <strong>Marking CATS</strong>: {{ data['marking_CATS'] }}
                                 </div>
                                 <div class="col-4">
-                                    <strong>Available assessors</strong>: {{ num_markers }}
+                                    <strong>#Markers</strong>: {{ data['marking_faculty'] }}
                                 </div>
                                 <div class="col-4">
-                                    <strong>Mean workload</strong>: {{ (marking_CATS/num_markers)|round(precision=0) }} CATS
+                                    <strong>Mean workload</strong>: {{ (data['marking_CATS']/data['marking_faculty'])|round(precision=0) }} CATS
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4">
+                                    <strong>Moderation CATS</strong>: {{ data['moderation_CATS'] }}
+                                </div>
+                                <div class="col-4">
+                                    <strong>#Moderators</strong>: {{ data['moderation_faculty'] }}
+                                </div>
+                                <div class="col-4">
+                                    <strong>Mean workload</strong>: {{ (data['moderation_CATS']/data['moderation_faculty'])|round(precision=0) }} CATS
                                 </div>
                             </div>
                         </div>

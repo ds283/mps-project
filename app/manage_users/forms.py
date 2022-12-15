@@ -272,7 +272,7 @@ class EnrollmentRecordMixin():
 
     # MARKER
 
-    marker_state = RadioField('2nd marker status', choices=EnrollmentRecord.marker_choices, coerce=int)
+    marker_state = RadioField('Marker status', choices=EnrollmentRecord.marker_choices, coerce=int)
 
     marker_reenroll = IntegerField('Re-enroll in academic year',
                                    description='Optional. For faculty on sabbatical or buy-outs, enter a year in which '
@@ -284,9 +284,23 @@ class EnrollmentRecordMixin():
                                    validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
 
 
+    # MODERATOR
+
+    moderator_state = RadioField('Marker status', choices=EnrollmentRecord.moderator_choices, coerce=int)
+
+    moderator_reenroll = IntegerField('Re-enroll in academic year',
+                                      description='Optional. For faculty on sabbatical or buy-outs, enter a year in which '
+                                                  'automatic re-enrolment should occur.',
+                                      validators=[Optional()])
+
+    moderator_comment = TextAreaField('Comment', render_kw={"rows": 3},
+                                      description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
+                                      validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
+
+
     # PRESENTATIONS
 
-    presentations_state = RadioField('2nd marker status', choices=EnrollmentRecord.presentations_choices, coerce=int)
+    presentations_state = RadioField('Marker status', choices=EnrollmentRecord.presentations_choices, coerce=int)
 
     presentations_reenroll = IntegerField('Re-enroll in academic year',
                                          description='Optional. For faculty on sabbatical or buy-outs, enter a year '

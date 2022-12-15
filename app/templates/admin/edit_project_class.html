@@ -256,13 +256,18 @@
         <div class="card mt-3 mb-3 card-body bg-well">
             <p class="form-group-heading mt-2">Workload model support</p>
             <div class="row vertical-top">
-                <div class="col-4">
+                <div class="col-6">
                     {{ wtf.render_field(pclass_form.CATS_supervision) }}
                 </div>
-                <div class="col-4">
+                <div class="col-6">
                     {{ wtf.render_field(pclass_form.CATS_marking) }}
                 </div>
-                <div class="col-4">
+            </div>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.CATS_moderation) }}
+                </div>
+                <div class="col-6">
                     {{ wtf.render_field(pclass_form.CATS_presentation) }}
                 </div>
             </div>

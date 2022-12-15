@@ -111,6 +111,10 @@ def FacultyDataMixinFactory(admin=False, enable_canvas=False):
                                         description='Leave blank for default assignment',
                                         validators=[Optional()])
 
+            CATS_moderation = IntegerField('Guideline number of CATS available for moderation',
+                                           description='Leave blank for default assignment',
+                                           validators=[Optional()])
+
             CATS_presentation = IntegerField('Guideline number of CATS available for presentation assessment',
                                              description='Leave blank for default assignment',
                                              validators=[Optional()])

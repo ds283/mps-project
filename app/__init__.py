@@ -309,7 +309,12 @@ def create_app():
         if s is None:
             return None
 
-        s = s.encode('utf8')
+        try:
+            s = s.encode('utf8')
+        except AttributeError as e:
+            print('urlencode_filter: s = {s}'.format(s=s))
+            raise e
+
         s = parse.quote_plus(s)
         return bleach.clean(s)
 

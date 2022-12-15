@@ -25,7 +25,24 @@
                 </div>
                 <div class="d-flex flex-row justify-content-between align-content-start sm-gap-below">
                     <div>
-                        <div class="project-owner-name">{{ project.owner.user.name }}</div>
+                        <div class="project-owner-name">
+                            {% if not project.generic and project.owner %}
+                                {{ project.owner.user.name }}
+                            {% else %}
+                                <div><span class="badge bg-info project-label">Generic project</span></div>
+                                <div class="text-muted">
+                                    You will be allocated a suitable faculty supervisor.
+                                    {% if desc and project.enforce_capacity and desc.capacity and desc.capacity > 0 %}
+                                        You may be supervised together with a group of up
+                                        to {{ desc.capacity }} students
+                                        working on the same project.
+                                    {% else %}
+                                        You may be supervised together with a group of other students
+                                        working on the same project.
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                     <div>
                         {% if project.group %}

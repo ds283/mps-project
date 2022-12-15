@@ -281,13 +281,14 @@ def allow_approvals(desc_id):
 
     owner: FacultyData = desc.parent.owner
 
-    # no-one should approve their own projects
-    if owner.id == current_user.id:
-        return False
+    if owner:
+        # no-one should approve their own projects
+        if owner.id == current_user.id:
+            return False
 
-    # don't include inactive faculty
-    if not owner.user.active:
-        return False
+        # don't include inactive faculty
+        if not owner.user.active:
+            return False
 
     # don't include inactive projects
     if not desc.parent.active:

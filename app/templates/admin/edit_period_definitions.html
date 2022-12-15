@@ -18,10 +18,24 @@
                 ajax: { url: $SCRIPT_ROOT + '/admin/period_definitions_ajax/{{ pclass.id }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'number' },
-                    { data: 'name' },
-                    { data: 'presentation' },
-                    { data: 'menu' }
+                    { data: 'number',
+                      orderable: true,
+                      searchable: false },
+                    { data: 'name',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'markers',
+                      orderable: true,
+                      searchable: false },
+                    { data: 'moderators',
+                      orderable: true,
+                      searchable: false },
+                    { data: 'presentation',
+                      orderable: false,
+                      searchable: false },
+                    { data: 'menu',
+                      orderable: false,
+                      searchable: false }
                 ],
                 deferRender: true
             });
@@ -39,15 +53,11 @@
             <i class="fas fa-backward"></i> Return to project class list
         </a>
     </div>
-    <div class="row vertical-align m-3">
-        <div class="col-12">
-            <div class="float-end">
-                <a href="{{ url_for('admin.regenerate_period_records', id=pclass.id) }}"
-                   class="btn btn-secondary" style="margin-bottom: 10px;">
-                    <i class="fas fa-redo"></i> Regenerate current period records
-                </a>
-            </div>
-        </div>
+    <div class="d-flex flex-row mt-3 mb-3 justify-content-end">
+        <a href="{{ url_for('admin.regenerate_period_records', id=pclass.id) }}"
+           class="btn btn-secondary" style="margin-bottom: 10px;">
+            <i class="fas fa-redo"></i> Regenerate current period records
+        </a>
     </div>
 
     <div class="card border-primary mt-3 mb-3">
@@ -58,7 +68,9 @@
                 <tr>
                     <th width="10%"> Number</th>
                     <th width="30%"> Name</th>
-                    <th width="45%"> Has presentation</th>
+                    <th width="15%"> #Markers</th>
+                    <th width="15%"> #Moderators</th>
+                    <th width="15%"> Has presentation</th>
                     <th width="15%"> Actions</th>
                 </tr>
                 </thead>

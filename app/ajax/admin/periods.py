@@ -7,9 +7,11 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from typing import List
 
 from flask import render_template_string, jsonify
 
+from app.models import SubmissionPeriodDefinition
 
 # language=jinja2
 _presentation = \
@@ -78,10 +80,12 @@ _name = \
 """
 
 
-def periods_data(periods):
+def periods_data(periods: List[SubmissionPeriodDefinition]):
 
     data = [{'number': p.period,
              'name': render_template_string(_name, p=p),
+             'markers': p.number_markers,
+             'moderators': p.number_moderators,
              'presentation': render_template_string(_presentation, p=p),
              'menu': render_template_string(_menu, period=p)} for p in periods]
 

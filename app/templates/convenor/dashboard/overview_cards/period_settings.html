@@ -9,41 +9,13 @@
                     {{ submission_period_configure_button(period, config, small=true, margin=false) }}
                 </div>
             </div>
-            {% set messages = [] %}
-            {% if period.canvas_enabled %}
-                {% set tmp = messages.append('Canvas integration enabled') %}
-            {% else %}
-                {% set tmp = messages.append('Canvas integration not enabled') %}
-            {% endif %}
-            {% if period.collect_project_feedback %}
-                {% set tmp = messages.append('Collect project feedback')%}
-            {% else %}
-                {% set tmp = messages.append('Do not collect project feedback') %}
-            {% endif %}
-            {% if period.has_presentation %}
-                {% set tmp = messages.append('Has presentation') %}
-                {% if period.collect_presentation_feedback %}
-                    {% set tmp = messages.append('Collect presentation feedback') %}
-                {% else %}
-                    {% set tmp = messages.append('Do not collect presentation feedback') %}
-                {% endif %}
-            {% endif %}
+            {% set messages = period.messages %}
             <span class="text-muted">{{ messages|join(', ') }}</span>
         </li>
         {% if period.has_presentation %}
             <li class="list-group-item">
                 <h6>Presentation assessment</h6>
-                {% set messages = [] %}
-                {% if period.talk_format and period.talk_format|length > 0 %}{% set tmp = messages.append(period.talk_format) %}{% else %}{% set tmp = messages.append('Format not set') %}{% endif %}
-                {% if period.lecture_capture %}
-                    {% set tmp = messages.append('Requires lecture capture') %}
-                {% endif %}
-                {% if period.number_assessors %}
-                    {% set tmp = messages.append('Uses ' + period.number_assessors|string + ' assessors') %}
-                {% endif %}
-                {% if period.max_group_size %}
-                    {% set tmp = messages.append('Maximum group size = ' + period.max_group_size|string) %}
-                {% endif %}
+                {% set messages = period.presentation_messages %}
                 <span class="text-muted">{{ messages|join(', ') }}</span>
             </li>
             <li class="list-group-item">

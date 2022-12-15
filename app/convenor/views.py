@@ -33,7 +33,7 @@ import app.ajax as ajax
 from . import convenor
 from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
-    EditSubmissionPeriodRecordSettingsFormFactory, UploadPeriodAttachmentForm, \
+    EditPeriodRecordFormFactory, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
     EditProjectConfigFormFactory, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask, \
     EditConvenorGenericTask, EditSubmissionPeriodRecordPresentationsForm
@@ -7172,8 +7172,10 @@ def edit_project_config(pid):
         config.CATS_marking = form.CATS_marking.data
         config.CATS_presentation = form.CATS_presentation.data
 
-        config.canvas_module_id = form.canvas_module_id.data
-        config.canvas_login = form.canvas_login.data
+        if hasattr(form, 'canvas_module_id'):
+            config.canvas_module_id = form.canvas_module_id.data
+        if hasattr(form, 'canvas_login'):
+            config.canvas_login = form.canvas_login.data
 
         try:
             db.session.commit()
@@ -7242,7 +7244,7 @@ def edit_period_record(pid):
     if not _validate_submission_period(record, config):
         return redirect(redirect_url())
 
-    FormClass = EditSubmissionPeriodRecordSettingsFormFactory(config)
+    FormClass = EditPeriodRecordFormFactory(config)
     edit_form = FormClass(obj=record)
 
     if edit_form.validate_on_submit():
@@ -7254,8 +7256,10 @@ def edit_period_record(pid):
 
         record.collect_project_feedback = edit_form.collect_project_feedback.data
 
-        record.canvas_module_id = edit_form.canvas_module_id.data
-        record.canvas_assignment_id = edit_form.canvas_assignment_id.data
+        if hasattr(edit_form, 'canvas_module_id'):
+            record.canvas_module_id = edit_form.canvas_module_id.data
+        if hasattr(edit_form, 'canvas_assignment_id'):
+            record.canvas_assignment_id = edit_form.canvas_assignment_id.data
 
         try:
             db.session.commit()

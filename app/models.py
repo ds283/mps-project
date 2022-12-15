@@ -4886,7 +4886,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     @validates('canvas_module_id')
     def _validate_canvas_module_id(self, key, value):
         self._canvas_course_URL = None
-
+        return value
 
     # SELECTOR LIFECYCLE MANAGEMENT
 
@@ -4996,6 +4996,53 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     @orm.reconstructor
     def _reconstruct(self):
         self._canvas_course_URL = None
+
+
+    @property
+    def messages(self):
+        messages = []
+
+        if self.uses_project_hub:
+            messages.append('Project hub enabled')
+        else:
+            messages.append('Project hub disabled')
+
+        if self.main_config.enable_canvas_sync:
+            if self.canvas_enabled:
+                messages.append('Canvas integration enabled')
+            else:
+                if not self.canvas_module_id:
+                    messages.append('Canvas module identifier not set')
+                if not self.canvas_login:
+                    messages.append('Canvas login identifier not set')
+
+        if self.do_matching:
+            messages.append('Use automated matching')
+
+        if self.skip_matching:
+            messages.append('Skip matching this cycle')
+
+        if self.requests_skipped:
+            messages.append('Skip confirmation requests this cycle')
+
+        if self.require_confirm:
+            messages.append('Requires project confirmation')
+
+        messages.append('Initial choices={m}'.format(m=self.initial_choices))
+        messages.append('Switch choices={m}'.format(m=self.switch_choices))
+        messages.append('Max selectable projects with same supervisor={m}'.format(m=self.faculty_maximum))
+        messages.append('Start year Y{m} {level}'.format(m=self.start_year, level=self.project_class._level_text(self.student_level)))
+        messages.append('Extent={m}'.format(m=self.extent))
+
+        if self.selection_open_to_all:
+            messages.append('Selection open to all')
+        else:
+            messages.append('Selection by invitation')
+
+        if self.full_CATS:
+            messages.append('Max CATS for accomodation={m}'.format(m=self.full_CATS))
+
+        return messages
 
 
     def _outstanding_descriptions_generator(self, faculty: FacultyData):
@@ -5485,21 +5532,23 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
         period = self.current_period
 
         if period is None:
-            template = self.template_periods.filter_by(period=self.submission_period).one()
+            t = self.template_periods.filter_by(period=self.submission_period).one()
 
             # allow period record to be auto-generated
             period = SubmissionPeriodRecord(config_id=self.id,
-                                            name=template.name,
-                                            start_date=template.start_date,
-                                            has_presentation=template.has_presentation,
-                                            lecture_capture=template.lecture_capture,
-                                            collect_presentation_feedback=template.collect_presentation_feedback,
-                                            collect_project_feedback=template.collect_project_feedback,
-                                            number_assessors=template.number_assessors,
-                                            max_group_size=template.max_group_size,
-                                            morning_session=template.morning_session,
-                                            afternoon_session=template.afternoon_session,
-                                            talk_format=template.talk_format,
+                                            name=t.name,
+                                            number_markers=t.number_markers,
+                                            number_moderators=t.number_moderators,
+                                            start_date=t.start_date,
+                                            has_presentation=t.has_presentation,
+                                            lecture_capture=t.lecture_capture,
+                                            collect_presentation_feedback=t.collect_presentation_feedback,
+                                            collect_project_feedback=t.collect_project_feedback,
+                                            number_assessors=t.number_assessors,
+                                            max_group_size=t.max_group_size,
+                                            morning_session=t.morning_session,
+                                            afternoon_session=t.afternoon_session,
+                                            talk_format=t.talk_format,
                                             retired=False,
                                             submission_period=self.submission_period,
                                             feedback_open=False,
@@ -5872,10 +5921,12 @@ class SubmissionPeriodRecord(db.Model):
     @validates('canvas_module_id')
     def _validate_canvas_module_id(self, key, value):
         self._canvas_assignment_URL = None
+        return value
 
     @validates('canvas_assignment_id')
     def _validate_canvas_assignment_id(self, key, value):
         self._canvas_assignment_URL = None
+        return value
 
 
     # SUBMISSION RECORDS
@@ -5892,6 +5943,89 @@ class SubmissionPeriodRecord(db.Model):
     def _reconstruct(self):
         self._canvas_assignment_URL = None
 
+    @property
+    def messages(self):
+        messages = []
+
+        messages.append('Markers={m}'.format(m=self.number_markers))
+        messages.append('Moderators={m}'.format(m=self.number_moderators))
+
+        if self.start_date:
+            messages.append('Start date {d}'.format(d=self.start_date.strftime("%a %d %b %Y")))
+
+        if self.hand_in_date:
+            messages.append('Hand-in date {d}'.format(d=self.hand_in_date.strftime("%a %d %b %Y")))
+
+        if self.config.main_config.enable_canvas_sync:
+            if self.canvas_enabled:
+                messages.append('Canvas integration enabled')
+            else:
+                if not self.canvas_module_id:
+                    messages.append('Canvas module identifier not set')
+
+                if not self.canvas_assignment_id:
+                    messages.append('Canvas assignment identifier not set')
+
+        if self.collect_project_feedback:
+            messages.append('Collect project feedback')
+        else:
+            messages.append('Do not collect project feedback')
+
+        if self.has_presentation:
+            messages.append('Has presentation')
+
+            if self.collect_presentation_feedback:
+                messages.append('Collect presentation feedback')
+            else:
+                messages.append('Do not collect presentation feedback')
+
+        if self.feedback_open:
+            if self.closed:
+                messages.append('Feedback closed')
+                if self.feedback_id:
+                    if self.feedback_timestamp:
+                        messages.append('Feedback opened by {name} at {time}'.format(name=self.feedback_by.name,
+                                                                                     time=self.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S")))
+                    else:
+                        messages.append('Feedback opened by {name}'.format(name=self.feedback_by.name))
+
+                if self.closed_id:
+                    if self.closed_timestamp:
+                        messages.append('Feedback closed by {name} at {time}'.format(name=self.closed_by.name,
+                                                                                     time=self.closed_timestamp.strftime("%a %d %b %Y %H:%M:%S")))
+                    else:
+                        messages.append('Feedback closed by {name}'.format(name=self.closed_by.name))
+
+            else:
+                messages.append('Feedback open')
+                if self.feedback_id:
+                    if self.feedback_timestamp:
+                        messages.append('Feedback opened by {name} at {time}'.format(name=self.feedback_by.name,
+                                                                                     time=self.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S")))
+                    else:
+                        messages.append('Feedback opened by {name}'.format(name=self.feedback_by.name))
+
+        return messages
+
+    @property
+    def presentation_messages(self):
+        messages = []
+
+        if self.talk_format and len(self.talk_format) > 0:
+            messages.append(self.talk_format)
+        else:
+            messages.append('Format not set')
+
+        if self.lecture_capture:
+            messages.append('Requires lecture capture')
+
+        if self.number_assessors and self.number_assessors > 0:
+            messages.append('Assessors={m}'.format(m=self.number_assessors))
+
+        if self.max_group_size and self.max_group_size > 0:
+            messages.append('Max group size={m}'.format(m=self.max_group_size))
+
+        return messages
 
     @property
     def display_name(self):

@@ -53,8 +53,14 @@
 {#        {{ wtf.form_errors(form) }}#}
 
         {{ wtf.render_field(form.name) }}
-        {{ wtf.render_field(form.number_markers) }}
-        {{ wtf.render_field(form.number_moderators) }}
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(form.number_markers) }}
+            </div>
+            <div class="col-6">
+                {{ wtf.render_field(form.number_moderators) }}
+            </div>
+        </div>
         {{ date_field(form.start_date, 'datetimepicker1') }}
         {{ date_field(form.hand_in_date, 'datetimepicker2') }}
         <hr class="intro-divider">

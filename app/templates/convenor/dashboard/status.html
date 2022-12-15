@@ -72,49 +72,7 @@
                 </div>
                 <ul class="list-group border-0 mb-3">
                     <li class="list-group-item list-group-item-primary">
-                        {% set messages = [] %}
-                        {% if config.uses_project_hub %}
-                            {% set tmp = messages.append('Project hub enabled') %}
-                        {% else %}
-                            {% set tmp = messages.append('Project hub disabled') %}
-                        {% endif %}
-                        {% if config.main_config.enable_canvas_sync %}
-                            {% if config.canvas_enabled %}
-                                {% set tmp = messages.append('Canvas integration enabled') %}
-                            {% else %}
-                                {% if not config.canvas_module_id %}
-                                    {% set tmp = messages.append('Canvas module identifier not set') %}
-                                {% endif %}
-                                {% if not config.canvas_login %}
-                                    {% set tmp = messages.append('Canvas login not set') %}
-                                {% endif %}
-                            {% endif %}
-                        {% endif %}
-                        {% if config.do_matching %}
-                            {% set tmp = messages.append('Use automated matching') %}
-                        {% endif %}
-                        {% if config.skip_matching %}
-                            {% set tmp = messages.append('Skip matching this cycle') %}
-                        {% endif %}
-                        {% if config.requests_skipped %}
-                            {% set tmp = messages.append('Skip confirmation requests this cycle') %}
-                        {% endif %}
-                        {% if config.require_confirm %}
-                            {% set tmp = messages.append('Requires project confirmations') %}
-                        {% endif %}
-                        {% set tmp = messages.append('Initial choices = ' + config.initial_choices|string) %}
-                        {% set tmp = messages.append('Switch choices = ' + config.switch_choices|string) %}
-                        {% set tmp = messages.append('Maximum selectable projects with same supervisor = ' + config.faculty_maximum|string) %}
-                        {% set tmp = messages.append('Start year Y' + config.start_year|string) %}
-                        {% set tmp = messages.append('Extent = ' + config.extent|string) %}
-                        {% if config.selection_open_to_all %}
-                            {% set tmp = messages.append('Selection open to all') %}
-                        {% else %}
-                            {% set tmp = messages.append('Selection restricted to invitees') %}
-                        {% endif %}
-                        {% if config.full_CATS %}
-                            {% set tmp = messages.append('Maximum supervisor CATS for accommodated matchings = ' + config.full_CATS|string) %}
-                        {% endif %}
+                        {% set messages = config.messages %}
                         {% call icon_block("cogs") %}
                             <p><strong>Details</strong></p>
                             {% if messages|length > 0 %}
@@ -152,65 +110,7 @@
                                 {% endif %}
                             </div>
                             <div class="mb-2">
-                                {% set messages = [] %}
-                                {% if p.start_date or p.hand_in_date %}
-                                    <div class="mb-3">
-                                        {% if p.start_date %}
-                                            {% set tmp = messages.append('Commences ' + p.start_date.strftime("%a %d %b %Y")) %}
-                                        {% endif %}
-                                        {% if p.hand_in_date %}
-                                            {% set tmp = messages.append('Hand-in date ' + p.hand_in_date.strftime("%a %d %b %Y")) %}
-                                        {% endif %}
-                                    </div>
-                                {% endif %}
-                                {% if config.main_config.enable_canvas_sync %}
-                                    {% if p.canvas_enabled %}
-                                        {% set tmp = messages.append('Canvas integration enabled') %}
-                                    {% else %}
-                                        {% set tmp = messages.append('Canvas integration not enabled') %}
-                                    {% endif %}
-                                {% endif %}
-                                {% if p.has_presentation %}
-                                    {% set tmp = messages.append('Has presentation') %}
-                                    {% if p.collect_presentation_feedback %}
-                                        {% set tmp = messages.append('Collect presentation feedback') %}
-                                    {%  else %}
-                                        {% set tmp = messages.append('Do not collect presentation feedback') %}
-                                    {% endif %}
-                                {% endif %}
-                                {% if p.collect_project_feedback %}
-                                    {% set tmp = messages.append('Collect project feedback') %}
-                                {% else %}
-                                    {% set tmp = messages.append('Do not collect project feedback') %}
-                                {% endif %}
-                                {% if p.feedback_open %}
-                                    {% if p.closed %}
-                                        {% set tmp = messages.append('Feedback closed') %}
-                                        {% if p.feedback_id %}
-                                            {% if p.feedback_timestamp %}
-                                                {% set tmp = messages.append('Opened by ' + p.feedback_by.name + ' at ' + p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S")) %}
-                                            {% else %}
-                                                {% set tmp = messages.append('Opened by ' + p.feedback_by.name) %}
-                                            {% endif %}
-                                        {% endif %}
-                                        {% if p.closed_id %}
-                                            {% if p.closed_timestamp %}
-                                                {% set tmp = messages.append('Closed by ' + p.closed_by.name + ' at ' + p.closed_timestamp.strftime("%a %d %b %Y %H:%M:%S")) %}
-                                            {% else %}
-                                                {% set tmp = messages.append('Closed by ' + p.closed_by.name) %}
-                                            {% endif %}
-                                        {% endif %}
-                                    {% else %}
-                                        {% set tmp = messages.append('Feedback open') %}
-                                        {% if p.feedback_id %}
-                                            {% if p.feedback_timestamp %}
-                                                {% set tmp = messages.append('Opened by ' + p.feedback_by.name + ' at ' + p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S")) %}
-                                            {% else %}
-                                                {% set tmp = messages.append('Opened by ' + p.feedback_by.name) %}
-                                            {% endif %}
-                                        {% endif %}
-                                    {% endif %}
-                                {% endif %}
+                                {% set messages = p.messages %}
                                 {% if messages|length > 0 %}
                                     <span class="text-muted">{{ messages|join(', ') }}</span>
                                 {% endif %}

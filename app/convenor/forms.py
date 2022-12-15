@@ -164,9 +164,9 @@ class CustomCATSLimitForm(Form, SaveChangesMixin):
                                      validators=[Optional()])
 
 
-def SubmissionPeriodRecordSettingsMixinFactory(enable_canvas=True):
+def PeriodRecordMixinFactory(enable_canvas=True):
 
-    class SubmissionPeriodRecordSettingsMixin():
+    class PeriodRecordMixin():
 
         name = StringField('Name', description='Optional. Enter a textual name for this submission '
                                                'period, such as "Autumn Term". Leave blank to use the default name.',
@@ -199,19 +199,19 @@ def SubmissionPeriodRecordSettingsMixinFactory(enable_canvas=True):
                                                             'assignment. Both the assignment id and module id need '
                                                             'to be specified.')
 
-    return SubmissionPeriodRecordSettingsMixin
+    return PeriodRecordMixin
 
 
-def EditSubmissionPeriodRecordSettingsFormFactory(config: ProjectClassConfig):
+def EditPeriodRecordFormFactory(config: ProjectClassConfig):
 
     canvas_enabled = config.main_config.enable_canvas_sync
-    mixin = SubmissionPeriodRecordSettingsMixinFactory(enable_canvas=canvas_enabled)
+    mixin = PeriodRecordMixinFactory(enable_canvas=canvas_enabled)
 
-    class EditSubmissionPeriodRecordSettingsForm(Form, mixin, SaveChangesMixin):
+    class EditPeriodRecordForm(Form, mixin, SaveChangesMixin):
 
         pass
 
-    return EditSubmissionPeriodRecordSettingsForm
+    return EditPeriodRecordForm
 
 
 class EditSubmissionPeriodRecordPresentationsForm(Form, SubmissionPeriodPresentationsMixin, SaveChangesMixin):

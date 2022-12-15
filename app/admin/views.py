@@ -1978,6 +1978,8 @@ def add_pclass():
             for t in config.template_periods.all():
                 period = SubmissionPeriodRecord(config_id=config.id,
                                                 name=t.name,
+                                                number_markers=t.number_markers,
+                                                number_moderators=t.number_moderators,
                                                 start_date=t.start_date,
                                                 has_presentation=t.has_presentation,
                                                 lecture_capture=t.lecture_capture,
@@ -2227,12 +2229,11 @@ def edit_period_definitions(id):
     :param id:
     :return:
     """
-
     data = ProjectClass.query.get_or_404(id)
     return render_template('admin/edit_period_definitions.html', pclass=data)
 
 
-@admin.route('/submission_periods_ajax/<int:id>')
+@admin.route('/period_definitions_ajax/<int:id>')
 @roles_required('root')
 def period_definitions_ajax(id):
     """
@@ -2291,6 +2292,8 @@ def regenerate_period_records(id):
 
         period = SubmissionPeriodRecord(config_id=config.id,
                                         name=t.name,
+                                        number_markers=t.number_markers,
+                                        number_moderators=t.number_moderators,
                                         start_date=t.start_date,
                                         has_presentation=t.has_presentation,
                                         lecture_capture=t.lecture_capture,
@@ -2429,12 +2432,13 @@ def edit_period_definition(id):
     :param id:
     :return:
     """
-
     data = SubmissionPeriodDefinition.query.get_or_404(id)
     form = EditSubmissionPeriodDefinitionForm(obj=data)
 
     if form.validate_on_submit():
         data.name = form.name.data
+        data.number_markers = form.number_markers.data
+        data.number_moderators = form.number_moderators.data
         data.start_date = form.start_date.data
         data.has_presentation = form.has_presentation.data
 

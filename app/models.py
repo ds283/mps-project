@@ -4860,8 +4860,10 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     # CANVAS INTEGRATION
 
 
-    # Canvas id for the module corresponding to this ProjectClassConfig
     canvas_id = db.Column(db.Integer(), default=None, nullable=True)
+
+    # Canvas id for the module corresponding to this ProjectClassConfig
+    canvas_module_id = db.Column(db.Integer(), default=None, nullable=True)
 
     # Link to FacultyData record for convenor whose access token we are using
     canvas_login_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
@@ -4869,8 +4871,8 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
                                    backref=db.backref('canvas_logins', lazy='dynamic'))
 
     # invalidate cached course URL if is changed
-    @validates('canvas_id')
-    def _validate_canvas_id(self, key, value):
+    @validates('canvas_module_id')
+    def _validate_canvas_module_id(self, key, value):
         self._canvas_course_URL = None
 
 
@@ -5495,7 +5497,8 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
                                             closed=False,
                                             closed_id=None,
                                             closed_timestamp=None,
-                                            canvas_id=None)
+                                            canvas_module_id=None,
+                                            canvas_assignment_id=None)
             db.session.add(period)
             db.session.commit()
 
@@ -5725,7 +5728,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     @property
     def canvas_enabled(self):
         return self.main_config.enable_canvas_sync and \
-               self.canvas_id is not None and self.canvas_login is not None
+               self.canvas_module_id is not None and self.canvas_login is not None
 
 
     @property
@@ -5740,7 +5743,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
             return self._canvas_course_URL
 
         URL_root = self.canvas_root_URL
-        course_URL = urljoin(URL_root, 'courses/{course_id}/'.format(course_id=self.canvas_id))
+        course_URL = urljoin(URL_root, 'courses/{course_id}/'.format(course_id=self.canvas_module_id))
         self._canvas_course_URL = url_normalize(course_URL)
 
         return self._canvas_course_URL
@@ -5838,12 +5841,22 @@ class SubmissionPeriodRecord(db.Model):
 
     # CANVAS INTEGRATION
 
-    # Canvas id for the assignment matching this submission period
     canvas_id = db.Column(db.Integer(), default=None, nullable=True)
 
-    # invalidate cached course URL if is changed
-    @validates('canvas_id')
-    def _validate_canvas_id(self, key, value):
+    # Canvas id for the module used to submit to this submission period
+    canvas_module_id = db.Column(db.Integer(), default=None, nullable=True)
+
+    # Canvas id for the assignment matching this submission period
+    canvas_assignment_id = db.Column(db.Integer(), default=None, nullable=True)
+
+    # invalidate cached course URL if Canvas details are changed
+
+    @validates('canvas_module_id')
+    def _validate_canvas_module_id(self, key, value):
+        self._canvas_assignment_URL = None
+
+    @validates('canvas_assignment_id')
+    def _validate_canvas_assignment_id(self, key, value):
         self._canvas_assignment_URL = None
 
 
@@ -6112,7 +6125,7 @@ class SubmissionPeriodRecord(db.Model):
         if not self.config.canvas_enabled:
             return False
 
-        return self.canvas_id is not None
+        return self.canvas_module_id is not None and self.canvas_assignment_id is not None
 
 
     @property
@@ -6120,8 +6133,9 @@ class SubmissionPeriodRecord(db.Model):
         if self._canvas_assignment_URL is not None:
             return self._canvas_assignment_URL
 
-        course_URL = self.config.canvas_course_URL
-        assignment_URL = urljoin(course_URL, 'assignments/{assign_id}/'.format(assign_id=self.canvas_id))
+        URL_root = self.config.canvas_root_URL
+        course_URL = urljoin(URL_root, 'courses/{course_id}/'.format(course_id=self.canvas_module_id))
+        assignment_URL = urljoin(course_URL, 'assignments/{assign_id}/'.format(assign_id=self.canvas_assignment_id))
         self._canvas_assignment_URL = url_normalize(assignment_URL)
 
         return self._canvas_assignment_URL

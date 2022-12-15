@@ -4633,6 +4633,8 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
                 data = SubmissionPeriodDefinition(owner_id=self.id,
                                                   period=1,
                                                   name=None,
+                                                  number_markers=1,
+                                                  number_moderators=0,
                                                   start_date=None,
                                                   has_presentation=self.uses_presentations,
                                                   collect_presentation_feedback=True,
@@ -4749,6 +4751,18 @@ class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
 
     # alternative textual name; can be left null if not used
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+
+    # MARKING SUPPORT
+
+    # number of markers to be assigned
+    number_markers = db.Column(db.Integer(), default=1)
+
+    # number of moderators to be assigned
+    number_moderators = db.Column(db.Integer(), default=0)
+
+
+    # PERIOD CONFIGURATION
 
     # does this period have a presentation submission?
     has_presentation = db.Column(db.Boolean())
@@ -5775,6 +5789,15 @@ class SubmissionPeriodRecord(db.Model):
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
 
+    # MARKING SUPPORT
+
+    # number of markers to be assigned
+    number_markers = db.Column(db.Integer(), default=1)
+
+    # number of moderators to be assigned
+    number_moderators = db.Column(db.Integer(), default=0)
+
+
     # PRESENTATION DATA, IF USED
 
     # does this submission period have an associated presentation assessment?
@@ -5846,7 +5869,6 @@ class SubmissionPeriodRecord(db.Model):
     canvas_assignment_id = db.Column(db.Integer(), default=None, nullable=True)
 
     # invalidate cached course URL if Canvas details are changed
-
     @validates('canvas_module_id')
     def _validate_canvas_module_id(self, key, value):
         self._canvas_assignment_URL = None

@@ -46,10 +46,10 @@ _menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_period', id=period.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_period_definition', id=period.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Edit period...
         </a>
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.delete_period', id=period.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.delete_period_definition', id=period.id) }}">
             <i class="fas fa-trash fa-fw"></i> Delete period
         </a>
     </div>

@@ -46,13 +46,15 @@
 {% endblock %}
 
 {% block form_content %}
-    <form action="{{ url_for('convenor.edit_submission_period_record_settings', pid=record.id) }}" method="POST" name="edit_form">
+    <form action="{{ url_for('convenor.edit_period_record', pid=record.id) }}" method="POST" name="edit_form">
 
         {{ form.hidden_tag() }}
 
 {#        {{ wtf.form_errors(form) }}#}
 
         {{ wtf.render_field(form.name) }}
+        {{ wtf.render_field(form.number_markers) }}
+        {{ wtf.render_field(form.number_moderators) }}
         {{ date_field(form.start_date, 'datetimepicker1') }}
         {{ date_field(form.hand_in_date, 'datetimepicker2') }}
         <hr class="intro-divider">

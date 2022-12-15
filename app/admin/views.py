@@ -2218,9 +2218,9 @@ def unpublish_pclass(id):
     return redirect(redirect_url())
 
 
-@admin.route('/edit_submission_periods/<int:id>')
+@admin.route('/edit_period_definitions/<int:id>')
 @roles_required('root')
-def edit_submission_periods(id):
+def edit_period_definitions(id):
     """
     Set up submission periods for a given project class
     incorporated
@@ -2229,12 +2229,12 @@ def edit_submission_periods(id):
     """
 
     data = ProjectClass.query.get_or_404(id)
-    return render_template('admin/edit_periods.html', pclass=data)
+    return render_template('admin/edit_period_definitions.html', pclass=data)
 
 
 @admin.route('/submission_periods_ajax/<int:id>')
 @roles_required('root')
-def submission_periods_ajax(id):
+def period_definitions_ajax(id):
     """
     Return AJAX data for the submission periods table
     :param id:
@@ -2359,9 +2359,9 @@ def regenerate_period_records(id):
     return redirect(redirect_url())
 
 
-@admin.route('/add_period/<int:id>', methods=['GET', 'POST'])
+@admin.route('/add_period_definition/<int:id>', methods=['GET', 'POST'])
 @roles_required('root')
-def add_period(id):
+def add_period_definition(id):
     """
     Add a new submission period configuration to the given project class
     :param id:
@@ -2376,6 +2376,8 @@ def add_period(id):
             data = SubmissionPeriodDefinition(owner_id=pclass.id,
                                               period=pclass.submissions+1,
                                               name=form.name.data,
+                                              number_markers=form.number_markers.data,
+                                              number_moderators=form.number_moderators.data,
                                               start_date=form.start_date.data,
                                               has_presentation=True,
                                               lecture_capture=form.lecture_capture.data,
@@ -2393,6 +2395,8 @@ def add_period(id):
             data = SubmissionPeriodDefinition(owner_id=pclass.id,
                                               period=pclass.submissions+1,
                                               name=form.name.data,
+                                              number_markers=form.number_markers.data,
+                                              number_moderators=form.number_moderators.data,
                                               start_date=form.start_date.data,
                                               has_presentation=False,
                                               lecture_capture=False,
@@ -2411,15 +2415,15 @@ def add_period(id):
         db.session.commit()
         pclass.validate_presentations()
 
-        return redirect(url_for('admin.edit_submission_periods', id=pclass.id))
+        return redirect(url_for('admin.edit_period_definitions', id=pclass.id))
 
-    return render_template('admin/edit_period.html', form=form, pclass_id=pclass.id,
+    return render_template('admin/edit_period_definition.html', form=form, pclass_id=pclass.id,
                            title='Add new submission period')
 
 
-@admin.route('/edit_period/<int:id>', methods=['GET', 'POST'])
+@admin.route('/edit_period_definition/<int:id>', methods=['GET', 'POST'])
 @roles_required('root')
-def edit_period(id):
+def edit_period_definition(id):
     """
     Edit an existing submission period configuration
     :param id:
@@ -2460,15 +2464,15 @@ def edit_period(id):
         db.session.commit()
         data.owner.validate_presentations()
 
-        return redirect(url_for('admin.edit_submission_periods', id=data.owner.id))
+        return redirect(url_for('admin.edit_period_definitions', id=data.owner.id))
 
-    return render_template('admin/edit_period.html', form=form, period=data,
+    return render_template('admin/edit_period_definition.html', form=form, period=data,
                            title='Edit submission period')
 
 
-@admin.route('/delete_period/<int:id>')
+@admin.route('/delete_period_definition/<int:id>')
 @roles_required('root')
-def delete_period(id):
+def delete_period_definition(id):
     """
     Delete a submission period configuration
     :param id:

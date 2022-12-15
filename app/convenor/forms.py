@@ -172,6 +172,12 @@ def SubmissionPeriodRecordSettingsMixinFactory(enable_canvas=True):
                                                'period, such as "Autumn Term". Leave blank to use the default name.',
                            validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
 
+        number_markers = IntegerField('Number of markers to be assigned', validators=[InputRequired()],
+                                      default=1)
+
+        number_moderators = IntegerField('Number of moderators to be assigned', validators=[InputRequired()],
+                                         default=0)
+
         start_date = DateTimeField('Period start date', format='%d/%m/%Y', validators=[Optional()],
                                    description="Enter an optional start date for this submission period.")
 

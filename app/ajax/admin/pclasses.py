@@ -35,7 +35,7 @@ _menu = \
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_pclass_text', id=pcl.id) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Customize messages...
         </a>
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_submission_periods', id=pcl.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_period_definitions', id=pcl.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Submission periods...
         </a>
         

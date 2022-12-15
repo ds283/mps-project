@@ -15,7 +15,7 @@
             $('#periods-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/admin/submission_periods_ajax/{{ pclass.id }}', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/admin/period_definitions_ajax/{{ pclass.id }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'number' },
@@ -64,7 +64,7 @@
                 </thead>
             </table>
             <div style="text-align: center;">
-                <a href="{{ url_for('admin.add_period', id=pclass.id) }}" class="btn btn-secondary btn-lg">
+                <a href="{{ url_for('admin.add_period_definition', id=pclass.id) }}" class="btn btn-secondary btn-lg">
                     <i class="fas fa-plus"></i>
                     Add new submission period
                 </a>

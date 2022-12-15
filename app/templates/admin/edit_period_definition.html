@@ -48,36 +48,37 @@
 
 {% block form_content %}
     {% if period %}
-        <form action="{{ url_for('admin.edit_period', id=period.id) }}" method="POST" name="period_form">
+        <form action="{{ url_for('admin.edit_period_definition', id=period.id) }}" method="POST" name="period_form">
     {% else %}
-        <form action="{{ url_for('admin.add_period', id=pclass_id) }}" method="POST" name="form">
+        <form action="{{ url_for('admin.add_period_definition', id=pclass_id) }}" method="POST" name="form">
     {% endif %}
 
         {{ form.hidden_tag() }}
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        <div class="card mt-3 mb-3 card-body bg-well">
-            {{ wtf.render_field(form.name) }}
-            {{ date_field(form.start_date, 'datepicker1') }}
+        {{ wtf.render_field(form.name) }}
+        {{ wtf.render_field(form.number_markers) }}
+        {{ wtf.render_field(form.number_moderators) }}
+        {{ date_field(form.start_date, 'datepicker1') }}
+        <hr class="intro-divider">
+
+        <p class="form-group-heading mt-2">Presentation configuration</p>
+        {{ wtf.render_field(form.has_presentation) }}
+        {{ wtf.render_field(form.collect_presentation_feedback) }}
+        {{ wtf.render_field(form.collect_project_feedback) }}
+        <hr class="intro-divider">
+        {{ wtf.render_field(form.lecture_capture) }}
+        {{ wtf.render_field(form.number_assessors) }}
+        {{ wtf.render_field(form.max_group_size) }}
+        <hr class="intro-divider">
+        {{ wtf.render_field(form.morning_session) }}
+        {{ wtf.render_field(form.afternoon_session) }}
+        {{ wtf.render_field(form.talk_format) }}
+
+        <div class="mt-4">
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
         </div>
-
-        <div class="card mt-3 mb-3 card-body bg-well">
-            {{ wtf.render_field(form.has_presentation) }}
-            {{ wtf.render_field(form.collect_presentation_feedback) }}
-            {{ wtf.render_field(form.collect_project_feedback) }}
-            <hr class="intro-divider">
-            {{ wtf.render_field(form.lecture_capture) }}
-            {{ wtf.render_field(form.number_assessors) }}
-            {{ wtf.render_field(form.max_group_size) }}
-            <hr class="intro-divider">
-            {{ wtf.render_field(form.morning_session) }}
-            {{ wtf.render_field(form.afternoon_session) }}
-            {{ wtf.render_field(form.talk_format) }}
-        </div>
-
-        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
-
     </form>
 {% endblock %}
 

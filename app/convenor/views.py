@@ -7232,9 +7232,9 @@ def _validate_submission_period(record: SubmissionPeriodRecord, config: ProjectC
     return True
 
 
-@convenor.route('/edit_submission_period_record_settings/<int:pid>', methods=['GET', 'POST'])
+@convenor.route('/edit_period_record/<int:pid>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def edit_submission_period_record_settings(pid):
+def edit_period_record(pid):
     # pid is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
     config: ProjectClassConfig = record.config
@@ -7247,6 +7247,8 @@ def edit_submission_period_record_settings(pid):
 
     if edit_form.validate_on_submit():
         record.name = edit_form.name.data
+        record.number_markers = edit_form.number_markers.data
+        record.number_moderators = edit_form.number_moderators.data
         record.start_date = edit_form.start_date.data
         record.hand_in_date = edit_form.hand_in_date.data
 
@@ -7265,13 +7267,13 @@ def edit_submission_period_record_settings(pid):
 
         return redirect(url_for('convenor.periods', id=config.project_class.id))
 
-    return render_template('convenor/dashboard/edit_submission_period_record_settings.html',
+    return render_template('convenor/dashboard/edit_period_record.html',
                            form=edit_form, record=record, config=config)
 
 
-@convenor.route('/edit_submission_period_record_presentation/<int:pid>', methods=['GET', 'POST'])
+@convenor.route('/edit_period_presentation/<int:pid>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def edit_submission_period_record_presentation(pid):
+def edit_period_presentation(pid):
     # pid is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
     config: ProjectClassConfig = record.config
@@ -7303,7 +7305,7 @@ def edit_submission_period_record_presentation(pid):
 
         return redirect(url_for('convenor.periods', id=config.project_class.id))
 
-    return render_template('convenor/dashboard/edit_submission_period_record_presentation.html', form=edit_form, record=record)
+    return render_template('convenor/dashboard/edit_period_presentation.html', form=edit_form, record=record)
 
 
 @convenor.route('/publish_assignment/<int:id>')

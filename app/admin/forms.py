@@ -455,6 +455,12 @@ class SubmissionPeriodDefinitionSettingsMixin():
     start_date = DateTimeField('Period start date', format='%d/%m/%Y', validators=[Optional()],
                                description='The year will increment when a rollover takes place')
 
+    number_markers = IntegerField('Number of markers to be assigned', default=1,
+                                  validators=[InputRequired()])
+
+    number_moderators = IntegerField('Number of moderators to be assigned', default=0,
+                                     validators=[InputRequired()])
+
     collect_project_feedback = BooleanField('Collect project feedback online')
 
 

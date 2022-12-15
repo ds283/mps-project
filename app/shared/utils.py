@@ -530,23 +530,21 @@ def get_convenor_dashboard_data(pclass, config):
     :param config:
     :return:
     """
-    fac_query = db.session.query(User) \
-        .filter_by(active=True) \
-        .join(FacultyData, FacultyData.id == User.id)
+    fac_query = db.session.query(User).filter_by(active=True)
 
     fac_total = get_count(fac_query)
-    fac_count = get_count(fac_query.filter(FacultyData.enrollments.any(pclass_id=pclass.id)))
+    fac_count = get_count(
+        fac_query.join(FacultyData, FacultyData.id == User.id).filter(FacultyData.enrollments.any(pclass_id=pclass.id)))
 
     attached_projects = db.session.query(Project) \
         .filter(Project.active == True,
                 Project.project_classes.any(id=pclass.id)) \
-        .join(User, User.id == Project.owner_id) \
-        .join(FacultyData, FacultyData.id == Project.owner_id) \
+        .join(User, User.id == Project.owner_id, isouter=True) \
         .join(EnrollmentRecord,
-              and_(EnrollmentRecord.pclass_id == pclass.id, EnrollmentRecord.owner_id == Project.owner_id)) \
-        .filter(User.active) \
-        .filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED) \
-        .order_by(User.last_name, User.first_name)
+              and_(EnrollmentRecord.pclass_id == pclass.id, EnrollmentRecord.owner_id == Project.owner_id), isouter=True) \
+        .filter(or_(Project.generic == True,
+                    and_(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                         User.active == True)))
     proj_count = get_count(attached_projects)
 
     sel_count = get_count(config.selecting_students.filter_by(retired=False))

@@ -42,7 +42,7 @@
 
         $(document).ready(function () {
             let table = $('#browser-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
                 stateSave: true, serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
                 ajax: {
@@ -129,8 +129,8 @@
                         <tr>
                             <th width="30%">Title</th>
                             <th width="20%">Supervisor</th>
-                            <th width="20%">Affiliation</th>
-                            <th width="30%">Transferable skills</th>
+                            <th width="10%">Affiliation</th>
+                            <th width="40%">Transferable skills</th>
                         </tr>
                     </thead>
                 </table>

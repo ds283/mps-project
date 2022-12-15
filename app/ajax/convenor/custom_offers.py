@@ -37,8 +37,12 @@ _project = \
 # language=jinja2
 _owner = \
 """
-<a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
-{% if project.group %}{{ project.group.make_label()|safe }}{% endif %}
+{% if not project.generic and project.owner is not none %}
+    <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
+    {% if project.group %}{{ project.group.make_label()|safe }}{% endif %}
+{% else %}
+    <span class="badge bg-info">Generic</span>
+{% endif %}
 """
 
 

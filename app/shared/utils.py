@@ -1043,7 +1043,7 @@ def filter_assessors(proj, state_filter, pclass_filter, group_filter):
     return query.all()
 
 
-def get_convenor_filter_record(config):
+def get_convenor_filter_record(config) -> FilterRecord:
     # extract FilterRecord for the logged-in user, if one exists
     record = config.filters.filter_by(user_id=current_user.id).first()
 

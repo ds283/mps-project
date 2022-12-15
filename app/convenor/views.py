@@ -50,7 +50,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Bookmark, \
     ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask
 from ..shared.projects import create_new_tags, get_filter_list_for_groups_and_skills, \
-    project_list_ajax_handler, apply_group_and_skills_filters
+    project_list_ajax_handler
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
@@ -476,52 +476,44 @@ def attached_ajax(id):
     base_query = db.session.query(Project) \
         .filter(Project.project_classes.any(id=id))
 
+    if valid_filter == 'valid' or valid_filter == 'not-valid' or valid_filter == 'reject' or \
+            valid_filter == 'pending':
+
+        if pclass.require_confirm:
+            base_query = base_query.join(ProjectDescription, ProjectDescription.parent_id == Project.id) \
+                .filter(ProjectDescription.project_classes.any(id=pclass.id))
+
+            if valid_filter == 'pending':
+                base_query = base_query.filter(ProjectDescription.confirmed == False)
+
+        if valid_filter == 'valid':
+            base_query = base_query.filter(ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_QUEUED,
+                                           ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_REJECTED)
+
+        if valid_filter == 'not-valid':
+            base_query = base_query.filter(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED)
+
+        if valid_filter == 'reject':
+            base_query = base_query.filter(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED)
+
+    # restrict query to projects owned by active users, or generic projects
+    base_query = base_query.join(User, User.id == Project.owner_id, isouter=True) \
+        .filter(or_(Project.generic == True,
+                    User.active == True))
+
     # get FilterRecord for currently logged-in user
-    filter_record = get_convenor_filter_record(config)
+    filter_record: FilterRecord = get_convenor_filter_record(config)
 
-    def row_filter(row: Project):
-        desc: ProjectDescription = row.get_description(id)
-        if desc is None:
-            return False
+    valid_group_ids = [g.id for g in filter_record.group_filters]
+    valid_skill_ids = [s.id for s in filter_record.skill_filters]
 
-        # apply workflow status filters
-        if valid_filter == 'valid' or valid_filter == 'not-valid' or valid_filter == 'reject' \
-            or valid_filter == 'pending':
+    if pclass.advertise_research_group and len(valid_group_ids) > 0:
+        base_query = base_query.filter(Project.group_id.in_(valid_group_ids))
 
-            if pclass.require_confirm:
-                if valid_filter == 'pending':
-                    if desc.confirmed:
-                        return False
-                else:
-                    if not desc.confirmed:
-                        return False
+    if len(valid_skill_ids) > 0:
+        base_query = base_query.filter(Project.skills.any(TransferableSkill.id.in_(valid_skill_ids)))
 
-            if valid_filter == 'valid':
-                if desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED \
-                        or desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
-                    return False
-
-            if valid_filter == 'not-valid':
-                if desc.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
-                    return False
-
-            if valid_filter == 'reject':
-                if desc.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
-                    return False
-
-        # only show projects belonging to active users
-        if not row.generic:
-            if row.owner is None:
-                return False
-
-            if not row.owner.user.active:
-                return False
-
-        return apply_group_and_skills_filters(row,
-                                              filter_record.group_filters.all() if pclass.advertise_research_group else [],
-                                              filter_record.skill_filters.all())
-
-    return project_list_ajax_handler(request, base_query, row_filter=row_filter,
+    return project_list_ajax_handler(request, base_query,
                                      current_user_id=current_user.id, config=config, menu_template='convenor',
                                      name_labels=True, text='attached projects list',
                                      url=url_for('convenor.attached', id=id),
@@ -2222,108 +2214,61 @@ def liveprojects_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
+    base_query = config.live_projects.join(User, User.id == LiveProject.owner_id)
+
     # get FilterRecord for currently logged-in user
     filter_record = get_convenor_filter_record(config)
 
-    base_query = config.live_projects
+    valid_group_ids = [g.id for g in filter_record.group_filters]
+    valid_skill_ids = [s.id for s in filter_record.skill_filters]
+
+    if pclass.advertise_research_group and len(valid_group_ids) > 0:
+        base_query = base_query.filter(Project.group_id.in_(valid_group_ids))
+
+    if len(valid_skill_ids) > 0:
+        base_query = base_query.filter(Project.skills.any(TransferableSkill.id.in_(valid_skill_ids)))
 
     return _liveprojects_ajax_handler(base_query, config, state_filter)
 
 
 def _liveprojects_ajax_handler(base_query, config: ProjectClassConfig, state_filter: str):
-    def search_name(row: LiveProject):
-        return row.name
+    if state_filter == 'submitter':
+        base_query = base_query.filter(func.count(LiveProject.submitted) > 0)
+    elif state_filter == 'bookmarks':
+        base_query = base_query.filter(and_(func.count(LiveProject.selections) == 0,
+                                            func.count(LiveProject.bookmarks) > 0))
+    elif state_filter == 'none':
+        base_query = base_query.filter(and_(func.count(LiveProject.selections) == 0,
+                                            func.count(LiveProject.bookmarks) == 0))
+    elif state_filter == 'confirmations':
+        base_query = base_query.filter(func.count(LiveProject.confirmation_requests.filter_by(state=ConfirmRequest.REQUESTED)))
 
-    def sort_name(row: LiveProject):
-        return row.name
-
-    def search_owner(row: LiveProject):
-        if not row.generic and row.owner is not None:
-            return row.owner.name
-
-        return 'generic'
-
-    def sort_owner(row: LiveProject):
-        if row.generic or row.owner is None:
-            return ['generic', 'generic']
-
-        return [row.owner.user.last_name, row.owner.user.first_name]
-
-    def search_group(row: LiveProject):
-        search_values = []
-
-        if row.group is not None:
-            search_values.append(row.group.name)
-
-        for tag in row.forced_group_tags:
-            search_values.append(tag.name)
-
-        return search_values
-
-    def sort_group(row: LiveProject):
-        sort_value = str()
-
-        if row.group is not None:
-            sort_value += row.group.name
-
-        for tag in row.forced_group_tags:
-            sort_value += tag.name
-
-        return sort_value
-
-    def sort_bookmarks(row: LiveProject):
-        return row.number_bookmarks
-
-    def sort_selections(row: LiveProject):
-        return row.number_selections
-
-    def sort_confirmations(row: LiveProject):
-        return row.number_pending
-
-    def sort_popularity(row: LiveProject):
-        data = row.popularity_rank(live=True)
-
-        if data is None:
-            return -1
-
-        rank, total = data
-        return rank
-
-    name = {'search': search_name,
-            'order': sort_name}
-    owner = {'search': search_owner,
-             'sort': sort_owner}
-    group = {'search': search_group,
-             'order': sort_group}
-    bookmarks = {'order': sort_bookmarks}
-    selections = {'order': sort_selections}
-    confirmations = {'order': sort_confirmations}
-    popularity = {'order': sort_popularity}
+    name = {'search': LiveProject.name,
+            'order': LiveProject.name,
+            'search_collation': 'utf8_general_ci'}
+    owner = {'search': func.concat(User.first_name, ' ', User.last_name),
+             'order': [User.last_name, User.first_name],
+             'search_collation': 'utf8_general_ci'}
+    bookmarks = {'order': func.count(LiveProject.bookmarks)}
+    selections = {'order': func.count(LiveProject.selections)}
+    confirmations = {'order': func.count(LiveProject.confirmation_requests.filter_by(state=ConfirmRequest.REQUESTED))}
 
     columns = {'name': name,
                'owner': owner,
-               'group': group,
                'bookmarks': bookmarks,
                'selections': selections,
-               'confirmations': confirmations,
-               'popularity': popularity}
+               'confirmations': confirmations}
 
-    def _filter(row: LiveProject):
-        if state_filter == 'submitted' and row.number_selections == 0:
-            return False
+    # def sort_popularity(row: LiveProject):
+    #     data = row.popularity_rank(live=True)
+    #
+    #     if data is None:
+    #         return -1
+    #
+    #     rank, total = data
+    #     return rank
 
-        if state_filter == 'bookmarks' and row.number_selections > 0 or row.number_bookmarks == 0:
-            return False
-
-        if state_filter == 'none' and row.number_selections > 0 or row.number_bookmarks > 0:
-            return False
-
-        if state_filter == 'confirmations' and row.number_pending == 0:
-            return False
-
-        return True
-
-    with ServerSideInMemoryHandler(request, base_query, columns, row_filter=_filter) as handler:
+    with ServerSideInMemoryHandler(request, base_query, columns) as handler:
         def row_formatter(liveprojects):
             return ajax.convenor.liveprojects_data(liveprojects, config,
                                                    url=url_for('convenor.liveprojects', id=config.pclass_id),
@@ -2608,20 +2553,17 @@ def attach_liveproject_ajax(id):
     current_projects = [p.parent_id for p in config.live_projects]
 
     # compute all active attached projects that do not have a LiveProject equivalent
-    base_query = pclass.projects
+    base_query = pclass.projects.filter(Project.active == True)
 
-    def row_filter(row: Project):
-        # don't show attached projects
-        if row.id in current_projects:
-            return False
+    # don't show attached projects
+    base_query = base_query.filter(Project.id.not_in(current_projects))
 
-        # don't show projects belonging to inactive users
-        if not row.generic and row.owner is not None and not row.owner.user.active:
-            return False
+    # restrict query to projects owned by active users, or generic projects
+    base_query = base_query.join(User, User.id == Project.owner_id, isouter=True) \
+        .filter(or_(Project.generic == True,
+                    User.active == True))
 
-        return True
-
-    return project_list_ajax_handler(request, base_query, row_filter=row_filter,
+    return project_list_ajax_handler(request, base_query,
                                      current_user_id=current_user.id, config=config, menu_template='attach',
                                      name_labels=True, text='attach projects view',
                                      url=url_for('convenor.attach_liveproject', id=id),
@@ -2688,26 +2630,21 @@ def attach_liveproject_other_ajax(id):
 
     # find all projects, not already attached as LiveProjects, that are not attached to
     # this project class
-    base_query = db.session.query(Project) \
-        .filter(Project.active == True)
+    base_query = db.session.query(Project).filter(Project.active == True)
 
     # get existing liveprojects
     current_projects = [p.parent_id for p in config.live_projects]
 
-    def row_filter(row: Project):
-        # don't show projects attached to this project class
-        if pclass.id in [p.id for p in row.project_classes]:
-            return False
+    # don't show attached projects
+    base_query = base_query.filter(Project.id.not_in(current_projects))
 
-        # don't show attached projects
-        if row.id in current_projects:
-            return False
+    # don't show projects attached to this project class
+    base_query = base_query.filter(~Project.project_classes.any(ProjectClass.id == pclass.id))
 
-        # don't show projects belonging to inactive users
-        if not row.generic and row.owner is not None and not row.owner.user.active:
-            return False
-
-        return True
+    # restrict query to projects owned by active users, or generic projects
+    base_query = base_query.join(User, User.id == Project.owner_id, isouter=True) \
+        .filter(or_(Project.generic == True,
+                    User.active == True))
 
     return project_list_ajax_handler(request, base_query,
                                      current_user_id=current_user.id, config=config, menu_template='attach_other',
@@ -4402,7 +4339,10 @@ def unofferable_ajax():
         return jsonify({})
 
     base_query = db.session.query(Project) \
-        .filter(Project.active == True)
+        .filter(Project.active == True) \
+        .join(User, User.id == Project.owner_id, isouter=True) \
+        .filter(or_(Project.generic == True,
+                    User.active == True))
 
     def row_filter(row: Project):
         # don't show offerable projects
@@ -7863,7 +7803,7 @@ def faculty_workload_ajax(id):
         fd: FacultyData
         u, fd = row
 
-        return u.first_name + ' ' + u.last_name
+        return u.name
 
     def sort_name(row):
         u: User

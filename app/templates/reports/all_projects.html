@@ -30,7 +30,7 @@
 
         $(document).ready(function () {
             $('#all-projects-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftrip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
                 serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
@@ -47,24 +47,24 @@
                       orderable: true },
                     { data: 'status',
                       searchable: false,
-                      orderable: true },
+                      orderable: false },
                     { data: 'pclasses',
-                      searchable: true,
-                      orderable: true },
+                      searchable: false,
+                      orderable: false },
                     { data: 'meeting',
                       searchable: false,
-                      orderable: true },
+                      orderable: false },
                     { data: 'group',
-                      searchable: true,
-                      orderable: true },
+                      searchable: false,
+                      orderable: false },
                     { data: 'prefer',
-                      searchable: true,
-                      orderable: true },
+                      searchable: false,
+                      orderable: false },
                     { data: 'skills',
-                      searchable: true,
-                      orderable: true }
+                      searchable: false,
+                      orderable: false }
                 ],
-                order: [[0, 'asc']
+                order: [[0, 'asc']]
             });
         });
     </script>

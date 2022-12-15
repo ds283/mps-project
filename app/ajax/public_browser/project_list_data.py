@@ -20,11 +20,22 @@ _name = \
 """
 
 # language=jinja2
+_owner = \
+"""
+{% if not project.generic and project.owner is not none %}
+    {{ project.owner.user.name }}
+{% else %}
+    <span class="badge bg-info">Generic</span>
+{% endif %}
+"""
+
+# language=jinja2
 _group = \
 """
 {% set ns = namespace(affiliation=false) %}
 {% if project.group %}
-    <a {% if href %}href="{{ href }}"{% endif %} class="badge bg-secondary text-decoration-none" style="{{ group.make_CSS_style() }}">{{ project.group.name }}</a>
+    {{ project.group.make_label()|safe }}
+    {% set ns.affiliation = true %}
 {% endif %}
 {% for tag in project.forced_group_tags %}
     {{ tag.make_label()|safe }}
@@ -51,7 +62,7 @@ _skills = \
 
 def _project_list_data(pclass_id: int, p: Project):
     return {'name': render_template_string(_name, pclass_id=pclass_id, project=p),
-            'supervisor': '{name}'.format(name=p.owner.user.name),
+            'supervisor': render_template_string(_owner, project=p),
             'group': render_template_string(_group, project=p),
             'skills': render_template_string(_skills, skills=p.ordered_skills)}
 

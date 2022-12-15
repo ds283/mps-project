@@ -17,7 +17,7 @@ from flask_security import login_required, roles_required, roles_accepted, curre
 
 from ..database import db
 from ..models import User, FacultyData, ResearchGroup, SkillGroup, ProjectClass, ProjectClassConfig, \
-    Project, LiveProject, StudentData, DegreeProgramme, DegreeType, EnrollmentRecord
+    Project, LiveProject, StudentData, DegreeProgramme, DegreeType, EnrollmentRecord, ProjectDescription
 
 from ..shared.conversions import is_integer
 from ..shared.projects import project_list_ajax_handler
@@ -150,44 +150,39 @@ def all_projects_ajax():
     flag, pclass_value = is_integer(pclass_filter)
 
     base_query = db.session.query(Project) \
-        .join(FacultyData, FacultyData.id == Project.owner_id) \
-        .join(User, User.id == FacultyData.id) \
-        .filter(User.active == True)
+        .join(User, User.id == Project.owner_id, isouter=True) \
+        .filter(or_(Project.generic == True,
+                    User.active == True))
+
     if flag:
         base_query = base_query.filter(Project.project_classes.any(id=pclass_value))
 
     if state_filter == 'active':
         base_query = base_query.filter(Project.project_classes.any(active=True))
     elif state_filter == 'inactive':
-        base_query = base_query.filter(~Project.project_classes.any(active=True))
+        base_query = base_query.filter(Project.project_classes.any(active=False))
     elif state_filter == 'published':
-        base_query = base_query.filter(Project.project_classes.any(active=True, publish=True))
+        base_query = base_query.filter(Project.project_classes.any(publish=True))
     elif state_filter == 'unpublished':
-        base_query = base_query.filter(~Project.project_classes.any(active=True, publish=True))
+        base_query = base_query.filter(Project.project_classes.any(publish=False))
 
     if active_filter == 'active':
         base_query = base_query.filter(Project.active == True)
     elif active_filter == 'inactive':
         base_query = base_query.filter(Project.active == False)
 
-    def row_filter(row: Project):
-        if valid_filter == 'valid':
-            if row.approval_state != Project.DESCRIPTIONS_APPROVED:
-                return False
+    if valid_filter == 'valid':
+        base_query = base_query.filter(Project.descriptions.all_(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_VALIDATED))
+    elif valid_filter == 'not-valid':
+        base_query = base_query.filter(and_(Project.descriptions.any(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED),
+                                            Project.get_description.all(ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_REJECTED)))
+    elif valid_filter == 'reject':
+        base_query = base_query.filter(Project.descriptions.any(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED))
+    elif valid_filter == 'pending':
+        base_query = base_query.filter(Project.descriptions.any(ProjectDescription.requires_confirmation == True,
+                                                                ProjectDescription.confirmed == False))
 
-        if valid_filter == 'not-valid':
-            if row.approval_state != Project.SOME_DESCRIPTIONS_QUEUED:
-                return False
-
-        if valid_filter == 'reject':
-            if row.approval_state != Project.SOME_DESCRIPTIONS_REJECTED:
-                return False
-
-        if valid_filter == 'pending':
-            if row.approval_state != Project.SOME_DESCRIPTIONS_UNCONFIRMED:
-                return False
-
-    return project_list_ajax_handler(request, base_query, row_filter=row_filter,
+    return project_list_ajax_handler(request, base_query,
                                      current_user_id=current_user.id, name_labels=True,
                                      show_approvals=True, show_errors=True)
 

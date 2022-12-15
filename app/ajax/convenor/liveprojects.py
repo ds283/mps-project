@@ -41,6 +41,28 @@ _owner = \
 
 
 # language=jinja2
+_affiliation = \
+"""
+{% set ns = namespace(affiliation=false) %}
+{% if project.group %}
+    {{ project.group.make_label()|safe }}
+    {% set ns.affiliation = true %}
+{% endif %}
+{% for tag in project.forced_group_tags %}
+    {% if tag.name|length > 15 %}
+        {{ tag.make_label(tag.name[0:15]+'...')|safe }}
+    {% else %}
+        {{ tag.make_label()|safe }}
+    {% endif %}
+    {% set ns.affiliation = true %}
+{% endfor %}
+{% if not ns.affiliation %}
+    <span class="badge bg-warning text-dark">No affiliations</span>
+{% endif %}
+"""
+
+
+# language=jinja2
 _bookmarks = \
 """
 {% set bookmarks = project.number_bookmarks %}
@@ -228,7 +250,7 @@ def liveprojects_data(projects, config: ProjectClassConfig, url=None, text=None)
 
     data = [{'name': render_template_string(_name, project=p, config=config),
              'owner': render_template_string(_owner, project=p),
-             'group': p.group.make_label(),
+             'group': render_template_string(_affiliation, project=p),
              'bookmarks': render_template_string(_bookmarks, project=p),
              'selections': render_template_string(_selections, project=p),
              'confirmations': render_template_string(_confirmations, project=p),

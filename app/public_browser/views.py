@@ -11,7 +11,7 @@ import re
 from functools import partial
 
 from flask import render_template, request, jsonify, url_for
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 
 from . import public_browser
 from .forms import PublicBrowserSelectorForm
@@ -56,10 +56,10 @@ def browse_ajax():
     base_query = db.session.query(Project) \
         .filter(and_(Project.active == True,
                      Project.project_classes.any(ProjectClass.id == pclass_id))) \
-        .join(FacultyData, FacultyData.id == Project.owner_id) \
-        .join(User, User.id == FacultyData.id) \
-        .filter(User.active == True) \
-        .join(ResearchGroup, ResearchGroup.id == Project.group_id)
+        .join(User, User.id == Project.owner_id, isouter=True) \
+        .filter(or_(Project.generic == True,
+                    User.active == True)) \
+        .join(ResearchGroup, ResearchGroup.id == Project.group_id, isouter=True)
 
     name = {'search': Project.name,
              'order': Project.name,

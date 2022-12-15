@@ -58,7 +58,11 @@
                                         {% set ns.affiliation = true %}
                                     {% endif %}
                                     {% for tag in project.forced_group_tags %}
-                                        {{ tag.make_label()|safe }}
+                                        {% if tag.name|length > 15 %}
+                                            {{ tag.make_label(tag.name[0:15]+'...')|safe }}
+                                        {% else %}
+                                            {{ tag.make_label()|safe }}
+                                        {% endif %}
                                         {% set ns.affiliation = true %}
                                     {% endfor %}
                                     {% if not ns.affiliation %}
@@ -136,7 +140,11 @@
                                         {% set ns.affiliation = true %}
                                     {% endif %}
                                     {% for tag in project.forced_group_tags %}
-                                        {{ tag.make_label()|safe }}
+                                        {% if tag.name|length > 15 %}
+                                            {{ tag.make_label(tag.name[0:15]+'...')|safe }}
+                                        {% else %}
+                                            {{ tag.make_label()|safe }}
+                                        {% endif %}
                                         {% set ns.affiliation = true %}
                                     {% endfor %}
                                     {% if not ns.affiliation %}

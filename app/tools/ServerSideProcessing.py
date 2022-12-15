@@ -226,14 +226,17 @@ def _filter_row(row, search_value):
             # if the searchable value for this row is a list, check whether search_value
             # matches any element in the list
             # (can't yet do and/or logic - implement that later if needed)
-            if isinstance(value, Iterable):
-                if any(search_value in x.lower() for x in value):
-                    return True
-
-            # otherwise, test whether search_value is in the searchable singlet
-            else:
+            if isinstance(value, str):
                 if search_value in value.lower():
                     return True
+                return False
+
+            elif isinstance(value, Iterable):
+                if any(search_value in x.lower() for x in value):
+                    return True
+                return False
+
+            return False
 
     return False
 

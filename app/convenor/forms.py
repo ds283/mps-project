@@ -237,13 +237,17 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
                                         description='Disable confirmation of project descriptions for '
                                                     'this academic year')
 
-        uses_supervisor = BooleanField('Has supervisor roles',
+        uses_supervisor = BooleanField('Uses supervisor roles',
                                        description='Select if the project is actively supervised by one or more '
                                                    'members of staff')
 
-        uses_marker = BooleanField('Has marker roles',
+        uses_marker = BooleanField('Uses marker roles',
                                    description='Select if the submissions are assessed by one or more '
                                                'members of staff')
+
+        uses_moderator = BooleanField('Uses moderator roles', default=False,
+                                      description='Select if submissions are moderated by one or more '
+                                                  'members of staff')
 
         uses_presentations = BooleanField('Includes one or more assessed presentations',
                                           description='Select if submissions are moderated by one or more '
@@ -259,12 +263,14 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
         project_hub_value_map = {1: None, 2: True, 3: False}
         project_hub_choice_map = {None: 1, True: 2, False: 3}
 
-        use_project_hub = SelectField('Use Project Hubs (caution: not production quality)', choices=project_hub_choices, coerce=int,
-                                       description='This setting is inherited from the project configuration, '
-                                                   'but can be overridden in any academic year. '
-                                                   'The Project Hub is a lightweight learning management system '
-                                                   'that allows you to publish resources to students and '
-                                                   'offers some project management tools.')
+        use_project_hub = SelectField('Use Project Hubs (caution: not production quality)',
+                                      choices=project_hub_choices,
+                                      coerce=int,
+                                      description='This setting is inherited from the project configuration, '
+                                                  'but can be overridden in any academic year. '
+                                                  'The Project Hub is a lightweight learning management system '
+                                                  'that allows you to publish resources to students and '
+                                                  'offers some project management tools.')
 
         full_CATS = IntegerField('CAT threshold for supervisors to be full',
                                  description='Optional. If a partial match is being accommodated, this is the maximum '

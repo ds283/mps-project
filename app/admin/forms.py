@@ -247,15 +247,15 @@ class ProjectClassMixin():
 
     include_available = BooleanField('Include this project class in supervisor availability calculations')
 
-    uses_supervisor = BooleanField('Has supervisor roles', default=True,
+    uses_supervisor = BooleanField('Uses supervisor roles', default=True,
                                    description='Select if the project is actively supervised by one or more '
                                                'members of staff')
 
-    uses_marker = BooleanField('Has marker roles', default=True,
+    uses_marker = BooleanField('Uses marker roles', default=True,
                                description='Select if the submissions are assessed by one or more '
                                            'members of staff')
 
-    uses_moderator = BooleanField('Has moderator roles', default=False,
+    uses_moderator = BooleanField('Uses moderator roles', default=False,
                                   description='Select if submissions are moderated by one or more '
                                               'members of staff')
 

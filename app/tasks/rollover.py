@@ -487,6 +487,7 @@ def register_rollover_tasks(celery):
                                             creation_timestamp=datetime.now(),
                                             uses_supervisor=pclass.uses_supervisor,
                                             uses_marker=pclass.uses_marker,
+                                            uses_moderator=pclass.uses_moderator,
                                             uses_presentations=pclass.uses_presentations,
                                             display_marker=pclass.display_marker,
                                             display_presentations=pclass.display_presentations,

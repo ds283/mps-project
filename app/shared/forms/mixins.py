@@ -136,7 +136,7 @@ class FeedbackMixin():
     save_feedback = SubmitField('Save changes')
 
 
-class SubmissionPeriodPresentationsMixin():
+class PeriodPresentationsMixin():
 
     has_presentation = BooleanField('This submission period includes a presentation assessment')
 

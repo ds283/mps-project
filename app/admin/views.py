@@ -44,7 +44,7 @@ from .forms import GlobalConfig, \
     AddModuleForm, EditModuleForm, \
     AddTransferableSkillForm, EditTransferableSkillForm, AddSkillGroupForm, EditSkillGroupForm, \
     AddProjectClassForm, EditProjectClassForm, EditProjectTextForm, \
-    AddSubmissionPeriodDefinitionForm, EditSubmissionPeriodDefinitionForm, \
+    AddPeriodDefinitionForm, EditPeriodDefinitionForm, \
     AddSupervisorForm, EditSupervisorForm, \
     EmailLogForm, \
     AddMessageFormFactory, EditMessageFormFactory, \
@@ -1904,6 +1904,7 @@ def add_pclass():
                                 include_available=form.include_available.data,
                                 uses_supervisor=form.uses_supervisor.data,
                                 uses_marker=form.uses_marker.data,
+                                uses_moderator=form.uses_moderator.data,
                                 uses_presentations=form.uses_presentations.data,
                                 display_marker=form.display_marker.data,
                                 display_presentations=form.display_presentations.data,
@@ -1948,6 +1949,7 @@ def add_pclass():
                                         convenor_id=data.convenor_id,
                                         uses_supervisor=form.uses_supervisor.data,
                                         uses_marker=form.uses_marker.data,
+                                        uses_moderator=form.uses_moderator.data,
                                         uses_presentations=form.uses_presentations.data,
                                         display_marker=form.display_marker.data,
                                         display_presentations=form.display_presentations.data,
@@ -2069,6 +2071,7 @@ def edit_pclass(id):
         data.include_available = form.include_available.data
         data.uses_supervisor = form.uses_supervisor.data
         data.uses_marker = form.uses_marker.data
+        data.uses_moderator = form.uses_moderator.data
         data.uses_presentations = form.uses_presentations.data
         data.display_marker = form.display_marker.data
         data.display_presentations = form.display_presentations.data
@@ -2372,7 +2375,7 @@ def add_period_definition(id):
     """
 
     pclass: ProjectClass = ProjectClass.query.get_or_404(id)
-    form = AddSubmissionPeriodDefinitionForm(form=request.form)
+    form = AddPeriodDefinitionForm(form=request.form)
 
     if form.validate_on_submit():
         if form.has_presentation.data:
@@ -2433,7 +2436,7 @@ def edit_period_definition(id):
     :return:
     """
     data = SubmissionPeriodDefinition.query.get_or_404(id)
-    form = EditSubmissionPeriodDefinitionForm(obj=data)
+    form = EditPeriodDefinitionForm(obj=data)
 
     if form.validate_on_submit():
         data.name = form.name.data

@@ -4335,8 +4335,11 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     # are projects supervised (or just marked?)
     uses_supervisor = db.Column(db.Boolean(), default=True)
 
-    # are the submissions second marked?
+    # are submissions marked?
     uses_marker = db.Column(db.Boolean(), default=True)
+
+    # are submissions moderated?
+    uses_moderator = db.Column(db.Boolean(), default=False)
 
     # display second marker information in UI?
     display_marker = db.Column(db.Boolean(), default=True)
@@ -4849,8 +4852,11 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     # are projects supervised (or just marked?)
     uses_supervisor = db.Column(db.Boolean())
 
-    # are the submissions second marked?
+    # are submissions marked?
     uses_marker = db.Column(db.Boolean())
+
+    # are submissions moderated?
+    uses_moderator = db.Column(db.Boolean())
 
     # display second marker information in UI?
     display_marker = db.Column(db.Boolean())

@@ -21,7 +21,7 @@ from ..manage_users.forms import ResearchGroupMixin
 from ..models import BackupConfiguration, ScheduleAttempt, extent_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices, auto_enrol_year_choices, \
     student_level_choices, DEFAULT_STRING_LENGTH, start_year_choices, DegreeProgramme, DegreeType
-from ..shared.forms.mixins import SaveChangesMixin, SubmissionPeriodPresentationsMixin
+from ..shared.forms.mixins import SaveChangesMixin, PeriodPresentationsMixin
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
@@ -247,16 +247,23 @@ class ProjectClassMixin():
 
     include_available = BooleanField('Include this project class in supervisor availability calculations')
 
-    uses_supervisor = BooleanField('Projects are supervised by a named faculty member',
-                                   default=True)
+    uses_supervisor = BooleanField('Has supervisor roles', default=True,
+                                   description='Select if the project is actively supervised by one or more '
+                                               'members of staff')
 
-    uses_marker = BooleanField('Submissions are second-marked')
+    uses_marker = BooleanField('Has marker roles', default=True,
+                               description='Select if the submissions are assessed by one or more '
+                                           'members of staff')
+
+    uses_moderator = BooleanField('Has moderator roles', default=False,
+                                  description='Select if submissions are moderated by one or more '
+                                              'members of staff')
 
     uses_presentations = BooleanField('Includes one or more assessed presentations')
 
-    display_marker = BooleanField('Include second marker information')
+    display_marker = BooleanField('Display assessor information')
 
-    display_presentations = BooleanField('Include presentation assessment information')
+    display_presentations = BooleanField('Display presentation assessment information')
 
     reenroll_supervisors_early = BooleanField('Re-enroll supervisors one year before end of sabbatical/buyout',
                                               default=True)
@@ -446,7 +453,7 @@ class EditProjectTextForm(Form, SaveChangesMixin):
                                                     render_kw={"rows": 5}, validators=[Optional()])
 
 
-class SubmissionPeriodDefinitionSettingsMixin():
+class PeriodDefinitionMixin():
 
     name = StringField('Name', description='Optional. Enter an alternative text name for this submission '
                                            'period, such as "Autumn Term"',
@@ -464,12 +471,12 @@ class SubmissionPeriodDefinitionSettingsMixin():
     collect_project_feedback = BooleanField('Collect project feedback online')
 
 
-class AddSubmissionPeriodDefinitionForm(Form, SubmissionPeriodDefinitionSettingsMixin, SubmissionPeriodPresentationsMixin):
+class AddPeriodDefinitionForm(Form, PeriodDefinitionMixin, PeriodPresentationsMixin):
 
     submit = SubmitField('Add new submission period')
 
 
-class EditSubmissionPeriodDefinitionForm(Form, SubmissionPeriodDefinitionSettingsMixin, SubmissionPeriodPresentationsMixin, SaveChangesMixin):
+class EditPeriodDefinitionForm(Form, PeriodDefinitionMixin, PeriodPresentationsMixin, SaveChangesMixin):
 
     pass
 

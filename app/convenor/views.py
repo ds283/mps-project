@@ -7164,6 +7164,7 @@ def edit_project_config(pid):
 
         config.uses_supervisor = form.uses_supervisor.data
         config.uses_marker = form.uses_marker.data
+        config.uses_moderator = form.uses_moderator.data
         config.uses_presentations = form.uses_presentations.data
         config.display_marker = form.display_marker.data
         config.display_presentations = form.display_presentations.data

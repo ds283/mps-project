@@ -17,7 +17,7 @@ from wtforms.validators import InputRequired, Optional, Email, Length
 from wtforms_alchemy import QuerySelectField
 
 from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig, ConvenorGenericTask
-from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodPresentationsMixin, \
+from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, PeriodPresentationsMixin, \
     PeriodSelectorMixinFactory
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
     GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses, GetAccommodatableMatchings, \
@@ -214,7 +214,7 @@ def EditPeriodRecordFormFactory(config: ProjectClassConfig):
     return EditPeriodRecordForm
 
 
-class EditSubmissionPeriodRecordPresentationsForm(Form, SubmissionPeriodPresentationsMixin, SaveChangesMixin):
+class EditSubmissionPeriodRecordPresentationsForm(Form, PeriodPresentationsMixin, SaveChangesMixin):
 
     pass
 
@@ -233,15 +233,21 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
                                         description='Disable confirmation of project descriptions for '
                                                     'this academic year')
 
-        uses_supervisor = BooleanField('Projects are supervised by a named faculty member')
+        uses_supervisor = BooleanField('Has supervisor roles',
+                                       description='Select if the project is actively supervised by one or more '
+                                                   'members of staff')
 
-        uses_marker = BooleanField('Submissions are second-marked')
+        uses_marker = BooleanField('Has marker roles',
+                                   description='Select if the submissions are assessed by one or more '
+                                               'members of staff')
 
-        uses_presentations = BooleanField('Includes one or more assessed presentations')
+        uses_presentations = BooleanField('Includes one or more assessed presentations',
+                                          description='Select if submissions are moderated by one or more '
+                                                      'members of staff')
 
-        display_marker = BooleanField('Include second marker information')
+        display_marker = BooleanField('Display assessor information')
 
-        display_presentations = BooleanField('Include presentation assessment information')
+        display_presentations = BooleanField('Display presentation assessment information')
 
         project_hub_choices = [
             (1, 'Inherit ({which} in project class)'.format(which='enabled' if hub_enabled else 'disabled')),

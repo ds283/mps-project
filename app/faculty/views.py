@@ -670,7 +670,7 @@ def edit_description(did):
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
-    if not validate_edit_description(desc):
+    if not validate_is_project_owner(desc.parent):
         return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
@@ -725,7 +725,7 @@ def edit_description_content(did):
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
-    if not validate_edit_description(desc):
+    if not validate_is_project_owner(desc.parent):
         return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
@@ -762,7 +762,7 @@ def description_modules(did, level_id=None):
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
-    if not validate_edit_description(desc):
+    if not validate_is_project_owner(desc.parent):
         return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
@@ -798,7 +798,7 @@ def description_attach_module(did, mod_id, level_id):
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
-    if not validate_edit_description(desc):
+    if not validate_is_project_owner(desc.parent):
         return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
@@ -818,7 +818,7 @@ def description_detach_module(did, mod_id, level_id):
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
-    if not validate_edit_description(desc):
+    if not validate_is_project_owner(desc.parent):
         return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
@@ -838,7 +838,7 @@ def delete_description(did):
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
-    if not validate_edit_description(desc):
+    if not validate_is_project_owner(desc.parent):
         return redirect(redirect_url())
 
     try:

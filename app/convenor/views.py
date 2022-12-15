@@ -3322,7 +3322,7 @@ def edit_description_content(did, pclass_id):
             flash('Could not edit project description due to a database error. '
                   'Please contact a system administrator', 'error')
 
-        return redirect(url_for('faculty.edit_descriptions', id=desc.parent_id, create=create))
+        return redirect(url)
 
     return render_template('faculty/edit_description_content.html', project=desc.parent, desc=desc, form=form,
                            pclass_id=pclass_id, title='Edit description', create=create,

@@ -3313,6 +3313,8 @@ def edit_description_content(did, pclass_id):
     if form.validate_on_submit():
         desc.description = form.description.data
         desc.reading = form.reading.data
+        desc.last_edit_id = current_user.id
+        desc.last_edit_timestamp = datetime.now()
 
         try:
             db.session.commit()

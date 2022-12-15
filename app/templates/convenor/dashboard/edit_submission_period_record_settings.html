@@ -59,7 +59,9 @@
 
         {% if config.main_config.enable_canvas_sync %}
             <p class="form-group-heading mt-2">Canvas integration</p>
-            {{ wtf.render_field(form.canvas_id) }}
+            {{ wtf.render_field(form.canvas_module_id) }}
+            {{ wtf.render_field(form.canvas_assignment_id) }}
+            <hr class="intro-divider">
         {% endif %}
 
         <div class="mt-2">

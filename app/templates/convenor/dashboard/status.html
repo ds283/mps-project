@@ -82,8 +82,8 @@
                             {% if config.canvas_enabled %}
                                 {% set tmp = messages.append('Canvas integration enabled') %}
                             {% else %}
-                                {% if not config.canvas_id %}
-                                    {% set tmp = messages.append('Canvas course identifier not set') %}
+                                {% if not config.canvas_module_id %}
+                                    {% set tmp = messages.append('Canvas module identifier not set') %}
                                 {% endif %}
                                 {% if not config.canvas_login %}
                                     {% set tmp = messages.append('Canvas login not set') %}

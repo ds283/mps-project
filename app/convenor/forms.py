@@ -182,9 +182,16 @@ def SubmissionPeriodRecordSettingsMixinFactory(enable_canvas=True):
         collect_project_feedback = BooleanField('Collect project feedback online')
 
         if enable_canvas:
-            canvas_id = IntegerField('Canvas assignment identifier', validators=[Optional()],
-                                     description='To enable Canvas integration for this submission period, enter the numeric '
-                                                 'identifier for the corresponding Canvas assignment')
+            canvas_module_id = IntegerField('Canvas module identifier', validators=[Optional()],
+                                            description='To enable Canvas integration for this submission period, '
+                                                        'enter the numeric identifier for the corresponding Canvas '
+                                                        'module. This does not need to be the same module used for '
+                                                        'synchronizing the submitter list.')
+
+            canvas_assignment_id = IntegerField('Canvas assignment identifier', validators=[Optional()],
+                                                description='Enter the numeric identifier for the corresponding Canvas '
+                                                            'assignment. Both the assignment id and module id need '
+                                                            'to be specified.')
 
     return SubmissionPeriodRecordSettingsMixin
 
@@ -262,9 +269,9 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
 
         # only include Canvas-related fields if Canvas integration is actually switched on
         if canvas_enabled:
-            canvas_id = IntegerField('Canvas course identifier', validators=[Optional()],
-                                     description='To enable Canvas integration for this cycle, enter the numeric '
-                                                 'identifier for the corresponding Canvas course')
+            canvas_module_id = IntegerField('Canvas module identifier', validators=[Optional()],
+                                            description='To enable Canvas integration for this cycle, enter the numeric '
+                                                        'identifier for the corresponding Canvas module')
 
             canvas_login = QuerySelectField('Canvas login account', query_factory=partial(GetCanvasEnabledConvenors, config),
                                             allow_blank=True, get_label=BuildCanvasLoginUserName)

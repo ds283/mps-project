@@ -4860,8 +4860,6 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     # CANVAS INTEGRATION
 
 
-    canvas_id = db.Column(db.Integer(), default=None, nullable=True)
-
     # Canvas id for the module corresponding to this ProjectClassConfig
     canvas_module_id = db.Column(db.Integer(), default=None, nullable=True)
 
@@ -5840,8 +5838,6 @@ class SubmissionPeriodRecord(db.Model):
 
 
     # CANVAS INTEGRATION
-
-    canvas_id = db.Column(db.Integer(), default=None, nullable=True)
 
     # Canvas id for the module used to submit to this submission period
     canvas_module_id = db.Column(db.Integer(), default=None, nullable=True)

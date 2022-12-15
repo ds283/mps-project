@@ -1967,7 +1967,7 @@ def add_pclass():
                                         creator_id=current_user.id,
                                         creation_timestamp=datetime.now(),
                                         submission_period=1,
-                                        canvas_id=None,
+                                        canvas_module_id=None,
                                         canvas_login_id=None)
             db.session.add(config)
             db.session.flush()
@@ -1997,7 +1997,8 @@ def add_pclass():
                                                 closed=False,
                                                 closed_id=None,
                                                 closed_timestamp=None,
-                                                canvas_id=None)
+                                                canvas_module_id=None,
+                                                canvas_assignment_id=None)
                 db.session.add(period)
 
             db.session.commit()
@@ -2309,7 +2310,8 @@ def regenerate_period_records(id):
                                         closed=False,
                                         closed_id=None,
                                         closed_timestamp=None,
-                                        canvas_id=None)
+                                        canvas_module_id=None,
+                                        canvas_assignment_id=None)
         db.session.add(period)
 
         # add SubmissionRecord instances for any attached students

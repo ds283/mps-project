@@ -119,13 +119,13 @@ def register_canvas_tasks(celery):
             return
 
         print('** Querying Canvas API for student list on module for {pcl} '
-              '(module id={mid})'.format(pcl=config.name, mid=config.canvas_id))
+              '(module id={mid})'.format(pcl=config.name, mid=config.canvas_module_id))
 
         # set up requests session; safe to assume config.canvas_login is not zero
         session = requests.Session()
         session.headers.update({'Authorization': 'Bearer {token}'.format(token=config.canvas_login.canvas_API_token)})
 
-        API_URL = url_normalize(urljoin(API_root, "courses/{course_id}/users".format(course_id=config.canvas_id)))
+        API_URL = url_normalize(urljoin(API_root, "courses/{course_id}/users".format(course_id=config.canvas_module_id)))
         user_list = _URL_query(session, API_URL, params={'enrollment_type': 'student'})
 
         if user_list is None:
@@ -321,8 +321,8 @@ def register_canvas_tasks(celery):
         config: ProjectClassConfig = period.config
 
         print('** Querying Canvas API for submission list on module for {pcl} '
-              '(module id={mid}, assigment id={aid})'.format(pcl=config.name, mid=config.canvas_id,
-                                                             aid=period.canvas_id))
+              '(module id={mid}, assigment id={aid})'.format(pcl=config.name, mid=period.canvas_module_id,
+                                                             aid=period.canvas_assignment_id))
 
         # reset the Canvas submission availability flag
         for sub in period.submissions:
@@ -335,8 +335,8 @@ def register_canvas_tasks(celery):
 
         API_URL = url_normalize(
             urljoin(API_root,
-                    "courses/{course_id}/assignments/{assign_id}/submissions".format(course_id=config.canvas_id,
-                                                                                     assign_id=period.canvas_id)))
+                    "courses/{course_id}/assignments/{assign_id}/submissions".format(course_id=period.canvas_module_id,
+                                                                                     assign_id=period.canvas_assignment_id)))
         submission_list = _URL_query(session, API_URL)
 
         if submission_list is None:
@@ -446,7 +446,7 @@ def register_canvas_tasks(celery):
         API_URL = url_normalize(
             urljoin(API_root,
                     "courses/{course_id}/assignments/{assign_id}/"
-                    "submissions/{user_id}".format(course_id=config.canvas_id, assign_id=period.canvas_id,
+                    "submissions/{user_id}".format(course_id=period.canvas_module_id, assign_id=period.canvas_assignment_id,
                                                    user_id=submitter.canvas_user_id)))
         response = session.get(API_URL)
         data = response.json()

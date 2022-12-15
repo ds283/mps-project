@@ -81,6 +81,46 @@ def validate_is_admin_or_convenor(*roles):
     return False
 
 
+def validate_view_project(project, *roles):
+    """
+    Validate that the logged-in user is privileged to view a particular project
+    :param project: Project model instance
+    :return: True/False
+    """
+    # if project owner is currently logged-in user
+    if project.owner_id == current_user.id:
+        return True
+
+    # admin and root users can always edit everything
+    if current_user.has_role('admin') or current_user.has_role('root'):
+        return True
+
+    # if the currently logged-in user has any of the specified roles
+    for role in roles:
+        if current_user.has_role(role):
+            return True
+
+    # if the current user is a convenor for any of the pclasses to which we're attached]
+    if any([item.is_convenor(current_user.id) for item in project.project_classes]):
+        return True
+
+    # if the current user has a faculty or office role, allow view
+    if current_user.has_role('faculty') or current_user.has_role('office'):
+        return True
+
+    # if current user has an approval role, allow view
+    if current_user.has_role('project_approver'):
+        return True
+
+    # if current user has an exam-board related role, allow view
+    if current_user.has_role('exam_board') or current_user.has_role('external_examiner') \
+            or current_user.has_role('moderator'):
+        return True
+
+    flash('This project belongs to another user. To view it, you must be a suitable convenor or an administrator.')
+    return False
+
+
 def validate_edit_project(project, *roles):
     """
     Validate that the logged-in user is privileged to edit a particular project

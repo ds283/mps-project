@@ -62,7 +62,8 @@ from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashbo
     build_enrol_submitter_candidates, build_submitters_data, redirect_url, get_convenor_todo_data, \
     build_convenor_tasks_query, home_dashboard_url, get_approval_data
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
-    validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
+    validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description, \
+    validate_view_project
 from ..student.actions import store_selection
 from ..task_queue import register_task
 from ..tools import ServerSideSQLHandler, ServerSideInMemoryHandler
@@ -2886,7 +2887,7 @@ def edit_descriptions(id, pclass_id):
         if not validate_is_convenor(pclass):
             return redirect(redirect_url())
 
-        if not validate_edit_project(project):
+        if not validate_view_project(project):
             return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
@@ -2900,7 +2901,7 @@ def descriptions_ajax(id, pclass_id):
     # get project details
     project = Project.query.get_or_404(id)
 
-    if not validate_edit_project(project):
+    if not validate_view_project(project):
         return jsonify({})
 
     pclass = None

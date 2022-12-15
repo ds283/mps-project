@@ -40,7 +40,7 @@ from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_asses
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable, \
     validate_assessment, validate_using_assessment, validate_presentation_assessor, \
-    validate_is_convenor, validate_edit_description
+    validate_is_convenor, validate_edit_description, validate_view_project
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -1312,7 +1312,7 @@ def project_preview(id):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged-in user or a suitable convenor, or an administrator, object
-    if not validate_edit_project(data, 'project_approver'):
+    if not validate_view_project(data):
         return redirect(redirect_url())
 
     show_selector = bool(int(request.args.get('show_selector', True)))
@@ -1384,6 +1384,9 @@ def project_preview(id):
     allow_approval = (current_user.has_role('project_approver') or current_user.has_role('root')) \
                      and desc is not None and allow_approvals(desc.id)
 
+    show_comments = allow_approval or (data.owner is not None and current_user.id == data.owner.id) \
+                    or current_user.has_role('convenor')
+
     if desc is not None:
         if all_workflow:
             workflow_history = desc.workflow_history \
@@ -1405,7 +1408,7 @@ def project_preview(id):
 
     return render_project(data, desc, form=form, text=text, url=url,
                           show_selector=show_selector, allow_approval=allow_approval,
-                          show_comments=True, comments=comments, all_comments=all_comments,
+                          show_comments=show_comments, comments=comments, all_comments=all_comments,
                           all_workflow=all_workflow, pclass_id=pclass_id, workflow_history=workflow_history)
 
 

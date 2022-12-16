@@ -7,6 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+
 import re
 from datetime import timedelta, datetime
 from email.utils import parseaddr
@@ -15,7 +16,8 @@ from app import create_app, db
 from app.models import PresentationAssessment, \
     AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
     SelectingStudent, ProjectDescription, Project, WorkflowMixin, EnrollmentRecord, StudentDataWorkflowHistory, \
-    ProjectDescriptionWorkflowHistory, MainConfig, AssetLicense, EmailLog, ProjectTag, LiveProject
+    ProjectDescriptionWorkflowHistory, MainConfig, AssetLicense, EmailLog, ProjectTag, LiveProject, SubmissionRecord, \
+    SubmissionRole, PresentationFeedback
 
 
 def migrate_availability_data():
@@ -422,9 +424,80 @@ def migrate_liveproject_tags():
     db.session.commit()
 
 
+def migrate_submission_roles():
+    records = db.session.query(SubmissionRecord).all()
+
+    for r in records:
+        r: SubmissionRecord
+
+        if r.project is not None and r.project.owner is not None:
+            sr = r.roles.filter(SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR,
+                                SubmissionRole.user_id == r.project.owner_id).first()
+            if sr is None:
+                # have not yet migrated supervisor
+                sr = SubmissionRole(submission_id=r.id,
+                                    user_id=r.project.owner_id,
+                                    role=SubmissionRole.ROLE_SUPERVISOR,
+                                    marking_email=r.email_to_supervisor,
+                                    positive_feedback=r.supervisor_positive,
+                                    improvements_feedback=r.supervisor_negative,
+                                    submitted_feedback=r.supervisor_submitted,
+                                    feedback_timestamp=r.supervisor_timestamp,
+                                    acknowledge_student=r.acknowledge_feedback,
+                                    response=r.faculty_response,
+                                    submitted_response=r.faculty_response_submitted,
+                                    response_timestamp=r.faculty_response_timestamp)
+                db.session.add(sr)
+                db.session.flush()
+
+        if r.marker is not None:
+            mr = r.roles.filter(SubmissionRole.role == SubmissionRole.ROLE_MARKER,
+                                SubmissionRole.user_id == r.marker_id).first()
+            if mr is None:
+                # have not yet migrated marker
+                mr = SubmissionRole(submission_id=r.id,
+                                    user_id=r.marker_id,
+                                    role=SubmissionRole.ROLE_MARKER,
+                                    marking_email=r.email_to_marker,
+                                    positive_feedback=r.marker_positive,
+                                    improvements_feedback=r.marker_negative,
+                                    submitted_feedback=r.marker_submitted,
+                                    feedback_timestamp=r.marker_timestamp,
+                                    acknowledge_student=None,
+                                    response=None,
+                                    submitted_response=None,
+                                    response_timestamp=None)
+                db.session.add(mr)
+                db.session.flush()
+
+        for pf in r.presentation_feedback:
+            pf: PresentationFeedback
+
+            pr = r.roles.filter(SubmissionRole.role == SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
+                                SubmissionRole.user_id == pf.assessor_id).first()
+
+            if pr is None:
+                # have not yet migrated this presentation assessor item
+                pr = SubmissionRole(submission_id=r.id,
+                                    user_id=pf.assessor_id,
+                                    role=SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
+                                    marking_email=None,
+                                    positive_feedback=pf.positive,
+                                    improvements_feedback=pf.negative,
+                                    submitted_feedback=pf.submitted,
+                                    feedback_timestamp=pf.timestamp,
+                                    acknowledge_student=None,
+                                    response=None,
+                                    submitted_response=None,
+                                    response_timestamp=None)
+                db.session.add(pr)
+                db.session.flush()
+
+    db.session.commit()
+
 app = create_app()
 
-# with app.app_context():
+with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -445,6 +518,7 @@ app = create_app()
     # migrate_email_recipients()
     # migrate_project_tags()
     # migrate_liveproject_tags()
+    migrate_submission_roles()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

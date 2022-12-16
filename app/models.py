@@ -1176,6 +1176,21 @@ class ProjectMeetingChoicesMixin:
                        (MEETING_NONE, "Prefer not to meet")]
 
 
+class SubmissionRoleTypesMixin:
+    """
+    Single point of definition for staff roles associated with a SubmissionRecord
+    """
+    ROLE_SUPERVISOR = 0
+    ROLE_MARKER = 1
+    ROLE_PRESENTATION_ASSESSOR = 2
+    ROLE_MODERATOR = 3
+    ROLE_EXAM_BOARD = 4
+    ROLE_EXTERNAL_EXAMINER = 5
+
+    _MIN_ROLE = ROLE_SUPERVISOR
+    _MAX_ROLE = ROLE_EXTERNAL_EXAMINER
+
+
 # roll our own get_main_config() and get_current_year(), which we cannot import because it creates a dependency cycle
 def _get_main_config():
     return db.session.query(MainConfig).order_by(MainConfig.year.desc()).first()
@@ -9136,6 +9151,78 @@ class PresentationFeedback(db.Model):
     timestamp = db.Column(db.DateTime())
 
 
+class SubmissionRole(db.Model, SubmissionRoleTypesMixin):
+    """
+    Model for each staff member that has a role for a SubmissionRecord: that includes supervisors, markers,
+    moderators, exam board members and external examiners (and possibly others)
+    """
+    __tablename__ = 'submission_roles'
+
+
+    # unique ID for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # owning submission record
+    submission_id = db.Column(db.Integer(), db.ForeignKey('submission_records.id'))
+    submission = db.relationship('SubmissionRecord', foreign_keys=[submission_id], uselist=False,
+                                 backref=db.backref('roles', lazy='dynamic'))
+
+    # owning user (does not have to be a FacultyData instance, e.g. for external examiners)
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    user = db.relationship('User', foreign_keys=[user_id], uselist=False,
+                           backref=db.backref('submission_roles', lazy='dynamic'))
+
+    # role identifier
+    role = db.Column(db.Integer(), default=SubmissionRoleTypesMixin.ROLE_SUPERVISOR, nullable=False)
+
+    @validates('role')
+    def _validate_role(self, key, value):
+        if value < self._MIN_ROLE:
+            value = self._MIN_ROLE
+
+        if value > self._MAX_ROLE:
+            value = self._MAX_ROLE
+
+        return value
+
+
+    # MARKING WORKFLOW
+
+    # has a marking notification email been sent
+    marking_email = db.Column(db.Boolean(), default=False)
+
+
+    # FEEDBACK TO STUDENT
+
+    # positive feedback
+    positive_feedback = db.Column(db.Text())
+
+    # improvements feedback
+    improvements_feedback = db.Column(db.Text())
+
+    # has the feedback been submitted?
+    submitted_feedback = db.Column(db.Boolean())
+
+    # feedback submission datestamp
+    feedback_timestamp = db.Column(db.DateTime())
+
+
+    # RESPONSE TO FEEDBACK FROM STUDENT (if used)
+
+    # acknowledge seen student feedback
+    acknowledge_student = db.Column(db.Boolean())
+
+    # faculty response
+    response = db.Column(db.Text())
+
+    # faculty response submitted
+    submitted_response = db.Column(db.Boolean())
+
+    # faculty response timestamp
+    response_timestamp = db.Column(db.DateTime())
+
+
+
 class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     """
     Collect details for a student submission
@@ -9306,6 +9393,11 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # faculty response timestamp
     faculty_response_timestamp = db.Column(db.DateTime())
+
+
+    # ROLES
+
+    # 'roles' member created by back-reference from SubmissionRole
 
 
     # PRESENTATIONS

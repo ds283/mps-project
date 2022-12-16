@@ -337,10 +337,7 @@ def AssignPresentationFeedbackFormFactory(record_id, slot_id=None):
 
     class AssignPresentationFeedbackForm(Form, FeedbackMixin):
 
-
-        assessor = QuerySelectField('Assign feedback to assessor',
-                                    query_factory=qf,
-                                    get_label=BuildActiveFacultyName)
+        assessor = QuerySelectField('Assign feedback to assessor', query_factory=qf, get_label=BuildActiveFacultyName)
 
     return AssignPresentationFeedbackForm
 

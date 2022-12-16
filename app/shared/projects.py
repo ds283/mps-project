@@ -19,7 +19,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app import db, ajax
 from app.models import ProjectTagGroup, ProjectTag, ResearchGroup, TransferableSkill, SkillGroup, ProjectClass, Project, \
     ProjectClassConfig, User
-from app.tools import ServerSideSQLHandler
+from app.tools import ServerSideSQLHandler, ServerSideInMemoryHandler
 
 
 def create_new_tags(form):
@@ -78,14 +78,14 @@ def get_filter_list_for_groups_and_skills(pclass: ProjectClass):
     return groups, skill_list
 
 
-def project_list_ajax_handler(request, base_query,
-                              current_user_id: int=None,
-                              config: ProjectClassConfig=None,
-                              menu_template: str=None,
-                              name_labels: bool=None,
-                              text: str=None, url: str=None,
-                              show_approvals: bool=False,
-                              show_errors: bool=True):
+def project_list_SQL_handler(request, base_query,
+                             current_user_id: int=None,
+                             config: ProjectClassConfig=None,
+                             menu_template: str=None,
+                             name_labels: bool=None,
+                             text: str=None, url: str=None,
+                             show_approvals: bool=False,
+                             show_errors: bool=True):
 
     name = {'search': Project.name,
             'order': Project.name,
@@ -98,6 +98,54 @@ def project_list_ajax_handler(request, base_query,
                'owner': owner}
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
+        def row_formatter(projects):
+            # convert project list back into a list of primary keys, so that we can
+            # use cached outcomes
+            return ajax.project.build_data([p.id for p in projects], config=config, current_user_id=current_user_id,
+                                           menu_template=menu_template, name_labels=name_labels,
+                                           text=text, url=url,
+                                           show_approvals=show_approvals,
+                                           show_errors=show_errors)
+
+        return handler.build_payload(row_formatter)
+
+
+def project_list_in_memory_handler(request, base_query, row_filter=None,
+                                   current_user_id: int = None,
+                                   config: ProjectClassConfig = None,
+                                   menu_template: str = None,
+                                   name_labels: bool = None,
+                                   text: str = None, url: str = None,
+                                   show_approvals: bool = False,
+                                   show_errors: bool = True):
+
+    def search_name(row: Project):
+        return row.name
+
+    def sort_name(row: Project):
+        return row.name
+
+    def search_owner(row: Project):
+        if not row.generic and row.owner is not None:
+            return row.owner.user.name
+
+        return 'generic'
+
+    def sort_owner(row: Project):
+        if not row.generic and row.owner is not None:
+            return [row.owner.user.last_name, row.owner.user.first_name]
+
+        return ['generic', 'generic']
+
+    name = {'search': search_name,
+            'order': sort_name}
+    owner = {'search': search_owner,
+             'order': sort_owner}
+
+    columns = {'name': name,
+               'owner': owner}
+
+    with ServerSideInMemoryHandler(request, base_query, columns, row_filter=row_filter) as handler:
         def row_formatter(projects):
             # convert project list back into a list of primary keys, so that we can
             # use cached outcomes

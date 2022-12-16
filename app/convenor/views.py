@@ -50,7 +50,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Bookmark, \
     ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask
 from ..shared.projects import create_new_tags, get_filter_list_for_groups_and_skills, \
-    project_list_ajax_handler
+    project_list_SQL_handler, project_list_in_memory_handler
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
@@ -514,11 +514,11 @@ def attached_ajax(id):
     if len(valid_skill_ids) > 0:
         base_query = base_query.filter(Project.skills.any(TransferableSkill.id.in_(valid_skill_ids)))
 
-    return project_list_ajax_handler(request, base_query,
-                                     current_user_id=current_user.id, config=config, menu_template='convenor',
-                                     name_labels=True, text='attached projects list',
-                                     url=url_for('convenor.attached', id=id),
-                                     show_approvals=True, show_errors=True)
+    return project_list_SQL_handler(request, base_query,
+                                    current_user_id=current_user.id, config=config, menu_template='convenor',
+                                    name_labels=True, text='attached projects list',
+                                    url=url_for('convenor.attached', id=id),
+                                    show_approvals=True, show_errors=True)
 
 
 @convenor.route('/faculty/<int:id>')
@@ -2565,11 +2565,11 @@ def attach_liveproject_ajax(id):
         .filter(or_(Project.generic == True,
                     User.active == True))
 
-    return project_list_ajax_handler(request, base_query,
-                                     current_user_id=current_user.id, config=config, menu_template='attach',
-                                     name_labels=True, text='attach projects view',
-                                     url=url_for('convenor.attach_liveproject', id=id),
-                                     show_approvals=True, show_errors=True)
+    return project_list_SQL_handler(request, base_query,
+                                    current_user_id=current_user.id, config=config, menu_template='attach',
+                                    name_labels=True, text='attach projects view',
+                                    url=url_for('convenor.attach_liveproject', id=id),
+                                    show_approvals=True, show_errors=True)
 
 
 @convenor.route('/manual_attach_project/<int:id>/<int:configid>')
@@ -2648,11 +2648,11 @@ def attach_liveproject_other_ajax(id):
         .filter(or_(Project.generic == True,
                     User.active == True))
 
-    return project_list_ajax_handler(request, base_query,
-                                     current_user_id=current_user.id, config=config, menu_template='attach_other',
-                                     name_labels=True, text='attach projects view',
-                                     url=url_for('convenor.attach_liveproject', id=id),
-                                     show_approvals=True, show_errors=True)
+    return project_list_SQL_handler(request, base_query,
+                                    current_user_id=current_user.id, config=config, menu_template='attach_other',
+                                    name_labels=True, text='attach projects view',
+                                    url=url_for('convenor.attach_liveproject', id=id),
+                                    show_approvals=True, show_errors=True)
 
 
 @convenor.route('/manual_attach_other_project/<int:id>/<int:configid>')
@@ -4350,18 +4350,18 @@ def unofferable_ajax():
 
     def row_filter(row: Project):
         # don't show offerable projects
-        if p.is_offerable:
+        if row.is_offerable:
             return False
 
-        # don't show projects belonging to inactive users
-        if not row.generic and row.owner is not None and not row.owner.user.active:
-            return False
+        return True
 
-    return project_list_ajax_handler(request, base_query, row_filter=row_filter,
-                                     current_user_id=current_user.id, menu_template='unofferable',
-                                     name_labels=True, text='unofferable projects list',
-                                     url=url_for('convenor.show_unofferable'),
-                                     show_approvals=False, show_errors=True)
+    # in-memory handler is much slower than the SQL handler, but since it does not seem possible to write an
+    # SQL query for .is_offerable, we are stuck with it
+    return project_list_in_memory_handler(request, base_query, row_filter=row_filter,
+                                          current_user_id=current_user.id, menu_template='unofferable',
+                                          name_labels=True, text='unofferable projects list',
+                                          url=url_for('convenor.show_unofferable'),
+                                          show_approvals=False, show_errors=True)
 
 
 @convenor.route('/force_confirm_all/<int:id>')

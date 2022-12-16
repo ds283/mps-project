@@ -34,7 +34,7 @@ from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
     WorkflowMixin, ProjectDescriptionWorkflowHistory, StudentData, SubmittingStudent
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
-from ..shared.projects import create_new_tags, project_list_ajax_handler
+from ..shared.projects import create_new_tags, project_list_SQL_handler
 from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_assessors, \
     get_current_year, get_count, get_approvals_data, allow_approvals, redirect_url, get_main_config
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
@@ -275,10 +275,10 @@ def projects_ajax():
 
     base_query = db.session.query(Project).filter_by(owner_id=current_user.id)
 
-    return project_list_ajax_handler(request, base_query, current_user_id=current_user.id,
-                                     menu_template='faculty', name_labels=True,
-                                     text='projects list', url=url_for('faculty.edit_projects'),
-                                     show_approvals=True, show_errors=True)
+    return project_list_SQL_handler(request, base_query, current_user_id=current_user.id,
+                                    menu_template='faculty', name_labels=True,
+                                    text='projects list', url=url_for('faculty.edit_projects'),
+                                    show_approvals=True, show_errors=True)
 
 
 @faculty.route('/assessor_for')
@@ -314,8 +314,8 @@ def marking_ajax():
     if flag:
         base_query = base_query.filter(Project.project_classes.any(id=pclass_value))
 
-    return project_list_ajax_handler(request, base_query,
-                                     current_user_id=current_user.id, show_approvals=False, show_errors=False)
+    return project_list_SQL_handler(request, base_query,
+                                    current_user_id=current_user.id, show_approvals=False, show_errors=False)
 
 
 @faculty.route('/edit_descriptions/<int:id>')

@@ -20,7 +20,7 @@ from ..models import User, FacultyData, ResearchGroup, SkillGroup, ProjectClass,
     Project, LiveProject, StudentData, DegreeProgramme, DegreeType, EnrollmentRecord, ProjectDescription
 
 from ..shared.conversions import is_integer
-from ..shared.projects import project_list_ajax_handler
+from ..shared.projects import project_list_SQL_handler
 from ..shared.utils import redirect_url, get_current_year
 
 from ..tools import ServerSideSQLHandler
@@ -182,9 +182,9 @@ def all_projects_ajax():
         base_query = base_query.filter(Project.descriptions.any(ProjectDescription.requires_confirmation == True,
                                                                 ProjectDescription.confirmed == False))
 
-    return project_list_ajax_handler(request, base_query,
-                                     current_user_id=current_user.id, name_labels=True,
-                                     show_approvals=True, show_errors=True)
+    return project_list_SQL_handler(request, base_query,
+                                    current_user_id=current_user.id, name_labels=True,
+                                    show_approvals=True, show_errors=True)
 
 
 _analyse_labels = {'popularity': ('Popularity rank', 'Popularity score'),

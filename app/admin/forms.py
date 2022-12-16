@@ -20,7 +20,7 @@ from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 from ..manage_users.forms import ResearchGroupMixin
 from ..models import BackupConfiguration, ScheduleAttempt, extent_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices, auto_enrol_year_choices, \
-    student_level_choices, DEFAULT_STRING_LENGTH, start_year_choices, DegreeProgramme, DegreeType
+    student_level_choices, DEFAULT_STRING_LENGTH, start_year_choices, DegreeProgramme, DegreeType, ProjectClass
 from ..shared.forms.mixins import SaveChangesMixin, PeriodPresentationsMixin
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
@@ -471,17 +471,38 @@ class PeriodDefinitionMixin():
     number_moderators = IntegerField('Number of moderators to be assigned', default=0,
                                      validators=[InputRequired()])
 
+    @staticmethod
+    def validate_number_markers(form, field):
+        if form._pclass.uses_marker and field.data == 0:
+            raise ValidationError('This project class uses markers. The number of markers should be 1 or greater.')
+
+    @staticmethod
+    def validate_number_moderators(form, field):
+        if form._pclass.uses_moderator and field.data == 0:
+            raise ValidationError(
+                'This project class uses moderators. This number of moderators should be 1 or greater.')
+
     collect_project_feedback = BooleanField('Collect project feedback online')
 
 
-class AddPeriodDefinitionForm(Form, PeriodDefinitionMixin, PeriodPresentationsMixin):
+def AddPeriodDefinitionFormFactory(pclass: ProjectClass):
 
-    submit = SubmitField('Add new submission period')
+    class AddPeriodDefinitionForm(Form, PeriodDefinitionMixin, PeriodPresentationsMixin):
+
+        _pclass = pclass
+
+        submit = SubmitField('Add new submission period')
+
+    return AddPeriodDefinitionForm
 
 
-class EditPeriodDefinitionForm(Form, PeriodDefinitionMixin, PeriodPresentationsMixin, SaveChangesMixin):
+def EditPeriodDefinitionFormFactory(pclass: ProjectClass):
 
-    pass
+    class EditPeriodDefinitionForm(Form, PeriodDefinitionMixin, PeriodPresentationsMixin, SaveChangesMixin):
+
+        _pclass = pclass
+
+    return EditPeriodDefinitionForm
 
 
 class SupervisorMixin():

@@ -44,7 +44,7 @@ from .forms import GlobalConfig, \
     AddModuleForm, EditModuleForm, \
     AddTransferableSkillForm, EditTransferableSkillForm, AddSkillGroupForm, EditSkillGroupForm, \
     AddProjectClassForm, EditProjectClassForm, EditProjectTextForm, \
-    AddPeriodDefinitionForm, EditPeriodDefinitionForm, \
+    AddPeriodDefinitionFormFactory, EditPeriodDefinitionFormFactory, \
     AddSupervisorForm, EditSupervisorForm, \
     EmailLogForm, \
     AddMessageFormFactory, EditMessageFormFactory, \
@@ -2376,53 +2376,59 @@ def add_period_definition(id):
     :param id:
     :return:
     """
-
     pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+    AddPeriodDefinitionForm = AddPeriodDefinitionFormFactory(pclass)
     form = AddPeriodDefinitionForm(form=request.form)
 
     if form.validate_on_submit():
         if form.has_presentation.data:
-            data = SubmissionPeriodDefinition(owner_id=pclass.id,
-                                              period=pclass.submissions+1,
-                                              name=form.name.data,
-                                              number_markers=form.number_markers.data,
-                                              number_moderators=form.number_moderators.data,
-                                              start_date=form.start_date.data,
-                                              has_presentation=True,
-                                              lecture_capture=form.lecture_capture.data,
-                                              number_assessors=form.number_assessors.data,
-                                              collect_presentation_feedback=form.collect_presentation_feedback.data,
-                                              collect_project_feedback=form.collect_project_feedback.data,
-                                              max_group_size=form.max_group_size.data,
-                                              morning_session=form.morning_session.data,
-                                              afternoon_session=form.afternoon_session.data,
-                                              talk_format=form.talk_format.data,
-                                              creator_id=current_user.id,
-                                              creation_timestamp=datetime.now())
+            pd = SubmissionPeriodDefinition(owner_id=pclass.id,
+                                            period=pclass.submissions + 1,
+                                            name=form.name.data,
+                                            number_markers=form.number_markers.data,
+                                            number_moderators=form.number_moderators.data,
+                                            start_date=form.start_date.data,
+                                            has_presentation=True,
+                                            lecture_capture=form.lecture_capture.data,
+                                            number_assessors=form.number_assessors.data,
+                                            collect_presentation_feedback=form.collect_presentation_feedback.data,
+                                            collect_project_feedback=form.collect_project_feedback.data,
+                                            max_group_size=form.max_group_size.data,
+                                            morning_session=form.morning_session.data,
+                                            afternoon_session=form.afternoon_session.data,
+                                            talk_format=form.talk_format.data,
+                                            creator_id=current_user.id,
+                                            creation_timestamp=datetime.now())
 
         else:
-            data = SubmissionPeriodDefinition(owner_id=pclass.id,
-                                              period=pclass.submissions+1,
-                                              name=form.name.data,
-                                              number_markers=form.number_markers.data,
-                                              number_moderators=form.number_moderators.data,
-                                              start_date=form.start_date.data,
-                                              has_presentation=False,
-                                              lecture_capture=False,
-                                              number_assessors=None,
-                                              collect_presentation_feedback=False,
-                                              collect_project_feedback=True,
-                                              max_group_size=None,
-                                              morning_session=None,
-                                              afternoon_session=None,
-                                              talk_format=None,
-                                              creator_id=current_user.id,
-                                              creation_timestamp=datetime.now())
+            pd = SubmissionPeriodDefinition(owner_id=pclass.id,
+                                            period=pclass.submissions + 1,
+                                            name=form.name.data,
+                                            number_markers=form.number_markers.data,
+                                            number_moderators=form.number_moderators.data,
+                                            start_date=form.start_date.data,
+                                            has_presentation=False,
+                                            lecture_capture=False,
+                                            number_assessors=None,
+                                            collect_presentation_feedback=False,
+                                            collect_project_feedback=True,
+                                            max_group_size=None,
+                                            morning_session=None,
+                                            afternoon_session=None,
+                                            talk_format=None,
+                                            creator_id=current_user.id,
+                                            creation_timestamp=datetime.now())
 
-        pclass.periods.append(data)
+        pclass.periods.append(pd)
 
-        db.session.commit()
-        pclass.validate_presentations()
+        try:
+            db.session.commit()
+            pclass.validate_presentations()
+        except SQLAlchemyError as e:
+            flash('Could not add new submission period definition because of a database error. '
+                  'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_period_definitions', id=pclass.id))
 
@@ -2438,45 +2444,52 @@ def edit_period_definition(id):
     :param id:
     :return:
     """
-    data = SubmissionPeriodDefinition.query.get_or_404(id)
-    form = EditPeriodDefinitionForm(obj=data)
+    pd: SubmissionPeriodDefinition = SubmissionPeriodDefinition.query.get_or_404(id)
+    EditPeriodDefinitionForm = EditPeriodDefinitionFormFactory(pd.owner)
+    form = EditPeriodDefinitionForm(obj=pd)
 
     if form.validate_on_submit():
-        data.name = form.name.data
-        data.number_markers = form.number_markers.data
-        data.number_moderators = form.number_moderators.data
-        data.start_date = form.start_date.data
-        data.has_presentation = form.has_presentation.data
+        pd.name = form.name.data
+        pd.number_markers = form.number_markers.data
+        pd.number_moderators = form.number_moderators.data
+        pd.start_date = form.start_date.data
+        pd.has_presentation = form.has_presentation.data
 
-        if data.has_presentation:
-            data.lecture_capture = form.lecture_capture.data
-            data.collect_presentation_feedback = form.collect_presentation_feedback.data
-            data.collect_project_feedback = form.collect_project_feedback.data
-            data.number_assessors = form.number_assessors.data
-            data.max_group_size = form.max_group_size.data
-            data.morning_session = form.morning_session.data
-            data.afternoon_session = form.afternoon_session.data
-            data.talk_format = form.talk_format.data
+        if pd.has_presentation:
+            pd.lecture_capture = form.lecture_capture.data
+            pd.collect_presentation_feedback = form.collect_presentation_feedback.data
+            pd.collect_project_feedback = form.collect_project_feedback.data
+            pd.number_assessors = form.number_assessors.data
+            pd.max_group_size = form.max_group_size.data
+            pd.morning_session = form.morning_session.data
+            pd.afternoon_session = form.afternoon_session.data
+            pd.talk_format = form.talk_format.data
 
         else:
-            data.lecture_capture = False
-            data.collect_presentation_feedback = False
-            data.collect_project_feedback = True
-            data.number_assessors = None
-            data.max_group_size = None
-            data.morning_session = None
-            data.afternoon_session = None
-            data.talk_format = None
+            pd.lecture_capture = False
+            pd.collect_presentation_feedback = False
+            pd.collect_project_feedback = True
+            pd.number_assessors = None
+            pd.max_group_size = None
+            pd.morning_session = None
+            pd.afternoon_session = None
+            pd.talk_format = None
 
-        data.last_edit_id = current_user.id,
-        data.last_edit_timestamp = datetime.now()
+        pd.last_edit_id = current_user.id,
+        pd.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
-        data.owner.validate_presentations()
+        try:
+            db.session.commit()
+            pd.owner.validate_presentations()
+        except SQLAlchemyError as e:
+            flash('Could not save changes because of a database error. '
+                  'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(url_for('admin.edit_period_definitions', id=data.owner.id))
+        return redirect(url_for('admin.edit_period_definitions', id=pd.owner.id))
 
-    return render_template('admin/edit_period_definition.html', form=form, period=data,
+    return render_template('admin/edit_period_definition.html', form=form, period=pd,
                            title='Edit submission period')
 
 
@@ -2492,9 +2505,15 @@ def delete_period_definition(id):
     data = SubmissionPeriodDefinition.query.get_or_404(id)
     pclass = data.owner
 
-    db.session.delete(data)
-    db.session.commit()
-    pclass.validate_presentations()
+    try:
+        db.session.delete(data)
+        db.session.commit()
+        pclass.validate_presentations()
+    except SQLAlchemyError as e:
+        flash('Could not delete submission period definition because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -2555,8 +2574,14 @@ def add_supervisor():
                           active=True,
                           creator_id=current_user.id,
                           creation_timestamp=datetime.now())
-        db.session.add(data)
-        db.session.commit()
+        try:
+            db.session.add(data)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not add new supervisory team member definition because of a database error. '
+                  'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_supervisors'))
 
@@ -2586,7 +2611,13 @@ def edit_supervisor(id):
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not save changes because of a database error. '
+                  'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_supervisors'))
 
@@ -2607,7 +2638,14 @@ def activate_supervisor(id):
 
     data = Supervisor.query.get_or_404(id)
     data.enable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not activate supervisory team member because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
@@ -2626,7 +2664,14 @@ def deactivate_supervisor(id):
 
     data = Supervisor.query.get_or_404(id)
     data.disable()
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not deactivate supervisory team member because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 

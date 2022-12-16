@@ -13,7 +13,7 @@ from functools import partial
 from flask_security.forms import Form
 from wtforms import SubmitField, IntegerField, StringField, BooleanField, TextAreaField, \
     DateTimeField, SelectField
-from wtforms.validators import InputRequired, Optional, Email, Length
+from wtforms.validators import InputRequired, Optional, Email, Length, ValidationError
 from wtforms_alchemy import QuerySelectField
 
 from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig, ConvenorGenericTask
@@ -182,6 +182,16 @@ def PeriodRecordMixinFactory(enable_canvas=True):
         number_moderators = IntegerField('Number of moderators to be assigned', validators=[InputRequired()],
                                          default=0)
 
+        @staticmethod
+        def validate_number_markers(form, field):
+            if form._config.uses_marker and field.data == 0:
+                raise ValidationError('This project class uses markers. The number of markers should be 1 or greater.')
+
+        @staticmethod
+        def validate_number_moderators(form, field):
+            if form._config.uses_moderator and field.data == 0:
+                raise ValidationError('This project class uses moderators. This number of moderators should be 1 or greater.')
+
         start_date = DateTimeField('Period start date', format='%d/%m/%Y', validators=[Optional()],
                                    description="Enter an optional start date for this submission period.")
 
@@ -213,7 +223,7 @@ def EditPeriodRecordFormFactory(config: ProjectClassConfig):
 
     class EditPeriodRecordForm(Form, mixin, SaveChangesMixin):
 
-        pass
+        _config = config
 
     return EditPeriodRecordForm
 

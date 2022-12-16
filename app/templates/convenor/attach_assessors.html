@@ -78,7 +78,7 @@
                         <div class="row vertical-top marker-table">
                             <div class="col-4">{{ pclass.name }}</div>
                             <div class="col-2">
-                                {% if pclass.uses_markers or pclass.uses_presentations %}
+                                {% if pclass.uses_marker or pclass.uses_presentations %}
                                     <span class="badge bg-info text-dark">{{ pclass.number_assessors }}</span>
                                 {% else %}
                                     <span class="badge bg-secondary">Not required</span>
@@ -86,7 +86,7 @@
                             </div>
                             <div class="col-6">
                                 {% set num = data.number_assessors(pclass) %}
-                                {% if pclass.uses_markers or pclass.uses_presentations %}
+                                {% if pclass.uses_marker or pclass.uses_presentations %}
                                     {% if num >= pclass.number_assessors %}
                                         <span class="badge bg-success">{{ num }}</span>
                                     {% else %}

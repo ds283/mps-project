@@ -17,7 +17,7 @@ from app.models import PresentationAssessment, \
     AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
     SelectingStudent, ProjectDescription, Project, WorkflowMixin, EnrollmentRecord, StudentDataWorkflowHistory, \
     ProjectDescriptionWorkflowHistory, MainConfig, AssetLicense, EmailLog, ProjectTag, LiveProject, SubmissionRecord, \
-    SubmissionRole, PresentationFeedback
+    SubmissionRole, PresentationFeedback, MatchingRecord, MatchingRole, FacultyData
 
 
 def migrate_availability_data():
@@ -495,9 +495,64 @@ def migrate_submission_roles():
 
     db.session.commit()
 
+
+def migrate_matching_roles():
+    records = db.session.query(MatchingRecord).all()
+
+    for r in records:
+        r: MatchingRecord
+
+        if r.project is not None and r.project.owner is not None:
+            mr = r.roles.filter(MatchingRole.role == MatchingRole.ROLE_SUPERVISOR,
+                                MatchingRole.user_id == r.project.owner_id).first()
+            if mr is None:
+                # have not yet migrated finally assigned supervisor
+                mr = MatchingRole(user_id=r.project.owner_id,
+                                  role=MatchingRole.ROLE_SUPERVISOR)
+                r.roles.append(mr)
+                db.session.flush()
+
+        if r.original_project_id is not None:
+            op = db.session.query(LiveProject).filter_by(id=r.original_project_id).first()
+
+            if op is not None and op.owner is not None:
+                mr = r.original_roles.filter(MatchingRole.role == MatchingRole.ROLE_SUPERVISOR,
+                                             MatchingRole.user_id == op.owner_id).first()
+                if mr is None:
+                    # have not yet migrated originally assigned supervisor
+                    mr = MatchingRole(user_id=op.owner_id,
+                                      role=MatchingRole.ROLE_SUPERVISOR)
+                    r.original_roles.append(mr)
+                    db.session.flush()
+
+        if r.marker is not None:
+            mr = r.roles.filter(MatchingRole.role == MatchingRole.ROLE_MARKER,
+                                MatchingRole.user_id == r.marker_id).first()
+            if mr is None:
+                # have not yet migrated finally assigned marker
+                mr = MatchingRole(user_id=r.marker_id,
+                                  role=MatchingRole.ROLE_MARKER)
+                r.roles.append(mr)
+                db.session.flush()
+
+        if r.original_marker_id is not None:
+            om = db.session.query(FacultyData).filter_by(id=r.original_marker_id).first()
+
+            if om is not None:
+                mr = r.original_roles.filter(MatchingRole.role == MatchingRole.ROLE_MARKER,
+                                             MatchingRole.user_id == om.id).first()
+                if mr is None:
+                    # have not yet migrated originally assigned marker
+                    mr = MatchingRole(user_id=om.id,
+                                      role=MatchingRole.ROLE_MARKER)
+                    r.original_roles.append(mr)
+                    db.session.flush()
+
+    db.session.commit()
+
 app = create_app()
 
-# with app.app_context():
+with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -519,6 +574,7 @@ app = create_app()
     # migrate_project_tags()
     # migrate_liveproject_tags()
     # migrate_submission_roles()
+    migrate_matching_roles()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

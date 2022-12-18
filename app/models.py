@@ -11816,6 +11816,9 @@ class MatchingRecord(db.Model):
     original_roles = db.relationship('MatchingRole', secondary=matching_role_list_original, lazy='dynamic',
                                      backref=db.backref('original_role_for', lazy='dynamic'))
 
+
+    # OLD FIELDS, TO BE REMOVED
+
     # assigned second marker, or none if second markers are not used
     marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
     marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False)

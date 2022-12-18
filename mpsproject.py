@@ -552,7 +552,7 @@ def migrate_matching_roles():
 
 app = create_app()
 
-with app.app_context():
+# with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -574,7 +574,7 @@ with app.app_context():
     # migrate_project_tags()
     # migrate_liveproject_tags()
     # migrate_submission_roles()
-    migrate_matching_roles()
+    # migrate_matching_roles()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

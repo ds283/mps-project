@@ -1512,6 +1512,19 @@ recipient_list = db.Table('email_log_recipients',
                           db.Column('recipient_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
 
 
+## MATCHING ROLES
+
+# main role list
+matching_role_list = db.Table('matching_to_roles',
+                              db.Column('record_id', db.Integer(), db.ForeignKey('matching_records.id'), primary_key=True),
+                              db.Column('role_id', db.Integer(), db.ForeignKey('matching_roles.id'), primary_key=True))
+
+# original role list (to support reversion of changes)
+matching_role_list_original = db.Table('matching_to_roles_original',
+                                       db.Column('record_id', db.Integer(), db.ForeignKey('matching_records.id'), primary_key=True),
+                                       db.Column('role_id', db.Integer(), db.ForeignKey('matching_roles.id'), primary_key=True))
+
+
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
@@ -9172,7 +9185,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin):
     user = db.relationship('User', foreign_keys=[user_id], uselist=False,
                            backref=db.backref('submission_roles', lazy='dynamic'))
 
-    # role identifier
+    # role identifier, drawn from SubmissionRoleTypesMixin
     role = db.Column(db.Integer(), default=SubmissionRoleTypesMixin.ROLE_SUPERVISOR, nullable=False)
 
     @validates('role')
@@ -11726,6 +11739,35 @@ def _MatchingRecord_is_valid(id):
     return is_valid, errors, warnings
 
 
+class MatchingRole(db.Model, SubmissionRoleTypesMixin):
+    """
+    Analogue of SubmissionRole for a MatchingRecord
+    """
+    __tablename__ = 'matching_roles'
+
+
+    # unique ID for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # owning user (does not have to be a FacultyData instance, but usually will be)
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    user = db.relationship('User', foreign_keys=[user_id], uselist=False,
+                           backref=db.backref('matching_roles', lazy='dynamic'))
+
+    # role identifier, drawn from SubmissionRoleTypesMixin
+    role = db.Column(db.Integer(), default=SubmissionRoleTypesMixin.ROLE_SUPERVISOR, nullable=False)
+
+    @validates('role')
+    def _validate_role(self, key, value):
+        if value < self._MIN_ROLE:
+            value = self._MIN_ROLE
+
+        if value > self._MAX_ROLE:
+            value = self._MAX_ROLE
+
+        return value
+
+
 class MatchingRecord(db.Model):
     """
     Store matching data for an individual selector
@@ -11750,6 +11792,9 @@ class MatchingRecord(db.Model):
     # submission period
     submission_period = db.Column(db.Integer())
 
+
+    # PROJECT
+
     # assigned project
     project_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
     project = db.relationship('LiveProject', foreign_keys=[project_id], uselist=False)
@@ -11759,6 +11804,17 @@ class MatchingRecord(db.Model):
 
     # rank of this project in the student's selection
     rank = db.Column(db.Integer())
+
+
+    # PERSONNEL
+
+    # assigned personnel
+    roles = db.relationship('MatchingRole', secondary=matching_role_list, lazy='dynamic',
+                            backref=db.backref('role_for', lazy='dynamic'))
+
+    # keep copy of originally assigned personnel (to support later reversion)
+    original_roles = db.relationship('MatchingRole', secondary=matching_role_list_original, lazy='dynamic',
+                                     backref=db.backref('original_role_for', lazy='dynamic'))
 
     # assigned second marker, or none if second markers are not used
     marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))

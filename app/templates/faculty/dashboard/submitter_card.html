@@ -19,6 +19,7 @@
 
     {% set is_sabbatical = supv_sabbatical and mark_sabbatical and pres_sabbatical %}
     {% set is_exempt = supv_exempt and mark_exempt and pres_exempt %}
+
     {% if period %}
         {% set ns = namespace(bgclass = '', borderclass = '', textclass = '') %}
         {% if n+1 == config.submission_period %}

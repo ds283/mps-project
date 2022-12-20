@@ -1452,13 +1452,16 @@ def dashboard():
                 for n in range(config.submissions):
                     period = config.get_period(n+1)
 
-                    supv_records = period.get_supervisor_records(current_user.id)
-                    mark_records = period.get_marker_records(current_user.id)
+                    s_records = period.get_supervisor_records(current_user.id)
+                    mk_records = period.get_marker_records(current_user.id)
+                    mo_records = period.get_moderator_records(current_user.id)
+
                     pres_slots = period.get_faculty_presentation_slots(current_user.id) \
                         if (period.has_presentation and period.has_deployed_schedule) else []
 
-                    if (pclass.uses_supervisor and len(supv_records) > 0) \
-                            or (config.uses_marker and config.display_marker and len(mark_records) > 0) \
+                    if (pclass.uses_supervisor and len(s_records) > 0) \
+                            or (config.uses_marker and config.display_marker and len(mk_records) > 0) \
+                            or (config.uses_moderator and config.display_marker and len(mo_records) > 0) \
                             or (config.uses_presentations and config.display_presentations and len(pres_slots) > 0):
                         include = True
                         break
@@ -1502,6 +1505,7 @@ def dashboard():
                 pane = valid_panes[0]
             else:
                 pane = None
+
     elif pane == 'approve':
         if not (current_user.has_role('user_approver') or current_user.has_role('project_approver')
                 or current_user.has_role('admin') or current_user.has_role('root')):
@@ -1509,6 +1513,7 @@ def dashboard():
                 pane = valid_panes[0]
             else:
                 pane = None
+
     else:
         if pane not in valid_panes:
             if len(valid_panes) > 0:

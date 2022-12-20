@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 from os import path
 from time import time
-from typing import List
+from typing import List, Set
 from urllib.parse import urljoin
 from uuid import uuid4
 
@@ -6132,51 +6132,90 @@ class SubmissionPeriodRecord(db.Model):
         return format_readable_time(delta)
 
 
-    def _unordered_supervisor_records_query(self, fac):
-        if isinstance(fac, int):
-            fac_id = fac
-        elif isinstance(fac, FacultyData) or isinstance(fac, User):
-            fac_id = fac.id
+    def _unordered_records_query(self, user, role: str):
+        """
+        Base query to extract SubmissionRecord instances belonging to this submission period,
+        for which the quoted faculty member has a specified role
+        :param user: identify staff member, either primary key for User, FacultyData or a User/FacultyData instance
+        :param role: one of 'supervisor', 'marker', 'moderator', 'presentation', 'exam_board', 'external'
+        :return:
+        """
+        if isinstance(user, int):
+            user_id = user
+        elif isinstance(user, FacultyData) or isinstance(user, User):
+            user_id = user.id
         else:
             raise RuntimeError('Unknown faculty id type "{typ}" passed to '
                                'SubmissionPeriodRecord.get_supervisor_records'.format(typ=type(fac)))
 
-        return self.submissions \
-            .join(LiveProject, LiveProject.id == SubmissionRecord.project_id) \
-            .filter(LiveProject.owner_id == fac_id)
+        role_map = {'supervisor': SubmissionRole.ROLE_SUPERVISOR,
+                    'marker': SubmissionRole.ROLE_MARKER,
+                    'moderator': SubmissionRole.ROLE_MODERATOR,
+                    'presentation': SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
+                    'exam_board': SubmissionRole.ROLE_EXAM_BOARD,
+                    'external': SubmissionRole.ROLE_EXTERNAL_EXAMINER}
+        if role not in role_map:
+            raise KeyError('Unknown role "{role}" in '
+                           'SubmissionPeriodRecord._unordered_records_query()'.format(role=role))
 
-
-    def _ordered_supervisor_records_query(self, fac):
-        return self._unordered_supervisor_records_query(fac) \
-            .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
-            .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
-            .join(User, User.id == SubmittingStudent.student_id) \
-            .order_by(SubmissionPeriodRecord.submission_period.asc(),
-                      User.last_name.asc(), User.first_name.asc())
-
-
-    def number_supervisor_records(self, fac):
-        return get_count(self._unordered_supervisor_records_query(fac))
-
-
-    def get_supervisor_records(self, fac):
-        return self._ordered_supervisor_records_query(fac).all()
-
-
-    def get_marker_records(self, fac):
-        if isinstance(fac, int):
-            fac_id = fac
-        elif isinstance(fac, FacultyData) or isinstance(fac, User):
-            fac_id = fac.id
-        else:
-            raise RuntimeError('Unknown faculty id type passed to get_marker_records()')
+        role_id = role_map[role]
 
         return self.submissions \
-            .filter_by(marker_id=fac_id) \
-            .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
+            .filter(SubmissionRecord.roles.any(and_(SubmissionRole.role == role_id,
+                                                    SubmissionRole.user_id == user_id))) \
+            .distinct()
+
+
+    def _ordered_records_query(self, user, role: str, order_by: str):
+        """
+        Same as _unordered_records_query(), but now order by student name
+        :param user: identify staff member, either primary key for User, FacultyData or a User/FacultyData instance
+        :param role: one of 'supervisor', 'marker', 'moderator', 'presentation', 'exam_board', 'external'
+        :param order_by: one of 'name', 'exam'
+        :return:
+        """
+        if order_by not in ['name', 'exam']:
+            raise KeyError('Unknown order type "{type}" in '
+                           'SubmissionPeriodRecord._ordered_records_query()'.format(type=order_by))
+
+        raw = self._unordered_records_query(user, role)
+
+        query =  self._unordered_records_query(user, role) \
             .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
-            .join(StudentData, StudentData.id == SubmittingStudent.student_id) \
-            .order_by(SubmissionPeriodRecord.submission_period.asc(), StudentData.exam_number.asc()).all()
+
+        if order_by == 'name':
+            query = query.join(User, User.id == SubmittingStudent.student_id) \
+                .order_by(User.last_name.asc(), User.first_name.asc())
+
+        if order_by == 'exam':
+            query = query.join(StudentData, StudentData.id == SubmittingStudent.student_id) \
+                .order_by(StudentData.exam_number.asc())
+
+        return query
+
+
+    def number_supervisor_records(self, user):
+        return get_count(self._unordered_records_query(user, 'supervisor'))
+
+
+    def get_supervisor_records(self, user):
+        return self._ordered_records_query(user, 'supervisor', 'name').all()
+
+
+    def number_marker_records(self, user):
+        return get_count(self._unordered_records_query(user, 'marker'))
+
+
+    def get_marker_records(self, user):
+        return self._ordered_records_query(user, 'marker', 'exam').all()
+
+
+    def number_moderator_records(self, user):
+        return get_count(self._unordered_records_query(user, 'moderator'))
+
+
+    def get_moderator_records(self, user):
+        return self._ordered_records_query(user, 'moderator', 'exam').all()
 
 
     def get_faculty_presentation_slots(self, fac):
@@ -9264,11 +9303,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     project = db.relationship('LiveProject', foreign_keys=[project_id], uselist=False,
                               backref=db.backref('submission_records', lazy='dynamic'))
 
-    # assigned marker
-    marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'), default=None)
-    marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False,
-                             backref=db.backref('marking_records', lazy='dynamic'))
-
     # link to ProjectClassConfig that selections were drawn from; used to offer a list of LiveProjects
     # if the convenor wishes to reassign
     selection_config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
@@ -9342,22 +9376,59 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     turnitin_student_overlap = db.Column(db.Integer(), default=None, nullable=True)
 
 
-    # MARKING EMAILS
-
-    # marking email sent to supervisor?
-    email_to_supervisor = db.Column(db.Boolean(), default=False)
-
-    # marking email sent to marker?
-    email_to_marker = db.Column(db.Boolean(), default=False)
-
-
     # LIFECYCLE DATA
 
     # has the project started? Helpful for convenor and senior tutor reports
     student_engaged = db.Column(db.Boolean(), default=False)
 
 
-    # MARKER FEEDBACK TO STUDENT
+    # STUDENT FEEDBACK
+
+    # free-form feedback field
+    student_feedback = db.Column(db.Text())
+
+    # student feedback submitted
+    student_feedback_submitted = db.Column(db.Boolean())
+
+    # student feedback timestamp
+    student_feedback_timestamp = db.Column(db.DateTime())
+
+
+    # ROLES
+
+    # 'roles' member created by back-reference from SubmissionRole
+
+
+    # PRESENTATIONS
+
+    # 'presentation_feedback' member created by back-reference from PresentationFeedback
+
+
+    # FEEDBACK PUSH
+
+    # has feedback been pushed out for this period?
+    feedback_sent = db.Column(db.Boolean(), default=False)
+
+    # who pushed the feedback?
+    feedback_push_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    feedback_push_by = db.relationship('User', foreign_keys=[feedback_push_id], uselist=False)
+
+    # timestamp when feedback was sent
+    feedback_push_timestamp = db.Column(db.DateTime())
+
+
+    # OLD FIELDS, TO BE REMOVED
+
+    # assigned marker
+    marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'), default=None)
+    marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False,
+                             backref=db.backref('marking_records', lazy='dynamic'))
+
+    # marking email sent to supervisor?
+    email_to_supervisor = db.Column(db.Boolean(), default=False)
+
+    # marking email sent to marker?
+    email_to_marker = db.Column(db.Boolean(), default=False)
 
     # supervisor positive feedback
     supervisor_positive = db.Column(db.Text())
@@ -9383,18 +9454,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # marker submission timestamp
     marker_timestamp = db.Column(db.DateTime())
 
-
-    # STUDENT FEEDBACK
-
-    # free-form feedback field
-    student_feedback = db.Column(db.Text())
-
-    # student feedback submitted
-    student_feedback_submitted = db.Column(db.Boolean())
-
-    # student feedback timestamp
-    student_feedback_timestamp = db.Column(db.DateTime())
-
     # faculty acknowledge
     acknowledge_feedback = db.Column(db.Boolean())
 
@@ -9407,28 +9466,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # faculty response timestamp
     faculty_response_timestamp = db.Column(db.DateTime())
 
-
-    # ROLES
-
-    # 'roles' member created by back-reference from SubmissionRole
-
-
-    # PRESENTATIONS
-
-    # 'presentation_feedback' member created by back-reference from PresentationFeedback
-
-
-    # FEEDBACK PUSH
-
-    # has feedback been pushed out for this period?
-    feedback_sent = db.Column(db.Boolean(), default=False)
-
-    # who pushed the feedback?
-    feedback_push_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    feedback_push_by = db.relationship('User', foreign_keys=[feedback_push_id], uselist=False)
-
-    # timestamp when feedback was sent
-    feedback_push_timestamp = db.Column(db.DateTime())
 
 
     @property
@@ -9473,6 +9510,89 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         # by default, other users see only the exam number
         return str(self.owner.student.exam_number)
+
+
+    def get_roles(self, role: str):
+        """
+        Return user instances corresponding to attached MatchingRole records for role type 'role'
+        :param role: specified role type
+        :return:
+        """
+        role = role.lower()
+        role_map = {'supervisor': MatchingRole.ROLE_SUPERVISOR,
+                    'marker': MatchingRole.ROLE_MARKER,
+                    'moderator': MatchingRole.ROLE_MODERATOR}
+
+        if role not in role_map:
+            raise KeyError('Unknown role "{role}" in MatchingRecord.get_roles()'.format(role=role))
+
+        role_id = role_map[role]
+
+        return db.session.query(User).select_from(self.roles) \
+            .filter(MatchingRole.role == role_id) \
+            .join(User, User.id == MatchingRole.user_id)
+
+
+    def get_role_ids(self, role: str):
+        """
+        Return a set of user ids for User instances obtained from get_roles()
+        :return:
+        """
+        return set(u.id for u in self.get_roles(role))
+
+
+    @property
+    def supervisor_roles(self):
+        """
+        Convenience function for get_roles() with role='supervisor'
+        :return:
+        """
+        return self.get_roles('supervisor')
+
+
+    @property
+    def supervisor_role_ids(self):
+        """
+        Convenience function for get_role_ids() with role='supervisor'
+        :return:
+        """
+        return self.get_role_ids('supervisor')
+
+
+    @property
+    def marker_roles(self):
+        """
+        Convenience function for get_roles() with role='marker'
+        :return:
+        """
+        return self.get_roles('marker')
+
+
+    @property
+    def marker_role_ids(self):
+        """
+        Convenience function for get_role_ids() with role='marker'
+        :return:
+        """
+        return self.get_role_ids('marker')
+
+
+    @property
+    def moderator_roles(self):
+        """
+        Convenience function for get_roles() with role='moderator'
+        :return:
+        """
+        return self.get_roles('moderator')
+
+
+    @property
+    def moderator_role_ids(self):
+        """
+        Convenience function for get_role_ids() with role='moderator'
+        :return:
+        """
+        return self.get_role_ids('moderator')
 
 
     @property
@@ -9931,27 +10051,49 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     def _check_access_control_users(self, asset, allow_student=False):
         modified = False
 
-        if self.supervisor is not None:
-            if not asset.has_access(self.supervisor.user):
-                asset.grant_user(self.supervisor.user)
-                modified = True
+        config: ProjectClassConfig = self.current_config
 
-        if self.marker is not None:
-            if not asset.has_access(self.marker.user):
-                asset.grant_user(self.marker.user)
-                modified = True
+        supervisor_roles: List[User] = self.supervisor_roles.all()
+        marker_roles: List[User] = self.marker_roles.all()
+        moderator_roles: List[User] = self.moderator_roles.all()
+
+        supervisor_ids: Set[int] = set(u.id for u in supervisor_roles)
+        marker_ids: Set[int] = set(u.id for u in marker_roles)
+        moderator_roles: Set[int] = [u.id for u in moderator_roles]
+
+        if config.uses_supervisor:
+            for u in supervisor_roles:
+                if not asset.has_access(u):
+                    asset.grant_user(u)
+                    modified = True
+
+        if config.uses_marker:
+            for u in marker_roles:
+                if not asset.has_access(u):
+                    asset.grant_user(u)
+                    modified = True
+
+        if config.uses_moderator:
+            for u in moderator_roles:
+                if not asset.has_access(u):
+                    asset.grant_user(u)
+                    modified = True
 
         for user in asset.access_control_list:
-            # OK for assigned supervisor to have download rights
-            if self.supervisor is not None and self.supervisor.id == user.id:
+            # OK for assigned supervisors to have download rights
+            if config.uses_supervisor and user.id in supervisor_ids:
                 continue
 
-            # OK for assigned marker to have download rights
-            if self.marker is not None and self.marker.id == user.id:
+            # OK for assigned markers to have download rights
+            if config.uses_marker and user.id in marker_roles:
+                continue
+
+            # OK for assigned moderators to have download rights
+            if config.uses_moderator and user.id in moderator_roles:
                 continue
 
             # if allow_student flag is set, OK for student to download their own report
-            if allow_student and self.owner.student.id == user.id:
+            if allow_student and user.id == self.owner.student.id:
                 continue
 
             # emit warning message to log
@@ -9996,21 +10138,33 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         """
         messages = []
 
-        exam_license = db.session.query(AssetLicense).filter_by(abbreviation='Exam').first()
+        # get current config
+        config: ProjectClassConfig = self.current_config
+
+        # get license used for exam submission
+        exam_license: AssetLicense = db.session.query(AssetLicense).filter_by(abbreviation='Exam').first()
 
         def _validate_report_access_control(asset, text_label):
-            if self.supervisor is not None:
-                if not asset.has_access(self.supervisor.user):
-                    messages.append('The project supervisor "{name}" does not have download permissions for the '
-                                    '{what}'.format(name=self.supervisor.user.name, what=text_label))
+            if config.uses_supervisor:
+                for u in self.supervisor_roles:
+                    if not asset.has_access(u):
+                        messages.append('"{name}" has been assigned a supervision role, but does not have download '
+                                        'permissions for the {what}'.format(name=u.name, what=text_label))
 
-            if self.marker is not None:
-                if not asset.has_access(self.marker.user):
-                    messages.append('The project marker "{name}" does not have download permissions for the '
-                                    '{what}'.format(name=self.marker.user.name, what=text_label))
+            if config.uses_marker:
+                for u in self.marker_roles:
+                    if not asset.has_access(u):
+                        messages.append('"{name}" has been assigned a marking role, but does not have download '
+                                        'permissions for the {what}'.format(name=u.name, what=text_label))
+
+            if config.uses_moderator:
+                for u in self.moderator_roles:
+                    if not asset.has_access(u):
+                        messages.append('"{name}" has been assigned a moderation role, but does not have download '
+                                        'permissions for the {what}'.format(name=u.name, what=text_label))
 
             if not asset.has_access(self.current_config.convenor.user):
-                messages.append('The project convenor for this submission period "{name}" does not have download '
+                messages.append('Project convenor "{name}" for this submission period does not have download '
                                 'permissions for the {what}'.format(name=self.current_config.convenor_name,
                                                                     what=text_label))
 
@@ -10021,23 +10175,28 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
 
         def _validate_attachment_access_control(asset):
-            if self.supervisor is not None:
-                if not asset.has_access(self.supervisor.user):
-                    messages.append('The project supervisor "{name}" does not have download permissions for the '
-                                    'attachment "{attach}"'.format(name=self.supervisor.user.name,
-                                                                   attach=asset.target_name))
+            if config.uses_supervisor:
+                for u in self.supervisor_roles:
+                    if not asset.has_access(u):
+                        messages.append('"{name}" has been assigned a supervision role, but does not have download '
+                                        'permissions for attachment "{attach}"'.format(name=u.name, attach=asset.target_name))
 
-            if self.marker is not None:
-                if not asset.has_access(self.marker.user):
-                    messages.append('The project marker "{name}" does not have download permissions for the '
-                                    'attachment "{attach}"'.format(name=self.marker.user.name,
-                                                                   attach=asset.target_name))
+            if config.uses_marker:
+                for u in self.marker_roles:
+                    if not asset.has_access(u):
+                        messages.append('"{name}" has been assigned a marking role, but does not have download '
+                                        'permissions for attachment "{attach}"'.format(name=u.name, attach=asset.target_name))
+
+            if config.uses_moderator:
+                for u in self.moderator_roles:
+                    if not asset.has_access(u):
+                        messages.append('"{name}" has been assigned a moderation role, but does not have download '
+                                        'permissions for attachment "{attach}"'.format(name=u.name, attach=asset.target_name))
 
             if not asset.has_access(self.current_config.convenor.user):
                 messages.append('The project convenor for this submission period "{name}" does not have download '
                                 'permissions for the attachment '
                                 '"{attach}"'.format(name=self.current_config.convenor_name, attach=asset.target_name))
-
 
         if self.period.closed and self.report is None:
             messages.append('This submission period is closed, but no report has been uploaded.')
@@ -10047,7 +10206,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         if self.processed_report is not None:
             _validate_report_access_control(self.processed_report, 'processed report')
-
 
         for item in self.attachments:
             item: SubmissionAttachment
@@ -11592,6 +11750,35 @@ def _MatchingAttempt_delete_handler(mapper, connection, target):
         _delete_MatchingAttempt_cache(target.id)
 
 
+class MatchingRole(db.Model, SubmissionRoleTypesMixin):
+    """
+    Analogue of SubmissionRole for a MatchingRecord
+    """
+    __tablename__ = 'matching_roles'
+
+
+    # unique ID for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # owning user (does not have to be a FacultyData instance, but usually will be)
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    user = db.relationship('User', foreign_keys=[user_id], uselist=False,
+                           backref=db.backref('matching_roles', lazy='dynamic'))
+
+    # role identifier, drawn from SubmissionRoleTypesMixin
+    role = db.Column(db.Integer(), default=SubmissionRoleTypesMixin.ROLE_SUPERVISOR, nullable=False)
+
+    @validates('role')
+    def _validate_role(self, key, value):
+        if value < self._MIN_ROLE:
+            value = self._MIN_ROLE
+
+        if value > self._MAX_ROLE:
+            value = self._MAX_ROLE
+
+        return value
+
+
 @cache.memoize()
 def _MatchingRecord_current_score(id):
     obj = db.session.query(MatchingRecord).filter_by(id=id).one()
@@ -11657,20 +11844,37 @@ def _MatchingRecord_is_valid(id):
     obj: MatchingRecord = db.session.query(MatchingRecord).filter_by(id=id).one()
     attempt: MatchingAttempt = obj.matching_attempt
     project: LiveProject = obj.project
-    supervisor: FacultyData = project.owner if project is not None else None
-    marker: FacultyData = obj.marker
+
+    supervisor_roles: List[User] = project.supervisor_roles.all()
+    marker_roles: List[User] = project.marker_roles.all()
+    moderator_roles: List[User] = project.moderator_roles.all()
+
+    supervisor_ids: Set[int] = set(u.id for u in supervisor_roles)
+    marker_ids: Set[int] = set(u.id for u in marker_roles)
+    moderator_ids: Set[int] = set(u.id for u in moderator_roles)
+
     pclass: ProjectClass = project.config.project_class
+    config: ProjectClassConfig = project.config
 
     errors = {}
     warnings = {}
 
-    # 1. SUPERVISOR AND MARKER SHOULD NOT BE THE SAME PERSON
-    if obj.supervisor_id == obj.marker_id:
-        errors[('basic', 0)] = 'Supervisor and marker are the same'
+    # 1. SUPERVISOR, MARKER AND MODERATOR ROLES SHOULD BE DISTINCT
+    a = supervisor_ids.intersection(marker_ids)
+    if len(a) > 0:
+        errors[('basic', 0)] = 'Some supervisor and marker roles coincide'
+    
+    b = supervisor_ids.intersection(moderator_ids)
+    if len(b) > 0:
+        errors[('basic', 1)] = 'Some supervisor and moderator roles coincide'
+    
+    c = marker_ids.intersection(moderator_ids)
+    if len(c) > 0:
+        errors[('basic', 2)] = 'Some marker and moderator roles coincide'
 
-    # 2. IF THERE IS A SUBMISSION LIST, WARN IF ASSIGNED SUPERVISOR IS NOT ON THIS LIST
+    # 2. IF THERE IS A SUBMISSION LIST, WARN IF ASSIGNED PROJECT IS NOT ON THIS LIST
     if obj.selector.has_submission_list and obj.selector.project_rank(obj.project_id) is None:
-        errors[('assignment', 0)] = "Assigned project does not appear in this selector's choices"
+        errors[('assignment', 0)] = "Assigned project did not appear in this selector's choices"
 
     # 3. IF THERE WAS AN ACCEPTED CUSTOM OFFER, WARN IF ASSIGNED SUPERVISOR IS NOT THE ONE IN THE OFFER
     if obj.selector.has_accepted_offer:
@@ -11685,13 +11889,37 @@ def _MatchingRecord_is_valid(id):
     if project.config_id != obj.selector.config_id:
         errors[('pclass', 0)] = 'Assigned project does not belong to the correct class for this selector'
 
-    # 5. SUPERVISOR SHOULD BE ENROLLED FOR THIS PROJECT CLASS
-    if supervisor is not None:
-        supervisor_enrolment: EnrollmentRecord = supervisor.get_enrollment_record(pclass)
-        if supervisor_enrolment is None or supervisor_enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-            errors[('enrolment', 0)] = 'Supervisor for assigned project is not currently enrolled for this project class'
+    # 5. STAFF WITH SUPERVISOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
+    for u in supervisor_roles:
+        if u.faculty_data is not None:
+            enrolment: EnrollmentRecord = u.get_enrollment_record(pclass)
+            if enrolment is None or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+                errors[('enrolment', 0)] = '"{name}" has been assigned a supervision role, but is not currently ' \
+                                           'enrolled for this project class'.format(name=u.name)
+        else:
+            warnings[('enrolment', 0)] = '"{name}" has been assigned a supervision role, but is not a faculty member'
 
-    # 6. PROJECT SHOULD NOT BE MULTIPLY ASSIGNED TO SAME SELECTOR BUT A DIFFERENT SUBMISSION PERIOD
+    # 6. STAFF WITH MARKER ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
+    for u in marker_roles:
+        if u.faculty_data is not None:
+            enrolment: EnrollmentRecord = u.get_enrollment_record(pclass)
+            if enrolment is None or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED:
+                errors[('enrolment', 1)] = '"{name}" has been assigned a marking role, but is not currently ' \
+                                           'enrolled for this project class'.format(name=u.name)
+        else:
+            warnings[('enrolment', 1)] = '"{name}" has been assigned a marking role, but is not a faculty member'
+
+    # 7. STAFF WITH SUPERVISOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
+    for u in moderator_roles:
+        if u.faculty_data is not None:
+            enrolment: EnrollmentRecord = u.get_enrollment_record(pclass)
+            if enrolment is None or enrolment.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED:
+                errors[('enrolment', 2)] = '"{name}" has been assigned a moderation role, but is not currently ' \
+                                           'enrolled for this project class'.format(name=u.name)
+        else:
+            warnings[('enrolment', 3)] = '"{name}" has been assigned a moderation role, but is not a faculty member'
+
+    # 8. PROJECT SHOULD NOT BE MULTIPLY ASSIGNED TO SAME SELECTOR BUT A DIFFERENT SUBMISSION PERIOD
     count = get_count(attempt.records.filter_by(selector_id=obj.selector_id,
                                                 project_id=obj.project_id))
 
@@ -11706,26 +11934,32 @@ def _MatchingRecord_is_valid(id):
             errors[('assignment', 2)] = 'Project "{name}" is duplicated in multiple submission ' \
                                           'periods'.format(name=project.name)
 
-    # 7. ASSIGNED MARKER SHOULD BE COMPATIBLE WITH ASSIGNED PROJECT
-    if obj.selector.config.uses_marker:
-        count = get_count(project.assessor_list_query.filter(FacultyData.id == obj.marker_id))
+    # 9. ASSIGNED MARKERS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
+    # (unambiguous to use config here since #4 checks config agrees with obj.selector.config)
+    if config.uses_marker:
+        for u in marker_roles:
+            count = get_count(project.assessor_list_query.filter(FacultyData.id == u.id))
 
-        if count != 1:
-            errors[('assignment', 3)] = 'Assigned marker is not compatible with assigned project'
+            if count != 1:
+                errors[('assignment', 3)] = 'Assigned marker "{name}" is not in assessor pool for ' \
+                                            'assigned project'.format(name=u.name)
 
-    # 8. ASSIGNED MARKER SHOULD BE ENROLLED FOR THIS PROJECT CLASS
-    if marker is not None:
-        marker_enrolment: EnrollmentRecord = marker.get_enrollment_record(pclass)
-        if marker_enrolment is None or marker_enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED:
-            errors[('enrolment', 1)] = 'Assigned marker is not currently enrolled for this project class'
+    # 10. ASSIGNED MODERATORS SHOULD: BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
+    if config.uses_moderator:
+        for u in moderator_roles:
+            count = get_count(project.assessor_list_query.filter(FacultyData.id == u.id))
 
-    # 9. ASSIGNED PROJECT SHOULD NOT BE OVERASSIGNED
+            if count != 1:
+                errors[('assignment', 4)] = 'Assigned moderator "{name}" is not in assessor pool for ' \
+                                            'assigned project'.format(name=u.name)
+
+    # 11. ASSIGNED PROJECT SHOULD NOT BE OVERASSIGNED
     # (we have to ask our parent MatchingAttempt for help with this)
     flag, msg = attempt.is_project_overassigned(project)
     if flag:
         errors[('overassigned', 0)] = msg
 
-    # 10. SELECTOR SHOULD BE MARKED FOR CONVERSION
+    # 12. SELECTOR SHOULD BE MARKED FOR CONVERSION
     if not obj.selector.convert_to_submitter:
         # only refuse to validate if we are the first member of the multiplet
         lo_rec = attempt.records \
@@ -11733,39 +11967,10 @@ def _MatchingRecord_is_valid(id):
 
         if lo_rec is not None and lo_rec.id == obj.id:
             warnings[('conversion', 1)] = 'Selector "{name}" is not marked for conversion to submitter, ' \
-                                          'but is included in this matching'.format(name=obj.selector.student.user.name)
+                                          'but is present in this matching'.format(name=obj.selector.student.user.name)
 
     is_valid = (len(errors) == 0)
     return is_valid, errors, warnings
-
-
-class MatchingRole(db.Model, SubmissionRoleTypesMixin):
-    """
-    Analogue of SubmissionRole for a MatchingRecord
-    """
-    __tablename__ = 'matching_roles'
-
-
-    # unique ID for this record
-    id = db.Column(db.Integer(), primary_key=True)
-
-    # owning user (does not have to be a FacultyData instance, but usually will be)
-    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    user = db.relationship('User', foreign_keys=[user_id], uselist=False,
-                           backref=db.backref('matching_roles', lazy='dynamic'))
-
-    # role identifier, drawn from SubmissionRoleTypesMixin
-    role = db.Column(db.Integer(), default=SubmissionRoleTypesMixin.ROLE_SUPERVISOR, nullable=False)
-
-    @validates('role')
-    def _validate_role(self, key, value):
-        if value < self._MIN_ROLE:
-            value = self._MIN_ROLE
-
-        if value > self._MAX_ROLE:
-            value = self._MAX_ROLE
-
-        return value
 
 
 class MatchingRecord(db.Model):
@@ -11901,27 +12106,87 @@ class MatchingRecord(db.Model):
         return self._filter(self._warnings, include, omit)
 
 
-    @property
-    def supervisor(self):
+    def get_roles(self, role: str):
         """
-        supervisor is just a pass-through to the assigned project owner
+        Return user instances corresponding to attached MatchingRole records for role type 'role'
+        :param role: specified role type
         :return:
         """
-        if self.project:
-            return self.project.owner
-        return None
+        role = role.lower()
+        role_map = {'supervisor': MatchingRole.ROLE_SUPERVISOR,
+                    'marker': MatchingRole.ROLE_MARKER,
+                    'moderator': MatchingRole.ROLE_MODERATOR}
+
+        if role not in role_map:
+            raise KeyError('Unknown role in MatchingRecord.get_roles()')
+
+        role_id = role_map[role]
+
+        return db.session.query(User).select_from(self.roles) \
+            .filter(MatchingRole.role == role_id) \
+            .join(User, User.id == MatchingRole.user_id)
+
+
+    def get_role_ids(self, role: str):
+        """
+        Return a set of user ids for User instances obtained from get_roles()
+        :return:
+        """
+        return set(u.id for u in self.get_roles(role))
 
 
     @property
-    def supervisor_id(self):
+    def supervisor_roles(self):
         """
-        supervisor_id is just a pass-through to the assigned project owner
-
+        Convenience function for get_roles() with role='supervisor'
         :return:
         """
-        if self.project:
-            return self.project.owner_id
-        return None
+        return self.get_roles('supervisor')
+
+
+    @property
+    def supervisor_role_ids(self):
+        """
+        Convenience function for get_role_ids() with role='supervisor'
+        :return:
+        """
+        return self.get_role_ids('supervisor')
+
+
+    @property
+    def marker_roles(self):
+        """
+        Convenience function for get_roles() with role='marker'
+        :return:
+        """
+        return self.get_roles('marker')
+
+
+    @property
+    def marker_role_ids(self):
+        """
+        Convenience function for get_role_ids() with role='marker'
+        :return:
+        """
+        return self.get_role_ids('marker')
+
+
+    @property
+    def moderator_roles(self):
+        """
+        Convenience function for get_roles() with role='moderator'
+        :return:
+        """
+        return self.get_roles('moderator')
+
+
+    @property
+    def moderator_role_ids(self):
+        """
+        Convenience function for get_role_ids() with role='moderator'
+        :return:
+        """
+        return self.get_role_ids('moderator')
 
 
     @property

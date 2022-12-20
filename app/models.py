@@ -6178,8 +6178,6 @@ class SubmissionPeriodRecord(db.Model):
             raise KeyError('Unknown order type "{type}" in '
                            'SubmissionPeriodRecord._ordered_records_query()'.format(type=order_by))
 
-        raw = self._unordered_records_query(user, role)
-
         query =  self._unordered_records_query(user, role) \
             .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
 

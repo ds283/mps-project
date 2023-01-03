@@ -54,14 +54,14 @@
                         <div class="card-body">
                             <span class="dashboard-subtitle">Positive aspects</span>
                             {% if record.supervisor_positive %}
-                                {{ record.supervisor_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                {{ record.supervisor_positive|latextomarkdown|markdown|bclean|blinkify|safe }}
                             {% else %}
                                 <p>Feedback from supervisor not yet recorded.</p>
                             {% endif %}
                             <hr class="intro-divider">
                             <span class="dashboard-subtitle">Negative aspects</span>
                             {% if record.supervisor_negative %}
-                                {{ record.supervisor_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                {{ record.supervisor_negative|latextomarkdown|markdown|bclean|blinkify|safe }}
                             {% else %}
                                 <p>Feedback from supervisor not yet recorded.</p>
                             {% endif %}
@@ -94,14 +94,14 @@
                         <div class="card-body">
                             <span class="dashboard-subtitle">Positive aspects</span>
                             {% if record.marker_positive %}
-                                {{ record.marker_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                {{ record.marker_positive|latextomarkdown|markdown|bclean|blinkify|safe }}
                             {% else %}
                                 <p>Feedback from marker not yet recorded.</p>
                             {% endif %}
                             <hr class="intro-divider">
                             <span class="dashboard-subtitle">Negative aspects</span>
                             {% if record.marker_negative %}
-                                {{ record.marker_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                {{ record.marker_negative|latextomarkdown|markdown|bclean|blinkify|safe }}
                             {% else %}
                                 <p>Feedback from marker not yet recorded.</p>
                             {% endif %}
@@ -146,10 +146,10 @@
                         </div>
                         <div class="card-body">
                             <span class="dashboard-subtitle">Positive aspects</span>
-                            {{ feedback.positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            {{ feedback.positive|latextomarkdown|markdown|bclean|blinkify|safe }}
                             <hr class="intro-divider">
                             <span class="dashboard-subtitle">Negative aspects</span>
-                            {{ feedback.negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            {{ feedback.negative|latextomarkdown|markdown|bclean|blinkify|safe }}
                         </div>
                     </div>
                 {% endfor %}
@@ -179,11 +179,11 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        {{ record.student_feedback|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                        {{ record.student_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
                     </div>
                     {% if record.faculty_response_submitted or (record.faculty_response and preview) %}
                         <div class="card-footer">
-                            {{ record.faculty_response|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            {{ record.faculty_response|latextomarkdown|markdown|bclean|blinkify|safe }}
                         </div>
                     {% endif %}
                 </div>

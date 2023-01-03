@@ -17,7 +17,7 @@
         <div class="card mt-3 mb-3">
             <div class="card-header">Student feedback</div>
             <div class="card-body">
-                {{ record.student_feedback|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                {{ record.student_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
             </div>
         </div>
 

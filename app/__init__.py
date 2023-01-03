@@ -266,8 +266,8 @@ def create_app():
                     current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
 
-    @app.template_filter('dealingwithdollars')
-    def dealingwithdollars(latex_string):
+    @app.template_filter('latextomarkdown')
+    def latextomarkdown(latex_string):
         if latex_string is None:
             return r'<div class="alert alert-danger">An empty string was supplied. ' \
                    r'Please check your project description.</div>'

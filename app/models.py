@@ -12083,7 +12083,7 @@ def _PresentationAssessment_is_valid(id):
     return True, errors, warnings
 
 
-class PresentationAssessment(db.Model, EditingMetadataMixin):
+class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequestStateMixin):
     """
     Store data for a presentation assessment
     """

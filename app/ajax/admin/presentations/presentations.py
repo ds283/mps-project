@@ -197,10 +197,9 @@ _menu = \
 
 
 def presentation_assessments_data(assessments):
-
-    data=[{'name': render_template_string(_name, a=a),
-           'periods': render_template_string(_periods, a=a),
-           'sessions': render_template_string(_sessions, a=a),
-           'menu': render_template_string(_menu, a=a)} for a in assessments]
+    data = [{'name': render_template_string(_name, a=a),
+             'periods': render_template_string(_periods, a=a),
+             'sessions': render_template_string(_sessions, a=a),
+             'menu': render_template_string(_menu, a=a)} for a in assessments]
 
     return jsonify(data)

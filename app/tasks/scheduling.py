@@ -499,6 +499,18 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
                 sum([S[(k, i)] * int(period_dict[k].max_group_size) for k in range(number_periods)])
         constraints += 1
 
+    # each slot should have no more talks than the available capacity of the room
+    for i in range(number_slots):
+        slot: ScheduleSlot = slot_dict[i]
+        room: Room = slot.room
+        room_capacity = int(room.capacity)
+
+        # the combination room_capacity - number_assessors could theoretically be negative, but if it is
+        # that is harmless: it will just prevent any talks being scheduled in this slot
+        prob += sum([X[(j, i)] for j in range(number_talks)]) <= \
+                sum([S[(k, i)] * (room_capacity - int(period_dict[k].number_assessors)) for k in range(number_periods)])
+        constraints += 1
+
 
     # TALKS SHOULD NOT CLASH WITH OTHER TALKS BELONGING TO THE SAME PROJECT, IF THAT OPTION IS SET
     # (talk should also be scheduled only with other talks belonging to the same project class, but

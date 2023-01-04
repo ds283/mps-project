@@ -13795,21 +13795,41 @@ def _ScheduleAttempt_delete_handler(mapper, connection, target):
 
 @cache.memoize()
 def _ScheduleSlot_is_valid(id):
-    obj = db.session.query(ScheduleSlot).filter_by(id=id).one()
+    obj: ScheduleSlot = db.session.query(ScheduleSlot).filter_by(id=id).one()
 
     errors = {}
     warnings = {}
 
-
-    # CONSTRAINT 1. NUMBER OF TALKS SHOULD BE LESS THAN PRESCRIBED MAXIMUM
+    # CONSTRAINT 1a. NUMBER OF TALKS SHOULD BE LESS THAN PRESCRIBED MAXIMUM
     num_talks = get_count(obj.talks)
     if num_talks > 0:
-        tk = obj.talks.first()
-        expected_size = tk.period.max_group_size
+        expected_size = max(tk.period.max_group_size for tk in obj.talks)
 
         if num_talks > expected_size:
-            errors[('basic', 0)] = 'Too many talks scheduled in this slot ' \
-                                   '(scheduled={sch}, max={max})'.format(sch=num_talks, max=expected_size)
+            errors[('basic', 0)] = 'This slot has a maximum group size {max}, but {sch} talks have ' \
+                                   'been scheduled'.format(sch=num_talks, max=expected_size)
+
+    # CONSTRAINT 1b. NUMBER OF TALKS SHOULD BE LESS THAN THE CAPACITY OF THE ROOM, MINUS THE NUMBER OF ASSESSORS
+    if num_talks > 0:
+        room: Room = obj.room
+        tk: SubmissionRecord = obj.talks.first()
+        period: SubmissionPeriodRecord = tk.period
+
+        room_capacity = room.capacity
+        num_assessors = period.number_assessors
+
+        max_talks = room_capacity - num_assessors
+        if max_talks < 0:
+            max_talks = 0
+
+        if max_talks <= 0:
+            errors[('basic', 1)] = 'Room "{name}" has maximum student capacity {max} (room capacity={rc}, ' \
+                                   'number assessors={na})'.format(name=room.full_name, max=max_talks,
+                                                                   rc=room.capacity, na=num_assessors)
+        elif num_talks > max_talks:
+            errors[('basic', 2)] = 'Room "{name}" has maximum student capacity {max}, but {nt} talks have been ' \
+                                   'scheduled in this slot'.format(name=room.full_name, max=max_talks,
+                                                                   nt=num_talks)
 
 
     # CONSTRAINT 2. TALKS SHOULD USUALLY BY DRAWN FROM THE SAME PROJECT CLASS (OR EQUIVALENTLY, SUBMISSION PERIOD)

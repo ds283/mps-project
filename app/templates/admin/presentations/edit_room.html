@@ -36,7 +36,9 @@
         {{ wtf.render_field(form.maximum_occupancy) }}
         {{ wtf.render_field(form.lecture_capture) }}
 
-        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        <div class="mt-2">
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        </div>
 
     </form>
 {% endblock %}

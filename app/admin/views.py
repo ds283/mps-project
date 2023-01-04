@@ -9012,6 +9012,7 @@ def edit_room(id):
 
     if form.validate_on_submit():
         data.name = form.name.data
+        data.building = form.building.data
         data.capacity = form.capacity.data
         data.lecture_capture = form.lecture_capture.data
         data.maximum_occupancy = form.maximum_occupancy.data

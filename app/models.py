@@ -12212,12 +12212,12 @@ class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequest
 
     @property
     def number_slots(self):
-        return sum([sess.number_slots for sess in self.sessions])
+        return sum(s.number_slots for s in self.sessions)
 
 
     @property
     def number_rooms(self):
-        return sum([sess.number_rooms for sess in self.sessions])
+        return sum(s.number_rooms for s in self.sessions)
 
 
     @property
@@ -12227,7 +12227,7 @@ class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequest
 
     @property
     def number_talks(self):
-        return sum([p.number_projects for p in self.submission_periods])
+        return sum(p.number_projects for p in self.submission_periods)
 
 
     @property
@@ -13158,7 +13158,7 @@ class PresentationSession(db.Model, EditingMetadataMixin, PresentationSessionTyp
 
     @property
     def number_slots(self):
-        return sum(r.maximum_occupany for r in self.rooms)
+        return sum(r.maximum_occupancy for r in self.rooms)
 
 
     @property

@@ -26,7 +26,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, TemporaryAsset, User, \
     ScheduleEnumeration, SubmissionRecord, SubmissionPeriodRecord, AssessorAttendanceData, \
-    EnrollmentRecord, SubmitterAttendanceData, PresentationSession, Room
+    EnrollmentRecord, SubmitterAttendanceData, PresentationSession, Room, FacultyData
 from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename, \
     canonical_generated_asset_filename
 from ..shared.sqlalchemy import get_count
@@ -317,7 +317,7 @@ def _reconstruct_XY(self, old_record, number_talks, number_assessors, number_slo
         k = reverse_slot_dict[(slot.session_id, slot.room_id)]
 
         for talk in slot.talks:
-            if talk.id in talk_to_number:                   # key might be missing if this talk has been removed; is so, just ignore
+            if talk.id in talk_to_number:                   # key might be missing if this talk has been removed; if so, just ignore
                 i = talk_to_number[talk.id]
                 X[(i, k)] = 1
 
@@ -620,7 +620,7 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     return prob, X, Y
 
 
-def _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_slots,
+def _store_PuLP_solution(X, Y, record: ScheduleAttempt, number_talks, number_assessors, number_slots,
                          talk_dict, assessor_dict, slot_dict):
     """
     Store a solution to the talk scheduling problem
@@ -639,7 +639,7 @@ def _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_sl
     store_slots = []
 
     for i in range(number_slots):
-        slot = slot_dict[i]
+        slot: ScheduleSlot = slot_dict[i]
 
         # we only store slots that are scheduled
         store = False
@@ -648,7 +648,7 @@ def _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_sl
             X[(j, i)].round()
             if pulp.value(X[(j, i)]) == 1:
                 store = True
-                talk = talk_dict[j]
+                talk: SubmissionRecord = talk_dict[j]
 
                 if talk not in slot.talks:
                     slot.talks.append(talk)
@@ -657,8 +657,10 @@ def _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_sl
         for j in range(number_assessors):
             Y[(j, i)].round()
             if pulp.value(Y[(j, i)]) == 1:
-                store = True
-                assessor = assessor_dict[j]
+                assessor: FacultyData = assessor_dict[j]
+
+                # no need to set store = True here; we only store this slot if it actually has
+                # some assigned talks
 
                 if assessor not in slot.assessors:
                     slot.assessors.append(assessor)

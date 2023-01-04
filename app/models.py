@@ -12210,6 +12210,11 @@ class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequest
 
     @property
     def number_slots(self):
+        return sum([sess.number_slots for sess in self.sessions])
+
+
+    @property
+    def number_rooms(self):
         return sum([sess.number_rooms for sess in self.sessions])
 
 
@@ -13149,6 +13154,10 @@ class PresentationSession(db.Model, EditingMetadataMixin, PresentationSessionTyp
     def number_rooms(self):
         return get_count(self.rooms)
 
+    @property
+    def number_slots(self):
+        return sum(r.maximum_occupany for r in self.rooms)
+
 
     @property
     def _faculty(self):
@@ -13368,6 +13377,10 @@ class Room(db.Model, EditingMetadataMixin):
 
     # room has lecture capture?
     lecture_capture = db.Column(db.Boolean())
+
+    # maximum allowable occupancy (i.e., multiple groups are allowed to be scheduled in the same room)
+    # This could be phsyical (maybe the room can be partitioned), or can be used to model e.g. Zoom teleconference rooms
+    maximum_occupancy = db.Column(db.Integer(), default=1, nullable=False)
 
     # active flag
     active = db.Column(db.Boolean())
@@ -13976,6 +13989,9 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
     # room
     room_id = db.Column(db.Integer(), db.ForeignKey('rooms.id'))
     room = db.relationship('Room', foreign_keys=[room_id], uselist=False)
+
+    # occupancy label
+    occupancy_label = db.Column(db.Integer(), nullable=False)
 
     # assessors attached to this slot
     assessors = db.relationship('FacultyData', secondary=faculty_to_slots, lazy='dynamic',

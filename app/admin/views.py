@@ -8916,12 +8916,23 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
         db.session.delete(target)
 
     elif target is None and source is not None:
+        # find first free occupancy label for this room in the target schedule
+        max_label = db.session.query(func.max(ScheduleSlot.occupancy_label)).filter_by(owner_id=target_schedule.id,
+                                                                                       session_id=source.session_id,
+                                                                                       room_id=source.room_id).scalar()
+
+        if max_label is None:
+            slot_label = 1
+        else:
+            slot_label = int(max_label) + 1
+
         # create new target slot
         data = ScheduleSlot(owner_id=target_schedule.id,
                             session_id=source.session_id,
                             room_id=source.room_id,
                             assessors=source.assessors,
                             talks=source.talks,
+                            occupancy_label=slot_label,
                             original_assessors=source.original_assessors,
                             original_talks=source.original_talks)
         db.session.add(data)
@@ -8970,14 +8981,14 @@ def add_room():
         flash('No buildings are available. Set up at least one active building before adding a room.', 'error')
         return redirect(redirect_url())
 
-    form = AddRoomForm(request.form)
+    form: AddRoomForm = AddRoomForm(request.form)
 
     if form.validate_on_submit():
-
         data = Room(building_id=form.building.data.id,
                     name=form.name.data,
                     capacity=form.capacity.data,
                     lecture_capture=form.lecture_capture.data,
+                    maximum_occupancy=form.maximum_occupancy.data,
                     active=True,
                     creator_id=current_user.id,
                     creation_timestamp=datetime.now())
@@ -8994,15 +9005,16 @@ def add_room():
 @roles_required('root')
 def edit_room(id):
     # id is a Room
-    data = Room.query.get_or_404(id)
+    data: Room = Room.query.get_or_404(id)
 
-    form = EditRoomForm(obj=data)
+    form: EditRoomForm = EditRoomForm(obj=data)
     form.room = data
 
     if form.validate_on_submit():
         data.name = form.name.data
         data.capacity = form.capacity.data
         data.lecture_capture = form.lecture_capture.data
+        data.maximum_occupancy = form.maximum_occupancy.data
 
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()

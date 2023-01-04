@@ -26,7 +26,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, TemporaryAsset, User, \
     ScheduleEnumeration, SubmissionRecord, SubmissionPeriodRecord, AssessorAttendanceData, \
-    EnrollmentRecord, SubmitterAttendanceData
+    EnrollmentRecord, SubmitterAttendanceData, PresentationSession, Room
 from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename, \
     canonical_generated_asset_filename
 from ..shared.sqlalchemy import get_count
@@ -676,11 +676,17 @@ def _create_slots(self, record):
     # add database records for each available slot (meaning a combination of session+room);
     # the ones we don't use will be cleaned up later
     for sess in record.owner.sessions:
+        sess: PresentationSession
+
         for room in sess.rooms:
-            slot = ScheduleSlot(owner_id=record.id,
-                                session_id=sess.id,
-                                room_id=room.id)
-            db.session.add(slot)
+            room: Room
+
+            for s in range(1, room.maximum_occupancy):
+                slot = ScheduleSlot(owner_id=record.id,
+                                    session_id=sess.id,
+                                    occupancy_label=s,
+                                    room_id=room.id)
+                db.session.add(slot)
 
     try:
         db.session.commit()
@@ -1278,9 +1284,11 @@ def register_scheduling_tasks(celery):
             # duplicate all slots
             slot_map = {}
             for slot in record.slots:
+                slot: ScheduleSlot
                 rec = ScheduleSlot(owner_id=data.id,
                                    session_id=slot.session_id,
                                    room_id=slot.room_id,
+                                   occupancy_label=slot.occupancy_label,
                                    assessors=slot.assessors,
                                    talks=slot.talks,
                                    original_assessors=slot.assessors,

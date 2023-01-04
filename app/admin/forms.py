@@ -14,7 +14,7 @@ from functools import partial
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, BooleanField, SubmitField, \
     TextAreaField, DateTimeField, FloatField, RadioField, ValidationError
-from wtforms.validators import InputRequired, Optional, Length, URL
+from wtforms.validators import InputRequired, Optional, Length, URL, NumberRange
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..manage_users.forms import ResearchGroupMixin
@@ -1135,6 +1135,18 @@ class RoomMixin():
 
     capacity = IntegerField('Capacity', description='How many people will this room accommodate?',
                             validators=[InputRequired('Enter the number of people who can be accommodated')])
+
+    maximum_occupancy = IntegerField('Maximum number of occupying groups',
+                                     description='Some rooms may be physically partitioned, allowing multiple groups '
+                                                 'to be specified in the same space. Alternatively, this can be used to '
+                                                 'model teleconference meeting rooms such as Zoom rooms, where multiple '
+                                                 'groups will be assigned to the same "venue" even though they are '
+                                                 'really distinct.',
+                                     validators=[
+                                         InputRequired('Enter the maximum number of occupying groups. Enter 1 if '
+                                                       'the room can only be singly occupupied.'),
+                                         NumberRange(min=1, max=100, message='The specified occupancy should be '
+                                                                             'between 1 and 100.')])
 
     lecture_capture = BooleanField('Lecture capture available')
 

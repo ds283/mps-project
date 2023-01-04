@@ -3178,6 +3178,8 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return db.session.query(PresentationAssessment) \
             .join(query, query.c.assessment_id == PresentationAssessment.id) \
             .filter(PresentationAssessment.year == _get_current_year(),
+                    PresentationAssessment.skip_availability != True,
+                    PresentationAssessment.requested_availability == True,
                     PresentationAssessment.availability_closed == False) \
             .order_by(PresentationAssessment.name.asc())
 

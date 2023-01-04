@@ -69,7 +69,7 @@ _global_name = \
 {% set constraints = s.number_unavailable %}
 {% if constraints > 0 %}
     &emsp;
-    <span class="badge bg-warning text-dark">{{ constraints }} session constraints</span>
+    <span class="badge bg-warning text-dark">{{ constraints }} session constraint{%- if constraints != 1 -%}s{%- endif -%}</span>
 {% endif %}
 """
 
@@ -85,7 +85,8 @@ _project_name = \
     </div>
     <div>
         <a class="badge text-decoration-none text-nohover-dark bg-info" href="{{ url_for('convenor.attach_assessors', id=p.parent_id, pclass_id=p.config.pclass_id, url=url, text=text) }}">
-            {{ p.number_assessors }} assessors
+            {% set assessors = p.number_assessors %}
+            {{ assessors }} assessor{%- if assessors != 1 -%}s{%- endif -%}
         </a>
     </div>
 {% endif %}

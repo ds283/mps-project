@@ -69,6 +69,10 @@
                 </div>
             {% endif %}
 
+            <div class="d-flex flex-row justify-content-end gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.submitter_session_all_available', s_id=sess.id) }}"><i class="fas fa-check"></i> Available for all</a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.submitter_session_all_unavailable', s_id=sess.id) }}"><i class="fas fa-times"></i> Not available for all</a>
+            </div>
             <table id="attendee-table" class="table table-striped table-bordered">
                 <thead>
                     <tr>

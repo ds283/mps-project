@@ -41,9 +41,9 @@
                                 <div class="d-flex flex-row justify-content-end gap-2">
                                     {% if session.submitter_available(submitter.id) %}
                                         <a class="btn btn-success btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-check"></i> Available</a>
-                                        <a {% if editabke %}href="{{ url_for('admin.submitter_unavailable', sess_id=session.id, s_id=submitter.id) }}"{% endif %} class="btn btn-outline-secondary btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-times"></i> Not available</a>
+                                        <a {% if editable %}href="{{ url_for('admin.submitter_unavailable', sess_id=session.id, s_id=submitter.id) }}"{% endif %} class="btn btn-outline-secondary btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-times"></i> Not available</a>
                                     {% else %}
-                                        <a {% if editabke %}href="{{ url_for('admin.submitter_available', sess_id=session.id, s_id=submitter.id) }}"{% endif %} class="btn btn-outline-secondary btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-check"></i> Available</a>
+                                        <a {% if editable %}href="{{ url_for('admin.submitter_available', sess_id=session.id, s_id=submitter.id) }}"{% endif %} class="btn btn-outline-secondary btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-check"></i> Available</a>
                                         <a class="btn btn-danger btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-times"></i> Not available</a>
                                     {% endif %}
                                 </div>

@@ -87,7 +87,7 @@ _menu = \
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.edit_session', id=s.id) }}"{% endif %}>
             <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
-        {% set disabled = not a.requested_availability or a.is_deployed %}
+        {% set disabled = (not a.requested_availability and not a.skip_availability) or a.is_deployed %}
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.submitter_session_availability', id=s.id) }}"{% endif %}>
             <i class="fas fa-cogs fa-fw"></i> Submitters...
         </a>
@@ -106,7 +106,8 @@ _menu = \
 # language=jinja2
 _faculty = \
 """
-{% if s.owner.availability_lifecycle > s.owner.AVAILABILITY_NOT_REQUESTED %}
+{% set lifecycle = s.owner.availability_lifecycle %}
+{% if lifecycle > s.owner.AVAILABILITY_NOT_REQUESTED and lifecycle < s.owner.AVAILABILITY_SKIPPED %}
     {% set fac_available = s.number_available_faculty %}
     {% set fac_ifneeded = s.number_ifneeded_faculty %}
     {% set fac_unavailable = s.number_unavailable_faculty %}
@@ -132,6 +133,8 @@ _faculty = \
     {% else %}
         <span class="badge bg-primary">All submitters available</span>
     {% endif %}
+{% elif lifecycle == s.owner.AVAILABILITY_SKIPPED %}
+    <span class="badge bg-primary">Availability skipped</span>
 {% else %}
     <span class="badge bg-secondary">Not yet requested</span>
 {% endif %}

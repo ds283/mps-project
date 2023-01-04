@@ -22,27 +22,27 @@ _session_actions = \
             <a class="btn btn-sm btn-success {% if not editable %}disabled{% endif %}">
                 <i class="fas fa-check"></i> Available
             </a>
-            <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}"{% endif %}>
+            <a class="btn btn-sm btn-outline-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 If needed
             </a>
-            <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}"{% endif %}>
+            <a class="btn btn-sm btn-outline-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 <i class="fas fa-times"></i> Not available
             </a>
         {% elif ifneeded %}
-            <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}"{% endif %}>
+            <a class="btn btn-sm btn-outline-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 <i class="fas fa-check"></i> Available
             </a>
             <a class="btn btn-sm btn-warning {% if not editable %}disabled{% endif %}">
                 If needed
             </a>
-            <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}"{% endif %}>
+            <a class="btn btn-sm btn-outline-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 <i class="fas fa-times"></i> Not available
             </a>
         {% else %}
-            <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}"{% endif %}>
+            <a class="btn btn-sm btn-outline-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 <i class="fas fa-check"></i> Available
             </a>
-            <a class="btn btn-sm btn-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}"{% endif %}>
+            <a class="btn btn-sm btn-outline-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 If needed
             </a>
             <a class="btn btn-sm btn-danger {% if not editable %}disabled{% endif %}">

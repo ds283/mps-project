@@ -1125,6 +1125,8 @@ class AvailabilityRequestStateMixin:
     AVAILABILITY_REQUESTED = 1
     AVAILABILITY_CLOSED = 2
 
+    AVAILABILITY_SKIPPED = 10
+
 
 class PresentationSessionTypesMixin:
     """
@@ -1136,8 +1138,8 @@ class PresentationSessionTypesMixin:
     SESSION_TO_TEXT = {MORNING_SESSION: 'morning',
                        AFTERNOON_SESSION: 'afternoon'}
 
-    SESSION_LABEL_TYPES = {MORNING_SESSION: 'bg-light text-dark',
-                           AFTERNOON_SESSION: 'bg-dark'}
+    SESSION_LABEL_TYPES = {MORNING_SESSION: 'bg-secondary',
+                           AFTERNOON_SESSION: 'bg-secondary'}
 
 
 class ScheduleEnumerationTypesMixin:
@@ -4967,7 +4969,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     # have we skipped confirmation requests?
     requests_skipped = db.Column(db.Boolean(), default=False)
 
-    # who skipped them
+    # who skipped them?
     requests_skipped_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     requests_skipped_by = db.relationship('User', uselist=False, foreign_keys=[requests_skipped_id])
 
@@ -12119,8 +12121,18 @@ class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequest
     # can availabilities still be modified?
     availability_closed = db.Column(db.Boolean())
 
-    # what deadline has been set of availability information to be returned?
+    # what deadline has been set for availability information to be returned?
     availability_deadline = db.Column(db.Date())
+
+    # have availability requests been skipped?
+    skip_availability = db.Column(db.Boolean())
+
+    # who skipped availabiluty requests?
+    availability_skipped_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    availability_skipped_by = db.relationship('User', uselist=False, foreign_keys=[availability_skipped_id])
+
+    # requests skipped timestamp
+    availability_skipped_timestamp = db.Column(db.DateTime())
 
 
     # FEEDBACK LIFECYCLE
@@ -12146,13 +12158,16 @@ class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequest
 
     @property
     def availability_lifecycle(self):
-        if self.requested_availability is False:
-            return PresentationAssessment.AVAILABILITY_NOT_REQUESTED
+        if self.skip_availability:
+            return AvailabilityRequestStateMixin.AVAILABILITY_SKIPPED
 
-        if self.availability_closed is False:
-            return PresentationAssessment.AVAILABILITY_REQUESTED
+        if not self.requested_availability:
+            return AvailabilityRequestStateMixin.AVAILABILITY_NOT_REQUESTED
 
-        return PresentationAssessment.AVAILABILITY_CLOSED
+        if not self.availability_closed:
+            return AvailabilityRequestStateMixin.AVAILABILITY_REQUESTED
+
+        return AvailabilityRequestStateMixin.AVAILABILITY_CLOSED
 
 
     @property

@@ -40,6 +40,8 @@ _name = \
     {% endif %}
 {% elif state == a.AVAILABILITY_CLOSED %}
     <span class="badge bg-primary">Availability closed</span>
+{% elif state == a.AVAILABILITY_SKIPPED %}
+    <span class="badge bg-primary">Availability skipped</span>
 {% else %}
     <span class="badge bg-danger">Unknown lifecycle state</span>
 {% endif %}
@@ -145,6 +147,10 @@ _sessions = \
 # language=jinja2
 _menu = \
 """
+{% set requested_availability = a.requested_availability %}
+{% set skipped_availability = a.skip_availability %}
+{% set availability_closed = a.availability_closed %}
+{% set deployed = a.is_deployed %}
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -152,24 +158,21 @@ _menu = \
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <div class="dropdown-header">Scheduling</div>
         {% set valid = a.is_valid %}
-        {% set disabled = not valid and a.availability_lifecycle < a.AVAILABILITY_REQUESTED %}
-        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.assessment_availability', id=a.id) }}"{% endif %}>
-            <i class="fas fa-calendar fa-fw"></i> Assessor availability...
+        {% set disabled = (not valid) or a.availability_lifecycle == a.AVAILABILITY_SKIPPED %}
+        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.initialize_assessment', id=a.id) }}"{% endif %}>
+            <i class="fas fa-calendar fa-fw"></i> Initialize...
         </a>
-        {% set disabled = not a.availability_closed %}
+        {% set disabled = not availability_closed and not skipped_availability %}
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.assessment_schedules', id=a.id) }}"{% endif %}>
             <i class="fas fa-wrench fa-fw"></i> Edit schedules...
         </a>
         
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Edit assessment</div>
-        {% set requested_availability = a.requested_availability %}
-        {% set deployed = a.is_deployed %}
-        {% set disable_settings = requested_availability %}
-        {% set disable_submitters = not requested_availability %}
-        {% set disable_assessors = not requested_availability %}
+        {% set disable_submitters = not requested_availability and not skipped_availability %}
+        {% set disable_assessors = not requested_availability and not skipped_availability %}
         {% set disable_delete = deployed %}
-        <a class="dropdown-item d-flex gap-2 {% if disable_settings %}disabled{% endif %}" {% if not disable_settings %}href="{{ url_for('admin.edit_assessment', id=a.id) }}"{% endif %}>
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_assessment', id=a.id) }}">
             <i class="fas fa-sliders-h fa-fw"></i> Settings...
         </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.assessment_manage_sessions', id=a.id) }}">

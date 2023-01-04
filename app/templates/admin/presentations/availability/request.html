@@ -1,26 +1,34 @@
 {% import "bootstrap/form.html" as wtf %}
+
 {% from "macros.html" import date_field %}
+{% from "icon_block.html" import icon_block %}
 
 {% macro issue_requests(assessment, form) %}
     <div class="card border-danger mt-3 mb-3">
         <div class="card-header bg-danger text-white">Assessor availability for assessment <strong>{{ assessment.name }}</strong></div>
         <div class="card-body">
-            <p>Availability requests have not yet been issued to faculty.</p>
-            <p>
-                <strong>Please note</strong> that after issuing availability requests
-                it is no longer possible to change the submission
-                periods to which this assessment is attached.
-            </p>
-            <hr class="intro-divider">
-            <form action="{{ url_for('admin.assessment_availability', id=assessment.id) }}"
+            <div class="alert alert-info">
+                {% call icon_block("info-circle") %}
+                    <div><strong>Availability requests have not yet been issued to faculty.</strong></div>
+                    <div class="mt-1">
+                        Please note that after issuing availability requests
+                        it is no longer possible to change the submission
+                        periods to which this assessment is attached.
+                    </div>
+                {% endcall %}
+            </div>
+            <form action="{{ url_for('admin.initialize_assessment', id=assessment.id) }}"
                   method="POST" name="availability-fom">
                 {{ date_field(form.availability_deadline, 'datetimepicker1') }}
-                <div class="row">
-                    <div class="col-12">
-                        <div class="float-end">
-                            {{ wtf.render_field(form.issue_requests, button_map={'issue_requests': 'warning'}) }}
-                        </div>
-                    </div>
+                <div class="d-flex flex-row justify-content-end gap-2">
+                    {% if not assessment.requested_availability %}
+                        <a class="btn btn-outline-secondary" href="{{ url_for('admin.skip_availability', id=assessment.id) }}">
+                            Skip availability collection
+                        </a>
+                    {% endif %}
+                    {% if form.issue_requests is defined %}
+                        {{ wtf.render_field(form.issue_requests, button_map={'issue_requests': 'outline-primary'}) }}
+                    {% endif %}
                 </div>
             </form>
         </div>

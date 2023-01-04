@@ -54,7 +54,7 @@ from .forms import GlobalConfig, \
     NewMatchFormFactory, RenameMatchFormFactory, CompareMatchFormFactory, UploadMatchForm, \
     AddPresentationAssessmentFormFactory, EditPresentationAssessmentFormFactory, \
     AddSessionForm, EditSessionForm, \
-    AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityForm, \
+    AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityFormFactory, \
     NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, AssignmentLimitForm, \
     ImposeConstraintsScheduleFormFactory, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
@@ -5677,13 +5677,20 @@ def add_assessment():
     if form.validate_on_submit():
         data = PresentationAssessment(name=form.name.data,
                                       year=current_year,
-                                      submission_periods=form.submission_periods.data,
+                                      submission_periods=None,
                                       requested_availability=False,
                                       availability_closed=False,
                                       availability_deadline=None,
+                                      skip_availability=False,
+                                      availability_skipped_id=None,
+                                      availability_skipped_timestamp=None,
                                       feedback_open=True,
                                       creator_id=current_user.id,
                                       creation_timestamp=datetime.now())
+
+        if hasattr(form, 'submission_period'):
+            data.submission_periods = form.submission_periods.data
+
         db.session.add(data)
         db.session.commit()
 
@@ -5703,33 +5710,35 @@ def edit_assessment(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
-    if data.requested_availability:
+    if assessment.requested_availability:
         flash('It is no longer possible to change settings for an assessment once '
               'availability requests have been issued.', 'info')
         return redirect(redirect_url())
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    EditPresentationAssessmentForm = EditPresentationAssessmentFormFactory(current_year, data.id)
-    form = EditPresentationAssessmentForm(obj=data)
-    form.assessment = data
+    EditPresentationAssessmentForm = EditPresentationAssessmentFormFactory(current_year, assessment)
+    form = EditPresentationAssessmentForm(obj=assessment)
+    form.assessment = assessment
 
     if form.validate_on_submit():
-        data.name = form.name.data
-        data.submission_periods = form.submission_periods.data
+        assessment.name = form.name.data
 
-        data.last_edit_id = current_user.id
-        data.last_edit_timestamp = datetime.now()
+        if hasattr(form, 'submission_periods'):
+            assessment.submission_periods = form.submission_periods.data
+
+        assessment.last_edit_id = current_user.id
+        assessment.last_edit_timestamp = datetime.now()
 
         db.session.commit()
 
         return redirect(url_for('admin.manage_assessments'))
 
-    return render_template('admin/presentations/edit_assessment.html', form=form, assessment=data,
+    return render_template('admin/presentations/edit_assessment.html', form=form, assessment=assessment,
                            title='Edit existing presentation assessment event')
 
 
@@ -5744,23 +5753,23 @@ def delete_assessment(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(name=data.name), 'info')
+    if assessment.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(name=assessment.name), 'info')
         return redirect(redirect_url())
 
     title = 'Delete presentation assessment'
-    panel_title = 'Delete presentation assessment <strong>{name}</strong>'.format(name=data.name)
+    panel_title = 'Delete presentation assessment <strong>{name}</strong>'.format(name=assessment.name)
 
     action_url = url_for('admin.perform_delete_assessment', id=id, url=request.referrer)
     message = '<p>Please confirm that you wish to delete the assessment ' \
               '<strong>{name}</strong>.</p>' \
-              '<p>This action cannot be undone.</p>'.format(name=data.name)
+              '<p>This action cannot be undone.</p>'.format(name=assessment.name)
     submit_label = 'Delete assessment'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -5778,19 +5787,19 @@ def perform_delete_assessment(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(name=data.name), 'info')
+    if assessment.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(name=assessment.name), 'info')
         return redirect(redirect_url())
 
     url = request.args.get('url', url_for('admin.manage_assessments'))
 
-    db.session.delete(data)
+    db.session.delete(assessment)
     db.session.commit()
 
     return redirect(url)
@@ -5807,27 +5816,27 @@ def close_assessment(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.is_feedback_open:
+    if not assessment.is_feedback_open:
         return redirect(redirect_url())
 
-    if not data.is_closable:
+    if not assessment.is_closable:
         flash('Cannot close assessment "{name}" because one or more closing criteria have not been met. Check '
-              'that all scheduled sessions are in the past.'.format(name=data.name), 'info')
+              'that all scheduled sessions are in the past.'.format(name=assessment.name), 'info')
         return redirect(redirect_url())
 
     title = 'Close feedback for assessment'
-    panel_title = 'Close feedback for assessment <strong>{name}</strong>'.format(name=data.name)
+    panel_title = 'Close feedback for assessment <strong>{name}</strong>'.format(name=assessment.name)
 
     action_url = url_for('admin.perform_close_assessment', id=id, url=request.referrer)
     message = '<p>Please confirm that you wish to close feedback for the assessment ' \
               '<strong>{name}</strong>.</p>' \
-              '<p>This action cannot be undone.</p>'.format(name=data.name)
+              '<p>This action cannot be undone.</p>'.format(name=assessment.name)
     submit_label = 'Close feedback'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -5845,87 +5854,123 @@ def perform_close_assessment(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.is_feedback_open:
+    if not assessment.is_feedback_open:
         return redirect(redirect_url())
 
-    if not data.is_closable:
+    if not assessment.is_closable:
         flash('Cannot close assessment "{name}" because one or more closing criteria have not been met. Check '
-              'that all scheduled sessions are in the past.'.format(name=data.name), 'info')
+              'that all scheduled sessions are in the past.'.format(name=assessment.name), 'info')
         return redirect(redirect_url())
 
     url = request.args.get('url', url_for('admin.manage_assessments'))
 
-    data.is_feedback_open = False
+    assessment.is_feedback_open = False
     db.session.commit()
 
     return redirect(url)
 
 
-@admin.route('/assessment_availability/<int:id>', methods=['GET', 'POST'])
+@admin.route('/initialize_assessment/<int:id>', methods=['GET', 'POST'])
 @roles_required('root')
-def assessment_availability(id):
+def initialize_assessment(id):
     """
-    Request availability information from faculty
+    Initialize an assessment by requesting availability information from faculty, or optionally skip that
     :param id:
     :return:
     """
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.is_valid and data.availability_lifecycle < PresentationAssessment.AVAILABILITY_REQUESTED:
+    if not assessment.is_valid and assessment.availability_lifecycle < PresentationAssessment.AVAILABILITY_REQUESTED:
         flash('Cannot request availability for an invalid assessment. Correct any validation errors before '
               'attempting to proceed.', 'info')
         return redirect(redirect_url())
 
-    form = AvailabilityForm(obj=data)
+    return_url = url_for('admin.manage_assessments')
 
-    if form.is_submitted() and form.issue_requests.data is True:
+    AvailabilityForm = AvailabilityFormFactory(assessment)
+    form: AvailabilityForm = AvailabilityForm(obj=assessment)
 
-        if not data.requested_availability:
-
-            if get_count(data.submission_periods) == 0:
-                flash('Availability requests not issued since this assessment is not attached to any '
-                      'submission periods', 'info')
-
-            elif get_count(data.sessions) == 0:
-                flash('Availability requests not issued since this assessment does not contain any sessions',
+    if form.is_submitted():
+        if hasattr(form, 'issue_requests') and form.issue_requests.data:
+            if assessment.skip_availability:
+                flash('Cannot issue availability requests because they have been skipped for this assessment',
                       'info')
+                return redirect(return_url)
 
-            else:
+            if not assessment.requested_availability:
+                if get_count(assessment.submission_periods) == 0:
+                    flash('Availability requests not issued since this assessment is not attached to any '
+                          'submission periods', 'info')
+                    return redirect(return_url)
 
-                uuid = register_task('Issue availability requests for "{name}"'.format(name=data.name),
-                                     owner=current_user, description="Issue availability requests to faculty assessors")
+                if get_count(assessment.sessions) == 0:
+                    flash('Availability requests not issued since this assessment does not contain any sessions',
+                          'info')
+                    return redirect(return_url)
 
-                celery = current_app.extensions['celery']
-                availability_task = celery.tasks['app.tasks.availability.issue']
+                _do_initialize_assessment('Issue availability requests for "{name}"'.format(name=assessment.name),
+                                          'Issue availability requests to faculty assessors',
+                                          assessment.id, form.availability_deadline.data, False)
 
-                availability_task.apply_async(args=(data.id, current_user.id, uuid, form.availability_deadline.data),
-                                              task_id=uuid)
-
-        return redirect(url_for('admin.manage_assessments'))
+            return redirect(return_url)
 
     else:
-
         if request.method == 'GET':
             if form.availability_deadline.data is None:
                 form.availability_deadline.data = date.today() + timedelta(weeks=2)
 
-    if data.availability_lifecycle > PresentationAssessment.AVAILABILITY_NOT_REQUESTED:
-        form.issue_requests.label.text = 'Save changes'
+    if PresentationAssessment.AVAILABILITY_NOT_REQUESTED < assessment.availability_lifecycle < PresentationAssessment.AVAILABILITY_SKIPPED:
+        if hasattr(form, 'issue_requests'):
+            form.issue_requests.label.text = 'Save changes'
 
-    return render_template('admin/presentations/availability.html', form=form, assessment=data)
+    return render_template('admin/presentations/availability.html', form=form, assessment=assessment)
+
+
+def _do_initialize_assessment(title: str, description: str, assessment_id: int, deadline: datetime, skip_availability: bool):
+    uuid = register_task(title, owner=current_user, description=description)
+    celery = current_app.extensions['celery']
+    availability_task = celery.tasks['app.tasks.availability.initialize']
+    availability_task.apply_async(args=(assessment_id, current_user.id, uuid, deadline, skip_availability), task_id=uuid)
+
+
+@admin.route('/skip_availability/<int:id>')
+@roles_required('root')
+def skip_availability(id):
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
+
+    return_url = url_for('admin.manage_assessments')
+
+    current_year = get_current_year()
+
+    if not validate_assessment(assessment, current_year=current_year):
+        return redirect(return_url)
+
+    if assessment.requested_availability:
+        flash('Cannot skip availability collection for this assessment because it has already been opened', 'info')
+        return redirect(return_url)
+
+    if not assessment.skip_availability:
+        _do_initialize_assessment('Attach assessor and submitter records for "{name}"'.format(name=assessment.name),
+                                  'Attach assessor and submitter records',
+                                  assessment.id, None, True)
+
+    return redirect(return_url)
 
 
 @admin.route('/close_availability/<int:id>')
@@ -5934,17 +5979,21 @@ def close_availability(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.requested_availability:
+    if not assessment.requested_availability:
         flash('Cannot close availability collection for this assessment because it has not yet been opened', 'info')
         return redirect(redirect_url())
 
-    data.availability_closed = True
+    if assessment.skip_availability:
+        flash('Cannot close availability collection for this assessment because it has been skipped', 'info')
+        return redirect(redirect_url())
+
+    assessment.availability_closed = True
     db.session.commit()
 
     return redirect(redirect_url())
@@ -5956,14 +6005,18 @@ def availability_reminder(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.requested_availability:
-        flash('Cannot issue reminder emails for this assessment because it has not yet been opened', 'info')
+    if not assessment.requested_availability:
+        flash('Cannot issue reminder emails for this assessment because availability collection has not yet been opened', 'info')
+        return redirect(redirect_url())
+
+    if assessment.skip_availability:
+        flash('Cannot issue reminder emails for this assessment because availabilty collection has been skipped', 'info')
         return redirect(redirect_url())
 
     celery = current_app.extensions['celery']
@@ -5980,15 +6033,19 @@ def availability_reminder_individual(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    record = AssessorAttendanceData.query.get_or_404(id)
-    data = record.assessment
+    record: AssessorAttendanceData = AssessorAttendanceData.query.get_or_404(id)
+    assessment: PresentationAssessment = record.assessment
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.requested_availability:
-        flash('Cannot send a reminder email for this assessment because it has not yet been opened', 'info')
+    if not assessment.requested_availability:
+        flash('Cannot send a reminder email for this assessment because availability collection has not yet been opened', 'info')
+        return redirect(redirect_url())
+
+    if assessment.skip_availability:
+        flash('Cannot issue a reminder email for this assessment because availability collection has been skipped', 'info')
         return redirect(redirect_url())
 
     celery = current_app.extensions['celery']
@@ -6007,27 +6064,31 @@ def reopen_availability(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.requested_availability:
+    if assessment.skip_availability:
+        flash('Cannot reopen availability collection for this assessment because it has been skipped', 'info')
+        return redirect(redirect_url())
+
+    if not assessment.requested_availability:
         flash('Cannot reopen availability collection for this assessment because it has not yet been opened', 'info')
         return redirect(redirect_url())
 
-    if not data.availability_closed:
+    if not assessment.availability_closed:
         flash('Cannot reopen availability collection for this assessment because it has not yet been closed', 'info')
         return redirect(redirect_url())
 
-    if data.is_deployed:
+    if assessment.is_deployed:
         flash('Cannot reopen availability collection for this assessment because it has a deployed schedule', 'info')
         return redirect(redirect_url())
 
-    data.availability_closed = False
-    if data.availability_deadline < date.today():
-        data.availability_deadline = date.today() + timedelta(weeks=1)
+    assessment.availability_closed = False
+    if assessment.availability_deadline < date.today():
+        assessment.availability_deadline = date.today() + timedelta(weeks=1)
 
     db.session.commit()
 
@@ -6040,18 +6101,18 @@ def outstanding_availability(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.requested_availability:
+    if not assessment.requested_availability:
         flash('Cannot show outstanding availability responses for this assessment because it has not yet been opened',
               'info')
         return redirect(redirect_url())
 
-    return render_template('admin/presentations/availability/outstanding.html', assessment=data)
+    return render_template('admin/presentations/availability/outstanding.html', assessment=assessment)
 
 
 @admin.route('/outstanding_availability_ajax/<int:id>')
@@ -6060,18 +6121,18 @@ def outstanding_availability_ajax(id):
     if not validate_using_assessment():
         return jsonify({})
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return jsonify({})
 
-    if not data.requested_availability:
+    if not assessment.requested_availability:
         flash('Cannot show outstanding availability responses for this assessment because it has not yet been opened',
               'info')
         return jsonify({})
 
-    return ajax.admin.outstanding_availability_data(data.outstanding_assessors.all(), data)
+    return ajax.admin.outstanding_availability_data(assessment.outstanding_assessors.all(), assessment)
 
 
 @admin.route('/force_confirm_availability/<int:assessment_id>/<int:faculty_id>')
@@ -6080,29 +6141,29 @@ def force_confirm_availability(assessment_id, faculty_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.requested_availability:
+    if not assessment.requested_availability:
         flash('Cannot force confirm an availability response for this assessment because it has not yet been opened',
               'info')
         return redirect(redirect_url())
 
-    if data.is_deployed:
+    if assessment.is_deployed:
         flash('Cannot force confirm availability for this assessment because it is currently deployed', 'info')
         return redirect(redirect_url())
 
     faculty: FacultyData = FacultyData.query.get_or_404(faculty_id)
 
-    if not data.includes_faculty(faculty_id):
+    if not assessment.includes_faculty(faculty_id):
         flash('Cannot force confirm availability response for {name} because this faculty member is not attached '
               'to this assessment'.format(name=faculty.user.name), 'error')
         return redirect(redirect_url())
 
-    record = data.assessor_list.filter_by(faculty_id=faculty_id, confirmed=False).first()
+    record = assessment.assessor_list.filter_by(faculty_id=faculty_id, confirmed=False).first()
 
     if record is not None:
         record.confirmed = True
@@ -6118,7 +6179,7 @@ def schedule_set_limit(assessment_id, faculty_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -6128,25 +6189,25 @@ def schedule_set_limit(assessment_id, faculty_id):
         text = 'assessment assessor list'
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(url)
 
-    if not data.requested_availability:
-        flash('Cannot remove assessors from this assessment because it has not yet been opened', 'info')
+    if not assessment.requested_availability and not assessment.skip_availability:
+        flash('Cannot adjust limits from this assessment because availability collection has not yet been opened', 'info')
         return redirect(url)
 
-    if data.is_deployed:
+    if assessment.is_deployed:
         flash('Cannot adjust limits for this assessment because it is currently deployed', 'info')
         return redirect(url)
 
     faculty: FacultyData = FacultyData.query.get_or_404(faculty_id)
 
-    if not data.includes_faculty(faculty_id):
+    if not assessment.includes_faculty(faculty_id):
         flash('Cannot remove assessor "{name}" from "{assess_name}" because this faculty member is not attached '
-              'to this assessment'.format(name=faculty.user.name, assess_name=data.name), 'error')
+              'to this assessment'.format(name=faculty.user.name, assess_name=assessment.name), 'error')
         return redirect(url)
 
-    record = data.assessor_list.filter_by(faculty_id=faculty_id).first()
+    record = assessment.assessor_list.filter_by(faculty_id=faculty_id).first()
 
     if record is None:
         return redirect(url)
@@ -6159,7 +6220,7 @@ def schedule_set_limit(assessment_id, faculty_id):
 
         return redirect(url)
 
-    return render_template('admin/presentations/edit_assigned_limit.html', form=form, fac=faculty, rec=record, a=data,
+    return render_template('admin/presentations/edit_assigned_limit.html', form=form, fac=faculty, rec=record, a=assessment,
                            url=url, text=text)
 
 
@@ -6169,28 +6230,28 @@ def remove_assessor(assessment_id, faculty_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.requested_availability:
+    if not assessment.requested_availability:
         flash('Cannot remove assessors from this assessment because it has not yet been opened', 'info')
         return redirect(redirect_url())
 
-    if data.is_deployed:
+    if assessment.is_deployed:
         flash('Cannot remove assessors from this assessment because it is currently deployed', 'info')
         return redirect(redirect_url())
 
     faculty: FacultyData = FacultyData.query.get_or_404(faculty_id)
 
-    if not data.includes_faculty(faculty_id):
+    if not assessment.includes_faculty(faculty_id):
         flash('Cannot remove assessor "{name}" from "{assess_name}" because this faculty member is not attached '
-              'to this assessment'.format(name=faculty.user.name, assess_name=data.name), 'error')
+              'to this assessment'.format(name=faculty.user.name, assess_name=assessment.name), 'error')
         return redirect(redirect_url())
 
-    record = data.assessor_list.filter_by(faculty_id=faculty_id).first()
+    record = assessment.assessor_list.filter_by(faculty_id=faculty_id).first()
 
     if record is not None:
         db.session.delete(record)
@@ -6210,12 +6271,12 @@ def availability_as_csv(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
-    if not validate_assessment(data):
+    if not validate_assessment(assessment):
         return redirect(redirect_url())
 
-    if not data.requested_availability:
+    if not assessment.requested_availability:
         flash('Cannot generate availability data for this assessment because it has not yet been collected.',
               'info')
         return redirect(redirect_url())
@@ -6225,7 +6286,7 @@ def availability_as_csv(id):
     headers.set('Content-Disposition', 'attachment', filename='availability.csv')
 
     # stream the response as the data is generated
-    return Response(stream_with_context(availability_CSV_generator(data)),
+    return Response(stream_with_context(availability_CSV_generator(assessment)),
                     mimetype='text/csv', headers=headers)
 
 
@@ -6240,12 +6301,12 @@ def assessment_manage_sessions(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
-    if not validate_assessment(data):
+    if not validate_assessment(assessment):
         return redirect(redirect_url())
 
-    return render_template('admin/presentations/manage_sessions.html', assessment=data)
+    return render_template('admin/presentations/manage_sessions.html', assessment=assessment)
 
 
 @admin.route('/attach_sessions_ajax/<int:id>')
@@ -6254,12 +6315,12 @@ def attach_sessions_ajax(id):
     if not validate_using_assessment():
         return jsonify({})
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
-    if not validate_assessment(data):
+    if not validate_assessment(assessment):
         return jsonify({})
 
-    return ajax.admin.assessment_sessions_data(data.sessions)
+    return ajax.admin.assessment_sessions_data(assessment.sessions)
 
 
 @admin.route('/add_session/<int:id>', methods=['GET', 'POST'])
@@ -6273,20 +6334,20 @@ def add_session(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
-    if not validate_assessment(data):
+    if not validate_assessment(assessment):
         return redirect(redirect_url())
 
-    if not data.is_feedback_open:
+    if not assessment.is_feedback_open:
         flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
-              'edited'.format(name=data.name), 'info')
+              'edited'.format(name=assessment.name), 'info')
         return redirect(redirect_url())
 
     form = AddSessionForm(request.form)
 
     if form.validate_on_submit():
-        sess = PresentationSession(owner_id=data.id,
+        sess = PresentationSession(owner_id=assessment.id,
                                    date=form.date.data,
                                    session_type=form.session_type.data,
                                    rooms=form.rooms.data,
@@ -6299,11 +6360,11 @@ def add_session(id):
         celery = current_app.extensions['celery']
         adjust_task = celery.tasks['app.tasks.availability.session_added']
 
-        adjust_task.apply_async(args=(sess.id, data.id))
+        adjust_task.apply_async(args=(sess.id, assessment.id))
 
         return redirect(url_for('admin.assessment_manage_sessions', id=id))
 
-    return render_template('admin/presentations/edit_session.html', form=form, assessment=data)
+    return render_template('admin/presentations/edit_session.html', form=form, assessment=assessment)
 
 
 @admin.route('/edit_session/<int:id>', methods=['GET', 'POST'])
@@ -6317,7 +6378,7 @@ def edit_session(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    sess = PresentationSession.query.get_or_404(id)
+    sess: PresentationSession = PresentationSession.query.get_or_404(id)
 
     if not validate_assessment(sess.owner):
         return redirect(redirect_url())
@@ -6356,7 +6417,7 @@ def delete_session(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    sess = PresentationSession.query.get_or_404(id)
+    sess: PresentationSession = PresentationSession.query.get_or_404(id)
 
     if not validate_assessment(sess.owner):
         return redirect(redirect_url())
@@ -6400,7 +6461,7 @@ def assessor_session_availability(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    sess = PresentationSession.query.get_or_404(id)
+    sess: PresentationSession = PresentationSession.query.get_or_404(id)
 
     if not sess.owner.is_feedback_open:
         flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
@@ -6467,22 +6528,22 @@ def session_available(f_id, s_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data: PresentationSession = PresentationSession.query.get_or_404(s_id)
+    sess: PresentationSession = PresentationSession.query.get_or_404(s_id)
 
     current_year = get_current_year()
-    if not validate_assessment(data.owner, current_year=current_year):
+    if not validate_assessment(sess.owner, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.owner.requested_availability:
+    if not sess.owner.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
         return redirect(redirect_url())
 
-    if data.owner.is_deployed:
+    if sess.owner.is_deployed:
         flash('Cannot modify attendance data for this assessor because the schedule is deployed', 'info')
         return redirect(redirect_url())
 
     fac = FacultyData.query.get_or_404(f_id)
-    data.faculty_make_available(fac)
+    sess.faculty_make_available(fac)
     db.session.commit()
 
     return redirect(redirect_url())
@@ -6494,22 +6555,22 @@ def session_ifneeded(f_id, s_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data: PresentationSession = PresentationSession.query.get_or_404(s_id)
+    sess: PresentationSession = PresentationSession.query.get_or_404(s_id)
 
     current_year = get_current_year()
-    if not validate_assessment(data.owner, current_year=current_year):
+    if not validate_assessment(sess.owner, current_year=current_year):
         return redirect(redirect_url())
 
-    if data.owner.is_deployed:
+    if sess.owner.is_deployed:
         flash('Cannot modify attendance data for this assessor because the schedule is deployed', 'info')
         return redirect(redirect_url())
 
-    if not data.owner.requested_availability:
+    if not sess.owner.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
         return redirect(redirect_url())
 
     fac = FacultyData.query.get_or_404(f_id)
-    data.faculty_make_ifneeded(fac)
+    sess.faculty_make_ifneeded(fac)
     db.session.commit()
 
     return redirect(redirect_url())
@@ -6521,22 +6582,22 @@ def session_unavailable(f_id, s_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data: PresentationSession = PresentationSession.query.get_or_404(s_id)
+    sess: PresentationSession = PresentationSession.query.get_or_404(s_id)
 
     current_year = get_current_year()
-    if not validate_assessment(data.owner, current_year=current_year):
+    if not validate_assessment(sess.owner, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.owner.requested_availability:
+    if not sess.owner.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
         return redirect(redirect_url())
 
-    if data.owner.is_deployed:
+    if sess.owner.is_deployed:
         flash('Cannot modify attendance data for this assessor because the schedule is deployed', 'info')
         return redirect(redirect_url())
 
     fac = FacultyData.query.get_or_404(f_id)
-    data.faculty_make_unavailable(fac)
+    sess.faculty_make_unavailable(fac)
     db.session.commit()
 
     return redirect(redirect_url())
@@ -6548,23 +6609,23 @@ def session_all_available(f_id, a_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.requested_availability:
+    if not assessment.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
         return redirect(redirect_url())
 
-    if data.is_deployed:
+    if assessment.is_deployed:
         flash('Cannot set availability data for this session because it has already been published', 'info')
         return redirect(redirect_url())
 
     fac = FacultyData.query.get_or_404(f_id)
 
-    for session in data.sessions:
+    for session in assessment.sessions:
         session.faculty_make_available(fac)
 
     db.session.commit()
@@ -6578,23 +6639,23 @@ def session_all_unavailable(f_id, a_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.requested_availability:
+    if not assessment.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
         return redirect(redirect_url())
 
-    if data.is_deployed:
+    if assessment.is_deployed:
         flash('Cannot set availability data for this session because it has already been published', 'info')
         return redirect(redirect_url())
 
     fac = FacultyData.query.get_or_404(f_id)
 
-    for session in data.sessions:
+    for session in assessment.sessions:
         session.faculty_make_unavailable(fac)
 
     db.session.commit()
@@ -6613,7 +6674,7 @@ def submitter_session_availability(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    sess = PresentationSession.query.get_or_404(id)
+    sess: PresentationSession = PresentationSession.query.get_or_404(id)
 
     if sess.owner.is_deployed:
         flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
@@ -6678,20 +6739,20 @@ def assessment_schedules(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.availability_closed:
-        flash('It is only possible to generate schedules once collection of faculty availabilities is closed',
-              'info')
+    if not assessment.availability_closed and not assessment.skip_availability:
+        flash('It is only possible to generate schedules once collection of faculty availabilities is closed '
+              '(or has been skipped).', 'info')
         return redirect(redirect_url())
 
-    matches = get_count(data.scheduling_attempts)
+    matches = get_count(assessment.scheduling_attempts)
 
-    return render_template('admin/presentations/scheduling/manage.html', pane='manage', info=matches, assessment=data)
+    return render_template('admin/presentations/scheduling/manage.html', pane='manage', info=matches, assessment=assessment)
 
 
 @admin.route('/assessment_schedules_ajax/<int:id>')
@@ -6705,16 +6766,16 @@ def assessment_schedules_ajax(id):
     if not validate_using_assessment():
         return jsonify({})
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return jsonify({})
 
-    if not data.availability_closed:
+    if not assessment.availability_closed and not assessment.skip_availability:
         return jsonify({})
 
-    return ajax.admin.assessment_schedules_data(data.scheduling_attempts, text='assessment schedule manager',
+    return ajax.admin.assessment_schedules_data(assessment.scheduling_attempts, text='assessment schedule manager',
                                                 url=url_for('admin.assessment_schedules', id=id))
 
 
@@ -6729,28 +6790,28 @@ def create_assessment_schedule(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.availability_closed:
-        flash('It is only possible to generate schedules once collection of faculty availabilities is closed',
-              'info')
+    if not assessment.availability_closed and not assessment.skip_availability:
+        flash('It is only possible to generate schedules once collection of faculty availabilities is closed '
+              '(or has been skipped).', 'info')
         return redirect(redirect_url())
 
-    if not data.is_valid:
+    if not assessment.is_valid:
         flash('It is not possible to generate a schedule for an assessment that contains validation errors. '
               'Correct any indicated errors before attempting to try again.', 'info')
         return redirect(redirect_url())
 
-    if data.number_slots <= 0:
+    if assessment.number_slots <= 0:
         flash('It is not possible to generate a schedule for this assessment, because it does not yet have any '
               'defined session slots.', 'info')
         return redirect(redirect_url())
 
-    NewScheduleForm = NewScheduleFormFactory(data)
+    NewScheduleForm = NewScheduleFormFactory(assessment)
     form = NewScheduleForm(request.form)
 
     if form.validate_on_submit():
@@ -6770,7 +6831,7 @@ def create_assessment_schedule(id):
 
         uuid = register_task(task_name, owner=current_user, description=desc)
 
-        schedule = ScheduleAttempt(owner_id=data.id,
+        schedule = ScheduleAttempt(owner_id=assessment.id,
                                    name=form.name.data,
                                    tag=form.tag.data,
                                    celery_id=uuid,
@@ -6804,7 +6865,7 @@ def create_assessment_schedule(id):
 
             schedule_task.apply_async(args=(schedule.id, current_user.id), task_id=uuid)
 
-            return redirect(url_for('admin.assessment_schedules', id=data.id))
+            return redirect(url_for('admin.assessment_schedules', id=assessment.id))
 
         else:
             celery = current_app.extensions['celery']
@@ -6812,16 +6873,16 @@ def create_assessment_schedule(id):
 
             schedule_task.apply_async(args=(schedule.id,), task_id=uuid)
 
-            return redirect(url_for('admin.assessment_schedules', id=data.id))
+            return redirect(url_for('admin.assessment_schedules', id=assessment.id))
 
     else:
         if request.method == 'GET':
             form.all_assessors_in_pool.data = 0
 
-    matches = get_count(data.scheduling_attempts)
+    matches = get_count(assessment.scheduling_attempts)
 
     return render_template('admin/presentations/scheduling/create.html', pane='create', info=matches, form=form,
-                           assessment=data)
+                           assessment=assessment)
 
 
 @admin.route('/adjust_assessment_schedule/<int:id>', methods=['GET', 'POST'])
@@ -6835,18 +6896,19 @@ def adjust_assessment_schedule(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    schedule = ScheduleAttempt.query.get_or_404(id)
+    schedule: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
+    assessment: PresentationAssessment = schedule.owner
 
     current_year = get_current_year()
     if not validate_assessment(schedule.owner, current_year=current_year):
         return redirect(redirect_url())
 
-    if not schedule.owner.availability_closed:
-        flash('It is only possible to adjust a schedule once collection of faculty availabilities is closed.',
-              'info')
+    if not assessment.availability_closed and not assessment.skip_availability:
+        flash('It is only possible to adjust a schedule once collection of faculty availabilities is closed '
+              '(or has been skipped).', 'info')
         return redirect(redirect_url())
 
-    if not schedule.owner.is_valid:
+    if not assessment.is_valid:
         flash('It is not possible to adjust a schedule for an assessment that contains validation errors. '
               'Correct any indicated errors before attempting to try again.', 'info')
         return redirect(redirect_url())
@@ -6855,7 +6917,7 @@ def adjust_assessment_schedule(id):
         flash('This schedule does not contain any validation errors, so does not require adjustment.', 'info')
         return redirect(redirect_url())
 
-    ImposeConstraintsScheduleForm = ImposeConstraintsScheduleFormFactory(schedule.owner)
+    ImposeConstraintsScheduleForm = ImposeConstraintsScheduleFormFactory(assessment)
     form = ImposeConstraintsScheduleForm(request.form)
 
     if form.validate_on_submit():
@@ -6904,18 +6966,19 @@ def perform_adjust_assessment_schedule(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    old_schedule = ScheduleAttempt.query.get_or_404(id)
+    old_schedule: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
+    assessment: PresentationAssessment = old_schedule.owner
 
     current_year = get_current_year()
     if not validate_assessment(old_schedule.owner, current_year=current_year):
         return redirect(redirect_url())
 
-    if not old_schedule.owner.availability_closed:
-        flash('It is only possible to adjust a schedule once collection of faculty availabilities is closed.',
-              'info')
+    if not assessment.availability_closed and not assessment.skip_availability:
+        flash('It is only possible to adjust a schedule once collection of faculty availabilities is closed '
+              '(or has been skipped).', 'info')
         return redirect(redirect_url())
 
-    if not old_schedule.owner.is_valid:
+    if not assessment.is_valid:
         flash('It is not possible to adjust a schedule for an assessment that contains validation errors. '
               'Correct any indicated errors before attempting to try again.', 'info')
         return redirect(redirect_url())
@@ -6986,7 +7049,7 @@ def perform_adjust_assessment_schedule(id):
 @admin.route('/terminate_schedule/<int:id>')
 @roles_required('root')
 def terminate_schedule(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if record.finished:
         flash('Can not terminate scheduling task "{name}" because it has finished.'.format(name=record.name),
@@ -7161,7 +7224,7 @@ def perform_delete_schedule(id):
 @admin.route('/revert_schedule/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def revert_schedule(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
         return redirect(redirect_url())
@@ -7200,7 +7263,7 @@ def revert_schedule(id):
 @admin.route('/perform_revert_schedule/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def perform_revert_schedule(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
     if url is None:
@@ -7250,7 +7313,7 @@ def perform_revert_schedule(id):
 @admin.route('/duplicate_schedule/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def duplicate_schedule(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
         return redirect(redirect_url())
@@ -7311,7 +7374,7 @@ def duplicate_schedule(id):
 @admin.route('/rename_schedule/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def rename_schedule(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
     if url is None:
@@ -7347,7 +7410,7 @@ def rename_schedule(id):
 @admin.route('/compare_schedule/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def compare_schedule(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
         return redirect(redirect_url())
@@ -7386,8 +7449,8 @@ def compare_schedule(id):
 @admin.route('/do_schedule_compare/<int:id1>/<int:id2>')
 @roles_accepted('faculty', 'admin', 'root')
 def do_schedule_compare(id1, id2):
-    record1 = ScheduleAttempt.query.get_or_404(id1)
-    record2 = ScheduleAttempt.query.get_or_404(id2)
+    record1: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id1)
+    record2: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id2)
 
     pclass_filter = request.args.get('pclass_filter')
     url = request.args.get('url', None)
@@ -7450,8 +7513,8 @@ def do_schedule_compare(id1, id2):
 @admin.route('/do_schedule_compare_ajax/<int:id1>/<int:id2>')
 @roles_accepted('faculty', 'admin', 'root')
 def do_schedule_compare_ajax(id1, id2):
-    record1 = ScheduleAttempt.query.get_or_404(id1)
-    record2 = ScheduleAttempt.query.get_or_404(id2)
+    record1: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id1)
+    record2: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id2)
 
     if not validate_schedule_inspector(record1) or not validate_schedule_inspector(record2):
         return jsonify({})
@@ -7505,7 +7568,7 @@ def do_schedule_compare_ajax(id1, id2):
 @admin.route('/publish_schedule/<int:id>')
 @roles_required('root')
 def publish_schedule(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
         return redirect(redirect_url())
@@ -7541,7 +7604,7 @@ def publish_schedule(id):
 @admin.route('/unpublish_schedule/<int:id>')
 @roles_required('root')
 def unpublish_schedule(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
         return redirect(redirect_url())
@@ -7572,7 +7635,7 @@ def unpublish_schedule(id):
 @admin.route('/publish_schedule_submitters/<int:id>')
 @roles_required('root')
 def publish_schedule_submitters(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
         return redirect(redirect_url())
@@ -7608,7 +7671,7 @@ def publish_schedule_submitters(id):
 @admin.route('/publish_schedule_assessors/<int:id>')
 @roles_required('root')
 def publish_schedule_assessors(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
         return redirect(redirect_url())
@@ -7644,7 +7707,7 @@ def publish_schedule_assessors(id):
 @admin.route('/deploy_schedule/<int:id>')
 @roles_required('root')
 def deploy_schedule(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
         return redirect(redirect_url())
@@ -7680,7 +7743,7 @@ def deploy_schedule(id):
 @admin.route('/undeploy_schedule/<int:id>')
 @roles_required('root')
 def undeploy_schedule(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
         return redirect(redirect_url())
@@ -7721,7 +7784,7 @@ def schedule_view_sessions(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_assessment(record.owner):
         return redirect(redirect_url())
@@ -7769,7 +7832,7 @@ def schedule_view_faculty(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_assessment(record.owner):
         return redirect(redirect_url())
@@ -7851,7 +7914,7 @@ def schedule_view_sessions_ajax(id):
     if not validate_using_assessment():
         return jsonify({})
 
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_assessment(record.owner):
         return jsonify({})
@@ -7910,7 +7973,7 @@ def schedule_view_faculty_ajax(id):
     if not validate_using_assessment():
         return jsonify({})
 
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_assessment(record.owner):
         return jsonify({})
@@ -7969,8 +8032,8 @@ def schedule_adjust_assessors(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    slot = ScheduleSlot.query.get_or_404(id)
-    record = slot.owner # = ScheduleAttempt
+    slot: ScheduleSlot = ScheduleSlot.query.get_or_404(id)
+    record: ScheduleAttempt = slot.owner # = ScheduleAttempt
 
     if not validate_assessment(record.owner):
         return redirect(redirect_url())
@@ -8005,8 +8068,8 @@ def schedule_assign_assessors_ajax(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    slot = ScheduleSlot.query.get_or_404(id)
-    record = slot.owner  # = ScheduleAttempt
+    slot: ScheduleSlot = ScheduleSlot.query.get_or_404(id)
+    record: ScheduleAttempt = slot.owner  # = ScheduleAttempt
 
     if not validate_assessment(record.owner):
         return jsonify({})
@@ -8054,8 +8117,8 @@ def schedule_attach_assessor(slot_id, fac_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    slot = ScheduleSlot.query.get_or_404(slot_id)
-    record = slot.owner # = ScheduleAttempt
+    slot: ScheduleSlot = ScheduleSlot.query.get_or_404(slot_id)
+    record: ScheduleAttempt = slot.owner # = ScheduleAttempt
 
     if not validate_assessment(record.owner):
         return redirect(redirect_url())
@@ -8104,8 +8167,8 @@ def schedule_remove_assessor(slot_id, fac_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    slot = ScheduleSlot.query.get_or_404(slot_id)
-    record = slot.owner # = ScheduleAttempt
+    slot: ScheduleSlot = ScheduleSlot.query.get_or_404(slot_id)
+    record: ScheduleAttempt = slot.owner # = ScheduleAttempt
 
     if not validate_assessment(record.owner):
         return redirect(redirect_url())
@@ -8154,8 +8217,8 @@ def schedule_adjust_submitter(slot_id, talk_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    slot = ScheduleSlot.query.get_or_404(slot_id)
-    record = slot.owner # = ScheduleAttempt
+    slot: ScheduleSlot = ScheduleSlot.query.get_or_404(slot_id)
+    record: ScheduleAttempt = slot.owner # = ScheduleAttempt
 
     if not validate_assessment(record.owner):
         return redirect(redirect_url())
@@ -8192,8 +8255,8 @@ def schedule_assign_submitter_ajax(slot_id, talk_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    slot = ScheduleSlot.query.get_or_404(slot_id)
-    record = slot.owner  # = ScheduleAttempt
+    slot: ScheduleSlot = ScheduleSlot.query.get_or_404(slot_id)
+    record: ScheduleAttempt = slot.owner  # = ScheduleAttempt
 
     if not validate_assessment(record.owner):
         return jsonify({})
@@ -8232,9 +8295,9 @@ def schedule_move_submitter(old_id, new_id, talk_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    old_slot = ScheduleSlot.query.get_or_404(old_id)
-    new_slot = ScheduleSlot.query.get_or_404(new_id)
-    record = old_slot.owner # = ScheduleAttempt
+    old_slot: ScheduleSlot = ScheduleSlot.query.get_or_404(old_id)
+    new_slot: ScheduleSlot = ScheduleSlot.query.get_or_404(new_id)
+    record: ScheduleAttempt = old_slot.owner # = ScheduleAttempt
 
     if old_slot.owner_id != new_slot.owner_id:
         flash('Cannot move specified talk because destination slot does not belong to the same'
@@ -8291,8 +8354,8 @@ def schedule_move_room(slot_id, room_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    slot = ScheduleSlot.query.get_or_404(slot_id)
-    room = Room.query.get_or_404(room_id)
+    slot: ScheduleSlot = ScheduleSlot.query.get_or_404(slot_id)
+    room: Room = Room.query.get_or_404(room_id)
 
     record = slot.owner
 

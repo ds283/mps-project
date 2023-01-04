@@ -51,17 +51,21 @@
         <div class="card-body">
             {% if pclasses is not none and pclasses|length > 0 %}
                 <div class="card mt-3 mb-3 card-body bg-well">
-                    <p>Filter by project type</p>
-                    <a href="{{ url_for('admin.submitter_session_availability', id=sess.id, pclass_filter='all') }}"
-                       class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                        All
-                    </a>
-                    {% for pclass in pclasses %}
-                        <a href="{{ url_for('admin.submitter_session_availability', id=sess.id, pclass_filter=pclass.id) }}"
-                           class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                            {{ pclass.name }}
-                        </a>
-                    {% endfor %}
+                    <div class="row">
+                        <div class="col-12">
+                            <p>Filter by project type</p>
+                            <a href="{{ url_for('admin.submitter_session_availability', id=sess.id, pclass_filter='all') }}"
+                               class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                All
+                            </a>
+                            {% for pclass in pclasses %}
+                                <a href="{{ url_for('admin.submitter_session_availability', id=sess.id, pclass_filter=pclass.id) }}"
+                                   class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    {{ pclass.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
             {% endif %}
 

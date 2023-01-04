@@ -2,31 +2,29 @@
     <div class="card mt-3 mb-3">
         <div class="card-header">Assessor availability for assessment <strong>{{ assessment.name }}</strong></div>
         <div class="card-body">
-            <p>Collection of availability data for this assessment is now closed.</p>
+            <div class="alert alert-info">
+                {% call icon_block("info-circle") %}
+                    <div><strong>Collection of availability data for this assessment is now closed.</strong></div>
+                {% endcall %}
+            </div>
             {% set count = assessment.availability_outstanding_count %}
             {% if count > 0 %}
-                <p>Responses are outstanding from <strong>{{ count }} faculty</strong>.</p>
-                <p>
+                <div>Responses are outstanding from <strong>{{ count }} faculty</strong>.</div>
+                <div class="d-flex flex-row justify-content-start gap-2">
                     <a class="text-decoration-none" href="{{ url_for('admin.outstanding_availability', id=assessment.id) }}">View outstanding responses...</a>
-                    &emsp;
                     <a class="text-decoration-none" href="{{ url_for('admin.availability_as_csv', id=assessment.id) }}">Download availability data</a>
-                </p>
+                </div>
             {% else %}
-                Responses have now been received from all faculty
-                <span class="badge bg-success"><i class="fas fa-check"></i></span>
-                <p>
+                <div>Responses have now been received from all faculty.</div>
+                <div class="d-flex flex-row justify-content-start gap-2">
                     <a class="text-decoration-none" href="{{ url_for('admin.availability_as_csv', id=assessment.id) }}">Download availability data</a>
-                </p>
+                </div>
             {% endif %}
             {% if not assessment.is_deployed %}
-                <div class="row">
-                    <div class="col-12">
-                        <div class="float-end">
-                            <a class="btn btn-secondary" href="{{ url_for('admin.reopen_availability', id=assessment.id) }}">
-                                Reopen collection
-                            </a>
-                        </div>
-                    </div>
+                <div class="d-flex flex-row justify-content-end gap-2 mt-2">
+                    <a class="btn btn-outline-secondary" href="{{ url_for('admin.reopen_availability', id=assessment.id) }}">
+                        Reopen collection
+                    </a>
                 </div>
             {% endif %}
         </div>

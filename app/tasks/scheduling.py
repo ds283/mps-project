@@ -232,6 +232,7 @@ def _generate_minimize_objective(C, X, Y, S, U, number_talks, number_assessors, 
     :return:
     """
     # generate objective function
+    # note that this is a minimization problem
     objective = 0
 
     # ask optimizer to minimize the number of slots that are used
@@ -266,8 +267,8 @@ def _generate_reschedule_objective(C, oldX, oldY, X, Y, S, U, number_talks, numb
     :param number_slots:
     :return:
     """
-
     # generate objective function
+    # note that this is a minimization problem
     objective = 0
 
     # ask optimizer to choose X and Y values that match oldX, oldY as closely as possible.
@@ -484,7 +485,7 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
 
     # talks should be scheduled in exactly one slot
     for i in range(number_talks):
-        prob += sum([X[(i, j)] for j in range(number_slots)]) == 1
+        prob += sum([X[(i, k)] for k in range(number_slots)]) == 1
         constraints += 1
 
     # each slot should have the required number of assessors (given its occupancy), *if* the slot is occupied:
@@ -542,9 +543,9 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
 
     if record.all_assessors_in_pool:
         for i in range(number_talks):
-            talk = talk_dict[i]
+            talk: SubmissionRecord = talk_dict[i]
 
-            # assessor j is compatible eith talk i only if j is in the assessor pool for i
+            # assessor j is compatible with talk i only if j is in the assessor pool for i
             for j in range(number_assessors):
                 assessor = assessor_dict[j]
 
@@ -556,9 +557,10 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     else:
         # set up constraints per talk
         for i in range(number_talks):
-            talk = talk_dict[i]
+            talk: SubmissionRecord = talk_dict[i]
 
-            # insist that *at least one* assessor is in the assessor pool for this talk
+            # insist that *at least one* assessor is in the assessor pool for this talk, for whichever
+            # slot the talk occupies
             for k in range(number_slots):
                 prob += sum([Y[(j, k)] for j in range(number_assessors)
                             if talk.project.is_assessor(assessor_dict[j].id)]) >= X[(i, k)]
@@ -570,9 +572,9 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
             # for a project already implies enrolment
             for j in range(number_assessors):
                 assessor = assessor_dict[j]
-                enrollment = assessor.get_enrollment_record(talk.project.config.pclass_id)
-                if enrollment is None or \
-                        enrollment.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
+                enrolment = assessor.get_enrollment_record(talk.project.config.pclass_id)
+                if enrolment is None or \
+                        enrolment.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
                     for k in range(number_slots):
                         prob += X[(i, k)] + Y[(j, k)] <= 1
                         constraints += 1

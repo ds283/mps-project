@@ -223,7 +223,7 @@ _menu = \
             {% set disabled = not current_user.has_role('root') %}
             {% if s.awaiting_upload %}
                 <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.upload_schedule', schedule_id=s.id) }}"{% endif %}>
-                    <i class="fas fa-cloud-upload fa-fw"></i> Upload solution...
+                    <i class="fas fa-cloud-upload-alt fa-fw"></i> Upload solution...
                 </a>
                 <div role="separator" class="dropdown-divider"></div>
             {% endif %}

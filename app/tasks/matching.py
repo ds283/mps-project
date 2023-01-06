@@ -1675,11 +1675,11 @@ def _send_offline_email(celery, record: MatchingAttempt, user, lp_asset: Generat
 
     lp_path = canonical_generated_asset_filename(lp_asset.filename)
     with open(lp_path, 'rb') as fd:
-        msg.attach(filename=str('schedule.lp'), content_type=lp_asset.mimetype, data=fd.read())
+        msg.attach(filename=str('schedule.lp'), mimetype=lp_asset.mimetype, content=fd.read())
 
     mps_path = canonical_generated_asset_filename(mps_asset.filename)
     with open(mps_path, 'rb') as fd:
-        msg.attach(filename=str('schedule.mps'), content_type=mps_asset.mimetype, data=fd.read())
+        msg.attach(filename=str('schedule.mps'), mimetype=mps_asset.mimetype, content=fd.read())
 
     # register a new task in the database
     task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.to)))

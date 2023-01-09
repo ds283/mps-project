@@ -1312,7 +1312,7 @@ class ScheduleSettingsMixin():
                                                'normalized to the cost of using a new slot.',
                                    validators=[InputRequired('Please enter a suitable positive decimal.')])
 
-    all_assessors_in_pool = RadioField('Assessor configuration', choices=ScheduleAttempt.assessor_choices, coerce=int)
+    all_assessors_in_pool = RadioField('Assessor configuration', choices=ScheduleAttempt.ASSESSOR_CHOICES, coerce=int)
 
 
 def NewScheduleFormFactory(assessment):

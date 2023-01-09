@@ -16,7 +16,7 @@
             {% if data and data.affiliations and research_groups %}
                 <h4>
                 {% for group in research_groups %}
-                    {% if group in data.affiliations %}
+                    {% if data.has_affiliation(group) %}
                         {% set style = group.make_CSS_style() %}
                         <a class="btn {% if style %}btn-secondary{% else %}btn-success{% endif %} selection-label"
                            {% if style %}style="{{ style }}"{% endif %}
@@ -34,7 +34,7 @@
             {% if data and research_groups %}
                 <h4>
                 {% for group in research_groups %}
-                    {% if group not in data.affiliations %}
+                    {% if not data.has_affiliation(group) %}
                         <a class="btn btn-secondary selection-label" href="{{ url_for('faculty.add_affiliation', groupid=group.id) }}"><i class="fas fa-plus"></i> {{ group.name }}</a>
                     {% endif %}
                 {% endfor %}

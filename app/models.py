@@ -1193,6 +1193,21 @@ class SubmissionRoleTypesMixin:
     _MAX_ROLE = ROLE_EXTERNAL_EXAMINER
 
 
+class AssessorPoolChoicesMixin:
+    """
+    Single point of definition for assessor pool choices used during assessment scheduling
+    """
+    AT_LEAST_ONE_IN_POOL = 0
+    ALL_IN_POOL = 1
+    ALL_IN_RESEARCH_GROUP = 2
+
+    ASSESSOR_CHOICES = [(AT_LEAST_ONE_IN_POOL, 'For each talk, at least one assessor should belong to its assessor '
+                                               'pool'),
+                        (ALL_IN_POOL, 'For every talk, each assessor should belong to its assessor pool'),
+                        (ALL_IN_RESEARCH_GROUP, 'For every talk, each assessor should belong to its assessor pool or '
+                                                'research group')]
+
+
 # roll our own get_main_config() and get_current_year(), which we cannot import because it creates a dependency cycle
 def _get_main_config():
     return db.session.query(MainConfig).order_by(MainConfig.year.desc()).first()
@@ -2711,7 +2726,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return '<span class="badge bg-warning text-dark"><i class="fas fa-times"></i> {n} unofferable</span>'.format(n=n)
 
 
-    def remove_affiliation(self, group, autocommit=False):
+    def remove_affiliation(self, group: ResearchGroup, autocommit=False):
         """
         Remove an affiliation from a faculty member
         :param group:
@@ -2730,7 +2745,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             db.session.commit()
 
 
-    def add_affiliation(self, group, autocommit=False):
+    def add_affiliation(self, group: ResearchGroup, autocommit=False):
         """
         Add an affiliation to this faculty member
         :param group:
@@ -2741,6 +2756,18 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         if autocommit:
             db.session.commit()
+
+
+    def has_affiliation(self, group: ResearchGroup):
+        """
+        Test whether this faculty members has a particular research group affiliation
+        :param group:
+        :return:
+        """
+        if group is None:
+            return False
+
+        return group in self.affiliations
 
 
     def is_enrolled(self, pclass):
@@ -13464,7 +13491,7 @@ def _ScheduleAttempt_is_valid(id):
     return True, errors, warnings
 
 
-class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
+class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin, AssessorPoolChoicesMixin):
     """
     Model configuration data for an assessment scheduling attempt
     """
@@ -13507,9 +13534,7 @@ class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     levelling_tension = db.Column(db.Numeric(8, 3))
 
     # must all assessors be in the assessor pool for every project, or is just one enough?
-    assessor_choices = [(0, 'For each talk, at least one assessor should belong to its assessor pool'),
-                        (1, 'Each assessor should belong to the assessor pool for every talk')]
-    all_assessors_in_pool = db.Column(db.Boolean())
+    all_assessors_in_pool = db.Column(db.Integer())
 
     # CIRCULATION STATUS
 

@@ -234,10 +234,10 @@ def affiliations():
 @roles_required('faculty')
 def add_affiliation(groupid):
 
-    data = FacultyData.query.get_or_404(current_user.id)
-    group = ResearchGroup.query.get_or_404(groupid)
+    data: FacultyData = FacultyData.query.get_or_404(current_user.id)
+    group: ResearchGroup = ResearchGroup.query.get_or_404(groupid)
 
-    if group not in data.affiliations:
+    if not data.has_affiliation(group):
         data.add_affiliation(group, autocommit=True)
 
     return redirect(redirect_url())
@@ -247,10 +247,10 @@ def add_affiliation(groupid):
 @roles_required('faculty')
 def remove_affiliation(groupid):
 
-    data = FacultyData.query.get_or_404(current_user.id)
-    group = ResearchGroup.query.get_or_404(groupid)
+    data: FacultyData = FacultyData.query.get_or_404(current_user.id)
+    group: ResearchGroup = ResearchGroup.query.get_or_404(groupid)
 
-    if group in data.affiliations:
+    if data.has_affiliation(group):
         data.remove_affiliation(group, autocommit=True)
 
     return redirect(redirect_url())

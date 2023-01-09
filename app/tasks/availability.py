@@ -57,7 +57,9 @@ def register_availability_tasks(celery):
         assessor_ids = set()
 
         # build list of eligible assessors for each submission period included in this assessment,
-        # and merge into assessor_ids if required
+        # and merge into assessor_ids if required.
+        # Notice that we use everyone who is suitably enrolled, *not* just faculty who are in the union of
+        # the assessor lists for all attached projects.
         for period in assessment.submission_periods:
             assessors = period.assessors_list \
                 .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \

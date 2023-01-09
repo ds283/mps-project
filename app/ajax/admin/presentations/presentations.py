@@ -164,7 +164,7 @@ _menu = \
         </a>
         {% set disabled = not availability_closed and not skipped_availability %}
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.assessment_schedules', id=a.id) }}"{% endif %}>
-            <i class="fas fa-wrench fa-fw"></i> Edit schedules...
+            <i class="fas fa-wrench fa-fw"></i> Schedules...
         </a>
         
         <div role="separator" class="dropdown-divider"></div>

@@ -26,7 +26,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, TemporaryAsset, User, \
     ScheduleEnumeration, SubmissionRecord, SubmissionPeriodRecord, AssessorAttendanceData, \
-    EnrollmentRecord, SubmitterAttendanceData, PresentationSession, Room, FacultyData
+    EnrollmentRecord, SubmitterAttendanceData, PresentationSession, Room, FacultyData, LiveProject
 from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename, \
     canonical_generated_asset_filename
 from ..shared.sqlalchemy import get_count
@@ -541,43 +541,113 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     # the definition of 'suitable' depends whether we insist all assessors belong to the assessor pool
     # for each project, or not. This is controlled by the 'all_assessors_in_pool' attribute.
 
-    if record.all_assessors_in_pool:
+    def _make_at_least_one_in_pool(i):
+        nonlocal prob, constraints
+
+        talk: SubmissionRecord = talk_dict[i]
+
+        # insist that *at least one* assessor is in the assessor pool for this talk, for whichever
+        # slot the talk occupies
+        for k in range(number_slots):
+            prob += sum([Y[(j, k)] for j in range(number_assessors)
+                         if talk.project.is_assessor(assessor_dict[j].id)]) >= X[(i, k)]
+            constraints += 1
+
+        # also have to require that assessors for each talk are drawn from those faculty enrolled
+        # as presentation assessors
+        for j in range(number_assessors):
+            assessor: FacultyData = assessor_dict[j]
+            enrolment: EnrollmentRecord = assessor.get_enrollment_record(talk.project.config.pclass_id)
+
+            not_available = enrolment is None or \
+                            enrolment.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED
+
+            if not_available:
+                for k in range(number_slots):
+                    # the constraint enforces that assessor j cannot be scheduled for slot k if they
+                    # are not available for talk i, and talk i is scheduled in slot k
+                    prob += X[(i, k)] + Y[(j, k)] <= 1
+                    constraints += 1
+
+    def _make_all_in_pool(i):
+        nonlocal prob, constraints
+
+        talk: SubmissionRecord = talk_dict[i]
+
+        # assessor j is compatible with talk i only if j is in the assessor pool for i
+        for j in range(number_assessors):
+            assessor: FacultyData = assessor_dict[j]
+            enrolment: EnrollmentRecord = assessor.get_enrollment_record(talk.project.config.pclass_id)
+
+            not_available = enrolment is None or \
+                            enrolment.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED or \
+                            not talk.project.is_assessor(assessor.id)
+
+            for k in range(number_slots):
+                if not_available:
+                    # the constraint enforces that assessor j cannot be scheduled for slot k if they
+                    # are not available for talk i, and talk i is scheduled in slot k
+                    prob += X[(i, k)] + Y[(j, k)] <= 1
+                    constraints += 1
+
+    def _make_all_in_research_group(i):
+        nonlocal prob, constraints
+
+        talk: SubmissionRecord = talk_dict[i]
+        project: LiveProject = talk.project
+
+        group = project.group
+        if group is None:
+            raise RuntimeError('Empty project research group encountered in _make_all_in_research_group()')
+
+        for j in range(number_assessors):
+            assessor: FacultyData = assessor_dict[i]
+            enrolment: EnrollmentRecord = assessor.get_enrollment_record(talk.project.config.pclass_id)
+
+            not_available = enrolment is None or \
+                            enrolment.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED or \
+                            (not assessor.has_affiliation(group) and not talk.project.is_assessor(assessor.id))
+
+            for k in range(number_slots):
+                if not_available :
+                    # the constraint enforces that assessor j cannot be scheduled for slot k if they
+                    # are not in the pool for talk i, and talk i is scheduled in slot k
+                    prob += X[(i, k)] + Y[(j, k)] <= 1
+                    constraints += 1
+
+
+    if record.all_assessors_in_pool == ScheduleAttempt.ALL_IN_POOL:
+        for i in range(number_talks):
+            _make_all_in_pool(i)
+
+    elif record.all_assessors_in_pool == ScheduleAttempt.AT_LEAST_ONE_IN_POOL:
+        for i in range(number_talks):
+            _make_at_least_one_in_pool(i)
+
+    elif record.all_assessors_in_pool == ScheduleAttempt.ALL_IN_RESEARCH_GROUP:
         for i in range(number_talks):
             talk: SubmissionRecord = talk_dict[i]
+            project: LiveProject = talk.project
 
-            # assessor j is compatible with talk i only if j is in the assessor pool for i
-            for j in range(number_assessors):
-                assessor = assessor_dict[j]
-
-                for k in range(number_slots):
-                    if not talk.project.is_assessor(assessor.id):
-                        prob += X[(i, k)] + Y[(j, k)] <= 1
-                        constraints += 1
+            # a research group might not be specified - they're typically not used for generic projects, or the
+            # 'advertise_research_group' flag might not be set. So, we can't assume that research group
+            # data will be available.
+            # In this case, we fall back on the assessor pool
+            if project.group is None:
+                _make_at_least_one_in_pool(i)
+            else:
+                _make_all_in_research_group(i)
 
     else:
-        # set up constraints per talk
-        for i in range(number_talks):
-            talk: SubmissionRecord = talk_dict[i]
+        raise RuntimeError("Unknown value for ScheduleAttempt.all_assessors_in_pool in _create_PuLP_problem()")
 
-            # insist that *at least one* assessor is in the assessor pool for this talk, for whichever
-            # slot the talk occupies
-            for k in range(number_slots):
-                prob += sum([Y[(j, k)] for j in range(number_assessors)
-                            if talk.project.is_assessor(assessor_dict[j].id)]) >= X[(i, k)]
-                constraints += 1
-
-            # also have to require that assessors for each talk are drawn from those faculty enrolled
-            # as presentation assessors
-            # We don't have to do this for 'all_assessors_in_pool' = True, since being in the assessor pool
-            # for a project already implies enrolment
-            for j in range(number_assessors):
-                assessor = assessor_dict[j]
-                enrolment = assessor.get_enrollment_record(talk.project.config.pclass_id)
-                if enrolment is None or \
-                        enrolment.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
-                    for k in range(number_slots):
-                        prob += X[(i, k)] + Y[(j, k)] <= 1
-                        constraints += 1
+    # TODO: there doesn't seem any way to ask for *as many sessions as possible* to be scheduled with all
+    #  (or as many as possible) assessors from the shared assessor pool of all presenters.
+    #  This requires (as far as I can tell) a nonlinear (probably quadratic) optimization goal.
+    #  The problem is that while one can easily compute the number of assessors N_ik in slot k for talk i, just as we
+    #  do for amin/amax below, it is not easy to select *which* of these k is the true value, given that talk i
+    #  has been assigned to slot k'. For that we (seem to) need to write an expression like sum_k X_ik N_ik.
+    #  Would be nice to improve this if possible.
 
 
     # TALKS CANNOT BE SCHEDULED WITH THE SUPERVISOR AS AN ASSESSOR
@@ -729,7 +799,7 @@ def _initialize(self, record, read_serialized=False):
         with Timer() as periods_timer:
             number_periods, period_to_number, number_to_period, period_dict = \
                 _enumerate_periods(record, read_serialized=read_serialized)
-        print('  -- enumerated periods in time {s}'.format(s=periods_timer.interval))
+        print(' -- enumerated periods in time {s}'.format(s=periods_timer.interval))
 
         with Timer() as slots_timer:
             number_slots, slot_to_number, number_to_slot, slot_dict = \

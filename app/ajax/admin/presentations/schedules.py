@@ -135,10 +135,14 @@ _info = \
 <span class="badge bg-info text-dark">Max assignment {{ s.assessor_assigned_limit }}</span>
 <span class="badge bg-info text-dark">If needed cost {{ s.if_needed_cost }}</span>
 <span class="badge bg-info text-dark">Levelling tension {{ s.levelling_tension }}</span>
-{% if s.all_assessors_in_pool %}
-    <span class="badge bg-info text-dark">All assessors in pool</span>
+{% if s.all_assessors_in_pool == s.ALL_IN_POOL %}
+    <span class="badge bg-info text-dark">All in pool</span>
+{% elif s.all_assessors_in_pool == s.AT_LEAST_ONE_IN_POOL %}
+    <span class="badge bg-secondary">&ge; 1 assessor in pool</span>
+{% elif s.all_assessors_in_pool == s.ALL_IN_RESEARCH_GROUP %}
+    <span class="badge bg-secondary">All in group</span>
 {% else %}
-    <span class="badge bg-secondary">At least 1 assessor in pool</span>
+    <span class="badge bg-danger">Unknown pool setting</span>
 {% endif %}
 {% if s.finished and s.solution_usable %}
     <p></p>

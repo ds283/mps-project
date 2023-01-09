@@ -6916,7 +6916,7 @@ def create_assessment_schedule(id):
                                    assessor_assigned_limit=form.assessor_assigned_limit.data,
                                    if_needed_cost=form.if_needed_cost.data,
                                    levelling_tension=form.levelling_tension.data,
-                                   all_assessors_in_pool=True if form.all_assessors_in_pool.data == 1 else False,
+                                   all_assessors_in_pool=form.all_assessors_in_pool.data,
                                    solver=form.solver.data,
                                    creation_timestamp=datetime.now(),
                                    creator_id=current_user.id,
@@ -6947,7 +6947,7 @@ def create_assessment_schedule(id):
 
     else:
         if request.method == 'GET':
-            form.all_assessors_in_pool.data = 0
+            form.all_assessors_in_pool.data = ScheduleAttempt.AT_LEAST_ONE_IN_POOL
 
     matches = get_count(assessment.scheduling_attempts)
 

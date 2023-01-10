@@ -106,8 +106,8 @@
                                         {% endfor %}
                                     </div>
                                     <div class="col-2">
-                                        <div class="float-end">
-                                            <a href="{{ url_for('admin.schedule_remove_assessor', slot_id=slot.id, fac_id=item.id) }}" class="btn btn-warning btn-sm"><i class="fas fa-trash"></i> Remove</a>
+                                        <div class="d-flex flex-row justify-content-end gap-2">
+                                            <a href="{{ url_for('admin.schedule_remove_assessor', slot_id=slot.id, fac_id=item.id) }}" class="btn btn-outline-warning btn-sm"><i class="fas fa-trash"></i> Remove</a>
                                         </div>
                                     </div>
                                 </div>

@@ -345,9 +345,9 @@ def _forbid_unused_slots(prob, X, Y, number_assessors, number_talks, slot_dict, 
                 prob += Y[(i, k)] == 0
 
 
-def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots, number_periods, assessor_to_number,
-                         period_to_number, talk_dict, assessor_dict, slot_dict, period_dict, assessor_limits,
-                         make_objective):
+def _create_PuLP_problem(A, B, record: ScheduleAttempt, number_talks, number_assessors, number_slots, number_periods,
+                         assessor_to_number, period_to_number, talk_dict, assessor_dict, slot_dict, period_dict,
+                         assessor_limits, make_objective):
     """
     Generate a PuLP problem to find an optimal assignment of student talks + faculty assessors to rooms
     :param assessor_limits:
@@ -508,7 +508,7 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
 
             prob += assessor_set >= S[(m, k)] * int(period.number_assessors)
             constraints += 1
-        
+
     for k in range(number_slots):
         prob += sum([Y[(j, k)] for j in range(number_assessors)]) == \
                 sum([S[(m, k)] * int(period_dict[m].number_assessors) for m in range(number_periods)])
@@ -546,23 +546,24 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     # this is taken care of by the constraints on occupation variables above, so doesn't have to be
     # done explicitly here)
 
-    for i in range(number_talks):
-        talk_i = talk_dict[i]
+    if not record.ignore_coscheduling:
+        for i in range(number_talks):
+            talk_i = talk_dict[i]
 
-        for j in range(i):
-            talk_j = talk_dict[j]
+            for j in range(i):
+                talk_j = talk_dict[j]
 
-            # note that we have j strictly less than i here, so i=j is excluded
-            for k in range(number_slots):
-                cant_pair = False
-                if talk_i.owner.config_id == talk_j.owner.config_id:
-                    if talk_i.project_id == talk_j.project_id:
-                        if talk_i.project.dont_clash_presentations:
-                            cant_pair = True
+                # note that we have j strictly less than i here, so i=j is excluded
+                for k in range(number_slots):
+                    cant_pair = False
+                    if talk_i.owner.config_id == talk_j.owner.config_id:
+                        if talk_i.project_id == talk_j.project_id:
+                            if talk_i.project.dont_clash_presentations:
+                                cant_pair = True
 
-                if cant_pair:
-                    prob += X[(i, k)] + X[(j, k)] <= 1
-                    constraints += 1
+                    if cant_pair:
+                        prob += X[(i, k)] + X[(j, k)] <= 1
+                        constraints += 1
 
 
     # TALKS CAN ONLY BE SCHEDULED WITH ASSESSORS WHO ARE SUITABLE
@@ -1366,6 +1367,7 @@ def register_scheduling_tasks(celery):
                                    assessor_assigned_limit=record.assessor_assigned_limit,
                                    if_needed_cost=record.if_needed_cost,
                                    levelling_tension=record.levelling_tension,
+                                   ignore_coscheduling=record.ignore_coscheduling,
                                    all_assessors_in_pool=record.all_assessors_in_pool,
                                    creator_id=current_id,
                                    creation_timestamp=datetime.now(),

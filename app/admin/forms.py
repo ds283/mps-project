@@ -1312,6 +1312,10 @@ class ScheduleSettingsMixin():
                                                'normalized to the cost of using a new slot.',
                                    validators=[InputRequired('Please enter a suitable positive decimal.')])
 
+    ignore_coscheduling = BooleanField('Ignore coscheduling constraints', default=False,
+                                       description='Ignore constraints on students taking the same '
+                                                   'presentation being scheduled in the same slot.')
+
     all_assessors_in_pool = RadioField('Assessor configuration', choices=ScheduleAttempt.ASSESSOR_CHOICES, coerce=int)
 
 

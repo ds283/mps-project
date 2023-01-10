@@ -13539,6 +13539,10 @@ class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin, AssessorPoolCho
     # must all assessors be in the assessor pool for every project, or is just one enough?
     all_assessors_in_pool = db.Column(db.Integer())
 
+    # ignore coscheduling constraints
+    ignore_coscheduling = db.Column(db.Boolean())
+
+
     # CIRCULATION STATUS
 
     # draft circulated to submitters?
@@ -13824,6 +13828,9 @@ def _ScheduleAttempt_delete_handler(mapper, connection, target):
 @cache.memoize()
 def _ScheduleSlot_is_valid(id):
     obj: ScheduleSlot = db.session.query(ScheduleSlot).filter_by(id=id).one()
+    attempt: ScheduleAttempt = obj.owner
+    assessment: PresentationAssessment = attempt.owner
+    session: PresentationSession = obj.session
 
     errors = {}
     warnings = {}
@@ -13902,20 +13909,21 @@ def _ScheduleSlot_is_valid(id):
 
     # CONSTRAINT 5. ALL ASSESSORS SHOULD BE AVAILABLE FOR THIS SESSION
     for assessor in obj.assessors:
-        if obj.session.faculty_unavailable(assessor.id):
+        if session.faculty_unavailable(assessor.id):
             errors[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but is not ' \
                                                'available'.format(name=assessor.user.name)
-        elif obj.session.faculty_ifneeded(assessor.id):
+        elif session.faculty_ifneeded(assessor.id):
             warnings[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but is marked ' \
                                                  'as "if needed"'.format(name=assessor.user.name)
         else:
-            if not obj.session.faculty_available(assessor.id):
+            if not session.faculty_available(assessor.id):
                 errors[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but they do not ' \
                                                    'belong to this assessment'.format(name=assessor.user.name)
 
 
     # CONSTRAINT 6. ASSESSORS SHOULD NOT BE PROJECT SUPERVISORS
     for talk in obj.talks:
+        talk: SubmissionRecord
         if talk.project is None:
             errors[('supervisor', talk.id)] = 'Project supervisor for "{student}" is not ' \
                                               'set'.format(student=talk.owner.student.user.name)
@@ -13927,49 +13935,80 @@ def _ScheduleSlot_is_valid(id):
     # CONSTRAINT 7. PREFERABLY, EACH TALK SHOULD HAVE AT LEAST ONE ASSESSOR BELONGING TO ITS ASSESSOR POOL
     # (but we mark this as a warning rather than an error)
     for talk in obj.talks:
-        found_match = False
-        for assessor in talk.project.assessor_list:
-            if get_count(obj.assessors.filter_by(id=assessor.id)) > 0:
-                found_match = True
-                break
+        talk: SubmissionRecord
+        project: LiveProject = talk.project
 
-        if not found_match:
-            warnings[('pool', talk.id)] = 'No assessor belongs to the pool for submitter ' \
-                                          '"{name}"'.format(name=talk.owner.student.user.name)
+        if attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.ALL_IN_POOL or \
+            attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_POOL:
 
+            found_match = False
+            for assessor in talk.project.assessor_list:
+                assessor: FacultyData
+                if get_count(obj.assessors.filter_by(id=assessor.id)) > 0:
+                    found_match = True
+                    break
+
+            if not found_match:
+                warnings[('pool', talk.id)] = 'No assessor belongs to the pool for submitter ' \
+                                              '"{name}"'.format(name=talk.owner.student.user.name)
+
+        elif attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.ALL_IN_RESEARCH_GROUP or \
+            attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_RESEARCH_GROUP:
+
+            found_match = False
+            if project.group is not None:
+                for assessor in obj.assessors:
+                    if assessor.has_affiliation(project.group):
+                        found_match = True
+                        break
+
+            if not found_match:
+                for assessor in talk.project.assessor_list:
+                    assessor: FacultyData
+                    if get_count(obj.assessors.filter_by(id=assessor.id)) > 0:
+                        found_match = True
+                        break
+
+            if not found_match:
+                warnings[('pool_group', talk.id)] = 'No assessor belongs to either the pool or affiliated ' \
+                                                    'research group for submitter ' \
+                                                    '"{name}"'.format(name=talk.owner.student.user.name)
 
     # CONSTRAINT 8. SUBMITTERS MARKED 'CAN'T ATTEND' SHOULD NOT BE SCHEDULED
     for talk in obj.talks:
-        if obj.owner.owner.not_attending(talk.id):
+        talk: SubmissionRecord
+        if assessment.not_attending(talk.id):
             errors[('talks', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but this student ' \
                                          'is not attending'.format(name=talk.owner.student.user.name)
 
 
     # CONSTRAINT 9. SUBMITTERS SHOULD ALL BE AVAILABLE FOR THIS SESSION
     for talk in obj.talks:
-        if obj.session.submitter_unavailable(talk.id):
+        talk: SubmissionRecord
+        if session.submitter_unavailable(talk.id):
             errors[('submitter', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but is not ' \
                                              'available'.format(name=talk.owner.student.user.name)
         else:
-            if not obj.session.submitter_available(talk.id):
+            if not session.submitter_available(talk.id):
                 errors[('submitter', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but they do not ' \
                                                  'belong to this assessment'.format(name=talk.owner.student.user.name)
 
 
     # CONSTRAINT 10. TALKS MARKED NOT TO CLASH SHOULD NOT BE SCHEDULED TOGETHER
-    talks_list = obj.talks.all()
-    for i in range(len(talks_list)):
-        for j in range(i):
-            talk_i = talks_list[i]
-            talk_j = talks_list[j]
+    if not attempt.ignore_coscheduling:
+        talks_list = obj.talks.all()
+        for i in range(len(talks_list)):
+            for j in range(i):
+                talk_i = talks_list[i]
+                talk_j = talks_list[j]
 
-            if talk_i.project_id == talk_j.project_id and \
-                    (talk_i.project is not None and talk_i.project.dont_clash_presentations):
-                errors[('clash', (talk_i.id, talk_j.id))] = \
-                    'Submitters "{name_a}" and "{name_b}" share a project ' \
-                    '"{proj}" that is marked not to be co-scheduled'.format(name_a=talk_i.owner.student.user.name,
-                                                                            name_b=talk_j.owner.student.user.name,
-                                                                            proj=talk_i.project.name)
+                if talk_i.project_id == talk_j.project_id and \
+                        (talk_i.project is not None and talk_i.project.dont_clash_presentations):
+                    errors[('clash', (talk_i.id, talk_j.id))] = \
+                        'Submitters "{name_a}" and "{name_b}" share a project ' \
+                        '"{proj}" that is marked not to be co-scheduled'.format(name_a=talk_i.owner.student.user.name,
+                                                                                name_b=talk_j.owner.student.user.name,
+                                                                                proj=talk_i.project.name)
 
 
     # CONSTRAINT 11. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN TWO PLACES AT THE SAME TIME
@@ -13993,6 +14032,7 @@ def _ScheduleSlot_is_valid(id):
 
     # CONSTRAINT 12. TALKS SHOULD BE SCHEDULED IN ONLY ONE SLOT
     for talk in obj.talks:
+        talk: SubmissionRecord
         q = db.session.query(ScheduleSlot) \
             .filter(ScheduleSlot.id != obj.id,
                     ScheduleSlot.owner_id == obj.owner_id,

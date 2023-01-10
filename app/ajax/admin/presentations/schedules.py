@@ -135,6 +135,9 @@ _info = \
 <span class="badge bg-info text-dark">Max assignment {{ s.assessor_assigned_limit }}</span>
 <span class="badge bg-info text-dark">If needed cost {{ s.if_needed_cost }}</span>
 <span class="badge bg-info text-dark">Levelling tension {{ s.levelling_tension }}</span>
+{% if s.ignore_coscheduling %}
+    <span class="badge bg-warning text-dark">Ignore coscheduling</span>
+{% endif %}
 {% if s.all_assessors_in_pool == s.ALL_IN_POOL %}
     <span class="badge bg-info text-dark">Assessors in pool</span>
 {% elif s.all_assessors_in_pool == s.AT_LEAST_ONE_IN_POOL %}

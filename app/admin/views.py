@@ -8159,26 +8159,35 @@ def schedule_assign_assessors_ajax(id):
     url = request.args.get('url', None)
 
     candidates = []
-    pclass = slot.pclass
+    pclass: ProjectClass = slot.pclass
 
     for item in record.owner.ordered_assessors:
-        # assessors should be available in this slot
+        # candidate assessors should be available in this slot
         if slot.session.faculty_available(item.faculty_id) or slot.session.faculty_ifneeded(item.faculty_id):
 
-            # assessors should also be enrolled for the project class corresponding to this slot
-            enrollment = item.faculty.get_enrollment_record(pclass.id)
-            if enrollment is not None and \
-                    enrollment.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED:
+            is_candidate = True
 
-                # check whether this faculty has any existing assignments in this session
-                num_existing = get_count(db.session.query(ScheduleSlot).filter(ScheduleSlot.owner_id == record.id,
-                                                                               ScheduleSlot.session_id == slot.session_id,
-                                                                               ScheduleSlot.assessors.any(id=item.faculty_id)))
+            if pclass is not None:
+                # assessors should also be enrolled for the project class corresponding to this slot
+                enrolment = item.faculty.get_enrollment_record(pclass.id)
+                available = enrolment is not None and \
+                            enrolment.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED
 
-                # if not, can offer them as a candidate
-                if num_existing == 0:
-                    slots = record.get_faculty_slots(item.faculty_id).all()
-                    candidates.append((item, slots))
+                if not available:
+                    is_candidate = False
+
+            # check whether this faculty has any existing assignments in this session
+            num_existing = get_count(db.session.query(ScheduleSlot).filter(ScheduleSlot.owner_id == record.id,
+                                                                           ScheduleSlot.session_id == slot.session_id,
+                                                                           ScheduleSlot.assessors.any(id=item.faculty_id)))
+
+            # if not, can offer them as a candidate
+            if num_existing > 0:
+                is_candidate = False
+
+            if is_candidate:
+                slots = record.get_faculty_slots(item.faculty_id).all()
+                candidates.append((item, slots))
 
     return ajax.admin.assign_assessor_data(candidates, slot, url=url, text=text)
 

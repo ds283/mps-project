@@ -107,12 +107,12 @@
                                     </div>
                                     <div class="col-2">
                                         <div class="d-flex flex-row justify-content-end gap-2">
-                                            <a href="{{ url_for('admin.schedule_remove_assessor', slot_id=slot.id, fac_id=item.id) }}" class="btn btn-outline-warning btn-sm"><i class="fas fa-trash"></i> Remove</a>
+                                            <a href="{{ url_for('admin.schedule_remove_assessor', slot_id=slot.id, fac_id=item.id) }}" class="btn btn-outline-danger btn-sm"><i class="fas fa-trash"></i> Remove</a>
                                         </div>
                                     </div>
                                 </div>
                             {% else %}
-                                <span class="badge bg-danger">Error: missing content</span>
+                                <span class="badge bg-warning bg-dark">No assessors assigned</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -154,7 +154,7 @@
                                         <div class="col-2">
                                             <div class="float-end">
                                                 {% if slot.is_assessor(item.id) %}
-                                                    <a class="btn btn-secondary btn-sm disabled">Already attached</a>
+                                                    <a class="btn btn-outline-success btn-sm disabled">Already attached</a>
                                                 {% else %}
                                                     <a href="{{ url_for('admin.schedule_attach_assessor', slot_id=slot.id, fac_id=item.id) }}" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Revert</a>
                                                 {% endif %}

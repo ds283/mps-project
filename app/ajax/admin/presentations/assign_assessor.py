@@ -143,7 +143,7 @@ _sessions = \
 _menu = \
 """
 <div class="float-end">
-    <a href="{{ url_for('admin.schedule_attach_assessor', slot_id=slot.id, fac_id=a.faculty_id) }}" class="btn btn-secondary btn-sm"><i class="fas fa-plus"></i> Attach</a>
+    <a href="{{ url_for('admin.schedule_attach_assessor', slot_id=slot.id, fac_id=a.faculty_id) }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-plus"></i> Attach</a>
 </div>
 """
 

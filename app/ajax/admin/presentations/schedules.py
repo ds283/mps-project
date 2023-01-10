@@ -136,11 +136,13 @@ _info = \
 <span class="badge bg-info text-dark">If needed cost {{ s.if_needed_cost }}</span>
 <span class="badge bg-info text-dark">Levelling tension {{ s.levelling_tension }}</span>
 {% if s.all_assessors_in_pool == s.ALL_IN_POOL %}
-    <span class="badge bg-info text-dark">All in pool</span>
+    <span class="badge bg-info text-dark">Assessors in pool</span>
 {% elif s.all_assessors_in_pool == s.AT_LEAST_ONE_IN_POOL %}
     <span class="badge bg-secondary">&ge; 1 assessor in pool</span>
 {% elif s.all_assessors_in_pool == s.ALL_IN_RESEARCH_GROUP %}
-    <span class="badge bg-secondary">All in group</span>
+    <span class="badge bg-secondary">Assessors in group</span>
+{% elif s.all_assessors_in_pool == s. AT_LEAST_ONE_IN_RESEARCH_GROUP %}
+    <span class="badge bg-secondary">&ge; 1 assessor in group</span>
 {% else %}
     <span class="badge bg-danger">Unknown pool setting</span>
 {% endif %}

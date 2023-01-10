@@ -1200,9 +1200,12 @@ class AssessorPoolChoicesMixin:
     AT_LEAST_ONE_IN_POOL = 0
     ALL_IN_POOL = 1
     ALL_IN_RESEARCH_GROUP = 2
+    AT_LEAST_ONE_IN_RESEARCH_GROUP = 3
 
     ASSESSOR_CHOICES = [(AT_LEAST_ONE_IN_POOL, 'For each talk, at least one assessor should belong to its assessor '
                                                'pool'),
+                        (AT_LEAST_ONE_IN_RESEARCH_GROUP, 'For each talk, at least one assessor should belong to its '
+                                                         'assessor pool or research group'),
                         (ALL_IN_POOL, 'For every talk, each assessor should belong to its assessor pool'),
                         (ALL_IN_RESEARCH_GROUP, 'For every talk, each assessor should belong to its assessor pool or '
                                                 'research group')]

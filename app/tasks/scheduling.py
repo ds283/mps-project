@@ -26,7 +26,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, TemporaryAsset, User, \
     ScheduleEnumeration, SubmissionRecord, SubmissionPeriodRecord, AssessorAttendanceData, \
-    EnrollmentRecord, SubmitterAttendanceData, PresentationSession, Room, FacultyData, LiveProject
+    EnrollmentRecord, SubmitterAttendanceData, PresentationSession, Room, FacultyData, LiveProject, ResearchGroup, \
+    ProjectClassConfig
 from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename, \
     canonical_generated_asset_filename
 from ..shared.sqlalchemy import get_count
@@ -218,8 +219,7 @@ def _build_student_availability_matrix(number_talks, talk_dict, number_slots, sl
     return B
 
 
-def _generate_minimize_objective(C, X, Y, S, U, number_talks, number_assessors, number_slots,
-                                 amax, amin, record):
+def _generate_minimize_objective(C, X, Y, S, number_talks, number_assessors, number_slots, record):
     """
     Generate an objective function that tries to schedule as efficiently as possible,
     with workload balancing
@@ -236,17 +236,11 @@ def _generate_minimize_objective(C, X, Y, S, U, number_talks, number_assessors, 
     objective = 0
 
     # ask optimizer to minimize the number of slots that are used
-    objective += sum([S[idx] for idx in S])
+    objective += sum(S[idx] for idx in S)
 
     # optimizer should penalize any slots that use 'if needed'
-    objective += sum([Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost)) for i in range(number_assessors)
-                                                                                for j in range(number_slots)])
-
-    # optimizer should try to balance workloads as evenly as possible
-    objective += abs(float(record.levelling_tension)) * (amax - amin)
-
-    # optimizer should leave the minimum number of faculty without work
-    objective += sum([1 - U[i] for i in range(number_assessors)])
+    objective += sum(Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost)) for i in range(number_assessors)
+                                                                               for j in range(number_slots))
 
     # TODO: - minimize number of days used in schedule
     # TODO: - minimize number of rooms used in schedule
@@ -254,8 +248,7 @@ def _generate_minimize_objective(C, X, Y, S, U, number_talks, number_assessors, 
     return objective
 
 
-def _generate_reschedule_objective(C, oldX, oldY, X, Y, S, U, number_talks, number_assessors, number_slots,
-                                   amax, amin, record):
+def _generate_reschedule_objective(C, oldX, oldY, X, Y, S, number_talks, number_assessors, number_slots, record):
     """
     Generate an objective function that tries to produce a feasible schedule matching oldX, oldY
     as closely as possible
@@ -292,14 +285,8 @@ def _generate_reschedule_objective(C, oldX, oldY, X, Y, S, U, number_talks, numb
                 objective += 1 - Y[idx]
 
     # optimizer should penalize any slots that use 'if needed'
-    objective += sum([Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost)) for i in range(number_assessors)
-                                                                                for j in range(number_slots)])
-
-    # optimizer should try to balance workloads as evenly as possible
-    objective += abs(float(record.levelling_tension)) * (amax - amin)
-
-    # optimizer should leave the minimum number of faculty without work
-    objective += sum([1 - U[i] for i in range(number_assessors)])
+    objective += sum(Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost)) for i in range(number_assessors)
+                                                                               for j in range(number_slots))
 
     return objective
 
@@ -398,19 +385,24 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     S = pulp.LpVariable.dicts("s", itertools.product(range(number_periods), range(number_slots)), cat=pulp.LpBinary)
 
     # for each assessor, generate a 'used' variable
-    # this is used to bias ths scheduler to spread work around so that the minimum number of
+    # this is used to bias the optimizer to spread work around so that the minimum number of
     # assessors are left with no work
     U = pulp.LpVariable.dicts("u", range(number_assessors), cat=pulp.LpBinary)
 
+    # for each talk and slot combination, generate a matrix to record how many assessors are drawn from the
+    # corresponding assessor pool (or research group)
+    # this is used to bias the optimizer to schedule students from compatible pools/groups together
+    P = pulp.LpVariable.dicts("p", itertools.product(range(number_talks), range(number_slots)), cat=pulp.LpInteger)
+
     # variables representing maximum and minimum number of assignments
     # we use these to tension the optimization so that workload tends to be balanced
-    amax = pulp.LpVariable("aMax", lowBound=0, cat=pulp.LpContinuous)
-    amin = pulp.LpVariable("aMin", lowBound=0, cat=pulp.LpContinuous)
+    amax = pulp.LpVariable("aMax", lowBound=0, cat=pulp.LpInteger)
+    amin = pulp.LpVariable("aMin", lowBound=0, cat=pulp.LpInteger)
 
 
     # OBJECTIVE FUNCTION
 
-    objective = make_objective(X, Y, S, U, number_talks, number_assessors, number_slots, amax, amin, record)
+    objective = make_objective(X, Y, S, number_talks, number_assessors, number_slots, record)
     prob += objective, "objective function"
 
 
@@ -422,17 +414,17 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
 
     # sum of occupation variables (over different periods) for each slot must be <= 1
     # this allows just one period type per slot
-    for i in range(number_slots):
-        prob += sum([S[(j, i)] for j in range(number_periods)]) <= 1
+    for k in range(number_slots):
+        prob += sum(S[(m, k)] for m in range(number_periods)) <= 1
         constraints += 1
 
     # if a talk is scheduled in a slot, then the corresponding occupation variable must be nonzero
     for i in range(number_talks):
         talk = talk_dict[i]
-        k = period_to_number[talk.period_id]
+        m = period_to_number[talk.period_id]
 
-        for j in range(number_slots):
-            prob += S[(k, j)] >= X[(i, j)]
+        for k in range(number_slots):
+            prob += S[(m, k)] >= X[(i, k)]
             constraints += 1
 
 
@@ -448,26 +440,29 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
 
     # faculty members can only be in one place at once, so should be scheduled only once per session
     for session in record.owner.sessions:
-        for i in range(number_assessors):
-            prob += sum([Y[(i, j)] for j in range(number_slots) if slot_dict[j].session_id == session.id]) <= 1
+        for j in range(number_assessors):
+            prob += sum(Y[(j, k)] for k in range(number_slots) if slot_dict[k].session_id == session.id) <= 1
             constraints += 1
 
     # number of times each faculty member is scheduled should fall below the hard limit, or the
     # exceptional limit for this faculty member (if specified)
-    for i in range(number_assessors):
-        if i in assessor_limits:
+    for j in range(number_assessors):
+        if j in assessor_limits:
             print('-- overwriting default assignment limit for assessor "{name}" with limit = '
-                  '{lim}'.format(name=assessor_dict[i].user.name, lim=assessor_limits[i]))
-            prob += sum([Y[(i, j)] for j in range(number_slots)]) <= int(assessor_limits[i])
+                  '{lim}'.format(name=assessor_dict[j].user.name, lim=assessor_limits[j]))
+            prob += sum(Y[(j, k)] for k in range(number_slots)) <= int(assessor_limits[j])
         else:
-            prob += sum([Y[(i, j)] for j in range(number_slots)]) <= int(record.assessor_assigned_limit)
+            prob += sum(Y[(j, k)] for k in range(number_slots)) <= int(record.assessor_assigned_limit)
         constraints += 1
 
     # if an assessor is scheduled in any slot, their occupation variable is allowed to become 1, otherwise
     # it is forced it zero
-    for i in range(number_assessors):
-        prob += U[i] <= sum([Y[(i, j)] for j in range(number_slots)])
+    for j in range(number_assessors):
+        prob += U[j] <= sum(Y[(j, k)] for k in range(number_slots))
         constraints += 1
+
+    # the purpose of U is to bias optimizer to leave the minimum number of faculty without work
+    objective += sum(1 - U[j] for j in range(number_assessors))
 
 
     # STUDENT (SUBMITTER) AVAILABILITY
@@ -485,32 +480,65 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
 
     # talks should be scheduled in exactly one slot
     for i in range(number_talks):
-        prob += sum([X[(i, k)] for k in range(number_slots)]) == 1
+        prob += sum(X[(i, k)] for k in range(number_slots)) == 1
         constraints += 1
 
     # each slot should have the required number of assessors (given its occupancy), *if* the slot is occupied:
-    for i in range(number_slots):
-        prob += sum([Y[(j, i)] for j in range(number_assessors)]) == \
-                sum([S[(k, i)] * int(period_dict[k].number_assessors) for k in range(number_periods)])
+    for m in range(number_periods):
+        period: SubmissionPeriodRecord = period_dict[m]
+        config: ProjectClassConfig = period.config
+
+        # build list of enrolled assessors for this period
+        allowed_assessors = set()
+        for j in range(number_assessors):
+            assessor: FacultyData = assessor_dict[j]
+            enrolment: EnrollmentRecord = assessor.get_enrollment_record(config.pclass_id)
+
+            if enrolment is not None and enrolment.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED:
+                allowed_assessors.add(j)
+
+        # if slot k is assigned to period m, then the sum of the assessor set should at least equal the expected
+        # number of assessors
+        # (note that we don't want assessor_set == S_mk * num_assessors, because if S_mk is zero this will force
+        # all the Y_jk in allowed_assessors to be zero likewise, which would incorrectly prohibit faculty with multiple
+        # enrolments from being assigned to this slot -- we have to impose the requirement that the total number
+        # of assessors exactly matches the expected number separately)
+        for k in range(number_slots):
+            assessor_set = sum(Y[(j, k)] for j in allowed_assessors)
+
+            prob += assessor_set >= S[(m, k)] * int(period.number_assessors)
+            constraints += 1
+        
+    for k in range(number_slots):
+        prob += sum([Y[(j, k)] for j in range(number_assessors)]) == \
+                sum([S[(m, k)] * int(period_dict[m].number_assessors) for m in range(number_periods)])
         constraints += 1
 
     # each slot should have no more than the maximum number of students:
-    for i in range(number_slots):
-        prob += sum([X[(j, i)] for j in range(number_talks)]) <= \
-                sum([S[(k, i)] * int(period_dict[k].max_group_size) for k in range(number_periods)])
-        constraints += 1
+    for m in range(number_periods):
+        period: SubmissionPeriodRecord = period_dict[m]
 
-    # each slot should have no more talks than the available capacity of the room
-    for i in range(number_slots):
-        slot: ScheduleSlot = slot_dict[i]
-        room: Room = slot.room
-        room_capacity = int(room.capacity)
+        # build list of allowed talks for this period
+        allowed_talks = set()
+        for i in range(number_talks):
+            talk: SubmissionRecord = talk_dict[i]
 
-        # the combination room_capacity - number_assessors could theoretically be negative, but if it is
-        # that is harmless: it will just prevent any talks being scheduled in this slot
-        prob += sum([X[(j, i)] for j in range(number_talks)]) <= \
-                sum([S[(k, i)] * (room_capacity - int(period_dict[k].number_assessors)) for k in range(number_periods)])
-        constraints += 1
+            if talk.period_id == period.id:
+                allowed_talks.add(i)
+
+        # if slot k is assigned to period m, then the sum of students assigned to slot k should not be more than
+        # the maximum group size or the available room capacity, whichever is smaller
+        for k in range(number_slots):
+            slot: ScheduleSlot = slot_dict[k]
+            room: Room = slot.room
+            room_capacity = int(room.capacity)
+
+            talk_set = sum(X[(i, k)] for i in allowed_talks)
+
+            max_capacity = min(room_capacity - int(period.number_assessors), int(period.max_group_size))
+
+            prob += talk_set <= S[(m, k)] * max_capacity
+            constraints += 1
 
 
     # TALKS SHOULD NOT CLASH WITH OTHER TALKS BELONGING TO THE SAME PROJECT, IF THAT OPTION IS SET
@@ -538,116 +566,97 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
 
 
     # TALKS CAN ONLY BE SCHEDULED WITH ASSESSORS WHO ARE SUITABLE
-    # the definition of 'suitable' depends whether we insist all assessors belong to the assessor pool
+    # the definition of 'suitable' depends on whether we insist all assessors belong to the assessor pool
     # for each project, or not. This is controlled by the 'all_assessors_in_pool' attribute.
 
-    def _make_at_least_one_in_pool(i):
-        nonlocal prob, constraints
+    def _make_assessor_objective(i: int, mode: str, not_available_predicate):
+        nonlocal prob, constraints, objective
+
+        if mode not in ['all', 'one']:
+            raise RuntimeError('Unknown assessor objective mode in _make_assessor_objective()')
 
         talk: SubmissionRecord = talk_dict[i]
 
-        # insist that *at least one* assessor is in the assessor pool for this talk, for whichever
-        # slot the talk occupies
+        allowed_assessors = set()
+        for j in range(number_assessors):
+            assessor: FacultyData = assessor_dict[j]
+
+            if not not_available_predicate(talk, assessor):
+                allowed_assessors.add(j)
+
         for k in range(number_slots):
-            prob += sum([Y[(j, k)] for j in range(number_assessors)
-                         if talk.project.is_assessor(assessor_dict[j].id)]) >= X[(i, k)]
+            assessor_sum = sum(Y[(j, k)] for j in allowed_assessors)
+
+            # insist that *at least one* assessor is in the assessor pool for this talk, for whichever
+            prob += assessor_sum >= X[(i, k)]
             constraints += 1
 
-        # also have to require that assessors for each talk are drawn from those faculty enrolled
-        # as presentation assessors
-        for j in range(number_assessors):
-            assessor: FacultyData = assessor_dict[j]
-            enrolment: EnrollmentRecord = assessor.get_enrollment_record(talk.project.config.pclass_id)
+            # if mode = 'all' then we *also* want to insist that every assessor belongs to allowed_assessors
+            # in theory this can be done by just requiring assessor_sum == num_assessors * X_ik, but the snag
+            # is that num_assessors depends on the *period*, not the *slot*, so there seems no way to write a linear
+            # constraint that enforces this; we apparently have to write a group of constraints that
+            # disallow assessors who don't fall in the allowed set
+            if mode == 'all':
+                for j in range(number_assessors):
+                    if j not in allowed_assessors:
+                        # don't allow talk i and assessor j to be scheduled in slot k simultaneously
+                        prob += X[(i, k)] + Y[(j, k)] <= 1
+                        constraints += 1
 
-            not_available = enrolment is None or \
-                            enrolment.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED
+            # P_ik is supposed to measure the number of assessors assigned to this slot who match the
+            # allowed assessor criteria; we try to maximize that
+            prob += assessor_sum >= P[(i, k)]
+            objective += -P[(i, k)]
+            constraints += 1
 
-            if not_available:
-                for k in range(number_slots):
-                    # the constraint enforces that assessor j cannot be scheduled for slot k if they
-                    # are not available for talk i, and talk i is scheduled in slot k
-                    prob += X[(i, k)] + Y[(j, k)] <= 1
-                    constraints += 1
+    def _make_assessor_objective_pool(i, mode: str):
+        if mode not in ['all', 'one']:
+            raise RuntimeError('Unknown assessor objective mode in _make_assessor_objective_pool()')
 
-    def _make_all_in_pool(i):
-        nonlocal prob, constraints
+        def _not_available_predicate(talk: SubmissionRecord, assessor: FacultyData):
+            # don't need to check enrolment status because that is enforced as part of the "TALKS" group above
+            return not talk.project.is_assessor(assessor.id)
 
-        talk: SubmissionRecord = talk_dict[i]
+        return _make_assessor_objective(i, mode, _not_available_predicate)
 
-        # assessor j is compatible with talk i only if j is in the assessor pool for i
-        for j in range(number_assessors):
-            assessor: FacultyData = assessor_dict[j]
-            enrolment: EnrollmentRecord = assessor.get_enrollment_record(talk.project.config.pclass_id)
+    def _make_assessor_objective_research_group(i, mode: str):
+        if mode not in ['all', 'one']:
+            raise RuntimeError('Unknown assessor objective mode in _make_assessor_objective_research_group()')
 
-            not_available = enrolment is None or \
-                            enrolment.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED or \
-                            not talk.project.is_assessor(assessor.id)
-
-            for k in range(number_slots):
-                if not_available:
-                    # the constraint enforces that assessor j cannot be scheduled for slot k if they
-                    # are not available for talk i, and talk i is scheduled in slot k
-                    prob += X[(i, k)] + Y[(j, k)] <= 1
-                    constraints += 1
-
-    def _make_all_in_research_group(i):
-        nonlocal prob, constraints
-
-        talk: SubmissionRecord = talk_dict[i]
-        project: LiveProject = talk.project
-
-        group = project.group
-        if group is None:
-            raise RuntimeError('Empty project research group encountered in _make_all_in_research_group()')
-
-        for j in range(number_assessors):
-            assessor: FacultyData = assessor_dict[i]
-            enrolment: EnrollmentRecord = assessor.get_enrollment_record(talk.project.config.pclass_id)
-
-            not_available = enrolment is None or \
-                            enrolment.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED or \
-                            (not assessor.has_affiliation(group) and not talk.project.is_assessor(assessor.id))
-
-            for k in range(number_slots):
-                if not_available :
-                    # the constraint enforces that assessor j cannot be scheduled for slot k if they
-                    # are not in the pool for talk i, and talk i is scheduled in slot k
-                    prob += X[(i, k)] + Y[(j, k)] <= 1
-                    constraints += 1
-
-
-    if record.all_assessors_in_pool == ScheduleAttempt.ALL_IN_POOL:
-        for i in range(number_talks):
-            _make_all_in_pool(i)
-
-    elif record.all_assessors_in_pool == ScheduleAttempt.AT_LEAST_ONE_IN_POOL:
-        for i in range(number_talks):
-            _make_at_least_one_in_pool(i)
-
-    elif record.all_assessors_in_pool == ScheduleAttempt.ALL_IN_RESEARCH_GROUP:
-        for i in range(number_talks):
-            talk: SubmissionRecord = talk_dict[i]
+        def _not_available_predicate(talk: SubmissionRecord, assessor: FacultyData):
+            # don't need to check enrolment status because that is enforced as part of the "TALKS" group above
             project: LiveProject = talk.project
+            group: ResearchGroup = project.group
 
             # a research group might not be specified - they're typically not used for generic projects, or the
             # 'advertise_research_group' flag might not be set. So, we can't assume that research group
             # data will be available.
             # In this case, we fall back on the assessor pool
-            if project.group is None:
-                _make_at_least_one_in_pool(i)
-            else:
-                _make_all_in_research_group(i)
+            if group is None:
+                return not talk.project.is_assessor(assessor.id)
+
+            return not assessor.has_affiliation(group) and not talk.project.is_assessor(assessor.id)
+
+        return _make_assessor_objective(i, mode, _not_available_predicate)
+
+    if record.all_assessors_in_pool == ScheduleAttempt.ALL_IN_POOL:
+        for i in range(number_talks):
+            _make_assessor_objective_pool(i, 'all')
+
+    elif record.all_assessors_in_pool == ScheduleAttempt.AT_LEAST_ONE_IN_POOL:
+        for i in range(number_talks):
+            _make_assessor_objective_pool(i, 'one')
+
+    elif record.all_assessors_in_pool == ScheduleAttempt.ALL_IN_RESEARCH_GROUP:
+        for i in range(number_talks):
+            _make_assessor_objective_research_group(i, 'all')
+
+    elif record.all_assessors_in_pool == ScheduleAttempt.AT_LEAST_ONE_IN_RESEARCH_GROUP:
+        for i in range(number_talks):
+            _make_assessor_objective_research_group(i, 'one')
 
     else:
         raise RuntimeError("Unknown value for ScheduleAttempt.all_assessors_in_pool in _create_PuLP_problem()")
-
-    # TODO: there doesn't seem any way to ask for *as many sessions as possible* to be scheduled with all
-    #  (or as many as possible) assessors from the shared assessor pool of all presenters.
-    #  This requires (as far as I can tell) a nonlinear (probably quadratic) optimization goal.
-    #  The problem is that while one can easily compute the number of assessors N_ik in slot k for talk i, just as we
-    #  do for amin/amax below, it is not easy to select *which* of these k is the true value, given that talk i
-    #  has been assigned to slot k'. For that we (seem to) need to write an expression like sum_k X_ik N_ik.
-    #  Would be nice to improve this if possible.
 
 
     # TALKS CANNOT BE SCHEDULED WITH THE SUPERVISOR AS AN ASSESSOR
@@ -673,8 +682,8 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     for i in range(number_talks):
         talk = talk_dict[i]
 
-        for j in range(number_slots):
-            slot = slot_dict[j]
+        for k in range(number_slots):
+            slot = slot_dict[k]
             slot_ok = True
 
             if not talk.period.has_presentation:
@@ -686,7 +695,7 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
             # future options can be inserted here
 
             if not slot_ok:
-                prob += X[(i, j)] == 0
+                prob += X[(i, k)] == 0
                 constraints += 1
 
 
@@ -694,9 +703,12 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
 
     # amax and amin should bracket the workload of each faculty member
     for i in range(number_assessors):
-        prob += sum([Y[(i, j)] for j in range(number_slots)]) <= amax
-        prob += sum([Y[(i, j)] for j in range(number_slots)]) >= amin
+        prob += sum(Y[(i, k)] for k in range(number_slots)) <= amax
+        prob += sum(Y[(i, k)] for k in range(number_slots)) >= amin
         constraints += 2
+
+    # optimizer should use amin and amax to (try to) balance workloads as evenly as possible
+    objective += abs(float(record.levelling_tension)) * (amax - amin)
 
 
     print(' -- {num} total constraints'.format(num=constraints))
@@ -876,22 +888,22 @@ def _execute_from_solution(self, file, record, prob, X, Y, create_time, number_t
 
         if record.solver == ScheduleAttempt.SOLVER_CBC_PACKAGED:
             solver = pulp_apis.PULP_CBC_CMD()
-            status, values, reducedCosts, shadowPrices, slacks = solver.readsol_LP(file, prob, prob.variables())
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol_LP(file, prob, prob.variables())
         elif record.solver == ScheduleAttempt.SOLVER_CBC_CMD:
             solver = pulp_apis.COIN_CMD()
-            status, values, reducedCosts, shadowPrices, slacks = solver.readsol_LP(file, prob, prob.variables())
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol_LP(file, prob, prob.variables())
         elif record.solver == ScheduleAttempt.SOLVER_GLPK_CMD:
             solver = pulp_apis.GLPK_CMD()
-            status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
         elif record.solver == ScheduleAttempt.SOLVER_CPLEX_CMD:
             solver = pulp_apis.CPLEX_CMD()
-            status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
         elif record.solver == ScheduleAttempt.SOLVER_GUROBI_CMD:
             solver = pulp_apis.GUROBI_CMD()
             status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
         elif record.solver == ScheduleAttempt.SOLVER_SCIP_CMD:
             solver = pulp_apis.SCIP_CMD()
-            status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
         else:
             progress_update(record.celery_id, TaskRecord.FAILURE, 100, "Unknown solver",
                             autocommit=True)

@@ -9548,23 +9548,23 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     def get_roles(self, role: str):
         """
-        Return user instances corresponding to attached MatchingRole records for role type 'role'
+        Return user instances corresponding to attached SubmissionRole records for role type 'role'
         :param role: specified role type
         :return:
         """
         role = role.lower()
-        role_map = {'supervisor': MatchingRole.ROLE_SUPERVISOR,
-                    'marker': MatchingRole.ROLE_MARKER,
-                    'moderator': MatchingRole.ROLE_MODERATOR}
+        role_map = {'supervisor': SubmissionRole.ROLE_SUPERVISOR,
+                    'marker': SubmissionRole.ROLE_MARKER,
+                    'moderator': SubmissionRole.ROLE_MODERATOR}
 
         if role not in role_map:
-            raise KeyError('Unknown role "{role}" in MatchingRecord.get_roles()'.format(role=role))
+            raise KeyError('Unknown role "{role}" in SubmissionRecord.get_roles()'.format(role=role))
 
         role_id = role_map[role]
 
         return db.session.query(User).select_from(self.roles) \
-            .filter(MatchingRole.role == role_id) \
-            .join(User, User.id == MatchingRole.user_id)
+            .filter(SubmissionRole.role == role_id) \
+            .join(User, User.id == SubmissionRole.user_id)
 
 
     def get_role_ids(self, role: str):

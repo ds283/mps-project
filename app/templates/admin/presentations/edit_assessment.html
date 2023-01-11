@@ -1,8 +1,10 @@
 {% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
+
 {% from "macros.html" import edit_data %}
 {% from "select2.html" import import_select2 %}
+{% from "icon_block.html" import icon_block %}
 
 {% block scripts %}
     {{ super() }}
@@ -45,8 +47,18 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
+        {% if form.submission_periods is not defined %}
+            <div class="alert alert-info">
+                {% call icon_block("info-circle") %}
+                    <div><strong>It is no longer possible to edit the submission periods attached to this assessment.</strong></div>
+                {% endcall %}
+            </div>
+        {% endif %}
+
         {{ wtf.render_field(form.name) }}
-        {{ wtf.render_field(form.submission_periods) }}
+        {% if form.submission_periods is defined %}
+            {{ wtf.render_field(form.submission_periods) }}
+        {% endif %}
 
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 

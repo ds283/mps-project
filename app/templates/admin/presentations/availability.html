@@ -1,6 +1,8 @@
 {% extends "base_app.html" %}
 {% import "bootstrap/form.html" as wtf %}
 
+{% from "icon_block.html" import icon_block %}
+
 {% from "admin/presentations/availability/request.html" import issue_requests %}
 {% from "admin/presentations/availability/waiting.html" import waiting_responses %}
 {% from "admin/presentations/availability/closed.html" import availability_closed %}
@@ -44,39 +46,34 @@
                 <div class="card mt-3 mb-3 card-body bg-well">
                     {% set state = assessment.availability_lifecycle %}
                     {% if state == assessment.AVAILABILITY_NOT_REQUESTED %}
-
                         {{ issue_requests(assessment, form) }}
-
                     {% elif state == assessment.AVAILABILITY_REQUESTED %}
-
                         {{ waiting_responses(assessment, form) }}
-
                     {% elif state == assessment.AVAILABILITY_CLOSED %}
-
                         {{ availability_closed(assessment) }}
-
-                    {% else %}
-
-                        <div class="card border-danger mt-3 mb-3">
-                            <div class="card-header bg-danger text-white">Error</div>
-                            <div class="card-body">
-                                <strong>Error:</strong>
-                                Unknown availability lifecycle state {{ state }}
-                            </div>
+                    {% elif state == assessment.AVAILABILITY_SKIPPED %}
+                        <div class="alert alert-info mt-2 mb-2">
+                            {% call icon_block("info-circle") %}
+                                <div><strong>Availability requests have been skipped for this assessment.</strong></div>
+                            {% endcall %}
                         </div>
-
+                    {% else %}
+                        <div class="alert alert-danger mt-2 mb-2">
+                            {% call icon_block("exclamation-triangle") %}
+                                <div><strong>An internal error has occurred.</strong></div>
+                                <div class="mt-1">Unknown availability lifecycle state {{ state }}.</div>
+                            {% endcall %}
+                        </div>
                     {% endif %}
                 </div>
             {% else %}
-                <div class="card border-danger mt-3 mb-3">
-                    <div class="card-header bg-danger text-white">Error</div>
-                    <div class="card-body">
-                        <strong>Error:</strong>
-                        Data for this assessment is missing
-                    </div>
+                <div class="alert alert-danger mt-2 mb-2">
+                    {% call icon_block("exclamation-triangle") %}
+                        <div><strong>An internal error has occurred.</strong></div>
+                        <div class="mt-1">Data for this assessment is missing.</div>
+                    {% endcall %}
                 </div>
             {% endif %}
-
             <div>
                 <a class="text-decoration-none" href="{{ url_for('admin.manage_assessments') }}">
                     <i class="fas fa-backward"></i> Return to assessments list

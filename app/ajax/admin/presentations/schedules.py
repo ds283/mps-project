@@ -135,10 +135,19 @@ _info = \
 <span class="badge bg-info text-dark">Max assignment {{ s.assessor_assigned_limit }}</span>
 <span class="badge bg-info text-dark">If needed cost {{ s.if_needed_cost }}</span>
 <span class="badge bg-info text-dark">Levelling tension {{ s.levelling_tension }}</span>
-{% if s.all_assessors_in_pool %}
-    <span class="badge bg-info text-dark">All assessors in pool</span>
+{% if s.ignore_coscheduling %}
+    <span class="badge bg-warning text-dark">Ignore coscheduling</span>
+{% endif %}
+{% if s.all_assessors_in_pool == s.ALL_IN_POOL %}
+    <span class="badge bg-info text-dark">Assessors in pool</span>
+{% elif s.all_assessors_in_pool == s.AT_LEAST_ONE_IN_POOL %}
+    <span class="badge bg-secondary">&ge; 1 assessor in pool</span>
+{% elif s.all_assessors_in_pool == s.ALL_IN_RESEARCH_GROUP %}
+    <span class="badge bg-secondary">Assessors in group</span>
+{% elif s.all_assessors_in_pool == s. AT_LEAST_ONE_IN_RESEARCH_GROUP %}
+    <span class="badge bg-secondary">&ge; 1 assessor in group</span>
 {% else %}
-    <span class="badge bg-secondary">At least 1 assessor in pool</span>
+    <span class="badge bg-danger">Unknown pool setting</span>
 {% endif %}
 {% if s.finished and s.solution_usable %}
     <p></p>
@@ -223,7 +232,7 @@ _menu = \
             {% set disabled = not current_user.has_role('root') %}
             {% if s.awaiting_upload %}
                 <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.upload_schedule', schedule_id=s.id) }}"{% endif %}>
-                    <i class="fas fa-cloud-upload fa-fw"></i> Upload solution...
+                    <i class="fas fa-cloud-upload-alt fa-fw"></i> Upload solution...
                 </a>
                 <div role="separator" class="dropdown-divider"></div>
             {% endif %}

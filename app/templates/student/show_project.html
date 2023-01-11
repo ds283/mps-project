@@ -1,23 +1,14 @@
 {% extends "base_project.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
+
 {% from "macros.html" import on_click_selector_field %}
 {% from "icon_block.html" import icon_block %}
+{% from "mathjax.html" import import_mathjax %}
 
 {% block scripts %}
     {{ super() }}
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/latest.js?config=TeX-MML-AM_CHTML' async></script>
-
-    <script type="text/x-mathjax-config">
-        MathJax.Hub.Config({
-            extensions: ["tex2jax.js", "AMSmath.js"],
-            jax: ["input/TeX", "output/HTML-CSS"],
-            tex2jax: {
-                displayMath: [ ['$$','$$'], ["\[","\]"] ],
-                processEscapes: true
-            },
-        });
-    </script>
+    {{ import_mathjax() }}
 {% endblock %}
 
 {% block title %}
@@ -330,12 +321,12 @@
 
                         <h4>Description</h4>
                         {% if desc %}
-                            <div class="project-description">{{ desc.description|dealingwithdollars|markdown|bclean|blinkify|safe }}</div>
+                            <div class="project-description">{{ desc.description|latextomarkdown|markdown|bclean|blinkify|safe }}</div>
 
                             {% if desc.reading and desc.reading is not none %}
                                 <hr class="intro-divider">
                                 <p><strong>Recommended resources</strong></p>
-                                {{ desc.reading|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                {{ desc.reading|latextomarkdown|markdown|bclean|blinkify|safe }}
                             {% endif %}
                         {% else %}
                             <div class="alert alert-danger">
@@ -436,7 +427,7 @@
                                                 <span class="text-muted">Visible only to approvals team</span>
                                             {% endif %}
                                         </p>
-                                        {{ comment.comment|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                        {{ comment.comment|latextomarkdown|markdown|bclean|blinkify|safe }}
                                     {% endif %}
                                 </div>
                                 {% if not comment.deleted and (comment.last_edit_timestamp or current_user.id == comment.owner_id or (is_approver and approvals_team_only)) %}

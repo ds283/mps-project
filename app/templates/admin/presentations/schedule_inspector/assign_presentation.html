@@ -174,9 +174,9 @@
                                     <div class="col-2">
                                         <div class="float-end">
                                             {% if original_slot.id != slot.id %}
-                                                <a href="{{ url_for('admin.schedule_move_submitter', old_id=slot.id, new_id=original_slot.id, talk_id=talk.id, url=url, text=text) }}" class="btn btn-secondary btn-sm"><i class="fas fa-undo"></i> Revert</a>
+                                                <a href="{{ url_for('admin.schedule_move_submitter', old_id=slot.id, new_id=original_slot.id, talk_id=talk.id, url=url, text=text) }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-undo"></i> Revert</a>
                                             {% else %}
-                                                <a class="btn btn-secondary btn-sm disabled">Already attached</a>
+                                                <a class="btn btn-outline-success btn-sm disabled">Already attached</a>
                                             {% endif %}
                                          </div>
                                    </div>

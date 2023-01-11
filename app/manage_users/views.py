@@ -1495,10 +1495,10 @@ def add_affiliation(userid, groupid):
     :param groupid:
     :return:
     """
-    data = FacultyData.query.get_or_404(userid)
-    group = ResearchGroup.query.get_or_404(groupid)
+    data: FacultyData = FacultyData.query.get_or_404(userid)
+    group: ResearchGroup = ResearchGroup.query.get_or_404(groupid)
 
-    if group not in data.affiliations:
+    if not data.has_affiliation(group):
         data.add_affiliation(group, autocommit=True)
 
     return redirect(redirect_url())
@@ -1513,10 +1513,10 @@ def remove_affiliation(userid, groupid):
     :param groupid:
     :return:
     """
-    data = FacultyData.query.get_or_404(userid)
-    group = ResearchGroup.query.get_or_404(groupid)
+    data: FacultyData = FacultyData.query.get_or_404(userid)
+    group: ResearchGroup = ResearchGroup.query.get_or_404(groupid)
 
-    if group in data.affiliations:
+    if data.has_affiliation(group):
         data.remove_affiliation(group, autocommit=True)
 
     return redirect(redirect_url())

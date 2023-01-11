@@ -265,7 +265,7 @@ _menu = \
             {% set disabled = not current_user.has_role('root') %}
             {% if m.awaiting_upload %}
                 <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.upload_match', match_id=m.id) }}"{% endif %}>
-                    <i class="fas fa-cloud-upload fa-fw"></i> Upload solution...
+                    <i class="fas fa-cloud-upload-alt fa-fw"></i> Upload solution...
                 </a>
             {% endif %}
             <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.duplicate_match', id=m.id) }}"{% endif %}>

@@ -23,15 +23,10 @@
                     Set <i class="fas fa-user"></i> <strong>{{ submitter.owner.student.user.name }}</strong> availability for assessment event <strong>{{ assessment.name }}</strong>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="float-end">
-                                <a class="btn btn-secondary{% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.submitter_all_available', a_id=assessment.id, s_id=submitter.id) }}"{% endif %}><i class="fas fa-check"></i> Available for all</a>
-                                <a class="btn btn-secondary{% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.submitter_all_unavailable', a_id=assessment.id, s_id=submitter.id) }}"{% endif %}><i class="fas fa-times"></i> Not available for all</a>
-                            </div>
-                        </div>
+                    <div class="d-flex flex-row justify-content-end gap-2">
+                        <a class="btn btn-sm btn-outline-secondary{% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.submitter_all_available', a_id=assessment.id, s_id=submitter.id) }}"{% endif %}><i class="fas fa-check"></i> Available for all</a>
+                        <a class="btn btn-sm btn-outline-secondary{% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.submitter_all_unavailable', a_id=assessment.id, s_id=submitter.id) }}"{% endif %}><i class="fas fa-times"></i> Not available for all</a>
                     </div>
-                    <hr class="intro-divider">
                     <div class="row vertical-top event-table">
                         <div class="col-4"><strong>Date</strong></div>
                         <div class="col-1"><strong>Session</strong></div>
@@ -43,12 +38,12 @@
                             <div class="col-4">{{ session.date.strftime("%a %d %b %Y") }}</div>
                             <div class="col-1">{{ session.session_type_label|safe }}</div>
                             <div class="col-7">
-                                <div class="float-end">
+                                <div class="d-flex flex-row justify-content-end gap-2">
                                     {% if session.submitter_available(submitter.id) %}
                                         <a class="btn btn-success btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-check"></i> Available</a>
-                                        <a {% if editabke %}href="{{ url_for('admin.submitter_unavailable', sess_id=session.id, s_id=submitter.id) }}"{% endif %} class="btn btn-secondary btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-times"></i> Not available</a>
+                                        <a {% if editable %}href="{{ url_for('admin.submitter_unavailable', sess_id=session.id, s_id=submitter.id) }}"{% endif %} class="btn btn-outline-secondary btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-times"></i> Not available</a>
                                     {% else %}
-                                        <a {% if editabke %}href="{{ url_for('admin.submitter_available', sess_id=session.id, s_id=submitter.id) }}"{% endif %} class="btn btn-secondary btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-check"></i> Available</a>
+                                        <a {% if editable %}href="{{ url_for('admin.submitter_available', sess_id=session.id, s_id=submitter.id) }}"{% endif %} class="btn btn-outline-secondary btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-check"></i> Available</a>
                                         <a class="btn btn-danger btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-times"></i> Not available</a>
                                     {% endif %}
                                 </div>

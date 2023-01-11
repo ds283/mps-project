@@ -1125,6 +1125,8 @@ class AvailabilityRequestStateMixin:
     AVAILABILITY_REQUESTED = 1
     AVAILABILITY_CLOSED = 2
 
+    AVAILABILITY_SKIPPED = 10
+
 
 class PresentationSessionTypesMixin:
     """
@@ -1136,8 +1138,8 @@ class PresentationSessionTypesMixin:
     SESSION_TO_TEXT = {MORNING_SESSION: 'morning',
                        AFTERNOON_SESSION: 'afternoon'}
 
-    SESSION_LABEL_TYPES = {MORNING_SESSION: 'bg-light text-dark',
-                           AFTERNOON_SESSION: 'bg-dark'}
+    SESSION_LABEL_TYPES = {MORNING_SESSION: 'bg-secondary',
+                           AFTERNOON_SESSION: 'bg-secondary'}
 
 
 class ScheduleEnumerationTypesMixin:
@@ -1189,6 +1191,24 @@ class SubmissionRoleTypesMixin:
 
     _MIN_ROLE = ROLE_SUPERVISOR
     _MAX_ROLE = ROLE_EXTERNAL_EXAMINER
+
+
+class AssessorPoolChoicesMixin:
+    """
+    Single point of definition for assessor pool choices used during assessment scheduling
+    """
+    AT_LEAST_ONE_IN_POOL = 0
+    ALL_IN_POOL = 1
+    ALL_IN_RESEARCH_GROUP = 2
+    AT_LEAST_ONE_IN_RESEARCH_GROUP = 3
+
+    ASSESSOR_CHOICES = [(AT_LEAST_ONE_IN_POOL, 'For each talk, at least one assessor should belong to its assessor '
+                                               'pool'),
+                        (AT_LEAST_ONE_IN_RESEARCH_GROUP, 'For each talk, at least one assessor should belong to its '
+                                                         'assessor pool or research group'),
+                        (ALL_IN_POOL, 'For every talk, each assessor should belong to its assessor pool'),
+                        (ALL_IN_RESEARCH_GROUP, 'For every talk, each assessor should belong to its assessor pool or '
+                                                'research group')]
 
 
 # roll our own get_main_config() and get_current_year(), which we cannot import because it creates a dependency cycle
@@ -2709,7 +2729,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return '<span class="badge bg-warning text-dark"><i class="fas fa-times"></i> {n} unofferable</span>'.format(n=n)
 
 
-    def remove_affiliation(self, group, autocommit=False):
+    def remove_affiliation(self, group: ResearchGroup, autocommit=False):
         """
         Remove an affiliation from a faculty member
         :param group:
@@ -2728,7 +2748,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             db.session.commit()
 
 
-    def add_affiliation(self, group, autocommit=False):
+    def add_affiliation(self, group: ResearchGroup, autocommit=False):
         """
         Add an affiliation to this faculty member
         :param group:
@@ -2739,6 +2759,18 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         if autocommit:
             db.session.commit()
+
+
+    def has_affiliation(self, group: ResearchGroup):
+        """
+        Test whether this faculty members has a particular research group affiliation
+        :param group:
+        :return:
+        """
+        if group is None:
+            return False
+
+        return group in self.affiliations
 
 
     def is_enrolled(self, pclass):
@@ -3176,6 +3208,8 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return db.session.query(PresentationAssessment) \
             .join(query, query.c.assessment_id == PresentationAssessment.id) \
             .filter(PresentationAssessment.year == _get_current_year(),
+                    PresentationAssessment.skip_availability != True,
+                    PresentationAssessment.requested_availability == True,
                     PresentationAssessment.availability_closed == False) \
             .order_by(PresentationAssessment.name.asc())
 
@@ -4967,7 +5001,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     # have we skipped confirmation requests?
     requests_skipped = db.Column(db.Boolean(), default=False)
 
-    # who skipped them
+    # who skipped them?
     requests_skipped_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     requests_skipped_by = db.relationship('User', uselist=False, foreign_keys=[requests_skipped_id])
 
@@ -12346,7 +12380,7 @@ def _PresentationAssessment_is_valid(id):
     return True, errors, warnings
 
 
-class PresentationAssessment(db.Model, EditingMetadataMixin):
+class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequestStateMixin):
     """
     Store data for a presentation assessment
     """
@@ -12382,8 +12416,18 @@ class PresentationAssessment(db.Model, EditingMetadataMixin):
     # can availabilities still be modified?
     availability_closed = db.Column(db.Boolean())
 
-    # what deadline has been set of availability information to be returned?
+    # what deadline has been set for availability information to be returned?
     availability_deadline = db.Column(db.Date())
+
+    # have availability requests been skipped?
+    skip_availability = db.Column(db.Boolean())
+
+    # who skipped availabiluty requests?
+    availability_skipped_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    availability_skipped_by = db.relationship('User', uselist=False, foreign_keys=[availability_skipped_id])
+
+    # requests skipped timestamp
+    availability_skipped_timestamp = db.Column(db.DateTime())
 
 
     # FEEDBACK LIFECYCLE
@@ -12409,13 +12453,16 @@ class PresentationAssessment(db.Model, EditingMetadataMixin):
 
     @property
     def availability_lifecycle(self):
-        if self.requested_availability is False:
-            return PresentationAssessment.AVAILABILITY_NOT_REQUESTED
+        if self.skip_availability:
+            return AvailabilityRequestStateMixin.AVAILABILITY_SKIPPED
 
-        if self.availability_closed is False:
-            return PresentationAssessment.AVAILABILITY_REQUESTED
+        if not self.requested_availability:
+            return AvailabilityRequestStateMixin.AVAILABILITY_NOT_REQUESTED
 
-        return PresentationAssessment.AVAILABILITY_CLOSED
+        if not self.availability_closed:
+            return AvailabilityRequestStateMixin.AVAILABILITY_REQUESTED
+
+        return AvailabilityRequestStateMixin.AVAILABILITY_CLOSED
 
 
     @property
@@ -12458,7 +12505,12 @@ class PresentationAssessment(db.Model, EditingMetadataMixin):
 
     @property
     def number_slots(self):
-        return sum([sess.number_rooms for sess in self.sessions])
+        return sum(s.number_slots for s in self.sessions)
+
+
+    @property
+    def number_rooms(self):
+        return sum(s.number_rooms for s in self.sessions)
 
 
     @property
@@ -12468,7 +12520,7 @@ class PresentationAssessment(db.Model, EditingMetadataMixin):
 
     @property
     def number_talks(self):
-        return sum([p.number_projects for p in self.submission_periods])
+        return sum(p.number_projects for p in self.submission_periods)
 
 
     @property
@@ -13397,6 +13449,10 @@ class PresentationSession(db.Model, EditingMetadataMixin, PresentationSessionTyp
     def number_rooms(self):
         return get_count(self.rooms)
 
+    @property
+    def number_slots(self):
+        return sum(r.maximum_occupancy for r in self.rooms)
+
 
     @property
     def _faculty(self):
@@ -13617,6 +13673,10 @@ class Room(db.Model, EditingMetadataMixin):
     # room has lecture capture?
     lecture_capture = db.Column(db.Boolean())
 
+    # maximum allowable occupancy (i.e., multiple groups are allowed to be scheduled in the same room)
+    # This could be phsyical (maybe the room can be partitioned), or can be used to model e.g. Zoom teleconference rooms
+    maximum_occupancy = db.Column(db.Integer(), default=1, nullable=False)
+
     # active flag
     active = db.Column(db.Boolean())
 
@@ -13697,7 +13757,7 @@ def _ScheduleAttempt_is_valid(id):
     return True, errors, warnings
 
 
-class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
+class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin, AssessorPoolChoicesMixin):
     """
     Model configuration data for an assessment scheduling attempt
     """
@@ -13740,9 +13800,11 @@ class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     levelling_tension = db.Column(db.Numeric(8, 3))
 
     # must all assessors be in the assessor pool for every project, or is just one enough?
-    assessor_choices = [(0, 'For each talk, at least one assessor should belong to its assessor pool'),
-                        (1, 'Each assessor should belong to the assessor pool for every talk')]
-    all_assessors_in_pool = db.Column(db.Boolean())
+    all_assessors_in_pool = db.Column(db.Integer())
+
+    # ignore coscheduling constraints
+    ignore_coscheduling = db.Column(db.Boolean())
+
 
     # CIRCULATION STATUS
 
@@ -14028,21 +14090,44 @@ def _ScheduleAttempt_delete_handler(mapper, connection, target):
 
 @cache.memoize()
 def _ScheduleSlot_is_valid(id):
-    obj = db.session.query(ScheduleSlot).filter_by(id=id).one()
+    obj: ScheduleSlot = db.session.query(ScheduleSlot).filter_by(id=id).one()
+    attempt: ScheduleAttempt = obj.owner
+    assessment: PresentationAssessment = attempt.owner
+    session: PresentationSession = obj.session
 
     errors = {}
     warnings = {}
 
-
-    # CONSTRAINT 1. NUMBER OF TALKS SHOULD BE LESS THAN PRESCRIBED MAXIMUM
+    # CONSTRAINT 1a. NUMBER OF TALKS SHOULD BE LESS THAN PRESCRIBED MAXIMUM
     num_talks = get_count(obj.talks)
     if num_talks > 0:
-        tk = obj.talks.first()
-        expected_size = tk.period.max_group_size
+        expected_size = max(tk.period.max_group_size for tk in obj.talks)
 
         if num_talks > expected_size:
-            errors[('basic', 0)] = 'Too many talks scheduled in this slot ' \
-                                   '(scheduled={sch}, max={max})'.format(sch=num_talks, max=expected_size)
+            errors[('basic', 0)] = 'This slot has a maximum group size {max}, but {sch} talks have ' \
+                                   'been scheduled'.format(sch=num_talks, max=expected_size)
+
+    # CONSTRAINT 1b. NUMBER OF TALKS SHOULD BE LESS THAN THE CAPACITY OF THE ROOM, MINUS THE NUMBER OF ASSESSORS
+    if num_talks > 0:
+        room: Room = obj.room
+        tk: SubmissionRecord = obj.talks.first()
+        period: SubmissionPeriodRecord = tk.period
+
+        room_capacity = room.capacity
+        num_assessors = period.number_assessors
+
+        max_talks = room_capacity - num_assessors
+        if max_talks < 0:
+            max_talks = 0
+
+        if max_talks <= 0:
+            errors[('basic', 1)] = 'Room "{name}" has maximum student capacity {max} (room capacity={rc}, ' \
+                                   'number assessors={na})'.format(name=room.full_name, max=max_talks,
+                                                                   rc=room.capacity, na=num_assessors)
+        elif num_talks > max_talks:
+            errors[('basic', 2)] = 'Room "{name}" has maximum student capacity {max}, but {nt} talks have been ' \
+                                   'scheduled in this slot'.format(name=room.full_name, max=max_talks,
+                                                                   nt=num_talks)
 
 
     # CONSTRAINT 2. TALKS SHOULD USUALLY BY DRAWN FROM THE SAME PROJECT CLASS (OR EQUIVALENTLY, SUBMISSION PERIOD)
@@ -14087,20 +14172,21 @@ def _ScheduleSlot_is_valid(id):
 
     # CONSTRAINT 5. ALL ASSESSORS SHOULD BE AVAILABLE FOR THIS SESSION
     for assessor in obj.assessors:
-        if obj.session.faculty_unavailable(assessor.id):
+        if session.faculty_unavailable(assessor.id):
             errors[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but is not ' \
                                                'available'.format(name=assessor.user.name)
-        elif obj.session.faculty_ifneeded(assessor.id):
+        elif session.faculty_ifneeded(assessor.id):
             warnings[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but is marked ' \
                                                  'as "if needed"'.format(name=assessor.user.name)
         else:
-            if not obj.session.faculty_available(assessor.id):
+            if not session.faculty_available(assessor.id):
                 errors[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but they do not ' \
                                                    'belong to this assessment'.format(name=assessor.user.name)
 
 
     # CONSTRAINT 6. ASSESSORS SHOULD NOT BE PROJECT SUPERVISORS
     for talk in obj.talks:
+        talk: SubmissionRecord
         if talk.project is None:
             errors[('supervisor', talk.id)] = 'Project supervisor for "{student}" is not ' \
                                               'set'.format(student=talk.owner.student.user.name)
@@ -14112,49 +14198,80 @@ def _ScheduleSlot_is_valid(id):
     # CONSTRAINT 7. PREFERABLY, EACH TALK SHOULD HAVE AT LEAST ONE ASSESSOR BELONGING TO ITS ASSESSOR POOL
     # (but we mark this as a warning rather than an error)
     for talk in obj.talks:
-        found_match = False
-        for assessor in talk.project.assessor_list:
-            if get_count(obj.assessors.filter_by(id=assessor.id)) > 0:
-                found_match = True
-                break
+        talk: SubmissionRecord
+        project: LiveProject = talk.project
 
-        if not found_match:
-            warnings[('pool', talk.id)] = 'No assessor belongs to the pool for submitter ' \
-                                          '"{name}"'.format(name=talk.owner.student.user.name)
+        if attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.ALL_IN_POOL or \
+            attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_POOL:
 
+            found_match = False
+            for assessor in talk.project.assessor_list:
+                assessor: FacultyData
+                if get_count(obj.assessors.filter_by(id=assessor.id)) > 0:
+                    found_match = True
+                    break
+
+            if not found_match:
+                warnings[('pool', talk.id)] = 'No assessor belongs to the pool for submitter ' \
+                                              '"{name}"'.format(name=talk.owner.student.user.name)
+
+        elif attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.ALL_IN_RESEARCH_GROUP or \
+            attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_RESEARCH_GROUP:
+
+            found_match = False
+            if project.group is not None:
+                for assessor in obj.assessors:
+                    if assessor.has_affiliation(project.group):
+                        found_match = True
+                        break
+
+            if not found_match:
+                for assessor in talk.project.assessor_list:
+                    assessor: FacultyData
+                    if get_count(obj.assessors.filter_by(id=assessor.id)) > 0:
+                        found_match = True
+                        break
+
+            if not found_match:
+                warnings[('pool_group', talk.id)] = 'No assessor belongs to either the pool or affiliated ' \
+                                                    'research group for submitter ' \
+                                                    '"{name}"'.format(name=talk.owner.student.user.name)
 
     # CONSTRAINT 8. SUBMITTERS MARKED 'CAN'T ATTEND' SHOULD NOT BE SCHEDULED
     for talk in obj.talks:
-        if obj.owner.owner.not_attending(talk.id):
+        talk: SubmissionRecord
+        if assessment.not_attending(talk.id):
             errors[('talks', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but this student ' \
                                          'is not attending'.format(name=talk.owner.student.user.name)
 
 
     # CONSTRAINT 9. SUBMITTERS SHOULD ALL BE AVAILABLE FOR THIS SESSION
     for talk in obj.talks:
-        if obj.session.submitter_unavailable(talk.id):
+        talk: SubmissionRecord
+        if session.submitter_unavailable(talk.id):
             errors[('submitter', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but is not ' \
                                              'available'.format(name=talk.owner.student.user.name)
         else:
-            if not obj.session.submitter_available(talk.id):
+            if not session.submitter_available(talk.id):
                 errors[('submitter', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but they do not ' \
                                                  'belong to this assessment'.format(name=talk.owner.student.user.name)
 
 
     # CONSTRAINT 10. TALKS MARKED NOT TO CLASH SHOULD NOT BE SCHEDULED TOGETHER
-    talks_list = obj.talks.all()
-    for i in range(len(talks_list)):
-        for j in range(i):
-            talk_i = talks_list[i]
-            talk_j = talks_list[j]
+    if not attempt.ignore_coscheduling:
+        talks_list = obj.talks.all()
+        for i in range(len(talks_list)):
+            for j in range(i):
+                talk_i = talks_list[i]
+                talk_j = talks_list[j]
 
-            if talk_i.project_id == talk_j.project_id and \
-                    (talk_i.project is not None and talk_i.project.dont_clash_presentations):
-                errors[('clash', (talk_i.id, talk_j.id))] = \
-                    'Submitters "{name_a}" and "{name_b}" share a project ' \
-                    '"{proj}" that is marked not to be co-scheduled'.format(name_a=talk_i.owner.student.user.name,
-                                                                            name_b=talk_j.owner.student.user.name,
-                                                                            proj=talk_i.project.name)
+                if talk_i.project_id == talk_j.project_id and \
+                        (talk_i.project is not None and talk_i.project.dont_clash_presentations):
+                    errors[('clash', (talk_i.id, talk_j.id))] = \
+                        'Submitters "{name_a}" and "{name_b}" share a project ' \
+                        '"{proj}" that is marked not to be co-scheduled'.format(name_a=talk_i.owner.student.user.name,
+                                                                                name_b=talk_j.owner.student.user.name,
+                                                                                proj=talk_i.project.name)
 
 
     # CONSTRAINT 11. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN TWO PLACES AT THE SAME TIME
@@ -14178,6 +14295,7 @@ def _ScheduleSlot_is_valid(id):
 
     # CONSTRAINT 12. TALKS SHOULD BE SCHEDULED IN ONLY ONE SLOT
     for talk in obj.talks:
+        talk: SubmissionRecord
         q = db.session.query(ScheduleSlot) \
             .filter(ScheduleSlot.id != obj.id,
                     ScheduleSlot.owner_id == obj.owner_id,
@@ -14224,6 +14342,9 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
     # room
     room_id = db.Column(db.Integer(), db.ForeignKey('rooms.id'))
     room = db.relationship('Room', foreign_keys=[room_id], uselist=False)
+
+    # occupancy label
+    occupancy_label = db.Column(db.Integer(), nullable=False)
 
     # assessors attached to this slot
     assessors = db.relationship('FacultyData', secondary=faculty_to_slots, lazy='dynamic',

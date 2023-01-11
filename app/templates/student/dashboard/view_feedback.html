@@ -1,19 +1,10 @@
 {% extends "base_app.html" %}
 
+{% from "mathjax.html" import import_mathjax %}
+
 {% block scripts %}
     {{ super() }}
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/latest.js?config=TeX-MML-AM_CHTML' async></script>
-
-    <script type="text/x-mathjax-config">
-        MathJax.Hub.Config({
-            extensions: ["tex2jax.js", "AMSmath.js"],
-            jax: ["input/TeX", "output/HTML-CSS"],
-            tex2jax: {
-                displayMath: [ ['$$','$$'], ["\[","\]"] ],
-                processEscapes: true
-            },
-        });
-    </script>
+    {{ import_mathjax() }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -35,10 +26,10 @@
                             <div class="card-header">Feedback from your supervisor on the project and marked report</div>
                             <div class="card-body">
                                 <span class="dashboard-subtitle">Positive aspects</span>
-                                {{ record.supervisor_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                {{ record.supervisor_positive|latextomarkdown|markdown|bclean|blinkify|safe }}
                                 <hr class="intro-divider">
                                 <span class="dashboard-subtitle">Negative aspects</span>
-                                {{ record.supervisor_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                {{ record.supervisor_negative|latextomarkdown|markdown|bclean|blinkify|safe }}
                             </div>
                         </div>
                     {% else %}
@@ -54,10 +45,10 @@
                             <div class="card-header">Feedback from the project marker on your report</div>
                             <div class="card-body">
                                 <span class="dashboard-subtitle">Positive aspects</span>
-                                {{ record.marker_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                {{ record.marker_positive|latextomarkdown|markdown|bclean|blinkify|safe }}
                                 <hr class="intro-divider">
                                 <span class="dashboard-subtitle">Negative aspects</span>
-                                {{ record.marker_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                {{ record.marker_negative|latextomarkdown|markdown|bclean|blinkify|safe }}
                             </div>
                         </div>
                     {% else %}
@@ -84,10 +75,10 @@
                             </div>
                             <div class="card-body">
                                 <span class="dashboard-subtitle">Positive aspects</span>
-                                {{ feedback.positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                {{ feedback.positive|latextomarkdown|markdown|bclean|blinkify|safe }}
                                 <hr class="intro-divider">
                                 <span class="dashboard-subtitle">Negative aspects</span>
-                                {{ feedback.negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                {{ feedback.negative|latextomarkdown|markdown|bclean|blinkify|safe }}
                             </div>
                         </div>
                     {% endif %}
@@ -124,11 +115,11 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        {{ record.student_feedback|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                        {{ record.student_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
                     </div>
                     {% if record.faculty_response_submitted %}
                         <div class="card-footer">
-                            {{ record.faculty_response|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            {{ record.faculty_response|latextomarkdown|markdown|bclean|blinkify|safe }}
                         </div>
                     {% endif %}
                 </div>

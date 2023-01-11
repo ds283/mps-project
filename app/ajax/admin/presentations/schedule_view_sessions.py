@@ -43,6 +43,18 @@ _assessors = \
             <i class="fas fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}
     </div>
+{% else %}
+    <div>
+        <a class="badge bg-warning text-nohover-dark text-decoration-none" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+            None assigned
+        </a>
+        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
+                Reassign assessors...
+            </a>
+        </div>
+        <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+    </div>
 {% endfor %}
 """
 
@@ -76,15 +88,11 @@ _talks = \
         <span class="badge bg-danger">1 error</span>
     {% elif errors|length > 1 %}
         <span class="badge bg-danger">{{ errors|length }} errors</span>
-    {% else %}
-        <span class="badge bg-success">0 errors</span>
     {% endif %}
     {% if warnings|length == 1 %}
         <span class="badge bg-warning text-dark">1 warning</span>
     {% elif warnings|length > 1 %}
         <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
-    {% else %}
-        <span class="badge bg-success">0 warnings</span>
     {% endif %}
     {% if errors|length > 0 %}
         <div class="error-block">

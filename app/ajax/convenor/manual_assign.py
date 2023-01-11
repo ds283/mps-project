@@ -34,7 +34,7 @@ _workload = \
 _action = \
 """
 <div class="float-end">
-    <a href="{{ url_for('convenor.assign_liveproject', id=rec.id, pid=p.id) }}" class="btn btn-secondary btn-sm">
+    <a href="{{ url_for('convenor.assign_liveproject', id=rec.id, pid=p.id) }}" class="btn btn-outline-secondary btn-sm">
         Assign
     </a>
 </div>

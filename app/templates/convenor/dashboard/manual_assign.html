@@ -141,7 +141,7 @@
                                                     <div class="row vertical-top" style="padding-top: 5px;">
                                                         <div class="col-12">
                                                             {% if allow_reassign_project %}
-                                                                <a class="btn btn-sm btn-danger" href="{{ url_for('convenor.deassign_project', id=item.id) }}">Remove</a>
+                                                                <a class="btn btn-sm btn-outline-danger" href="{{ url_for('convenor.deassign_project', id=item.id) }}">Remove</a>
                                                             {% endif %}
                                                         </div>
                                                     </div>
@@ -159,7 +159,7 @@
                                                         </div>
                                                         <div class="row vertical-top" style="padding-top: 5px;">
                                                             <div class="col-12">
-                                                                <a class="btn btn-sm btn-danger" href="{{ url_for('convenor.deassign_marker', id=item.id) }}">Remove</a>
+                                                                <a class="btn btn-sm btn-outline-danger" href="{{ url_for('convenor.deassign_marker', id=item.id) }}">Remove</a>
                                                             </div>
                                                         </div>
                                                     {% else %}
@@ -202,7 +202,7 @@
                                                         </div>
                                                         <div class="col-2">
                                                             <div class="float-end">
-                                                                <a href="{{ url_for('convenor.assign_from_selection', id=rec.id, sel_id=item.id) }}" class="btn btn-secondary btn-sm">Assign</a>
+                                                                <a href="{{ url_for('convenor.assign_from_selection', id=rec.id, sel_id=item.id) }}" class="btn btn-outline-secondary btn-sm">Assign</a>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -244,12 +244,8 @@
                                             </div>
                                         </div>
                                         <div class="card-footer">
-                                            <div class="row">
-                                                <div class="col-12">
-                                                    <div class="float-end">
-                                                        <a href="{{ url_for('convenor.assign_revert', id=rec.id) }}" class="btn btn-secondary btn-sm">Revert</a>
-                                                    </div>
-                                                </div>
+                                            <div class="d-flex flex-row justify-content-end gap-2">
+                                                <a href="{{ url_for('convenor.assign_revert', id=rec.id) }}" class="btn btn-outline-secondary btn-sm">Revert</a>
                                             </div>
                                         </div>
                                     </div>

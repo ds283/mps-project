@@ -1,4 +1,4 @@
-{% extends "base_form.html" %}
+\{% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
@@ -33,9 +33,12 @@
         {{ wtf.render_field(form.name) }}
         {{ wtf.render_field(form.building) }}
         {{ wtf.render_field(form.capacity) }}
+        {{ wtf.render_field(form.maximum_occupancy) }}
         {{ wtf.render_field(form.lecture_capture) }}
 
-        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        <div class="mt-2">
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        </div>
 
     </form>
 {% endblock %}

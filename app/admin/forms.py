@@ -14,13 +14,14 @@ from functools import partial
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, BooleanField, SubmitField, \
     TextAreaField, DateTimeField, FloatField, RadioField, ValidationError
-from wtforms.validators import InputRequired, Optional, Length, URL
+from wtforms.validators import InputRequired, Optional, Length, URL, NumberRange
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..manage_users.forms import ResearchGroupMixin
 from ..models import BackupConfiguration, ScheduleAttempt, extent_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices, auto_enrol_year_choices, \
-    student_level_choices, DEFAULT_STRING_LENGTH, start_year_choices, DegreeProgramme, DegreeType, ProjectClass
+    student_level_choices, DEFAULT_STRING_LENGTH, start_year_choices, DegreeProgramme, DegreeType, ProjectClass, \
+    PresentationAssessment
 from ..shared.forms.mixins import SaveChangesMixin, PeriodPresentationsMixin
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
@@ -1033,7 +1034,7 @@ def CompareMatchFormFactory(year, self_id, pclasses, is_root):
     return CompareMatchForm
 
 
-def PresentationAssessmentMixinFactory(query_factory):
+def PresentationAssessmentMixinFactory(assessment: PresentationAssessment, query_factory):
 
     class PresentationAssessmentMixin():
 
@@ -1041,16 +1042,18 @@ def PresentationAssessmentMixinFactory(query_factory):
                            validators=[InputRequired(message='Please supply a unique name'),
                                        Length(max=DEFAULT_STRING_LENGTH)])
 
-        submission_periods = QuerySelectMultipleField('Select those submission periods for which project '
-                                                      'presentations will be given',
-                                                      query_factory=query_factory, get_label=BuildSubmissionPeriodName)
+        if assessment is None or (assessment is not None
+                                  and not assessment.requested_availability and not assessment.skip_availability):
+            submission_periods = QuerySelectMultipleField('Select those submission periods for which project '
+                                                          'presentations will be given',
+                                                          query_factory=query_factory, get_label=BuildSubmissionPeriodName)
 
     return PresentationAssessmentMixin
 
 
 def AddPresentationAssessmentFormFactory(year):
 
-    Mixin = PresentationAssessmentMixinFactory(partial(GetUnattachedSubmissionPeriods, None))
+    Mixin = PresentationAssessmentMixinFactory(None, partial(GetUnattachedSubmissionPeriods, None))
 
     class AddPresentationAssessmentForm(Form, Mixin):
 
@@ -1063,9 +1066,9 @@ def AddPresentationAssessmentFormFactory(year):
     return AddPresentationAssessmentForm
 
 
-def EditPresentationAssessmentFormFactory(year, assessment_id):
+def EditPresentationAssessmentFormFactory(year, assessment: PresentationAssessment):
 
-    Mixin = PresentationAssessmentMixinFactory(partial(GetUnattachedSubmissionPeriods, assessment_id))
+    Mixin = PresentationAssessmentMixinFactory(assessment, partial(GetUnattachedSubmissionPeriods, assessment.id))
 
     class EditPresentationAssessmentForm(Form, Mixin, SaveChangesMixin):
 
@@ -1132,6 +1135,18 @@ class RoomMixin():
 
     capacity = IntegerField('Capacity', description='How many people will this room accommodate?',
                             validators=[InputRequired('Enter the number of people who can be accommodated')])
+
+    maximum_occupancy = IntegerField('Maximum number of occupying groups',
+                                     description='Some rooms may be physically partitioned, allowing multiple groups '
+                                                 'to be specified in the same space. Alternatively, this can be used to '
+                                                 'model teleconference meeting rooms such as Zoom rooms, where multiple '
+                                                 'groups will be assigned to the same "venue" even though they are '
+                                                 'really distinct.',
+                                     validators=[
+                                         InputRequired('Enter the maximum number of occupying groups. Enter 1 if '
+                                                       'the room can only be singly occupupied.'),
+                                         NumberRange(min=1, max=100, message='The specified occupancy should be '
+                                                                             'between 1 and 100.')])
 
     lecture_capture = BooleanField('Lecture capture available')
 
@@ -1217,13 +1232,17 @@ class EditAssetLicenseForm(Form, AssetLicenseMixin, SaveChangesMixin):
         return per_license_unique_or_original_version(form, field)
 
 
-class AvailabilityForm(Form):
+def AvailabilityFormFactory(assessment: PresentationAssessment):
 
-    # deadline for response
-    availability_deadline = DateTimeField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
+    class AvailabilityForm(Form):
+        # deadline for response
+        availability_deadline = DateTimeField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
 
-    # submit button: open feedback
-    issue_requests = SubmitField('Issue availability requests')
+        if not assessment.skip_availability:
+            # submit button: open feedback
+            issue_requests = SubmitField('Issue availability requests')
+
+    return AvailabilityForm
 
 
 class ScheduleNameMixin():
@@ -1239,10 +1258,9 @@ class ScheduleNameMixin():
                                   Length(max=DEFAULT_STRING_LENGTH)])
 
 
-def ScheduleNameCreateValidatorFactory(assessment):
+def ScheduleNameCreateValidatorFactory(assessment: PresentationAssessment):
 
     class Validator():
-
         @staticmethod
         def validate_name(form, field):
             return globally_unique_schedule_name(assessment.id, form, field)
@@ -1259,10 +1277,9 @@ def ScheduleNameCreateValidatorFactory(assessment):
     return Validator
 
 
-def ScheduleNameRenameValidatorFactory(assessment):
+def ScheduleNameRenameValidatorFactory(assessment: PresentationAssessment):
 
     class Validator():
-
         @staticmethod
         def validate_name(form, field):
             return unique_or_original_schedule_name(assessment.id, form, field)
@@ -1286,7 +1303,7 @@ class ScheduleSettingsMixin():
                                                        'scheduled.',
                                            validators=[InputRequired('Please enter a positive integer')])
 
-    if_needed_cost = FloatField('Cost for using faculty tagged as <i>if needed</i>', default=1.5,
+    if_needed_cost = FloatField('Cost for using faculty tagged as if-needed', default=1.5,
                                 description='Normalized relative to the cost for using a new slot.',
                                 validators=[InputRequired('Please enter a suitable positive decimal.')])
 
@@ -1295,7 +1312,11 @@ class ScheduleSettingsMixin():
                                                'normalized to the cost of using a new slot.',
                                    validators=[InputRequired('Please enter a suitable positive decimal.')])
 
-    all_assessors_in_pool = RadioField('Assessor configuration', choices=ScheduleAttempt.assessor_choices, coerce=int)
+    ignore_coscheduling = BooleanField('Ignore coscheduling constraints', default=False,
+                                       description='Ignore constraints on students taking the same '
+                                                   'presentation being scheduled in the same slot.')
+
+    all_assessors_in_pool = RadioField('Assessor configuration', choices=ScheduleAttempt.ASSESSOR_CHOICES, coerce=int)
 
 
 def NewScheduleFormFactory(assessment):

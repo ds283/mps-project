@@ -153,12 +153,12 @@
 
                         <h4>Description</h4>
                         {% if desc %}
-                            <div class="project-description">{{ desc.description|dealingwithdollars|markdown|bclean|blinkify|safe }}</div>
+                            <div class="project-description">{{ desc.description|latextomarkdown|markdown|bclean|blinkify|safe }}</div>
 
                             {% if desc.reading and desc.reading is not none %}
                                 <hr class="intro-divider">
                                 <p><strong>Recommended resources</strong></p>
-                                {{ desc.reading|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                {{ desc.reading|latextomarkdown|markdown|bclean|blinkify|safe }}
                             {% endif %}
                         {% else %}
                             <div class="alert alert-danger">

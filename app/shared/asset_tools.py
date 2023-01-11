@@ -68,8 +68,18 @@ def make_generated_asset_filename(ext=None, subpath=None):
     Generate a unique filename for a newly-generated asset
     :return:
     """
+    if subpath is not None and not isinstance(subpath, Path):
+        subpath = Path(subpath)
+
+    assets_subfolder = Path(current_app.config.get('ASSETS_GENERATED_SUBFOLDER'))
+
+    if subpath is not None:
+        subfolder = assets_subfolder / subpath
+    else:
+        subfolder = assets_subfolder
+
     return _make_asset_filename(asset_folder=current_app.config.get('ASSETS_FOLDER'),
-                                subfolder=current_app.config.get('ASSETS_GENERATED_SUBFOLDER') / subpath, ext=ext)
+                                subfolder=subfolder, ext=ext)
 
 
 def canonical_generated_asset_filename(filename):
@@ -105,14 +115,18 @@ def make_submitted_asset_filename(ext=None, subpath=None, root_folder='ASSETS_SU
     """
     Generate a unique filename for a submitted asset
     """
-    if not isinstance(subpath, Path):
+    if subpath is not None and not isinstance(subpath, Path):
         subpath = Path(subpath)
 
-    name, path = _make_asset_filename(asset_folder=current_app.config.get('ASSETS_FOLDER'),
-                                      subfolder=Path(current_app.config.get(root_folder) / subpath),
-                                      ext=ext)
+    assets_subfolder = Path(current_app.config.get(root_folder))
 
-    return name, path
+    if subpath is not None:
+        subfolder = assets_subfolder / subpath
+    else:
+        subfolder = assets_subfolder
+
+    return _make_asset_filename(asset_folder=current_app.config.get('ASSETS_FOLDER'),
+                                subfolder=subfolder, ext=ext)
 
 
 def canonical_submitted_asset_filename(filename, root_folder='ASSETS_SUBMITTED_SUBFOLDER'):

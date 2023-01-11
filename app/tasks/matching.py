@@ -1299,18 +1299,18 @@ def _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config):
     for i in range(number_markers):
         # max_CATS and min_CATS should bracket the CATS workload of all faculty
         prob += mark_CATS_dict[i] \
-                + CATS_per_assignment * sum([Y[(i, j)] for j in range(number_submitters)]) <= max_CATS
+                + CATS_per_assignment * sum(Y[(i, j)] for j in range(number_submitters)) <= max_CATS
         prob += mark_CATS_dict[i] \
-                + CATS_per_assignment * sum([Y[(i, j)] for j in range(number_submitters)]) >= min_CATS
+                + CATS_per_assignment * sum(Y[(i, j)] for j in range(number_submitters)) >= min_CATS
 
         # max_assigned should relax to total assigned
-        prob += sum([Y[(i, j)] for j in range(number_submitters)]) <= max_assigned
+        prob += sum(Y[(i, j)] for j in range(number_submitters)) <= max_assigned
 
 
     # CONSTRAINT: EXACTLY ONE MARKER ASSIGNED PER SUBMITTER
 
     for j in range(number_submitters):
-        prob += sum([Y[(i, j)] for i in range(number_markers)]) == 1
+        prob += sum(Y[(i, j)] for i in range(number_markers)) == 1
 
 
     # CONSTRAINT: MARKERS CAN ONLY BE ASSIGNED TO PROJECTS FOR WHICH THEY ARE IN THE ASSESSOR POOL
@@ -1519,22 +1519,22 @@ def _execute_from_solution(self, file, record, prob, X, Y, W, R, create_time,
 
         if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
             solver = pulp_apis.PULP_CBC_CMD()
-            status, values, reducedCosts, shadowPrices, slacks = solver.readsol_LP(file, prob, prob.variables())
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol_LP(file, prob, prob.variables())
         elif record.solver == MatchingAttempt.SOLVER_CBC_CMD:
             solver = pulp_apis.COIN_CMD()
-            status, values, reducedCosts, shadowPrices, slacks = solver.readsol_LP(file, prob, prob.variables())
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol_LP(file, prob, prob.variables())
         elif record.solver == MatchingAttempt.SOLVER_GLPK_CMD:
             solver = pulp_apis.GLPK_CMD()
-            status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
         elif record.solver == MatchingAttempt.SOLVER_CPLEX_CMD:
             solver = pulp_apis.CPLEX_CMD()
-            status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
         elif record.solver == MatchingAttempt.SOLVER_GUROBI_CMD:
             solver = pulp_apis.GUROBI_CMD()
             status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
         elif record.solver == MatchingAttempt.SOLVER_SCIP_CMD:
             solver = pulp_apis.SCIP_CMD()
-            status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
         else:
             progress_update(record.celery_id, TaskRecord.FAILURE, 100, "Unknown solver",
                             autocommit=True)
@@ -1675,11 +1675,11 @@ def _send_offline_email(celery, record: MatchingAttempt, user, lp_asset: Generat
 
     lp_path = canonical_generated_asset_filename(lp_asset.filename)
     with open(lp_path, 'rb') as fd:
-        msg.attach(filename=str('schedule.lp'), content_type=lp_asset.mimetype, data=fd.read())
+        msg.attach(filename=str('schedule.lp'), mimetype=lp_asset.mimetype, content=fd.read())
 
     mps_path = canonical_generated_asset_filename(mps_asset.filename)
     with open(mps_path, 'rb') as fd:
-        msg.attach(filename=str('schedule.mps'), content_type=mps_asset.mimetype, data=fd.read())
+        msg.attach(filename=str('schedule.mps'), mimetype=mps_asset.mimetype, content=fd.read())
 
     # register a new task in the database
     task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.to)))

@@ -10,6 +10,7 @@
 
 from celery import group, chain
 from celery.exceptions import Ignore
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from flask import current_app, render_template
@@ -401,7 +402,10 @@ def register_availability_tasks(celery):
 
         # find all assessments that are actively searching for availability
         assessments = db.session.query(PresentationAssessment) \
-            .filter_by(year=current_year, requested_availability=True, availability_closed=False).all()
+            .filter(and_(PresentationAssessment.year == current_year,
+                         or_(PresentationAssessment.requested_availability == True,
+                             PresentationAssessment.skip_availability),
+                         PresentationAssessment.availability_closed == False)).all()
 
         for assessment in assessments:
             eligible_assessor = False
@@ -471,7 +475,10 @@ def register_availability_tasks(celery):
 
         # find all assessments that are actively searching for availability
         assessments = db.session.query(PresentationAssessment) \
-            .filter_by(year=current_year, requested_availability=True, availability_closed=False).all()
+            .filter(and_(PresentationAssessment.year == current_year,
+                         or_(PresentationAssessment.requested_availability == True,
+                             PresentationAssessment.skip_availability),
+                         PresentationAssessment.availability_closed == False)).all()
 
         for assessment in assessments:
             eligible_assessor = False

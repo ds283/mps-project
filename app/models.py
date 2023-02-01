@@ -12897,7 +12897,8 @@ class AssessorAttendanceData(db.Model):
     # assessment that owns this availability record
     assessment_id = db.Column(db.Integer(), db.ForeignKey('presentation_assessments.id'))
     assessment = db.relationship('PresentationAssessment', foreign_keys=[assessment_id], uselist=False,
-                                 backref=db.backref('assessor_list', lazy='dynamic'))
+                                 backref=db.backref('assessor_list', lazy='dynamic',
+                                                    cascade='all, delete, delete-orphan'))
 
     # sessions for which we are available
     available = db.relationship('PresentationSession', secondary=assessor_available_sessions, lazy='dynamic',
@@ -13126,7 +13127,8 @@ class SubmitterAttendanceData(db.Model):
     # assessment that owns this availability record
     assessment_id = db.Column(db.Integer(), db.ForeignKey('presentation_assessments.id'))
     assessment = db.relationship('PresentationAssessment', foreign_keys=[assessment_id], uselist=False,
-                                 backref=db.backref('submitter_list', lazy='dynamic'))
+                                 backref=db.backref('submitter_list', lazy='dynamic',
+                                                    cascade='all, delete, delete-orphan'))
 
     # in the make-up event?
     attending = db.Column(db.Boolean(), default=True)
@@ -13774,7 +13776,8 @@ class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin, AssessorPoolCho
     # owning assessment
     owner_id = db.Column(db.Integer(), db.ForeignKey('presentation_assessments.id'))
     owner = db.relationship('PresentationAssessment', foreign_keys=[owner_id], uselist=False,
-                            backref=db.backref('scheduling_attempts', lazy='dynamic'))
+                            backref=db.backref('scheduling_attempts', lazy='dynamic',
+                                               cascade='all, delete, delete-orphan'))
 
     # a name for this matching attempt
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)

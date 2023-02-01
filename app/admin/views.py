@@ -5674,10 +5674,14 @@ def add_assessment():
     AddPresentationAssessmentForm = AddPresentationAssessmentFormFactory(current_year)
     form = AddPresentationAssessmentForm(request.form)
 
+    if not hasattr(form, 'submission_periods'):
+        flash('An internal error occurred. Please contact a system administrator', 'error')
+        return redirect(redirect_url())
+
     if form.validate_on_submit():
         data = PresentationAssessment(name=form.name.data,
                                       year=current_year,
-                                      submission_periods=None,
+                                      submission_periods=form.submission_periods.data,
                                       requested_availability=False,
                                       availability_closed=False,
                                       availability_deadline=None,
@@ -5687,9 +5691,6 @@ def add_assessment():
                                       feedback_open=True,
                                       creator_id=current_user.id,
                                       creation_timestamp=datetime.now())
-
-        if hasattr(form, 'submission_period'):
-            data.submission_periods = form.submission_periods.data
 
         db.session.add(data)
         db.session.commit()

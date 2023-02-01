@@ -8825,9 +8825,10 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         counts = {}
         for item in self.bookmarks.order_by(Bookmark.rank).all():
             # STEP 2 - all bookmarks in "active" positions must be available to this user
+            project: LiveProject = item.liveproject
             rank += 1
 
-            if not item.liveproject.is_available(self):
+            if not project.is_available(self):
                 valid = False
                 messages.append("The project '{name}' currently ranked #{rk} is not yet available for "
                                 "selection.".format(name=item.liveproject.name,
@@ -8835,10 +8836,11 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
 
             # STEP 3 - check that the maximum number of projects for a single faculty member
             # is not exceeded
-            if item.liveproject.owner_id not in counts:
-                counts[item.liveproject.owner_id] = 1
-            else:
-                counts[item.liveproject.owner_id] += 1
+            if not project.generic:
+                if project.owner_id not in counts:
+                    counts[project.owner_id] = 1
+                else:
+                    counts[project.owner_id] += 1
 
             if rank >= num_choices:
                 break

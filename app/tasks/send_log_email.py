@@ -79,7 +79,7 @@ def register_send_log_email(celery, mail: Mail):
         # extract HTML content, if any is present
         html = None
         if hasattr(msg, 'alternatives'):
-            for content, mimetype in self.alternatives:
+            for content, mimetype in msg.alternatives:
                 if mimetype == 'text/html':
                     html = content
                     break

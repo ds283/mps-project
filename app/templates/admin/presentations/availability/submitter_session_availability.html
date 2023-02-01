@@ -47,7 +47,7 @@
     </div>
 
     <div class="card border-primary mt-3 mb-3">
-        <div class="card-header bg-primary text-white">Student availability for assessment event <strong>{{ assessment.name }}</strong>, session <strong>{{ sess.short_date_as_string }} {{ sess.session_type_string }}</strong></strong></div>
+        <div class="card-header bg-primary text-white">Student availability for assessment event <strong>{{ assessment.name }}</strong>, session <strong>{{ sess.short_date_as_string }} {{ sess.session_type_string }}</strong></div>
         <div class="card-body">
             {% if pclasses is not none and pclasses|length > 0 %}
                 <div class="card mt-3 mb-3 card-body bg-well">
@@ -70,8 +70,8 @@
             {% endif %}
 
             <div class="d-flex flex-row justify-content-end gap-2">
-                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.submitter_session_all_available', s_id=sess.id) }}"><i class="fas fa-check"></i> Available for all</a>
-                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.submitter_session_all_unavailable', s_id=sess.id) }}"><i class="fas fa-times"></i> Not available for all</a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.session_all_submitters_available', sess_id=sess.id) }}"><i class="fas fa-check"></i> Set all Available</a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.session_all_submitters_unavailable', sess_id=sess.id) }}"><i class="fas fa-times"></i> Set all Not available</a>
             </div>
             <table id="attendee-table" class="table table-striped table-bordered">
                 <thead>

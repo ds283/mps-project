@@ -25,8 +25,8 @@
                     <div class="row">
                         <div class="col-12">
                             <div class="float-end">
-                                <a class="btn btn-secondary" href="{{ url_for('faculty.session_all_available', id=assessment.id) }}"><i class="fas fa-check"></i> Available for all</a>
-                                <a class="btn btn-secondary" href="{{ url_for('faculty.session_all_unavailable', id=assessment.id) }}"><i class="fas fa-times"></i> Not available for all</a>
+                                <a class="btn btn-secondary" href="{{ url_for('faculty.session_all_available', sess_id=assessment.id) }}"><i class="fas fa-check"></i> Set all Available</a>
+                                <a class="btn btn-secondary" href="{{ url_for('faculty.session_all_unavailable', sess_id=assessment.id) }}"><i class="fas fa-times"></i> Set all Not available</a>
                             </div>
                         </div>
                     </div>
@@ -47,15 +47,15 @@
                                     <div class="float-end">
                                     {% if session.faculty_available(current_user.id) %}
                                         <a class="btn btn-success btn-sm btn-table-block"><i class="fas fa-check"></i> Available</a>
-                                        <a href="{{ url_for('faculty.session_ifneeded', id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block">If needed</a>
-                                        <a href="{{ url_for('faculty.session_unavailable', id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block"><i class="fas fa-times"></i> Not available</a>
+                                        <a href="{{ url_for('faculty.session_ifneeded', sess_id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block">If needed</a>
+                                        <a href="{{ url_for('faculty.session_unavailable', sess_id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block"><i class="fas fa-times"></i> Not available</a>
                                     {% elif session.faculty_ifneeded(current_user.id) %}
-                                        <a href="{{ url_for('faculty.session_available', id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block"><i class="fas fa-check"></i> Available</a>
+                                        <a href="{{ url_for('faculty.session_available', sess_id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block"><i class="fas fa-check"></i> Available</a>
                                         <a class="btn btn-warning btn-sm btn-table-block">If needed</a>
-                                        <a href="{{ url_for('faculty.session_unavailable', id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block"><i class="fas fa-times"></i> Not available</a>
+                                        <a href="{{ url_for('faculty.session_unavailable', sess_id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block"><i class="fas fa-times"></i> Not available</a>
                                     {% else %}
-                                        <a href="{{ url_for('faculty.session_available', id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block"><i class="fas fa-check"></i> Available</a>
-                                        <a href="{{ url_for('faculty.session_ifneeded', id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block">If needed</a>
+                                        <a href="{{ url_for('faculty.session_available', sess_id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block"><i class="fas fa-check"></i> Available</a>
+                                        <a href="{{ url_for('faculty.session_ifneeded', sess_id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block">If needed</a>
                                         <a class="btn btn-danger btn-sm btn-table-block"><i class="fas fa-times"></i> Not available</a>
                                     {% endif %}
                                     </div>

@@ -6451,6 +6451,492 @@ def delete_session(id):
     return redirect(redirect_url())
 
 
+@admin.route('/manage_attendees_ajax/<int:id>')
+@roles_required('root')
+def manage_attendees_ajax(id):
+    """
+    AJAX data point for managing student attendees
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return jsonify({})
+
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
+
+    if not validate_assessment(data):
+        return jsonify({})
+
+    pclass_filter = request.args.get('pclass_filter')
+    attend_filter = request.args.get('attend_filter')
+
+    talks = data.submitter_list
+    flag, pclass_value = is_integer(pclass_filter)
+    if flag:
+        talks = [t for t in talks if t.submitter.owner.config.pclass_id == pclass_value]
+
+    if attend_filter == 'attending':
+        talks = [t for t in talks if t.attending]
+    elif attend_filter == 'not-attending':
+        talks = [t for t in talks if not t.attending]
+
+    return ajax.admin.presentation_attendees_data(data, talks, editable=not data.is_deployed)
+
+
+@admin.route('/assessment_attending/<int:a_id>/<int:s_id>')
+@roles_required('root')
+def assessment_attending(a_id, s_id):
+    """
+    Mark a student/talk as able to attend the assessment
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
+
+    if not validate_assessment(data):
+        return redirect(redirect_url())
+
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+              'altered'.format(name=data.name), 'info')
+        return redirect(redirect_url())
+
+    talk = SubmissionRecord.query.get_or_404(s_id)
+
+    if talk not in data.available_talks:
+        flash('Cannot mark the specified presenter as attending because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(redirect_url())
+
+    data.submitter_attending(talk)
+    db.session.commit()
+
+    return redirect(redirect_url())
+
+
+@admin.route('/assessment_not_attending/<int:a_id>/<int:s_id>')
+@roles_required('root')
+def assessment_not_attending(a_id, s_id):
+    """
+    Mark a student/talk as not able to attend the assessment
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
+
+    if not validate_assessment(data):
+        return redirect(redirect_url())
+
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+              'altered'.format(name=data.name), 'info')
+        return redirect(redirect_url())
+
+    talk = SubmissionRecord.query.get_or_404(s_id)
+
+    if talk not in data.available_talks:
+        flash('Cannot mark the specified presenter as not attending because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(redirect_url())
+
+    data.submitter_not_attending(talk)
+    db.session.commit()
+
+    # we leave availability information per-session intact, so that it is immediately available again
+    # if this presenter is subsequently marked as attending
+
+    return redirect(redirect_url())
+
+
+@admin.route('/assessment_submitter_availability/<int:a_id>/<int:s_id>')
+@roles_required('root')
+def assessment_submitter_availability(a_id, s_id):
+    """
+    Allow submitter availabilities to be specified on a per-session basis
+    :param a_id:
+    :param s_id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
+
+    if not validate_assessment(data):
+        return redirect(redirect_url())
+
+    submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
+
+    if not data.includes_submitter(s_id):
+        flash('Cannot set availability for the specified presenter because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(redirect_url())
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    return render_template('admin/presentations/availability/submitter_availability.html',
+                           assessment=data, submitter=submitter, url=url, text=text)
+
+
+@admin.route('/assessment_assessor_availability/<int:a_id>/<int:f_id>')
+@roles_required('root')
+def assessment_assessor_availability(a_id, f_id):
+    """
+    Allow submitter availabilities to be specified on a per-session basis
+    :param a_id:
+    :param s_id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
+
+    if not validate_assessment(data):
+        return redirect(redirect_url())
+
+    assessor: FacultyData = FacultyData.query.get_or_404(f_id)
+
+    if not data.includes_faculty(f_id):
+        flash('Cannot set availability for the specified assessor because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(redirect_url())
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    return render_template('admin/presentations/availability/assessor_availability.html',
+                           assessment=data, assessor=assessor, url=url, text=text)
+
+
+@admin.route('/submitter_session_availability/<int:id>')
+@roles_required('root')
+def submitter_session_availability(id):
+    """
+    Edit/inspect submitter availabilities per session
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    sess: PresentationSession = PresentationSession.query.get_or_404(id)
+
+    if sess.owner.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
+              ' altered'.format(name=sess.owner.name), 'info')
+        return redirect(redirect_url())
+
+    if not validate_assessment(sess.owner):
+        return redirect(redirect_url())
+
+    pclass_filter = request.args.get('pclass_filter')
+
+    if pclass_filter is None and session.get('attendees_session_pclass_filter'):
+        pclass_filter = session['attendees_session_pclass_filter']
+
+    if pclass_filter is not None:
+        session['attendees_session_pclass_filter'] = pclass_filter
+
+    pclasses = sess.owner.available_pclasses
+
+    return render_template('admin/presentations/availability/submitter_session_availability.html',
+                           assessment=sess.owner, sess=sess, pclass_filter=pclass_filter, pclasses=pclasses)
+
+
+@admin.route('/submitter_session_availability_ajax/<int:id>')
+@roles_required('root')
+def submitter_session_availability_ajax(id):
+    """
+    AJAX endpoint for edit/inspect submitter availability per session
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return jsonify({})
+
+    sess: PresentationSession = PresentationSession.query.get_or_404(id)
+
+    if sess.owner.is_deployed:
+        return jsonify({})
+
+    if not validate_assessment(sess.owner):
+        return jsonify({})
+
+    pclass_filter = request.args.get('pclass_filter')
+
+    data = sess.owner
+    talks = data.submitter_list.filter_by(attending=True)      # only include students who are marked as attending
+    flag, pclass_value = is_integer(pclass_filter)
+    if flag:
+        talks = [t for t in talks if t.submitter.owner.config.pclass_id == pclass_value]
+
+    return ajax.admin.submitter_session_availability_data(data, sess, talks, editable=not sess.owner.is_deployed)
+
+
+@admin.route('/submitter_available/<int:sess_id>/<int:s_id>')
+@roles_accepted('root')
+def submitter_available(sess_id, s_id):
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    sess = PresentationSession.query.get_or_404(sess_id)
+    data = sess.owner
+
+    if not validate_assessment(data):
+        return redirect(redirect_url())
+
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
+              'altered'.format(name=data.name), 'info')
+        return redirect(redirect_url())
+
+    submitter = SubmissionRecord.query.get_or_404(s_id)
+
+    if submitter not in data.available_talks:
+        flash('Cannot specify availability for the specified presenter because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(redirect_url())
+
+    sess.submitter_make_available(submitter)
+    db.session.commit()
+
+    return redirect(redirect_url())
+
+
+@admin.route('/submitter_unavailable/<int:sess_id>/<int:s_id>')
+@roles_accepted('root')
+def submitter_unavailable(sess_id, s_id):
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    sess: PresentationSession = PresentationSession.query.get_or_404(sess_id)
+    data = sess.owner
+
+    if not validate_assessment(data):
+        return redirect(redirect_url())
+
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
+              'altered'.format(name=data.name), 'info')
+        return redirect(redirect_url())
+
+    submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
+
+    if submitter not in data.available_talks:
+        flash('Cannot specify availability for the specified presenter because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(redirect_url())
+
+    sess.submitter_make_unavailable(submitter)
+    db.session.commit()
+
+    return redirect(redirect_url())
+
+
+@admin.route('/submitter_available_all_sessions/<int:a_id>/<int:s_id>')
+@roles_accepted('root')
+def submitter_available_all_sessions(a_id, s_id):
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
+
+    if not validate_assessment(assessment):
+        return redirect(redirect_url())
+
+    if assessment.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+              'altered'.format(name=assessment.name), 'info')
+        return redirect(redirect_url())
+
+    if not assessment.requested_availability and not assessment.skip_availability:
+        flash('Cannot change availability because collection for its parent assessment has not yet been opened', 'info')
+        return redirect(redirect_url())
+
+    submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
+
+    if submitter not in assessment.available_talks:
+        flash('Cannot specify availability for the specified presenter because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(redirect_url())
+
+    for s in assessment.sessions:
+        s.submitter_make_available(submitter)
+
+    db.session.commit()
+
+    return redirect(redirect_url())
+
+
+@admin.route('/submitter_unavailable_all_sessions/<int:a_id>/<int:s_id>')
+@roles_accepted('root')
+def submitter_unavailable_all_sessions(a_id, s_id):
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
+
+    if not validate_assessment(assessment):
+        return redirect(redirect_url())
+
+    if assessment.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+              'altered'.format(name=assessment.name), 'info')
+        return redirect(redirect_url())
+
+    if not assessment.requested_availability and not assessment.skip_availability:
+        flash('Cannot change availability because collection for its parent assessment has not yet been opened', 'info')
+        return redirect(redirect_url())
+
+    submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
+
+    if submitter not in assessment.available_talks:
+        flash('Cannot specify availability for the specified presenter because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(redirect_url())
+
+    for s in assessment.sessions:
+        s.submitter_make_unavailable(submitter)
+
+    db.session.commit()
+
+    return redirect(redirect_url())
+
+
+@admin.route('/session_all_submitters_available/<int:sess_id>')
+@roles_accepted('root')
+def session_all_submitters_available(sess_id):
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    sess: PresentationSession = PresentationSession.query.get_or_404(sess_id)
+    assessment: PresentationAssessment = sess.owner
+
+    if not validate_assessment(assessment):
+        return redirect(redirect_url())
+
+    if assessment.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
+              'altered'.format(name=assessment.name), 'info')
+        return redirect(redirect_url())
+
+    if not assessment.requested_availability and not assessment.skip_availability:
+        flash('Cannot change availability because collection for its parent assessment has not yet been opened', 'info')
+        return redirect(redirect_url())
+
+    for s in assessment.submitter_list:
+        s: SubmitterAttendanceData
+        rec: SubmissionRecord = s.submitter
+
+        sess.submitter_make_available(rec)
+
+    db.session.commit()
+
+    return redirect(redirect_url())
+
+
+@admin.route('/session_all_submitters_unavailable/<int:sess_id>')
+@roles_accepted('root')
+def session_all_submitters_unavailable(sess_id):
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    sess: PresentationSession = PresentationSession.query.get_or_404(sess_id)
+    assessment: PresentationAssessment = sess.owner
+
+    if not validate_assessment(assessment):
+        return redirect(redirect_url())
+
+    if assessment.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
+              'altered'.format(name=assessment.name), 'info')
+        return redirect(redirect_url())
+
+    if not assessment.requested_availability and not assessment.skip_availability:
+        flash('Cannot change availability because collection for its parent assessment has not yet been opened', 'info')
+        return redirect(redirect_url())
+
+    for s in assessment.submitter_list:
+        s: SubmitterAttendanceData
+        rec: SubmissionRecord = s.submitter
+
+        sess.submitter_make_unavailable(rec)
+
+    db.session.commit()
+
+    return redirect(redirect_url())
+
+
+@admin.route('/assessment_manage_assessors/<int:id>')
+@roles_required('root')
+def assessment_manage_assessors(id):
+    """
+    Manage faculty assessors for an existing assessment event
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
+
+    if not validate_assessment(data):
+        return redirect(redirect_url())
+
+    state_filter = request.args.get('state_filter')
+
+    if state_filter is None and session.get('assessors_state_filter'):
+        state_filter = session['assessors_state_filter']
+
+    if state_filter is not None:
+        session['assessors_state_filter'] = state_filter
+
+    return render_template('admin/presentations/manage_assessors.html', assessment=data, state_filter=state_filter)
+
+
+@admin.route('/manage_assessors_ajax/<int:id>')
+@roles_required('root')
+def manage_assessors_ajax(id):
+    """
+    AJAX data point for managing faculty assessors
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return jsonify({})
+
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
+
+    state_filter = request.args.get('state_filter')
+
+    if state_filter == 'confirm':
+        attached_q = data.assessor_list.subquery()
+
+        assessors = db.session.query(AssessorAttendanceData) \
+            .join(attached_q, attached_q.c.id == AssessorAttendanceData.id) \
+            .filter(AssessorAttendanceData.confirmed == True).all()
+
+    elif state_filter == 'not-confirm':
+        attached_q = data.assessor_list.subquery()
+
+        assessors = db.session.query(AssessorAttendanceData) \
+            .join(attached_q, attached_q.c.id == AssessorAttendanceData.id) \
+            .filter(AssessorAttendanceData.confirmed == False).all()
+
+    else:
+        assessors = data.assessor_list.all()
+
+    return ajax.admin.presentation_assessors_data(data, assessors, editable=not data.is_deployed)
+
+
 @admin.route('/assessor_session_availability/<int:id>')
 @roles_required('root')
 def assessor_session_availability(id):
@@ -6523,25 +7009,26 @@ def assessor_session_availability_ajax(id):
     return ajax.admin.assessor_session_availability_data(data, sess, assessors, editable=not sess.owner.is_deployed)
 
 
-@admin.route('/session_available/<int:f_id>/<int:s_id>')
+@admin.route('/assessor_available/<int:sess_id>/<int:f_id>')
 @roles_accepted('root')
-def session_available(f_id, s_id):
+def assessor_available(sess_id, f_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    sess: PresentationSession = PresentationSession.query.get_or_404(s_id)
+    sess: PresentationSession = PresentationSession.query.get_or_404(sess_id)
     assessment: PresentationAssessment = sess.owner
 
     current_year = get_current_year()
     if not validate_assessment(sess.owner, current_year=current_year):
         return redirect(redirect_url())
 
-    if not assessment.requested_availability and not assessment.skip_availability:
-        flash('Cannot set availability for this session because availability collection for its parent assessment has not yet been opened', 'info')
+    if assessment.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
+              'altered'.format(name=assessment.name), 'info')
         return redirect(redirect_url())
 
-    if assessment.is_deployed:
-        flash('Cannot modify attendance data for this assessor because the schedule is deployed', 'info')
+    if not assessment.requested_availability and not assessment.skip_availability:
+        flash('Cannot change availability because collection for its parent assessment has not yet been opened', 'info')
         return redirect(redirect_url())
 
     fac: FacultyData = FacultyData.query.get_or_404(f_id)
@@ -6552,13 +7039,13 @@ def session_available(f_id, s_id):
     return redirect(redirect_url())
 
 
-@admin.route('/session_ifneeded/<int:f_id>/<int:s_id>')
+@admin.route('/assessor_ifneeded/<int:sess_id>/<int:f_id>')
 @roles_accepted('root')
-def session_ifneeded(f_id, s_id):
+def assessor_ifneeded(sess_id, f_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    sess: PresentationSession = PresentationSession.query.get_or_404(s_id)
+    sess: PresentationSession = PresentationSession.query.get_or_404(sess_id)
     assessment: PresentationAssessment = sess.owner
 
     current_year = get_current_year()
@@ -6566,11 +7053,12 @@ def session_ifneeded(f_id, s_id):
         return redirect(redirect_url())
 
     if assessment.is_deployed:
-        flash('Cannot modify attendance data for this assessor because the schedule is deployed', 'info')
+        flash('Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
+              'altered'.format(name=assessment.name), 'info')
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash('Cannot set availability for this session because availability collection for its parent assessment has not yet been opened', 'info')
+        flash('Cannot change availability because collection for its parent assessment has not yet been opened', 'info')
         return redirect(redirect_url())
 
     fac: FacultyData = FacultyData.query.get_or_404(f_id)
@@ -6581,25 +7069,26 @@ def session_ifneeded(f_id, s_id):
     return redirect(redirect_url())
 
 
-@admin.route('/session_unavailable/<int:f_id>/<int:s_id>')
+@admin.route('/assessor_unavailable/<int:sess_id>/<int:f_id>')
 @roles_accepted('root')
-def session_unavailable(f_id, s_id):
+def assessor_unavailable(sess_id, f_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    sess: PresentationSession = PresentationSession.query.get_or_404(s_id)
+    sess: PresentationSession = PresentationSession.query.get_or_404(sess_id)
     assessment: PresentationAssessment = sess.owner
 
     current_year = get_current_year()
     if not validate_assessment(sess.owner, current_year=current_year):
         return redirect(redirect_url())
 
-    if not assessment.requested_availability and not assessment.skip_availability:
-        flash('Cannot set availability for this session because availability collection for its parent assessment has not yet been opened', 'info')
+    if assessment.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
+              'altered'.format(name=assessment.name), 'info')
         return redirect(redirect_url())
 
-    if assessment.is_deployed:
-        flash('Cannot modify attendance data for this assessor because the schedule is deployed', 'info')
+    if not assessment.requested_availability and not assessment.skip_availability:
+        flash('Cannot change availability because collection for its parent assessment has not yet been opened', 'info')
         return redirect(redirect_url())
 
     fac: FacultyData = FacultyData.query.get_or_404(f_id)
@@ -6610,9 +7099,9 @@ def session_unavailable(f_id, s_id):
     return redirect(redirect_url())
 
 
-@admin.route('/session_all_assessors_available/<int:f_id>/<int:a_id>')
+@admin.route('/assessor_available_all_sessions/<int:a_id>/<int:f_id>')
 @roles_accepted('root')
-def session_all_assessors_available(f_id, a_id):
+def assessor_available_all_sessions(a_id, f_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
@@ -6622,27 +7111,28 @@ def session_all_assessors_available(f_id, a_id):
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not assessment.requested_availability and not assessment.skip_availability:
-        flash('Cannot set availability for this assessment because availability collection has not yet been opened', 'info')
+    if assessment.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+              'altered'.format(name=assessment.name), 'info')
         return redirect(redirect_url())
 
-    if assessment.is_deployed:
-        flash('Cannot set availability data for this session because it has already been published', 'info')
+    if not assessment.requested_availability and not assessment.skip_availability:
+        flash('Cannot change availability because collection for its parent assessment has not yet been opened', 'info')
         return redirect(redirect_url())
 
     fac: FacultyData = FacultyData.query.get_or_404(f_id)
 
-    for session in assessment.sessions:
-        session.faculty_make_available(fac)
+    for s in assessment.sessions:
+        s.faculty_make_available(fac)
 
     db.session.commit()
 
     return redirect(redirect_url())
 
 
-@admin.route('/session_all_assessors_unavailable/<int:f_id>/<int:a_id>')
+@admin.route('/assessor_unavailable_all_sessions/<int:a_id>/<int:f_id>')
 @roles_accepted('root')
-def session_all_assessors_unavailable(f_id, a_id):
+def assessor_unavailable_all_sessions(a_id, f_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
@@ -6652,97 +7142,33 @@ def session_all_assessors_unavailable(f_id, a_id):
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not assessment.requested_availability and not assessment.skip_availability:
-        flash('Cannot set availability for this assessment because availability collection has not yet been opened', 'info')
+    if assessment.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+              'altered'.format(name=assessment.name), 'info')
         return redirect(redirect_url())
 
-    if assessment.is_deployed:
-        flash('Cannot set availability data for this session because it has already been published', 'info')
+    if not assessment.requested_availability and not assessment.skip_availability:
+        flash('Cannot change availability because collection for its parent assessment has not yet been opened', 'info')
         return redirect(redirect_url())
 
     fac: FacultyData = FacultyData.query.get_or_404(f_id)
 
-    for session in assessment.sessions:
-        session.faculty_make_unavailable(fac)
+    for s in assessment.sessions:
+        s.faculty_make_unavailable(fac)
 
     db.session.commit()
 
     return redirect(redirect_url())
 
 
-@admin.route('/submitter_session_availability/<int:id>')
-@roles_required('root')
-def submitter_session_availability(id):
-    """
-    Edit/inspect submitter availabilities per session
-    :param id:
-    :return:
-    """
-    if not validate_using_assessment():
-        return redirect(redirect_url())
-
-    sess: PresentationSession = PresentationSession.query.get_or_404(id)
-
-    if sess.owner.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
-              ' altered'.format(name=sess.owner.name), 'info')
-        return redirect(redirect_url())
-
-    if not validate_assessment(sess.owner):
-        return redirect(redirect_url())
-
-    pclass_filter = request.args.get('pclass_filter')
-
-    if pclass_filter is None and session.get('attendees_session_pclass_filter'):
-        pclass_filter = session['attendees_session_pclass_filter']
-
-    if pclass_filter is not None:
-        session['attendees_session_pclass_filter'] = pclass_filter
-
-    pclasses = sess.owner.available_pclasses
-
-    return render_template('admin/presentations/availability/submitter_session_availability.html',
-                           assessment=sess.owner, sess=sess, pclass_filter=pclass_filter, pclasses=pclasses)
-
-
-@admin.route('/submitter_session_availability_ajax/<int:id>')
-@roles_required('root')
-def submitter_session_availability_ajax(id):
-    """
-    AJAX endpoint for edit/inspect submitter availability per session
-    :param id:
-    :return:
-    """
-    if not validate_using_assessment():
-        return jsonify({})
-
-    sess: PresentationSession = PresentationSession.query.get_or_404(id)
-
-    if sess.owner.is_deployed:
-        return jsonify({})
-
-    if not validate_assessment(sess.owner):
-        return jsonify({})
-
-    pclass_filter = request.args.get('pclass_filter')
-
-    data = sess.owner
-    talks = data.submitter_list.filter_by(attending=True)      # only include students who are marked as attending
-    flag, pclass_value = is_integer(pclass_filter)
-    if flag:
-        talks = [t for t in talks if t.submitter.owner.config.pclass_id == pclass_value]
-
-    return ajax.admin.submitter_session_availability_data(data, sess, talks, editable=not sess.owner.is_deployed)
-
-
-@admin.route('/submitter_session_all_available/<int:s_id>')
+@admin.route('/session_all_assessors_available/<int:sess_id>')
 @roles_accepted('root')
-def submitter_session_all_available(s_id):
+def session_all_assessors_available(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    session: PresentationSession = PresentationSession.query.get_or_404(s_id)
-    assessment: PresentationAssessment = session.owner
+    sess: PresentationSession = PresentationSession.query.get_or_404(sess_id)
+    assessment: PresentationAssessment = sess.owner
 
     if not validate_assessment(assessment):
         return redirect(redirect_url())
@@ -6752,29 +7178,29 @@ def submitter_session_all_available(s_id):
               'altered'.format(name=assessment.name), 'info')
         return redirect(redirect_url())
 
-    if assessment.is_deployed:
-        flash('Cannot set availability data for this session because it has already been published', 'info')
+    if not assessment.requested_availability and not assessment.skip_availability:
+        flash('Cannot change availability because collection for its parent assessment has not yet been opened', 'info')
         return redirect(redirect_url())
 
-    for s in assessment.submitter_list:
-        s: SubmitterAttendanceData
-        rec: SubmissionRecord = s.submitter
+    for f in assessment.assessor_list:
+        f: AssessorAttendanceData
+        fac: FacultyData = f.faculty
 
-        session.submitter_make_available(rec)
+        sess.faculty_make_available(fac)
 
     db.session.commit()
 
     return redirect(redirect_url())
 
 
-@admin.route('/submitter_session_all_unavailable/<int:s_id>')
+@admin.route('/session_all_assessors_unavailable/<int:sess_id>')
 @roles_accepted('root')
-def submitter_session_all_unavailable(s_id):
+def session_all_assessors_unavailable(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    session: PresentationSession = PresentationSession.query.get_or_404(s_id)
-    assessment: PresentationAssessment = session.owner
+    sess: PresentationSession = PresentationSession.query.get_or_404(sess_id)
+    assessment: PresentationAssessment = sess.owner
 
     if not validate_assessment(assessment):
         return redirect(redirect_url())
@@ -6784,15 +7210,15 @@ def submitter_session_all_unavailable(s_id):
               'altered'.format(name=assessment.name), 'info')
         return redirect(redirect_url())
 
-    if assessment.is_deployed:
-        flash('Cannot set availability data for this session because it has already been published', 'info')
+    if not assessment.requested_availability and not assessment.skip_availability:
+        flash('Cannot change availability because collection for its parent assessment has not yet been opened', 'info')
         return redirect(redirect_url())
 
-    for s in assessment.submitter_list:
-        s: SubmitterAttendanceData
-        rec: SubmissionRecord = s.submitter
+    for f in assessment.assessor_list:
+        f: AssessorAttendanceData
+        fac: FacultyData = f.faculty
 
-        session.submitter_make_unavailable(rec)
+        sess.faculty_make_unavailable(fac)
 
     db.session.commit()
 
@@ -8506,355 +8932,6 @@ def assessment_manage_attendees(id):
 
     return render_template('admin/presentations/manage_attendees.html', assessment=data, pclass_filter=pclass_filter,
                            attend_filter=attend_filter, pclasses=pclasses)
-
-
-@admin.route('/manage_attendees_ajax/<int:id>')
-@roles_required('root')
-def manage_attendees_ajax(id):
-    """
-    AJAX data point for managing student attendees
-    :param id:
-    :return:
-    """
-    if not validate_using_assessment():
-        return jsonify({})
-
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
-
-    if not validate_assessment(data):
-        return jsonify({})
-
-    pclass_filter = request.args.get('pclass_filter')
-    attend_filter = request.args.get('attend_filter')
-
-    talks = data.submitter_list
-    flag, pclass_value = is_integer(pclass_filter)
-    if flag:
-        talks = [t for t in talks if t.submitter.owner.config.pclass_id == pclass_value]
-
-    if attend_filter == 'attending':
-        talks = [t for t in talks if t.attending]
-    elif attend_filter == 'not-attending':
-        talks = [t for t in talks if not t.attending]
-
-    return ajax.admin.presentation_attendees_data(data, talks, editable=not data.is_deployed)
-
-
-@admin.route('/assessment_attending/<int:a_id>/<int:s_id>')
-@roles_required('root')
-def assessment_attending(a_id, s_id):
-    """
-    Mark a student/talk as able to attend the assessment
-    :param id:
-    :return:
-    """
-    if not validate_using_assessment():
-        return redirect(redirect_url())
-
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
-
-    if not validate_assessment(data):
-        return redirect(redirect_url())
-
-    if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
-              'altered'.format(name=data.name), 'info')
-        return redirect(redirect_url())
-
-    talk = SubmissionRecord.query.get_or_404(s_id)
-
-    if talk not in data.available_talks:
-        flash('Cannot mark the specified presenter as attending because they are not included in this '
-              'presentation assessment', 'error')
-        return redirect(redirect_url())
-
-    data.submitter_attending(talk)
-    db.session.commit()
-
-    return redirect(redirect_url())
-
-
-@admin.route('/assessment_not_attending/<int:a_id>/<int:s_id>')
-@roles_required('root')
-def assessment_not_attending(a_id, s_id):
-    """
-    Mark a student/talk as not able to attend the assessment
-    :param id:
-    :return:
-    """
-    if not validate_using_assessment():
-        return redirect(redirect_url())
-
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
-
-    if not validate_assessment(data):
-        return redirect(redirect_url())
-
-    if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
-              'altered'.format(name=data.name), 'info')
-        return redirect(redirect_url())
-
-    talk = SubmissionRecord.query.get_or_404(s_id)
-
-    if talk not in data.available_talks:
-        flash('Cannot mark the specified presenter as not attending because they are not included in this '
-              'presentation assessment', 'error')
-        return redirect(redirect_url())
-
-    data.submitter_not_attending(talk)
-    db.session.commit()
-
-    # we leave availability information per-session intact, so that it is immediately available again
-    # if this presenter is subsequently marked as attending
-
-    return redirect(redirect_url())
-
-
-@admin.route('/assessment_submitter_availability/<int:a_id>/<int:s_id>')
-@roles_required('root')
-def assessment_submitter_availability(a_id, s_id):
-    """
-    Allow submitter availabilities to be specified on a per-session basis
-    :param a_id:
-    :param s_id:
-    :return:
-    """
-    if not validate_using_assessment():
-        return redirect(redirect_url())
-
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
-
-    if not validate_assessment(data):
-        return redirect(redirect_url())
-
-    submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
-
-    if not data.includes_submitter(s_id):
-        flash('Cannot set availability for the specified presenter because they are not included in this '
-              'presentation assessment', 'error')
-        return redirect(redirect_url())
-
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
-
-    return render_template('admin/presentations/availability/submitter_availability.html',
-                           assessment=data, submitter=submitter, url=url, text=text)
-
-
-@admin.route('/assessment_assessor_availability/<int:a_id>/<int:f_id>')
-@roles_required('root')
-def assessment_assessor_availability(a_id, f_id):
-    """
-    Allow submitter availabilities to be specified on a per-session basis
-    :param a_id:
-    :param s_id:
-    :return:
-    """
-    if not validate_using_assessment():
-        return redirect(redirect_url())
-
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
-
-    if not validate_assessment(data):
-        return redirect(redirect_url())
-
-    assessor: FacultyData = FacultyData.query.get_or_404(f_id)
-
-    if not data.includes_faculty(f_id):
-        flash('Cannot set availability for the specified assessor because they are not included in this '
-              'presentation assessment', 'error')
-        return redirect(redirect_url())
-
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
-
-    return render_template('admin/presentations/availability/assessor_availability.html',
-                           assessment=data, assessor=assessor, url=url, text=text)
-
-
-@admin.route('/submitter_available/<int:sess_id>/<int:s_id>')
-@roles_accepted('root')
-def submitter_available(sess_id, s_id):
-    if not validate_using_assessment():
-        return redirect(redirect_url())
-
-    session = PresentationSession.query.get_or_404(sess_id)
-    data = session.owner
-
-    if not validate_assessment(data):
-        return redirect(redirect_url())
-
-    if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
-              'altered'.format(name=data.name), 'info')
-        return redirect(redirect_url())
-
-    submitter = SubmissionRecord.query.get_or_404(s_id)
-
-    if submitter not in data.available_talks:
-        flash('Cannot specify availability for the specified presenter because they are not included in this '
-              'presentation assessment', 'error')
-        return redirect(redirect_url())
-
-    session.submitter_make_available(submitter)
-    db.session.commit()
-
-    return redirect(redirect_url())
-
-
-@admin.route('/submitter_unavailable/<int:sess_id>/<int:s_id>')
-@roles_accepted('root')
-def submitter_unavailable(sess_id, s_id):
-    if not validate_using_assessment():
-        return redirect(redirect_url())
-
-    session: PresentationSession = PresentationSession.query.get_or_404(sess_id)
-    data = session.owner
-
-    if not validate_assessment(data):
-        return redirect(redirect_url())
-
-    if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and availability status for its attendees can no longer be '
-              'altered'.format(name=data.name), 'info')
-        return redirect(redirect_url())
-
-    submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
-
-    if submitter not in data.available_talks:
-        flash('Cannot specify availability for the specified presenter because they are not included in this '
-              'presentation assessment', 'error')
-        return redirect(redirect_url())
-
-    session.submitter_make_unavailable(submitter)
-    db.session.commit()
-
-    return redirect(redirect_url())
-
-
-@admin.route('/submitter_all_available/<int:a_id>/<int:s_id>')
-@roles_accepted('root')
-def submitter_all_available(a_id, s_id):
-    if not validate_using_assessment():
-        return redirect(redirect_url())
-
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
-
-    if not validate_assessment(data):
-        return redirect(redirect_url())
-
-    if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
-              'altered'.format(name=data.name), 'info')
-        return redirect(redirect_url())
-
-    submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
-
-    if submitter not in data.available_talks:
-        flash('Cannot specify availability for the specified presenter because they are not included in this '
-              'presentation assessment', 'error')
-        return redirect(redirect_url())
-
-    for session in data.sessions:
-        session.submitter_make_available(submitter)
-
-    db.session.commit()
-
-    return redirect(redirect_url())
-
-
-@admin.route('/submitter_all_unavailable/<int:a_id>/<int:s_id>')
-@roles_accepted('root')
-def submitter_all_unavailable(a_id, s_id):
-    if not validate_using_assessment():
-        return redirect(redirect_url())
-
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
-
-    if not validate_assessment(data):
-        return redirect(redirect_url())
-
-    if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
-              'altered'.format(name=data.name), 'info')
-        return redirect(redirect_url())
-
-    submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
-
-    if submitter not in data.available_talks:
-        flash('Cannot specify availability for the specified presenter because they are not included in this '
-              'presentation assessment', 'error')
-        return redirect(redirect_url())
-
-    for session in data.sessions:
-        session.submitter_make_unavailable(submitter)
-
-    db.session.commit()
-
-    return redirect(redirect_url())
-
-
-@admin.route('/assessment_manage_assessors/<int:id>')
-@roles_required('root')
-def assessment_manage_assessors(id):
-    """
-    Manage faculty assessors for an existing assessment event
-    :param id:
-    :return:
-    """
-    if not validate_using_assessment():
-        return redirect(redirect_url())
-
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
-
-    if not validate_assessment(data):
-        return redirect(redirect_url())
-
-    state_filter = request.args.get('state_filter')
-
-    if state_filter is None and session.get('assessors_state_filter'):
-        state_filter = session['assessors_state_filter']
-
-    if state_filter is not None:
-        session['assessors_state_filter'] = state_filter
-
-    return render_template('admin/presentations/manage_assessors.html', assessment=data, state_filter=state_filter)
-
-
-@admin.route('/manage_assessors_ajax/<int:id>')
-@roles_required('root')
-def manage_assessors_ajax(id):
-    """
-    AJAX data point for managing faculty assessors
-    :param id:
-    :return:
-    """
-    if not validate_using_assessment():
-        return jsonify({})
-
-    data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
-
-    state_filter = request.args.get('state_filter')
-
-    if state_filter == 'confirm':
-        attached_q = data.assessor_list.subquery()
-
-        assessors = db.session.query(AssessorAttendanceData) \
-            .join(attached_q, attached_q.c.id == AssessorAttendanceData.id) \
-            .filter(AssessorAttendanceData.confirmed == True).all()
-
-    elif state_filter == 'not-confirm':
-        attached_q = data.assessor_list.subquery()
-
-        assessors = db.session.query(AssessorAttendanceData) \
-            .join(attached_q, attached_q.c.id == AssessorAttendanceData.id) \
-            .filter(AssessorAttendanceData.confirmed == False).all()
-
-    else:
-        assessors = data.assessor_list.all()
-
-    return ajax.admin.presentation_assessors_data(data, assessors, editable=not data.is_deployed)
 
 
 @admin.route('/merge_change_schedule/<int:source_id>/<int:target_id>/<int:source_sched>/<int:target_sched>')

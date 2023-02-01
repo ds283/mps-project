@@ -24,8 +24,8 @@
                 </div>
                 <div class="card-body">
                     <div class="d-flex flex-row justify-content-end gap-2">
-                        <a class="btn btn-sm btn-outline-secondary{% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.submitter_all_available', a_id=assessment.id, s_id=submitter.id) }}"{% endif %}><i class="fas fa-check"></i> Available for all</a>
-                        <a class="btn btn-sm btn-outline-secondary{% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.submitter_all_unavailable', a_id=assessment.id, s_id=submitter.id) }}"{% endif %}><i class="fas fa-times"></i> Not available for all</a>
+                        <a class="btn btn-sm btn-outline-secondary{% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.submitter_available_all_sessions', a_id=assessment.id, s_id=submitter.id) }}"{% endif %}><i class="fas fa-check"></i> Set all Available</a>
+                        <a class="btn btn-sm btn-outline-secondary{% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.submitter_unavailable_all_sessions', a_id=assessment.id, s_id=submitter.id) }}"{% endif %}><i class="fas fa-times"></i> Set all Not available</a>
                     </div>
                     <div class="row vertical-top event-table">
                         <div class="col-4"><strong>Date</strong></div>

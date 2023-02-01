@@ -2454,76 +2454,79 @@ def session_available(id):
     return redirect(redirect_url())
 
 
-@faculty.route('/session_ifneeded/<int:id>')
+@faculty.route('/session_ifneeded/<int:sess_id>')
 @roles_accepted('faculty')
-def session_ifneeded(id):
+def session_ifneeded(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    session: PresentationSession = PresentationSession.query.get_or_404(id)
-    assessment: PresentationAssessment = session.owner
+    sess: PresentationSession = PresentationSession.query.get_or_404(sess_id)
+    assessment: PresentationAssessment = sess.owner
 
     current_year = get_current_year()
-    if not validate_assessment(session.owner, current_year=current_year):
+    if not validate_assessment(sess.owner, current_year=current_year):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash('Cannot set availability for this session because availability collection for its parent assessment has not yet been opened', 'info')
+        flash('Cannot set availability for this session because availability collection for its parent assessment '
+              'has not yet been opened', 'info')
         return redirect(redirect_url())
 
     if assessment.availability_closed:
         flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
         return redirect(redirect_url())
 
-    session.faculty_make_ifneeded(current_user.faculty_data)
+    sess.faculty_make_ifneeded(current_user.faculty_data)
 
     db.session.commit()
 
     return redirect(redirect_url())
 
 
-@faculty.route('/session_unavailable/<int:id>')
+@faculty.route('/session_unavailable/<int:sess_id>')
 @roles_accepted('faculty')
-def session_unavailable(id):
+def session_unavailable(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    session: PresentationSession = PresentationSession.query.get_or_404(id)
-    assessment: PresentationAssessment = session.owner
+    sess: PresentationSession = PresentationSession.query.get_or_404(sess_id)
+    assessment: PresentationAssessment = sess.owner
 
     current_year = get_current_year()
-    if not validate_assessment(session.owner, current_year=current_year):
+    if not validate_assessment(sess.owner, current_year=current_year):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash('Cannot set availability for this session because availability collection for its parent assessment has not yet been opened', 'info')
+        flash('Cannot set availability for this session because availability collection for its parent assessment '
+              'has not yet been opened', 'info')
         return redirect(redirect_url())
 
     if assessment.availability_closed:
         flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
         return redirect(redirect_url())
 
-    session.faculty_make_unavailable(current_user.faculty_data)
+    sess.faculty_make_unavailable(current_user.faculty_data)
 
     db.session.commit()
 
     return redirect(redirect_url())
 
 
-@faculty.route('/session_all_available/<int:id>')
+@faculty.route('/session_all_available/<int:sess_id>')
 @roles_accepted('faculty')
-def session_all_available(id):
+def session_all_available(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(sess_id)
 
     current_year = get_current_year()
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash('Cannot set availability for this session because availability collection for its parent assessment has not yet been opened', 'info')
+        flash('Cannot set availability for this session because availability collection for its parent assessment '
+              'has not yet been opened', 'info')
         return redirect(redirect_url())
 
     if assessment.availability_closed:
@@ -2538,20 +2541,21 @@ def session_all_available(id):
     return redirect(redirect_url())
 
 
-@faculty.route('/session_all_unavailable/<int:id>')
+@faculty.route('/session_all_unavailable/<int:sess_id>')
 @roles_accepted('faculty')
-def session_all_unavailable(id):
+def session_all_unavailable(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(sess_id)
 
     current_year = get_current_year()
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash('Cannot set availability for this session because availability collection for its parent assessment has not yet been opened', 'info')
+        flash('Cannot set availability for this session because availability collection for its parent assessment '
+              'has not yet been opened', 'info')
         return redirect(redirect_url())
 
     if assessment.availability_closed:

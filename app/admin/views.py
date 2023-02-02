@@ -6470,7 +6470,8 @@ def manage_attendees_ajax(id):
     pclass_filter = request.args.get('pclass_filter')
     attend_filter = request.args.get('attend_filter')
 
-    talks = data.submitter_list
+    talks: List[SubmitterAttendanceData] = data.submitter_list
+
     flag, pclass_value = is_integer(pclass_filter)
     if flag:
         talks = [t for t in talks if t.submitter.owner.config.pclass_id == pclass_value]
@@ -6504,7 +6505,7 @@ def assessment_attending(a_id, s_id):
               'altered'.format(name=data.name), 'info')
         return redirect(redirect_url())
 
-    talk = SubmissionRecord.query.get_or_404(s_id)
+    talk: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if talk not in data.available_talks:
         flash('Cannot mark the specified presenter as attending because they are not included in this '

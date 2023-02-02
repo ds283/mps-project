@@ -68,7 +68,6 @@ _global_name = \
 <a class="text-decoration-none" href="mailto:{{ s.submitter.owner.student.user.email }}">{{ s.submitter.owner.student.user.name }}</a>
 {% set constraints = s.number_unavailable %}
 {% if constraints > 0 %}
-    &emsp;
     <span class="badge bg-warning text-dark">{{ constraints }} session constraint{%- if constraints != 1 -%}s{%- endif -%}</span>
 {% endif %}
 """

@@ -6310,9 +6310,9 @@ def assessment_manage_sessions(id):
     return render_template('admin/presentations/manage_sessions.html', assessment=assessment)
 
 
-@admin.route('/attach_sessions_ajax/<int:id>')
+@admin.route('/manage_sessions_ajax/<int:id>')
 @roles_required('root')
-def attach_sessions_ajax(id):
+def manage_sessions_ajax(id):
     if not validate_using_assessment():
         return jsonify({})
 

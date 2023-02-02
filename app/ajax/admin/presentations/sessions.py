@@ -104,10 +104,15 @@ _menu = \
 
 
 # language=jinja2
-_faculty = \
+_availability = \
 """
 {% set lifecycle = s.owner.availability_lifecycle %}
-{% if lifecycle > s.owner.AVAILABILITY_NOT_REQUESTED and lifecycle < s.owner.AVAILABILITY_SKIPPED %}
+{% if lifecycle <= s.owner.AVAILABILITY_NOT_REQUESTED %}
+    <span class="badge bg-secondary">Not yet requested</span>
+{% else %}
+    {% if lifecycle == s.owner.AVAILABILITY_SKIPPED %}
+        <span class="badge bg-primary">Availability skipped</span>
+    {% endif %}
     {% set fac_available = s.number_available_faculty %}
     {% set fac_ifneeded = s.number_ifneeded_faculty %}
     {% set fac_unavailable = s.number_unavailable_faculty %}
@@ -133,10 +138,6 @@ _faculty = \
     {% else %}
         <span class="badge bg-primary">All submitters available</span>
     {% endif %}
-{% elif lifecycle == s.owner.AVAILABILITY_SKIPPED %}
-    <span class="badge bg-primary">Availability skipped</span>
-{% else %}
-    <span class="badge bg-secondary">Not yet requested</span>
 {% endif %}
 """
 
@@ -147,7 +148,7 @@ def assessment_sessions_data(sessions):
                       'timestamp': calendar.timegm(s.date.timetuple())},
              'session': s.session_type_label,
              'rooms': render_template_string(_rooms, s=s),
-             'availability': render_template_string(_faculty, s=s),
+             'availability': render_template_string(_availability, s=s),
              'menu': render_template_string(_menu, s=s)} for s in sessions]
 
     return jsonify(data)

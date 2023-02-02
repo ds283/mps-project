@@ -13807,8 +13807,11 @@ class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin, AssessorPoolCho
     # must all assessors be in the assessor pool for every project, or is just one enough?
     all_assessors_in_pool = db.Column(db.Integer())
 
-    # ignore coscheduling constraints
+    # ignore coscheduling constraints (useful for Zoom talks)
     ignore_coscheduling = db.Column(db.Boolean())
+
+    # allow assessors to be scheduled multiple times per session (also useful for Zoom talks)
+    assessor_multiplicity_per_session = db.Column(db.Integer())
 
 
     # CIRCULATION STATUS
@@ -14279,7 +14282,8 @@ def _ScheduleSlot_is_valid(id):
                                                                                 proj=talk_i.project.name)
 
 
-    # CONSTRAINT 11. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN TWO PLACES AT THE SAME TIME
+    # CONSTRAINT 11. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN TOO MANY PLACES AT THE SAME TIME
+    # the maximum multiplicity is given by the assessor_multiplicity_per_session field in ScheduleAttempt
     for assessor in obj.assessors:
         q = db.session.query(ScheduleSlot) \
             .filter(ScheduleSlot.id != obj.id,
@@ -14288,14 +14292,13 @@ def _ScheduleSlot_is_valid(id):
                     ScheduleSlot.assessors.any(id=assessor.id))
         count = get_count(q)
 
-        if count > 0:
-            for slot in q.all():
-                errors[('assessors',
-                        (assessor.id, slot.id))] = 'Assessor "{name}" is clashed with session {date} {session} ' \
-                                                   '{room}'.format(name=assessor.user.name,
-                                                                   date=slot.short_date_as_string,
-                                                                   session=slot.session_type_string,
-                                                                   room=slot.room_full_name)
+        if count > attempt.assessor_multiplicity_per_session - 1:
+            errors[('assessors', assessor.id)] = 'Assessor "{name}" is scheduled too many times in session ' \
+                                                 '{date} {session} (maximum multiplicity = ' \
+                                                 '{max}'.format(name=assessor.user.name,
+                                                                date=slot.short_date_as_string,
+                                                                session=slot.session_type_string,
+                                                                max=attempt.assessor_multiplicity_per_session)
 
 
     # CONSTRAINT 12. TALKS SHOULD BE SCHEDULED IN ONLY ONE SLOT

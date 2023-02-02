@@ -434,14 +434,17 @@ def _create_PuLP_problem(A, B, record: ScheduleAttempt, number_talks, number_ass
     for idx in A:
         if A[idx] == 0:
             # no need to add a constraint if occupation is allowed, because the upper limit of 1 is implied
-            # by use of boolean variables. Any constraint would just be removed in pre-solve.
+            # by use of boolean variables.
             prob += Y[idx] == 0
             constraints += 1
 
-    # faculty members can only be in one place at once, so should be scheduled only once per session
+    # faculty members can only scheduled only up to the maximum specified multiplicity per session
+    # for physical rooms this will usually be 1, but for Zoom-style teleconferences it could be larger
+    # (corresponding to running different Zoom calls with different assessors)
     for session in record.owner.sessions:
         for j in range(number_assessors):
-            prob += sum(Y[(j, k)] for k in range(number_slots) if slot_dict[k].session_id == session.id) <= 1
+            prob += sum(Y[(j, k)] for k in range(number_slots)
+                        if slot_dict[k].session_id == session.id) <= record.assessor_multiplicity_per_session
             constraints += 1
 
     # number of times each faculty member is scheduled should fall below the hard limit, or the
@@ -1365,6 +1368,7 @@ def register_scheduling_tasks(celery):
                                    published=record.published,
                                    deployed=False,
                                    assessor_assigned_limit=record.assessor_assigned_limit,
+                                   assessor_multiplicity_per_session=record.assessor_multiplicity_per_session,
                                    if_needed_cost=record.if_needed_cost,
                                    levelling_tension=record.levelling_tension,
                                    ignore_coscheduling=record.ignore_coscheduling,

@@ -38,7 +38,7 @@ _assessors = \
             </div>
         </div>
         {% if s.session.faculty_ifneeded(assessor.id) %}
-            <span class="badge bg-warning text-dark">if-needed</span>
+            <span class="badge bg-warning text-dark">If needed</span>
         {% elif s.session.faculty_unavailable(assessor.id) %}
             <i class="fas fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}

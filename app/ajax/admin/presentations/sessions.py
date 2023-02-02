@@ -111,16 +111,16 @@ _availability = \
     <span class="badge bg-secondary">Not yet requested</span>
 {% else %}
     {% if lifecycle == s.owner.AVAILABILITY_SKIPPED %}
-        <span class="badge bg-primary">Availability skipped</span>
+        <span class="badge bg-info">Availability skipped</span>
     {% endif %}
     {% set fac_available = s.number_available_faculty %}
     {% set fac_ifneeded = s.number_ifneeded_faculty %}
     {% set fac_unavailable = s.number_unavailable_faculty %}
     {% if fac_available > 0 or fac_ifneeded > 0 %}
         <div>
-            <span class="badge bg-primary">{{ fac_available }} available</span>
+            <span class="badge bg-success">{{ fac_available }} available</span>
             {% if fac_ifneeded > 0 %}
-                <span class="badge bg-warning text-dark">{{ fac_ifneeded }} if needed</span>
+                <span class="badge bg-warning text-dark">{{ fac_ifneeded }} if-needed</span>
             {% endif %}
             {% if fac_unavailable > 0 %}
                 <span class="badge bg-danger">{{ fac_unavailable }} unavailable</span>

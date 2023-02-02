@@ -1301,7 +1301,8 @@ class ScheduleSettingsMixin():
     assessor_assigned_limit = IntegerField('Maximum number of assignments per assessor', default=3,
                                            description='Enter the maximum number of times each assessor can be '
                                                        'scheduled.',
-                                           validators=[InputRequired('Please enter a positive integer')])
+                                           validators=[InputRequired('Please enter a positive integer'),
+                                                       NumberRange(min=0, message='Please enter a postive integer')])
 
     if_needed_cost = FloatField('Cost for using faculty tagged as if-needed', default=1.5,
                                 description='Normalized relative to the cost for using a new slot.',
@@ -1315,6 +1316,24 @@ class ScheduleSettingsMixin():
     ignore_coscheduling = BooleanField('Ignore coscheduling constraints', default=False,
                                        description='Ignore constraints on students taking the same '
                                                    'presentation being scheduled in the same slot.')
+
+    assessor_multiplicity_per_session = IntegerField('Maximum number of times assessors to be scheduled per session',
+                                                     default=1,
+                                                     description='This can be useful for presentations delivered '
+                                                                 'remotely via Zoom or Teams. In this case, '
+                                                                 'assessors need not necessarily form fixed groups.',
+                                                     validators=[InputRequired('Please enter a positive integer'),
+                                                                 NumberRange(min=1, message='Please enter a positive integer')])
+
+    @staticmethod
+    def validate_assessor_multiplicity_per_session(form, field):
+        multiplicity = field.data
+        assigned_limit = form.assessor_assigned_limit.data
+
+        if multiplicity is not None and assigned_limit is not None:
+            if multiplicity > assigned_limit:
+                raise ValidationError('The specified multiplicity should be less than or equal to the maximum '
+                                      'number of assignments per assessor')
 
     all_assessors_in_pool = RadioField('Assessor configuration', choices=ScheduleAttempt.ASSESSOR_CHOICES, coerce=int)
 

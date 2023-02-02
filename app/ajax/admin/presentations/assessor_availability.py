@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, url_for
-
+from flask import render_template_string, jsonify
 
 # language=jinja2
 _session_actions = \

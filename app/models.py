@@ -9562,7 +9562,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         role_id = role_map[role]
 
-        return self.roles.select_from(SubmissionRole) \
+        return self.roles \
             .filter(SubmissionRole.role == role_id) \
             .join(User, User.id == SubmissionRole.user_id)
 

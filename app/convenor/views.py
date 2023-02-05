@@ -8446,7 +8446,7 @@ def marker_edit_feedback(id):
 @roles_accepted('faculty', 'admin', 'root')
 def supervisor_submit_feedback(id):
     # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
@@ -8460,9 +8460,9 @@ def supervisor_submit_feedback(id):
     if not validate_is_convenor(record.project.config.project_class):
         return redirect(redirect_url())
 
-    period = record.period
+    period: SubmissionPeriodRecord = record.period
 
-    if not period.is_feedback_open:
+    if not period.is_feedback_open and not period.closed:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
         return redirect(redirect_url())
 
@@ -8518,7 +8518,7 @@ def supervisor_unsubmit_feedback(id):
 @roles_accepted('faculty', 'admin', 'root')
 def marker_submit_feedback(id):
     # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
@@ -8532,9 +8532,9 @@ def marker_submit_feedback(id):
     if not validate_is_convenor(record.project.config.project_class):
         return redirect(redirect_url())
 
-    period = record.period
+    period: SubmissionPeriodRecord = record.period
 
-    if not period.is_feedback_open:
+    if not period.is_feedback_open and not period.closed:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
         return redirect(redirect_url())
 

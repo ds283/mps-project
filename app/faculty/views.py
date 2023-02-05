@@ -31,7 +31,7 @@ from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
     EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord, PresentationAssessment, \
     PresentationSession, ScheduleSlot, User, PresentationFeedback, Module, FHEQ_Level, DescriptionComment, \
-    WorkflowMixin, ProjectDescriptionWorkflowHistory, StudentData, SubmittingStudent
+    WorkflowMixin, ProjectDescriptionWorkflowHistory, StudentData, SubmittingStudent, SubmissionPeriodRecord
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
 from ..shared.projects import create_new_tags, project_list_SQL_handler
@@ -1905,7 +1905,7 @@ def marker_edit_feedback(id):
 @roles_required('faculty')
 def supervisor_submit_feedback(id):
     # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_supervisor(record):
         return redirect(redirect_url())
@@ -1917,9 +1917,9 @@ def supervisor_submit_feedback(id):
     if record.supervisor_submitted:
         return redirect(redirect_url())
 
-    period = record.period
+    period: SubmissionPeriodRecord = record.period
 
-    if not period.is_feedback_open:
+    if not period.is_feedback_open and not period.closed:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
         return redirect(redirect_url())
 
@@ -1967,7 +1967,7 @@ def supervisor_unsubmit_feedback(id):
 @roles_required('faculty')
 def marker_submit_feedback(id):
     # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_marker(record):
         return redirect(redirect_url())
@@ -1979,9 +1979,9 @@ def marker_submit_feedback(id):
     if record.marker_submitted:
         return redirect(redirect_url())
 
-    period = record.period
+    period: SubmissionPeriodRecord = record.period
 
-    if not period.is_feedback_open:
+    if not period.is_feedback_open and not period.closed:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
         return redirect(redirect_url())
 
@@ -2029,7 +2029,7 @@ def marker_unsubmit_feedback(id):
 @roles_required('faculty')
 def supervisor_acknowledge_feedback(id):
     # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_supervisor(record):
         return redirect(redirect_url())
@@ -2037,9 +2037,9 @@ def supervisor_acknowledge_feedback(id):
     if record.acknowledge_feedback:
         return redirect(redirect_url())
 
-    period = record.period
+    period: SubmissionPeriodRecord = record.period
 
-    if not period.is_feedback_open:
+    if not period.is_feedback_open and not period.closed:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
         return redirect(redirect_url())
 

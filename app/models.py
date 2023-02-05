@@ -705,6 +705,12 @@ def AssetMixinFactory(acl_name, acr_name):
                 user_id = user
             elif isinstance(user, User):
                 user_id = user.id
+            elif isinstance(user, SubmissionRole):
+                user_id = user.user_id
+            elif isinstance(user, FacultyData):
+                user_id = user.user.id
+            elif isinstance(user, StudentData):
+                user_id = user.user.id
             else:
                 raise RuntimeError('Unrecognized object "user" passed to AssetMixin._get_userid()')
 
@@ -718,6 +724,8 @@ def AssetMixinFactory(acl_name, acr_name):
 
             if isinstance(user, User):
                 user_obj = user
+            elif isinstance(user, SubmissionRole):
+                user_obj = user.user
             elif isinstance(user, FacultyData):
                 user_obj = user.user
             elif isinstance(user, StudentData):

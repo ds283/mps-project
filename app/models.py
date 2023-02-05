@@ -9563,8 +9563,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         role_id = role_map[role]
 
         return db.session.query(User).select_from(self.roles) \
-            .filter(SubmissionRole.role == role_id) \
-            .join(User, User.id == SubmissionRole.user_id)
+            .join(User, User.id == SubmissionRole.user_id) \
+            .filter(SubmissionRole.role == role_id)
 
 
     def get_role_ids(self, role: str):

@@ -6267,12 +6267,12 @@ class SubmissionPeriodRecord(db.Model):
 
     @property
     def uses_marker_feedback(self):
-        return self.collect_project_feedback and self.config.uses_marker and self.config.display_marker
+        return self.collect_project_feedback and self.config.uses_marker
 
 
     @property
     def uses_presentation_feedback(self):
-        return self.has_presentation and self.collect_presentation_feedback and self.config.display_presentations
+        return self.has_presentation and self.collect_presentation_feedback
 
 
     @property

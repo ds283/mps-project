@@ -530,11 +530,12 @@ def get_convenor_dashboard_data(pclass, config):
     :param config:
     :return:
     """
-    fac_query = db.session.query(User).filter_by(active=True)
+    all_fac_query = db.session.query(User) \
+        .filter_by(active=True) \
+        .join(FacultyData, FacultyData.id == User.id)
 
-    fac_total = get_count(fac_query)
-    fac_count = get_count(
-        fac_query.join(FacultyData, FacultyData.id == User.id).filter(FacultyData.enrollments.any(pclass_id=pclass.id)))
+    all_fac_count = get_count(all_fac_query)
+    enrolled_fac_count = get_count(all_fac_query.filter(FacultyData.enrollments.any(pclass_id=pclass.id)))
 
     attached_projects = db.session.query(Project) \
         .filter(Project.active == True,
@@ -554,8 +555,8 @@ def get_convenor_dashboard_data(pclass, config):
     todos = build_convenor_tasks_query(config, status_filter='available', due_date_order=True)
     todo_count = get_count(todos)
 
-    return {'faculty': fac_count,
-            'total_faculty': fac_total,
+    return {'faculty': enrolled_fac_count,
+            'total_faculty': all_fac_count,
             'live_projects': live_count,
             'attached_projects': proj_count,
             'selectors': sel_count,

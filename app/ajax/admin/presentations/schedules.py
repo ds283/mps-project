@@ -132,8 +132,8 @@ _name = \
 # language=jinja2
 _info = \
 """
-<span class="badge bg-info text-dark">Max assignment {{ s.assessor_assigned_limit }}</span>
-<span class="badge bg-info text-dark">Max multiplicity {{ s.assessor_multiplicity_per_session }}</span>
+<span class="badge bg-info text-dark">Assignments &le; {{ s.assessor_assigned_limit }}</span>
+<span class="badge bg-info text-dark">Session multiplicity &le; {{ s.assessor_multiplicity_per_session }}</span>
 <span class="badge bg-info text-dark">If-needed cost {{ s.if_needed_cost }}</span>
 <span class="badge bg-info text-dark">Levelling tension {{ s.levelling_tension }}</span>
 {% if s.ignore_coscheduling %}

@@ -1939,7 +1939,7 @@ def enrol_all_submitters(configid):
 
     # get current year
     current_year = get_current_year()
-    old_config: ProjectClassConfig = config.pclass.get_config(config.year-1)
+    old_config: ProjectClassConfig = config.project_class.get_config(config.year-1)
 
     candidates = build_enrol_submitter_candidates(config)
 

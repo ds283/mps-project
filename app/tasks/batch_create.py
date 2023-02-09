@@ -258,7 +258,10 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
                   'mphys physics (with a study abroad year)': 'F3027U',
                   'mphys physics with astrophysics (with a study abroad year)': 'F3069U',
                   'mphys theoretical physics (with a study abroad year)': 'F3050U',
-                  'mphys theoretical physics (yab)': 'F3050U'}
+                  'mphys theoretical physics (yab)': 'F3050U',
+                  'msc data science': 'F5063T',
+                  'msc data science (with an industrial placement year)': 'F5065T',
+                  'msc human and social data science': 'F5064T'}
 
     programme = None
 

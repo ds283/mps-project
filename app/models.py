@@ -3422,9 +3422,6 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
             return None
 
         current_programme: DegreeProgramme = self.programme
-        if current_programme is None and self.programme_id is not None:
-            current_programme: DegreeProgramme = db.session.query(DegreeProgramme) \
-                .filter_by(id=self.programme_id).first()
 
         if current_programme is not None and current_programme.year_out:
             year_out_value = current_programme.year_out_value

@@ -686,11 +686,13 @@ def _compute_group_capacity_data(pclass_id, group_id):
 
     for p in ps:
         if p.is_offerable:
+            # increment count of offerable projects
             projects += 1
 
             # add owner to list of faculty offering projects
             faculty_offering.add(p.owner.id)
 
+            # evaluate workflow state for this project
             desc = p.get_description(pclass_id)
             if desc is not None:
                 cap = desc.capacity
@@ -751,6 +753,7 @@ def _compute_group_approvals_data(pclass_id, group_id):
         .filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
 
     # number of offerable projects in different approval workflow states
+    projects = 0
     pending = 0
     approved = 0
     rejected = 0
@@ -758,6 +761,10 @@ def _compute_group_approvals_data(pclass_id, group_id):
 
     for p in ps:
         if p.is_offerable:
+            # increment count of offerable projects
+            projects += 1
+
+            # evaluate workflow state for this project
             desc = p.get_description(pclass_id)
             if desc is not None:
                 if not desc.confirmed:
@@ -769,7 +776,8 @@ def _compute_group_approvals_data(pclass_id, group_id):
                 elif desc.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED:
                     approved += 1
 
-    return {'pending': pending,
+    return {'projects': projects,
+            'pending': pending,
             'queued': queued,
             'rejected': rejected,
             'approved': approved}
@@ -913,6 +921,7 @@ def get_approval_data(pclass):
 
     data = []
 
+    projects = 0
     pending = 0
     queued = 0
     rejected = 0
@@ -922,6 +931,7 @@ def get_approval_data(pclass):
         group_data = _compute_group_approvals_data(pclass.id, group.id)
 
         # update totals
+        projects += group_data['projects']
         pending += group_data['pending']
         queued += group_data['queued']
         rejected += group_data['rejected']
@@ -931,6 +941,7 @@ def get_approval_data(pclass):
         data.append({'label': group.make_label(group.name), 'data': group_data})
 
     return {'data': data,
+            'projects': projects,
             'pending': pending,
             'queued': queued,
             'rejected': rejected,

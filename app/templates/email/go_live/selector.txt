@@ -5,13 +5,11 @@ Dear {{ user.first_name }}
 This email is automated. Please do not reply to it directly, because email to
 the sending address is not monitored.
 
-{% if student.is_optional -%}
 You are receiving this email because we believe you are eligible to apply for
 a Sussex Junior Research Associate award for summer 2023. If you do not wish
 to apply, then you need take no action and can safely ignore this email.
 
 https://www.sussex.ac.uk/study/undergraduate/undergraduate-research/junior-research-associates
-{%- endif %}
 
 The list of projects has now been published, and can be inspected by logging
 in to our web platform:

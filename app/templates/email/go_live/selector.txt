@@ -6,23 +6,28 @@ This email is automated. Please do not reply to it directly, because email to
 the sending address is not monitored.
 
 {% if student.is_optional -%}
-You are receiving this email because you have the option to apply or enroll
-as a participant for "{{ pclass.name }}". If you are unsure whether you
-are eligible for "{{ pclass.name }}", please seek guidance from the
-project convenor whose details are given below.
+You are receiving this email because we believe you are eligible to apply for
+a Sussex Junior Research Associate award for summer 2023. If you do not wish
+to apply, then you need take no action and can safely ignore this email.
 
-If this is not relevant for you, then you need take no action and can safely
-ignore the remainder of this email.
-{%- else -%}
-You are receiving this email because we are expecting you to participate in
-the "{{ pclass.name }}" module. This runs in Y{{ pclass.start_year }}, and it is now
-time to select your preferred projects. If you believe this to be incorrect,
-for example if you are not expecting to undertake this type of project, please
-contact the convenor as soon as possible. Contact details are given below.
+https://www.sussex.ac.uk/study/undergraduate/undergraduate-research/junior-research-associates
 {%- endif %}
 
-This year's project list has now been published, and can be inspected
-by logging in to our web platform: https://mpsprojects.sussex.ac.uk.
+The list of projects has now been published, and can be inspected by logging
+in to our web platform:
+
+https://mpsprojects.sussex.ac.uk
+
+Please note that the list is intended as a basis for discussion with
+prospective supervisors. You are not limited to proposing projects on the
+list, although they do give you an idea of the subject areas each faculty
+member is prepared to supervise.
+
+If a faculty member does not appear on the list, this is an indication
+that they are not actively looking to recruit a JRA student this year,
+but should *not* be taken to mean definitively that they will not be willing
+to supervise you. You should feel free to contact individual faculty members
+to check their availability.
 
 If you have used the platform before, log in with your Sussex email
 address and existing password. If not, an account has been set up for you
@@ -48,33 +53,20 @@ are interested in a project, and therefore whether it is likely to be
 oversubscribed. The popularity indicators may not be available until enough
 data has been collected.
 
-Use the "bookmark" function to keep track of projects in which you
-are interested. Bookmarked projects appear on your dashboard for quick
-access, and you can drag-and-drop individual bookmarks to arrange
-them in order of preference. Once you have bookmarked enough projects
-you can submit your ranked list. You can do this as many times as you
-like before the selection deadline. We are asking you to select
-at least {{ student.number_choices }} projects to help us find a good match for everyone.
-{% if student.is_optional -%}
+For JRA projects, you need to apply separately through the Sussex Undergradute
+Research OfficeL
 
-The deadline for selections is {{ deadline.strftime("%a %d %b %Y") }}.
-You do not need to do anything else to apply for enrolment in the programme.
-If you do not submit a selection by the deadline we will assume that you
-do not wish to apply.
-{%- else -%}
-The deadline for selections is {{ deadline.strftime("%a %d %b %Y") }}.
-{%- endif %}
+http://www.sussex.ac.uk/suro/
 
-Some projects require more background than others. In these cases the
-project supervisor may require you to obtain a signoff before
-allowing you to submit a selection containing the project. To request
-a sign-off, use the 'Request confirmation' button. You will be notified by
-email when the supervisor responds. Use the "Settings..." option
-from the drop-down menu at the top of the page to control how often
-the website contacts you by email.
+There is no need to submit a ranked list of projects on the
+mpsprojects.sussex.ac.uk website; the project list there is purely for
+information only. Please note that you need to make contact with a prospective
+supervisor before submitting an application. You are advised to do this as
+early as possible, because putting together a compelling JRA application can
+take some time.
 
-If you have questions or encounter difficulties, please contact the
-project convenor.
+If you have questions or encounter difficulties, please contact David Seery
+(D.Seery@sussex.ac.uk) who acts as an unofficial contact for the JRA scheme
+within Physics & Astronomy.
 
-{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
-project convenor
+The MPS JRA team.

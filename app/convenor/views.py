@@ -2302,7 +2302,7 @@ def delete_live_project(pid):
 
     # reject if project is not deletable
     if not project.is_deletable:
-        flash('Cannot delete live project "{name}" because it is marked as undeletable.'.format(name=project.name),
+        flash('Cannot delete live project "{name}" because it is marked as not removable.'.format(name=project.name),
               'error')
         return redirect(redirect_url())
 

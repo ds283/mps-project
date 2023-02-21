@@ -4417,11 +4417,17 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
 
         return value
 
+    # is this an optional project type? e.g., JRA, research placement
+    is_optional = db.Column(db.Boolean, default=False)
+
     # in which academic year/FHEQ level does this project class begin?
     start_year = db.Column(db.Integer(), default=3)
 
     # how many years does the project extend? usually 1, but RP is more
     extent = db.Column(db.Integer(), default=1)
+
+    # does this project type use selection? i.e., do selectors actually have to submit a ranked list of preferences?
+    uses_selection = db.Column(db.Integer(), default=True)
 
     # selection runs in previous academic cycle?
     # This is the default for FYPs and MPPs, but not usually for MSc projects
@@ -5413,6 +5419,16 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     @property
     def student_level(self):
         return self.project_class.student_level
+
+
+    @property
+    def is_optional(self):
+        return self.project_class.is_optional
+
+
+    @property
+    def uses_selection(self):
+        return self.project_class.uses_selection
 
 
     @property
@@ -8793,11 +8809,9 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
     def is_optional(self):
         """
         Determine whether this selection is optional (an example would be to sign-up for a research placement project).
-        Optional means that the individual's degree programme isn't one of the programmes associated with the
-        project class
         :return:
         """
-        return get_count(self.config.project_class.programmes.filter_by(id=self.student.programme.id)) == 0
+        return self.config.is_optional
 
 
     @property

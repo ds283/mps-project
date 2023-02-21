@@ -242,6 +242,12 @@ class ProjectClassMixin():
     extent = SelectField('Duration', choices=extent_choices, coerce=int,
                          description='For how many academic years do students participate in the project?')
 
+    is_optional = BooleanField('This project is optional', default=False)
+
+    uses_selection = BooleanField('Students are required to submit a ranked list of project choices', default=True,
+                                  description='Disable for projects types where only the project list is published, '
+                                              'and selection takes place through a different workflow.')
+
     require_confirm = BooleanField('Require faculty to confirm projects yearly', default=True)
 
     supervisor_carryover = BooleanField('For multi-year projects, automatically carry over supervisor year-to-year')
@@ -396,8 +402,9 @@ class ProjectClassMixin():
                 raise ValidationError("The selected degree programmes are not consistent with the required "
                                       "student level")
 
-    advertise_research_group = BooleanField('Advertise research group affiliations to students',
+    advertise_research_group = BooleanField('Advertise affiliations/research groups to students',
                                             description='Students will be shown the research group '
+                                                        'or other affiliation '
                                                         'associated with each project. For example, this could be '
                                                         'used to drive improved awareness of research teams '
                                                         'within the department.')

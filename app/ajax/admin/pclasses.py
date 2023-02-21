@@ -87,6 +87,12 @@ _options = \
 {% if p.use_project_hub %}
     <span class="badge bg-secondary">Project Hubs</span>
 {% endif %}
+{% if p.is_optional %}
+    <span class="badge bg-secondary">Optional</span>
+{% endif %}
+{% if not p.uses_selection %}
+    <span class="badge bg-secondary">No selections</span>
+{% endif %}
 {% if p.do_matching %}
     <span class="badge bg-secondary">Auto-match</span>
 {% endif %}
@@ -103,7 +109,7 @@ _options = \
     <span class="badge bg-secondary">Re-enroll early</span>
 {% endif %}
 {% if p.advertise_research_group %}
-    <span class="badge bg-secondary">Research groups</span>
+    <span class="badge bg-secondary">Affiliations</span>
 {% endif %}
 {% if p.use_project_tags %}
     <span class="badge bg-secondary">Tags</span>

@@ -1897,6 +1897,8 @@ def add_pclass():
                                 number_assessors=form.number_assessors.data,
                                 use_project_hub=form.use_project_hub.data,
                                 student_level=form.student_level.data,
+                                is_optional=form.is_optional.data,
+                                uses_selection=form.uses_selection.data,
                                 start_year=form.start_year.data,
                                 extent=form.extent.data,
                                 require_confirm=form.require_confirm.data,
@@ -2029,6 +2031,8 @@ def add_pclass():
             form.display_marker.data = True
             form.display_presentations.data = True
             form.auto_enroll_years.data = ProjectClass.AUTO_ENROLL_FIRST_YEAR
+            form.is_optional.data = False
+            form.uses_selection.data = True
             form.do_matching.data = True
             form.advertise_research_group.data = True
             form.use_project_tags.data = False
@@ -2065,6 +2069,8 @@ def edit_pclass(id):
         data.student_level = form.student_level.data
         data.start_year = form.start_year.data
         data.colour = form.colour.data
+        data.is_optional = form.is_optional.data
+        data.uses_selection = form.uses_selection.data
         data.do_matching = form.do_matching.data
         data.number_assessors = form.number_assessors.data
         data.extent = form.extent.data

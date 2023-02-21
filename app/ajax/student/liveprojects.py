@@ -64,12 +64,12 @@ _bookmarks = \
 {% if sel %}
     {% if sel.is_project_bookmarked(project) %}
         <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
-           class="badge bg-primary text-decoration-none">
+           class="badge bg-primary text-decoration-none text-light">
            <i class="fas fa-times"></i> Remove
         </a>
     {% else %}
         <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}"
-           class="badge bg-secondary text-decoration-none">
+           class="badge bg-secondary text-decoration-none text-light">
            <i class="fas fa-plus"></i> Add
         </a>
     {% endif %}

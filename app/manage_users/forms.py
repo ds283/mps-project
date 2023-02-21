@@ -189,7 +189,7 @@ class ResearchGroupMixin():
 
     website = StringField('Website', description='Optional.', validators=[Length(max=DEFAULT_STRING_LENGTH)])
 
-    colour = StringField('Colour', description='Assign a colour to help students identify this research group.',
+    colour = StringField('Colour', description='Assign a colour to help students identify this affiliation.',
                          validators=[Length(max=DEFAULT_STRING_LENGTH)])
 
 

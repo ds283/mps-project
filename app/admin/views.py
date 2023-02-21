@@ -201,7 +201,7 @@ def add_group():
 
         return redirect(url_for('admin.edit_groups'))
 
-    return render_template('admin/edit_group.html', group_form=form, title='Add new research group')
+    return render_template('admin/edit_group.html', group_form=form, title='Add new affiliation')
 
 
 @admin.route('/edit_group/<int:id>', methods=['GET', 'POST'])
@@ -240,7 +240,7 @@ def edit_group(id):
 
         return redirect(url_for('admin.edit_groups'))
 
-    return render_template('admin/edit_group.html', group_form=form, group=group, title='Edit research group')
+    return render_template('admin/edit_group.html', group_form=form, group=group, title='Edit affiliation')
 
 
 @admin.route('/activate_group/<int:id>')

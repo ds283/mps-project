@@ -217,7 +217,7 @@ class WorkflowMixin(WorkflowStatesMixin):
                 # bail out by setting validator_id to None
                 try:
                     self.validator_id = current_user.id
-                except AttributeError as e:
+                except AttributeError:
                     self.validator_id = None
 
                 if self.workflow_state != value:
@@ -1012,6 +1012,10 @@ class SubmissionAttachmentTypesMixin:
                ATTACHMENT_MARKING_REPORT: 'Marking report',
                ATTACHMENT_SIMILARITY_REPORT: 'Similarity report',
                ATTACHMENT_OTHER: 'Other'}
+
+    # ATTACHMENT TYPE
+    type = db.Column(db.Integer(), default=0, nullable=True)
+
 
     def type_label(self):
         if self.type is None:
@@ -6185,7 +6189,7 @@ class SubmissionPeriodRecord(db.Model):
             user_id = user.id
         else:
             raise RuntimeError('Unknown faculty id type "{typ}" passed to '
-                               'SubmissionPeriodRecord.get_supervisor_records'.format(typ=type(fac)))
+                               'SubmissionPeriodRecord.get_supervisor_records'.format(typ=type(user)))
 
         role_map = {'supervisor': SubmissionRole.ROLE_SUPERVISOR,
                     'marker': SubmissionRole.ROLE_MARKER,
@@ -10287,12 +10291,6 @@ class SubmissionAttachment(db.Model, SubmissionAttachmentTypesMixin):
     include_supervisor_emails = db.Column(db.Boolean(), default=False)
 
 
-    # ATTACHMENT TYPE
-
-    type = db.Column(db.Integer(), default=0, nullable=True)
-
-
-
 class PeriodAttachment(db.Model):
     """
     Model an attachment to a SubmissionPeriodRecord (eg. mark scheme)
@@ -14298,11 +14296,12 @@ def _ScheduleSlot_is_valid(id):
         count = get_count(q)
 
         if count > attempt.assessor_multiplicity_per_session - 1:
+            session: PresentationSession = obj.session
             errors[('assessors', assessor.id)] = 'Assessor "{name}" is scheduled too many times in session ' \
                                                  '{date} {session} (maximum multiplicity = ' \
                                                  '{max}'.format(name=assessor.user.name,
-                                                                date=slot.short_date_as_string,
-                                                                session=slot.session_type_string,
+                                                                date=session.short_date_as_string,
+                                                                session=session.session_type_string,
                                                                 max=attempt.assessor_multiplicity_per_session)
 
 

@@ -123,24 +123,28 @@
                             result.push($(items[i]).attr('id'));
 
                             // update colours of list items to indicate selection status
-                            if (i < {{ sel.number_choices }}) {
-                                $(items[i]).addClass('selected-project');
-                                $(items[i]).removeClass('deselected-project');
-                            } else {
-                                $(items[i]).addClass('deselected-project');
-                                $(items[i]).removeClass('selected-project');
-                            }
+                            {% if config.uses_selection %}
+                                if (i < {{ sel.number_choices }}) {
+                                    $(items[i]).addClass('selected-project');
+                                    $(items[i]).removeClass('deselected-project');
+                                } else {
+                                    $(items[i]).addClass('deselected-project');
+                                    $(items[i]).removeClass('selected-project');
+                                }
+                            {% endif %}
 
                             // update numerical rankings
                             rspan = $(items[i]).find('#ranking');
                             rspan.html("#" + (i+1));
-                            if (i < {{ sel.number_choices }}) {
-                                rspan.addClass('bg-success');
-                                rspan.removeClass('bg-danger');
-                            } else {
-                                rspan.addClass('bg-danger');
-                                rspan.removeClass('bg-success');
-                            }
+                            {% if config.uses_selection %}
+                                if (i < {{ sel.number_choices }}) {
+                                    rspan.addClass('bg-success');
+                                    rspan.removeClass('bg-danger');
+                                } else {
+                                    rspan.addClass('bg-danger');
+                                    rspan.removeClass('bg-success');
+                                }
+                            {% endif %}
                         }
                         sendAjax(result, {{ config.id }}, {{ sel.id }});
                     }

@@ -88,35 +88,37 @@ _selector_menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id) }}">
-            View project...
+            <i class="fas fa-eye fa-fw"></i> View project...
         </a>
         {% if is_live and sel %}
             {% if sel.is_project_bookmarked(project) %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}">
-                    Remove bookmark
+                    <i class="fas fa-fw fa-trash"></i> Remove bookmark
                 </a>
             {% else %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}">
-                    Add bookmark
+                    <i class="fas fa-fw fa-plus"></i> Add bookmark
                 </a>
             {% endif %}
-            {% set disabled = project.is_available(sel) %}
-            {% if not disabled %}
-                {% if project.is_waiting(sel) %}
-                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
-                        Cancel confirmation
-                    </a>
+            {% if config.uses_selection %}
+                {% set disabled = project.is_available(sel) %}
+                {% if not disabled %}
+                    {% if project.is_waiting(sel) %}
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
+                            <i class="fas fa-times fa-fw"></i> Cancel confirmation
+                        </a>
+                    {% else %}
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}">
+                            <i class="fas fa-check fa-fw"></i> 'Request confirmation
+                        </a>
+                    {% endif %}
                 {% else %}
-                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}">
-                        Request confirmation
-                    </a>
+                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-ban fa-fw"></i> Project unavailable</a>
                 {% endif %}
-            {% else %}
-                <a class="dropdown-item d-flex gap-2 disabled">Project unavailable</a>
             {% endif %}
         {% else %}
             <div role="separator" class="dropdown-divider"></div>
-            <a class="dropdown-item d-flex gap-2 disabled">Project selection not live</a>
+            <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-ban fa-fw"></i> Project selection not live</a>
         {% endif %}
     </div>
 </div>
@@ -133,7 +135,7 @@ _submitter_menu = \
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.submitter_view_project', sid=sub_id, pid=project.id) }}">
-            View project...
+            <i class="fas fa-eye fa-fw"></i> View project...
         </a>
     </div>
 </div>
@@ -212,7 +214,7 @@ def _selector_element(sel_id, project_id, is_live):
             'group': render_template_string(_project_group, sel=sel, project=p, config=config),
             'skills': render_template_string(_project_skills, sel=sel, skills=p.ordered_skills),
             'prefer': render_template_string(_project_prefer, project=p),
-            'menu': render_template_string(_selector_menu, sel=sel, project=p, is_live=is_live)}
+            'menu': render_template_string(_selector_menu, sel=sel, project=p, is_live=is_live, config=config)}
 
     if is_live:
         extra_fields = {'meeting': render_template_string(_meeting, sel=sel, project=p),

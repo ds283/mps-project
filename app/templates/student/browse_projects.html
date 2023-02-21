@@ -48,12 +48,14 @@
                       orderable: false,
                       searchable: false },
                     {% if is_live %}
-                        { data: 'meeting',
-                          orderable: true,
-                          searchable: false },
-                        { data: 'availability',
-                          orderable: false,
-                          searchable: false },
+                        {% if uses_selection %}
+                            { data: 'meeting',
+                              orderable: true,
+                              searchable: false },
+                            { data: 'availability',
+                              orderable: false,
+                              searchable: false },
+                        {% endif %}
                         { data: 'bookmarks',
                           orderable: false,
                           searchable: false },
@@ -122,14 +124,23 @@
                 <thead>
                 <tr>
                     {% if is_live %}
-                        <th width="18%"> Title</th>
-                        <th width="15%"> Supervisor</th>
-                        <th width="15%"> Affiliation</th>
-                        <th width="15%"> Transferable skills</th>
-                        <th width="7%"> Meeting</th>
-                        <th width="10%"> Availability</th>
-                        <th width="5%"> Bookmark</th>
-                        <th width="15%"> Actions</th>
+                        {% if uses_selection %}
+                            <th width="18%"> Title</th>
+                            <th width="15%"> Supervisor</th>
+                            <th width="15%"> Affiliation</th>
+                            <th width="15%"> Transferable skills</th>
+                            <th width="7%"> Meeting</th>
+                            <th width="10%"> Availability</th>
+                            <th width="5%"> Bookmark</th>
+                            <th width="15%"> Actions</th>
+                        {% else %}
+                            <th width="25%"> Title</th>
+                            <th width="15%"> Supervisor</th>
+                            <th width="15%"> Affiliation</th>
+                            <th width="20%"> Transferable skills</th>
+                            <th width="10%"> Bookmark</th>
+                            <th width="15%"> Actions</th>
+                        {% endif %}
                     {% else %}
                         <th width="30%"> Title</th>
                         <th width="15%"> Supervisor</th>

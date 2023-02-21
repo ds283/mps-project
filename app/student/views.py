@@ -176,7 +176,7 @@ def selector_browse_projects(id):
     endpoint = url_for('student.selector_projects_ajax', id=id)
     return render_template('student/browse_projects.html', sel=sel, config=config, is_live=is_live,
                            groups=groups, skill_groups=sorted(skill_list.keys()), skill_list=skill_list,
-                           ajax_endpoint=endpoint)
+                           ajax_endpoint=endpoint, uses_selection=config.uses_selection)
 
 
 @student.route('/selector_projects_ajax/<int:id>', methods=['POST'])
@@ -225,7 +225,8 @@ def submitter_browse_projects(id):
     is_live = state < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
     endpoint = url_for('student.submitter_projects_ajax', id=id)
     return render_template('student/browse_projects.html', sel=sub, config=config, is_live=is_live,
-                           groups=None, skill_groups=None, skill_list=None, ajax_endpoint=endpoint)
+                           groups=None, skill_groups=None, skill_list=None, ajax_endpoint=endpoint,
+                           uses_selection=False)
 
 
 @student.route('/submitter_projects_ajax/<int:id>', methods=['POST'])
@@ -550,14 +551,15 @@ def remove_bookmark(sid, pid):
 @roles_accepted('student', 'admin', 'root')
 def request_confirmation(sid, pid):
     # sid is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(sid)
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
     if not verify_selector(sel, message=True):
         return redirect(redirect_url())
 
     # pid is the id for a LiveProject
-    project = LiveProject.query.get_or_404(pid)
+    project: LiveProject = LiveProject.query.get_or_404(pid)
+    config: ProjectClassConfig = project.config
 
     # verify project is open
     if not verify_open(project.config, strict=True, message=True):
@@ -569,7 +571,13 @@ def request_confirmation(sid, pid):
 
     if project.hidden:
         flash('This project has been marked as unavailable by the convenor. '
-              'It cannot be selected.', 'error')
+              'It is not possible to request confirmation for it.', 'error')
+        return redirect(redirect_url())
+
+    # check whether this project type uses selections
+    if not config.uses_selection:
+        flash('This project belongs to a project class for which online selection is not required. '
+              'It is not possible to request confirmation for it.', 'error')
         return redirect(redirect_url())
 
     # check if confirmation has already been issued
@@ -592,7 +600,13 @@ def request_confirmation(sid, pid):
         bm = Bookmark(owner_id=sid, liveproject_id=pid, rank=sel.bookmarks.count()+1)
         db.session.add(bm)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not issue confirmation request due to a database error. Please inform a system administrator.',
+              'info')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return redirect(redirect_url())
 
@@ -601,14 +615,15 @@ def request_confirmation(sid, pid):
 @roles_accepted('student', 'admin', 'root')
 def cancel_confirmation(sid, pid):
     # sid is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(sid)
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
     if not verify_selector(sel, message=True):
         return redirect(redirect_url())
 
     # pid is the id for a LiveProject
-    project = LiveProject.query.get_or_404(pid)
+    project: LiveProject = LiveProject.query.get_or_404(pid)
+    config: ProjectClassConfig = project.config
 
     # verify project is open
     if not verify_open(project.config, strict=True, message=True):
@@ -616,6 +631,12 @@ def cancel_confirmation(sid, pid):
 
     # verify student is allowed to view this live project
     if not verify_view_project(sel.config, project):
+        return redirect(redirect_url())
+
+    # check whether this project type uses selections
+    if not config.uses_selection:
+        flash('This project belongs to a project class for which online selection is not required. '
+              'It is not possible to request confirmation for it.', 'error')
         return redirect(redirect_url())
 
     # check if confirmation has already been issued
@@ -629,7 +650,15 @@ def cancel_confirmation(sid, pid):
         if req is not None:
             req.remove()
             db.session.delete(req)
-            db.session.commit()
+
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                flash(
+                    'Could not cancel confirmation request due to a database error. '
+                    'Please inform a system administrator.', 'info')
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                db.session.rollback()
 
     return redirect(redirect_url())
 
@@ -694,16 +723,17 @@ def update_ranking():
         return jsonify({'status': 'database_error'})
 
     # work out which HTML elements to make visible and which to hide, based on validity of this selection
-    valid, messages = sel.is_valid_selection
+    valid, messages = sel.is_valid_selection if config.uses_selection else (True, [])
     hide_list = []
     reveal_list = []
 
-    if valid:
-        hide_list.append('P{config}-invalid-button'.format(config=config.id))
-        reveal_list.append('P{config}-valid-button'.format(config=config.id))
-    else:
-        hide_list.append('P{config}-valid-button'.format(config=config.id))
-        reveal_list.append('P{config}-invalid-button'.format(config=config.id))
+    if config.uses_selection:
+        if valid:
+            hide_list.append('P{config}-invalid-button'.format(config=config.id))
+            reveal_list.append('P{config}-valid-button'.format(config=config.id))
+        else:
+            hide_list.append('P{config}-valid-button'.format(config=config.id))
+            reveal_list.append('P{config}-invalid-button'.format(config=config.id))
 
     return jsonify({'status': 'success', 'hide': hide_list, 'reveal': reveal_list,
                     'submittable': valid, 'message-id': 'P{n}-status-list'.format(n=config.id),

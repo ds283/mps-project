@@ -19,33 +19,33 @@ _session_actions = \
     <div class="float-end">
         {% if available %}
             <a class="btn btn-sm btn-success {% if not editable %}disabled{% endif %}">
-                <i class="fas fa-check"></i> Available
+                <i class="fas fa-check fa-fw"></i> Available
             </a>
             <a class="btn btn-sm btn-outline-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.assessor_ifneeded', sess_id=s.id, f_id=f.id) }}"{% endif %}>
                 If needed
             </a>
             <a class="btn btn-sm btn-outline-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.assessor_unavailable', sess_id=s.id, f_id=f.id) }}"{% endif %}>
-                <i class="fas fa-times"></i> Not available
+                <i class="fas fa-times fa-fw"></i> Not available
             </a>
         {% elif ifneeded %}
             <a class="btn btn-sm btn-outline-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.assessor_available', sess_id=s.id, f_id=f.id) }}"{% endif %}>
-                <i class="fas fa-check"></i> Available
+                <i class="fas fa-check fa-fw"></i> Available
             </a>
             <a class="btn btn-sm btn-warning {% if not editable %}disabled{% endif %}">
                 If needed
             </a>
             <a class="btn btn-sm btn-outline-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.assessor_unavailable', sess_id=s.id, f_id=f.id) }}"{% endif %}>
-                <i class="fas fa-times"></i> Not available
+                <i class="fas fa-times fa-fw"></i> Not available
             </a>
         {% else %}
             <a class="btn btn-sm btn-outline-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.assessor_available', sess_id=s.id, f_id=f.id) }}"{% endif %}>
-                <i class="fas fa-check"></i> Available
+                <i class="fas fa-check fa-fw"></i> Available
             </a>
             <a class="btn btn-sm btn-outline-secondary {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.assessor_ifneeded', sess_id=s.id, f_id=f.id) }}"{% endif %}>
                 If needed
             </a>
             <a class="btn btn-sm btn-danger {% if not editable %}disabled{% endif %}">
-                <i class="fas fa-times"></i> Not available
+                <i class="fas fa-times fa-fw"></i> Not available
             </a>
         {% endif %}
     </div>
@@ -76,18 +76,18 @@ _assessor_actions = \
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.assessment_assessor_availability', a_id=a.id, f_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}">
-            <i class="fas fa-calendar"></i> Sessions...
+            <i class="fas fa-calendar fa-fw"></i> Sessions...
         </a>
         {% set disabled = not editable or not a.is_faculty_outstanding(f.id) %} 
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=f.id) }}"{% endif %}>
-            <i class="fas fa-check"></i> {% if not disabled %}Force confirm{% else %}Confirmed{% endif %}
+            <i class="fas fa-check fa-fw"></i> {% if not disabled %}Force confirm{% else %}Confirmed{% endif %}
         </a>
         {% set disabled = not editable %}
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.schedule_set_limit', assessment_id=a.id, faculty_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}"{% endif %}>
-            <i class="fas fa-cogs"></i> Set assignment limit...
+            <i class="fas fa-cogs fa-fw"></i> Set assignment limit...
         </a>
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=f.id) }}"{% endif %}>
-            <i class="fas fa-trash"></i> Remove
+            <i class="fas fa-trash fa-fw"></i> Remove
         </a>
     </div>
 </div>

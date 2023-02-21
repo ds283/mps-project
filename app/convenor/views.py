@@ -2243,7 +2243,8 @@ def _liveprojects_ajax_handler(base_query, config: ProjectClassConfig, state_fil
         base_query = base_query.filter(and_(func.count(LiveProject.selections) == 0,
                                             func.count(LiveProject.bookmarks) == 0))
     elif state_filter == 'confirmations':
-        base_query = base_query.filter(func.count(LiveProject.confirmation_requests.filter_by(state=ConfirmRequest.REQUESTED)))
+        base_query = base_query.join(ConfirmRequest, ConfirmRequest.project_id == LiveProject.id, isouter=True) \
+            .filter(ConfirmRequest.state == ConfirmRequest.REQUESTED).distinct()
 
     name = {'search': LiveProject.name,
             'order': LiveProject.name,
@@ -2253,13 +2254,12 @@ def _liveprojects_ajax_handler(base_query, config: ProjectClassConfig, state_fil
              'search_collation': 'utf8_general_ci'}
     bookmarks = {'order': func.count(LiveProject.bookmarks)}
     selections = {'order': func.count(LiveProject.selections)}
-    confirmations = {'order': func.count(LiveProject.confirmation_requests.filter_by(state=ConfirmRequest.REQUESTED))}
+    # confirmations = {'order': func.count(LiveProject.confirmation_requests.filter_by(state=ConfirmRequest.REQUESTED))}
 
     columns = {'name': name,
                'owner': owner,
                'bookmarks': bookmarks,
-               'selections': selections,
-               'confirmations': confirmations}
+               'selections': selections}
 
     # def sort_popularity(row: LiveProject):
     #     data = row.popularity_rank(live=True)
@@ -2270,7 +2270,7 @@ def _liveprojects_ajax_handler(base_query, config: ProjectClassConfig, state_fil
     #     rank, total = data
     #     return rank
 
-    with ServerSideInMemoryHandler(request, base_query, columns) as handler:
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
         def row_formatter(liveprojects):
             return ajax.convenor.liveprojects_data(liveprojects, config,
                                                    url=url_for('convenor.liveprojects', id=config.pclass_id),

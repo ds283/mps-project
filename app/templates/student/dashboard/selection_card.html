@@ -15,26 +15,41 @@
     {% endif %}
     <div class="alert alert-success">
         {% call icon_block("info-circle") %}
-            <div><strong>
-                Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
-                is now available.
-            </strong></div>
-            {# add data about deadline, if present #}
-            {% if has_deadline %}
-                <div class="mt-1">You can submit your ranked preference list
-                    at any time up to the deadline
-                    {{ deadline_text }}, which is
-                    {% if deadline_is_past %}
-                        in the past.
-                    {% else %}
-                        {{ time_to_deadline_text }} from now.
-                    {% endif %}
-                </div>
+            {% if config.uses_selection %}
+                <div><strong>
+                    Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                    is now available.
+                </strong></div>
+                {# add data about deadline, if present #}
+                {% if has_deadline %}
+                    <div class="mt-1">You can submit your ranked preference list
+                        at any time up to the deadline
+                        {{ deadline_text }}, which is
+                        {% if deadline_is_past %}
+                            in the past.
+                        {% else %}
+                            {{ time_to_deadline_text }} from now.
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="mt-1">
+                        You can submit your ranked preference list at any time.
+                    </div>
+                {% endif %}
             {% else %}
+                <div><strong>
+                    The project list for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                    is now available.
+                </strong></div>
                 <div class="mt-1">
-                    You can submit your ranked preference list at any time.
+                    This project list is for information only. You do not need to submit
+                    a list of project choices using the website.
                 </div>
             {% endif %}
+            <div class="d-flex gap-2 justify-content-end align-content-start w-100 mt-3">
+                <button type="button" class="btn btn-outline-primary video-btn student-dashboard-button" data-bs-toggle="modal" data-bs-target="#PanoptoModal">Show video help</button>
+                <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-success student-dashboard-button">Show available projects...</a>
+            </div>
         {% endcall %}
     </div>
 
@@ -42,7 +57,7 @@
         {% set optional_text = config.card_text_optional %}
         {% if optional_text and optional_text|length > 0 %}
             {{ optional_text|markdown|bclean|blinkify|safe }}
-        {% else %}
+        {% elif config.uses_selection %}
             <ul>
                 <li style="color: red;"><strong>This project is optional for your degree programme.</strong></li>
                 <li>If you wish to participate, add bookmarks to keep track of the projects
@@ -58,19 +73,20 @@
                     assume that you do not wish to participate.</li>
             </ul>
         {% endif %}
-
-        <ul>
-            <li>Some projects may require the project supervisor to confirm that
-                a pre-selection meeting has taken place, or at least been arranged,
-                before the project becomes available.
-            </li>
-        </ul>
+        {% if config.uses_selection %}
+            <ul>
+                <li>Some projects may require the project supervisor to confirm that
+                    a pre-selection meeting has taken place, or at least been arranged,
+                    before the project becomes available.
+                </li>
+            </ul>
+        {% endif %}
     {% else %}
         {% if sel.is_initial_selection %}
             {% set normal_text = config.card_text_normal %}
             {% if normal_text and normal_text|length > 0 %}
                 {{ normal_text|markdown|bclean|blinkify|safe }}
-            {% else %}
+            {% elif config.uses_selection %}
                 <ul>
                     <li><strong>This project is mandatory for your degree programme.</strong></li>
                     <li>Add bookmarks to keep track of the projects in which you are interested,
@@ -158,8 +174,6 @@
         {% endcall %}
     </div>
     <div class="d-flex justify-content-end align-content-start w-100">
-        <button type="button" class="btn btn-outline-primary video-btn student-dashboard-button" data-bs-toggle="modal" data-bs-target="#PanoptoModal">Show video help</button>
-        <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-success student-dashboard-button">Show available projects...</a>
         {% if sel.has_submission_list %}
             <a class="btn btn-secondary student-dashboard-button" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
                 Clear submission
@@ -324,64 +338,91 @@
     {% else %}
         {# no markup required; formerly panel-default #}
     {% endif %}
-   <div class="card {{ ns.borderclass }} %}mt-3 mb-3">
+    <div class="card {{ ns.borderclass }} mt-3 mb-3">
         <div class="card-header {{ ns.bgclass }} {{ ns.textclass }}">
             {% if sub %}
                 <strong>Request to switch projects</strong>
             {% else %}
-                <strong>Project selection</strong>
+                {% if config.uses_selection %}
+                    <strong>Project selection</strong>
+                {% else %}
+                    <strong>Project list</strong>
+                {% endif %}
             {% endif %}
         </div>
         <div class="card-body">
             {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                {% if sel.is_optional or not sel.uses_selection %}
+                    <div class="alert alert-info">
+                        {% call icon_block("info-circle") %}
+                            <div><strong>This project is optional.</strong></div>
+                            {% if config.uses_selection %}
+                                <div class="mt-1">
+                                    If you choose not to submit a project selection, we will assume you
+                                    don't wish to participate.
+                                </div>
+                            {% endif %}
+                        {% endcall %}
+                    </div>
+                {% endif %}
                 {{ open_card(config, sel) }}
-                <ul>
+                {% if config.uses_selection %}
                     {% set num_choices = sel.number_choices %}
                     {% set numpl = 's' %}
                     {% if num_choices == 1 %}{% set numpl = '' %}{% endif %}
                     {% if sel.is_optional or sel.is_initial_selection %}
-                        <li><strong>Select at least {{ num_choices }} project{{ numpl }}.</strong></li>
-                        <li>
-                            Although we make every effort,
-                            it is not possible to guarantee that you will be assigned
-                            your highest-ranked choices.
-                        </li>
+                        <ul>
+                            <li><strong>Select at least {{ num_choices }} project{{ numpl }}.</strong></li>
+                            <li>
+                                Although we make every effort,
+                                it is not possible to guarantee that you will be assigned
+                                your highest-ranked choices.
+                            </li>
+                        </ul>
                      {% else %}
-                        <li><strong>
-                            If you wish to continue with your existing supervisor,
-                            there is no need to do anything.
-                        </strong> </li>
-                        <li>
-                            To change supervisor, select at least {{ num_choices }} project{{ numpl }} and ensure
-                            your list is
-                            submitted before the deadline.
-                        </li>
+                        <ul>
+                            <li><strong>
+                                If you wish to continue with your existing supervisor,
+                                there is no need to do anything.
+                            </strong> </li>
+                            <li>
+                                To change supervisor, select at least {{ num_choices }} project{{ numpl }} and ensure
+                                your list is
+                                submitted before the deadline.
+                            </li>
+                        </ul>
                     {% endif %}
-                </ul>
+                {% endif %}
                 {# render bookmarks #}
                 {% if sel.has_bookmarks %}
                     {{ render_bookmarks(config, sel) }}
                 {% endif %}
-                {% if sel.number_custom_offers > 0 %}
-                    <div class="row vertical-align">
-                        <div class="col-8">
-                            <strong>You have custom offers available.</strong>
-                        </div>
-                        <div class="col-4">
-                            <div class="float-end">
-                                <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}" class="btn btn-secondary">Manage offers</a>
+                {% if config.uses_selection %}
+                    {% if sel.number_custom_offers > 0 %}
+                        <div class="row vertical-align">
+                            <div class="col-8">
+                                <strong>You have custom offers available.</strong>
+                            </div>
+                            <div class="col-4">
+                                <div class="float-end">
+                                    <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}" class="btn btn-secondary">Manage offers</a>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    {% endif %}
+                    {{ show_submission_status(config, sel) }}
                 {% endif %}
-                {{ show_submission_status(config, sel) }}
             {% elif config.selection_closed %}
                 {{ closed_card(config, sel) }}
             {% else %}
                 <div>
                     {% call icon_block("info-circle") %}
                         <div>
-                            Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }} is not yet available.
+                            {% if config.uses_selection %}
+                                <strong>Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }} is not yet available.</strong>
+                            {% else %}
+                                <strong>The project list for {{ config.year+1 }}&ndash;{{ config.year+2 }} is not yet available.</strong>
+                            {% endif %}
                         </div>
                     {% endcall %}
                 </div>

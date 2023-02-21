@@ -107,7 +107,10 @@
                         {% if bookmarks == 1 %}{% set bmpl = '' %}{% endif %}
                         {% set ncpl = 's' %}
                         {% if sel.number_choices == 1 %}{% set ncpl = '' %}{% endif %}
-                        <span class="badge bg-success">{{ bookmarks }} bookmark{{ bmpl }} &ndash; {{ sel.number_choices }} selection{{ ncpl }} required</span>
+                        <span class="badge bg-success">
+                            {{ bookmarks }} bookmark{{ bmpl }}
+                            {% if config.uses_selection %}&ndash; {{ sel.number_choices }} selection{{ ncpl }} required{% endif %}
+                        </span>
                     </div>
                 {% endif %}
                 {% if groups and skill_groups and skill_list %}

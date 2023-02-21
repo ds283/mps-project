@@ -183,7 +183,7 @@
     </ul>
 {% endblock %}
 
-{% macro project_card(config, pclass, sdata) %}
+{% macro project_card(config, pclass, sdata, show_canvas) %}
     <div class="row vertical-top">
         <div class="col-12">
             <span class="dashboard-project-title">{{ pclass.name }}</span>
@@ -229,7 +229,7 @@
         </div>
     </div>
 
-    {% if config.canvas_enabled %}
+    {% if show_canvas and config.canvas_enabled %}
         <hr class="intro-divider">
         <div class="d-flex flex-row justify-content-start gap-2">
             <a href="{{ config.canvas_course_URL }}">Go to Canvas site for this module</a>
@@ -255,7 +255,7 @@
                     {% set pclass = config.project_class %}
                         {% if pane=='select' and sel %}
                             <div class="card mt-3 mb-3 card-body bg-well">
-                                {{ project_card(config, pclass, sel) }}
+                                {{ project_card(config, pclass, sel, false) }}
                                 {{ selection_card(config, sel) }}
                             </div>
                             {% set ns.display = ns.display+1 %}
@@ -263,7 +263,7 @@
 
                         {% if pane=='submit' and sub %}
                             <div class="card mt-3 mb-3 card-body bg-well">
-                            {{ project_card(config, pclass, sub) }}
+                                {{ project_card(config, pclass, sub, true) }}
                                 {% for n in range(config.submissions) %}
                                     {{ submission_card(config, sub, n, today) }}
                                 {% else %}

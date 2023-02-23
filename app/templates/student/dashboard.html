@@ -297,22 +297,24 @@
 
                 {% if pclasses and pclasses.first() %}
                     <div class="row mt-3 mb-3">
-                        <div class="col-3"></div>
-                        <div class="col-6">
+                        <div class="col-2"></div>
+                        <div class="col-8">
                             <table class="table table-sm table-hover">
                                 <thead>
                                 <tr>
                                     <th>Project</th>
                                     <th>Convenor</th>
+                                    <th></th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 {% for pclass in pclasses %}
                                     <tr>
                                         <td>{{ pclass.name }}</td>
-                                        <td>{{ pclass.convenor_name }}
+                                        <td>{{ pclass.convenor_name }}</td>
+                                        <td>
                                             <a class="text-decoration-none" href="mailto:{{ pclass.convenor_email }}">
-                                                {{ pclass.convenor_email }}
+                                                &langle; {{ pclass.convenor_email }} &rangle;
                                             </a>
                                         </td>
                                     </tr>
@@ -320,7 +322,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="col-3"></div>
+                        <div class="col-2"></div>
                     </div>
                 {% endif %}
 

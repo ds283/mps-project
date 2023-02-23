@@ -169,15 +169,15 @@
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
         <li class="nav-item">
-            <a class="nav-link {% if pane=='select' %}active{% elif not has_selections %}disabled{% endif %}"
-               {% if has_selections %}href="{{ url_for('student.dashboard', pane='select') }}"{% endif %}>
-                Selections for next year
+            <a class="nav-link {% if pane=='submit' %}active{% elif not has_submissions %}disabled{% endif %}"
+               {% if has_submissions %}href="{{ url_for('student.dashboard', pane='submit') }}"{% endif %}>
+                Manage running projects
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {% if pane=='submit' %}active{% elif not has_submissions %}disabled{% endif %}"
-               {% if has_submissions %}href="{{ url_for('student.dashboard', pane='submit') }}"{% endif %}>
-                Running this year
+            <a class="nav-link {% if pane=='select' %}active{% elif not has_selections %}disabled{% endif %}"
+               {% if has_selections %}href="{{ url_for('student.dashboard', pane='select') }}"{% endif %}>
+                Make selections
             </a>
         </li>
     </ul>

@@ -50,7 +50,7 @@ def _element(r_id):
     record = db.session.query(ProjectDescription).filter_by(id=r_id).one()
 
     return {'name': render_template_string(title, r=record, url='REPURL', text='REPTEXT'),
-            'owner': render_template_string(owner, f=record.parent.owner),
+            'owner': render_template_string(owner, p=record.parent),
             'pclasses': render_template_string(pclasses, r=record),
             'rejected_by': render_template_string(_rejected, r=record),
             'menu': render_template_string(_actions, r=record, url='REPURL', text='REPTEXT')}

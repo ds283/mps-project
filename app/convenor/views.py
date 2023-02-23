@@ -4488,12 +4488,13 @@ def confirm_description(config_id, did):
 
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
-            project=config.name, yeara=config.year, yearb=config.year+1))
+            project=config.name, yeara=config.year, yearb=config.year+1), 'info')
         return redirect(redirect_url())
 
     if config.live:
         flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
-              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
+              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1),
+              'info')
         return redirect(redirect_url())
 
     desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
@@ -4501,6 +4502,10 @@ def confirm_description(config_id, did):
     # reject user if can't edit this description
     if not validate_edit_description(desc):
         return redirect(redirect_url())
+
+    # reject if a generic project
+    if desc.parent.generic:
+        flash('Individual faculty members cannot confirm generic projects.', 'info')
 
     try:
         desc.confirmed = True
@@ -4516,9 +4521,10 @@ def confirm_description(config_id, did):
         # kick off a background task to check whether any other project classes in which this user is enrolled
         # have been reduced to zero confirmations left.
         # If so, treat this 'Confirm' click as accounting for them also
-        celery = current_app.extensions['celery']
-        task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
-        task.apply_async(args=(desc.parent.owner.id, config.pclass_id))
+        if desc.parent.owner is not None:
+            celery = current_app.extensions['celery']
+            task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
+            task.apply_async(args=(desc.parent.owner.id, config.pclass_id))
 
     except SQLAlchemyError as e:
         db.session.rollback()

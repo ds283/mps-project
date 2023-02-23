@@ -29,7 +29,8 @@ from .utils import verify_submitter, verify_selector, verify_view_project, verif
 from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, LiveProject, \
     Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SubmissionRecord, TransferableSkill, \
-    User, EmailNotification, add_notification, CustomOffer, Project, SubmittingStudent
+    User, EmailNotification, add_notification, CustomOffer, Project, SubmittingStudent, StudentData, DegreeProgramme, \
+    DegreeType
 from ..shared.utils import home_dashboard, home_dashboard_url, get_count, redirect_url
 from ..shared.validators import validate_is_convenor, validate_submission_viewable
 from ..task_queue import register_task
@@ -47,22 +48,24 @@ def dashboard():
     has_submissions = False
 
     # build list of all project classes for which this student has roles
-    pcs = set()
+    enrolled_pclasses = set()
 
     if current_user.student_data is not None:
-        for item in current_user.student_data.selecting.filter_by(retired=False).all():
-            pclass: ProjectClass = item.config.project_class
-            if pclass.active and pclass.publish:
-                pcs.add(pclass)
+        data: StudentData = current_user.student_data
 
-        for item in current_user.student_data.submitting.filter_by(retired=False).all():
+        for item in data.selecting.filter_by(retired=False).all():
             pclass: ProjectClass = item.config.project_class
             if pclass.active and pclass.publish:
-                pcs.add(pclass)
+                enrolled_pclasses.add(pclass)
+
+        for item in data.submitting.filter_by(retired=False).all():
+            pclass: ProjectClass = item.config.project_class
+            if pclass.active and pclass.publish:
+                enrolled_pclasses.add(pclass)
 
     # map list of project classes into ProjectClassConfig instance, and selector/submitter cards
-    enrollments = []
-    for item in pcs:
+    enrolled_configs = []
+    for item in enrolled_pclasses:
         # extract live configuration for this project class
         config: ProjectClassConfig = item.most_recent_config
 
@@ -88,9 +91,9 @@ def dashboard():
         if sub is not None:
             has_submissions = True
 
-        enrollments.append((config, sel, sub))
+        enrolled_configs.append((config, sel, sub))
 
-    enrollments.sort(key=lambda x: x[0].project_class.name)
+    enrolled_configs.sort(key=lambda x: x[0].project_class.name)
 
     # can't disable both panes, so if neither is active then force selection pane to be active
     if not has_selections and not has_submissions:
@@ -110,9 +113,20 @@ def dashboard():
 
     session['dashboard_pane'] = pane
 
-    # list of all (active, published) project classes used to generate a simple informational dashboard in the event
+    # list of all (active, published, suitable level) project classes used to generate a simple informational dashboard in the event
     # that this student doesn't have any live selector or submitter roles
-    pclasses = ProjectClass.query.filter_by(active=True, publish=True)
+    # Restrict attention to projects of the correct level (UG, PGT, PGR)
+    if current_user.student_data is not None:
+        data: StudentData = current_user.student_data
+        programme: DegreeProgramme = data.programme
+        ptype: DegreeType = programme.degree_type
+        pclasses = ProjectClass.query.filter(ProjectClass.active == True,
+                                             ProjectClass.publish == True,
+                                             ProjectClass.student_level == ptype.level)
+    else:
+        pclasses = ProjectClass.query.filter(ProjectClass.active == True,
+                                             ProjectClass.publish == True)
+
 
     # build list of system messages to consider displaying
     messages = []
@@ -122,14 +136,14 @@ def dashboard():
         include = message.project_classes.first() is None
         if not include:
             for pcl in message.project_classes:
-                if pcl in pcs:
+                if pcl in enrolled_pclasses:
                     include = True
                     break
 
         if include:
             messages.append(message)
 
-    return render_template('student/dashboard.html', enrolled_classes=pcs, enrollments=enrollments, pclasses=pclasses,
+    return render_template('student/dashboard.html', enrolled_classes=enrolled_pclasses, enrollments=enrolled_configs, pclasses=pclasses,
                            messages=messages, today=date.today(), pane=pane, has_selections=has_selections,
                            has_submissions=has_submissions)
 

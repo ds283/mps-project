@@ -25,7 +25,7 @@ from urllib import parse
 # language=jinja2
 _actions = \
 """
-<a href="{{ url_for('project_approver.approve', id=r.id, url=url) }}" class="btn btn-sm btn-success btn-table-block">Approve</a>
+<a href="{{ url_for('project_approver.approve', id=r.id, url=url) }}" class="btn btn-sm btn-outline-success btn-table-block">Approve</a>
 <a href="{{ url_for('project_approver.requeue', id=r.id, url=url) }}" class="btn btn-sm btn-outline-secondary btn-table-block">Re-queue</a>
 <a href="{{ url_for('project_approver.return_to_owner', id=r.id, url=url) }}" class="btn btn-sm btn-outline-danger btn-table-block">Return to owner</a>
 """

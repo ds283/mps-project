@@ -5154,7 +5154,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
             messages.append('Selection by invitation')
 
         if self.full_CATS:
-            messages.append('Max CATS for accomodation={m}'.format(m=self.full_CATS))
+            messages.append('Max CATS for accommodation={m}'.format(m=self.full_CATS))
 
         return messages
 

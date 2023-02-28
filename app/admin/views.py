@@ -2761,11 +2761,13 @@ def perform_global_rollover():
     final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
     error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
 
+    # remove unused match records that belonged to the previous academic year
     prune_matches = celery.tasks['app.tasks.rollover.prune_matches']
 
     # need to perform a maintenance cycle to update students academic years
     maintenance_cycle = celery.tasks['app.tasks.maintenance.maintenance']
 
+    # schedule all parts of the rollover+maintenance cycle
     seq = chain(init.si(uuid, tk_name),
                 prune_matches.si(uuid, current_year, current_user.id),
                 maintenance_cycle.si(),

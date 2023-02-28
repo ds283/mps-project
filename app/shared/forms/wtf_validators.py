@@ -259,20 +259,6 @@ def unique_or_original_role(form, field):
     return globally_unique_role(form, field)
 
 
-def globally_unique_exam_number(form, field):
-    rec = StudentData.query.filter_by(exam_number=field.data).first()
-    if rec is not None:
-        raise ValidationError('Exam number {n} is already associated with student '
-                              '{name}'.format(n=rec.exam_number, name=rec.user.name))
-
-
-def unique_or_original_exam_number(form, field):
-    if field.data == form.user.student_data.exam_number:
-        return
-
-    return globally_unique_exam_number(form, field)
-
-
 def globally_unique_registration_number(form, field):
     rec = StudentData.query.filter_by(registration_number=field.data).first()
     if rec is not None:

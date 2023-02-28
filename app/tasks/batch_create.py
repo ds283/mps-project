@@ -263,9 +263,9 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
         'msc data science': 'F5063T',
         'msc data science (with an industrial placement year)': 'F5065T',
         'msc human and social data science': 'F5064T',
-        'msc data science': 'F5063T p/t',
-        'msc data science (with an industrial placement year)': 'F5065T p/t',
-        'msc human and social data science': 'F5064T p/t'
+        'msc data science (p/t)': 'F5063T p/t',
+        'msc data science (with an industrial placement year) (p/t)': 'F5065T p/t',
+        'msc human and social data science (p/t)': 'F5064T p/t'
     }
 
     programme = None

@@ -510,8 +510,8 @@ def edit_project(id):
 @roles_required('faculty')
 def remove_project_pclass(proj_id, pclass_id):
     # get project details
-    proj = Project.query.get_or_404(proj_id)
-    pclass = ProjectClass.query.get_or_404(pclass_id)
+    proj: Project = Project.query.get_or_404(proj_id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
     # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
@@ -520,9 +520,16 @@ def remove_project_pclass(proj_id, pclass_id):
     try:
         proj.remove_project_class(pclass)
         db.session.commit()
-    except StaleDataError:
-        # presumably caused by a race condition?
+    except StaleDataError as e:
         db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes due to a database error. '
+              'Please contact a system administrator', 'error')
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not save changes due to a database error. '
+              'Please contact a system administrator', 'error')
 
     return redirect(redirect_url())
 

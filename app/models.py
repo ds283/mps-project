@@ -7099,16 +7099,20 @@ class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
         self.active = True
 
 
-    def remove_project_class(self, pclass):
+    def remove_project_class(self, pclass: ProjectClass):
         """
         Remove ourselves from a given pclass, and cascade to our attached descriptions
         :param pclass:
         :return:
         """
-        self.project_classes.remove(pclass)
+        if pclass not in self.project_classes:
+            return
 
         for desc in self.descriptions:
+            desc: ProjectDescription
             desc.remove_project_class(pclass)
+
+        self.project_classes.remove(pclass)
 
 
     @property
@@ -7657,8 +7661,9 @@ class ProjectDescription(db.Model, EditingMetadataMixin,
         return self._warnings.get(key, None)
 
 
-    def remove_project_class(self, pclass):
-        self.project_classes.remove(pclass)
+    def remove_project_class(self, pclass: ProjectClass):
+        if pclass in self.project_classes:
+            self.project_classes.remove(pclass)
 
 
     def module_available(self, module_id):

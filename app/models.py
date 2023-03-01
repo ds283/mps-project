@@ -7432,6 +7432,8 @@ class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
 
 @listens_for(Project, 'before_update')
 def _Project_update_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable, target.id)
 
@@ -7441,6 +7443,8 @@ def _Project_update_handler(mapper, connection, target):
 
 @listens_for(Project, 'before_insert')
 def _Project_insert_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable, target.id)
 
@@ -7449,7 +7453,9 @@ def _Project_insert_handler(mapper, connection, target):
 
 
 @listens_for(Project, 'before_delete')
-def _Project_insert_handler(mapper, connection, target):
+def _Project_delete_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable, target.id)
 
@@ -7775,6 +7781,8 @@ class ProjectDescription(db.Model, EditingMetadataMixin,
 
 @listens_for(ProjectDescription, 'before_update')
 def _ProjectDescription_update_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_ProjectDescription_is_valid, target.id)
         cache.delete_memoized(_Project_is_offerable, target.parent_id)
@@ -7786,6 +7794,8 @@ def _ProjectDescription_update_handler(mapper, connection, target):
 
 @listens_for(ProjectDescription, 'before_insert')
 def _ProjectDescription_insert_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_ProjectDescription_is_valid, target.id)
         cache.delete_memoized(_Project_is_offerable, target.parent_id)
@@ -7797,6 +7807,8 @@ def _ProjectDescription_insert_handler(mapper, connection, target):
 
 @listens_for(ProjectDescription, 'before_delete')
 def _ProjectDescription_delete_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_ProjectDescription_is_valid, target.id)
         cache.delete_memoized(_Project_is_offerable, target.parent_id)
@@ -8567,6 +8579,26 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
                 delete_notification(self.project.owner.user, EmailNotification.CONFIRMATION_REQUEST_CREATED, self)
 
 
+@cache.memoize()
+def _SelectingStudent_is_valid(sid):
+    obj: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sid).one()
+
+    errors = {}
+    warnings = {}
+
+    student: StudentData = obj.student
+    user: User = student.user
+
+    # CONSTRAINT 1 - owning student should be active
+    if not user.active:
+        errors['active'] = 'User is inactive'
+
+    if len(errors) > 0:
+        return False, errors, warnings
+
+    return True, errors, warnings
+
+
 class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)):
     """
     Model a student who is selecting a project in the current cycle
@@ -8614,6 +8646,20 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
     # record IP address of selection request
     submission_IP = db.Column(db.String(IP_LENGTH))
 
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._validated = False
+        self._errors = False
+        self._warnings = False
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+        self._validated = False
+        self._errors = False
+        self._warnings = False
 
     @property
     def _requests_waiting_query(self):
@@ -9023,11 +9069,79 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
             db.session.delete(offer)
 
 
+    @property
+    def is_valid(self):
+        flag, self._errors, self._warnings = _SelectingStudent_is_valid(self.id)
+        self._validated = True
+
+        return flag
+
+
+    @property
+    def has_issues(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._errors) > 0 or len(self._warnings) > 0
+
+
+    @property
+    def errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._errors.values()
+
+    @property
+    def warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._warnings.values()
+
+
 @listens_for(SelectingStudent, 'before_update')
 def _SelectingStudent_update_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
+        cache.delete_memoized(_SelectingStudent_is_valid, target.id)
+
         for record in target.matching_records:
             _delete_MatchingRecord_cache(record.id, record.matching_id)
+
+
+@listens_for(SelectingStudent, 'before_insert')
+def _SelectingStudent_insert_handler(mapper, connection, target):
+    target._validated = False
+
+    with db.session.no_autoflush:
+        cache.delete_memoized(_SelectingStudent_is_valid, target.id)
+
+
+@listens_for(SelectingStudent, 'before_delete')
+def _SelectingStudent_delete_handler(mapper, connection, target):
+    target._validated = False
+
+    with db.session.no_autoflush:
+        cache.delete_memoized(_SelectingStudent_is_valid, target.id)
+
+
+@cache.memoize()
+def _SubmittingStudent_is_valid(sid):
+    obj: SubmittingStudent = db.session.query(SubmittingStudent).filter_by(id=sid).one()
+
+    errors = {}
+    warnings = {}
+
+    student: StudentData = obj.student
+    user: User = student.user
+
+    # CONSTRAINT 1 - owning student should be active
+    if not user.active:
+        errors['active'] = 'User is inactive'
+
+    if len(errors) > 0:
+        return False, errors, warnings
+
+    return True, errors, warnings
 
 
 class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTask)):
@@ -9069,6 +9183,21 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
 
     # flag a student that is missing in the Canvas database
     canvas_missing = db.Column(db.Integer(), default=None, nullable=True)
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._validated = False
+        self._errors = False
+        self._warnings = False
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+        self._validated = False
+        self._errors = False
+        self._warnings = False
 
 
     @property
@@ -9191,6 +9320,59 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
 
             for slot in rec.original_scheduled_slots:
                 slot.original_talks.remove(rec)
+
+
+    @property
+    def is_valid(self):
+        flag, self._errors, self._warnings = _SubmittingStudent_is_valid(self.id)
+        self._validated = True
+
+        return flag
+
+
+    @property
+    def has_issues(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._errors) > 0 or len(self._warnings) > 0
+
+
+    @property
+    def errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._errors.values()
+
+
+    @property
+    def warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._warnings.values()
+
+
+@listens_for(SubmittingStudent, 'before_update')
+def _SubmittingStudent_update_handler(mapper, connection, target):
+    target._validated = False
+
+    with db.session.no_autoflush:
+        cache.delete_memoized(_SubmittingStudent_is_valid, target.id)
+
+
+@listens_for(SubmittingStudent, 'before_insert')
+def _SubmittingStudent_insert_handler(mapper, connection, target):
+    target._validated = False
+
+    with db.session.no_autoflush:
+        cache.delete_memoized(_SubmittingStudent_is_valid, target.id)
+
+
+@listens_for(SubmittingStudent, 'before_delete')
+def _SubmittingStudent_delete_handler(mapper, connection, target):
+    target._validated = False
+
+    with db.session.no_autoflush:
+        cache.delete_memoized(_SubmittingStudent_is_valid, target.id)
 
 
 class CanvasStudent(db.Model):
@@ -11791,18 +11973,24 @@ def _delete_MatchingAttempt_cache(target_id):
 
 @listens_for(MatchingAttempt, 'before_update')
 def _MatchingAttempt_update_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         _delete_MatchingAttempt_cache(target.id)
 
 
 @listens_for(MatchingAttempt, 'before_insert')
 def _MatchingAttempt_insert_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         _delete_MatchingAttempt_cache(target.id)
 
 
 @listens_for(MatchingAttempt, 'before_delete')
 def _MatchingAttempt_delete_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         _delete_MatchingAttempt_cache(target.id)
 
@@ -12332,18 +12520,24 @@ def _delete_MatchingRecord_cache(record_id, attempt_id):
 
 @listens_for(MatchingRecord, 'before_update')
 def _MatchingRecord_update_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         _delete_MatchingRecord_cache(target.id, target.matching_id)
 
 
 @listens_for(MatchingRecord, 'before_insert')
 def _MatchingRecord_insert_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         _delete_MatchingRecord_cache(target.id, target.matching_id)
 
 
 @listens_for(MatchingRecord, 'before_delete')
 def _MatchingRecord_delete_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         _delete_MatchingRecord_cache(target.id, target.matching_id)
 
@@ -12830,18 +13024,24 @@ class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequest
 
 @listens_for(PresentationAssessment, 'before_update')
 def _PresentationAssessment_update_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.id)
 
 
 @listens_for(PresentationAssessment, 'before_insert')
 def _PresentationAssessment_insert_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.id)
 
 
 @listens_for(PresentationAssessment, 'before_delete')
 def _PresentationAssessment_delete_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.id)
 
@@ -13600,6 +13800,8 @@ class PresentationSession(db.Model, EditingMetadataMixin, PresentationSessionTyp
 
 @listens_for(PresentationSession, 'before_update')
 def _PresentationSession_update_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationSession_is_valid, target.id)
         cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
@@ -13615,6 +13817,8 @@ def _PresentationSession_update_handler(mapper, connection, target):
 
 @listens_for(PresentationSession, 'before_insert')
 def _PresentationSession_insert_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationSession_is_valid, target.id)
         cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
@@ -13628,6 +13832,8 @@ def _PresentationSession_insert_handler(mapper, connection, target):
 
 @listens_for(PresentationSession, 'before_delete')
 def _PresentationSession_delete_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationSession_is_valid, target.id)
         cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
@@ -14100,6 +14306,8 @@ class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin, AssessorPoolCho
 
 @listens_for(ScheduleAttempt, 'before_update')
 def _ScheduleAttempt_update_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.id)
         cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
@@ -14107,6 +14315,8 @@ def _ScheduleAttempt_update_handler(mapper, connection, target):
 
 @listens_for(ScheduleAttempt, 'before_insert')
 def _ScheduleAttempt_insert_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.id)
         cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
@@ -14114,6 +14324,8 @@ def _ScheduleAttempt_insert_handler(mapper, connection, target):
 
 @listens_for(ScheduleAttempt, 'before_delete')
 def _ScheduleAttempt_delete_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.id)
         cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
@@ -14678,6 +14890,8 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
 
 @listens_for(ScheduleSlot, 'before_update')
 def _ScheduleSlot_update_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
@@ -14687,6 +14901,8 @@ def _ScheduleSlot_update_handler(mapper, connection, target):
 
 @listens_for(ScheduleSlot, 'before_insert')
 def _ScheduleSlot_insert_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
@@ -14696,6 +14912,8 @@ def _ScheduleSlot_insert_handler(mapper, connection, target):
 
 @listens_for(ScheduleSlot, 'before_delete')
 def _ScheduleSlot_delete_handler(mapper, connection, target):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
@@ -14705,6 +14923,8 @@ def _ScheduleSlot_delete_handler(mapper, connection, target):
 
 @listens_for(ScheduleSlot.assessors, 'append')
 def _ScheduleSlot_assessors_append_handler(target, value, initiator):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
@@ -14714,6 +14934,8 @@ def _ScheduleSlot_assessors_append_handler(target, value, initiator):
 
 @listens_for(ScheduleSlot.assessors, 'remove')
 def _ScheduleSlot_assessors_remove_handler(target, value, initiator):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
@@ -14723,6 +14945,8 @@ def _ScheduleSlot_assessors_remove_handler(target, value, initiator):
 
 @listens_for(ScheduleSlot.talks, 'append')
 def _ScheduleSlot_talks_append_handler(target, value, initiator):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
@@ -14732,6 +14956,8 @@ def _ScheduleSlot_talks_append_handler(target, value, initiator):
 
 @listens_for(ScheduleSlot.talks, 'remove')
 def _ScheduleSlot_talks_remove_handler(target, value, initiator):
+    target._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)

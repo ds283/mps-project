@@ -66,24 +66,21 @@ _sessions = \
             </div>
             {{ slot.room.label|safe }}
             {% if slot.has_issues %}
-                <i class="fas fa-exclamation-triangle" style="color:red;"></i>
-                <p></p>
                 {% set errors = slot.errors %}
                 {% set warnings = slot.warnings %}
-                {% if errors|length == 1 %}
-                    <span class="badge bg-danger">1 error</span>
-                {% elif errors|length > 1 %}
-                    <span class="badge bg-danger">{{ errors|length }} errors</span>
-                {% else %}
-                    <span class="badge bg-success">0 errors</span>
-                {% endif %}
-                {% if warnings|length == 1 %}
-                    <span class="badge bg-warning text-dark">1 warning</span>
-                {% elif warnings|length > 1 %}
-                    <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
-                {% else %}
-                    <span class="badge bg-success">0 warnings</span>
-                {% endif %}
+                <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+                <div class="mt-1">
+                    {% if errors|length == 1 %}
+                        <span class="badge bg-danger">1 error</span>
+                    {% elif errors|length > 1 %}
+                        <span class="badge bg-danger">{{ errors|length }} errors</span>
+                    {% endif %}
+                    {% if warnings|length == 1 %}
+                        <span class="badge bg-warning text-dark">1 warning</span>
+                    {% elif warnings|length > 1 %}
+                        <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
+                    {% endif %}
+                </div>
             {% endif %}
         </div>
         <div class="col-9">
@@ -105,31 +102,32 @@ _sessions = \
                 {% endif %}
             {% endfor %}
             {% if slot.has_issues %}
-                <p></p>
                 {% set errors = slot.errors %}
                 {% set warnings = slot.warnings %}
-                {% if errors|length > 0 %}
-                    <div class="error-block">
-                        {% for item in errors %}
-                            {% if loop.index <= 5 %}
-                                <div class="error-message">{{ item }}</div>
-                            {% elif loop.index == 6 %}
-                                <div class="error-message">Further errors suppressed...</div>
-                            {% endif %}            
-                        {% endfor %}
-                    </div>
-                {% endif %}
-                {% if warnings|length > 0 %}
-                    <div class="error-block">
-                        {% for item in warnings %}
-                            {% if loop.index <= 5 %}
-                                <div class="error-message">Warning: {{ item }}</div>
-                            {% elif loop.index == 6 %}
-                                <div class="error-message">Further errors suppressed...</div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                {% endif %}
+                <div class="mt-1">
+                    {% if errors|length > 0 %}
+                        <div class="error-block">
+                            {% for item in errors %}
+                                {% if loop.index <= 5 %}
+                                    <div class="error-message">{{ item }}</div>
+                                {% elif loop.index == 6 %}
+                                    <div class="error-message">Further errors suppressed...</div>
+                                {% endif %}            
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if warnings|length > 0 %}
+                        <div class="error-block">
+                            {% for item in warnings %}
+                                {% if loop.index <= 5 %}
+                                    <div class="error-message">Warning: {{ item }}</div>
+                                {% elif loop.index == 6 %}
+                                    <div class="error-message">Further errors suppressed...</div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
             {% endif %}
         </div>
     </div>

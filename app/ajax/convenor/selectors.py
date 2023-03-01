@@ -214,11 +214,14 @@ _confirmations = \
 _name = \
 """
 <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
+{% if sel.has_issues %}
+    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+{% endif %}
 <div>
 {% if sel.convert_to_submitter %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Convert</span>
 {% else %}
-    <span class="badge bg-danger"><i class="fas fa-times"></i> Disable convert</span>
+    <span class="badge bg-danger"><i class="fas fa-times"></i> No convert</span>
 {% endif %}
 {% if sel.student.intermitting %}
     <span class="badge bg-warning text-dark">TWD</span>
@@ -229,6 +232,44 @@ _name = \
     <span class="badge bg-info text-dark">{{ num_tasks }} task{{ pl }}</span>
 {% endif %}
 </div>
+{% if sel.has_issues %}
+    {% set errors = sel.errors %}
+    {% set warnings = sel.warnings %}
+    <div class="mt-1">
+        {% if errors|length == 1 %}
+            <span class="badge bg-danger">1 error</span>
+        {% elif errors|length > 1 %}
+            <span class="badge bg-danger">{{ errors|length }} errors</span>
+        {% endif %}
+        {% if warnings|length == 1 %}
+            <span class="badge bg-warning text-dark">1 warning</span>
+        {% elif warnings|length > 1 %}
+            <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
+        {% endif %}
+        {% if errors|length > 0 %}
+            <div class="error-block">
+                {% for item in errors %}
+                    {% if loop.index <= 5 %}
+                        <div class="error-message">{{ item }}</div>
+                    {% elif loop.index == 6 %}
+                        <div class="error-message">Further errors suppressed...</div>
+                    {% endif %}            
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if warnings|length > 0 %}
+            <div class="error-block">
+                {% for item in warnings %}
+                    {% if loop.index <= 5 %}
+                        <div class="error-message">Warning: {{ item }}</div>
+                    {% elif loop.index == 6 %}
+                        <div class="error-message">Further errors suppressed...</div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+{% endif %}
 """
 
 

@@ -67,15 +67,11 @@ _project_error_block = \
         <span class="badge bg-danger">1 error</span>
     {% elif errors|length > 1 %}
         <span class="badge bg-danger">{{ errors|length }} errors</span>
-    {% else %}
-        <span class="badge bg-success">0 errors</span>
     {% endif %}
     {% if warnings|length == 1 %}
         <span class="badge bg-warning text-dark">1 warning</span>
     {% elif warnings|length > 1 %}
         <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
-    {% else %}
-        <span class="badge bg-success">0 warnings</span>
     {% endif %}
     {% if errors|length > 0 %}
         <div class="error-block">

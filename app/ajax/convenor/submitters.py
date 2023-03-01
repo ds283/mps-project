@@ -364,9 +364,6 @@ _name = \
             <span class="badge bg-secondary">#{{ student.exam_number }}</span>
         {% endif %}
     {% endif %}
-    {% if student.intermitting %}
-        <span class="badge bg-warning text-dark">TWD</span>
-    {% endif %}
     {% set num_tasks = sub.number_available_tasks %}
     {% set pl = 's' %}{% if num_tasks == 1 %}{% set pl = '' %}{% endif %}
     {% if num_tasks > 0 %}

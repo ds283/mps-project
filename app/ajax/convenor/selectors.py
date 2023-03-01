@@ -223,9 +223,6 @@ _name = \
 {% else %}
     <span class="badge bg-danger"><i class="fas fa-times"></i> No convert</span>
 {% endif %}
-{% if sel.student.intermitting %}
-    <span class="badge bg-warning text-dark">TWD</span>
-{% endif %}
 {% set num_tasks = sel.number_available_tasks %}
 {% set pl = 's' %}{% if num_tasks == 1 %}{% set pl = '' %}{% endif %}
 {% if num_tasks > 0 %}

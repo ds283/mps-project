@@ -8591,7 +8591,11 @@ def _SelectingStudent_is_valid(sid):
 
     # CONSTRAINT 1 - owning student should be active
     if not user.active:
-        errors['active'] = 'User is inactive'
+        errors['active'] = 'Student is inactive'
+
+    # CONSTRAINT 2 - owning student should not be TWD
+    if student.intermitting:
+        errors['intermitting'] = 'Student is intermitting'
 
     if len(errors) > 0:
         return False, errors, warnings
@@ -9136,7 +9140,11 @@ def _SubmittingStudent_is_valid(sid):
 
     # CONSTRAINT 1 - owning student should be active
     if not user.active:
-        errors['active'] = 'User is inactive'
+        errors['active'] = 'Student is inactive'
+
+    # CONSTRAINT 2 - owning student should not be TWD
+    if student.intermitting:
+        errors['intermitting'] = 'Student is intermitting'
 
     if len(errors) > 0:
         return False, errors, warnings

@@ -618,7 +618,7 @@ def perform_delete_project(id):
 @roles_required('faculty')
 def add_description(pid):
     # get parent project details
-    proj = Project.query.get_or_404(pid)
+    proj: Project = Project.query.get_or_404(pid)
 
     # if project owner is not logged-in user, object
     if not validate_is_project_owner(proj):
@@ -670,7 +670,7 @@ def add_description(pid):
 @faculty.route('/edit_description/<int:did>', methods=['GET', 'POST'])
 @roles_required('faculty')
 def edit_description(did):
-    desc = ProjectDescription.query.get_or_404(did)
+    desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
     if not validate_is_project_owner(desc.parent):
@@ -725,7 +725,7 @@ def edit_description(did):
 @faculty.route('/edit_description_content/<int:did>', methods=['GET', 'POST'])
 @roles_required('faculty')
 def edit_description_content(did):
-    desc = ProjectDescription.query.get_or_404(did)
+    desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
     if not validate_is_project_owner(desc.parent):
@@ -800,19 +800,36 @@ def description_modules(did, level_id=None):
 @faculty.route('/description_attach_module/<int:did>/<int:mod_id>/<int:level_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def description_attach_module(did, mod_id, level_id):
-    desc = ProjectDescription.query.get_or_404(did)
+    desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
     if not validate_is_project_owner(desc.parent):
         return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
-    module = Module.query.get_or_404(mod_id)
+    module: Module = Module.query.get_or_404(mod_id)
 
     if desc.module_available(module.id):
         if module not in desc.modules:
             desc.modules.append(module)
-            db.session.commit()
+
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                flash('Could not attach module "{name}" due to a database error. '
+                      'Please contact a system administrator'.format(name=module.name), 'error')
+
+        else:
+            flash('Could not attach module "{name}" because it is already attached.'.format(name=module.name),
+                  'warning')
+
+    else:
+        flash('Could not attach module "{name}" because it cannot be applied as a pre-requisite '
+              'for this description. Most likely this means it is incompatible with one of the selected '
+              'project classes. Consider generating a new variant for the incompatible '
+              'classes.'.format(name=module.name), 'warning')
 
     return redirect(url_for('faculty.description_modules', did=did, level_id=level_id, create=create))
 
@@ -820,19 +837,29 @@ def description_attach_module(did, mod_id, level_id):
 @faculty.route('/description_detach_module/<int:did>/<int:mod_id>/<int:level_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def description_detach_module(did, mod_id, level_id):
-    desc = ProjectDescription.query.get_or_404(did)
+    desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
     if not validate_is_project_owner(desc.parent):
         return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
-    module = Module.query.get_or_404(mod_id)
+    module: Module = Module.query.get_or_404(mod_id)
 
-    if desc.module_available(module.id):
-        if module in desc.modules:
-            desc.modules.remove(module)
+    if module in desc.modules:
+        desc.modules.remove(module)
+
+        try:
             db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not detach module "{name}" due to a database error. '
+                  'Please contact a system administrator'.format(name=module.name), 'error')
+
+    else:
+        flash('Could not detach specified module "{name}" because it was not previously '
+              'attached.'.format(name=module.name), 'warning')
 
     return redirect(url_for('faculty.description_modules', did=did, level_id=level_id, create=create))
 

@@ -10,7 +10,7 @@
 
 from urllib import parse
 
-from flask import render_template_string, jsonify, current_app, url_for
+from flask import render_template_string, current_app, url_for
 from sqlalchemy.event import listens_for
 
 from ...cache import cache
@@ -26,18 +26,20 @@ REPERRORSYMBOL
 <a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
     {{ project.name }}
 </a>
-<div>
-    {{ 'REPNEWCOMMENTS'|safe }}
-    REPISLIVE
-    REPISRUNNING
-    {% set num = project.num_descriptions %}
-    {% if num > 0 %}
-        {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
-        <span class="badge bg-info text-dark">{{ num }} variant{{ pl }}</span>
-    {% endif %}
-</div>
-REPNAMELABELS
-REPERRORBLOCK
+{% if project.active %}
+<div class="mt-1">
+        {{ 'REPNEWCOMMENTS'|safe }}
+        REPISLIVE
+        REPISRUNNING
+        {% set num = project.num_descriptions %}
+        {% if num > 0 %}
+            {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
+            <span class="badge bg-info text-dark">{{ num }} variant{{ pl }}</span>
+        {% endif %}
+    </div>
+    REPNAMELABELS
+    REPERRORBLOCK
+{% endif %}
 """
 
 
@@ -117,16 +119,16 @@ _owner = \
 # language=jinja2
 _project_status = \
 """
-{% if project.is_offerable %}
-    {% if project.active %}
-        <span class="badge bg-success"><i class="fas fa-check"></i> Project active</span>
-    {% else %}
-        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Project inactive</span>
-    {% endif %}
-    {{ 'REPENROLLMENT'|safe }}
-    {{ 'REPAPPROVAL'|safe }}
+{% if not project.active %}
+    <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Project inactive</span>
 {% else %}
-    <span class="badge bg-danger">Not available</span>
+    {% if project.is_offerable %}
+        <span class="badge bg-success"><i class="fas fa-check"></i> Project active</span>
+        {{ 'REPENROLLMENT'|safe }}
+        {{ 'REPAPPROVAL'|safe }}
+    {% else %}
+        <span class="badge bg-danger">Not available</span>
+    {% endif %}
 {% endif %}
 """
 
@@ -390,14 +392,14 @@ _pclass_proxy_str = str(_pclass_proxy)
 
 @cache.memoize()
 def _name_labels(project_id):
-    p = db.session.query(Project).filter_by(id=project_id).one()
+    p: Project = db.session.query(Project).filter_by(id=project_id).one()
 
     return render_template_string(_project_name_labels, project=p)
 
 
 @cache.memoize()
 def _element(project_id, menu_template, in_current):
-    p = db.session.query(Project).filter_by(id=project_id).one()
+    p: Project = db.session.query(Project).filter_by(id=project_id).one()
 
     menu_string = _menus[menu_template]
 

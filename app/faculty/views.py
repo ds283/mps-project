@@ -516,11 +516,6 @@ def remove_project_pclass(proj_id, pclass_id):
     try:
         proj.remove_project_class(pclass)
         db.session.commit()
-    except StaleDataError as e:
-        db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash('Could not save changes due to a database error. '
-              'Please contact a system administrator', 'error')
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

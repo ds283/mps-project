@@ -486,14 +486,14 @@ def register_issue_confirm_tasks(celery):
         fac_data = user.faculty_data
 
         for record in records:
-            config: ProjectClass = record.most_recent_config
+            config: ProjectClassConfig = record.pclass.most_recent_config
 
             if config is not None:
                 if fac_data.number_projects_offered(config.pclass_id) > 0:
 
                     # if no confirmations outstanding, mark this project class as confirmed automatically
                     if config.is_confirmation_required(user_id) and not config.has_confirmations_outstanding(user_id):
-                        config.mark_confirmed(user_id, commit=False, message=False)
+                        config.mark_confirmed(user_id, message=False)
 
                         user.post_message('No further project descriptions attached to project class '
                                           '"{name}" require confirmation, so it has been marked as '

@@ -23,7 +23,7 @@ from app.shared.forms.mixins import FirstLastNameMixin, FacultyDataMixinFactory,
     EditUserNameMixin, DefaultLicenseMixin
 from app.shared.forms.queries import GetActiveDegreeProgrammes, BuildDegreeProgrammeName
 from app.shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_email, \
-    OptionalIf, password_strength, value_is_nonnegative, globally_unique_exam_number, unique_or_original_exam_number, \
+    OptionalIf, password_strength, value_is_nonnegative, \
     unique_or_original_batch_item_userid, unique_or_original_batch_item_email, \
     unique_or_original_batch_item_exam_number, globally_unique_role, unique_or_original_role, \
     globally_unique_registration_number, unique_or_original_registration_number, \
@@ -84,7 +84,7 @@ class UserTypeSelectForm(Form, UserTypeMixin):
 
 class StudentDataMixin():
 
-    foundation_year = BooleanField('Foundation year')
+    foundation_year = BooleanField('This student used a Foundation Year')
 
     cohort = IntegerField('Cohort', validators=[InputRequired(message="Cohort is required")],
                           description='Enter the year the student joined the university. '
@@ -100,7 +100,7 @@ class StudentDataMixin():
     programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes,
                                  get_label=BuildDegreeProgrammeName)
 
-    intermitting = BooleanField('Currently intermitting')
+    intermitting = BooleanField('This student is currently intermitting (TWD)')
 
     dyspraxia_sticker = BooleanField('Mark work with dyspraxia sticker', default=False)
 
@@ -145,18 +145,20 @@ class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixinFact
 
 class CreateStudentNumbersMixin():
 
-    exam_number = IntegerField('Exam number', validators=[Optional(), globally_unique_exam_number])
-
     registration_number = IntegerField('Registration number',
-                                       validators=[Optional(), globally_unique_registration_number])
+                                       validators=[Optional(), globally_unique_registration_number],
+                                       description='Registration numbers are optional. They are automatically '
+                                                   'imported when students are created in batch mode, but they '
+                                                   'are not currently used by the system.')
 
 
 class EditStudentNumbersMixin():
 
-    exam_number = IntegerField('Exam number', validators=[Optional(), unique_or_original_exam_number])
-
     registration_number = IntegerField('Registration number',
-                                       validators=[Optional(), unique_or_original_registration_number])
+                                       validators=[Optional(), unique_or_original_registration_number],
+                                       description='Registration numbers are optional. They are automatically '
+                                                   'imported when students are created in batch mode, but they '
+                                                   'are not currently used by the system.')
 
 
 class RegisterStudentForm(RegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin):

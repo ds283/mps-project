@@ -22,9 +22,6 @@ _name = \
 """
 <div>
     {{ item.first_name }} {{ item.last_name }}
-    {% if item.exam_number is not none %}
-        <span class="badge bg-info text-dark">Exam #{{ item.exam_number }}</span>
-    {% endif %}
     {% if item.registration_number is not none %}
         <span class="badge bg-info text-dark">Registration #{{ item.registration_number }}</span>
     {% endif %}

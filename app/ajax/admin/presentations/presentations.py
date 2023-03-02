@@ -23,37 +23,38 @@ _name = \
 {% if a.has_issues %}
     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
-<p></p>
-{% if a.is_deployed %}
-    <span class="badge bg-success"><i class="fas fa-check"></i> Deployed</span>
-{% endif %}
-{% if not a.is_feedback_open %}
-    <span class="badge bg-success">Feedback closed</span>
-{% endif %}
-{% if state == a.AVAILABILITY_NOT_REQUESTED %}
-    <span class="badge bg-secondary">Availability not requested</span>
-{% elif state == a.AVAILABILITY_REQUESTED %}
-    <span class="badge bg-success">Availability requested</span>
-    {% set num_outstanding = a.availability_outstanding_count %}
-    {% if num_outstanding > 0 %}
-        <span class="badge bg-info text-dark">{{ num_outstanding }} outstanding</span>
+<div class="mt-1">
+    {% if a.is_deployed %}
+        <span class="badge bg-success"><i class="fas fa-check"></i> Deployed</span>
     {% endif %}
-{% elif state == a.AVAILABILITY_CLOSED %}
-    <span class="badge bg-primary">Availability closed</span>
-{% elif state == a.AVAILABILITY_SKIPPED %}
-    <span class="badge bg-primary">Availability skipped</span>
-{% else %}
-    <span class="badge bg-danger">Unknown lifecycle state</span>
-{% endif %}
-{% set sessions = a.number_sessions %}
-{% set pl = 's' %}{% if sessions == 1 %}{% set pl = '' %}{% endif %}
-<span class="badge bg-info text-dark">{{ sessions }} session{{ pl }}</span>
-{% set slots = a.number_slots %}
-{% set pl = 's' %}{% if slots == 1 %}{% set pl = '' %}{% endif %}
-<span class="badge bg-info text-dark">{{ slots }} slot{{ pl }}</span>
-{% set schedules = a.number_schedules %}
-{% set pl = 's' %}{% if schedules == 1 %}{% set pl = '' %}{% endif %}
-<span class="badge bg-info text-dark">{{ schedules }} schedule{{ pl }}</span>
+    {% if not a.is_feedback_open %}
+        <span class="badge bg-success">Feedback closed</span>
+    {% endif %}
+    {% if state == a.AVAILABILITY_NOT_REQUESTED %}
+        <span class="badge bg-secondary">Availability not requested</span>
+    {% elif state == a.AVAILABILITY_REQUESTED %}
+        <span class="badge bg-success">Availability requested</span>
+        {% set num_outstanding = a.availability_outstanding_count %}
+        {% if num_outstanding > 0 %}
+            <span class="badge bg-info text-dark">{{ num_outstanding }} outstanding</span>
+        {% endif %}
+    {% elif state == a.AVAILABILITY_CLOSED %}
+        <span class="badge bg-primary">Availability closed</span>
+    {% elif state == a.AVAILABILITY_SKIPPED %}
+        <span class="badge bg-primary">Availability skipped</span>
+    {% else %}
+        <span class="badge bg-danger">Unknown lifecycle state</span>
+    {% endif %}
+    {% set sessions = a.number_sessions %}
+    {% set pl = 's' %}{% if sessions == 1 %}{% set pl = '' %}{% endif %}
+    <span class="badge bg-info text-dark">{{ sessions }} session{{ pl }}</span>
+    {% set slots = a.number_slots %}
+    {% set pl = 's' %}{% if slots == 1 %}{% set pl = '' %}{% endif %}
+    <span class="badge bg-info text-dark">{{ slots }} slot{{ pl }}</span>
+    {% set schedules = a.number_schedules %}
+    {% set pl = 's' %}{% if schedules == 1 %}{% set pl = '' %}{% endif %}
+    <span class="badge bg-info text-dark">{{ schedules }} schedule{{ pl }}</span>
+</div>
 """
 
 
@@ -101,45 +102,42 @@ _sessions = \
     {% endif %}
 {% endfor %}
 {% if a.has_issues %}
-    <p></p>
     {% set errors = a.errors %}
     {% set warnings = a.warnings %}
-    {% if errors|length == 1 %}
-        <span class="badge bg-danger">1 error</span>
-    {% elif errors|length > 1 %}
-        <span class="badge bg-danger">{{ errors|length }} errors</span>
-    {% else %}
-        <span class="badge bg-success">0 errors</span>
-    {% endif %}
-    {% if warnings|length == 1 %}
-        <span class="badge bg-warning text-dark">1 warning</span>
-    {% elif warnings|length > 1 %}
-        <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
-    {% else %}
-        <span class="badge bg-success">0 warnings</span>
-    {% endif %}
-    {% if errors|length > 0 %}
-        <div class="error-block">
-            {% for item in errors %}
-                {% if loop.index <= 10 %}
-                    <div class="error-message">{{ item }}</div>
-                {% elif loop.index == 11 %}
-                    <div class="error-message">Further errors suppressed...</div>
-                {% endif %}            
-            {% endfor %}
-        </div>
-    {% endif %}
-    {% if warnings|length > 0 %}
-        <div class="error-block">
-            {% for item in warnings %}
-                {% if loop.index <= 10 %}
-                    <div class="error-message">Warning: {{ item }}</div>
-                {% elif loop.index == 11 %}
-                    <div class="error-message">Further errors suppressed...</div>
-                {% endif %}
-            {% endfor %}
-        </div>
-    {% endif %}
+    <div class="mt-1">
+        {% if errors|length == 1 %}
+            <span class="badge bg-danger">1 error</span>
+        {% elif errors|length > 1 %}
+            <span class="badge bg-danger">{{ errors|length }} errors</span>
+        {% endif %}
+        {% if warnings|length == 1 %}
+            <span class="badge bg-warning text-dark">1 warning</span>
+        {% elif warnings|length > 1 %}
+            <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
+        {% endif %}
+        {% if errors|length > 0 %}
+            <div class="error-block">
+                {% for item in errors %}
+                    {% if loop.index <= 10 %}
+                        <div class="error-message">{{ item }}</div>
+                    {% elif loop.index == 11 %}
+                        <div class="error-message">Further errors suppressed...</div>
+                    {% endif %}            
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if warnings|length > 0 %}
+            <div class="error-block">
+                {% for item in warnings %}
+                    {% if loop.index <= 10 %}
+                        <div class="error-message">Warning: {{ item }}</div>
+                    {% elif loop.index == 11 %}
+                        <div class="error-message">Further errors suppressed...</div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
 {% endif %}
 """
 

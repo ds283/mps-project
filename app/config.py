@@ -27,10 +27,10 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 # website revision number
-site_revision = '2022.3'
+site_revision = '2023.1'
 
 # website copyright dates
-site_copyright_dates = '2018–2022'
+site_copyright_dates = '2018–2023'
 
 
 class Config(object):
@@ -210,7 +210,7 @@ class ProductionConfig(Config):
     DEBUG = False
 
     # Flask-Limiter
-    # RATELIMIT_STORAGE_URL is set in instance/secrets.py
+    # RATELIMIT_STORAGE_URI is set in instance/secrets.py
     RATELIMIT_DEFAULT = "500/hour;120/minute"
 
     # our own, hand-rolled profiler:

@@ -47,7 +47,11 @@
         </li>
         <li class="nav-item">
             <a class="nav-link {% if pane == 'selectors' %}active{% endif %}" href="{{ url_for('convenor.selectors', id=pclass.id) }}">
-                Selectors for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                {% if config.select_in_previous_cycle %}
+                    Selectors for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                {% else %}
+                    Selectors for {{ config.year }}&ndash;{{ config.year+1 }}
+                {% endif %}
                 {% if sel_count is defined %}
                     <span id="selector-count" class="badge {% if pane == 'selectors' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ sel_count }}</span>
                 {% endif %}

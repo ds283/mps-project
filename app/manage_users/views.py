@@ -236,7 +236,7 @@ def create_student(role):
         rep_years = form.repeated_years.data
         ry = rep_years if rep_years is not None and rep_years >= 0 else 0
         data = StudentData(id=user.id,
-                           exam_number=form.exam_number.data,
+                           exam_number=None,
                            registration_number=form.registration_number.data,
                            intermitting=form.intermitting.data,
                            cohort=form.cohort.data,
@@ -1298,7 +1298,6 @@ def edit_student(id):
 
         data.foundation_year = form.foundation_year.data
         data.intermitting = form.intermitting.data
-        data.exam_number = form.exam_number.data
         data.registration_number = form.registration_number.data
         data.cohort = form.cohort.data
         data.repeated_years = ry
@@ -1336,7 +1335,6 @@ def edit_student(id):
         if request.method == 'GET':
             form.foundation_year.data = data.foundation_year
             form.intermitting.data = data.intermitting
-            form.exam_number.data = data.exam_number
             form.registration_number.data = data.registration_number
             form.cohort.data = data.cohort
             form.repeated_years.data = data.repeated_years

@@ -154,15 +154,11 @@ _desc_label = \
             <span class="badge bg-danger">1 error</span>
         {% elif errors|length > 1 %}
             <span class="badge bg-danger">{{ errors|length }} errors</span>
-        {% else %}
-            <span class="badge bg-success">0 errors</span>
         {% endif %}
         {% if warnings|length == 1 %}
             <span class="badge bg-warning text-dark">1 warning</span>
         {% elif warnings|length > 1 %}
             <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
-        {% else %}
-            <span class="badge bg-success">0 warnings</span>
         {% endif %}
         {% if errors|length > 0 %}
             <div class="error-block">
@@ -3377,7 +3373,7 @@ def description_modules(did, pclass_id, level_id=None):
 @convenor.route('/description_attach_module/<int:did>/<int:pclass_id>/<int:mod_id>/<int:level_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def description_attach_module(did, pclass_id, mod_id, level_id):
-    desc = ProjectDescription.query.get_or_404(did)
+    desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
 
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
@@ -3390,19 +3386,38 @@ def description_attach_module(did, pclass_id, mod_id, level_id):
             return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
-    module = Module.query.get_or_404(mod_id)
+    module: Module = Module.query.get_or_404(mod_id)
 
-    if desc.module_available(module.id) and module not in desc.modules:
-        desc.modules.append(module)
-        db.session.commit()
+    if desc.module_available(module.id):
+        if module not in desc.modules:
+            desc.modules.append(module)
 
-    return redirect(url_for('convenor.description_modules', did=did, pclass_id=pclass_id, level_id=level_id, create=create))
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                flash('Could not attach module "{name}" due to a database error. '
+                      'Please contact a system administrator'.format(name=module.name), 'error')
+
+        else:
+            flash('Could not attach module "{name}" because it is already attached.'.format(name=module.name),
+                  'warning')
+
+    else:
+        flash('Could not attach module "{name}" because it cannot be applied as a pre-requisite '
+              'for this description. Most likely this means it is incompatible with one of the selected '
+              'project classes. Consider generating a new variant for the incompatible '
+              'classes.'.format(name=module.name), 'warning')
+
+    return redirect(url_for('convenor.description_modules', did=did, pclass_id=pclass_id, level_id=level_id,
+                            create=create))
 
 
 @convenor.route('/description_detach_module/<int:did>/<int:pclass_id>/<int:mod_id>/<int:level_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def description_detach_module(did, pclass_id, mod_id, level_id):
-    desc = ProjectDescription.query.get_or_404(did)
+    desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
 
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
@@ -3415,13 +3430,25 @@ def description_detach_module(did, pclass_id, mod_id, level_id):
             return redirect(redirect_url())
 
     create = request.args.get('create', default=None)
-    module = Module.query.get_or_404(mod_id)
+    module: Module = Module.query.get_or_404(mod_id)
 
-    if desc.module_available(module.id) and module in desc.modules:
+    if module in desc.modules:
         desc.modules.remove(module)
-        db.session.commit()
 
-    return redirect(url_for('convenor.description_modules', did=did, pclass_id=pclass_id, level_id=level_id, create=create))
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not detach module "{name}" due to a database error. '
+                  'Please contact a system administrator'.format(name=module.name), 'error')
+
+    else:
+        flash('Could not detach specified module "{name}" because it was not previously '
+              'attached.'.format(name=module.name), 'warning')
+
+    return redirect(url_for('convenor.description_modules', did=did, pclass_id=pclass_id, level_id=level_id,
+                            create=create))
 
 
 @convenor.route('/delete_description/<int:did>/<int:pclass_id>')
@@ -4488,12 +4515,13 @@ def confirm_description(config_id, did):
 
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
-            project=config.name, yeara=config.year, yearb=config.year+1))
+            project=config.name, yeara=config.year, yearb=config.year+1), 'info')
         return redirect(redirect_url())
 
     if config.live:
         flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
-              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
+              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1),
+              'info')
         return redirect(redirect_url())
 
     desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
@@ -4501,6 +4529,10 @@ def confirm_description(config_id, did):
     # reject user if can't edit this description
     if not validate_edit_description(desc):
         return redirect(redirect_url())
+
+    # reject if a generic project
+    if desc.parent.generic:
+        flash('Individual faculty members cannot confirm generic projects.', 'info')
 
     try:
         desc.confirmed = True
@@ -4516,9 +4548,10 @@ def confirm_description(config_id, did):
         # kick off a background task to check whether any other project classes in which this user is enrolled
         # have been reduced to zero confirmations left.
         # If so, treat this 'Confirm' click as accounting for them also
-        celery = current_app.extensions['celery']
-        task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
-        task.apply_async(args=(desc.parent.owner.id, config.pclass_id))
+        if desc.parent.owner is not None:
+            celery = current_app.extensions['celery']
+            task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
+            task.apply_async(args=(desc.parent.owner.id, config.pclass_id))
 
     except SQLAlchemyError as e:
         db.session.rollback()

@@ -30,7 +30,16 @@ title = \
 
 owner = \
 """
-<a class="text-decoration-none" href="mailto:{{ f.user.email }}">{{ f.user.name }}</a>
+{% if p.generic %}
+    <span class="badge bg-secondary">Generic</span>
+{% else %}
+    {% set fac = p.owner %}
+    {% if fac is not none %}
+        <a class="text-decoration-none" href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
+    {% else %}
+        <span class="badge bg-danger">Missing</span>
+    {% endif %}
+{% endif %}
 """
 
 

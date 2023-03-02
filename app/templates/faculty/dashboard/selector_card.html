@@ -25,20 +25,19 @@
         {# no markup required; formerly panel-default #}
     {% else %}
         {% if nproj == 0 %}
-            {% set ns.bgclass = 'bg-danger' %}
-            {% set ns.borderclass = 'border-danger' %}
-            {% set ns.textclass = 'text-white' %}
+            {% set ns.bgclass = 'bg-warning' %}
+            {% set ns.borderclass = 'border-warning' %}
+            {% set ns.textclass = 'text-dark' %}
         {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-            {# no markup required; formerly bg-success #}
-{#            {% set ns.bgclass = 'bg-success' %}#}
-{#            {% set ns.borderclass = 'border-success' %}#}
-{#            {% set ns.textclass = 'text-white' %}#}
+            {% set ns.bgclass = 'bg-success' %}
+            {% set ns.borderclass = 'border-success' %}
+            {% set ns.textclass = 'text-white' %}
         {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
             {# no markup required; formerly panel-default #}
         {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
             {% if confirm_required %}
-                {% set ns.bgclass = 'bg-danger' %}
-                {% set ns.borderclass = 'border-danger' %}
+                {% set ns.bgclass = 'bg-success' %}
+                {% set ns.borderclass = 'border-success' %}
                 {% set ns.textclass = 'text-white' %}
             {% else %}
                 {% set ns.bgclass = 'bg-info' %}
@@ -106,7 +105,7 @@
             {# show basic details about this project class #}
             {% set ns = namespace(bgclass='alert-secondary', iconclass='info-circle') %}
             {% if nproj == 0 and not (is_sabbatical or is_exempt) %}
-                {% set ns.bgclass = 'alert-danger' %}
+                {% set ns.bgclass = 'alert-warning' %}
                 {% set ns.iconclass = 'exclamation-circle' %}
             {% endif %}
             <div class="alert {{ ns.bgclass }} mt-1 mb-3">
@@ -123,7 +122,7 @@
                         </div>
                     {% endif %}
                     <div class="mt-1">
-                        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-sm {% if nproj==0 %}btn-danger{% else %}btn-outline-secondary{% endif %} text-nowrap">Go to project library</a>
+                        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-sm {% if nproj==0 %}btn-warning{% else %}btn-outline-secondary{% endif %} text-nowrap">Go to project library</a>
                     </div>
                 {% endcall %}
             </div>

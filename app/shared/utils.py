@@ -279,6 +279,10 @@ def allow_approvals(desc_id):
     if desc is None:
         return False
 
+    parent: Project = desc.parent
+    if parent.generic:
+        return False
+
     owner: FacultyData = desc.parent.owner
 
     if owner:

@@ -105,8 +105,11 @@
         {% if user_form.foundation_year is defined or user_form.exam_number is defined or user_form.cohort is defined or user_form.repeated_years is defined or user_form.programme is defined or user_form.registration_number is defined %}
             <div class="card mt-3 mb-3 card-body bg-well">
                 <div class="form-group-heading">Student settings</div>
-                {% if user_form.exam_number is defined %}
-                    {{ wtf.render_field(user_form.exam_number) }}
+{#                {% if user_form.exam_number is defined %}#}
+{#                    {{ wtf.render_field(user_form.exam_number) }}#}
+{#                {% endif %}#}
+                {% if user_form.programme is defined %}
+                    {{ wtf.render_field(user_form.programme) }}
                 {% endif %}
                 {% if user_form.registration_number is defined %}
                     {{ wtf.render_field(user_form.registration_number) }}
@@ -117,14 +120,14 @@
                 {%  if user_form.repeated_years is defined %}
                     {{ wtf.render_field(user_form.repeated_years) }}
                 {% endif %}
-                {% if user_form.foundation_year is defined %}
-                    {{ wtf.render_field(user_form.foundation_year) }}
-                {% endif %}
-                {% if user_form.intermitting is defined %}
-                    {{ wtf.render_field(user_form.intermitting) }}
-                {% endif %}
-                {% if user_form.programme is defined %}
-                    {{ wtf.render_field(user_form.programme) }}
+                {% if user_form.foundation_year is defined or user_form.intermitting is defined %}
+                    <hr class="intro-divider">
+                    {% if user_form.foundation_year is defined %}
+                        {{ wtf.render_field(user_form.foundation_year) }}
+                    {% endif %}
+                    {% if user_form.intermitting is defined %}
+                        {{ wtf.render_field(user_form.intermitting) }}
+                    {% endif %}
                 {% endif %}
             </div>
         {%  endif %}

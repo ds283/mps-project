@@ -351,6 +351,9 @@ _name = \
     {% endif %}
     {% if show_name %}
         <a class="text-decoration-none" href="mailto:{{ user.email }}">{{ user.name }}</a>
+        {% if sub.has_issues %}
+            <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+        {% endif %}
     {% endif %}
     {% if show_number %}
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
@@ -360,9 +363,6 @@ _name = \
         {% else %}
             <span class="badge bg-secondary">#{{ student.exam_number }}</span>
         {% endif %}
-    {% endif %}
-    {% if student.intermitting %}
-        <span class="badge bg-warning text-dark">TWD</span>
     {% endif %}
     {% set num_tasks = sub.number_available_tasks %}
     {% set pl = 's' %}{% if num_tasks == 1 %}{% set pl = '' %}{% endif %}
@@ -377,6 +377,44 @@ _name = \
         <span class="badge bg-warning text-dark"><i class="fas fa-eye-slash"></i> Unpublished</span>
     {% endif %}
 </div>
+{% if sub.has_issues %}
+    {% set errors = sub.errors %}
+    {% set warnings = sub.warnings %}
+    <div class="mt-1">
+        {% if errors|length == 1 %}
+            <span class="badge bg-danger">1 error</span>
+        {% elif errors|length > 1 %}
+            <span class="badge bg-danger">{{ errors|length }} errors</span>
+        {% endif %}
+        {% if warnings|length == 1 %}
+            <span class="badge bg-warning text-dark">1 warning</span>
+        {% elif warnings|length > 1 %}
+            <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
+        {% endif %}
+        {% if errors|length > 0 %}
+            <div class="error-block">
+                {% for item in errors %}
+                    {% if loop.index <= 5 %}
+                        <div class="error-message">{{ item }}</div>
+                    {% elif loop.index == 6 %}
+                        <div class="error-message">Further errors suppressed...</div>
+                    {% endif %}            
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if warnings|length > 0 %}
+            <div class="error-block">
+                {% for item in warnings %}
+                    {% if loop.index <= 5 %}
+                        <div class="error-message">Warning: {{ item }}</div>
+                    {% elif loop.index == 6 %}
+                        <div class="error-message">Further errors suppressed...</div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+{% endif %}
 """
 
 

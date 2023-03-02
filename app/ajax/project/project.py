@@ -22,7 +22,9 @@ from ...models import Project, EnrollmentRecord, ResearchGroup, SkillGroup, Tran
 # language=jinja2
 _project_name = \
 """
-REPERRORSYMBOL
+{% if project.active %}
+    REPERRORSYMBOL
+{% endif %}
 <a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
     {{ project.name }}
 </a>

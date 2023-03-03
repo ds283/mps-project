@@ -111,7 +111,7 @@
             {% else %}
                 <ul>
                     <li><strong>If you wish to switch supervisors,
-                        then add bookmarks for each project of interest.</strong></li>
+                        please add bookmarks for each project of interest.</strong></li>
                     <li>Drag-and-drop your bookmarks to indicate your order of preference.</li>
                 </ul>
             {% endif %}
@@ -128,7 +128,7 @@
                 <li class="list-group-item {% if is_valid %}list-group-item-success{% else %}list-group-item-danger{% endif %}">
                     {% if not is_valid %}
                         {% call icon_block("exclamation-circle") %}
-                            <div>{{ message }}</div>
+                            <div>{{ message|safe }}</div>
                         {% endcall %}
                     {% else %}
                         {{ message }}

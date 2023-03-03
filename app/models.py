@@ -8908,19 +8908,29 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
             project: LiveProject = item.liveproject
             rank += 1
 
-            if not project.is_available(self):
-                valid = False
-                messages.append("The project '{name}' currently ranked #{rk} is not yet available for "
-                                "selection.".format(name=item.liveproject.name,
-                                                    rk=rank))
+            if project is not None:
+                if not project.is_available(self):
+                    valid = False
+                    if not project.generic and project.owner is not None:
+                        fac: FacultyData = project.owner
+                        user: User = fac.user
+                        messages.append('The project <em>{name}</em> currently ranked #{rk} is not yet available for '
+                                        'selection because confirmation from the supervisor is required. Please set '
+                                        'up a meeting by email to {supv} '
+                                        '&langle;<a href="mailto:{email}">{email}</a>&rangle;.'
+                                        ''.format(name=project.name, rk=rank, supv=user.name, email=user.email))
+                    else:
+                        messages.append('The project <em>{name}</em> currently ranked #{rk} is not yet available for '
+                                        'selection because confirmation from the supervisor is '
+                                        'required.'.format(name=project.name, rk=rank))
 
-            # STEP 3 - check that the maximum number of projects for a single faculty member
-            # is not exceeded
-            if not project.generic:
-                if project.owner_id not in counts:
-                    counts[project.owner_id] = 1
-                else:
-                    counts[project.owner_id] += 1
+                # STEP 3 - check that the maximum number of projects for a single faculty member
+                # is not exceeded
+                if not project.generic:
+                    if project.owner_id not in counts:
+                        counts[project.owner_id] = 1
+                    else:
+                        counts[project.owner_id] += 1
 
             if rank >= num_choices:
                 break
@@ -8936,8 +8946,8 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
                     owner = db.session.query(FacultyData).filter_by(id=owner_id).first()
                     if owner is not None:
                         messages.append("You have selected {n} project{npl} offered by {name}, "
-                                        "but you are only allowed to choose a maximum of {nmax} "
-                                        "project{nmaxpl} from the same "
+                                        "but you are only allowed to choose a maximum of <strong>{nmax} "
+                                        "project{nmaxpl}</strong> from the same "
                                         "supervisor.".format(n=count, npl='' if count == 1 else 's',
                                                              name=owner.user.name, nmax=max,
                                                              nmaxpl='' if max == 1 else 's'))

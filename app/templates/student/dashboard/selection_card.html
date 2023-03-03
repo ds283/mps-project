@@ -354,7 +354,7 @@
         </div>
         <div class="card-body">
             {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                {% if sel.is_optional or not sel.uses_selection %}
+                {% if sel.is_optional or (not config.uses_selection) %}
                     <div class="alert alert-info">
                         {% call icon_block("info-circle") %}
                             <div><strong>This project is optional.</strong></div>

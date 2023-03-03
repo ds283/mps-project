@@ -685,7 +685,7 @@ def register_rollover_tasks(celery):
             try:
 
                 if selector.academic_year is not None and not selector.student.has_graduated \
-                        and selector.academic_year == new_config.start_year - 1:
+                        and selector.academic_year == new_config.start_year - (1 if new_config.select_in_previous_cycle else 0):
 
                     print('##    selector is in first year of project')
 

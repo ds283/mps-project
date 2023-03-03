@@ -111,6 +111,7 @@ def _enumerate_selectors_primary(configs, include_only_submitted=False):
     selector_dict = {}
 
     for config in configs:
+        config: ProjectClassConfig
         # get SelectingStudent instances that are not retired and belong to this config instance
 
         # however, we need to remember that for projects marked 'selection_open_to_all',
@@ -149,7 +150,7 @@ def _enumerate_selectors_primary(configs, include_only_submitted=False):
                 else:
                     if item.academic_year is not None and not item.has_graduated:
                         if opt_in_type and \
-                                ((enroll_previous_year and item.academic_year == config.start_year - 1) or
+                                ((enroll_previous_year and item.academic_year == config.start_year - (1 if config.select_in_previous_cycle else 0)) or
                                  (enroll_any_year and config.start_year <= item.academic_year < config.start_year + config.extent)):
                             # interpret failure to submit as lack of interest; no need to generate a match
                             attach = False

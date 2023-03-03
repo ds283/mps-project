@@ -4,7 +4,7 @@
 
 <p>You are receiving this message because you are enrolled as a supervisor for projects of type <strong>{{ pclass.name }}</strong>. If you believe this to be incorrect, please contact the project convenor ({{ pclass.convenor.user.email }}).</p>
 
-<p>We are now preparing to publish project descriptions to this year's Y{{ pclass.start_year-1 }} cohort. To help us, we would like to ask you to confirm the projects you wish to offer in this cycle.</p>
+<p>We are now preparing to publish project descriptions to this year's Y{%- if config.select_in_previous_cycle -%}{{ pclass.start_year-1 }}{%- else -%}{{ pclass.start_year }}{%- endif %} cohort. To help us, we would like to ask you to confirm the projects you wish to offer in this cycle.</p>
 
 <p>To check your projects, please log in to the <a href="https://mpsprojects.sussex.ac.uk">project management web app</a> and select 'My projects/My project library...' from the drop-down menu in the menubar. Alternatively, the list of active projects associated with each project type is shown in the corresponding tab on your dashboard. If you wish to withdraw a project, use the <em>Action</em> menu shown in the list and choose 'Don't offer this project'. If a project has come to the end of its life, you can deactivate the project entirely from the library view.</p>
 

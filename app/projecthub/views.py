@@ -248,7 +248,7 @@ def edit_subpd_record_articles(pid):
                                        'class <strong>{pclass}</strong> '
                                        '({yra}&ndash;{yrb})'.format(name=record.display_name,
                                                                     pclass=record.config.name,
-                                                                    yra=record.config.year, yrb=record.config.year+1),
+                                                                    yra=record.config.submit_year_a, yrb=record.config.submit_year_b),
                            ajax_endpoint=url_for('projecthub.edit_subpd_record_articles_ajax', pid=pid),
                            add_endpoint=url_for('projecthub.add_subpd_record_article', pid=pid))
 
@@ -335,7 +335,7 @@ def add_subpd_record_article(pid):
                            panel_title='Add new article or news story to period <strong>{pname}</strong> '
                                        'in project class <strong>{pclass}</strong> '
                                        '({yra}&ndash;{yrb})'.format(pname=record.display_name, pclass=record.config.name,
-                                                                    yra=record.config.year, yrb=record.config.year+1),
+                                                                    yra=record.config.submit_year_a, yrb=record.config.submit_year_b),
                            action_url=url_for('projecthub.add_subpd_record_article', pid=pid))
 
 
@@ -384,7 +384,7 @@ def edit_subpd_record_article(aid):
                            panel_title='Edit article in period <strong>{pname}</strong> '
                                        'in project class <strong>{pclass}</strong> '
                                        '({yra}&ndash;{yrb})'.format(pname=record.display_name, pclass=record.config.name,
-                                                                    yra=record.config.year, yrb=record.config.year+1),
+                                                                    yra=record.config.submit_year_a, yrb=record.config.submit_year_b),
                            action_url=url_for('projecthub.edit_subpd_record_article', aid=aid))
 
 

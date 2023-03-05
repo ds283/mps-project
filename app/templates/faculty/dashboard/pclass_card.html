@@ -12,7 +12,7 @@
     <div class="card mt-3 mb-3 card-body bg-well">
         <div class="row vertical-align">
             <div class="col-12">
-                <span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span>
+                <span class="dashboard-project-title">{{ pclass.name }} {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
             </div>
         </div>
         <div class="row vertical-align">
@@ -29,7 +29,7 @@
                 <div class="d-flex flex-row justify-content-end gap-2">
                 {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
                     {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                        <span class="badge bg-success">Student selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
+                        <span class="badge bg-success">Student selection open for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}</span>
                         {% if config.live_deadline %}
                             <span class="badge bg-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                         {% endif %}

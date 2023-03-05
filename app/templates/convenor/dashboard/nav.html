@@ -47,11 +47,7 @@
         </li>
         <li class="nav-item">
             <a class="nav-link {% if pane == 'selectors' %}active{% endif %}" href="{{ url_for('convenor.selectors', id=pclass.id) }}">
-                {% if config.select_in_previous_cycle %}
-                    Selectors for {{ config.year+1 }}&ndash;{{ config.year+2 }}
-                {% else %}
-                    Selectors for {{ config.year }}&ndash;{{ config.year+1 }}
-                {% endif %}
+                Selectors for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}
                 {% if sel_count is defined %}
                     <span id="selector-count" class="badge {% if pane == 'selectors' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ sel_count }}</span>
                 {% endif %}
@@ -59,7 +55,7 @@
         </li>
         <li class="nav-item">
             <a class="nav-link {% if pane == 'submitters' %}active{% endif %}" href="{{ url_for('convenor.submitters', id=pclass.id) }}">
-                Submitters for {{ config.year }}&ndash;{{ config.year+1 }}
+                Submitters for {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}
                 {% if sub_count is defined %}
                     <span id="submitter-count" class="badge {% if pane == 'submitters' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ sub_count }}</span>
                 {% endif %}
@@ -68,7 +64,7 @@
         {% if live_count is defined %}
             <li class="nav-item">
                 <a class="nav-link {% if pane == 'live' %}active{% endif %}" href="{{ url_for('convenor.liveprojects', id=pclass.id) }}">
-                    Live projects {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                    Live projects {{ config.select_year_a }}&ndash;{{ config.select_year_b }}
                     <span id="live-project-count" class="badge {% if pane == 'live' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ live_count }}</span>
                 </a>
             </li>

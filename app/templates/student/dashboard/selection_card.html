@@ -17,7 +17,7 @@
         {% call icon_block("info-circle") %}
             {% if config.uses_selection %}
                 <div><strong>
-                    Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                    Project selection for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}
                     is now available.
                 </strong></div>
                 {# add data about deadline, if present #}
@@ -38,7 +38,7 @@
                 {% endif %}
             {% else %}
                 <div><strong>
-                    The project list for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                    The project list for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}
                     is now available.
                 </strong></div>
                 <div class="mt-1">
@@ -196,7 +196,7 @@
     <div class="alert alert-warning mb-3">
         {% call icon_block("info-circle") %}
             <div>
-                Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                Project selection for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}
                 is now closed.
             </div>
         {% endcall %}
@@ -421,9 +421,9 @@
                     {% call icon_block("info-circle") %}
                         <div>
                             {% if config.uses_selection %}
-                                <strong>Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }} is not yet available.</strong>
+                                <strong>Project selection for {{ config.select_year_a }}&ndash;{{ config.select_year_b }} is not yet available.</strong>
                             {% else %}
-                                <strong>The project list for {{ config.year+1 }}&ndash;{{ config.year+2 }} is not yet available.</strong>
+                                <strong>The project list for {{ config.select_year_a}}&ndash;{{ config.select_year_b }} is not yet available.</strong>
                             {% endif %}
                         </div>
                     {% endcall %}

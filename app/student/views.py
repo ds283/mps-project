@@ -822,7 +822,7 @@ def clear_submission(sid):
     message = '<p>Please confirm that you wish to clear your submitted preferences for ' \
               '<strong>{name} {yeara}&ndash;{yearb}</strong>.</p>' \
               '<p>This action cannot be undone.</p>'.format(name=sel.config.name,
-                                                     yeara=sel.config.year, yearb=sel.config.year+1)
+                                                     yeara=sel.config.select_year_a, yearb=sel.config.select_year_b)
     submit_label = 'Clear submitted preferences'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,

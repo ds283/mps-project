@@ -217,7 +217,7 @@
             <div class="d-flex flex-row justify-content-end gap-2">
                 {% if sdata and sdata.live_deadline is defined %}
                     {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                        <span class="badge bg-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
+                        <span class="badge bg-success">Choices for {{ config.select_year_a }}&ndash;{{ config.select_year_b }} open</span>
                         {% if config.live_deadline %}
                             <span class="badge bg-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                         {% endif %}

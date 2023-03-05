@@ -86,7 +86,7 @@ def register_matching_email_tasks(celery):
             is_draft = strtobool(is_draft)
 
         try:
-            record = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
             matches = db.session.query(MatchingRecord) \
                 .filter_by(matching_id=match_id, selector_id=sel_id) \
                 .order_by(MatchingRecord.submission_period).all()
@@ -113,7 +113,7 @@ def register_matching_email_tasks(celery):
 
         if is_draft:
             msg.subject ='Notification: Draft project allocation for "{name}" ' \
-                         '{yra}-{yrb}'.format(name=config.name, yra=record.year+1, yrb=record.year+2)
+                         '{yra}-{yrb}'.format(name=config.name, yra=record.submit_year_a, yrb=record.submit_year_b)
             msg.body = render_template('email/matching/draft_notify_students.txt', user=user,
                                        config=config, pclass=pclass, attempt=record, matches=matches,
                                        number=len(matches))
@@ -125,7 +125,7 @@ def register_matching_email_tasks(celery):
 
         else:
             msg.subject ='Notification: Final project allocation for "{name}" ' \
-                         '{yra}-{yrb}'.format(name=config.name, yra=record.year+1, yrb=record.year+2)
+                         '{yra}-{yrb}'.format(name=config.name, yra=record.submit_year_a, yrb=record.submit_year_b)
             msg.body = render_template('email/matching/final_notify_students.txt', user=user,
                                        config=config, pclass=pclass, attempt=record, matches=matches,
                                        number=len(matches))
@@ -239,7 +239,7 @@ def register_matching_email_tasks(celery):
 
         if is_draft:
             msg.subject ='Notification: Draft project allocation for ' \
-                         '{yra}-{yrb}'.format(yra=record.year+1, yrb=record.year+2)
+                         '{yra}-{yrb}'.format(yra=record.submit_year_a, yrb=record.submit_year_b)
 
             # check whether we are notifying of an assignment, or that a faculty member is not needed for an
             # assignment
@@ -262,7 +262,7 @@ def register_matching_email_tasks(celery):
 
         else:
             msg.subject ='Notification: Final project allocation for ' \
-                         '{yra}-{yrb}'.format(yra=record.year+1, yrb=record.year+2)
+                         '{yra}-{yrb}'.format(yra=record.submit_year_a, yrb=record.submit_year_b)
 
             # check whether we are notifying of an assignment, or that a faculty member is not needed for an
             # assignment

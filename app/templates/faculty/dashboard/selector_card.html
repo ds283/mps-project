@@ -270,7 +270,7 @@
             {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and live_projects.first() %}
                 <div class="mt-1 mb-1">
                     You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
-                    on the live system for students making selections for {{ config.year+1 }}&ndash;{{ config.year+2 }}.
+                    on the live system for students making selections for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}.
                 </div>
                 <div class="container-fluid">
                     <div class="row fac-project-table">

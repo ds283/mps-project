@@ -20,7 +20,7 @@ convenor {{ config.convenor_name }} <{{ config.convenor_email }}>
 {% for item in match_list %}
 {% if config.project_class.submissions > 1 -%}
 {%- set period = config.project_class.get_period(item.submission_period) -%}
-{%- set text = period.display_name(config.year+1) + ': ' + item.selector.student.user.name + ' <' + item.selector.student.user.email + '> (' + item.project.name + ')' -%}
+{%- set text = period.display_name(config.select_year_a) + ': ' + item.selector.student.user.name + ' <' + item.selector.student.user.email + '> (' + item.project.name + ')' -%}
 {%- else -%}
 {%- set text = item.selector.student.user.name + ' <' + item.selector.student.user.email + '> (' + item.project.name + ')' -%}
 {%- endif -%}

@@ -98,7 +98,7 @@ def register_close_selection_tasks(celery):
         if convenor is not None:
             # send direct message to user announcing that we have been successful
             convenor.post_message('Closure of selections for "{proj}" {yra}-{yrb} is now '
-                                  'complete'.format(proj=config.name, yra=config.year, yrb=config.year+1),
+                                  'complete'.format(proj=config.name, yra=config.submit_year_a, yrb=config.submit_year_b),
                                   'success', autocommit=False)
 
         try:

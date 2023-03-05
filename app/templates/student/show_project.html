@@ -115,9 +115,10 @@
                     <div class="alert alert-warning mt-1 mb-1">
                         {% call icon_block("info-circle") %}
                             <div><strong>
-                                This is an archived description that refers to a project offered in
+                                This is an archived description that refers to a project offered
+                                for selection in
                                 {% if project.config is not none %}
-                                    academic year {{ project.config.year }}&ndash;{{ project.config.year+1 }}.
+                                    academic year {{ project.config.select_year_a }}&ndash;{{ project.config.select_year_b }}.
                                 {% else %}
                                     a previous academic year.
                                 {% endif %}

@@ -28,10 +28,10 @@
                     <div class="col-2"><a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a></div>
                     <div class="col-2">
                         {% if config.year == current_year %}
-                            <span class="badge bg-secondary">{{ config.year }}&ndash;{{ config.year+1 }}</span>
+                            <span class="badge bg-secondary">{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
                             <span class="badge bg-success"><i class="fas fa-check"></i> Current</span>
                         {% else %}
-                            <span class="badge bg-secondary">{{ config.year }}&ndash;{{ config.year+1 }}</span>
+                            <span class="badge bg-secondary">{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
                             <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Not current</span>
                         {% endif %}
                     </div>

@@ -4999,6 +4999,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
         self._canvas_course_URL = None
         return value
 
+
     # SELECTOR LIFECYCLE MANAGEMENT
 
     # are faculty requests to confirm projects open?
@@ -5460,6 +5461,31 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     @property
     def start_year(self):
         return self.project_class.start_year
+
+
+    @property
+    def select_year_a(self):
+        if self.select_in_previous_cycle:
+            return self.year + 1
+
+        return self.year
+
+    @property
+    def select_year_b(self):
+        if self.select_in_previous_cycle:
+            return self.year + 2
+
+        return self.year + 1
+
+
+    @property
+    def submit_year_a(self):
+        return self.year
+
+
+    @property
+    def submit_year_b(self):
+        return self.year + 1
 
 
     @property
@@ -6154,7 +6180,7 @@ class SubmissionPeriodRecord(db.Model):
     @property
     def display_name(self):
         if self.name is not None and len(self.name) > 0:
-            return str(self.name).format(year1=self.config.year, year2=self.config.year+1)
+            return str(self.name).format(year1=self.config.submit_year_a, year2=self.config.submit_year_b)
 
         return 'Submission Period #{n}'.format(n=self.submission_period)
 
@@ -11650,6 +11676,16 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     def faculty(self):
         self._build_faculty_list()
         return self._faculty_list.values()
+
+
+    @property
+    def submit_year_a(self):
+        return self.year + 1
+
+
+    @property
+    def submit_year_b(self):
+        return self.year + 2
 
 
     @property

@@ -79,7 +79,7 @@ def register_canvas_tasks(celery):
 
                 if API_root is None:
                     print('** Canvas API integration not enabled globally for cycle '
-                          '{yra}-{yrb}'.format(yra=config.year, yrb=config.year+1))
+                          '{yra}-{yrb}'.format(yra=config.submit_year_a, yrb=config.submit_year_b))
                     break
                 print('** API root URL is {root}'.format(root=API_root))
 
@@ -88,7 +88,7 @@ def register_canvas_tasks(celery):
                     tasks.append(canvas_user_checkin_module.s(config.id, API_root))
                 else:
                     print('**   Canvas integration is not enabled for this project class for cycle '
-                          '{yra}-{yrb}'.format(yra=config.year, yrb=config.year+1))
+                          '{yra}-{yrb}'.format(yra=config.submit_year_a, yrb=config.submit_year_b))
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -273,7 +273,7 @@ def register_canvas_tasks(celery):
 
                 if API_root is None:
                     print('** Canvas API integration not enabled globally for cycle '
-                          '{yra}-{yrb}'.format(yra=config.year, yrb=config.year+1))
+                          '{yra}-{yrb}'.format(yra=config.submit_year_a, yrb=config.submit_year_b))
                     break
                 print('** API root URL is {root}'.format(root=API_root))
 
@@ -288,7 +288,7 @@ def register_canvas_tasks(celery):
                         print('**  Submission period is closed, or canvas integration not enabled for this submission period')
                 else:
                     print('**   Canvas integration is not enabled for this project class for cycle '
-                          '{yra}-{yrb}'.format(yra=config.year, yrb=config.year+1))
+                          '{yra}-{yrb}'.format(yra=config.submit_year_a, yrb=config.submit_year_b))
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

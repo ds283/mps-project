@@ -1582,17 +1582,17 @@ def confirm_pclass(id):
 
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} '
-              '{yeara}-{yearb}'.format(project=config.name, yeara=config.year, yearb=config.year+1))
+              '{yeara}-{yearb}'.format(project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b))
         return redirect(redirect_url())
 
     if config.live:
         flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
-              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year+1))
+              'has already gone live'.format(project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b))
         return redirect(redirect_url())
 
     if not config.is_confirmation_required(current_user.faculty_data):
         flash('You have no outstanding confirmation requests for {project} {yeara}-{yearb}'.format(
-            project=config.name, yeara=config.year, yearb=config.year+1))
+            project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b))
         return redirect(redirect_url())
 
     messages = []
@@ -1631,12 +1631,12 @@ def confirm_description(did, pclass_id):
 
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
-            project=config.name, yeara=config.year, yearb=config.year+1))
+            project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b))
         return redirect(redirect_url())
 
     if config.live:
         flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
-              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
+              'has already gone live'.format(project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b))
         return redirect(redirect_url())
 
     # if project owner is not logged-in user, object

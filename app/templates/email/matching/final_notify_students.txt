@@ -11,7 +11,7 @@ please contact the project convenor:
 {{ text|wordwrap(79) }}
 {%- else -%}
 You are receiving this email because we expect you will undertake a project
-of type "{{ config.name }}" in academic year {{ config.year+1 }}-{{ config.year+2 }}.
+of type "{{ config.name }}" in academic year {{ config.select_year_a }}-{{ config.select_year_b }}.
 Please let us know as soon as possible if you believe this is not correct.
 
 The final project allocation is now available. If you previously received
@@ -27,7 +27,7 @@ You have been allocated the following projects:
 {% for item in matches %}
 {% if number > 1 -%}
 {%- set period = pclass.get_period(item.submission_period) -%}
-{%- set text = period.display_name(config.year+1) + ': ' + item.project.name + ' (' + item.project.owner.user.name + ' <' + item.project.owner.user.email + '>, rank ' + item.rank|string + ')' -%}
+{%- set text = period.display_name(config.select_year_a) + ': ' + item.project.name + ' (' + item.project.owner.user.name + ' <' + item.project.owner.user.email + '>, rank ' + item.rank|string + ')' -%}
 {{ text|wordwrap(79) }}
 {%- else -%}
 {%- set text = item.project.name + ' (' + item.project.owner.user.name + ' <' + item.project.owner.user.email + '>, rank ' + item.rank|string + ')' -%}

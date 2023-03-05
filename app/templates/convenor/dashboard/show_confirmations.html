@@ -36,7 +36,7 @@
 
 {% block bodyblock %}
     <div class="card border-primary mt-3 mb-3">
-        <div class="card-header bg-primary text-white">Outstanding confirmation requests for <strong>{{ pclass.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong></div>
+        <div class="card-header bg-primary text-white">Outstanding confirmation requests for <strong>{{ pclass.name }} {{ config.select_year_a }}&ndash;{{ config.select_year_b }}</strong></div>
         <div class="card-body">
 
             <table id="confirm-requests-table" class="table table-striped table-bordered">

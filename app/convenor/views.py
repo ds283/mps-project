@@ -2305,17 +2305,17 @@ def delete_live_project(pid):
     # if this config has closed selections, we cannot delete any live projects
     if config.selection_closed:
         flash('Cannot delete LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
-              'because selections have already closed'.format(cls=config.name, yra=config.year, yrb=config.year+1),
+              'because selections have already closed'.format(cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b),
               'info')
         return redirect(redirect_url())
 
     title = 'Delete LiveProject "{name}" for project class "{cls}" in ' \
-            '{yra}&ndash;{yrb}'.format(name=project.name, cls=config.name, yra=config.year, yrb=config.year+1)
+            '{yra}&ndash;{yrb}'.format(name=project.name, cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b)
     action_url = url_for('convenor.perform_delete_live_project', pid=pid)
     message = '<p>Please confirm that you wish to delete the live project "{name}" belonging to ' \
               'project class "{cls}" {yra}&ndash;{yrb}.</p>' \
-              '<p>This action cannot be undone.</p>'.format(name=project.name, cls=config.name, yra=config.year,
-                                                            yrb=config.year+1)
+              '<p>This action cannot be undone.</p>'.format(name=project.name, cls=config.name, yra=config.submit_year_a,
+                                                            yrb=config.submit_year_b)
     submit_label = 'Delete live project'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=title, action_url=action_url,
@@ -2352,7 +2352,7 @@ def perform_delete_live_project(pid):
     # if this config has closed selections, we cannot delete any live projects
     if config.selection_closed:
         flash('Cannot delete LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
-              'because selections have already closed'.format(cls=config.name, yra=config.year, yrb=config.year+1),
+              'because selections have already closed'.format(cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b),
               'info')
         return redirect(redirect_url())
 
@@ -2427,7 +2427,7 @@ def hide_liveproject(id):
     # This also preserves the database record.
     if config.selection_closed:
         flash('Cannot hide LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
-              'because selections have already closed'.format(cls=config.name, yra=config.year, yrb=config.year+1),
+              'because selections have already closed'.format(cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b),
               'info')
         return redirect(redirect_url())
 
@@ -2471,7 +2471,7 @@ def unhide_liveproject(id):
     # This also preserves the database record.
     if config.selection_closed:
         flash('Cannot unhide LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
-              'because selections have already closed'.format(cls=config.name, yra=config.year, yrb=config.year + 1),
+              'because selections have already closed'.format(cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b),
               'info')
         return redirect(redirect_url())
 
@@ -4407,12 +4407,12 @@ def force_confirm_all(id):
 
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
-            project=config.name, yeara=config.year, yearb=config.year+1))
+            project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b))
         return redirect(redirect_url())
 
     if config.live:
         flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
-              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
+              'has already gone live'.format(project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b))
         return redirect(redirect_url())
 
     # because we filter on supervisor state, this won't confirm projects from any faculty who are bought-out or
@@ -4470,12 +4470,12 @@ def force_confirm(id, uid):
 
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
-            project=config.name, yeara=config.year, yearb=config.year+1))
+            project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b))
         return redirect(redirect_url())
 
     if config.live:
         flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
-              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
+              'has already gone live'.format(project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b))
         return redirect(redirect_url())
 
     try:
@@ -4515,12 +4515,12 @@ def confirm_description(config_id, did):
 
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
-            project=config.name, yeara=config.year, yearb=config.year+1), 'info')
+            project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b), 'info')
         return redirect(redirect_url())
 
     if config.live:
         flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
-              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1),
+              'has already gone live'.format(project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b),
               'info')
         return redirect(redirect_url())
 
@@ -5565,7 +5565,7 @@ def reset_popularity_data(id):
 
     title = 'Delete popularity data'
     panel_title = 'Delete selection popularity data for <strong>{name} {yra}&ndash;{yrb}</strong>'\
-        .format(name=config.name, yra=config.year+1, yrb=config.year+2)
+        .format(name=config.name, yra=config.select_year_a, yrb=config.select_year_b)
 
     action_url = url_for('convenor.perform_reset_popularity_data', id=id)
     message = '<p>Please confirm that you wish to delete all popularity data for ' \
@@ -5573,7 +5573,7 @@ def reset_popularity_data(id):
               '<p>This action cannot be undone.</p>' \
               '<p>Afterwards, it will not be possible to analyse ' \
               'historical popularity trends for individual projects offered in this cycle.</p>' \
-        .format(name=config.name, yra=config.year+1, yrb=config.year+2)
+        .format(name=config.name, yra=config.select_year_a, yrb=config.select_year_b)
     submit_label = 'Delete data'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -7169,7 +7169,7 @@ def edit_project_config(pid):
     # check configuration is still current
     if config.project_class.most_recent_config.id != config.id:
         flash('It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} '
-              'because it has been rolled over.'.format(yra=config.year, yrb=config.year+1), 'info')
+              'because it has been rolled over.'.format(yra=config.submit_year_a, yrb=config.submit_year_b), 'info')
         return redirect(redirect_url())
 
     EditProjectConfigForm = EditProjectConfigFormFactory(config)
@@ -7244,7 +7244,7 @@ def _validate_submission_period(record: SubmissionPeriodRecord, config: ProjectC
     # check configuration is still current
     if config.project_class.most_recent_config.id != config.id:
         flash('It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} '
-              'because it has been rolled over.'.format(yra=config.year, yrb=config.year+1), 'info')
+              'because it has been rolled over.'.format(yra=config.submit_year_a, yrb=config.submit_year_b), 'info')
         return False
 
     # reject if project class is not published
@@ -9738,7 +9738,7 @@ def inject_liveproject(pid, pclass_id):
     if prior is not None:
         flash('Ignored request to inject project "{proj}" into project class "{pcl}" for '
               'academic year {yra}-{yrb} because counterpart LiveProject already '
-              'exists.'.format(proj=project.name, pcl=config.name, yra=config.year-1, yrb=config.year),
+              'exists.'.format(proj=project.name, pcl=config.name, yra=config.submit_year_a-1, yrb=config.year),
               'info')
         return redirect(redirect_url())
 
@@ -9746,14 +9746,14 @@ def inject_liveproject(pid, pclass_id):
     if previous_config is None:
         flash('Ignored request to inject project "{proj}" into project class "{pcl}" for '
               'academic year {yra}-{yrb} because the prior configuration record does not '
-              'exist.'.format(proj=project.name, pcl=config.name, yra=config.year-1, yrb=config.year),
+              'exist.'.format(proj=project.name, pcl=config.name, yra=config.submit_year_a-1, yrb=config.year),
               'info')
         return redirect(redirect_url())
 
     tk_name = 'Manually insert LiveProject'
     tk_description = 'Insert project "{proj}" into project class "{pcl}" for academic year ' \
                      '{yra}-{yrb}'.format(proj=project.name, pcl=config.name,
-                                          yra=config.year-1, yrb=config.year)
+                                          yra=config.submit_year_a-1, yrb=config.year)
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     celery = current_app.extensions['celery']

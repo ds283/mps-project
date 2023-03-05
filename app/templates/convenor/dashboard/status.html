@@ -67,7 +67,7 @@
         <div class="col-10">
             <div class="card mt-3 mb-3 card-body border-primary bg-well">
                 <div class="d-flex flex-row justify-content-start align-items-start mb-4">
-                    <div class="dashboard-project-title align-self-start me-2">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</div>
+                    <div class="dashboard-project-title align-self-start me-2">{{ pclass.name }} {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</div>
                     <a class="mt-1 btn btn-sm btn-outline-secondary align-self-start mt-2" href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure this cycle...</a>
                 </div>
                 <ul class="list-group border-0 mb-3">

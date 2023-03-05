@@ -433,8 +433,8 @@ def register_golive_tasks(celery):
             # send direct message to user announcing successful Go Live event
             convenor.post_message('Go Live "{proj}" '
                                   'for {yra}-{yrb} is now complete'.format(proj=config.name,
-                                                                           yra=config.year,
-                                                                           yrb=config.year+1),
+                                                                           yra=config.submit_year_a,
+                                                                           yrb=config.submit_year_b),
                                   'success', autocommit=False)
 
             convenor.send_replacetext('live-project-count', '{c}'.format(c=config.live_projects.count()), autocommit=False)
@@ -537,8 +537,8 @@ def register_golive_tasks(celery):
 
         if convenor is not None:
             convenor.post_message('Student selections for "{name}" {yeara}-{yearb} have now been'
-                                  ' closed'.format(name=config.name, yeara=config.year,
-                                                   yearb=config.year+1), 'success')
+                                  ' closed'.format(name=config.name, yeara=config.submit_year_a,
+                                                   yearb=config.submit_year_b), 'success')
 
         try:
             db.session.commit()

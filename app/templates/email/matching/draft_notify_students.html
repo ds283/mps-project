@@ -6,7 +6,7 @@
 {%- if text is not none and text|length > 0 -%}
 <p>{{ text }}</p>
 {%- else -%}
-<p>You are receiving this email because we expect you will undertake a project of type "{{ config.name }}" in academic year {{ config.year+1 }}-{{ config.year+2 }}. Please let us know as soon as possible if you believe this is not correct.</p>
+<p>You are receiving this email because we expect you will undertake a project of type "{{ config.name }}" in academic year {{ config.select_year_a }}-{{ config.select_year_b }}. Please let us know as soon as possible if you believe this is not correct.</p>
 
 <p>We have now reached a provisional allocation of projects. Please be aware that this is <strong>not yet the final version</strong>. Although we do not expect significant alterations, it is possible that some details may change to accommodate students who are transferring between programmes. If changes are required we will advise you as soon as we are able. A further email will be sent when the allocation is finalized.</p>
 {%- endif %}
@@ -20,7 +20,7 @@
 {% for item in matches %}
 {% if number > 1 -%}
 {%- set period = pclass.get_period(item.submission_period) -%}
-<li>{{ period.display_name(config.year+1) }}: <strong>{{ item.project.name }}</strong> (<a href="mailto:{{ item.project.owner.user.email }}">{{ item.project.owner.user.name }}</a>, rank {{ item.rank|string }})</li>
+<li>{{ period.display_name(config.select_year_a) }}: <strong>{{ item.project.name }}</strong> (<a href="mailto:{{ item.project.owner.user.email }}">{{ item.project.owner.user.name }}</a>, rank {{ item.rank|string }})</li>
 {%- else -%}
 <li><strong>{{ item.project.name }}</strong> (<a href="mailto:{{ item.project.owner.user.email }}">{{ item.project.owner.user.name }}</a>, rank {{ item.rank|string }})</li>{%- endif %}
 {%- endfor %}

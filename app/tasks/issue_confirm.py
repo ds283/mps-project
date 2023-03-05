@@ -175,8 +175,8 @@ def register_issue_confirm_tasks(celery):
             # send direct message to user announcing successful Go Live event
             convenor.post_message('Issuing confirmation requests for "{proj}" '
                                   'for {yra}-{yrb} is now complete'.format(proj=config.name,
-                                                                           yra=config.year,
-                                                                           yrb=config.year+1),
+                                                                           yra=config.submit_year_a,
+                                                                           yrb=config.submit_year_b),
                                   'success', autocommit=False)
 
         db.session.commit()

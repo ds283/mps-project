@@ -1217,10 +1217,10 @@ class AssessorPoolChoicesMixin:
     ASSESSOR_CHOICES = [(AT_LEAST_ONE_IN_POOL, 'For each talk, at least one assessor should belong to its assessor '
                                                'pool'),
                         (AT_LEAST_ONE_IN_RESEARCH_GROUP, 'For each talk, at least one assessor should belong to its '
-                                                         'assessor pool or research group'),
+                                                         'assessor pool or affiliation/research group'),
                         (ALL_IN_POOL, 'For every talk, each assessor should belong to its assessor pool'),
                         (ALL_IN_RESEARCH_GROUP, 'For every talk, each assessor should belong to its assessor pool or '
-                                                'research group')]
+                                                'affiliation/research group')]
 
 
 # roll our own get_main_config() and get_current_year(), which we cannot import because it creates a dependency cycle
@@ -6970,11 +6970,11 @@ def _Project_is_offerable(pid):
     # classes that uses research groups
     if project.group is None:
         if get_count(project.project_classes.filter(ProjectClass.advertise_research_group)) > 0:
-            errors['groups'] = "No research group affiliated with project"
+            errors['groups'] = "No affiliation/research group associated with project"
 
     else:
         if not project.group.active:
-            errors['groups'] = "The project's affiliated research group is not active"
+            errors['groups'] = "The project's affiliation group is not active"
 
     # CONSTRAINT 3. For each attached project class, we should have enough assessors.
     # Also, there should be a project description
@@ -12171,11 +12171,11 @@ def _MatchingRecord_is_valid(id):
     a = supervisor_ids.intersection(marker_ids)
     if len(a) > 0:
         errors[('basic', 0)] = 'Some supervisor and marker roles coincide'
-    
+
     b = supervisor_ids.intersection(moderator_ids)
     if len(b) > 0:
         errors[('basic', 1)] = 'Some supervisor and moderator roles coincide'
-    
+
     c = marker_ids.intersection(moderator_ids)
     if len(c) > 0:
         errors[('basic', 2)] = 'Some marker and moderator roles coincide'

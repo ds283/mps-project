@@ -64,7 +64,7 @@ def unique_or_original_email(form, field):
 
 def globally_unique_group_name(form, field):
     if ResearchGroup.query.filter_by(name=field.data).first():
-        raise ValidationError('{name} is already associated with a research group'.format(name=field.data))
+        raise ValidationError('{name} is already associated with an affiliation/research group'.format(name=field.data))
 
 
 def unique_or_original_group_name(form, field):
@@ -76,7 +76,7 @@ def unique_or_original_group_name(form, field):
 
 def globally_unique_group_abbreviation(form, field):
     if ResearchGroup.query.filter_by(abbreviation=field.data).first():
-        raise ValidationError('{name} is already associated with a research group'.format(name=field.data))
+        raise ValidationError('{name} is already associated with an affiliation/research group'.format(name=field.data))
 
 
 def unique_or_original_group_abbreviation(form, field):

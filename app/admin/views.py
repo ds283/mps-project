@@ -196,7 +196,7 @@ def add_group():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash('Could not add this research group because of a database error. Please contact a system '
+            flash('Could not add this affiliation group because of a database error. Please contact a system '
                   'administrator', 'error')
 
         return redirect(url_for('admin.edit_groups'))

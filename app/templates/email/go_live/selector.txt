@@ -36,7 +36,7 @@ box labelled "{{ pclass.name }}" on your dashboard.
 Now click the green button labelled "Show available projects".
 You can search the list by entering keywords or phrases in the
 search box in the top-right, or by applying filters for keywords
-and research groups in the box labelled "Filters".
+and affiliations/research groups in the box labelled "Filters".
 
 Each project has a description, and a number of key facts that detail
 recommended modules, supervision arrangements and subject information.

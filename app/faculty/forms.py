@@ -84,7 +84,7 @@ def ProjectMixinFactory(convenor_editing: bool, uses_tags: bool, uses_research_g
             group = QuerySelectField('Research group', query_factory=group_qf, get_label='name',
                                      allow_blank=True,
                                      description='For some project classes, the project list presented to students '
-                                                 'is organized by research group. This is intended to help undergraduates '
+                                                 'is organized by affilation/research group. This is intended to help undergraduates '
                                                  'understand the research we do, and where it is done. You can use this '
                                                  'to highlight or advertise particular research groups, or to indicate '
                                                  'to students the approximate area in which they will be working. '
@@ -99,8 +99,8 @@ def ProjectMixinFactory(convenor_editing: bool, uses_tags: bool, uses_research_g
                         continue
 
                     if field.data is None:
-                        raise ValidationError("Projects attached to class '{cl}' are advertised by research group. "
-                                              "Please specify a research group affiliation for this "
+                        raise ValidationError("Projects attached to class '{cl}' are advertised by affiliation/research group. "
+                                              "Please specify an affiliation for this "
                                               "project.".format(cl=pclass.name))
 
         # allow the project_class list to be empty (but then the project is not offered)

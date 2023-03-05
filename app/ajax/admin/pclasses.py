@@ -91,7 +91,10 @@ _options = \
     <span class="badge bg-secondary">Optional</span>
 {% endif %}
 {% if not p.uses_selection %}
-    <span class="badge bg-secondary">No selections</span>
+    <span class="badge bg-danger">No selections</span>
+{% endif %}
+{% if not p.uses_submission %}
+    <span class="badge bg-danger">No submissions</span>
 {% endif %}
 {% if p.do_matching %}
     <span class="badge bg-secondary">Auto-match</span>

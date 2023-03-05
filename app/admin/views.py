@@ -1899,6 +1899,7 @@ def add_pclass():
                                 student_level=form.student_level.data,
                                 is_optional=form.is_optional.data,
                                 uses_selection=form.uses_selection.data,
+                                uses_submission=form.uses_submission.data,
                                 start_year=form.start_year.data,
                                 extent=form.extent.data,
                                 require_confirm=form.require_confirm.data,
@@ -1981,33 +1982,34 @@ def add_pclass():
             # generate submission period records, if any
             # if this is a brand new project then we won't create anything -- that will have to be done
             # later, when the submission periods are defined
-            for t in config.template_periods.all():
-                period = SubmissionPeriodRecord(config_id=config.id,
-                                                name=t.name,
-                                                number_markers=t.number_markers,
-                                                number_moderators=t.number_moderators,
-                                                start_date=t.start_date,
-                                                has_presentation=t.has_presentation,
-                                                lecture_capture=t.lecture_capture,
-                                                collect_presentation_feedback=t.collect_presentation_feedback,
-                                                collect_project_feedback=t.collect_project_feedback,
-                                                number_assessors=t.number_assessors,
-                                                max_group_size=t.max_group_size,
-                                                morning_session=t.morning_session,
-                                                afternoon_session=t.afternoon_session,
-                                                talk_format=t.talk_format,
-                                                retired=False,
-                                                submission_period=t.period,
-                                                feedback_open=False,
-                                                feedback_id=None,
-                                                feedback_timestamp=None,
-                                                feedback_deadline=None,
-                                                closed=False,
-                                                closed_id=None,
-                                                closed_timestamp=None,
-                                                canvas_module_id=None,
-                                                canvas_assignment_id=None)
-                db.session.add(period)
+            if data.uses_submission:
+                for t in config.template_periods.all():
+                    period = SubmissionPeriodRecord(config_id=config.id,
+                                                    name=t.name,
+                                                    number_markers=t.number_markers,
+                                                    number_moderators=t.number_moderators,
+                                                    start_date=t.start_date,
+                                                    has_presentation=t.has_presentation,
+                                                    lecture_capture=t.lecture_capture,
+                                                    collect_presentation_feedback=t.collect_presentation_feedback,
+                                                    collect_project_feedback=t.collect_project_feedback,
+                                                    number_assessors=t.number_assessors,
+                                                    max_group_size=t.max_group_size,
+                                                    morning_session=t.morning_session,
+                                                    afternoon_session=t.afternoon_session,
+                                                    talk_format=t.talk_format,
+                                                    retired=False,
+                                                    submission_period=t.period,
+                                                    feedback_open=False,
+                                                    feedback_id=None,
+                                                    feedback_timestamp=None,
+                                                    feedback_deadline=None,
+                                                    closed=False,
+                                                    closed_id=None,
+                                                    closed_timestamp=None,
+                                                    canvas_module_id=None,
+                                                    canvas_assignment_id=None)
+                    db.session.add(period)
 
             db.session.commit()
             data.validate_presentations()
@@ -2033,6 +2035,7 @@ def add_pclass():
             form.auto_enroll_years.data = ProjectClass.AUTO_ENROLL_FIRST_YEAR
             form.is_optional.data = False
             form.uses_selection.data = True
+            form.uses_submission.data = True
             form.do_matching.data = True
             form.advertise_research_group.data = True
             form.use_project_tags.data = False
@@ -2071,6 +2074,7 @@ def edit_pclass(id):
         data.colour = form.colour.data
         data.is_optional = form.is_optional.data
         data.uses_selection = form.uses_selection.data
+        data.uses_submission = form.uses_submission.data
         data.do_matching = form.do_matching.data
         data.number_assessors = form.number_assessors.data
         data.extent = form.extent.data

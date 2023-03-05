@@ -248,6 +248,8 @@ class ProjectClassMixin():
                                   description='Disable for projects types where only the project list is published, '
                                               'and selection takes place through a different workflow.')
 
+    uses_submission = BooleanField('Students submit work requiring marking or feedback', default=True)
+
     require_confirm = BooleanField('Require faculty to confirm projects yearly', default=True)
 
     supervisor_carryover = BooleanField('For multi-year projects, automatically carry over supervisor year-to-year')

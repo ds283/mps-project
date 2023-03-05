@@ -261,7 +261,7 @@
                             {% set ns.display = ns.display+1 %}
                         {% endif %}
 
-                        {% if pane=='submit' and sub %}
+                        {% if pane=='submit' and sub and config.uses_submission %}
                             <div class="card mt-3 mb-3 card-body bg-well">
                                 {{ project_card(config, pclass, sub, true) }}
                                 {% for n in range(config.submissions) %}

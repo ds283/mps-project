@@ -4434,6 +4434,9 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     # This is the default for FYPs and MPPs, but not usually for MSc projects
     select_in_previous_cycle = db.Column(db.Boolean(), default=True)
 
+    # does this project type use submission? i.e., do submitters actually have to submit work?
+    uses_submission = db.Column(db.Integer(), default=True)
+
     # are projects supervised (or just marked?)
     uses_supervisor = db.Column(db.Boolean(), default=True)
 
@@ -5431,6 +5434,11 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     @property
     def uses_selection(self):
         return self.project_class.uses_selection
+
+
+    @property
+    def uses_submission(self):
+        return self.project_class.uses_submission
 
 
     @property

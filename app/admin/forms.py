@@ -576,8 +576,12 @@ def MessageMixinFactory(query_factory, convenor_editing):
         title = StringField('Title', validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
                             description='Optional. Briefly summarize your message.')
 
-        body = TextAreaField('Message', render_kw={"rows": 10},
-                             validators=[InputRequired(message='You must enter a message, however short')])
+        # TODO: would prefer to validate that the message length is not zero, but this is not trivial
+        #  with TinyMCE. Various suggested solutions, not yet implemented here:
+        #    https://stackoverflow.com/questions/60834085/how-to-make-textarea-filed-mandatory-when-ive-applied-tinymce/66032994#66032994
+        #    https://stackoverflow.com/questions/37701600/validating-tinymce-for-empty-inputs
+        #    https://stackoverflow.com/questions/38558091/tinymce-empty-validation-check
+        body = TextAreaField('Message', render_kw={"rows": 10})
 
         project_classes = QuerySelectMultipleField('Display to users enrolled for',
                                                    query_factory=query_factory, get_label='name')

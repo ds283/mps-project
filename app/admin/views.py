@@ -3176,7 +3176,14 @@ def add_message():
                                body=form.body.data,
                                project_classes=form.project_classes.data)
         db.session.add(data)
-        db.session.commit()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not add message because of a database error. '
+                  'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_messages'))
 
@@ -3194,7 +3201,7 @@ def edit_message(id):
     if not validate_is_admin_or_convenor():
         return home_dashboard()
 
-    data = MessageOfTheDay.query.get_or_404(id)
+    data: MessageOfTheDay = MessageOfTheDay.query.get_or_404(id)
 
     # convenors can't show login-screen messages and can only edit their own messages
     if not current_user.has_role('admin') and not current_user.has_role('root'):
@@ -3226,7 +3233,13 @@ def edit_message(id):
         data.body = form.body.data
         data.project_classes = form.project_classes.data
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not save edited message because of a database error. '
+                  'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('admin.edit_messages'))
 

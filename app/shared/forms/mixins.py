@@ -73,7 +73,7 @@ def FacultyDataMixinFactory(admin=False, enable_canvas=False):
                                                     'allocating more students to this project than a specified '
                                                     'maximum. You can specify a different maximum capacity for each '
                                                     'flavour of this project that you offer. The different flavours '
-                                                    'are listed in the "Descriptions" view, and the maximum '
+                                                    'are listed in the "Variants" view, and the maximum '
                                                     'capacity for each flavour should be specified in the settings for '
                                                     'the corresponding description.')
 

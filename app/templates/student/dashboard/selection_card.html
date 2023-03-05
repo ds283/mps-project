@@ -53,7 +53,7 @@
         {% endcall %}
     </div>
 
-    {% if sel.is_optional and not sel.is_initial_selection %}
+    {% if sel.is_optional and sel.is_initial_selection %}
         {% set optional_text = config.card_text_optional %}
         {% if optional_text and optional_text|length > 0 %}
             {{ optional_text|markdown|bclean|blinkify|safe }}

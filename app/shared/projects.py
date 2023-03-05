@@ -7,9 +7,8 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from collections.abc import Iterable
 from datetime import datetime
-from itertools import chain
-from typing import List
 
 from flask import flash, current_app
 from flask_security import current_user
@@ -101,7 +100,21 @@ def project_list_SQL_handler(request, base_query,
         def row_formatter(projects):
             # convert project list back into a list of primary keys, so that we can
             # use cached outcomes
-            return ajax.project.build_data([p.id for p in projects], config=config, current_user_id=current_user_id,
+            if not isinstance(projects, list):
+                raise TypeError('Unexpected project list type')
+
+            if len(projects) == 0:
+                return []
+
+            p = projects[0]
+            if isinstance(p, Iterable):
+                project_list = [{'project_id': p.id, 'desc_id': d.id} for (p, d) in projects]
+            elif isinstance(p, Project):
+                project_list = [p.id for p in projects]
+            else:
+                raise TypeError('Unexpected project data type')
+
+            return ajax.project.build_data(project_list, config=config, current_user_id=current_user_id,
                                            menu_template=menu_template, name_labels=name_labels,
                                            text=text, url=url,
                                            show_approvals=show_approvals,

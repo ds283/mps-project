@@ -14,12 +14,13 @@ from flask import current_app
 from ..shared.utils import get_current_year
 from ..database import db
 from ..models import Project, LiveProject, StudentData, SelectingStudent, SubmittingStudent, \
-    ProjectClassConfig, SubmissionRecord
+    ProjectClassConfig, SubmissionRecord, ProjectDescription
 
 
-def add_liveproject(number, project, config_id, autocommit=False):
+def add_liveproject(number, project, config_id, desc=None, autocommit=False):
     # extract this project; input 'project' is allowed to be a Project instance, or else
     # the database id of an instance
+    item: Project
     if isinstance(project, Project):
         item = project
     elif isinstance(project, int):
@@ -34,10 +35,13 @@ def add_liveproject(number, project, config_id, autocommit=False):
     if config is None:
         raise KeyError('Missing database record for ProjectClassConfig id={id}'.format(id=config_id))
 
-    description = item.get_description(config.project_class)
-    if description is None:
-        raise KeyError('Missing description for Project id={id}, '
-                       'ProjectClass id={pid}'.format(id=item.id, pid=config.pclass_id))
+    if desc is None:
+        description: ProjectDescription = item.get_description(config.project_class)
+        if description is None:
+            raise KeyError('Missing description for Project id={id}, '
+                           'ProjectClass id={pid}'.format(id=item.id, pid=config.pclass_id))
+    else:
+        description = desc
 
     # check whether an existing LiveProject for this config_id already exists
     existing_record = db.session.query(LiveProject).filter_by(config_id=config_id, parent_id=item.id).first()

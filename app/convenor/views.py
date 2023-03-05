@@ -2577,8 +2577,7 @@ def manual_attach_project(id, configid):
     :param configid:
     :return:
     """
-
-    config = ProjectClassConfig.query.get_or_404(configid)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
 
     # reject user if not entitled to act as convenor
     if not validate_is_convenor(config.project_class):
@@ -2590,11 +2589,11 @@ def manual_attach_project(id, configid):
         return redirect(redirect_url())
 
     # reject if desired project is not attachable
-    project = Project.query.get_or_404(id)
+    project: Project = Project.query.get_or_404(id)
 
     if config.project_class not in project.project_classes:
-        flash('Project "{p}" is not attached to "{c}". You do not have sufficient privileges to manually attached it; '
-              'please consult with an administrator.'.format(p=project.name, c=config.name), 'error')
+        flash('Project "{p}" is not attached to "{c}". You do not have sufficient privileges to manually attach it. '
+              'Please consult with an administrator.'.format(p=project.name, c=config.name), 'error')
         return redirect(redirect_url())
 
     # get number for this project
@@ -2628,15 +2627,17 @@ def attach_liveproject_other_ajax(id):
 
     # find all projects, not already attached as LiveProjects, that are not attached to
     # this project class
-    base_query = db.session.query(Project).filter(Project.active == True)
+    base_query = db.session.query(Project, ProjectDescription) \
+        .filter(ProjectDescription.parent_id == Project.id) \
+        .filter(Project.active == True)
 
-    # get existing liveprojects
+    # get existing liveprojects attached to this config instance
     current_projects = [p.parent_id for p in config.live_projects]
 
-    # don't show attached projects
+    # don't show these existing attached liveprojects
     base_query = base_query.filter(Project.id.not_in(current_projects))
 
-    # don't show projects attached to this project class
+    # don't offer to attach projects attached to this project class
     base_query = base_query.filter(~Project.project_classes.any(ProjectClass.id == pclass.id))
 
     # restrict query to projects owned by active users, or generic projects
@@ -2660,7 +2661,7 @@ def manual_attach_other_project(id, configid):
     :param configid:
     :return:
     """
-    config = ProjectClassConfig.query.get_or_404(configid)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
 
     # reject if project class is not live
     if not config.live:
@@ -2668,10 +2669,10 @@ def manual_attach_other_project(id, configid):
         return redirect(redirect_url())
 
     # get number for this project
-    project = Project.query.get_or_404(id)
+    desc: ProjectDescription = ProjectDescription.query.get_or_404(id)
     number = config.live_projects.count() + 1
 
-    add_liveproject(number, project, configid, autocommit=True)
+    add_liveproject(number, desc.parent, configid, desc=desc, autocommit=True)
 
     return redirect(redirect_url())
 

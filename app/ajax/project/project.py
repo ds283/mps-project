@@ -26,17 +26,19 @@ _project_name = \
     REPERRORSYMBOL
 {% endif %}
 <a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
-    {{ project.name }}
+    {{ project.name }}{%- if desc is not none -%}/{{ desc.label }}{%- endif %}
 </a>
 {% if project.active %}
 <div class="mt-1">
         {{ 'REPNEWCOMMENTS'|safe }}
         REPISLIVE
         REPISRUNNING
-        {% set num = project.num_descriptions %}
-        {% if num > 0 %}
-            {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
-            <span class="badge bg-info text-dark">{{ num }} variant{{ pl }}</span>
+        {% if desc is none %}
+            {% set num = project.num_descriptions %}
+            {% if num > 0 %}
+                {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
+                <span class="badge bg-info text-dark">{{ num }} variant{{ pl }}</span>
+            {% endif %}
         {% endif %}
     </div>
     REPNAMELABELS
@@ -62,11 +64,9 @@ _project_name_labels = \
 
 
 # language=jinja2
-_project_error_block = \
+_error_block = \
 """
 <div class="mt-1">
-    {% set errors = project.errors %}
-    {% set warnings = project.warnings %}
     {% if errors|length == 1 %}
         <span class="badge bg-danger">1 error</span>
     {% elif errors|length > 1 %}
@@ -362,8 +362,8 @@ _unofferable_menu = \
 # language=jinja2
 _attach_button = \
 """
-<a href="{{ url_for('convenor.manual_attach_project', id=project.id, configid=config_id) }}" class="btn btn-warning btn-sm">
-    <i class="fas fa-plus"></i> Manually attach
+<a href="{{ url_for('convenor.manual_attach_project', id=project.id, configid=config_id) }}" class="btn btn-success btn-sm">
+    <i class="fas fa-plus"></i> Attach
 </a>
 """
 
@@ -371,8 +371,8 @@ _attach_button = \
 # language=jinja2
 _attach_other_button = \
 """
-<a href="{{ url_for('convenor.manual_attach_other_project', id=project.id, configid=config_id) }}" class="btn btn-warning btn-sm">
-    <i class="fas fa-plus"></i> Manually attach
+<a href="{{ url_for('convenor.manual_attach_other_project', id=desc.id, configid=config_id) }}" class="btn btn-success btn-sm">
+    <i class="fas fa-plus"></i> Attach
 </a>
 """
 
@@ -400,12 +400,15 @@ def _name_labels(project_id):
 
 
 @cache.memoize()
-def _element(project_id, menu_template, in_current):
+def _element(project_id, desc_id, menu_template, in_current):
     p: Project = db.session.query(Project).filter_by(id=project_id).one()
+    d: ProjectDescription = None
+    if desc_id is not None:
+        d = db.session.query(ProjectDescription).filter_by(id=desc_id).one()
 
     menu_string = _menus[menu_template]
 
-    return {'name': render_template_string(_project_name, project=p, text='REPTEXT', url='REPURL'),
+    return {'name': render_template_string(_project_name, project=p, desc=d, text='REPTEXT', url='REPURL'),
              'owner': render_template_string(_owner, project=p),
              'status': render_template_string(_project_status, project=p),
              'pclasses': render_template_string(_project_pclasses, project=p),
@@ -413,13 +416,16 @@ def _element(project_id, menu_template, in_current):
              'group': render_template_string(_affiliation, project=p),
              'prefer': render_template_string(_project_prefer, project=p),
              'skills': render_template_string(_project_skills, skills=p.ordered_skills),
-             'menu': render_template_string(menu_string, project=p, config_id=_config_proxy, pclass_id=_pclass_proxy,
+             'menu': render_template_string(menu_string, project=p, desc=d, config_id=_config_proxy, pclass_id=_pclass_proxy,
                                             in_current=in_current, text='REPTEXT', url='REPURL')}
 
 
 def _process(project_id, config, current_user_id, menu_template, name_labels, text_enc, url_enc,
-             show_approvals, show_errors):
-    p = db.session.query(Project).filter_by(id=project_id).one()
+             show_approvals, show_errors, desc_id=None):
+    p: Project = db.session.query(Project).filter_by(id=project_id).one()
+    d: ProjectDescription = None
+    if desc_id is not None:
+        d = db.session.query(ProjectDescription).filter_by(id=desc_id).one()
 
     if config is not None and not p.generic and p.owner is not None:
         e = db.session.query(EnrollmentRecord).filter_by(owner_id=current_user_id,
@@ -432,7 +438,7 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
     in_current = (p.prior_counterpart(config.id) is not None) if config is not None else False
 
     # _element is cached
-    record = _element(project_id, menu_template, in_current)
+    record = _element(project_id, desc_id, menu_template, in_current)
 
     # need to replace text and url in 'name' field
     # need to replace text, url, config_id and pclass_id in 'menu' field
@@ -460,7 +466,7 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
         name = name.replace('REPISLIVE', '', 1)
 
     status = replace_enrollment_text(e, status)
-    name = replace_error_block(p, show_errors, name)
+    name = replace_error_block(p, d, show_errors, name)
     name = replace_comment_notification(current_user_id, name, p)
     status = replace_approval_tags(p, show_approvals, config, status)
     menu = replace_menu_anchor(text_enc, url_enc, config, menu)
@@ -469,13 +475,19 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
     return record
 
 
-def replace_error_block(p: Project, show_errors: bool, name: str):
+def replace_error_block(p: Project, d: ProjectDescription, show_errors: bool, name: str):
     block = ''
     symbol = ''
 
-    if show_errors and p.has_issues:
-        block = render_template_string(_project_error_block, project=p)
-        symbol = '<i class="fas fa-exclamation-triangle" style="color:red;"></i>'
+    if show_errors:
+        if d is not None and d.has_issues:
+            block = render_template_string(_error_block, errors=d.errors, warnings=d.warnings)
+            symbol = '<i class="fas fa-exclamation-triangle" style="color:red;"></i>'
+        elif p is not None and p.has_issues:
+            block = render_template_string(_error_block, errors=p.errors, warnings=p.warnings)
+            symbol = '<i class="fas fa-exclamation-triangle" style="color:red;"></i>'
+        else:
+            block = '<span class="badge bg-danger">MISSING</span>'
 
     name = name.replace('REPERRORBLOCK', block, 1).replace('REPERRORSYMBOL', symbol, 1)
     return name
@@ -802,7 +814,20 @@ def build_data(projects,
     url_enc = urlencode(url) if url is not None else ''
     text_enc = urlencode(text) if text is not None else ''
 
-    data = [_process(p_id, config, current_user_id, menu_template, name_labels, text_enc, url_enc, show_approvals,
-                     show_errors) for p_id in projects]
+    if not isinstance(projects, list):
+        raise TypeError('Expected projects argument to be a list')
+
+    if len(projects) == 0:
+        return []
+
+    p = projects[0]
+    if isinstance(p, dict):
+        data = [_process(p['project_id'], config, current_user_id, menu_template, name_labels, text_enc, url_enc, show_approvals,
+                         show_errors, desc_id=p['desc_id']) for p in projects]
+    elif isinstance(p, int):
+        data = [_process(p_id, config, current_user_id, menu_template, name_labels, text_enc, url_enc, show_approvals,
+                         show_errors) for p_id in projects]
+    else:
+        raise TypeError('Expected projects list to be of type int or dict')
 
     return data

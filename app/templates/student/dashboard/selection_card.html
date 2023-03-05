@@ -53,7 +53,7 @@
         {% endcall %}
     </div>
 
-    {% if sel.is_optional %}
+    {% if sel.is_optional and not sel.is_initial_selection %}
         {% set optional_text = config.card_text_optional %}
         {% if optional_text and optional_text|length > 0 %}
             {{ optional_text|markdown|bclean|blinkify|safe }}
@@ -372,13 +372,17 @@
                     {% set num_choices = sel.number_choices %}
                     {% set numpl = 's' %}
                     {% if num_choices == 1 %}{% set numpl = '' %}{% endif %}
-                    {% if sel.is_optional or sel.is_initial_selection %}
+                    {% if sel.is_initial_selection %}
                         <ul>
+                        {% if sel.is_optional %}
                             <li><strong>Select at least {{ num_choices }} project{{ numpl }}.</strong></li>
+                        {% else %}
+                            <li><strong>To apply, select at least {{ num_choices }} project{{ numpl }}.</strong></li>
+                        {% endif %}
                             <li>
                                 Although we make every effort,
                                 it is not possible to guarantee that you will be assigned
-                                your highest-ranked choices.
+                                your highest-ranked choice.
                             </li>
                         </ul>
                      {% else %}

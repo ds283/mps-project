@@ -5,6 +5,7 @@
 {% from "student/dashboard/selection_card.html" import selection_card with context %}
 {% from "student/dashboard/submission_card.html" import submission_card with context %}
 {% from "macros.html" import message_card %}
+{% from "icon_block.html" import icon_block %}
 
 {% block scripts %}
     {{ super() }}
@@ -267,7 +268,11 @@
                                 {% for n in range(config.submissions) %}
                                     {{ submission_card(config, sub, n, today) }}
                                 {% else %}
-                                    <p>You are enrolled on this project class, but it does not have marked assessments.</p>
+                                    <div class="alert alert-info mt-3 mb-3">
+                                        {% call icon_block("info-circle") %}
+                                            <strong>You are enrolled on this project class, but it does not have marked assessments.</strong>
+                                        {% endcall %}
+                                    </div>
                                 {% endfor %}
                             </div>
                             {% set ns.display = ns.display+1 %}
@@ -275,14 +280,18 @@
                 {% endfor %}
 
                 {% if pane=='select' and ns.display==0 %}
-                    <div class="card mt-3 mb-3 card-body bg-well">
-                        <p>You do not currently need to make any project selections.</p>
+                    <div class="alert alert-info mt-3">
+                        {% call icon_block("info-circle") %}
+                            <strong>You do not currently need to make any project selections.</strong>
+                        {% endcall %}
                     </div>
                 {% endif %}
 
                 {% if pane=='submit' and ns.display==0 %}
-                    <div class="card mt-3 mb-3 card-body bg-well">
-                        <p>You are not making submissions for any project this year.</p>
+                    <div class="alert alert-info mt-3">
+                        {% call icon_block("info-circle") %}
+                            <strong>You are not making submissions for any project this year.</strong>
+                        {% endcall %}
                     </div>
                 {% endif %}
 
@@ -314,7 +323,7 @@
                                         <td>{{ pclass.convenor_name }}</td>
                                         <td>
                                             <a class="text-decoration-none" href="mailto:{{ pclass.convenor_email }}">
-                                                &langle; {{ pclass.convenor_email }} &rangle;
+                                                &langle;{{ pclass.convenor_email }}&rangle;
                                             </a>
                                         </td>
                                     </tr>

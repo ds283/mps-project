@@ -52,6 +52,7 @@ def AttachmentMixinFactory(admin=False):
             _types = [(SubmissionAttachment.ATTACHMENT_TYPE_UNSET, "Unset"),
                       (SubmissionAttachment.ATTACHMENT_MARKING_REPORT, "Marking report"),
                       (SubmissionAttachment.ATTACHMENT_SIMILARITY_REPORT, "Similarity report"),
+                      (SubmissionAttachment.ATTACHMENT_FEEDBACK_DOCUMENT, "Feedback document"),
                       (SubmissionAttachment.ATTACHMENT_OTHER, "Other")]
             type = SelectField('Attachment type', choices=_types, coerce=int)
 

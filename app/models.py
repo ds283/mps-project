@@ -1006,11 +1006,13 @@ class SubmissionAttachmentTypesMixin:
     ATTACHMENT_TYPE_UNSET = 0
     ATTACHMENT_MARKING_REPORT = 1
     ATTACHMENT_SIMILARITY_REPORT = 2
+    ATTACHMENT_FEEDBACK_DOCUMENT = 4
     ATTACHMENT_OTHER = 3
 
     _labels = {ATTACHMENT_TYPE_UNSET: 'Unset',
                ATTACHMENT_MARKING_REPORT: 'Marking report',
                ATTACHMENT_SIMILARITY_REPORT: 'Similarity report',
+               ATTACHMENT_FEEDBACK_DOCUMENT: 'Feedback document',
                ATTACHMENT_OTHER: 'Other'}
 
     # ATTACHMENT TYPE

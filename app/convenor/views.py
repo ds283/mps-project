@@ -1213,8 +1213,9 @@ def enrol_all_selectors(configid):
 
     candidates = \
         build_enrol_selector_candidates(config,
-                                        disable_programme_filter=True if isinstance(prog_filter, str)
-                                                                  and prog_filter.lower() == 'off' else False)
+                                        disable_programme_filter=True \
+                                            if isinstance(prog_filter, str) and prog_filter.lower() == 'off' \
+                                            else False)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
@@ -1227,15 +1228,17 @@ def enrol_all_selectors(configid):
     if prog_flag:
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
+    candidate_values = candidates.all()
+
     year = year_value if year_flag else None
-    c_list = [x for x in candidates.all() if _filter_candidates(year, x)]
+    c_list = [x for x in candidate_values if _filter_candidates(year, x)]
 
     for c in c_list:
         add_selector(c, configid, convert=convert, autocommit=False)
 
     try:
         db.session.commit()
-        flash('Added {count} selectors to project "{proj}"'.format(count=len(candidates),
+        flash('Added {count} selectors to project "{proj}"'.format(count=len(candidate_values),
                                                                     proj=config.project_class.name), 'info')
     except SQLAlchemyError as e:
         db.session.rollback()

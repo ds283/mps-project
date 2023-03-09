@@ -374,11 +374,11 @@
                     {% if num_choices == 1 %}{% set numpl = '' %}{% endif %}
                     {% if sel.is_initial_selection %}
                         <ul>
-                        {% if sel.is_optional %}
-                            <li><strong>Select at least {{ num_choices }} project{{ numpl }}.</strong></li>
-                        {% else %}
-                            <li><strong>To apply, select at least {{ num_choices }} project{{ numpl }}.</strong></li>
-                        {% endif %}
+                            {% if sel.is_optional %}
+                                <li><strong>To apply, select at least {{ num_choices }} project{{ numpl }}.</strong></li>
+                            {% else %}
+                                <li><strong>Select at least {{ num_choices }} project{{ numpl }}.</strong></li>
+                            {% endif %}
                             <li>
                                 Although we make every effort,
                                 it is not possible to guarantee that you will be assigned

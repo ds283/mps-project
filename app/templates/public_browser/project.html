@@ -23,39 +23,62 @@
                         {{ title }}
                     </div>
                 </div>
-                <div class="d-flex flex-row justify-content-between align-content-start sm-gap-below">
-                    <div>
-                        <div class="project-owner-name">
-                            {% if not project.generic and project.owner %}
+                {% if not project.generic and project.owner %}
+                    <div class="d-flex flex-row justify-content-between align-content-start sm-gap-below">
+                        <div>
+                            <div class="project-owner-name">
                                 {{ project.owner.user.name }}
-                            {% else %}
-                                <div><span class="badge bg-info project-label">Generic project</span></div>
-                                <div class="text-muted">
-                                    You will be allocated a suitable faculty supervisor.
-                                    {% if desc and project.enforce_capacity and desc.capacity and desc.capacity > 0 %}
-                                        You may be supervised together with a group of up
-                                        to {{ desc.capacity }} students
-                                        working on the same project.
-                                    {% else %}
-                                        You may be supervised together with a group of other students
-                                        working on the same project.
-                                    {% endif %}
-                                </div>
+                            </div>
+                            {% if project.owner.office %}
+                                <div>{{ project.owner.office }}</div>
                             {% endif %}
                         </div>
-                    </div>
-                    <div>
                         {% if project.group %}
-                            <div class="research-group-banner">{{ project.group.name }}</div>
-                            {% if project.group.website and project.group.website is not none %}
-                                <a class="research-group-webpage" href="{{ project.group.website }}">
-                                    Research group website <i class="fas fa-external-link"></i>
-                                </a>
-                            {% endif %}
+                            <div>
+                                <div class="research-group-banner">{{ project.group.name }}</div>
+                                {% if project.group.website and project.group.website is not none %}
+                                    <a class="research-group-webpage" href="{{ project.group.website }}">
+                                        Research group website <i class="fas fa-external-link"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
                         {% endif %}
                     </div>
-                </div>
-                <hr class="intro-divider">
+                    <hr class="intro-divider">
+                {% else %}
+                    <div class="alert alert-info">
+                        {% call icon_block("info-circle") %}
+                            <div class="h5"><strong>This is a generic project.</strong></div>
+                            <div class="mt-1">
+                                You will be allocated a suitable faculty supervisor.
+                            </div>
+                            {% if desc and project.enforce_capacity and desc.capacity and desc.capacity > 0 %}
+                                <div class="mt-1">
+                                    You may be supervised together with a group of up
+                                    to {{ desc.capacity }} students
+                                    working on the same project.
+                                </div>
+                            {% else %}
+                                <div class="mt-1">
+                                    You may be supervised together with a group of other students
+                                    working on the same project.
+                                </div>
+                            {% endif %}
+                        {% endcall %}
+                    </div>
+                    {% if project.group %}
+                        <div class="mt-4 d-flex flex-row justify-content-end align-content-start"></div>
+                            <div>
+                                <div class="research-group-banner">{{ project.group.name }}</div>
+                                {% if project.group.website and project.group.website is not none %}
+                                    <a class="research-group-webpage" href="{{ project.group.website }}">
+                                        Research group website <i class="fas fa-external-link"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endif %}
 
                 <div class="card border-primary mt-3 mb-3">
                     <div class="card-header bg-primary text-white">Project details</div>

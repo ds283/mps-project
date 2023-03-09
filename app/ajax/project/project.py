@@ -486,8 +486,6 @@ def replace_error_block(p: Project, d: ProjectDescription, show_errors: bool, na
         elif p is not None and p.has_issues:
             block = render_template_string(_error_block, errors=p.errors, warnings=p.warnings)
             symbol = '<i class="fas fa-exclamation-triangle" style="color:red;"></i>'
-        else:
-            block = '<span class="badge bg-danger">MISSING</span>'
 
     name = name.replace('REPERRORBLOCK', block, 1).replace('REPERRORSYMBOL', symbol, 1)
     return name

@@ -6,6 +6,7 @@
     {% set deadline_text = '' %}
     {% set time_to_deadline_text = '' %}
     {% set deadline_is_past = false %}
+    {% set has_custom_offers = config.uses_selection and sel.number_custom_offers > 0 %}
     {% if has_deadline %}
         {% set deadline_text = config.live_deadline.strftime("%a %d %b (%Y)") %}
         {% set time_to_deadline_text = config.time_to_live_deadline %}
@@ -46,11 +47,33 @@
                     a list of project choices using this website.
                 </div>
             {% endif %}
-            <div class="d-flex gap-2 justify-content-end align-content-start w-100 mt-3">
-                <button type="button" class="btn btn-outline-primary video-btn student-dashboard-button" data-bs-toggle="modal" data-bs-target="#PanoptoModal">Show video help</button>
-                <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-success student-dashboard-button">Show available projects...</a>
-            </div>
         {% endcall %}
+        {% if has_custom_offers %}
+            {% call icon_block("info-circle", extra_classes='mt-3') %}
+                <div><strong>You have custom offers available.</strong></div>
+                <div class="mt-1">
+                    Custom offers give you the option of a guaranteed
+                    project and supervisor.
+                </div>
+                <div class="mt-1">
+                    Use the <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}">Manage custom offers</a> button
+                    to accept or decline your offers.
+                    You can only accept one offer, but you can change your mind
+                    up to the deadline.
+                </div>
+                <div class="mt-1">
+                    If you prefer not to accept any custom offers, you can decline and
+                    submit a list of ranked projects in the normal way.
+                </div>
+            {% endcall %}
+        {% endif %}
+        <div class="d-flex gap-2 justify-content-end align-content-start w-100 mt-3">
+            <button type="button" class="btn btn-outline-primary video-btn student-dashboard-button" data-bs-toggle="modal" data-bs-target="#PanoptoModal">Show video help</button>
+            {% if has_custom_offers %}
+                <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}" class="btn btn-outline-secondary student-dashboard-button">Manage custom offers</a>
+            {% endif %}
+            <a href="{{ url_for('student.selector_browse_projects', id=sel.id) }}" class="btn btn-outline-success student-dashboard-button">Show available projects...</a>
+        </div>
     </div>
 
     {% if sel.is_optional and sel.is_initial_selection %}
@@ -175,17 +198,17 @@
     </div>
     <div class="d-flex justify-content-end align-content-start w-100">
         {% if sel.has_submission_list %}
-            <a class="btn btn-secondary student-dashboard-button" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
+            <a class="btn btn-outline-secondary student-dashboard-button" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
                 Clear submission
             </a>
         {% endif %}
         <a id="P{{ config.id }}-valid-button"
-           class="btn btn-primary {% if not is_valid %}d-none{% endif %} student-dashboard-button"
+           class="btn btn-outline-primary {% if not is_valid %}d-none{% endif %} student-dashboard-button"
            href="{{ url_for('student.submit', sid=sel.id) }}">
             {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
         </a>
         <a id="P{{ config.id }}-invalid-button"
-           class="btn btn-primary disabled {% if is_valid %}d-none{% endif %} student-dashboard-button">
+           class="btn btn-outline-primary disabled {% if is_valid %}d-none{% endif %} student-dashboard-button">
             {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
         </a>
     </div>
@@ -404,18 +427,6 @@
                     {{ render_bookmarks(config, sel) }}
                 {% endif %}
                 {% if config.uses_selection %}
-                    {% if sel.number_custom_offers > 0 %}
-                        <div class="row vertical-align">
-                            <div class="col-8">
-                                <strong>You have custom offers available.</strong>
-                            </div>
-                            <div class="col-4">
-                                <div class="float-end">
-                                    <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}" class="btn btn-secondary">Manage offers</a>
-                                </div>
-                            </div>
-                        </div>
-                    {% endif %}
                     {{ show_submission_status(config, sel) }}
                 {% endif %}
             {% elif config.selection_closed %}

@@ -6339,7 +6339,8 @@ def accept_custom_offer(offer_id):
         return redirect(redirect_url())
 
     if offer.selector.number_offers_accepted > 0:
-        flash('A custom offer has already been accepted for selector {name}'.format(name=offer.selector.student.user.name),
+        flash('A custom offer has already been accepted for selector {name}. '
+              'Please decline this offer before accepting a new one.'.format(name=offer.selector.student.user.name),
               'error')
         return redirect(redirect_url())
 

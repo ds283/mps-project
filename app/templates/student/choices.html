@@ -1,6 +1,7 @@
 {% extends "base_app.html" %}
 
 {% from "student/macros.html" import ranked_selection %}
+{% from "icon_block.html" import icon_block %}
 
 {% block title %}
     View my submitted project preferences
@@ -23,21 +24,27 @@
                             {% if project is not none %}
                                 <div>
                                     You have accepted a custom offer for
-                                    <strong>{{ project.name }}</strong>
+                                    <a class="text-decoration-none" href="{{ url_for('student.selector_view_project', sid=sel.id, pid=offer.liveproject.id, url=url_for('student.view_selection', sid=sel.id), text='submitted project selection') }}">
+                                        <strong>{{ project.name }}</strong>
+                                    </a>
                                     <i class="fas fa-user"></i> {{ project.owner.user.name }}
                                 </div>
                             {% else %}
-                                <span class="badge bg-danger">MISSING ACCEPTED PROJECT</span>
-                                <p>This is an internal error. Please contact a system administrator.</p>
+                                <div>
+                                    We have detected an issue with your selection.
+                                    Please contact the project convenor.
+                                </div>
                             {% endif %}
                         {% else %}
-                            <div class="card mt-3 mb-3 card-body bg-well">
-                                <div>
-                                    Last submission received at
-                                    <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
-                                    from IP address
-                                    <strong>{{ sel.submission_IP }}</strong>
-                                </div>
+                            <div class="alert alert-info mt-3 mb-3">
+                                {% call icon_block("check-circle") %}
+                                    <div>
+                                        Last submission received at
+                                        <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
+                                        from IP address
+                                        <strong>{{ sel.submission_IP }}</strong>
+                                    </div>
+                                {% endcall %}
                             </div>
                             {{ ranked_selection(sel, sel.ordered_selections) }}
                         {% endif %}

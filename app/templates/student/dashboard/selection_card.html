@@ -142,7 +142,6 @@
     {% endif %}
 {% endmacro %}
 
-
 {% macro show_submission_status(config, sel) %}
     {% set is_valid, messages = sel.is_valid_selection %}
     <div class="vertical-top mt-3 mb-3">
@@ -160,42 +159,57 @@
             {% endfor %}
         </ul>
     </div>
-    <div class="alert alert-secondary mt-3 mb-3">
-        {% call icon_block("info-circle") %}
-            {% if sel.has_submitted %}
-                {% if sel.has_accepted_offer %}
-                    {% set offer = sel.accepted_offer %}
-                    {% set project = offer.liveproject %}
-                    {% if project is not none %}
-                        <div>
-                            <strong>You have accepted a custom offer for the project
-                                &ldquo;{{ project.name }}&rdquo;
-                                supervised by
-                                <i class="fas fa-user"></i> {{ project.owner.user.name }}.</strong>
-                        </div>
-                    {% else %}
-                        <span class="badge bg-danger">MISSING ACCEPTED PROJECT</span>
-                        <div>This is an internal error. Please contact a system administrator.</div>
-                    {% endif %}
-                {% else %}
-                    <div>
-                        You have already submitted a valid list of project preferences.
+    {% if sel.has_accepted_offer %}
+        {% set offer = sel.accepted_offer %}
+        {% set project = offer.liveproject %}
+        <div class="alert alert-success mt-3 mb-3">
+            {% call icon_block("check-circle") %}
+                <div><strong>You have accepted a custom offer.</strong></div>
+                {% if project is not none %}
+                    <div class="mt-1">
+                        You have accepted an offer for the project
+                        <a class="text-decoration-none" href="{{ url_for('student.selector_view_project', sid=sel.id, pid=offer.liveproject.id, url=url_for('student.dashboard'), text='home dashboard') }}">
+                            <strong>{{ project.name }}</strong>
+                        </a>
+                        supervised by
+                        <i class="fas fa-user"></i> {{ project.owner.user.name }}.
                     </div>
+                    <div class="mt-1">
+                        If you prefer to change your decision, you can decline this project
+                        at any point up to the deadline.
+                    </div>
+                {% else %}
+                    <div class="mt-1">
+                        We have detected an issue with your selection.
+                        Please contact the project convenor.
+                    </div>
+                {% endif %}
+            {% endcall %}
+        </div>
+    {% else %}
+        {% if sel.has_submitted %}
+            <div class="alert alert-success mt-3 mb-3">
+                {% call icon_block("check-circle") %}
+                    <div><strong>You have submitted a valid selection.</strong></div>
                     <div class="mt-1">
                         You may continue to revise your list up to the deadline.
                         <a class="text-decoration-none" href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
                     </div>
-                {% endif %}
-            {% else %}
-                <div>You have not yet submitted your project preferences.</div>
-            {% endif %}
-            {% if sel.has_sumission_list and sel.submission_time %}
-                <div class="mt-2">
-                    Last submission received at <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>.
-                </div>
-            {% endif %}
-        {% endcall %}
-    </div>
+                    {% if sel.has_sumission_list and sel.submission_time %}
+                        <div class="mt-1">
+                            Last submission received at <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>.
+                        </div>
+                    {% endif %}
+                {% endcall %}
+            </div>
+        {% else %}
+            <div class="alert alert-secondary mt-3 mb-3">
+                {% call icon_block("info-circle") %}
+                    <div><strong>You have not yet submitted your project preferences.</strong></div>
+                {% endcall %}
+            </div>
+        {% endif %}
+    {% endif %}
     <div class="d-flex justify-content-end align-content-start w-100">
         {% if sel.has_submission_list %}
             <a class="btn btn-outline-secondary student-dashboard-button" href="{{ url_for('student.clear_submission', sid=sel.id) }}">

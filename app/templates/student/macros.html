@@ -1,6 +1,6 @@
 {% macro ranked_selection(sel, list) %}
     <div class="container-fluid">
-        <div class="row vertical-align final-selection-table">
+        <div class="row vertical-top final-selection-table">
             <div class="col-1"><strong>Rank</strong></div>
             <div class="col-5"><strong>Project title</strong></div>
             <div class="col-3"><strong>Affiliation</strong></div>
@@ -9,12 +9,12 @@
         {% for item in list %}
             {% if item.rank <= sel.number_choices %}
                 {% set project = item.liveproject %}
-                <div class="row vertical-align final-selection-table">
+                <div class="row vertical-top final-selection-table">
                     <div class="col-1">
                         <span class="badge bg-success">#{{ item.rank }}</span>
                     </div>
                     <div class="col-5">
-                        <a class="text-decoration-none" href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id) }}">
+                        <a class="text-decoration-none" href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id, url=url_for('student.view_selection', sid=sel.id), text='submitted project selection') }}">
                             <strong>{{ project.name }}</strong>
                         </a>
                     </div>
@@ -49,16 +49,18 @@
 
 {% macro custom_offers_table(sel, list, show_actions) %}
     <div class="container-fluid">
-        <div class="row vertical-align offers-table">
+        <div class="row vertical-top offers-table">
             {% if show_actions %}<div class="col-4">{% else %}<div class="col-5">{% endif %}<strong>Project</strong></div>
             {% if show_actions %}<div class="col-4">{% else %}<div class="col-5">{% endif %}<strong>Supervisor</strong></div>
             {% if show_actions %}<div class="col-1">{% else %}<div class="col-2">{% endif %}<strong>Status</strong></div>
             {% if show_actions %}<div class="col-3"><strong>Actions</strong></div>{% endif %}
         </div>
         {% for offer in list %}
-            <div class="row vertical-align offers-table">
+            <div class="row vertical-top offers-table">
                 {% if show_actions %}<div class="col-4">{% else %}<div class="col-5">{% endif %}
-                    {{ offer.liveproject.name }}
+                <a class="text-decoration-none" href="{{ url_for('student.selector_view_project', sid=sel.id, pid=offer.liveproject.id, url=url_for('student.manage_custom_offers', sel_id=sel.id), text='manage custom offers view') }}">
+                    <strong>{{ offer.liveproject.name }}</strong>
+                </a>
                 </div>
                 {% if show_actions %}<div class="col-4">{% else %}<div class="col-5">{% endif %}
                     <a class="text-decoration-none" href="mailto:{{ offer.liveproject.owner.user.email }}">
@@ -80,12 +82,12 @@
                 {% if show_actions %}
                     <div class="col-3">
                         {% if status == offer.OFFERED %}
-                            <a href="{{ url_for('student.accept_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-outline-success">Accept</a>
-                            <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-outline-danger">Decline</a>
+                            <a href="{{ url_for('student.accept_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-outline-success"><i class="fas fa-check"></i> Accept</a>
+                            <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-outline-danger"><i class="fas fa-times"></i> Decline</a>
                         {% elif status == offer.ACCEPTED %}
-                            <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-outline-danger">Decline</a>
+                            <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Deselect</a>
                         {% elif status == offer.DECLINED %}
-                            <a href="{{ url_for('student.accept_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-outline-success">Accept</a>
+                            <a href="{{ url_for('student.accept_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-outline-success"><i class="fas fa-check"></i> Accept</a>
                         {% endif %}
                     </div>
                 {% endif %}

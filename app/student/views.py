@@ -421,6 +421,12 @@ def selector_view_project(sid, pid):
     sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
     config: ProjectClassConfig = sel.config
 
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+    if url is None:
+        url = url_for('student.selector_browse_projects', id=sel.id)
+        text = 'project list'
+
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
     if not verify_selector(sel, message=True):
         return redirect(redirect_url())
@@ -450,7 +456,7 @@ def selector_view_project(sid, pid):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return render_template('student/show_project.html', title=project.name, sel=sel, project=project, desc=project,
-                           text='project list', url=url_for('student.selector_browse_projects', id=sel.id))
+                           text=text, url=url)
 
 
 @student.route('/submitter_view_project/<int:sid>/<int:pid>')
@@ -843,8 +849,14 @@ def do_clear_submission(sid):
     sel.submission_time = None
     sel.submission_IP = None
 
-    db.session.commit()
-    flash('Your project preferences have been cleared successfully.', 'info')
+    try:
+        db.session.commit()
+        flash('Your project preferences have been cleared successfully.', 'info')
+    except SQLAlchemyError as e:
+        flash('Could not clear project preferences due to a database error. '
+              'Please inform a system administrator.', 'info')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return home_dashboard()
 
@@ -876,8 +888,8 @@ def accept_custom_offer(offer_id):
 
     # reset any previous acceptances
     accepted = sel.custom_offers.filter_by(status=CustomOffer.ACCEPTED).all()
-    for offer in accepted:
-        offer.status = CustomOffer.OFFERED
+    for o in accepted:
+        o.status = CustomOffer.OFFERED
 
     offer.status = CustomOffer.ACCEPTED
     offer.last_edit_timestamp = datetime.now()
@@ -890,6 +902,7 @@ def accept_custom_offer(offer_id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
+    # accepting an offer returns the user to their dashboard
     return home_dashboard()
 
 
@@ -916,7 +929,8 @@ def decline_custom_offer(offer_id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
-    return home_dashboard()
+    # decline an offer stays on the "manage" view
+    return redirect(redirect_url())
 
 
 @student.route('/view_selection/<int:sid>')

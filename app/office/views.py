@@ -17,7 +17,7 @@ from . import office
 from ..database import db
 from ..models import User
 from .forms import OfficeSettingsForm
-from ..shared.utils import home_dashboard, get_root_dashboard_data, get_approvals_data
+from ..shared.utils import home_dashboard, get_root_dashboard_data, get_approval_queue_data
 
 
 @office.route('/dashboard')
@@ -38,7 +38,7 @@ def dashboard():
         session['office_dashboard_pane'] = pane
 
     root_data = get_root_dashboard_data()
-    approvals_data = get_approvals_data()
+    approvals_data = get_approval_queue_data()
 
     return render_template('office/dashboard.html', root_data=root_data, approvals_data=approvals_data, pane=pane)
 

@@ -212,7 +212,7 @@ def get_pclass_config_data(configs=None):
             'config_warning': config_warning}
 
 
-def get_approvals_data():
+def get_approval_queue_data():
     data = {}
 
     if current_user.has_role('user_approver') or current_user.has_role('root') or current_user.has_role('manage_users'):
@@ -245,24 +245,37 @@ def _get_user_approvals_data():
             'approval_user_rejected': to_correct}
 
 
+def _get_project_approvals_data():
+    data = build_project_approval_queues()
+
+    queued = data.get('queued')
+    rejected = data.get('rejected')
+
+    return {'approval_project_queued': len(queued) if isinstance(queued, list) else 0,
+            'approval_project_rejected': len(rejected) if isinstance(rejected, list) else 0}
+
+
 def build_project_approval_queues():
     # want to count number of ProjectDescriptions that are associated with project classes that are in the
     # confirmation phase.
     # We ignore descriptions that have already been validated, or which belong to inactive projects
     descriptions = db.session.query(ProjectDescription) \
         .join(Project, Project.id == ProjectDescription.parent_id) \
-        .join(FacultyData, FacultyData.id == Project.owner_id) \
-        .join(User, User.id == FacultyData.id) \
+        .join(FacultyData, FacultyData.id == Project.owner_id, isouter=True) \
+        .join(User, User.id == FacultyData.id, isouter=True) \
         .filter(ProjectDescription.confirmed,
                 ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED,
                 Project.active == True,
-                User.active == True).all()
+                or_(Project.generic == True,
+                    and_(Project.generic == False,
+                         FacultyData.id != None,
+                         User.active == True))).all()
 
     queued = []
     rejected = []
 
     for desc in descriptions:
-        if allow_approvals(desc.id):
+        if allow_approval_for_project(desc.id):
             if desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
                 queued.append(desc.id)
             elif desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
@@ -273,7 +286,7 @@ def build_project_approval_queues():
 
 
 @cache.memoize()
-def allow_approvals(desc_id):
+def allow_approval_for_project(desc_id):
     desc: ProjectDescription = db.session.query(ProjectDescription).filter_by(id=desc_id).first()
 
     if desc is None:
@@ -343,7 +356,7 @@ def allow_approvals(desc_id):
 
 
 def _approvals_ProjectDescription_delete_cache(desc):
-    cache.delete_memoized(allow_approvals, desc.id)
+    cache.delete_memoized(allow_approval_for_project, desc.id)
 
 
 @listens_for(ProjectDescription, 'before_insert')
@@ -378,7 +391,7 @@ def _approvals_ProjectDescription_project_classes_remove_handler(target, value, 
 
 def _approvals_delete_ProjectClass_cache(project):
     for d in project.descriptions:
-        cache.delete_memoized(allow_approvals, d.id)
+        cache.delete_memoized(allow_approval_for_project, d.id)
 
 
 @listens_for(ProjectClass, 'before_insert')
@@ -441,7 +454,7 @@ def _approvals_delete_EnrollmentRecord_cache(record):
                 ProjectDescription.project_classes.any(id=record.pclass_id)).all()
 
     for d in descriptions:
-        cache.delete_memoized(allow_approvals, d.id)
+        cache.delete_memoized(allow_approval_for_project, d.id)
 
 
 @listens_for(EnrollmentRecord, 'before_insert')
@@ -460,16 +473,6 @@ def _approvals_EnrollmentRecord_update_handler(mapper, connection, target):
 def _approvals_EnrollmentRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _approvals_delete_EnrollmentRecord_cache(target)
-
-
-def _get_project_approvals_data():
-    data = build_project_approval_queues()
-
-    queued = data.get('queued')
-    rejected = data.get('rejected')
-
-    return {'approval_project_queued': len(queued) if isinstance(queued, list) else 0,
-            'approval_project_rejected': len(rejected) if isinstance(rejected, list) else 0}
 
 
 def _get_pclass_list():
@@ -545,10 +548,13 @@ def get_convenor_dashboard_data(pclass, config):
         .filter(Project.active == True,
                 Project.project_classes.any(id=pclass.id)) \
         .join(User, User.id == Project.owner_id, isouter=True) \
-        .join(EnrollmentRecord,
-              and_(EnrollmentRecord.pclass_id == pclass.id, EnrollmentRecord.owner_id == Project.owner_id), isouter=True) \
+        .join(FacultyData, FacultyData.id == User.id, isouter=True) \
+        .join(EnrollmentRecord, EnrollmentRecord.owner_id == Project.owner_id, isouter=True) \
         .filter(or_(Project.generic == True,
-                    and_(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                    and_(Project.generic == False,
+                         EnrollmentRecord.pclass_id == pclass.id,
+                         EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                         FacultyData.id != None,
                          User.active == True)))
     proj_count = get_count(attached_projects)
 
@@ -665,12 +671,15 @@ def _compute_group_capacity_data(pclass_id, group_id):
         .filter(Project.active == True,
                 Project.project_classes.any(id=pclass_id),
                 Project.group_id == group_id) \
-        .join(User, User.id == Project.owner_id) \
-        .join(FacultyData, FacultyData.id == Project.owner_id) \
-        .join(EnrollmentRecord,
-              and_(EnrollmentRecord.pclass_id == pclass_id, EnrollmentRecord.owner_id == Project.owner_id)) \
-        .filter(User.active) \
-        .filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+        .join(User, User.id == Project.owner_id, isouter=True) \
+        .join(FacultyData, FacultyData.id == Project.owner_id, isouter=True) \
+        .join(EnrollmentRecord, EnrollmentRecord.owner_id == Project.owner_id, isouter=True) \
+        .filter(or_(Project.generic == True,
+                    and_(Project.generic == False,
+                         EnrollmentRecord.pclass_id == pclass_id,
+                         EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                         FacultyData.id != None,
+                         User.active == True)))
 
     # set of faculty members offering projects
     faculty_offering = set()
@@ -694,7 +703,8 @@ def _compute_group_capacity_data(pclass_id, group_id):
             projects += 1
 
             # add owner to list of faculty offering projects
-            faculty_offering.add(p.owner.id)
+            if not p.generic and p.owner is not None:
+                faculty_offering.add(p.owner.id)
 
             # evaluate workflow state for this project
             desc = p.get_description(pclass_id)
@@ -749,12 +759,15 @@ def _compute_group_approvals_data(pclass_id, group_id):
         .filter(Project.active == True,
                 Project.project_classes.any(id=pclass_id),
                 Project.group_id == group_id) \
-        .join(User, User.id == Project.owner_id) \
-        .join(FacultyData, FacultyData.id == Project.owner_id) \
-        .join(EnrollmentRecord,
-              and_(EnrollmentRecord.pclass_id == pclass_id, EnrollmentRecord.owner_id == Project.owner_id)) \
-        .filter(User.active) \
-        .filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+        .join(User, User.id == Project.owner_id, isouter=True) \
+        .join(FacultyData, FacultyData.id == Project.owner_id, isouter=True) \
+        .join(EnrollmentRecord, EnrollmentRecord.owner_id == Project.owner_id, isouter=True) \
+        .filter(or_(Project.generic == True,
+                    and_(Project.generic == False,
+                         EnrollmentRecord.pclass_id == pclass_id,
+                         EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                         FacultyData.id != None,
+                         User.active == True)))
 
     # number of offerable projects in different approval workflow states
     projects = 0
@@ -920,7 +933,7 @@ def _capacity_FacultyData_delete_handler(mapper, connection, target):
         _capacity_delete_FacultyData_cache(target)
 
 
-def get_approval_data(pclass: ProjectClass):
+def get_convenor_approval_data(pclass: ProjectClass):
     # get list of research groups
     groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name).all()
 
@@ -944,6 +957,18 @@ def get_approval_data(pclass: ProjectClass):
 
         # store data for this research group
         data.append({'label': group.make_label(group.name), 'data': group_data})
+
+    # add projects that are not attached to any group
+    no_group_data = _compute_group_approvals_data(pclass.id, None)
+
+    projects += no_group_data['projects']
+    pending += no_group_data['pending']
+    queued += no_group_data['queued']
+    rejected += no_group_data['rejected']
+    approved += no_group_data['approved']
+
+    # store data for this research group
+    data.append({'label': 'Unaffiliated', 'data': no_group_data})
 
     return {'data': data,
             'projects': projects,
@@ -977,6 +1002,18 @@ def get_capacity_data(pclass: ProjectClass):
 
         # store data for this research group
         data.append({'label': group.make_label(group.name), 'data': group_data})
+
+    # add projects that are not attached to any group
+    no_group_data = _compute_group_capacity_data(pclass.id, None)
+
+    # update totals
+    projects += no_group_data['projects']
+
+    faculty_offering += no_group_data['faculty_offering']
+    capacity += no_group_data['capacity']
+    capacity_bounded = capacity_bounded and no_group_data['capacity_bounded']
+
+    data.append({'label': 'Unaffiliated', 'data': no_group_data})
 
     return {'data': data,
             'projects': projects,

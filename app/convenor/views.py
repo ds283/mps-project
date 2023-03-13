@@ -60,7 +60,7 @@ from ..shared.sqlalchemy import get_count, clone_model
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     get_convenor_filter_record, filter_assessors, build_enrol_selector_candidates, \
     build_enrol_submitter_candidates, build_submitters_data, redirect_url, get_convenor_todo_data, \
-    build_convenor_tasks_query, home_dashboard_url, get_approval_data
+    build_convenor_tasks_query, home_dashboard_url, get_convenor_approval_data
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description, \
     validate_view_project
@@ -310,7 +310,7 @@ def status(id):
 
     data = get_convenor_dashboard_data(pclass, config)
     todo = get_convenor_todo_data(config)
-    approval_data = get_approval_data(pclass)
+    approval_data = get_convenor_approval_data(pclass)
 
     return render_template('convenor/dashboard/status.html', pane='overview', subpane='status',
                            golive_form=golive_form, change_form=change_form, issue_form=issue_form,

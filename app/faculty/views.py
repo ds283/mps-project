@@ -36,7 +36,7 @@ from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel
 from ..shared.conversions import is_integer
 from ..shared.projects import create_new_tags, project_list_SQL_handler
 from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_assessors, \
-    get_current_year, get_count, get_approvals_data, allow_approvals, redirect_url, get_main_config
+    get_current_year, get_count, get_approval_queue_data, allow_approval_for_project, redirect_url, get_main_config
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable, \
     validate_assessment, validate_using_assessment, validate_presentation_assessor, \
@@ -1409,7 +1409,7 @@ def project_preview(id):
     form.limit_visibility.data = True if current_user.has_role('project_approver') else False
 
     allow_approval = (current_user.has_role('project_approver') or current_user.has_role('root')) \
-                     and desc is not None and allow_approvals(desc.id)
+                     and desc is not None and allow_approval_for_project(desc.id)
 
     show_comments = allow_approval or (data.owner is not None and current_user.id == data.owner.id) \
                     or current_user.has_role('convenor')
@@ -1561,7 +1561,7 @@ def dashboard():
     else:
         root_dash_data = None
 
-    approvals_data = get_approvals_data()
+    approvals_data = get_approval_queue_data()
 
     return render_template('faculty/dashboard/dashboard.html', enrollments=enrollments, messages=messages,
                            root_dash_data=root_dash_data, approvals_data=approvals_data, pane=pane,

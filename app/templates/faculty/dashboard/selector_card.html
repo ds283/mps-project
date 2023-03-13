@@ -10,10 +10,12 @@
     {% set is_sabbatical = record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
     {% set is_exempt = record.supervisor_state == record.SUPERVISOR_EXEMPT %}
 
-    {% set confirm_required = config.is_confirmation_required(current_user.faculty_data) %}
+    {% set faculty_data = current_user.faculty_data %}
 
-    {% set offered_variants = current_user.faculty_data.variants_offered(pclass) %}
-{#    {% set variants_missing_aims = current_user.faculty_data.variants_offered(pclass, filter_warnings='aims') %}#}
+    {% set confirm_required = config.is_confirmation_required(faculty_data) %}
+
+    {% set offered_variants = faculty_data.variants_offered(pclass) %}
+{#    {% set variants_missing_aims = faculty_data.variants_offered(pclass, filter_warnings='aims') %}#}
     {% set nproj = offered_variants|length %}
     {% if nproj == 1 %}
         {% set nproj_plural = '' %}
@@ -180,11 +182,17 @@
                             <a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=project.id, url=url_for('faculty.dashboard', id=pclass.id), text='dashboard', pclass=pclass.id) }}">{{ project.name }}</a>
                             <div>
                                 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
-                                    <span class="badge bg-danger">Meeting required</span>
+                                    <span class="badge bg-primary">Meeting required</span>
+                                    {% if not faculty_data.sign_off_students %}
+                                        <span class="badge bg-danger"><i class="fas fa-cross"></i> Disabled in settings</span>
+                                    {% endif %}
                                 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-                                    <span class="badge bg-warning text-dark">Meeting optional</span>
+                                    <span class="badge bg-primary">Meeting optional</span>
+                                    {% if not faculty_data.sign_off_students %}
+                                        <span class="badge bg-danger"><i class="fas fa-cross"></i> Disabled in settings</span>
+                                    {% endif %}
                                 {% elif project.meeting_reqd == project.MEETING_NONE %}
-                                    <span class="badge bg-success">Meeting not required</span>
+                                    <span class="badge bg-secondary">Meeting not required</span>
                                 {% endif %}
                                 {% set ns = namespace(affiliation=false) %}
                                 {% if project.group %}

@@ -200,23 +200,21 @@
                                             <div class="col-3">Sign-up details</div>
                                             <div class="col-9">
                                                 <div class="sm-gap-below">
-                                                    {% if project.meeting_reqd == project.MEETING_REQUIRED %}
-                                                        {% if project.is_confirmed(sel) %}
-                                                            <span class="badge bg-primary project-label"><i
-                                                                    class="fas fa-check"></i> Meeting confirmed</span>
+                                                    {% if not project.generic and project.owner is not none %}
+                                                        {% if project.owner.sign_off_students and project.meeting_reqd == project.MEETING_REQUIRED %}
+                                                            {% if project.is_confirmed(sel) %}
+                                                                <span class="badge bg-primary project-label"><i class="fas fa-check"></i> Meeting confirmed</span>
+                                                            {% else %}
+                                                                <span class="badge bg-danger project-label"><i class="fas fa-times"></i> Meeting required</span>
+                                                            {% endif %}
+                                                        {% elif project.owner.sign_off_students and project.meeting_reqd == project.MEETING_OPTIONAL %}
+                                                            <span class="badge bg-warning text-dark project-label">Meeting optional</span>
                                                         {% else %}
-                                                            <span class="badge bg-danger project-label"><i
-                                                                    class="fas fa-times"></i> Meeting required</span>
+                                                            <span class="badge bg-secondary project-label"><i class="fas fa-check"></i> Meeting not required</span>
                                                         {% endif %}
-                                                    {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-                                                        <span class="badge bg-warning text-dark project-label">Meeting optional</span>
-                                                    {% else %}
-                                                        <span class="badge bg-secondary project-label"><i
-                                                                class="fas fa-check"></i> Meeting not required</span>
-                                                    {% endif %}
-                                                    {% if selections_open and project.is_available(sel) %}
-                                                        <span class="badge bg-success project-label"><i
-                                                                class="fas fa-check"></i> Available</span>
+                                                        {% if selections_open and project.is_available(sel) %}
+                                                            <span class="badge bg-success project-label"><i class="fas fa-check"></i> Available</span>
+                                                        {% endif %}
                                                     {% endif %}
                                                 </div>
                                             </div>

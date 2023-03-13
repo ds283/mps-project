@@ -18,18 +18,22 @@ from ...models import ConfirmRequest, SelectingStudent, LiveProject, Bookmark, P
 # language=jinja2
 _meeting = \
 """
-{% if project.meeting_reqd == project.MEETING_REQUIRED %}
-    {% if sel %}
-        {% if project.is_confirmed(sel) %}
-            <span class="badge bg-primary"><i class="fas fa-check"></i> Confirmed</span>
+{% if not project.generic and project.owner is not none %}    
+    {% if project.meeting_reqd == project.MEETING_REQUIRED %}
+        {% if sel %}
+            {% if project.is_confirmed(sel) %}
+                <span class="badge bg-primary"><i class="fas fa-check"></i> Confirmed</span>
+            {% else %}
+                <span class="badge bg-danger"><i class="fas fa-times"></i> Required</span>
+            {% endif %}
         {% else %}
-            <span class="badge bg-danger"><i class="fas fa-times"></i> Required</span>
+            <span class="badge bg-secondary">Not live</span>
         {% endif %}
+    {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
+        <span class="badge bg-warning text-dark">Optional</span>
     {% else %}
-        <span class="badge bg-secondary">Not live</span>
+        <span class="badge bg-secondary"><i class="fas fa-check"></i> Not required</span>
     {% endif %}
-{% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-    <span class="badge bg-warning text-dark">Optional</span>
 {% else %}
     <span class="badge bg-secondary"><i class="fas fa-check"></i> Not required</span>
 {% endif %}

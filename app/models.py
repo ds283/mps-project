@@ -6959,7 +6959,7 @@ def _Project_is_offerable(pid):
     :param pid:
     :return:
     """
-    project = db.session.query(Project).filter_by(id=pid).one()
+    project: Project = db.session.query(Project).filter_by(id=pid).one()
 
     errors = {}
     warnings = {}
@@ -6970,7 +6970,7 @@ def _Project_is_offerable(pid):
 
     # CONSTRAINT 2. The affiliated research group should be active, if this project is attached to any
     # classes that uses research groups
-    if project.group is None:
+    if project.generic or project.group is None:
         if get_count(project.project_classes.filter(ProjectClass.advertise_research_group)) > 0:
             errors['groups'] = "No affiliation/research group associated with project"
 

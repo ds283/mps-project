@@ -30,28 +30,24 @@
                 </div>
                 <div class="col-1"></div>
             </div>
-            <hr class="intro-divider">
-            <form action="{{ url_for('convenor.go_live', id=config.id) }}" method="POST" name="golive-form">
-                {{ golive_form.hidden_tag() }}
-                {{ date_field(golive_form.live_deadline, 'golive_datetimepicker') }}
-                {{ wtf.render_field(golive_form.accommodate_matching) }}
-                {{ wtf.render_field(golive_form.full_CATS) }}
-                {{ wtf.render_field(golive_form.notify_faculty) }}
-                {{ wtf.render_field(golive_form.notify_selectors) }}
-                {{ blocking_task_list(config.get_blocking_tasks[0]) }}
-                <div class="row">
-                    <div class="col-12">
-                        <div class="float-end">
-                            {% if total_projects > 0 %}
-                                {% if golive_form.live_and_close is defined %}
-                                    {{ wtf.render_field(golive_form.live_and_close, button_map={'live_and_close': 'outline-secondary'}, button_size='sm') }}
-                                {% endif %}
-                                {{ wtf.render_field(golive_form.live, button_map={'live': 'outline-primary'}, button_size='sm') }}
-                            {% endif %}
-                        </div>
+            {% if total_projects > 0 %}
+                <hr class="intro-divider">
+                <form action="{{ url_for('convenor.go_live', id=config.id) }}" method="POST" name="golive-form">
+                    {{ golive_form.hidden_tag() }}
+                    {{ date_field(golive_form.live_deadline, 'golive_datetimepicker') }}
+                    {{ wtf.render_field(golive_form.accommodate_matching) }}
+                    {{ wtf.render_field(golive_form.full_CATS) }}
+                    {{ wtf.render_field(golive_form.notify_faculty) }}
+                    {{ wtf.render_field(golive_form.notify_selectors) }}
+                    {{ blocking_task_list(config.get_blocking_tasks[0]) }}
+                    <div class="d-flex flex-row justify-content-end align-content-start gap-2">
+                        {% if golive_form.live_and_close is defined %}
+                            {{ wtf.render_field(golive_form.live_and_close, button_map={'live_and_close': 'outline-secondary'}, button_size='sm') }}
+                        {% endif %}
+                        {{ wtf.render_field(golive_form.live, button_map={'live': 'outline-primary'}, button_size='sm') }}
                     </div>
-                </div>
-            </form>
+                </form>
+            {% endif %}
         </div>
     </div>
 {% endmacro %}

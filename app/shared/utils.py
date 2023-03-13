@@ -764,6 +764,7 @@ def _compute_group_approvals_data(pclass_id, group_id):
     queued = 0
 
     for p in ps:
+        p: Project
         if p.is_offerable:
             # increment count of offerable projects
             projects += 1
@@ -919,7 +920,7 @@ def _capacity_FacultyData_delete_handler(mapper, connection, target):
         _capacity_delete_FacultyData_cache(target)
 
 
-def get_approval_data(pclass):
+def get_approval_data(pclass: ProjectClass):
     # get list of research groups
     groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name).all()
 
@@ -952,7 +953,7 @@ def get_approval_data(pclass):
             'approved': approved}
 
 
-def get_capacity_data(pclass):
+def get_capacity_data(pclass: ProjectClass):
     # get list of research groups
     groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name).all()
 

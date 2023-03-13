@@ -3,6 +3,10 @@
 {% from "convenor/dashboard/overview_cards/capacity_card.html" import capacity_card %}
 {% from "icon_block.html" import icon_block %}
 
+{% set state = config.selector_lifecycle %}
+{% set enable_capacity = false %}
+{% if state <= config.SELECTOR_LIFECYCLE_READY_GOLIVE %}{% set enable_capacity = true %}{% endif %}
+
 {% block bodyblock %}
     <div class="row">
         <div class="col-1"></div>

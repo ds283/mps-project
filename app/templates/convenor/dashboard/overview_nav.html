@@ -2,7 +2,7 @@
 
 {% set state = config.selector_lifecycle %}
 {% set enable_capacity = false %}
-{% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}{% set enable_capacity = true %}{% endif %}
+{% if state <= config.SELECTOR_LIFECYCLE_READY_GOLIVE %}{% set enable_capacity = true %}{% endif %}
 
 {% block tabblock %}
     <ul class="nav nav-tabs dashboard-nav">

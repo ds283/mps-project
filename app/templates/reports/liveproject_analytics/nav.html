@@ -22,7 +22,18 @@
             <div class="card mt-3 mb-3 card-body bg-well">
                 <p><span class="dashboard-project-title">{{ project.name }}</span></p>
                 <p>{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }} |
-                    <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a> |
+                    {% if project.generic %}
+                        <span class="badge bg-info">Generic</span>
+                    {% else %}
+                        {% if project.owner is not none %}
+                            <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
+                                {{ project.owner.user.name }}
+                            </a>
+                        {% else %}
+                            <span class="badge bg-danger">Missing</span>
+                        {% endif %}
+                    {% endif %}
+                    |
                     {{ config.project_class.name }}</p>
                 <hr class="intro-divider">
                 <div class="row vertical-top">

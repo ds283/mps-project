@@ -9,6 +9,7 @@
         <div class="list-group" id="project-bookmarks">
             {% for item in list %}
                 {% set project = item.liveproject %}
+                {% set config = project.config %}
                 <div id="P-{{ project.id }}" class="row vertical-top final-selection-table">
                     <div class="col-1">
                         {% if not sel.retired %}<i class="fas fa-bars drag-handle"></i>{% endif %}
@@ -25,11 +26,19 @@
                         {% endif %}
                     </div>
                     <div class="col-4">
-                        <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
-                            {{ project.owner.user.name }}
-                        </a>
+                        {% if project.generic %}
+                            <span class="badge bg-info">Generic</span>
+                        {% else %}
+                            {% if project.owner is not none %}
+                                <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
+                                    {{ project.owner.user.name }}
+                                </a>
+                            {% else %}
+                                <span class="badge bg-danger">Missing</span>
+                            {% endif %}
+                        {% endif %}
                         {% set ns = namespace(affiliation=false) %}
-                        {% if project.group %}
+                        {% if config.advertise_research_group and project.group %}
                             {{ project.group.make_label()|safe }}
                             {% set ns.affiliation = true %}
                         {% endif %}
@@ -187,6 +196,7 @@
         <div class="list-group" id="project-selections">
             {% for item in list %}
                 {% set project = item.liveproject %}
+                {% set config = project.config %}
                 <div id="P-{{ project.id }}" class="row vertical-top final-selection-table">
                     <div {% if show_hint %}class="col-2"{% else %}class="col-1"{% endif %}>
                         {% if not sel.retired %}<i class="fas fa-bars drag-handle"></i>{% endif %}
@@ -223,11 +233,19 @@
                         </a>
                     </div>
                     <div class="col-4">
-                        <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
-                            {{ project.owner.user.name }}
-                        </a>
+                        {% if project.generic %}
+                            <span class="badge bg-info">Generic</span>
+                        {% else %}
+                            {% if project.owner is not none %}
+                                <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
+                                    {{ project.owner.user.name }}
+                                </a>
+                            {% else %}
+                                <span class="badge bg-danger">Missing</span>
+                            {% endif %}
+                        {% endif %}
                         {% set ns = namespace(affiliation=false) %}
-                        {% if project.group %}
+                        {% if config.advertise_research_group and project.group %}
                             {{ project.group.make_label()|safe }}
                             {% set ns.affiliation = true %}
                         {% endif %}

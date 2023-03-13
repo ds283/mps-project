@@ -8010,7 +8010,7 @@ class LiveProject(db.Model,
 
     def is_available(self, sel):
         """
-        determine whether a this LiveProject is available for selection to a particular SelectingStudent
+        determine whether this LiveProject is available for selection to a particular SelectingStudent
         :param sel:
         :return:
         """
@@ -8023,9 +8023,14 @@ class LiveProject(db.Model,
         if not sel.satisfies_recommended(self) and not self.is_confirmed(sel):
             return False
 
+        # generic projects are always available
+        if self.generic:
+            return True
+
         # if project doesn't require sign off, it is always available
         # if project owner doesn't require confirmation, it is always available
-        if self.meeting_reqd != self.MEETING_REQUIRED or self.owner.sign_off_students is False:
+        if self.meeting_reqd != self.MEETING_REQUIRED or \
+                (self.owner is not None and self.owner.sign_off_students is False):
             return True
 
         # otherwise, check if sel is in list of confirmed students

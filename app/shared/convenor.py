@@ -56,6 +56,7 @@ def add_liveproject(number, project, config_id, desc=None, autocommit=False):
                             number=number,
                             name=item.name,
                             owner_id=item.owner_id,
+                            generic=item.generic,
                             tags=item.tags,
                             group_id=item.group_id,
                             skills=item.skills,

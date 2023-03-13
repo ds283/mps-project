@@ -2215,7 +2215,7 @@ def liveprojects_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
-    base_query = config.live_projects.join(User, User.id == LiveProject.owner_id)
+    base_query = config.live_projects.join(User, User.id == LiveProject.owner_id, isouter=True)
 
     # get FilterRecord for currently logged-in user
     filter_record = get_convenor_filter_record(config)

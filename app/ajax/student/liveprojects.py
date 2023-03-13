@@ -198,6 +198,21 @@ _not_live = \
 """
 
 
+# langauge=jinja2
+_owner = \
+"""
+{% if project.generic %}
+    <span class="badge bg-info">Generic</span>
+{% else %}
+    {% if project.owner is not none %}
+        <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
+    {% else %}
+        <span class="badge bg-danger">Missing</span>
+    {% endif %}
+{% endif %}
+"""
+
+
 @cache.memoize()
 def _selector_element(sel_id, project_id, is_live):
     sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sel_id).one() if sel_id is not None else None
@@ -209,8 +224,7 @@ def _selector_element(sel_id, project_id, is_live):
                     'href="{url}">{name}</a>'.format(name=p.name,
                                                      url=url_for('student.selector_view_project', sid=sel.id,
                                                                  pid=p.id)),
-            'supervisor': '{name} <a class="text-decoration-none" '
-                          'href="mailto:{em}">{em}</a>'.format(name=p.owner.user.name, em=p.owner.user.email),
+            'supervisor': render_template_string(_owner, project=p),
             'group': render_template_string(_project_group, sel=sel, project=p, config=config),
             'skills': render_template_string(_project_skills, sel=sel, skills=p.ordered_skills),
             'prefer': render_template_string(_project_prefer, project=p),
@@ -233,7 +247,7 @@ def _submitter_element(sub_id, project_id):
 
     return {'name': '<a class="text-decoration-none" href="{url}">{name}</a>' \
                 .format(name=p.name, url=url_for('student.submitter_view_project', sid=sub_id, pid=p.id)),
-            'supervisor': '{name} <a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(name=p.owner.user.name, em=p.owner.user.email),
+            'supervisor': render_template_string(_owner, project=p),
             'group': render_template_string(_project_group, sel=None, project=p, config=config),
             'skills': render_template_string(_project_skills, sel=None, skills=p.ordered_skills),
             'prefer': render_template_string(_project_prefer, project=p),

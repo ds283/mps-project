@@ -309,9 +309,17 @@
                     {% endif %}
                 </div>
                 <div class="col-2">
-                    <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
-                        {{ project.owner.user.name }}
-                    </a>
+                    {% if project.generic %}
+                        <span class="badge bg-info">Generic</span>
+                    {% else %}
+                        {% if project.owner is not none %}
+                            <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
+                                {{ project.owner.user.name }}
+                            </a>
+                        {% else %}
+                            <span class="badge bg-danger">Missing</span>
+                        {% endif %}
+                    {% endif %}
                 </div>
                 <div class="col-4">
                     {% if config.uses_selection %}

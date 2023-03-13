@@ -11,7 +11,7 @@
 from flask import current_app, render_template
 from flask_mailman import EmailMultiAlternatives
 
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -103,14 +103,17 @@ def register_golive_tasks(celery):
         # build list of projects to be attached when we go live
         # note that we exclude any projects where the supervisor is not normally enrolled
         attached_projects = db.session.query(Project) \
-            .filter(Project.active,
+            .filter(Project.active == True,
                     Project.project_classes.any(id=pclass_id)) \
-            .join(User, User.id == Project.owner_id) \
-            .join(FacultyData, FacultyData.id == Project.owner_id) \
-            .join(EnrollmentRecord,
-                  and_(EnrollmentRecord.pclass_id == pclass_id, EnrollmentRecord.owner_id == Project.owner_id)) \
-            .filter(User.active) \
-            .filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED) \
+            .join(User, User.id == Project.owner_id, isouter=True) \
+            .join(FacultyData, FacultyData.id == Project.owner_id, isouter=True) \
+            .join(EnrollmentRecord, EnrollmentRecord.owner_id == Project.owner_id, isouter=True) \
+            .filter(or_(Project.generic == True,
+                        and_(Project.generic == False,
+                             User.active == True,
+                             FacultyData.id != None,
+                             EnrollmentRecord.pclass_id == pclass_id,
+                             EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED))) \
             .order_by(User.last_name, User.first_name).all()
 
         # weed out projects that do not satisfy is_offerable predicate
@@ -146,7 +149,7 @@ def register_golive_tasks(celery):
 
             filtered_projects = []
             for p in attached_projects:
-                if is_full(p.owner_id):
+                if not p.generic and p.owner_id is not None and is_full(p.owner_id):
                     print('## dropping project "{pname}" offered by supervisor "{sname}" because their CATS '
                           'allocation exceeds the limit (full_CATS={fc})'.format(sname=p.owner.user.name,
                                                                                  pname=p.name,

@@ -273,8 +273,8 @@ def _project_list_endpoint(config: ProjectClassConfig, sel: SelectingStudent, ro
     base_query = config.live_projects \
         .filter(~LiveProject.hidden) \
         .join(Project, Project.id == LiveProject.parent_id) \
-        .join(User, User.id == Project.owner_id) \
-        .join(ResearchGroup, ResearchGroup.id == LiveProject.group_id)
+        .join(User, User.id == Project.owner_id, isouter=True) \
+        .join(ResearchGroup, ResearchGroup.id == LiveProject.group_id, isouter=True)
 
     if sel is not None:
         if config.advertise_research_group and sel.group_filters.first():

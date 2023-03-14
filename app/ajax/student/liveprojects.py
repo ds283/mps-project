@@ -184,6 +184,7 @@ _project_group = \
         {% set href = url_for('student.add_group_filter', id=sel.id, gid=group.id) %}
     {% endif %}
     <a {% if href %}href="{{ href }}"{% endif %} class="badge bg-secondary text-decoration-none" style="{{ group.make_CSS_style() }}">{{ group.name }}</a>
+    {% set ns.affiliation = true %}
 {% endif %}
 {% for tag in project.forced_group_tags %}
     {{ tag.make_label()|safe }}

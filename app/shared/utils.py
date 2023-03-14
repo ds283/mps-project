@@ -213,17 +213,25 @@ def get_pclass_config_data(configs=None):
 
 
 def get_approval_queue_data():
+    total = 0
     data = {}
 
     if current_user.has_role('user_approver') or current_user.has_role('root') or current_user.has_role('manage_users'):
-        data.update(_get_user_approvals_data())
+        user_data = _get_user_approvals_data()
+        data.update(user_data)
+
+        if current_user.has_role('user_approver'):
+            total += user_data['approval_user_queued']
+
+        if current_user.has_role('root') or current_user.has_role('manage_users'):
+            total += user_data['approval_user_rejected']
 
     if current_user.has_role('project_approver') or current_user.has_role('root'):
-        data.update(_get_project_approvals_data())
+        project_data = _get_project_approvals_data()
+        data.update(project_data)
 
-    total = 0
-    for v in data.values():
-        total += v
+        for v in project_data.values():
+            total += v
 
     data['total'] = total
 
@@ -241,7 +249,7 @@ def _get_user_approvals_data():
                                   or_(and_(StudentData.last_edit_id == None, StudentData.creator_id == current_user.id),
                                       and_(StudentData.last_edit_id != None, StudentData.last_edit_id == current_user.id))))
 
-    return {'approval_user_outstanding': to_approve,
+    return {'approval_user_queued': to_approve,
             'approval_user_rejected': to_correct}
 
 

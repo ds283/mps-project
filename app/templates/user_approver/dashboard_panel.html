@@ -1,5 +1,7 @@
+{% from "icon_block.html" import icon_block %}
+
 {% macro user_approver_panel(data, current_user) %}
-    {% set to_approve = data['approval_user_outstanding'] %}
+    {% set to_approve = data['approval_user_queued'] %}
     {% set to_correct = data['approval_user_rejected'] %}
 
     {# user_approver role needed to perform approval #}
@@ -8,40 +10,48 @@
             <div class="card-header {% if to_approve > 0 %}bg-warning text-dark{% endif %}">{{ to_approve }} student {% if to_approve != 1 %}records require{% else %}record requires{% endif %} validation</div>
             <div class="card-body">
                 {% if to_approve == 0 %}
-                    <p>No student records currently require validation.</p>
+                    <div class="alert alert-success">
+                        {% call icon_block("check-circle") %}
+                            <div>No student records currently require validation.</div>
+                        {% endcall %}
+                    </div>
                 {% else %}
-                    <div class="d-flex flex-row justify-content-between align-content-end gap-2">
-                        <div>
-                            You have validation tasks to perform.
-                        </div>
-                        <div>
-                            <a href="{{ url_for('user_approver.validate') }}" class="btn btn-sm btn-outline-secondary">
-                                Approve records
-                            </a>
-                        </div>
+                    <div class="alert alert-primary mb-3">
+                        {% call icon_block("info-circle") %}
+                            <div><strong>You have validation tasks to perform.</strong></div>
+                            <div class="mt-2">
+                                <a href="{{ url_for('user_approver.validate') }}" class="btn btn-sm btn-outline-secondary">
+                                    Approve records
+                                </a>
+                            </div>
+                        {% endcall %}
                     </div>
                 {% endif %}
             </div>
         </div>
     {% endif %}
 
-    {# admin or root role needed to edit users #}
+    {# manage_users or root role needed to edit users #}
     {% if current_user.has_role('manage_users') or current_user.has_role('root') %}
         <div class="card mt-3 mb-3">
             <div class="card-header {% if to_correct > 0 %}bg-warning text-dark{% endif %}">{{ to_correct }} student {% if to_correct != 1 %}records require{% else %}record requires{% endif %} correction</div>
             <div class="card-body">
                 {% if to_correct == 0 %}
-                    <p>None of your student record edits have been flagged for corrections.</p>
+                    <div class="alert alert-success">
+                        {% call icon_block("check-circle") %}
+                            <div>None of your student record edits have been flagged for corrections.</div>
+                        {% endcall %}
+                    </div>
                 {% else %}
-                    <div class="d-flex flex-row justify-content-between align-content-end gap-2">
-                        <div class="col-8">
-                            One or more student records edited by you have been flagged for correction.
-                        </div>
-                        <div>
-                            <a href="{{ url_for('user_approver.correct') }}" class="btn btn-sm btn-outline-secondary">
-                                Correct records
-                            </a>
-                        </div>
+                    <div class="alert alert-primary mb-3">
+                        {% call icon_block("info-circle") %}
+                            <div><strong>One or more student records edited by you have been flagged for correction.</strong></div>
+                            <div class="mt-2">
+                                <a href="{{ url_for('user_approver.correct') }}" class="btn btn-sm btn-outline-secondary">
+                                    Correct records
+                                </a>
+                            </div>
+                        {% endcall %}
                     </div>
                 {% endif %}
             </div>

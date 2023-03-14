@@ -1,3 +1,5 @@
+{% from "icon_block.html" import icon_block %}
+
 {% macro project_approver_panel(data) %}
     {% set queued = data['approval_project_queued'] %}
     {% set rejected = data['approval_project_rejected'] %}
@@ -8,17 +10,21 @@
         <div class="card-header {% if queued > 0 %}bg-warning text-dark{% endif %}}">{{ queued }} project description{{ pl }} require{{ anti_pl }} validation</div>
         <div class="card-body">
             {% if queued == 0 %}
-                <p>No project descriptions currently require validation.</p>
+                <div class="alert alert-success">
+                    {% call icon_block("check-circle") %}
+                        <div>No project descriptions currently require validation.</div>
+                    {% endcall %}
+                </div>
             {% else %}
-                <div class="d-flex flex-row justify-content-between align-content-end gap-2">
-                    <div>
-                        You have validation tasks to perform.
-                    </div>
-                    <div>
-                        <a href="{{ url_for('project_approver.validate') }}" class="btn btn-sm btn-outline-secondary">
-                            Approve projects
-                        </a>
-                    </div>
+                <div class="alert alert-primary mb-3">
+                    {% call icon_block("info-circle") %}
+                        <div><strong>You have validation tasks to perform.</strong></div>
+                        <div class="mt-2">
+                            <a href="{{ url_for('project_approver.validate') }}" class="btn btn-sm btn-outline-secondary">
+                                Approve projects
+                            </a>
+                        </div>
+                    {% endcall %}
                 </div>
             {% endif %}
         </div>
@@ -31,17 +37,20 @@
             <div class="card-header bg-danger text-white">{{ rejected }} project description{{ pl }} {{ have_has }} been rejected</div>
             <div class="card-body">
                 {% if rejected == 0 %}
-                    <p>No project descriptions have been rejected.</p>
+                    <div class="alert alert-success">
+                        {% call icon_block("check-circle") %}
+                            <div>No project descriptions have been rejected.</div>
+                        {% endcall %}
                 {% else %}
-                    <div class="d-flex flex-row justify-content-between align-content-end gap-2">
-                        <div>
-                            You have rejected projects to review.
-                        </div>
-                        <div>
-                            <a href="{{ url_for('project_approver.rejected') }}" class="btn btn-sm btn-outline-secondary">
-                                Review projects
-                            </a>
-                        </div>
+                    <div class="alert alert-primary mb-3">
+                        {% call icon_block("info-circle") %}
+                            <div><strong>You have rejected projects to review.</strong></div>
+                            <div class="mt-2">
+                                <a href="{{ url_for('project_approver.rejected') }}" class="btn btn-sm btn-outline-secondary">
+                                    Review projects
+                                </a>
+                            </div>
+                        {% endcall %}
                     </div>
                 {% endif %}
             </div>

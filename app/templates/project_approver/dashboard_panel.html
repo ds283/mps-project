@@ -4,56 +4,39 @@
     {% set queued = data['approval_project_queued'] %}
     {% set rejected = data['approval_project_rejected'] %}
 
-    <div class="card mt-3 mb-3">
-        {% set pl = 's' %}{% if queued == 1 %}{% set pl = '' %}{% endif  %}
-        {% set anti_pl = '' %}{% if queued == 1 %}{% set anti_pl = 's' %}{% endif %}
-        <div class="card-header {% if queued > 0 %}bg-warning text-dark{% endif %}}">{{ queued }} project description{{ pl }} require{{ anti_pl }} validation</div>
-        <div class="card-body">
-            {% if queued == 0 %}
-                <div class="alert alert-success">
-                    {% call icon_block("check-circle") %}
-                        <div>No project descriptions currently require validation.</div>
-                    {% endcall %}
-                </div>
-            {% else %}
-                <div class="alert alert-primary mb-3">
-                    {% call icon_block("info-circle") %}
-                        <div><strong>You have validation tasks to perform.</strong></div>
-                        <div class="mt-2">
-                            <a href="{{ url_for('project_approver.validate') }}" class="btn btn-sm btn-outline-secondary">
-                                Approve projects
-                            </a>
-                        </div>
-                    {% endcall %}
-                </div>
-            {% endif %}
+    {% set pl = 's' %}{% if queued == 1 %}{% set pl = '' %}{% endif  %}
+    {% set anti_pl = '' %}{% if queued == 1 %}{% set anti_pl = 's' %}{% endif %}
+    {% if queued == 0 %}
+        <div class="alert alert-success mb-3">
+            {% call icon_block("check-circle") %}
+                <div>No project descriptions currently require validation.</div>
+            {% endcall %}
         </div>
-    </div>
+    {% else %}
+        <div class="alert alert-primary mb-3">
+            {% call icon_block("info-circle") %}
+                <div><strong>{{ queued }} project description{{ pl }} require{{ anti_pl }} validation.</strong></div>
+                <div class="mt-2">
+                    <a href="{{ url_for('project_approver.validate') }}" class="btn btn-sm btn-outline-secondary">
+                        Approve projects
+                    </a>
+                </div>
+            {% endcall %}
+        </div>
+    {% endif %}
 
     {% if rejected > 0 %}
-        <div class="card mt-3 mb-3">
-            {% set pl = 's' %}{% if rejected == 1 %}{% set pl = '' %}{% endif  %}
-            {% set have_has = 'have' %}{% if rejected == 1 %}{% set have_has = 'has' %}{% endif %}
-            <div class="card-header bg-danger text-white">{{ rejected }} project description{{ pl }} {{ have_has }} been rejected</div>
-            <div class="card-body">
-                {% if rejected == 0 %}
-                    <div class="alert alert-success">
-                        {% call icon_block("check-circle") %}
-                            <div>No project descriptions have been rejected.</div>
-                        {% endcall %}
-                {% else %}
-                    <div class="alert alert-primary mb-3">
-                        {% call icon_block("info-circle") %}
-                            <div><strong>You have rejected projects to review.</strong></div>
-                            <div class="mt-2">
-                                <a href="{{ url_for('project_approver.rejected') }}" class="btn btn-sm btn-outline-secondary">
-                                    Review projects
-                                </a>
-                            </div>
-                        {% endcall %}
-                    </div>
-                {% endif %}
-            </div>
+        {% set pl = 's' %}{% if rejected == 1 %}{% set pl = '' %}{% endif  %}
+        {% set have_has = 'have' %}{% if rejected == 1 %}{% set have_has = 'has' %}{% endif %}
+        <div class="alert alert-primary mb-3">
+            {% call icon_block("info-circle") %}
+                <div><strong>{{ rejected }} project description{{ pl }} {{ have_has }} been rejected.</strong></div>
+                <div class="mt-2">
+                    <a href="{{ url_for('project_approver.rejected') }}" class="btn btn-sm btn-outline-secondary">
+                        Review projects
+                    </a>
+                </div>
+            {% endcall %}
         </div>
     {% endif %}
 {% endmacro %}

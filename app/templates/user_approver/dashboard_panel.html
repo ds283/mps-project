@@ -6,55 +6,45 @@
 
     {# user_approver role needed to perform approval #}
     {% if current_user.has_role('user_approver') %}
-        <div class="card mt-3 mb-3">
-            <div class="card-header {% if to_approve > 0 %}bg-warning text-dark{% endif %}">{{ to_approve }} student {% if to_approve != 1 %}records require{% else %}record requires{% endif %} validation</div>
-            <div class="card-body">
-                {% if to_approve == 0 %}
-                    <div class="alert alert-success">
-                        {% call icon_block("check-circle") %}
-                            <div>No student records currently require validation.</div>
-                        {% endcall %}
-                    </div>
-                {% else %}
-                    <div class="alert alert-primary mb-3">
-                        {% call icon_block("info-circle") %}
-                            <div><strong>You have validation tasks to perform.</strong></div>
-                            <div class="mt-2">
-                                <a href="{{ url_for('user_approver.validate') }}" class="btn btn-sm btn-outline-secondary">
-                                    Approve records
-                                </a>
-                            </div>
-                        {% endcall %}
-                    </div>
-                {% endif %}
+        {% if to_approve == 0 %}
+            <div class="alert alert-success mb-3">
+                {% call icon_block("check-circle") %}
+                    <div>No student records currently require validation.</div>
+                {% endcall %}
             </div>
-        </div>
+        {% else %}
+            <div class="alert alert-primary mb-3">
+                {% call icon_block("info-circle") %}
+                    <div><strong>{{ to_approve }} student {% if to_approve != 1 %}records require{% else %}record requires{% endif %} validation.</strong></div>
+                    <div class="mt-2">
+                        <a href="{{ url_for('user_approver.validate') }}" class="btn btn-sm btn-outline-secondary">
+                            Approve records
+                        </a>
+                    </div>
+                {% endcall %}
+            </div>
+        {% endif %}
     {% endif %}
 
     {# manage_users or root role needed to edit users #}
     {% if current_user.has_role('manage_users') or current_user.has_role('root') %}
-        <div class="card mt-3 mb-3">
-            <div class="card-header {% if to_correct > 0 %}bg-warning text-dark{% endif %}">{{ to_correct }} student {% if to_correct != 1 %}records require{% else %}record requires{% endif %} correction</div>
-            <div class="card-body">
-                {% if to_correct == 0 %}
-                    <div class="alert alert-success">
-                        {% call icon_block("check-circle") %}
-                            <div>None of your student record edits have been flagged for corrections.</div>
-                        {% endcall %}
-                    </div>
-                {% else %}
-                    <div class="alert alert-primary mb-3">
-                        {% call icon_block("info-circle") %}
-                            <div><strong>One or more student records edited by you have been flagged for correction.</strong></div>
-                            <div class="mt-2">
-                                <a href="{{ url_for('user_approver.correct') }}" class="btn btn-sm btn-outline-secondary">
-                                    Correct records
-                                </a>
-                            </div>
-                        {% endcall %}
-                    </div>
-                {% endif %}
+        {% if to_correct == 0 %}
+            <div class="alert alert-success mb-3">
+                {% call icon_block("check-circle") %}
+                    <div>None of your student record edits have been flagged for corrections.</div>
+                {% endcall %}
             </div>
-        </div>
+        {% else %}
+            <div class="alert alert-primary mb-3">
+                {% call icon_block("info-circle") %}
+                    <div><strong>{{ to_correct }} student {% if to_correct != 1 %}records require{% else %}record requires{% endif %} correction.</strong></div>
+                    <div class="mt-2">
+                        <a href="{{ url_for('user_approver.correct') }}" class="btn btn-sm btn-outline-secondary">
+                            Correct records
+                        </a>
+                    </div>
+                {% endcall %}
+            </div>
+        {% endif %}
     {% endif %}
 {% endmacro %}

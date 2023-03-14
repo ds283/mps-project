@@ -18,7 +18,87 @@
             {% set missing = selector_data['missing'] %}
             {% set total = selector_data['total'] %}
             {% set outstanding_confirm = selector_data['outstanding_confirm'] %}
-            <div class="d-flex flex-row justify-content-start align-content-center gap-2 w-100 mb-2">
+            <div class="mb-3">
+                {% if submitted == total %}
+                    <div class="alert alert-success mb-3">
+                        {% call icon_block("info-circle") %}
+                            <div><strong>All students have submitted validated choices.</strong></div>
+                            <div>
+                                It is safe to close selections.
+                                {% if total == 0 %}
+                                    <a class="btn btn-sm btn-outline-danger" href="{{ url_for('convenor.reverse_golive', config_id=config.id) }}" style="margin-left: 10px;">
+                                        Reverse Go Live to add more selectors
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% endcall %}
+                    </div>
+                {% elif missing == 0 %}
+                    <div class="alert alert-info mb-3">
+                        {% call icon_block("info-circle") %}
+                            <div><strong>Some students have not yet submitted a validated selection.</strong></div>
+                            <div class="mt-1">
+                                However, all students have bookmark data.
+                            </div>
+                        {% endcall %}
+                    </div>
+                    {% if config.selection_open_to_all %}
+                        <div class="alert alert-warning mb-3">
+                            {% call icon_block("exclamation-circle") %}
+                                <div>
+                                    <strong>Selection for this project is available to all eligible students on an opt-in basis.</strong>
+                                </div>
+                                <div class="mt-1">
+                                    If selections are closed now, students who have not submitted a validated selection
+                                    will be assumed not to have opted-in and will be ignored when performing
+                                    automatic matching.
+                                </div>
+                            {% endcall %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info mb-3">
+                            {% call icon_block("info-circle") %}
+                                <div><strong>Bookmark data will be used for automated matching.</strong></div>
+                                <div class="mt-1">
+                                    If selections are closed now, bookmark data will be used when performing
+                                    automated matching for students missing a validated selection.
+                                </div>
+                            {% endcall %}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-warning mb-3">
+                        {% call icon_block("exclamation-circle") %}
+                            <div><strong>Some students are missing both a validated selection and bookmark data.</strong></div>
+                        {% endcall %}
+                    </div>
+                    {% if config.selection_open_to_all %}
+                        <div class="alert alert-warning mb-3">
+                            {% call icon_block("info-circle") %}
+                                <div>
+                                    <strong>Selection for this project is available to all eligible students on an opt-in basis.</strong>
+                                </div>
+                                <div class="mt-1">
+                                    If selections are closed now, students who have not submitted a validated selection
+                                    will be assumed not to have opted-in and will be ignored when performing
+                                    automatic matching.
+                                </div>
+                            {% endcall %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info mb-3">
+                            {% call icon_block("info-circle") %}
+                                <div><strong>Bookmark data will be used for automated matching.</strong></div>
+                                <div class="mt-1">
+                                    If selections are closed now, bookmark data will be used when performing
+                                    automated matching for students missing a validated selection.
+                                </div>
+                            {% endcall %}
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+            <div class="d-flex flex-row justify-content-start align-content-center gap-2 w-100 mb-3">
                 <div class="list-group">
                     <div class="list-group-item {% if submitted == total %}list-group-item-success{% else %}list-group-item-primary"{% endif %}>
                         Submitted
@@ -46,88 +126,6 @@
                         <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">(Show...)</a>
                         <span class="badge bg-secondary rounded-pill">{{ missing}}/{{ total }}</span>
                     </div>
-                </div>
-            </div>
-            <div class="row vertical-top mb-2">
-                <div class="col-12">
-                    {% if submitted == total %}
-                        <div class="alert alert-success m-3">
-                            {% call icon_block("info-circle") %}
-                                <div><strong>All students have submitted validated choices.</strong></div>
-                                <div>
-                                    It is safe to close selections.
-                                    {% if total == 0 %}
-                                        <a class="btn btn-sm btn-outline-danger" href="{{ url_for('convenor.reverse_golive', config_id=config.id) }}" style="margin-left: 10px;">
-                                            Reverse Go Live to add more selectors
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            {% endcall %}
-                        </div>
-                    {% elif missing == 0 %}
-                        <div class="alert alert-info mt-3 mb-3">
-                            {% call icon_block("info-circle") %}
-                                <div><strong>Some students have not yet submitted a validated selection.</strong></div>
-                                <div class="mt-1">
-                                    However, all students have bookmark data.
-                                </div>
-                            {% endcall %}
-                        </div>
-                        {% if config.selection_open_to_all %}
-                            <div class="alert alert-warning mt-3 mb-3">
-                                {% call icon_block("exclamation-circle") %}
-                                    <div>
-                                        <strong>Selection for this project is available to all eligible students on an opt-in basis.</strong>
-                                    </div>
-                                    <div class="mt-1">
-                                        If selections are closed now, students who have not submitted a validated selection
-                                        will be assumed not to have opted-in and will be ignored when performing
-                                        automatic matching.
-                                    </div>
-                                {% endcall %}
-                            </div>
-                        {% else %}
-                            <div class="alert alert-info mt-3 mb-3">
-                                {% call icon_block("info-circle") %}
-                                    <div><strong>Bookmark data will be used for automated matching.</strong></div>
-                                    <div class="mt-1">
-                                        If selections are closed now, bookmark data will be used when performing
-                                        automated matching for students missing a validated selection.
-                                    </div>
-                                {% endcall %}
-                            </div>
-                        {% endif %}
-                    {% else %}
-                        <div class="alert alert-warning mt-3 mb-3">
-                            {% call icon_block("exclamation-circle") %}
-                                <div><strong>Some students are missing both a validated selection and bookmark data.</strong></div>
-                            {% endcall %}
-                        </div>
-                        {% if config.selection_open_to_all %}
-                            <div class="alert alert-warning mt-3 mb-3">
-                                {% call icon_block("info-circle") %}
-                                    <div>
-                                        <strong>Selection for this project is available to all eligible students on an opt-in basis.</strong>
-                                    </div>
-                                    <div class="mt-1">
-                                        If selections are closed now, students who have not submitted a validated selection
-                                        will be assumed not to have opted-in and will be ignored when performing
-                                        automatic matching.
-                                    </div>
-                                {% endcall %}
-                            </div>
-                        {% else %}
-                            <div class="alert alert-info mt-3 mb-3">
-                                {% call icon_block("info-circle") %}
-                                    <div><strong>Bookmark data will be used for automated matching.</strong></div>
-                                    <div class="mt-1">
-                                        If selections are closed now, bookmark data will be used when performing
-                                        automated matching for students missing a validated selection.
-                                    </div>
-                                {% endcall %}
-                            </div>
-                        {% endif %}
-                    {% endif %}
                 </div>
             </div>
             <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}" method="POST" name="adjust_selection_deadline">

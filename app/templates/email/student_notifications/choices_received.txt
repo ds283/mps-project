@@ -6,7 +6,7 @@ This email confirms that we have received your project choices for
 
 The selection that has been recorded is:
 {% for item in sel.ordered_selections -%}
-- {{ item.rank }}: {{ item.liveproject.name }} ({{ item.liveproject.owner.user.last_name }})
+- {{ item.rank }}: {{ item.liveproject.name }} {% if not item.liveproject.generic and item.liveproject.owner is not none -%}({{ item.liveproject.owner.user.last_name }}){%- endif %}
 {% endfor %}
 You can continue to resubmit selections until the submission deadline.
 After the deadline has passed, the most recently submitted selection

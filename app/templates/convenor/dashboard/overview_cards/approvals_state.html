@@ -3,26 +3,24 @@
     {% set queued = approval_data['queued'] %}
     {% set approved = approval_data['approved'] %}
     {% set rejected = approval_data['rejected'] %}
-    <div class="row">
-        <div class="col-6">
-            <div class="list-group">
-                <div class="list-group-item">
-                    Pending <span class="badge bg-secondary rounded-pill">{{ pending }}</span>
-                </div>
-                <div class="list-group-item">
-                    Queued <span class="badge bg-secondary rounded-pill">{{ queued }}</span>
-                </div>
-            </div>
+    <div class="list-group">
+        <div class="list-group-item list-group-item-success">
+            Approved <span class="badge bg-secondary rounded-pill">{{ approved }}</span>
         </div>
-        <div class="col-6">
-            <div class="list-group">
-                <div class="list-group-item list-group-item-success">
-                    Approved <span class="badge bg-secondary rounded-pill">{{ approved }}</span>
-                </div>
-                <div class="list-group-item list-group-item-warning">
-                    Rejected <span class="badge bg-secondary rounded-pill">{{ rejected }}</span>
-                </div>
-            </div>
+    </div>
+    <div class="list-group">
+        <div class="list-group-item list-group-item-warning">
+            Rejected <span class="badge bg-secondary rounded-pill">{{ rejected }}</span>
+        </div>
+    </div>
+    <div class="list-group">
+        <div class="list-group-item">
+            Pending <span class="badge bg-secondary rounded-pill">{{ pending }}</span>
+        </div>
+    </div>
+    <div class="list-group">
+        <div class="list-group-item">
+            Queued <span class="badge bg-secondary rounded-pill">{{ queued }}</span>
         </div>
     </div>
 {% endmacro %}

@@ -1,5 +1,6 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import date_field %}
+{% from "icon_block.html" import icon_block %}
 
 {% from "convenor/dashboard/overview_cards/approvals_state.html" import approvals_state %}
 {% from "convenor/dashboard/overview_cards/blocking_task_list.html" import blocking_task_list %}
@@ -9,26 +10,34 @@
         <div class="card-header bg-danger text-white"><strong>Student selections are not yet live</strong></div>
         <div class="card-body">
             {% set total_projects = approval_data['projects'] %}
-            <strong>{{ total_projects }}</strong> projects are currently available to go live.
             {% set pending = approval_data['pending'] %}
             {% set queued = approval_data['queued'] %}
             {% set approved = approval_data['approved'] %}
             {% set rejected = approval_data['rejected'] %}
-            {% if rejected > 0 %}
-                <p><strong>{{ rejected }} projects have been rejected and require revision.</strong></p>
-            {% elif pending > 0 %}
-                <p>{{ pending }} projects are still to be resubmitted for approval.</p>
-            {% elif queued > 0 %}
-                <p>{{ queued }} projects are waiting for approval.</p>
-            {% else %}
-                <p><strong>All projects have passed approvals.</strong></p>
-            {% endif %}
-            <div class="row" style="margin-top: 20px;">
-                <div class="col-1"></div>
-                <div class="col-10">
-                    {{ approvals_state(approval_data) }}
-                </div>
-                <div class="col-1"></div>
+            <div class="alert alert-info">
+                {% call icon_block("check-circle") %}
+                    <strong>{{ total_projects }}</strong> projects are currently available to Go Live.
+                {% endcall %}
+                {% if rejected > 0 %}
+                    {% call icon_block("exclamation-circle", extra_classes="mt-2") %}
+                        <strong>{{ rejected }} projects have been rejected and require revision.</strong>
+                    {% endcall %}
+                {% elif pending > 0 %}
+                    {% call icon_block("info-circle", extra_classes="mt-2") %}
+                        <strong>{{ pending }}</strong> projects are still to be confirmed.
+                    {% endcall %}
+                {% elif queued > 0 %}
+                    {% call icon_block("info-circle", extra_classes="mt-2") %}
+                        <strong>{{ queued }}</strong> projects are waiting for approval.
+                    {% endcall %}
+                {% else %}
+                    {% call icon_block("check-circle") %}
+                        All projects have passed approvals.
+                    {% endcall %}
+                {% endif %}
+            </div>
+            <div class="d-flex flex-row justify-content-start align-content-center gap-2 mt-3">
+                {{ approvals_state(approval_data) }}
             </div>
             {% if total_projects > 0 %}
                 <hr class="intro-divider">

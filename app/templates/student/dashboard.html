@@ -97,9 +97,7 @@
 
                         let textblock = document.createElement("div");
                         textblock.classList.add('w-100');
-
-                        let txt = document.createTextNode(messages[i]);
-                        textblock.appendChild(txt);
+                        textblock.innerHTML = messages[i]
 
                         block.appendChild(icon);
                         block.appendChild(textblock);
@@ -190,43 +188,37 @@
             <span class="dashboard-project-title">{{ pclass.name }}</span>
         </div>
     </div>
-    <div class="row vertical-top">
-        <div class="col-6">
+    <div class="d-flex flex-row justify-content-between align-content-start w-100 mt-2">
+        <div>
             Convenor:
             <a class="text-decoration-none" href="mailto:{{ pclass.convenor_email }}">
                 {{ pclass.convenor_name }}
             </a>
         </div>
-        <div class="col-6">
-            <div class="float-end">
-                Commences
-                <span class="badge bg-info text-dark">Y{{ pclass.start_year }}</span>
-            </div>
+        <div>
+            Commences
+            <span class="badge bg-info text-dark">Y{{ pclass.start_year }}</span>
         </div>
     </div>
-    <div class="row vertical-top">
-        <div class="col-7">
-            <div class="d-flex flex-row justify-content-start gap-2">
-                {% if sdata %}
-                    {{ sdata.student.cohort_label|safe }}
-                    {{ sdata.student.programme.label|safe }}
-                    {{ sdata.academic_year_label(show_details=False)|safe }}
-                {% endif %}
-            </div>
+    <div class="d-flex flex-row justify-content-between align-content-start mt-2">
+        <div class="d-flex flex-row justify-content-start gap-2">
+            {% if sdata %}
+                {{ sdata.student.cohort_label|safe }}
+                {{ sdata.student.programme.label|safe }}
+                {{ sdata.academic_year_label(show_details=False)|safe }}
+            {% endif %}
         </div>
-        <div class="col-5">
-            <div class="d-flex flex-row justify-content-end gap-2">
-                {% if sdata and sdata.live_deadline is defined %}
-                    {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                        <span class="badge bg-success">Choices for {{ config.select_year_a }}&ndash;{{ config.select_year_b }} open</span>
-                        {% if config.live_deadline %}
-                            <span class="badge bg-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
-                        {% endif %}
-                    {% else %}
-                        <span class="badge bg-secondary">Student selections not open</span>
+        <div class="d-flex flex-row justify-content-end gap-2">
+            {% if sdata and sdata.live_deadline is defined %}
+                {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                    <span class="badge bg-success">Choices for {{ config.select_year_a }}&ndash;{{ config.select_year_b }} open</span>
+                    {% if config.live_deadline %}
+                        <span class="badge bg-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                     {% endif %}
+                {% else %}
+                    <span class="badge bg-secondary">Student selections not open</span>
                 {% endif %}
-            </div>
+            {% endif %}
         </div>
     </div>
 

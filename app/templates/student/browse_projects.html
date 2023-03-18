@@ -115,7 +115,7 @@
                         </span>
                     </div>
                 {% endif %}
-                {% if groups and skill_groups and skill_list %}
+                {% if groups is not none or (skill_groups is not none and skill_list is not none) %}
                     {{ filter_block(sel, groups, skill_groups, skill_list, 'student.clear_group_filters', 'student.add_group_filter', 'student.remove_group_filter', 'student.clear_skill_filters', 'student.add_skill_filter', 'student.remove_skill_filter') }}
                 {% endif %}
             {% endif %}

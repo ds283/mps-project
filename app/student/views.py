@@ -18,7 +18,7 @@ from flask import render_template, redirect, url_for, flash, request, jsonify, c
 from flask_mailman import EmailMultiAlternatives
 from flask_security import current_user, roles_required, roles_accepted
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from sqlalchemy.sql import func, or_
+from sqlalchemy.sql import func, or_, and_
 from sqlalchemy.orm.exc import StaleDataError
 
 import app.ajax as ajax
@@ -277,11 +277,18 @@ def _project_list_endpoint(config: ProjectClassConfig, sel: SelectingStudent, ro
         .join(ResearchGroup, ResearchGroup.id == LiveProject.group_id, isouter=True)
 
     if sel is not None:
-        if config.advertise_research_group and sel.group_filters.first():
-            base_query = base_query.filter(or_(ResearchGroup.id == g.id for g in sel.group_filters))
+        filter_groups = config.advertise_research_group and sel.group_filters.first()
+        filter_skills = sel.skill_filters.first()
 
-        if sel.skill_filters.first():
-            base_query = base_query.filter(or_(LiveProject.skills.any(SkillGroup.id == s.id) for s in sel.skill_filters))
+        if filter_groups and filter_skills:
+            base_query = base_query.filter(and_(or_(ResearchGroup.id == g.id for g in sel.group_filters),
+                                                or_(LiveProject.skills.any(TransferableSkill.id == s.id)
+                                                    for s in sel.skill_filters)))
+        elif filter_groups:
+            base_query = base_query.filter(or_(ResearchGroup.id == g.id for g in sel.group_filters))
+        elif filter_skills:
+            base_query = base_query.filter(or_(LiveProject.skills.any(TransferableSkill.id == s.id)
+                                               for s in sel.skill_filters))
 
     name = {'search': LiveProject.name,
             'order': LiveProject.name,

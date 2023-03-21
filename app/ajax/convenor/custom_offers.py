@@ -172,7 +172,8 @@ def student_offer_data(items):
     data = [{'project': render_template_string(_project, sel=item.selector, proj=item.liveproject),
              'owner': {
                  'display': render_template_string(_owner, project=item.liveproject),
-                 'sortvalue': item.liveproject.owner.user.last_name + item.liveproject.owner.user.first_name
+                 'sortvalue': 'Generic' if item.liveproject.generic or item.liveproject.owner is None else \
+                     item.liveproject.owner.user.last_name + item.liveproject.owner.user.first_name
              },
              'timestamp': {
                  'display': item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S"),
@@ -203,7 +204,8 @@ def student_offer_projects(projects, sel):
     data = [{'project': render_template_string(_project, sel=sel, proj=project),
              'owner': {
                  'display': render_template_string(_owner, project=project),
-                 'sortvalue': project.owner.user.last_name + project.owner.user.first_name
+                 'sortvalue': 'Generic' if project.generic or project.owner is None else \
+                     project.owner.user.last_name + project.owner.user.first_name
              },
              'offers': render_template_string(_project_offers, record=project),
              'actions': render_template_string(_sel_actions, sel=sel, project=project)} for project in projects]

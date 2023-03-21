@@ -2506,9 +2506,6 @@ def attach_liveproject(id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    # get current academic year
-    current_year = get_current_year()
-
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
@@ -2517,7 +2514,7 @@ def attach_liveproject(id):
 
     # reject if project class is not live
     if not config.live:
-        flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
+        flash('Manual attachment of projects is only possible after Go Live for this academic year', 'error')
         return redirect(redirect_url())
 
     data = get_convenor_dashboard_data(pclass, config)
@@ -2544,7 +2541,6 @@ def attach_liveproject_ajax(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
     if not config.live:
@@ -2561,8 +2557,11 @@ def attach_liveproject_ajax(id):
 
     # restrict query to projects owned by active users, or generic projects
     base_query = base_query.join(User, User.id == Project.owner_id, isouter=True) \
-        .filter(or_(Project.generic == True,
-                    User.active == True))
+        .filter(or_(Project.generic == True, User.active == True))
+
+    # remove projects that don't have a description
+    base_query = base_query.join(ProjectDescription, ProjectDescription.parent_id == Project.id) \
+        .filter(ProjectDescription.project_classes.any(id=pclass.id))
 
     return project_list_SQL_handler(request, base_query,
                                     current_user_id=current_user.id, config=config, menu_template='attach',
@@ -2588,7 +2587,7 @@ def manual_attach_project(id, configid):
 
     # reject if project class is not live
     if not config.live:
-        flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
+        flash('Manual attachment of projects is only possible after Go Live for this academic year', 'error')
         return redirect(redirect_url())
 
     # reject if desired project is not attachable
@@ -2597,6 +2596,12 @@ def manual_attach_project(id, configid):
     if config.project_class not in project.project_classes:
         flash('Project "{p}" is not attached to "{c}". You do not have sufficient privileges to manually attach it. '
               'Please consult with an administrator.'.format(p=project.name, c=config.name), 'error')
+        return redirect(redirect_url())
+
+    desc: ProjectDescription = project.get_description(config.project_class)
+    if desc is None:
+        flash('Project "{p}" does not have a description for "{c}" and cannot be '
+              'attached.'.format(p=project.name, c=config.name))
         return redirect(redirect_url())
 
     # get number for this project
@@ -2622,7 +2627,6 @@ def attach_liveproject_other_ajax(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
     if not config.live:
@@ -2668,7 +2672,7 @@ def manual_attach_other_project(id, configid):
 
     # reject if project class is not live
     if not config.live:
-        flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
+        flash('Manual attachment of projects is only possible after Go Live for this academic year', 'error')
         return redirect(redirect_url())
 
     # get number for this project

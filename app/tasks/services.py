@@ -56,7 +56,7 @@ def register_services_tasks(celery):
             reply_to = list(reply_to)
 
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=reply_to,
+                                     reply_to=[reply_to],
                                      to=[formataddr((record.name, record.email))],
                                      subject=subject,
                                      body=render_template('email/services/send_email.txt', body=body_text))
@@ -79,7 +79,7 @@ def register_services_tasks(celery):
             reply_to = list(reply_to)
 
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=reply_to,
+                                     reply_to=[reply_to],
                                      to=[to_addr],
                                      subject=subject,
                                      body=render_template('email/services/cc_email.txt', body=body))
@@ -113,7 +113,7 @@ def register_services_tasks(celery):
             reply_to = list(reply_to)
 
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=reply_to,
+                                     reply_to=[reply_to],
                                      to=[to_addr],
                                      subject=subject,
                                      body=render_template('email/services/send_email.txt', body=body))

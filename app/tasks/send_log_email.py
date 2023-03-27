@@ -14,6 +14,8 @@ from flask_mailman import Mail, EmailMessage
 from smtplib import SMTPAuthenticationError, SMTPConnectError, SMTPDataError, SMTPException, SMTPNotSupportedError, \
     SMTPHeloError, SMTPRecipientsRefused, SMTPResponseException, SMTPSenderRefused, SMTPServerDisconnected
 
+from flask_mailman.message import sanitize_address
+
 from ..database import db
 from ..models import User, EmailLog, TaskRecord
 from ..task_queue import progress_update
@@ -52,6 +54,16 @@ def register_send_log_email(celery, mail: Mail):
                 SMTPHeloError, SMTPRecipientsRefused, SMTPResponseException, SMTPSenderRefused,
                 SMTPServerDisconnected) as e:
             current_app.logger.info('-- send_mail() task SMTP exception')
+
+            encoding = msg.encoding or 'utf-8'
+            from_email = sanitize_address(msg.from_email, encoding)
+            recipients = [sanitize_address(addr, encoding) for addr in msg.recipients()]
+            message = msg.message()
+
+            current_app.logger.info('**   from_email = "{email}"'.format(email=from_email))
+            current_app.logger.info('**   recipients = "{recipients}"'.format(recipients=recipients))
+            current_app.logger.info('**   message = "{msg}"'.format(msg=message))
+
             current_app.logger.exception("SMTP exception", exc_info=e)
             raise self.retry()
 

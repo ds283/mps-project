@@ -271,22 +271,6 @@ class ProjectClassMixin():
 
     uses_presentations = BooleanField('Includes one or more assessed presentations')
 
-    number_markers = IntegerField('Number of markers', default=DEFAULT_ASSIGNED_MARKERS,
-                                  description='Number of markers that should be assigned to each project. '
-                                              'Used during automated matching.',
-                                  validators=[InputRequired('Please enter the required number of markers'),
-                                              NumberRange(min=0, message='The required number of markers should not be '
-                                                                         'negative')])
-
-    number_moderators = IntegerField('Number of moderators', default=DEFAULT_ASSIGNED_MODERATORS,
-                                     description='Number of moderators that should be assigned to each project '
-                                                 'by default. Used during automated matching. Usually this should be '
-                                                 'set to zero. Moderators can be added manually during the marking '
-                                                 'workflow if required.',
-                                     validators=[InputRequired('Please enter the required number of moderators'),
-                                                 NumberRange(min=0, message='The required number of moderators should '
-                                                                            'not be negative')])
-
     display_marker = BooleanField('Display assessor information')
 
     display_presentations = BooleanField('Display presentation assessment information')
@@ -507,11 +491,21 @@ class PeriodDefinitionMixin():
     start_date = DateTimeField('Period start date', format='%d/%m/%Y', validators=[Optional()],
                                description='The year will increment when a rollover takes place')
 
-    number_markers = IntegerField('Number of markers to be assigned', default=1,
-                                  validators=[InputRequired()])
+    number_markers = IntegerField('Number of markers to be assigned', default=DEFAULT_ASSIGNED_MARKERS,
+                                  description='Number of markers that should be assigned to each project. '
+                                              'Used during automated matching.',
+                                  validators=[InputRequired('Please enter the required number of markers'),
+                                              NumberRange(min=0, message='The required number of markers should '
+                                                                         'not be negative')])
 
-    number_moderators = IntegerField('Number of moderators to be assigned', default=0,
-                                     validators=[InputRequired()])
+    number_moderators = IntegerField('Number of moderators to be assigned', default=DEFAULT_ASSIGNED_MODERATORS,
+                                     description='Number of moderators that should be assigned to each project '
+                                                 'by default. Used during automated matching. Usually this should be '
+                                                 'set to zero. If required, moderators can be added manually during '
+                                                 'the marking workflow.',
+                                     validators=[InputRequired('Please enter the required number of moderators'),
+                                                 NumberRange(min=0, message='The required number of moderators '
+                                                                            'should not be negative')])
 
     @staticmethod
     def validate_number_markers(form, field):

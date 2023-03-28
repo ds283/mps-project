@@ -4455,12 +4455,6 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     # are submissions moderated?
     uses_moderator = db.Column(db.Boolean(), default=False)
 
-    # number of markers per submission (used in automated matching and possibly elsewhere)
-    number_markers = db.Column(db.Integer(), default=DEFAULT_ASSIGNED_MARKERS)
-
-    # number of moderators per submission (used in automated matching and possibly elsewhere)
-    number_moderators = db.Column(db.Integer(), default=DEFAULT_ASSIGNED_MODERATORS)
-
     # display second marker information in UI?
     display_marker = db.Column(db.Boolean(), default=True)
 

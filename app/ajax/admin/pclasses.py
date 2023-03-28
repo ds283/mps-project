@@ -183,20 +183,10 @@ _submissions = \
 """
 <span class="badge bg-primary">{{ p.submissions }}/yr</span>
 {% if p.uses_marker %}
-    {% if p.number_markers is not none %}
-        <span class="badge bg-info text-dark">Marked by {{ p.number_markers }}</span>
-    {% else %}
-        <span class="badge bg-info text-dark">Marked</span>
-        <span class="badge bg-danger">Number missing</span>
-    {% endif %}
+    <span class="badge bg-info text-dark">Marked</span>
 {% endif %}
 {% if p.uses_moderator %}
-    {% if p.number_moderators is not none %}
-        <span class="badge bg-info text-dark">Moderated by {{ p.number_moderators }}</span>
-    {% else %}
-        <span class="badge bg-info text-dark">Moderated</span>
-        <span class="badge bg-danger">Number missing</span>
-    {% endif %}
+    <span class="badge bg-info text-dark">Moderated</span>
 {% endif %}
 {% if p.uses_presentations %}
     {% for item in p.periods.all() %}

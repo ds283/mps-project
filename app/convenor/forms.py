@@ -13,10 +13,11 @@ from functools import partial
 from flask_security.forms import Form
 from wtforms import SubmitField, IntegerField, StringField, BooleanField, TextAreaField, \
     DateTimeField, SelectField
-from wtforms.validators import InputRequired, Optional, Email, Length, ValidationError
+from wtforms.validators import InputRequired, Optional, Email, Length, ValidationError, NumberRange
 from wtforms_alchemy import QuerySelectField
 
-from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig, ConvenorGenericTask
+from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig, ConvenorGenericTask, \
+    DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, PeriodPresentationsMixin, \
     PeriodSelectorMixinFactory
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
@@ -176,11 +177,19 @@ def PeriodRecordMixinFactory(enable_canvas=True):
                                                'period, such as "Autumn Term". Leave blank to use the default name.',
                            validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
 
-        number_markers = IntegerField('Number of markers to be assigned', validators=[InputRequired()],
-                                      default=1)
+        number_markers = IntegerField('Number of markers', default=DEFAULT_ASSIGNED_MARKERS,
+                                      description='Number of markers that should be assigned to each project.',
+                                      validators=[InputRequired('Please enter the required number of markers'),
+                                                  NumberRange(min=0, message='The required number of markers should '
+                                                                             'not be negative')])
 
-        number_moderators = IntegerField('Number of moderators to be assigned', validators=[InputRequired()],
-                                         default=0)
+        number_moderators = IntegerField('Number of moderators', default=DEFAULT_ASSIGNED_MODERATORS,
+                                         description='Number of moderators that should be assigned to each project. '
+                                                     'If required, moderators can be added manually during the marking '
+                                                     'workflow if required.',
+                                         validators=[InputRequired('Please enter the required number of moderators'),
+                                                     NumberRange(min=0, message='The required number of moderators '
+                                                                                'should not be negative')])
 
         @staticmethod
         def validate_number_markers(form, field):
@@ -288,19 +297,31 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
                                              'as full for the purposes of further allocation. If left blank, '
                                              'the maximum number of CATS is taken from the settings for the '
                                              'matching.',
-                                 validators=[Optional()])
+                                 validators=[Optional(),
+                                             NumberRange(min=0, message='The specified number of CATS should not '
+                                                                        'be negative')])
 
         CATS_supervision = IntegerField('CATS awarded for project supervision',
-                                        validators=[InputRequired(message='Please enter an integer value')])
+                                        validators=[NotOptionalIf('uses_supervisor'),
+                                                    NumberRange(min=0,
+                                                                message='The specified number of CATS should not '
+                                                                        'be negative')])
 
         CATS_marking = IntegerField('CATS awarded for marking submissions',
-                                    validators=[InputRequired(message='Please enter an integer value')])
+                                    validators=[NotOptionalIf('uses_marker'),
+                                                NumberRange(min=0, message='The specified number of CATS should not '
+                                                                           'be negative')])
 
         CATS_moderation = IntegerField('CATS awarded for moderating submissions',
-                                       validators=[InputRequired(message='Please enter an integer value')])
+                                       validators=[NotOptionalIf('uses_moderator'),
+                                                   NumberRange(min=0, message='The specified number of CATS should not '
+                                                                              'be negative')])
 
         CATS_presentation = IntegerField('CATS awarded for assessing presentations',
-                                         validators=[InputRequired(message='Please enter an integer value')])
+                                         validators=[NotOptionalIf('uses_presentations'),
+                                                     NumberRange(min=0,
+                                                                 message='The specified number of CATS should not '
+                                                                         'be negative')])
 
         # only include Canvas-related fields if Canvas integration is actually switched on
         if canvas_enabled:

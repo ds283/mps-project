@@ -135,11 +135,13 @@ def _enumerate_selectors_primary(configs, include_only_submitted=False):
         print(' :: length of raw selectors list for "{name}" '
               '(config_id={y}) = {n}'.format(name=config.project_class.name, y=config.id, n=len(selectors)))
 
-        for item in selectors:
+        for sel in selectors:
+            sel: SelectingStudent
+
             # decide what to do with this selector
             attach = False
 
-            if item.has_submitted:
+            if sel.has_submitted:
                 # always count selectors who have submitted choices or accepted custom offers
                 attach = True
 
@@ -148,14 +150,14 @@ def _enumerate_selectors_primary(configs, include_only_submitted=False):
                     attach = False
 
                 else:
-                    if item.academic_year is not None and not item.has_graduated:
+                    if sel.academic_year is not None and not sel.has_graduated:
                         if opt_in_type and \
-                                ((enroll_previous_year and item.academic_year == config.start_year - (1 if config.select_in_previous_cycle else 0)) or
-                                 (enroll_any_year and config.start_year <= item.academic_year < config.start_year + config.extent)):
+                                ((enroll_previous_year and sel.academic_year == config.start_year - (1 if config.select_in_previous_cycle else 0)) or
+                                 (enroll_any_year and config.start_year <= sel.academic_year < config.start_year + config.extent)):
                             # interpret failure to submit as lack of interest; no need to generate a match
                             attach = False
 
-                        elif carryover and config.start_year <= item.academic_year < config.start_year + config.extent:
+                        elif carryover and config.start_year <= sel.academic_year < config.start_year + config.extent:
                             # interpret failure to submit as evidence student is happy with existing allocation
 
                             # TODO: in reality there is some overlap with the previous case, if both carryover and
@@ -171,13 +173,13 @@ def _enumerate_selectors_primary(configs, include_only_submitted=False):
                             attach = True
 
             if attach:
-                sel_to_number[item.id] = number
-                number_to_sel[number] = item.id
+                sel_to_number[sel.id] = number
+                number_to_sel[number] = sel.id
 
                 submissions = config.submissions
                 multiplicity[number] = submissions if submissions >= 1 else 1
 
-                selector_dict[number] = item
+                selector_dict[number] = sel
 
                 number += 1
 
@@ -271,6 +273,8 @@ def _enumerate_liveprojects_primary(configs):
         project_group_dict[config.id] = []
 
         for item in projects:
+            item: LiveProject
+
             lp_to_number[item.id] = number
             number_to_lp[number] = item.id
 
@@ -357,16 +361,17 @@ def _enumerate_supervising_faculty_primary(configs):
 
     for config in configs:
         # get EnrollmentRecord instances for this project class
-        erecords = db.session.query(EnrollmentRecord) \
+        records = db.session.query(EnrollmentRecord) \
             .filter_by(pclass_id=config.pclass_id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED) \
-            .join(User, User.id==EnrollmentRecord.owner_id) \
+            .join(User, User.id == EnrollmentRecord.owner_id) \
             .filter(User.active).all()
 
         config_limits[config.id] = {}
 
         # what gets written into our tables are links to the corresponding FacultyData instances
-        for erec in erecords:
-            fac = erec.owner
+        for rec in records:
+            rec: EnrollmentRecord
+            fac: FacultyData = rec.owner
 
             if fac.id not in fac_to_number:
                 fac_to_number[fac.id] = number
@@ -379,8 +384,8 @@ def _enumerate_supervising_faculty_primary(configs):
 
                 number += 1
 
-            if erec.CATS_supervision is not None:
-                config_limits[config.id][fac_to_number[fac.id]] = erec.CATS_supervision
+            if rec.CATS_supervision is not None:
+                config_limits[config.id][fac_to_number[fac.id]] = rec.CATS_supervision
 
     return number, fac_to_number, number_to_fac, limit, fac_dict, config_limits
 
@@ -452,7 +457,7 @@ def _enumerate_marking_faculty_primary(configs):
 
     for config in configs:
         # get EnrollmentRecord instances for this project class
-        faculty = db.session.query(EnrollmentRecord) \
+        records = db.session.query(EnrollmentRecord) \
             .filter_by(pclass_id=config.pclass_id, marker_state=EnrollmentRecord.MARKER_ENROLLED) \
             .join(User, User.id == EnrollmentRecord.owner_id) \
             .filter(User.active).all()
@@ -460,8 +465,9 @@ def _enumerate_marking_faculty_primary(configs):
         config_limits[config.id] = {}
 
         # what gets written into our tables are links to the corresponding FacultyData instances
-        for erec in faculty:
-            fac = erec.owner
+        for rec in records:
+            rec: EnrollmentRecord
+            fac: FacultyData = rec.owner
 
             if fac.id not in fac_to_number:
                 fac_to_number[fac.id] = number
@@ -474,8 +480,8 @@ def _enumerate_marking_faculty_primary(configs):
 
                 number += 1
 
-            if erec.CATS_marking is not None:
-                config_limits[config.id][fac_to_number[fac.id]] = erec.CATS_marking
+            if rec.CATS_marking is not None:
+                config_limits[config.id][fac_to_number[fac.id]] = rec.CATS_marking
 
     return number, fac_to_number, number_to_fac, limit, fac_dict, config_limits
 
@@ -586,9 +592,8 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
                 w = 0 if val is False else 1.0
 
             # check whether this project has a preference for the degree programme associated with the current selector
-            if not ignore_programme_prefs:
-                if proj.satisfies_preferences(sel):
-                    w *= programme_bias
+            if not ignore_programme_prefs and proj.satisfies_preferences(sel):
+                w *= programme_bias
 
             W[idx] = w
 
@@ -630,7 +635,7 @@ def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict,
                 elif count == 0:
                     M[idx] = 0
                 else:
-                    errmsg = 'Inconsistent number of second markers match to LiveProject: ' \
+                    errmsg = 'Inconsistent number of second markers in match to LiveProject: ' \
                              'fac={fname}, proj={pname}, matches={c}, ' \
                              'LiveProject.id={lpid}, ' \
                              'FacultyData.id={fid}'.format(fname=fac.user.name, pname=proj.name, c=count,
@@ -638,7 +643,8 @@ def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict,
 
                     print('!! {msg}'.format(msg=errmsg))
                     print('!! LiveProject Assessor List')
-                    for f in proj.assessor_list_query.all():
+                    for f in proj.assessor_list:
+                        f: FacultyData
                         print('!! - {name} id={fid}'.format(name=f.user.name, fid=f.id))
 
                     raise RuntimeError(errmsg)
@@ -663,17 +669,43 @@ def _build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dic
     P = {}
 
     for i in range(number_proj):
-        proj = proj_dict[i]
+        proj: LiveProject = proj_dict[i]
 
         for j in range(number_sup):
             idx = (i, j)
 
-            fac = sup_dict[j]
+            fac: FacultyData = sup_dict[j]
 
-            if proj.owner_id == fac.id:
-                P[idx] = 1
+            # if project is of generic/group type, then any member of the assessor pool is an allowed
+            # supervisor
+            if proj.generic or proj.owner is None:
+                count = get_count(proj.assessor_list_query.filter(FacultyData.id == fac.id))
+                if count == 1:
+                    P[idx] = 1
+                elif count == 0:
+                    P[idx] = 0
+                else:
+                    errmsg = 'Inconsistent number of possible supervisors for group project in match to LiveProject: ' \
+                             'fac={fname}, proj={pname}, matches={c}, ' \
+                             'LiveProject.id={lpid}, ' \
+                             'FacultyData.id={fid}'.format(fname=fac.user.name, pname=proj.name, c=count,
+                                                           lpid=proj.id, fid=fac.id)
+
+                    print('!! {msg}'.format(msg=errmsg))
+                    print('!! LiveProject Assessor List')
+                    for f in proj.assessor_list:
+                        f: FacultyData
+                        print('!! - {name} id={fid}'.format(name=f.user.name, fid=f.id))
+
+                    raise RuntimeError(errmsg)
+
+            # otherwise, only the project supervisor is an allowed supervisor
+            # TODO: allow more general supervisory arrangements
             else:
-                P[idx] = 0
+                if proj.owner_id == fac.id:
+                    P[idx] = 1
+                else:
+                    P[idx] = 0
 
     return P
 
@@ -713,8 +745,12 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
                     autocommit=True)
 
     # loop through all submissions in all periods to capture all those with missing markers
-    for period in config.periods:                     #type: SubmissionPeriodRecord
-        for sub in period.submissions:                #type: SubmissionRecord
+    for period in config.periods:
+        period: SubmissionRecord
+
+        for sub in period.submissions:
+            sub: SubmissionRecord
+
             # do nothing if project not assigned (no assessor pool)
             if sub.project is None:
                 continue
@@ -744,7 +780,9 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
                 self.update_state('FAILURE', meta='LiveProject did not have active assessors')
                 raise Ignore()
 
-            for marker in assessors:        # type: FacultyData
+            for marker in assessors:
+                marker: FacultyData
+
                 if marker not in inverse_mark_dict:
                     mark_dict[number_markers] = marker
                     inverse_mark_dict[marker] = number_markers
@@ -884,11 +922,11 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
     # selectors can only be assigned to projects that they have ranked
     # (unless no ranking data was available, in which case all elements of R were set to 1)
     for i in range(number_sel):
-        sel = sel_dict[i]
-        user = sel.student.user
+        sel: SelectingStudent = sel_dict[i]
+        user: User = sel.student.user
 
         for j in range(number_lp):
-            proj = lp_dict[j]
+            proj: LiveProject = lp_dict[j]
             key = (i, j)
             prob += X[key] <= R[key], \
                     '_C{first}{last}_{scfg}_rk_{cfg}_{pfirst}{plast}_proj{num}' \
@@ -898,11 +936,11 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
 
     # markers can only be assigned projects to which they are attached
     for i in range(number_mark):
-        mark = mark_dict[i]
-        user = mark.user
+        mark: FacultyData = mark_dict[i]
+        user: User = mark.user
 
         for j in range(number_lp):
-            proj = lp_dict[j]
+            proj: LiveProject = lp_dict[j]
             key = (i, j)
             prob += Y[key] <= M[key], \
                     '_C{first}{last}_mark_{cfg}_{num}'.format(first=user.first_name, last=user.last_name,
@@ -911,8 +949,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
     # enforce desired multiplicity for each selector
     # (usually requires that each selector is assigned just one project, but can be 2 for eg. MPP)
     for i in range(number_sel):
-        sel = sel_dict[i]
-        user = sel.student.user
+        sel: SelectingStudent = sel_dict[i]
+        user: User = sel.student.user
 
         prob += sum(X[(i, j)] for j in range(number_lp)) == multiplicity[i], \
                 '_C{first}{last}_{scfg}_assign'.format(first=user.first_name, last=user.last_name, scfg=sel.config_id)
@@ -920,7 +958,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
     # enforce maximum capacity for each project
     # note capacity[j] will be zero if this project is not enforcing an upper limit on capacity
     for j in range(number_lp):
-        proj = lp_dict[j]
+        proj: LiveProject = lp_dict[j]
 
         if capacity[j] != 0:
             prob += sum(X[(i, j)] for i in range(number_sel)) <= capacity[j], \
@@ -934,7 +972,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
         if j not in lp_dict:
             raise RuntimeError('lp_dict does not contain all projects when constructing PuLP problem')
 
-        proj = lp_dict[j]
+        proj: LiveProject = lp_dict[j]
 
         # number of assigned students should equal number of assigned markers, or zero if no markers used
         # note we intentionally go out to the default ProjectClass.uses_marker setting, rather than using
@@ -956,19 +994,20 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
 
     # CATS assigned to each supervisor must be within bounds
     for i in range(number_sup):
-        sup = sup_dict[i]
-        user = sup.user
+        sup: FacultyData = sup_dict[i]
+        user: User = sup.user
 
         # enforce global limit, either from optimization configuration or from user's global record
         lim = record.supervising_limit
-        if not record.ignore_per_faculty_limits and sup_limits[i] > 0:
-            lim = sup_limits[i]
+        sup_limit = sup_limits[i]
+        if not record.ignore_per_faculty_limits and sup_limit is not None and sup_limit > 0:
+            if sup_limit < lim:
+                lim = sup_limits
 
-        sup_data = sup_dict[i]
-        existing_CATS = _compute_existing_sup_CATS(record, sup_data)
+        existing_CATS = _compute_existing_sup_CATS(record, sup)
         if existing_CATS > lim:
             raise RuntimeError('Inconsistent matching problem: existing supervisory CATS load {n} for faculty '
-                               '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=sup_data.user.name))
+                               '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=user.name))
 
         prob += existing_CATS + sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in range(number_lp)
                                     for k in range(number_sel)) <= lim + sup_elastic_CATS[i], \
@@ -996,16 +1035,17 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
 
     # CATS assigned to each marker must be within bounds
     for i in range(number_mark):
-        mark = mark_dict[i]
-        user = mark.user
+        mark: FacultyData = mark_dict[i]
+        user: User = mark.user
 
         # enforce global limit
         lim = record.marking_limit
-        if not record.ignore_per_faculty_limits and mark_limits[i] > 0:
-            lim = mark_limits[i]
+        mark_limit = mark_limits[i]
+        if not record.ignore_per_faculty_limits and mark_limit is not None and mark_limit > 0:
+            if mark_limit < lim:
+                lim = mark_limit
 
-        mark_data = mark_dict[i]
-        existing_CATS = _compute_existing_mark_CATS(record, mark_data)
+        existing_CATS = _compute_existing_mark_CATS(record, mark)
         if existing_CATS > lim:
             raise RuntimeError('Inconsistent matching problem: existing marking CATS load {n} for faculty '
                                '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=mark_data.user.name))
@@ -1028,9 +1068,9 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
     for idx in cstr:
         i = idx[0]
         j = idx[1]
-        sel = sel_dict[i]
-        proj = lp_dict[j]
-        user = sel.student.user
+        sel: SelectingStudent = sel_dict[i]
+        proj: LiveProject = lp_dict[j]
+        user: User = sel.student.user
 
         # impose 'force' constraints, where we require a student to be allocated a particular project
         prob += X[idx] == 1, \

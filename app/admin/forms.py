@@ -20,8 +20,8 @@ from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 from ..manage_users.forms import ResearchGroupMixin
 from ..models import BackupConfiguration, ScheduleAttempt, extent_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices, auto_enrol_year_choices, \
-    student_level_choices, DEFAULT_STRING_LENGTH, start_year_choices, DegreeProgramme, DegreeType, ProjectClass, \
-    PresentationAssessment
+    student_level_choices, start_year_choices, DegreeProgramme, DegreeType, ProjectClass, \
+    PresentationAssessment, DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS, DEFAULT_STRING_LENGTH
 from ..shared.forms.mixins import SaveChangesMixin, PeriodPresentationsMixin
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
@@ -223,7 +223,8 @@ class ProjectClassMixin():
                                     description='Assessors are used to assign markers, moderators and presentation assessors. '
                                                 'Significantly more than one assessor is required per project to allow '
                                                 'sufficient flexibility during matching.',
-                                    validators=[NotOptionalIf('do_matching')])
+                                    validators=[NotOptionalIf('do_matching'),
+                                                NumberRange(min=1, message='At least one assessor is required')])
 
     use_project_hub = BooleanField('Use Project Hubs (caution: not production quality)',
                                    description='The Project Hub is a lightweight learning management system that '
@@ -270,6 +271,22 @@ class ProjectClassMixin():
 
     uses_presentations = BooleanField('Includes one or more assessed presentations')
 
+    number_markers = IntegerField('Number of markers', default=DEFAULT_ASSIGNED_MARKERS,
+                                  description='Number of markers that should be assigned to each project. '
+                                              'Used during automated matching.',
+                                  validators=[InputRequired('Please enter the required number of markers'),
+                                              NumberRange(min=0, message='The required number of markers should not be '
+                                                                         'negative')])
+
+    number_moderators = IntegerField('Number of moderators', default=DEFAULT_ASSIGNED_MODERATORS,
+                                     description='Number of moderators that should be assigned to each project '
+                                                 'by default. Used during automated matching. Usually this should be '
+                                                 'set to zero. Moderators can be added manually during the marking '
+                                                 'workflow if required.',
+                                     validators=[InputRequired('Please enter the required number of moderators'),
+                                                 NumberRange(min=0, message='The required number of moderators should '
+                                                                            'not be negative')])
+
     display_marker = BooleanField('Display assessor information')
 
     display_presentations = BooleanField('Display presentation assessment information')
@@ -278,29 +295,44 @@ class ProjectClassMixin():
                                               default=True)
 
     initial_choices = IntegerField('Number of initial project preferences',
-                                   description='Select number of preferences students should list before joining.')
+                                   description='Select number of preferences students should list before joining.',
+                                   validators=[NotOptionalIf('uses_selection'),
+                                               NumberRange(min=1, message='The required number of preferences should '
+                                                                          'be at least 1')])
 
     switch_choices = IntegerField('Number of subsequent project preferences',
                                   description='Number of preferences to allow in subsequent years, '
-                                              'if switching is allowed.')
+                                              'if switching is allowed.',
+                                  validators=[NotOptionalIf('uses_selection'),
+                                              NumberRange(min=1, message='The required number of preferences should '
+                                                                         'be at least 1')])
 
     faculty_maximum = IntegerField('Limit selections per faculty member',
                                    description='Optional. Specify a maximum number of projects that '
                                                'students can select if they are offered by the same '
                                                'faculty supervisor. Leave blank to disable.',
-                                   validators=[Optional()])
+                                   validators=[Optional(),
+                                               NumberRange(min=1, message='Specified maximum cannot be less than 1')])
 
     CATS_supervision = IntegerField('CATS awarded for project supervision',
-                                    validators=[InputRequired(message='Please enter an integer value')])
+                                    validators=[NotOptionalIf('uses_supervisor'),
+                                                NumberRange(min=0, message='The specified number of CATS should not '
+                                                                           'be negative')])
 
     CATS_marking = IntegerField('CATS awarded for marking submissions',
-                                validators=[InputRequired(message='Please enter an integer value')])
+                                validators=[NotOptionalIf('uses_marker'),
+                                            NumberRange(min=0, message='The specified number of CATS should not '
+                                                                       'be negative')])
 
     CATS_moderation = IntegerField('CATS awarded for moderating submissions',
-                                   validators=[InputRequired(message='Please enter an integer value')])
+                                   validators=[NotOptionalIf('uses_moderator'),
+                                               NumberRange(min=0, message='The specified number of CATS should not '
+                                                                           'be negative')])
 
     CATS_presentation = IntegerField('CATS awarded for assessing presentations',
-                                     validators=[InputRequired(message='Please enter an integer value')])
+                                     validators=[NotOptionalIf('uses_presentations'),
+                                                 NumberRange(min=0, message='The specified number of CATS should not '
+                                                                            'be negative')])
 
     hourly_choices = [(1, '1 day'),
                       (2, '2 days'),

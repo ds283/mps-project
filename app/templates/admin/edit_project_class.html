@@ -170,6 +170,15 @@
             <div class="mt-2">
                 {{ wtf.render_field(pclass_form.include_available) }}
             </div>
+            <p class="form-group-heading mt-2">Faculty dashboards</p>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.display_marker) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(pclass_form.display_presentations) }}
+                </div>
+            </div>
         </div>
 
         <div class="card mt-3 mb-3 card-body bg-well">
@@ -239,13 +248,16 @@
                     {{ wtf.render_field(pclass_form.uses_presentations) }}
                 </div>
             </div>
-            <p class="form-group-heading mt-2">Faculty dashboards</p>
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <p class="form-group-heading mt-2">Automated matching</p>
             <div class="row vertical-top">
                 <div class="col-6">
-                    {{ wtf.render_field(pclass_form.display_marker) }}
+                    {{ wtf.render_field(pclass_form.number_markers) }}
                 </div>
                 <div class="col-6">
-                    {{ wtf.render_field(pclass_form.display_presentations) }}
+                    {{ wtf.render_field(pclass_form.number_moderators) }}
                 </div>
             </div>
         </div>

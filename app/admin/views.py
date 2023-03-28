@@ -72,7 +72,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset, \
     AssetLicense, SubmittedAssetDownloadRecord, GeneratedAssetDownloadRecord, SelectingStudent, EmailNotification, \
-    ProjectTagGroup, ProjectTag, SubmitterAttendanceData
+    ProjectTagGroup, ProjectTag, SubmitterAttendanceData, DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS
 from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
     canonical_submitted_asset_filename
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
@@ -1909,6 +1909,8 @@ def add_pclass():
                                 uses_marker=form.uses_marker.data,
                                 uses_moderator=form.uses_moderator.data,
                                 uses_presentations=form.uses_presentations.data,
+                                number_markers=form.number_markers.data,
+                                number_moderators=form.number_moderators.data,
                                 display_marker=form.display_marker.data,
                                 display_presentations=form.display_presentations.data,
                                 reenroll_supervisors_early=form.reenroll_supervisors_early.data,
@@ -2030,6 +2032,9 @@ def add_pclass():
             form.require_confirm.data = True
             form.uses_supervisor.data = True
             form.uses_marker.data = True
+            form.uses_presentations.data = False
+            form.number_markers.data = DEFAULT_ASSIGNED_MARKERS
+            form.number_moderators.data = DEFAULT_ASSIGNED_MODERATORS
             form.display_marker.data = True
             form.display_presentations.data = True
             form.auto_enroll_years.data = ProjectClass.AUTO_ENROLL_FIRST_YEAR
@@ -2085,6 +2090,8 @@ def edit_pclass(id):
         data.uses_marker = form.uses_marker.data
         data.uses_moderator = form.uses_moderator.data
         data.uses_presentations = form.uses_presentations.data
+        data.number_markers = form.number_markers.data
+        data.number_moderators = form.number_moderators.data
         data.display_marker = form.display_marker.data
         data.display_presentations = form.display_presentations.data
         data.reenroll_supervisors_early = form.reenroll_supervisors_early.data
@@ -2136,20 +2143,54 @@ def edit_pclass(id):
         if request.method == 'GET':
             if form.number_assessors.data is None:
                 form.number_assessors.data = current_app.config['DEFAULT_ASSESSORS']
+
+            if form.require_confirm.data is None:
+                form.require_confirm.data = True
+
             if form.uses_supervisor.data is None:
                 form.uses_supervisor.data = True
+
             if form.uses_marker.data is None:
                 form.uses_marker.data = True
+
             if form.uses_presentations.data is None:
                 form.uses_presentations.data = False
+
+            if form.number_markers.data is None:
+                form.number_markers.data = DEFAULT_ASSIGNED_MARKERS
+
+            if form.number_moderators.data is None:
+                form.number_moderators.data = DEFAULT_ASSIGNED_MODERATORS
+
             if form.display_marker.data is None:
                 form.display_marker.data = True
+
             if form.display_presentations.data is None:
                 form.display_presentations = True
+
+            if form.auto_enroll_years.data is None:
+                form.auto_enroll_years.data = ProjectClass.AUTO_ENROLL_FIRST_YEAR
+
+            if form.is_optional.data is None:
+                form.is_optional.data = False
+
+            if form.uses_selection.data is None:
+                form.uses_selection.data = True
+
+            if form.uses_submission.data is None:
+                form.uses_submission.data = True
+
+            if form.do_matching.data is None:
+                form.do_matching.data = True
+
             if form.advertise_research_group.data is None:
                 form.advertise_research_group.data = True
+
             if form.use_project_tags.data is None:
                 form.use_project_tags.data = False
+
+            if form.force_tag_groups.data is None:
+                form.force_tag_groups.data = []
 
     return render_template('admin/edit_project_class.html', pclass_form=form, pclass=data,
                            title='Edit project class')

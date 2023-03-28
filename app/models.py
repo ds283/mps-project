@@ -53,6 +53,13 @@ PASSWORD_HASH_LENGTH = 255
 SERIALIZED_LAYOUT_LENGTH = 2048
 
 
+# default number of markers to assign
+DEFAULT_ASSIGNED_MARKERS = 2
+
+# default number of moderators to assign
+DEFAULT_ASSIGNED_MODERATORS = 0
+
+
 # labels and keys for student 'level' field
 student_level_choices = [(0, 'UG'), (1, 'PGT'), (2, 'PGR')]
 
@@ -4447,6 +4454,12 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
 
     # are submissions moderated?
     uses_moderator = db.Column(db.Boolean(), default=False)
+
+    # number of markers per submission (used in automated matching and possibly elsewhere)
+    number_markers = db.Column(db.Integer(), default=DEFAULT_ASSIGNED_MARKERS)
+
+    # number of moderators per submission (used in automated matching and possibly elsewhere)
+    number_moderators = db.Column(db.Integer(), default=DEFAULT_ASSIGNED_MODERATORS)
 
     # display second marker information in UI?
     display_marker = db.Column(db.Boolean(), default=True)

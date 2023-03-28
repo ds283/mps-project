@@ -8888,6 +8888,15 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         Determine whether this is the initial selection or a switch
         :return:
         """
+        # 28 March 2023: removed this check based on the academic year because it can produce the wrong
+        # result for part-time students. We now have these for the Data Science MSc programme.
+        # These students seem to select a project in Y2 which leads to a wrong result when computed
+        # using the academic year, because at the moment we specify start years from projects
+        # *as a whole*. Perhaps we need to specify start year *per programme*.
+
+        # TODO: consider specifying the start year of a project type per programme. However, this might
+        #  be too cumbersome.
+
         # academic_year = self.academic_year
         #
         # # if academic year is not None, we can do a simple numerical check

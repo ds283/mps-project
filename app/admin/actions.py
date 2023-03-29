@@ -114,7 +114,7 @@ def estimate_CATS_load():
             'presentation_CATS': presentation_CATS,
             'supervision_faculty': len(supervision_faculty),
             'marking_faculty': len(marking_faculty),
-            'moderation_faculty': len(),
+            'moderation_faculty': len(moderation_faculty),
             'presentation_faculty': len(presentation_faculty)}
 
 

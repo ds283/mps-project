@@ -12346,11 +12346,13 @@ class MatchingRecord(db.Model):
 
     # assigned personnel
     roles = db.relationship('MatchingRole', secondary=matching_role_list, lazy='dynamic',
+                            single_parent=True,
                             cascade='all, delete, delete-orphan',
                             backref=db.backref('role_for', lazy='dynamic'))
 
     # keep copy of originally assigned personnel (to support later reversion)
     original_roles = db.relationship('MatchingRole', secondary=matching_role_list_original, lazy='dynamic',
+                                     single_parent=True,
                                      cascade='all, delete, delete-orphan',
                                      backref=db.backref('original_role_for', lazy='dynamic'))
 

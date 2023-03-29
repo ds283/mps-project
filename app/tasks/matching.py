@@ -928,11 +928,17 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
         for j in range(number_lp):
             proj: LiveProject = lp_dict[j]
             key = (i, j)
+
+            if proj.generic or proj.owner is None:
+                tag = 'generic'
+            else:
+                user: User = proj.owner.user
+                tag = '{first}{last}'.format(first=user.first_name, last=user.last_name)
+
             prob += X[key] <= R[key], \
-                    '_C{first}{last}_{scfg}_rk_{cfg}_{pfirst}{plast}_proj{num}' \
+                    '_C{first}{last}_{scfg}_rk_{cfg}_{tag}_proj{num}' \
                         .format(first=user.first_name, last=user.last_name, scfg=sel.config_id,
-                                cfg=proj.config_id, num=proj.number, pfirst=proj.owner.user.first_name,
-                                plast=proj.owner.user.last_name)
+                                cfg=proj.config_id, num=proj.number, tag=tag)
 
     # markers can only be assigned projects to which they are attached
     for i in range(number_mark):
@@ -960,11 +966,15 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
     for j in range(number_lp):
         proj: LiveProject = lp_dict[j]
 
-        if capacity[j] != 0:
+        if capacity[j] > 0:
+            if proj.generic or proj.owner is None:
+                tag = 'generic'
+            else:
+                user: User = proj.owner.user
+                tag = '{first}{last}'.format(first=user.first_name, last=user.last_name)
+
             prob += sum(X[(i, j)] for i in range(number_sel)) <= capacity[j], \
-                    '_C{cfg}_{first}{last}_proj{num}_capacity'.format(cfg=proj.config_id, num=proj.number,
-                                                                      first=proj.owner.user.first_name,
-                                                                      last=proj.owner.user.last_name)
+                    '_C{cfg}_{tag}_proj{num}_capacity'.format(cfg=proj.config_id, num=proj.number, tag=tag)
 
     # number of students assigned to each project must match number of markers assigned to each project,
     # if markers are being used; otherwise, number of markers should be zero
@@ -984,8 +994,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
 
         else:
             for i in range(number_mark):
-                mark = mark_dict[i]
-                user = mark.user
+                mark: FacultyData = mark_dict[i]
+                user: User = mark.user
 
                 # enforce no markers assigned to this project
                 prob += Y[(i, j)] == 0, \
@@ -1048,7 +1058,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
         existing_CATS = _compute_existing_mark_CATS(record, mark)
         if existing_CATS > lim:
             raise RuntimeError('Inconsistent matching problem: existing marking CATS load {n} for faculty '
-                               '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=mark_data.user.name))
+                               '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=mark.user.name))
 
         prob += existing_CATS + sum(Y[(i, j)] * CATS_marker[j]
                                     for j in range(number_lp)) <= lim + mark_elastic_CATS[i], \
@@ -1275,7 +1285,7 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
             if proj_number not in lp_dict:
                 raise RuntimeError('PuLP solution references unexpected LiveProject instance')
 
-            project = lp_dict[proj_number]
+            project: LiveProject = lp_dict[proj_number]
             if proj_id != project.id:
                 raise RuntimeError('Inconsistent project lookup when storing PuLP solution')
 

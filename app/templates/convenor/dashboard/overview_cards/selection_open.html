@@ -132,17 +132,13 @@
                 {{ change_form.hidden_tag() }}
                 {{ date_field(change_form.live_deadline, 'live_datetimepicker') }}
                 {{ wtf.render_field(change_form.notify_convenor) }}
-                <div class="row vertical-top">
-                    <div class="col-12">
-                        <div class="float-end">
-                            <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
-                               class="btn btn-sm btn-outline-secondary grouped-button-margin">
-                                Reset popularity data
-                            </a>
-                            {{ wtf.render_field(change_form.change, button_map={'change': 'outline-secondary'}, button_size='sm') }}
-                            {{ wtf.render_field(change_form.close, button_map={'close': 'outline-primary'}, button_size='sm') }}
-                        </div>
-                    </div>
+                <div class="d-flex flex-row justify-content-end align-content-end gap-2">
+                    <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
+                       class="btn btn-sm btn-outline-secondary">
+                        Reset popularity data
+                    </a>
+                    {{ wtf.render_field(change_form.change, button_map={'change': 'outline-secondary'}, button_size='sm') }}
+                    {{ wtf.render_field(change_form.close, button_map={'close': 'outline-primary'}, button_size='sm') }}
                 </div>
             </form>
         </div>

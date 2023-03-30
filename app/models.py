@@ -9848,10 +9848,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             raise KeyError('Unknown role "{role}" in SubmissionRecord.get_roles()'.format(role=role))
 
         role_id = role_map[role]
-
-        return self.roles \
-            .filter(SubmissionRole.role == role_id) \
-            .join(User, User.id == SubmissionRole.user_id)
+        return [role.user for role in self.roles if role.role == role_id]
 
 
     def get_role_ids(self, role: str):
@@ -10374,9 +10371,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         config: ProjectClassConfig = self.current_config
 
-        supervisor_roles: List[User] = self.supervisor_roles.all()
-        marker_roles: List[User] = self.marker_roles.all()
-        moderator_roles: List[User] = self.moderator_roles.all()
+        supervisor_roles: List[User] = self.supervisor_roles
+        marker_roles: List[User] = self.marker_roles
+        moderator_roles: List[User] = self.moderator_roles
 
         supervisor_ids: Set[int] = set(u.id for u in supervisor_roles)
         marker_ids: Set[int] = set(u.id for u in marker_roles)
@@ -12176,9 +12173,9 @@ def _MatchingRecord_is_valid(id):
     attempt: MatchingAttempt = obj.matching_attempt
     project: LiveProject = obj.project
 
-    supervisor_roles: List[User] = project.supervisor_roles.all()
-    marker_roles: List[User] = project.marker_roles.all()
-    moderator_roles: List[User] = project.moderator_roles.all()
+    supervisor_roles: List[User] = obj.supervisor_roles
+    marker_roles: List[User] = obj.marker_roles
+    moderator_roles: List[User] = obj.moderator_roles
 
     supervisor_ids: Set[int] = set(u.id for u in supervisor_roles)
     marker_ids: Set[int] = set(u.id for u in marker_roles)
@@ -12223,7 +12220,7 @@ def _MatchingRecord_is_valid(id):
     # 5. STAFF WITH SUPERVISOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
     for u in supervisor_roles:
         if u.faculty_data is not None:
-            enrolment: EnrollmentRecord = u.get_enrollment_record(pclass)
+            enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
                 errors[('enrolment', 0)] = '"{name}" has been assigned a supervision role, but is not currently ' \
                                            'enrolled for this project class'.format(name=u.name)
@@ -12233,7 +12230,7 @@ def _MatchingRecord_is_valid(id):
     # 6. STAFF WITH MARKER ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
     for u in marker_roles:
         if u.faculty_data is not None:
-            enrolment: EnrollmentRecord = u.get_enrollment_record(pclass)
+            enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED:
                 errors[('enrolment', 1)] = '"{name}" has been assigned a marking role, but is not currently ' \
                                            'enrolled for this project class'.format(name=u.name)
@@ -12243,7 +12240,7 @@ def _MatchingRecord_is_valid(id):
     # 7. STAFF WITH SUPERVISOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
     for u in moderator_roles:
         if u.faculty_data is not None:
-            enrolment: EnrollmentRecord = u.get_enrollment_record(pclass)
+            enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED:
                 errors[('enrolment', 2)] = '"{name}" has been assigned a moderation role, but is not currently ' \
                                            'enrolled for this project class'.format(name=u.name)
@@ -12456,10 +12453,7 @@ class MatchingRecord(db.Model):
             raise KeyError('Unknown role in MatchingRecord.get_roles()')
 
         role_id = role_map[role]
-
-        return db.session.query(User).select_from(self.roles) \
-            .filter(MatchingRole.role == role_id) \
-            .join(User, User.id == MatchingRole.user_id)
+        return [role.user for role in self.roles if role.role == role_id]
 
 
     def get_role_ids(self, role: str):

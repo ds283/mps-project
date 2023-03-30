@@ -59,28 +59,45 @@ _cohort = \
 # language=jinja2
 _project = \
 """
+{% macro truncate_name(name) %}
+    {% if name|length > 18 %}
+        {{ name[0:18] }}...
+    {% else %}
+        {{ name }}
+    {% endif %}
+{% endmacro %}
 {% macro project_tag(r, show_period) %}
     {% set adjustable = false %}
     {% if r.selector.has_submission_list %}{% set adjustable = true %}{% endif %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     {% set proj_overassigned = r.is_project_overassigned %}
+    {% set supervisors = r.supervisor_roles %}
     <div>
         <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
             <a class="badge text-decoration-none text-nohover-light {% if proj_overassigned %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
                     {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
-                    {% if adjustable %}data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }}
-                (No. {{ r.project.number }})</a>
+                    {% if adjustable %}data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>
+                {% if show_period %}#{{ r.submission_period }}: {% endif %}
+                {% if supervisors|length > 0 %}
+                    {{ truncate_name(r.project.name) }} ({{ supervisors[0].last_name }})
+                {% endif %}
+            </a>
             {% if adjustable %}
                 {% set list = r.selector.ordered_selections %}
                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                     <div class="dropdown-header">Submitted choices</div>
                     {% for item in list %}
                         {% set disabled = false %}
+                        {% set project = item.liveproject %}
                         {% if item.liveproject_id == r.project_id or not item.is_selectable %}{% set disabled = true %}{% endif %}
                         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
-                           #{{ item.rank }}:
-                           {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.format_project()|safe }} 
+                           #{{ item.rank }}: {{ item.format_project()|safe }}
+                           {% if project.generic or project.owner is none %}
+                              [generic]
+                           {% else %}
+                              [{{ project.owner.user.name }}]
+                           {% endif %}
                         </a>
                     {% endfor %}
                 </div>
@@ -160,26 +177,27 @@ _project = \
 _marker = \
 """
 {% macro marker_tag(r, show_period) %}
-    {% if r.marker %}
+    {% set markers = r.marker_roles %}
+    {% for marker in markers %}
         <div class="dropdown match-assign-button" style="display: inline-block;">
             <a class="badge text-decoration-none text-nohover-dark bg-light dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.marker.user.name }}
+                {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ marker.name }}
             </a>
             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                 <div class="dropdown-header">Reassign marker</div>
                 {% set assessor_list = r.project.assessor_list %}
-                {% for marker in assessor_list %}
+                {% for fac in assessor_list %}
                     {% set disabled = false %}
-                    {% if marker.id == r.marker_id %}{% set disabled = true %}{% endif %}
-                    <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=marker.id) }}"{% endif %}>
-                        {{ marker.user.name }}
+                    {% if fac.id == marker.id %}{% set disabled = true %}{% endif %}
+                    <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=fac.id) }}"{% endif %}>
+                        {{ fac.user.name }}
                     </a>
                 {% endfor %}
             </div>
         </div>
     {% else %}
         <span class="badge bg-light text-dark">None</span>
-    {% endif %}
+    {% endfor %}
 {% endmacro %}
 {% if recs|length == 1 %}
     {{ marker_tag(recs[0], false) }}

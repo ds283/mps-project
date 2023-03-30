@@ -33,7 +33,7 @@ _status = \
         {% if m.is_modified %}
             <span class="badge bg-warning text-dark">Modified</span>
         {% else %}
-            <span class="badge bg-secondary text-dark">Original</span>
+            <span class="badge bg-secondary">Original</span>
         {% endif %}
     </div>
     {% if m.finished %}

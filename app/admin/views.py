@@ -4595,9 +4595,6 @@ def perform_delete_match(id):
         return redirect(url)
 
     try:
-        # delete all MatchingRecords associated with this MatchingAttempt
-        db.session.query(MatchingRecord).filter_by(matching_id=attempt.id).delete()
-
         expire_time = datetime.now() + timedelta(days=1)
         if attempt.lp_file is not None:
             attempt.lp_file.expiry = expire_time

@@ -870,23 +870,24 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
     X = pulp.LpVariable.dicts("X", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
 
     # generate decision variables for supervisor assignment matrix
-    # the indices are (supervisor, project) and the entries of the matrix are either 0 or 1,
-    # 0 = supervisor not assigned to project
-    # 1 = supervisor assigned to project (by constraint if supervisor owns the project, otherwise
-    #     possible supervisors are drawn from the assessor pool for group projects)
-    S = pulp.LpVariable.dicts("W", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpBinary)
+    # the indices are (supervisor, project) and the entries of the matrix are integers representing
+    # the number of times a supervisor has been assigned to a project (depending on the number of students
+    # who are assigned)
+    # value = number of times assigned to this project. Can't be negative.
+    S = pulp.LpVariable.dicts("S", itertools.product(range(number_sup), range(number_lp)),
+                              cat=pulp.LpInteger, lowBound=0)
 
     # generate decision variables for marker assignment matrix
     # the indices are (marker, project) and the entries of the matrix are integers, because
     # the same marker can be assigned to mark more than one instance of a particular project (e.g. different
     # students submitting reports for the same project).
-    # value = number of times assigned to this project
+    # value = number of times assigned to this project. Can't be negative.
     Y = pulp.LpVariable.dicts("Y", itertools.product(range(number_mark), range(number_lp)),
                               cat=pulp.LpInteger, lowBound=0)
 
     # generate auxiliary variables that track whether a given supervisor has any projects assigned or not
     # 0 = none assigned
-    # 1 = at least one assigned
+    # 1 = at least one assigned (obtained by biasing the optimizer to produce this from the objective function)
     Z = pulp.LpVariable.dicts("Z", range(number_sup), cat=pulp.LpBinary)
 
     # generate auxiliary variables that track whether a given project has any students assigned or not
@@ -1003,7 +1004,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
 
         if proj.generic or proj.owner is None:
             # force Q[j] to be zero if no students are assigned to project j
-            prob += sum(X[(i, j)] for i in range(number_sel)) >= Q[j], \
+            prob += Q[j] <= sum(X[(i, j)] for i in range(number_sel)), \
                     '_CQ_upperb_C{cfg}_P{num}'.format(cfg=proj.config_id, num=proj.number)
 
             # force Q[j] to be nonzero if any students are assigned to project j
@@ -1011,7 +1012,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
                 sel: SelectingStudent = sel_dict[i]
                 user: User = sel.student.user
 
-                prob += X[(i, j)] <= Q[j], \
+                prob += Q[j] >= X[(i, j)], \
                         '_CQ{first}{last}_lowerb_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
                                                                        cfg=proj.config_id, num=proj.number)
 
@@ -1099,7 +1100,10 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
         for j in range(number_lp):
             proj: LiveProject = lp_dict[j]
             key = (k, j)
-            prob += S[key] <= P[key], \
+            # TODO: literal 6 represents the maximum number of times a supervisor can be assigned to a project
+            #  and should be specified as part of the configuration for a match.
+            #  It can override the maximum capacity for a project.
+            prob += S[key] <= 6*P[key], \
                     '_CS{first}{last}_supv_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
                                                                  cfg=proj.config_id, num=proj.number)
 
@@ -1109,16 +1113,14 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
         user: User = sup.user
 
         # force Z[k] to be zero if no projects are assigned to supervisor k
-        prob += sum(S[(k, j)] for j in range(number_lp)) >= Z[k], \
+        prob += Z[k] <= sum(S[(k, j)] for j in range(number_lp)), \
                 '_CZ{first}{last}_upperb'.format(first=user.first_name, last=user.last_name)
 
-        # force Z[k] to be nonzero if any project is assigned to supervisor k
-        for j in range(number_lp):
-            proj: LiveProject = lp_dict[j]
-
-            prob += S[(k, j)] <= Z[k], \
-                    '_CZ{first}{last}_lowerb_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
-                                                                   cfg=proj.config_id, num=proj.number)
+        # if any projects are assigned to supervisor k then Z[k] will be allowed to float up to 1,
+        # and the optimizer will choose to do this because the no-assignment-penalty part of the
+        # objective function makes it prefer to do so.
+        # So, we don't explicitly need a constraint to force Z[k] to be nonzero when any projects
+        # are assigned.
 
     # markers can only be assigned projects to which they are attached
     for i in range(number_mark):
@@ -1130,8 +1132,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
             key = (i, j)
             # recall M[key] is the allowed multiplicity, not just a 0 or 1
             prob += Y[key] <= M[key], \
-                    '_C{first}{last}_mark_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
-                                                              cfg=proj.config_id, num=proj.number)
+                    '_C{first}{last}_C{cfg}_P{num}_mark'.format(first=user.first_name, last=user.last_name,
+                                                                cfg=proj.config_id, num=proj.number)
 
     # if supervisors are being used, a supervisor should be assigned for each project that has been assigned
     for j in range(number_lp):
@@ -1142,33 +1144,24 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
         # TODO: note, we intentionally go out to the default ProjectClass.uses_supervisor setting, rather than using
         #  the current ProjectClassConfig.uses_supervisors setting. Is this correct?
         if pclass.uses_supervisor:
+            capacity = proj.capacity if (proj.capacity is not None and proj.capacity > 0) else 1
 
-            # if no selector is assigned to this project, force that no supervisor is assigned to it either
-            for k in range(number_sup):
-                sup: FacultyData = sup_dict[k]
-                user: User = sup.user
+            # force that total number of assigned supervisors is at least large enough to accommodate all
+            # the assigned students
+            prob += sum(S[(k, j)] * P[(k, j)] for k in range(number_sup)) >= \
+                      sum(X[(i, j)] for i in range(number_sel))/capacity, \
+                    '_CS_C{cfg}_P{num}_supv_lowerb'.format(cfg=proj.config_id, num=proj.number)
 
-                prob += sum(X[(i, j)] for i in range(number_sel)) >= S[(k, j)], \
-                        '_CW{first}{last}_C{cfg}_P{num}_supv_upperb'.format(first=user.first_name, last=user.last_name,
-                                                                            cfg=proj.config_id, num=proj.number)
-
-            # on the other hand, if *any* selector is assigned to this project, force that 1 supervisor is
-            # assigned
-            for i in range(number_sel):
-                sel: SelectingStudent = sel_dict[i]
-
-                prob += sum(S[(k, j)] * P[(k, j)] for k in range(number_sup)) >= X[(i, j)], \
-                        '_CW_SEL{sel}_C{cfg}_P{num}_supv_lowerb'.format(sel=sel.id, cfg=proj.config_id, num=proj.number)
+            # force that total number of assigned supervisors is not larger than required to accommodate all
+            # the assigned students
+            prob += sum(S[(k, j)] * P[(k, j)] for k in range(number_sup)) < \
+                      sum(X[(i, j)] for i in range(number_sel))/capacity + 1, \
+                    '_CS_C{cfg}_P{num}_supv_uppperb'.format(cfg=proj.config_id, num=proj.number)
 
         else:
-            for k in range(number_sup):
-                sup: FacultyData = sup_dict[k]
-                user: User = sup.user
-
-                # enforce no supervisors assigned to this project
-                prob += S[(k, j)] == 0, \
-                        '_C{first}{last}_nosupv_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
-                                                                      cfg=proj.config_id, num=proj.number)
+            # enforce no supervisors assigned to this project
+            prob += sum(S[(k, j)] for k in range(number_sup)) == 0, \
+                    '_CS_C{cfg}_P{num}_nosupv'.format(cfg=proj.config_id, num=proj.number)
 
     # if markers are being used, number of students assigned to each project must match number of markers assigned
     # to each project; otherwise, number of markers should be zero
@@ -1186,14 +1179,9 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
                     '_C{cfg}_P{num}_mark_parity'.format(cfg=proj.config_id, num=proj.number)
 
         else:
-            for i in range(number_mark):
-                mark: FacultyData = mark_dict[i]
-                user: User = mark.user
-
-                # enforce no markers assigned to this project
-                prob += Y[(i, j)] == 0, \
-                        '_C{first}{last}_nomarkers_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
-                                                                         cfg=proj.config_id, num=proj.number)
+            # enforce no markers assigned to this project
+            prob += sum(Y[(i, j)] for i in range(number_mark)) == 0, \
+                    '_CY_C{cfg}_P{num}_nomark'.format(cfg=proj.config_id, num=proj.number)
 
     # implement any "force" constraints from base match
     if force_base:
@@ -1421,8 +1409,9 @@ def _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, numb
                 idx = (k, j)
 
                 if idx in base_S:
-                    # bias S assignment towards S=1
-                    objective += fbase_bias*S[idx]
+                    # bias S assignment towards the multiplicity found in the base
+                    m = base_S[idx]
+                    objective += fbase_bias*(S[idx] - int(m))
                 else:
                     # bias Y assignment towards S=0
                     objective += fbase_bias*(1-S[idx])
@@ -1469,6 +1458,8 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
         proj_id = number_to_lp[j]
         if proj_id in supervisors:
             raise RuntimeError('PuLP solution has inconsistent supervisor assignment')
+
+        assigned = []
 
         for k in range(number_sup):
             S[(k, j)].round()
@@ -1730,7 +1721,7 @@ def _initialize(self, record, read_serialized=False):
 def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_number):
     base_X = set()
     base_Y = {}
-    base_S = set()
+    base_S = {}
     has_base_match = set()
 
     base: MatchingAttempt = record.base
@@ -1767,7 +1758,13 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
                 if role.user_id not in sup_to_number:
                     raise RuntimeError('Missing supervisor when reconstructing S map')
                 supv_number = sup_to_number[role.user_id]
-                base_S.add((supv_number, proj_number))
+
+                key = (supv_number, proj_number)
+                if key in base_S:
+                    base_S[key] += 1
+                else:
+                    base_S[key] = 1
+
                 print('>> registered base match between supervisor {sup_n} (={sup_name}) and project {proj_n} '
                       '(={proj_name})'.format(sup_n=supv_number, proj_n=proj_number,
                                               sup_name=role.user.name, proj_name=record.project.name))

@@ -54,7 +54,7 @@
                                     <strong>#Supervisors</strong>: {{ data['supervision_faculty'] }}
                                 </div>
                                 <div class="col-4">
-                                    <strong>Mean workload</strong>: {{ (data['supervision_CATS']/data['supervision_faculty'])|round(precision=0) }} CATS
+                                    <strong>Mean workload</strong>: {{ data['supervision_workload']|round(precision=0) }} CATS
                                 </div>
                             </div>
                             <div class="row">
@@ -65,7 +65,7 @@
                                     <strong>#Markers</strong>: {{ data['marking_faculty'] }}
                                 </div>
                                 <div class="col-4">
-                                    <strong>Mean workload</strong>: {{ (data['marking_CATS']/data['marking_faculty'])|round(precision=0) }} CATS
+                                    <strong>Mean workload</strong>: {{ data['marking_workload']|round(precision=0) }} CATS
                                 </div>
                             </div>
                             <div class="row">
@@ -76,7 +76,7 @@
                                     <strong>#Moderators</strong>: {{ data['moderation_faculty'] }}
                                 </div>
                                 <div class="col-4">
-                                    <strong>Mean workload</strong>: {{ (data['moderation_CATS']/data['moderation_faculty'])|round(precision=0) }} CATS
+                                    <strong>Mean workload</strong>: {{ data['moderation_workload']|round(precision=0) }} CATS
                                 </div>
                             </div>
                         </div>

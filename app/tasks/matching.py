@@ -19,7 +19,7 @@ from celery import group, chain
 from celery.exceptions import Ignore
 from flask import current_app, render_template
 from flask_mailman import EmailMultiAlternatives
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -285,9 +285,15 @@ def _enumerate_liveprojects_primary(configs):
         # (eg. enrolment status may have changed since the projects went live)
         projects = db.session.query(LiveProject).filter_by(config_id=config.id) \
             .join(ProjectClassConfig, ProjectClassConfig.id == LiveProject.config_id) \
-            .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == LiveProject.owner_id,
-                                         EnrollmentRecord.pclass_id == ProjectClassConfig.pclass_id)) \
-            .filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED).all()
+            .join(User, User.id == LiveProject.owner_id, isouter=True) \
+            .join(FacultyData, FacultyData.id == LiveProject.owner_id, isouter=True) \
+            .join(EnrollmentRecord, EnrollmentRecord.owner_id == LiveProject.owner_id, isouter=True) \
+            .filter(or_(LiveProject.generic == True,
+                        and_(LiveProject.generic == False,
+                             User.active == True,
+                             FacultyData.id != None,
+                             EnrollmentRecord.pclass_id == ProjectClassConfig.pclass_id,
+                             EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED))).all()
 
         project_group_dict[config.id] = []
 
@@ -923,8 +929,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
 
     # add variables designed to allow violation of maximum CATS if necessary to obtain a feasible
     # solution
-    sup_elastic_CATS = pulp.LpVariable.dicts("P", range(number_sup), cat=pulp.LpContinuous, lowBound=0)
-    mark_elastic_CATS = pulp.LpVariable.dicts("Q", range(number_mark), cat=pulp.LpContinuous, lowBound=0)
+    sup_elastic_CATS = pulp.LpVariable.dicts("A", range(number_sup), cat=pulp.LpContinuous, lowBound=0)
+    mark_elastic_CATS = pulp.LpVariable.dicts("B", range(number_mark), cat=pulp.LpContinuous, lowBound=0)
 
 
     # OBJECTIVE FUNCTION
@@ -983,11 +989,11 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
             if proj.generic or proj.owner is None:
                 tag = 'generic'
             else:
-                user: User = proj.owner.user
-                tag = '{first}{last}'.format(first=user.first_name, last=user.last_name)
+                user_owner: User = proj.owner.user
+                tag = '{first}{last}'.format(first=user_owner.first_name, last=user_owner.last_name)
 
             prob += X[key] <= R[key], \
-                    '_C{first}{last}_{scfg}_rk_C{cfg}_{tag}_P{num}' \
+                    '_C{first}{last}_rank_SC{scfg}_C{cfg}_{tag}_P{num}' \
                         .format(first=user.first_name, last=user.last_name, scfg=sel.config_id,
                                 cfg=proj.config_id, num=proj.number, tag=tag)
 
@@ -1093,7 +1099,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
             proj: LiveProject = lp_dict[j]
             key = (k, j)
             prob += S[key] <= P[key], \
-                    '_CS{first}{last}_supv_C{cfg}_P{num}'.format(first=user.first.name, last=user.last.name,
+                    '_CS{first}{last}_supv_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
                                                                 cfg=proj.config_id, num=proj.number)
 
     # Z[k] should be constrained to be 1 if supervisor k is assigned to any projects
@@ -1227,7 +1233,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
         sup_limit = sup_limits[k]
         if not record.ignore_per_faculty_limits and sup_limit is not None and sup_limit > 0:
             if sup_limit < lim:
-                lim = sup_limits
+                lim = sup_limit
 
         existing_CATS = _compute_existing_sup_CATS(record, sup)
         if existing_CATS > lim:

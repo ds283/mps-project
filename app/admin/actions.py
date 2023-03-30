@@ -11,7 +11,7 @@
 
 from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, EnrollmentRecord, SelectingStudent, User, AssessorAttendanceData, \
-    SubmissionPeriodRecord
+    SubmissionPeriodRecord, SubmissionPeriodDefinition
 from ..shared.utils import get_current_year
 from ..shared.sqlalchemy import get_count
 
@@ -49,26 +49,10 @@ def estimate_CATS_load():
         num_selectors = get_count(db.session.query(SelectingStudent) \
                                   .filter_by(retired=False, convert_to_submitter=True, config_id=config.id))
 
-        if config.CATS_supervision is not None and config.CATS_supervision > 0:
-            supervision_CATS += config.CATS_supervision * num_selectors
+        if pclass.uses_supervisor:
+            if pclass.CATS_supervision is not None and pclass.CATS_supervision > 0:
+                supervision_CATS += pclass.CATS_supervision * num_selectors
 
-        if config.CATS_marking is not None and config.CATS_marking > 0:
-            for period in config.periods:
-                period: SubmissionPeriodRecord
-                marking_CATS += config.CATS_marking * num_selectors * period.number_markers
-
-        if config.CATS_moderation is not None and config.CATS_moderation > 0:
-            for period in config.periods:
-                period: SubmissionPeriodRecord
-                moderation_CATS += config.CATS_moderation * num_selectors * period.number_moderators
-
-        if config.CATS_presentation is not None and config.CATS_presentation > 0:
-            for period in config.periods:
-                period: SubmissionPeriodRecord
-                if period.has_presentation:
-                    presentation_CATS += config.CATS_presentation * num_selectors * period.number_assessors
-
-        if config.uses_supervisor:
             # find supervising faculty enrolled for this project
             supervisors = db.session.query(EnrollmentRecord) \
                 .filter_by(pclass_id=pclass.id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED) \
@@ -78,7 +62,12 @@ def estimate_CATS_load():
             for item in supervisors:
                 supervision_faculty.add(item.owner_id)
 
-        if config.uses_marker:
+        if pclass.uses_marker:
+            if pclass.CATS_marking is not None and pclass.CATS_marking > 0:
+                for period in pclass.periods:
+                    period: SubmissionPeriodDefinition
+                    marking_CATS += pclass.CATS_marking * num_selectors * period.number_markers
+
             # find marking faculty enrolled for this project
             markers = db.session.query(EnrollmentRecord) \
                 .filter_by(pclass_id=pclass.id, marker_state=EnrollmentRecord.MARKER_ENROLLED) \
@@ -88,7 +77,12 @@ def estimate_CATS_load():
             for item in markers:
                 marking_faculty.add(item.owner_id)
 
-        if config.uses_moderator:
+        if pclass.uses_moderator:
+            if pclass.CATS_moderation is not None and pclass.CATS_moderation > 0:
+                for period in pclass.periods:
+                    period: SubmissionPeriodDefinition
+                    moderation_CATS += pclass.CATS_moderation * num_selectors * period.number_moderators
+
             # find moderating faculty enrolled for this project
             moderators = db.session.query(EnrollmentRecord) \
                 .filter_by(pclass_id=pclass.id, moderator_state=EnrollmentRecord.MODERATOR_ENROLLED) \
@@ -98,7 +92,13 @@ def estimate_CATS_load():
             for item in moderators:
                 moderation_faculty.add(item.owner_id)
 
-        if config.uses_presentations:
+        if pclass.uses_presentations:
+            if pclass.CATS_presentation is not None and pclass.CATS_presentation > 0:
+                for period in pclass.periods:
+                    period: SubmissionPeriodDefinition
+                    if period.has_presentation:
+                        presentation_CATS += pclass.CATS_presentation * num_selectors * period.number_assessors
+
             # find assessor faculty enrolled for this project
             markers = db.session.query(EnrollmentRecord) \
                 .filter_by(pclass_id=pclass.id, presentations_state=EnrollmentRecord.PRESENTATIONS_ENROLLED) \
@@ -108,14 +108,23 @@ def estimate_CATS_load():
             for item in markers:
                 presentation_faculty.add(item.owner_id)
 
+    num_supervision_faculty = len(supervision_faculty)
+    num_marking_faculty = len(marking_faculty)
+    num_moderation_faculty = len(moderation_faculty)
+    num_presentation_faculty = len(presentation_faculty)
+
     return {'supervision_CATS': supervision_CATS,
             'marking_CATS': marking_CATS,
             'moderation_CATS': moderation_CATS,
             'presentation_CATS': presentation_CATS,
-            'supervision_faculty': len(supervision_faculty),
-            'marking_faculty': len(marking_faculty),
-            'moderation_faculty': len(moderation_faculty),
-            'presentation_faculty': len(presentation_faculty)}
+            'supervision_faculty': num_supervision_faculty,
+            'marking_faculty': num_marking_faculty,
+            'moderation_faculty': num_moderation_faculty,
+            'presentation_faculty': num_presentation_faculty,
+            'supervision_workload': supervision_CATS/num_supervision_faculty if num_supervision_faculty > 0 else 0,
+            'marking_workload': marking_CATS/num_marking_faculty if num_marking_faculty > 0 else 0,
+            'moderation_workload': moderation_CATS/num_moderation_faculty if num_moderation_faculty > 0 else 0,
+            'presentation_owrkload': presentation_CATS/num_presentation_faculty if num_presentation_faculty > 0 else 0}
 
 
 def availability_CSV_generator(assessment):

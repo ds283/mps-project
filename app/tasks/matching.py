@@ -957,7 +957,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
     # of CATS limits except where really necessary; notice that these elastic variables are measured in
     # units of CATS, not projects, so the coefficents really are large
     elastic_CATS_penalty = abs(CATS_violation_penalty) * \
-                           (sum(sup_elastic_CATS[i] for i in range(number_sup)) \
+                           (sum(sup_elastic_CATS[i] for i in range(number_sup))
                             + sum(mark_elastic_CATS[i] for i in range(number_mark)))
 
     # we also impose a penalty for every supervisor who does not have any project assignments
@@ -997,7 +997,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
                         .format(first=user.first_name, last=user.last_name, scfg=sel.config_id,
                                 cfg=proj.config_id, num=proj.number, tag=tag)
 
-    # Q[i] should be constrained to be 1 for group/generic projects is i is assigned to any student
+    # Q[i] should be constrained to be 1 for group/generic projects if i is assigned to any student
     for j in range(number_lp):
         proj: LiveProject = lp_dict[j]
 
@@ -1044,13 +1044,14 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
             prob += sum(X[(i, j)] for i in range(number_sel)) <= capacity[j], \
                     '_C_C{cfg}_{tag}_P{num}_capacity'.format(cfg=proj.config_id, num=proj.number, tag=tag)
 
-    # enforce that group projects have a minimum occupancy
+    # enforce that group projects have a *minimum* occupancy
     for j in range(number_lp):
         proj: LiveProject = lp_dict[j]
 
         if proj.generic or proj.owner is None:
             # force number of students assigned to this project to be at least a given minimum
-            min = 5
+            # TODO: literal 3 should be specified as part of configuration for a match
+            min = 3
             if min > capacity[j]:
                 min = 1
 
@@ -1100,7 +1101,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
             key = (k, j)
             prob += S[key] <= P[key], \
                     '_CS{first}{last}_supv_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
-                                                                cfg=proj.config_id, num=proj.number)
+                                                                 cfg=proj.config_id, num=proj.number)
 
     # Z[k] should be constrained to be 1 if supervisor k is assigned to any projects
     for k in range(number_sup):
@@ -1127,6 +1128,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
         for j in range(number_lp):
             proj: LiveProject = lp_dict[j]
             key = (i, j)
+            # recall M[key] is the allowed multiplicity, not just a 0 or 1
             prob += Y[key] <= M[key], \
                     '_C{first}{last}_mark_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
                                                               cfg=proj.config_id, num=proj.number)
@@ -1374,21 +1376,26 @@ def _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, numb
 
     # reward the solution for assigning students to highly ranked projects:
     for i in range(number_sel):
-        has_old_match = i in has_base_match
-        if has_old_match:
-            print('-- using old match data for selector {n}'.format(n=i))
+        base_match_exists = i in has_base_match
+        if base_match_exists:
+            print('-- using base match data for selector {n}'.format(n=i))
 
         for j in range(number_lp):
             idx = (i, j)
 
-            if has_old_match:
+            if base_match_exists:
+                # an assignment for selector i was present in the base, but we don't know whether it was for
+                # this project.
+
                 if idx in base_X:
-                    # this match was in the base, so bias it to be present here
+                    # an assignment to this project *was* already in the base, so bias it to be present here
                     objective += fbase_bias*X[idx]
                 else:
-                    # this match was not in the base, so bias it to be absent here
+                    # an assignment to this project was *not* already in the base, so bias it to be absent here
                     objective += fbase_bias*(1-X[idx])
             else:
+                # no assignment for selector i was present in the base
+
                 if R[idx] > 0:
                     # score is 1/rank of assigned project, weighted
                     objective += X[idx] * W[idx] / R[idx]
@@ -1720,7 +1727,7 @@ def _initialize(self, record, read_serialized=False):
            R, W, cstr, M, P
 
 
-def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_number, cstr):
+def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_number):
     base_X = set()
     base_Y = {}
     base_S = set()
@@ -1753,7 +1760,7 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
                                       sel_name=record.selector.student.user.name, proj_name=record.project.name))
         has_base_match.add(sel_number)
 
-        for role in base.roles:
+        for role in record.roles:
             role: MatchingRole
 
             if role.role == MatchingRole.ROLE_SUPERVISOR:
@@ -2113,7 +2120,8 @@ def register_matching_tasks(celery):
             mean_CATS_per_project, CATS_supervisor, CATS_marker, \
             R, W, cstr, M, P = _initialize(self, record)
 
-            base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_number, cstr)
+            base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number,
+                                                                     mark_to_number)
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                             autocommit=True)
@@ -2163,7 +2171,8 @@ def register_matching_tasks(celery):
             mean_CATS_per_project, CATS_supervisor, CATS_marker, \
             R, W, cstr, M, P = _initialize(self, record)
 
-            base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_number, cstr)
+            base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number,
+                                                                     mark_to_number)
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                             autocommit=True)
@@ -2239,7 +2248,8 @@ def register_matching_tasks(celery):
             mean_CATS_per_project, CATS_supervisor, CATS_marker, \
             R, W, cstr, M, P = _initialize(self, record, read_serialized=True)
 
-            base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_number, cstr)
+            base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number,
+                                                                     mark_to_number)
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                             autocommit=True)

@@ -1738,11 +1738,13 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
         if record.selector_id not in sel_to_number:
             raise RuntimeError('Missing SelectingStudent when reconstructing X map')
 
+        # get our selector number for the allocated selector
         sel_number = sel_to_number[record.selector_id]
 
         if record.project_id not in lp_to_number:
             raise RuntimeError('Missing LiveProject when reconstructing X map')
 
+        # get our project number for the allocated project
         proj_number = lp_to_number[record.project_id]
 
         base_X.add((sel_number, proj_number))

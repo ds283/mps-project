@@ -11181,7 +11181,8 @@ def _MatchingAttempt_current_score(id):
 
 @cache.memoize()
 def _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id):
-    obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
+    # obtain MatchingAttempt
+    obj: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
     CATS = 0
 
@@ -11198,7 +11199,8 @@ def _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id):
 
 @cache.memoize()
 def _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id):
-    obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
+    # obtain MatchingAttempt
+    obj: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
     CATS = 0
 
@@ -11217,7 +11219,7 @@ def _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id):
 def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
     CATS_sup = _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id)
     CATS_mark = _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id)
-    # UPDATE MODERATE CATS
+    # TODO: Include CATS for moderation roles
 
     return CATS_sup, CATS_mark
 
@@ -11773,13 +11775,24 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     def get_supervisor_records(self, fac_id):
         return self.records \
             .join(LiveProject, LiveProject.id == MatchingRecord.project_id) \
-            .filter(LiveProject.owner_id == fac_id) \
+            .filter(MatchingRecord.roles.any(and_(MatchingRole.user_id == fac_id,
+                                                  MatchingRole.role == MatchingRole.ROLE_SUPERVISOR))) \
             .order_by(MatchingRecord.submission_period.asc())
 
 
     def get_marker_records(self, fac_id):
         return self.records \
-            .filter_by(marker_id=fac_id) \
+            .join(LiveProject, LiveProject.id == MatchingRecord.project_id) \
+            .filter(MatchingRecord.roles.any(and_(MatchingRole.user_id == fac_id,
+                                                  MatchingRole.role == MatchingRole.ROLE_MARKER))) \
+            .order_by(MatchingRecord.submission_period.asc())
+
+
+    def get_moderator_records(self, fac_id):
+        return self.records \
+            .join(LiveProject, LiveProject.id == MatchingRecord.project_id) \
+            .filter(MatchingRecord.roles.any(and_(MatchingRole.user_id == fac_id,
+                                                  MatchingRole.role == MatchingRole.ROLE_MODERATOR))) \
             .order_by(MatchingRecord.submission_period.asc())
 
 

@@ -10,6 +10,7 @@
 
 from flask import jsonify, render_template_string
 
+from ....models import MatchingAttempt
 from ....shared.utils import get_count
 
 
@@ -27,7 +28,8 @@ _name = \
             {% if rec is not none %}
                 {% set pcl = rec.pclass %}
                 {% set style = pcl.make_CSS_style() %}
-                <span class="badge {% if style is not none %}bg-secondary{% else %}bg-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
+                <span class="badge {% if style is not none %}bg-secondary{% else %}bg-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>
+                    {{ pcl.abbreviation }}
                     {{ f.number_projects_offered(pcl.id) }}
                     {%- if rec.supervisor_state == rec.SUPERVISOR_ENROLLED %}
                         S <i class="fas fa-check"></i>
@@ -52,7 +54,8 @@ _name = \
                 {% set pcl = rec.pclass %}
                 {% if rec.CATS_supervision is not none or rec.CATS_marking is not none or rec.CATS_moderation is not none %}
                     {% set style = pcl.make_CSS_style() %}
-                    <span class="badge {% if style is not none %}bg-secondary{% else %}bg-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
+                    <span class="badge {% if style is not none %}bg-secondary{% else %}bg-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>
+                        {{ pcl.abbreviation }}
                         {%- if rec.CATS_supervision is not none %}
                             S {{ rec.CATS_supervision }}
                         {%- endif -%}
@@ -68,7 +71,8 @@ _name = \
         {% endif %}
     {% endfor %}
     {% if f.CATS_supervision is not none or f.CATS_marking is not none or f.CATS_moderation is not none %}
-        <span class="badge bg-primary">Global
+        <span class="badge bg-primary">
+            Global
             {%- if f.CATS_supervision is not none %}
                 S {{ f.CATS_supervision }}
             {%- endif -%}
@@ -93,11 +97,14 @@ _projects = \
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     {% set proj_overassigned = r.is_project_overassigned %}
-    <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
+    <div class="badge {% if proj_overassigned %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %}" {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}>
+        #{{ r.submission_period }}: {{ r.selector.student.user.last_name }} ({{ truncate_name(r.project.name) }})
+    </div>
+    {# <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
         <a class="badge text-decoration-none text-nohover-light {% if proj_overassigned %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
                 {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
-                {% if adjustable %}data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>#{{ r.submission_period }}:
-            {{ r.selector.student.user.name }} (No. {{ r.project.number }})</a>
+                {% if adjustable %}data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>
+                #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})</a>
         {% if adjustable %}
             {% set list = r.selector.ordered_selections %}
             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
@@ -112,7 +119,7 @@ _projects = \
                 {% endfor %}
             </div>
         {% endif %}
-    </div>
+    </div> #}
     {% set outcome = r.hint_status %}
     {% if outcome is not none %}
         {% set satisfied, violated = outcome %}
@@ -155,10 +162,20 @@ _projects = \
 # language=jinja2
 _marking = \
 """
+{% macro truncate_name(name) %}
+    {% if name|length > 18 %}
+        {{ name[0:18] }}...
+    {% else %}
+        {{ name }}
+    {% endif %}
+{% endmacro %}
 {% macro marker_tag(r) %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
-    <div class="dropdown match-assign-button" style="display: inline-block;">
+    <div class="badge {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block" {% if style %}style="{{ style }}"{% endif %}>
+        #{{ r.submission_period }}: {{ r.selector.student.user.last_name }} ({{ truncate_name(r.project.name) }})
+    </div>
+    {# <div class="dropdown match-assign-button" style="display: inline-block;">
         <a class="badge text-decoration-none text-nohover-light {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown"
             href="" role="button" aria-haspopup="true" aria-expanded="false">
             #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})
@@ -174,11 +191,11 @@ _marking = \
                 </a>
             {% endfor %}
         </div>
-    </div>
+    </div> #}
 {% endmacro %}
 {% set ns = namespace(count=0) %}
 {% for r in recs %}
-    {% if r.marker and pclass_filter is none or r.selector.config.pclass_id == pclass_filter %}
+    {% if pclass_filter is none or r.selector.config.pclass_id == pclass_filter %}
         {% set ns.count = ns.count + 1 %}
         {{ marker_tag(r) }}
     {% endif %}
@@ -213,7 +230,7 @@ _workload = \
 """
 
 
-def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
+def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, show_includes):
     data = []
 
     for f in faculty:

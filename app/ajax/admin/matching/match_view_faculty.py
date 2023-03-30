@@ -91,6 +91,13 @@ _name = \
 # language=jinja2
 _projects = \
 """
+{% macro truncate_name(name) %}
+    {% if name|length > 18 %}
+        {{ name[0:18] }}...
+    {% else %}
+        {{ name }}
+    {% endif %}
+{% endmacro %}
 {% macro project_tag(r) %}
     {% set adjustable = false %}
     {% if r.selector.has_submission_list %}{% set adjustable = true %}{% endif %}

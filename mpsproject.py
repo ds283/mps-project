@@ -18,6 +18,7 @@ from app.models import PresentationAssessment, \
     SelectingStudent, ProjectDescription, Project, WorkflowMixin, EnrollmentRecord, StudentDataWorkflowHistory, \
     ProjectDescriptionWorkflowHistory, MainConfig, AssetLicense, EmailLog, ProjectTag, LiveProject, SubmissionRecord, \
     SubmissionRole, PresentationFeedback, MatchingRecord, MatchingRole, FacultyData
+from app.shared.sqlalchemy import get_count
 
 
 def migrate_availability_data():
@@ -550,9 +551,54 @@ def migrate_matching_roles():
 
     db.session.commit()
 
+
+def _write_supervisor_pool_data(items):
+    for item in items:
+        names = []
+        if get_count(item.tags.filter_by(id=535)):
+            # data science
+            names += ['Mitchell', 'Barrett', 'Roseboom', 'Sherman', 'Weeds', 'Weir', 'Olugbade',
+                      'Simpson', 'Evans', 'Ashby', 'Raman', 'Rosas De Andraca']
+
+        if get_count(item.tags.filter_by(id=536)):
+            # life sciences
+            pass
+
+        if get_count(item.tags.filter_by(id=537)):
+            # mathematics
+            names += ['Blyuss', 'Cagnetti', 'Dahlqvist', 'Dashti', 'Koch', 'Koumatos', 'Scalas']
+
+        if get_count(item.tags.filter_by(id=538)):
+            # physics & astronomy
+            names += ['Romer', 'Shaw', 'Loveday', 'Iliev', 'Lewis', 'Salvatore']
+
+        fds = []
+        for name in names:
+            obj = db.session.query(User) \
+                    .join(FacultyData, FacultyData.id == User.id) \
+                    .filter(User.last_name == name,
+                            User.roles.any(id=3)).one()
+
+            if obj is not None and obj.faculty_data is not None:
+                fds.append(obj.faculty_data)
+            else:
+                print('Failed to append FacultyData object for supervisor "{name}"'.format(name=name))
+
+        item.supervisors = fds
+
+
+def add_supervisor_pool_data():
+    ps = db.session.query(Project).filter(Project.generic == True).all()
+    _write_supervisor_pool_data(ps)
+
+    lps = db.session.query(LiveProject).filter(LiveProject.generic == True).all()
+    _write_supervisor_pool_data(lps)
+
+    db.session.commit()
+
 app = create_app()
 
-# with app.app_context():
+with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -575,6 +621,7 @@ app = create_app()
     # migrate_liveproject_tags()
     # migrate_submission_roles()
     # migrate_matching_roles()
+    add_supervisor_pool_data()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

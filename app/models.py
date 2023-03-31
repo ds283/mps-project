@@ -349,10 +349,12 @@ def ProjectConfigurationMixinFactory(backref_label, force_unique_names,
 
         if allow_edit_tags == 'allow':
             def add_tag(self, tag):
-                self.tags.append(tag)
+                if tag not in self.tags:
+                    self.tags.append(tag)
 
             def remove_tag(self, tag):
-                self.tags.remove(tag)
+                if tag in self.tags:
+                    self.tags.remove(tag)
 
 
         @property

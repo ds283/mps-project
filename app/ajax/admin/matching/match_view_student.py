@@ -71,12 +71,12 @@ _project = \
     {% if r.selector.has_submission_list %}{% set adjustable = true %}{% endif %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
-    {% set proj_overassigned = r.is_project_overassigned %}
+    {% set has_issues = r.has_issues %}
     {% set supervisors = r.supervisor_roles %}
     <div>
         <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-            <a class="badge text-decoration-none text-nohover-light {% if proj_overassigned %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
-                    {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
+            <a class="badge text-decoration-none text-nohover-light {% if has_issues %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
+                    {% if not has_issues and style %}style="{{ style }}"{% endif %}
                     {% if adjustable %}data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {% if supervisors|length > 0 %}
@@ -132,7 +132,7 @@ _project = \
 {% endif %}
 {% for r in recs %}
     {# if both not valid and overassigned, should leave error message from is_valid intact due to short-circuit evaluation #}
-    {% if not r.is_valid or r.is_project_overassigned %}
+    {% if not r.is_valid or r.has_issues %}
         <p></p>
         {% set errors = r.errors %}
         {% set warnings = r.warnings %}
@@ -251,8 +251,7 @@ def student_view_data(selector_data):
 
     data = [{'student': {
                 'display': render_template_string(_student, sel=r[0].selector, record_id=r[0].id,
-                                                  valid=all([not rc.has_issues and
-                                                             not rc.is_project_overassigned for rc in r])),
+                                                  valid=all([not rc.has_issues for rc in r])),
                 'sortvalue': r[0].selector.student.user.last_name + r[0].selector.student.user.first_name
              },
              'pclass': render_template_string(_pclass, sel=r[0].selector),

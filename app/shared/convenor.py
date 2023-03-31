@@ -65,6 +65,7 @@ def add_liveproject(number, project, config_id, desc=None, autocommit=False):
                             enforce_capacity=item.enforce_capacity,
                             capacity=description.capacity,
                             assessors=item.get_assessor_list(config.project_class) if config.uses_marker else [],
+                            supervisors=item.get_supervisor_list(config.project_class) if config.uses_supervisor else [],
                             modules=[m for m in description.modules if m.active],
                             description=description.description,
                             reading=description.reading,

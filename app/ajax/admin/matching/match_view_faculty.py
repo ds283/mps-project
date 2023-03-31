@@ -103,8 +103,8 @@ _projects = \
     {% if r.selector.has_submission_list %}{% set adjustable = true %}{% endif %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
-    {% set proj_overassigned = r.is_project_overassigned %}
-    <div class="badge {% if proj_overassigned %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %}" {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}>
+    {% set has_issues = r.has_issues %}
+    <div class="badge {% if has_issues %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %}" {% if not has_issues and style %}style="{{ style }}"{% endif %}>
         #{{ r.submission_period }}: {{ r.selector.student.user.last_name }} ({{ truncate_name(r.project.name) }})
     </div>
     {# <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
@@ -294,15 +294,6 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, sh
         supv_records = match_attempt.get_supervisor_records(f.id).all()
         mark_records = match_attempt.get_marker_records(f.id).all()
 
-        for item in supv_records:
-            if pclass_filter is None or item.selector.config.pclass_id == pclass_filter:
-                flag, msg = match_attempt.is_project_overassigned(item.project)
-                if flag:
-                    if item.project_id not in sup_errors:
-                        sup_errors[item.project_id] = msg
-        proj_overassigned = len(sup_errors) > 0
-        overassigned = overassigned or proj_overassigned
-
         # FOR EACH INCLUDED PROJECT CLASS, FACULTY ASSIGNMENTS SHOULD RESPECT ANY CUSTOM CATS LIMITS
         enrollments = {}
         for config in match_attempt.config_members:
@@ -315,18 +306,18 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, sh
             sup, mark = match_attempt.get_faculty_CATS(f, pclass_id=config.pclass_id)
 
             if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
-                sup_errors[('custom_sup', f.id)] = 'Assignment to {name} violates their custom supervising CATS ' \
+                sup_errors[('custom_sup', f.id)] = 'Assignment to {name} violates custom supervising CATS ' \
                                                    'limit {n}'.format(name=f.user.name, n=rec.CATS_supervision)
                 overassigned = True
                 sup_overassigned = True
 
             if rec.CATS_marking is not None and mark > rec.CATS_marking:
-                mark_errors[('custom_mark', f.id)] = 'Assignment to {name} violates their custom marking CATS ' \
+                mark_errors[('custom_mark', f.id)] = 'Assignment to {name} violates custom marking CATS ' \
                                                      'limit {n}'.format(name=f.user.name, n=rec.CATS_marking)
                 overassigned = True
                 mark_overassigned = True
 
-            # UPDATE MODERATE CATS
+            # TODO: UPDATE MODERATE CATS
 
         sup_err_msgs = sup_errors.values()
         mark_err_msgs = mark_errors.values()

@@ -240,8 +240,14 @@ def _enumerate_liveprojects_serialized(record):
         lp_to_number[lp.id] = n
         number_to_lp[n] = lp.id
 
-        sup = lp.config.CATS_supervision
-        mk = lp.config.CATS_marking
+        if lp.generic:
+            # TODO: replace literal values with something from project class configuration
+            sup = 6.5
+            mk = 3
+        else:
+            sup = lp.config.CATS_supervision
+            mk = lp.config.CATS_marking
+
         CATS_supervisor[n] = sup if sup is not None else FALLBACK_DEFAULT_SUPERVISOR_CATS
         CATS_marker[n] = mk if mk is not None else FALLBACK_DEFAULT_MARKER_CATS
 
@@ -716,7 +722,7 @@ def _build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dic
             # if project is of generic/group type, then any member of the assessor pool is an allowed
             # supervisor
             if proj.generic or proj.owner is None:
-                count = get_count(proj.assessor_list_query.filter(FacultyData.id == fac.id))
+                count = get_count(proj.supervisor_list_query.filter(FacultyData.id == fac.id))
                 if count == 1:
                     P[idx] = 1
                 elif count == 0:
@@ -1030,35 +1036,6 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
         prob += sum(X[(i, j)] for j in range(number_lp)) == multiplicity[i], \
                 '_C{first}{last}_SC{scfg}_assign'.format(first=user.first_name, last=user.last_name, scfg=sel.config_id)
 
-    # enforce maximum capacity for each project
-    # note capacity[j] will be zero if this project is not enforcing an upper limit on capacity
-    for j in range(number_lp):
-        proj: LiveProject = lp_dict[j]
-
-        if capacity[j] > 0:
-            if proj.generic or proj.owner is None:
-                tag = 'generic'
-            else:
-                user: User = proj.owner.user
-                tag = '{first}{last}'.format(first=user.first_name, last=user.last_name)
-
-            prob += sum(X[(i, j)] for i in range(number_sel)) <= capacity[j], \
-                    '_C_C{cfg}_{tag}_P{num}_capacity'.format(cfg=proj.config_id, num=proj.number, tag=tag)
-
-    # enforce that group projects have a *minimum* occupancy
-    for j in range(number_lp):
-        proj: LiveProject = lp_dict[j]
-
-        if proj.generic or proj.owner is None:
-            # force number of students assigned to this project to be at least a given minimum
-            # TODO: literal 3 should be specified as part of configuration for a match
-            min = 3
-            if min > capacity[j]:
-                min = 1
-
-            prob += sum(X[i, j] for i in range(number_sel)) >= min * Q[j], \
-                    '_C_C{cfg}_generic_P{num}_occupancy'.format(cfg=proj.config_id, num=proj.number)
-
     # add constraints for any matches marked 'require' by a convenor
     for idx in cstr:
         i = idx[0]
@@ -1100,14 +1077,14 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
         for j in range(number_lp):
             proj: LiveProject = lp_dict[j]
             key = (k, j)
-            # TODO: literal 6 represents the maximum number of times a supervisor can be assigned to a project
-            #  and should be specified as part of the configuration for a match.
-            #  It can override the maximum capacity for a project.
-            prob += S[key] <= 6*P[key], \
-                    '_CS{first}{last}_supv_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
-                                                                 cfg=proj.config_id, num=proj.number)
 
-    # Z[k] should be constrained to be 1 if supervisor k is assigned to any projects
+            # enforce maximum capacity for each project; each supervisor should have no more assignments than
+            # the specified project capacity
+            prob += S[key] <= capacity[j] * P[key], \
+                    '_CS{first}{last}_C{cfg}_P{num}_supv_capacity'.format(first=user.first_name, last=user.last_name,
+                                                                          cfg=proj.config_id, num=proj.number)
+
+    # Z[k] should be constrained to be 0 if supervisor k is not assigned to any projects
     for k in range(number_sup):
         sup: FacultyData = sup_dict[k]
         user: User = sup.user
@@ -1132,8 +1109,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
             key = (i, j)
             # recall M[key] is the allowed multiplicity, not just a 0 or 1
             prob += Y[key] <= M[key], \
-                    '_C{first}{last}_C{cfg}_P{num}_mark'.format(first=user.first_name, last=user.last_name,
-                                                                cfg=proj.config_id, num=proj.number)
+                    '_CM{first}{last}_C{cfg}_P{num}_mark_capacity'.format(first=user.first_name, last=user.last_name,
+                                                                          cfg=proj.config_id, num=proj.number)
 
     # if supervisors are being used, a supervisor should be assigned for each project that has been assigned
     for j in range(number_lp):
@@ -1144,19 +1121,11 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
         # TODO: note, we intentionally go out to the default ProjectClass.uses_supervisor setting, rather than using
         #  the current ProjectClassConfig.uses_supervisors setting. Is this correct?
         if pclass.uses_supervisor:
-            capacity = proj.capacity if (proj.capacity is not None and proj.capacity > 0) else 1
 
-            # force that total number of assigned supervisors is at least large enough to accommodate all
-            # the assigned students
-            prob += sum(S[(k, j)] * P[(k, j)] for k in range(number_sup)) >= \
-                      sum(X[(i, j)] for i in range(number_sel))/capacity, \
-                    '_CS_C{cfg}_P{num}_supv_lowerb'.format(cfg=proj.config_id, num=proj.number)
-
-            # force that total number of assigned supervisors is not larger than required to accommodate all
-            # the assigned students
-            prob += sum(S[(k, j)] * P[(k, j)] for k in range(number_sup)) < \
-                      sum(X[(i, j)] for i in range(number_sel))/capacity + 1, \
-                    '_CS_C{cfg}_P{num}_supv_uppperb'.format(cfg=proj.config_id, num=proj.number)
+            # force that total number of assigned supervisors matches total number of assigned students
+            prob += sum(S[(k, j)] * P[(k, j)] for k in range(number_sup)) == \
+                      sum(X[(i, j)] for i in range(number_sel)), \
+                    '_CS_C{cfg}_P{num}_supv_parity'.format(cfg=proj.config_id, num=proj.number)
 
         else:
             # enforce no supervisors assigned to this project
@@ -1174,8 +1143,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
         # TODO: note we intentionally go out to the default ProjectClass.uses_marker setting, rather than using
         #  the current ProjectClassConfig.uses_marker value. Is this correct?
         if pclass.uses_marker:
-            prob += sum(X[(i, j)] for i in range(number_sel)) - \
-                    sum(Y[(i, j)] for i in range(number_mark)) == 0, \
+            prob += sum(X[(i, j)] for i in range(number_sel)) == \
+                    sum(Y[(i, j)] for i in range(number_mark)), \
                     '_C{cfg}_P{num}_mark_parity'.format(cfg=proj.config_id, num=proj.number)
 
         else:
@@ -1242,7 +1211,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
             if k in fac_limits and projects is not None:
                 prob += sum(S[(k, j)] * CATS_supervisor[j] for j in projects) <= fac_limits[i], \
                         '_C{first}{last}_supv_CATS_config_{cfg}'.format(first=user.first_name, last=user.last_name,
-                                                                       cfg=config_id)
+                                                                        cfg=config_id)
 
     # CATS assigned to each marker must be within bounds
     for i in range(number_mark):
@@ -1459,13 +1428,16 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
         if proj_id in supervisors:
             raise RuntimeError('PuLP solution has inconsistent supervisor assignment')
 
-        assigned = []
+        assigned = {}
 
         for k in range(number_sup):
             S[(k, j)].round()
+            # get multiplicity m with which supervisor k is assigned to project j
             m = pulp.value(S[(k, j)])
             if m > 0:
-                supervisors[proj_id] = number_to_sup[k]
+                assigned.update({number_to_sup[k]: m})
+
+        supervisors[proj_id] = assigned
 
     # generate dictionary of marker assignments; we map each project id to a list of available markers
     markers = {}
@@ -1545,7 +1517,29 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
                 if proj_id not in supervisors:
                     raise RuntimeError('PuLP solution error: supervisor stack unexpectedly empty or missing')
 
-                supervisor: int = supervisors[proj_id]
+                supervisor_list = supervisors[proj_id]
+                supervisor = None
+
+                while supervisor is None and len(supervisor_list) > 0:
+                    key_list = sorted(list(supervisor_list))
+                    key = key_list[0]
+                    value = supervisor_list[key]
+
+                    if value > 0:
+                        supervisor = key
+                        value -= 1
+
+                        if value == 0:
+                            supervisor_list.pop(key)
+                        else:
+                            supervisor_list[key] = value
+
+                    else:
+                        raise RuntimeError('PuLP solution error: supervisor count has decreased to zero, but '
+                                           'supervisor has not been removed from queue')
+
+                if supervisor is None:
+                    raise RuntimeError('PuLP solution error: supervisor stack unexpectedly empty or missing')
 
                 # generate supervisor role record
                 role_supv = MatchingRole(user_id=supervisor, role=MatchingRole.ROLE_SUPERVISOR)

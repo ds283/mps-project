@@ -309,7 +309,9 @@ def ProjectConfigurationMixinFactory(backref_label, force_unique_names,
                                      programmes_mapping_table, programmes_mapped_column, programmes_self_column, allow_edit_programmes,
                                      tags_mapping_table, tags_mapped_column, tags_self_column, allow_edit_tags,
                                      assessor_mapping_table, assessor_mapped_column, assessor_self_column,
-                                     assessor_backref_label, allow_edit_assessors):
+                                     assessor_backref_label, allow_edit_assessors,
+                                     supervisor_mapping_table, supervisor_mapped_column, supervisor_self_column,
+                                     supervisor_backref_label, allow_edit_supervisors):
 
     class ProjectConfigurationMixin(ProjectMeetingChoicesMixin):
         # NAME
@@ -448,7 +450,7 @@ def ProjectConfigurationMixinFactory(backref_label, force_unique_names,
         if allow_edit_assessors:
             def add_assessor(self, faculty, autocommit=False):
                 """
-                Add a FacultyData instance as a marker
+                Add a FacultyData instance as an assessor
                 :param faculty:
                 :return:
                 """
@@ -463,11 +465,11 @@ def ProjectConfigurationMixinFactory(backref_label, force_unique_names,
 
             def remove_assessor(self, faculty, autocommit=False):
                 """
-                Remove a FacultyData instance as a marker
+                Remove a FacultyData instance as an assessor
                 :param faculty:
                 :return:
                 """
-                if not self.is_assessor(faculty.id):
+                if not faculty in self.assessors:   # no need to check carefully, just remove
                     return
 
                 self.assessors.remove(faculty)
@@ -570,6 +572,153 @@ def ProjectConfigurationMixinFactory(backref_label, force_unique_names,
 
                     while get_count(self.assessors.filter_by(id=assessor_id)) > 1:
                         self.assessors.remove(f)
+                        removed += 1
+
+            return removed > 0
+
+
+        # table of allowed supervisors, if used
+        @declared_attr
+        def supervisors(cls):
+            return db.relationship('FacultyData', secondary=supervisor_mapping_table, lazy='dynamic',
+                                   backref=db.backref(supervisor_backref_label, lazy='dynamic'))
+
+
+        if allow_edit_supervisors:
+            def add_supervisor(self, faculty, autocommit=False):
+                """
+                Add a FacultyData instance as a possible supervisor
+                :param faculty:
+                :param autocommit:
+                :return:
+                """
+                if not self.can_enroll_supervisor(faculty):
+                    return
+
+                self.supervisors.append(faculty)
+
+                if autocommit:
+                    db.session.commit()
+
+
+            def remove_supervisor(self, faculty, autocommit=False):
+                """
+                Remove a FacultyData instance as a possible supervisor
+                :param faculty:
+                :param autocommit:
+                :return:
+                """
+                if not faculty in self.supervisors:
+                    return
+
+                self.supervisors.remove(faculty)
+
+                if autocommit:
+                    db.session.commit()
+
+
+        def _supervisor_list_query(self, pclass):
+            if isinstance(pclass, int):
+                pclass_id = pclass
+            elif isinstance(pclass, ProjectClass):
+                pclass_id = pclass.id
+            else:
+                raise RuntimeError('Could not interpret parameter pclass of type {typ} in '
+                                   'ProjectConfigurationMixin._assessor_list_query'.format(typ=type(pclass)))
+
+            fac_ids = db.session.query(supervisor_mapped_column.label('faculty_id')) \
+                .filter(supervisor_self_column == self.id).subquery()
+
+            query = db.session.query(FacultyData) \
+                .join(fac_ids, fac_ids.c.faculty_id == FacultyData.id) \
+                .join(User, User.id == FacultyData.id) \
+                .filter(User.active == True) \
+                .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
+                .filter(EnrollmentRecord.pclass_id == pclass_id) \
+                .join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id) \
+                .filter(or_(and_(ProjectClass.uses_supervisor == True,
+                                 EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED))) \
+                .order_by(User.last_name.asc(), User.first_name.asc())
+
+            return query
+
+
+        def _is_supervisor_for_at_least_one_pclass(self, faculty):
+            """
+            Check whether a given faculty member is enrolled as a supervisor for at least one
+            of the project classes associated with this project
+            :param faculty:
+            :return:
+            """
+            if not isinstance(faculty, FacultyData):
+                faculty = db.session.query(FacultyData).filter_by(id=faculty).one()
+
+            pclasses = self.project_classes.subquery()
+
+            query = faculty.enrollments \
+                .join(pclasses, pclasses.c.id == EnrollmentRecord.pclass_id) \
+                .filter(and_(pclasses.c.uses_supervisor == True,
+                             or_(EnrollmentRecord.supervisor_state == EnrollmentRecord.MARKER_ENROLLED,
+                                 EnrollmentRecord.supervisor_state == EnrollmentRecord.MARKER_SABBATICAL)))
+
+            return get_count(query) > 0
+
+
+        def _maintenance_supervisor_prune(self):
+            """
+            ensure that supervisor list does not contain anyone who is no longer enrolled for those tasks
+            note that _is_supervisor_for_at_least_one_pclass() allows faculty who are on sabbatical; we don't
+            want to strip these supervisors off, because then they would have to be pointlessly re-added by hand
+            when they come back from sabbatical
+            :return:
+            """
+            # only generic projects should have a nonzero supervisor pool
+            if not self.generic:
+                count = get_count(self.supervisors) > 0 
+                if count > 0:
+                    self.supervisors = []
+                    current_app.logger.info('Regular maintenance: removed supervisor pool from project "{proj}" because '
+                                            'it is not of generic type,'.format(proj=self.name))
+                    
+                    return count
+
+            if self.generic:
+                removed = [f for f in self.supervisors if not self._is_supervisor_for_at_least_one_pclass(f)]
+                self.supervisors = [f for f in self.supervisors if self._is_supervisor_for_at_least_one_pclass(f)]
+    
+                for f in removed:
+                    current_app.logger.info('Regular maintenance: pruned supervisor "{name}" from project "{proj}" since '
+                                            'they no longer meet eligibility criteria'.format(name=f.user.name,
+                                                                                              proj=self.name))
+    
+                return len(removed) > 0
+            
+            return 0
+
+
+        def _maintenance_supervisor_remove_duplicates(self):
+            """
+            remove any duplicates from supervisor lists
+            :return:
+            """
+            removed = 0
+
+            faculty = set()
+            for supv in self.supervisors:
+                faculty.add(supv.id)
+
+            for supv_id in faculty:
+                count = get_count(self.supervisors.filter_by(id=supv_id))
+
+                if count > 1:
+                    f = self.supervisors.filter_by(id=supv_id).first()
+                    current_app.logger.info('Regular maintenance: supervisor "{name}" from project "{proj}" occurs '
+                                            'multiple times (multiplicity = {count})'.format(name=f.user.name,
+                                                                                             proj=self.name,
+                                                                                             count=count))
+
+                    while get_count(self.supervisors.filter_by(id=supv_id)) > 1:
+                        self.supervisors.remove(f)
                         removed += 1
 
             return removed > 0
@@ -1348,6 +1497,11 @@ project_assessors = db.Table('project_to_assessors',
                              db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                              db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
 
+# association table giving assessors
+project_supervisors = db.Table('project_to_supervisors',
+                               db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
+                               db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+
 # association table matching project descriptions to supervision team
 description_supervisors = db.Table('description_to_supervisors',
                                    db.Column('description_id', db.Integer(), db.ForeignKey('descriptions.id'), primary_key=True),
@@ -1389,6 +1543,11 @@ live_project_supervision = db.Table('live_project_to_supervision',
 
 # association table matching live projects to assessors
 live_assessors = db.Table('live_project_to_assessors',
+                          db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
+                          db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+
+# association table matching live projects to supervisors
+live_supervisors = db.Table('live_project_to_supervisors',
                           db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
                           db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
 
@@ -4831,6 +4990,7 @@ def _ProjectClass_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable)
         cache.delete_memoized(_Project_num_assessors)
+        cache.delete_memoized(_Project_num_supervisors)
 
 
 @listens_for(ProjectClass, 'before_insert')
@@ -4838,6 +4998,7 @@ def _ProjectClass_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable)
         cache.delete_memoized(_Project_num_assessors)
+        cache.delete_memoized(_Project_num_supervisors)
 
 
 @listens_for(ProjectClass, 'before_delete')
@@ -4845,6 +5006,7 @@ def _ProjectClass_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable)
         cache.delete_memoized(_Project_num_assessors)
+        cache.delete_memoized(_Project_num_supervisors)
 
 
 class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
@@ -6746,6 +6908,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 def _delete_EnrollmentRecord_cache(faculty_id):
     cache.delete_memoized(_Project_is_offerable)
     cache.delete_memoized(_Project_num_assessors)
+    cache.delete_memoized(_Project_num_supervisors)
 
     year = _get_current_year()
 
@@ -7018,13 +7181,21 @@ def _Project_num_assessors(pid, pclass_id):
     return get_count(project.assessor_list_query(pclass_id))
 
 
+@cache.memoize()
+def _Project_num_supervisors(pid, pclass_id):
+    project = db.session.query(Project).filter_by(id=pid).one()
+    return get_count(project.supervisor_list_query(pclass_id))
+
+
 class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
               ProjectConfigurationMixinFactory(backref_label='projects', force_unique_names='unique',
                                                skills_mapping_table=project_skills, skills_mapped_column=project_skills.c.skill_id, skills_self_column=project_skills.c.project_id, allow_edit_skills='allow',
                                                programmes_mapping_table=project_programmes, programmes_mapped_column=project_programmes.c.programme_id, programmes_self_column=project_programmes.c.project_id, allow_edit_programmes='allow',
                                                tags_mapping_table=project_tags, tags_mapped_column=project_tags.c.tag_id, tags_self_column=project_tags.c.project_id, allow_edit_tags='allow',
                                                assessor_mapping_table=project_assessors, assessor_mapped_column=project_assessors.c.faculty_id, assessor_self_column=project_assessors.c.project_id,
-                                               assessor_backref_label='assessor_for', allow_edit_assessors='allow')):
+                                               assessor_backref_label='assessor_for', allow_edit_assessors='allow',
+                                               supervisor_mapping_table=project_supervisors, supervisor_mapped_column=project_supervisors.c.faculty_id, supervisor_self_column=project_supervisors.c.project_id,
+                                               supervisor_backref_label='supervisor_for', allow_edit_supervisors='allow')):
     """
     Model a project
     """
@@ -7298,6 +7469,56 @@ class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
         return self._is_assessor_for_at_least_one_pclass(faculty)
 
 
+    def supervisor_list_query(self, pclass):
+        return super()._supervisor_list_query(pclass)
+
+
+    def is_supervisor(self, faculty_id):
+        """
+        Determine whether a given FacultyData instance is a supervisor for this project
+        :param faculty:
+        :return:
+        """
+        return get_count(self.supervisors.filter_by(id=faculty_id)) > 0 and \
+            self._is_supervisor_for_at_least_one_pclass(faculty_id)
+
+
+    def number_supervisors(self, pclass):
+        """
+        Determine the number of supervisors enrolled who are available for a given project class
+        :param pclass:
+        :return:
+        """
+        return _Project_num_supervisors(self.id, pclass.id)
+
+
+    def get_supervisor_list(self, pclass):
+        """
+        Build a list of FacultyData objects for supervisors attached to this project who are
+        available for a given project class
+        :param pclass:
+        :return:
+        """
+        return self.supervisor_list_query(pclass).all()
+
+
+    def can_enroll_supervisor(self, faculty):
+        """
+        Determine whether a given FacultyData instance can be enrolled as a supervisor for this project
+        :param faculty:
+        :return:
+        """
+        if self.is_supervisor(faculty.id):
+            return False
+
+        if not faculty.user.active:
+            return False
+
+        # determine whether this faculty member is enrolled as a second marker for any project
+        # class we are attached to
+        return self._is_supervisor_for_at_least_one_pclass(faculty)
+
+
     def get_description(self, pclass):
         """
         Gets the ProjectDescription instance for project class pclass, or returns None if no
@@ -7470,6 +7691,9 @@ class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
         modified = super()._maintenance_assessor_prune() or modified
         modified = super()._maintenance_assessor_remove_duplicates() or modified
 
+        modified = super()._maintenance_supervisor_prune() or modified
+        modified = super()._maintenance_supervisor_remove_duplicates() or modified
+
         return modified
 
 
@@ -7482,6 +7706,7 @@ def _Project_update_handler(mapper, connection, target):
 
         for pclass in target.project_classes:
             cache.delete_memoized(_Project_num_assessors, target.id, pclass.id)
+            cache.delete_memoized(_Project_num_supervisors, target.id, pclass.id)
 
 
 @listens_for(Project, 'before_insert')
@@ -7493,6 +7718,7 @@ def _Project_insert_handler(mapper, connection, target):
 
         for pclass in target.project_classes:
             cache.delete_memoized(_Project_num_assessors, target.id, pclass.id)
+            cache.delete_memoized(_Project_num_supervisors, target.id, pclass.id)
 
 
 @listens_for(Project, 'before_delete')
@@ -7504,6 +7730,7 @@ def _Project_delete_handler(mapper, connection, target):
 
         for pclass in target.project_classes:
             cache.delete_memoized(_Project_num_assessors, target.id, pclass.id)
+            cache.delete_memoized(_Project_num_supervisors, target.id, pclass.id)
 
 
 @cache.memoize()
@@ -7833,6 +8060,7 @@ def _ProjectDescription_update_handler(mapper, connection, target):
         if target is not None and target.parent is not None:
             for pclass in target.parent.project_classes:
                 cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
+                cache.delete_memoized(_Project_num_supervisors, target.parent_id, pclass.id)
 
 
 @listens_for(ProjectDescription, 'before_insert')
@@ -7846,6 +8074,7 @@ def _ProjectDescription_insert_handler(mapper, connection, target):
         if target is not None and target.parent is not None:
             for pclass in target.parent.project_classes:
                 cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
+                cache.delete_memoized(_Project_num_supervisors, target.parent_id, pclass.id)
 
 
 @listens_for(ProjectDescription, 'before_delete')
@@ -7859,6 +8088,7 @@ def _ProjectDescription_delete_handler(mapper, connection, target):
         if target is not None and target.parent is not None:
             for pclass in target.parent.project_classes:
                 cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
+                cache.delete_memoized(_Project_num_supervisors, target.parent_id, pclass.id)
 
 
 class DescriptionComment(db.Model, ApprovalCommentVisibilityStatesMixin):
@@ -7962,7 +8192,10 @@ class LiveProject(db.Model,
                                                    programmes_mapping_table=live_project_programmes, programmes_mapped_column=live_project_programmes.c.programme_id, programmes_self_column=live_project_programmes.c.project_id, allow_edit_programmes='disallow',
                                                    tags_mapping_table=live_project_tags, tags_mapped_column=live_project_tags.c.tag_id, tags_self_column=live_project_tags.c.project_id, allow_edit_tags='disallow',
                                                    assessor_mapping_table=live_assessors, assessor_mapped_column=live_assessors.c.faculty_id, assessor_self_column=live_assessors.c.project_id,
-                                                   assessor_backref_label='assessor_for_live', allow_edit_assessors='disallow'),
+                                                   assessor_backref_label='assessor_for_live', allow_edit_assessors='disallow',
+                                                   supervisor_mapping_table=live_supervisors,  supervisor_mapped_column=live_supervisors.c.faculty_id, supervisor_self_column=live_supervisors.c.project_id,
+                                                   supervisor_backref_label='supervisor_for_live', allow_edit_supervisors='allow'
+                                                   ),
                   ProjectDescriptionMixinFactory(team_mapping_table=live_project_supervision, team_backref='live_projects',
                                                  module_mapping_table=live_project_to_modules, module_backref='tagged_live_projects',
                                                  module_mapped_column=live_project_to_modules.c.module_id, module_self_column=live_project_to_modules.c.project_id)):
@@ -8475,6 +8708,25 @@ class LiveProject(db.Model,
 
     def is_assessor(self, fac_id):
         return get_count(self.assessors.filter_by(id=fac_id)) > 0
+
+
+    @property
+    def supervisor_list_query(self):
+        return super()._supervisor_list_query(self.config.pclass_id)
+
+
+    @property
+    def assessor_list(self):
+        return self.assessor_list_query.all()
+
+
+    @property
+    def number_assessors(self):
+        return get_count(self.assessors)
+
+
+    def is_supervisor(self, fac_id):
+        return get_count(self.supervisors.filter_by(id=fac_id)) > 0
 
 
     @property
@@ -11320,15 +11572,7 @@ def _MatchingAttempt_is_valid(id):
             if len(record_errors) > 0:
                 student_issues = True
 
-    # 2. EACH PARTICIPATING PROJECT SHOULD NOT BE OVERASSIGNED
-    for project in obj.projects:
-        proj_over, msg = obj.is_project_overassigned(project)
-        if proj_over:
-            errors[('capacity', project.id)] = msg
-            student_issues = True
-            faculty_issues = True
-
-    # 3. EACH PARTICIPATING FACULTY SHOULD NOT BE OVERASSIGNED, EITHER AS MARKER OR SUPERVISOR
+    # 2. EACH PARTICIPATING FACULTY MEMBERSHOULD NOT BE OVERASSIGNED, EITHER AS MARKER OR SUPERVISOR
     for fac in obj.faculty:
         data = obj.is_supervisor_overassigned(fac, include_matches=True)
         if data['flag']:
@@ -11798,19 +12042,6 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
     def number_project_assignments(self, project):
         return _MatchingAttempt_number_project_assignments(self.id, project.id)
-
-
-    def is_project_overassigned(self, project):
-        count = self.number_project_assignments(project)
-
-        if project.enforce_capacity and project.capacity is not None and 0 < project.capacity < count:
-            supervisor = project.owner
-            message = 'Project "{supv} ({name})" is over-assigned ' \
-                      '(assigned={m}, max capacity={n})'.format(supv=supervisor.user.name, name=project.name,
-                                                                m=count, n=project.capacity)
-            return True, message
-
-        return False, None
 
 
     def is_supervisor_overassigned(self, faculty, include_matches=False, pclass_id=None):
@@ -12294,13 +12525,7 @@ def _MatchingRecord_is_valid(id):
                 errors[('assignment', 4)] = 'Assigned moderator "{name}" is not in assessor pool for ' \
                                             'assigned project'.format(name=u.name)
 
-    # 11. ASSIGNED PROJECT SHOULD NOT BE OVERASSIGNED
-    # (we have to ask our parent MatchingAttempt for help with this)
-    flag, msg = attempt.is_project_overassigned(project)
-    if flag:
-        errors[('overassigned', 0)] = msg
-
-    # 12. SELECTOR SHOULD BE MARKED FOR CONVERSION
+    # 11. SELECTOR SHOULD BE MARKED FOR CONVERSION
     if not obj.selector.convert_to_submitter:
         # only refuse to validate if we are the first member of the multiplet
         lo_rec = attempt.records \
@@ -12328,7 +12553,8 @@ class MatchingRecord(db.Model):
     # owning MatchingAttempt
     matching_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'))
     matching_attempt = db.relationship('MatchingAttempt', foreign_keys=[matching_id], uselist=False,
-                                       backref=db.backref('records', lazy='dynamic', cascade='all, delete, delete-orphan'))
+                                       backref=db.backref('records', lazy='dynamic',
+                                                          cascade='all, delete, delete-orphan'))
 
     # owning SelectingStudent
     selector_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
@@ -12529,12 +12755,6 @@ class MatchingRecord(db.Model):
         :return:
         """
         return self.get_role_ids('moderator')
-
-
-    @property
-    def is_project_overassigned(self):
-        flag, msg = self.matching_attempt.is_project_overassigned(self.project)
-        return flag
 
 
     @property

@@ -1909,8 +1909,6 @@ def add_pclass():
                                 uses_marker=form.uses_marker.data,
                                 uses_moderator=form.uses_moderator.data,
                                 uses_presentations=form.uses_presentations.data,
-                                number_markers=form.number_markers.data,
-                                number_moderators=form.number_moderators.data,
                                 display_marker=form.display_marker.data,
                                 display_presentations=form.display_presentations.data,
                                 reenroll_supervisors_early=form.reenroll_supervisors_early.data,
@@ -2033,8 +2031,6 @@ def add_pclass():
             form.uses_supervisor.data = True
             form.uses_marker.data = True
             form.uses_presentations.data = False
-            form.number_markers.data = DEFAULT_ASSIGNED_MARKERS
-            form.number_moderators.data = DEFAULT_ASSIGNED_MODERATORS
             form.display_marker.data = True
             form.display_presentations.data = True
             form.auto_enroll_years.data = ProjectClass.AUTO_ENROLL_FIRST_YEAR
@@ -2090,8 +2086,6 @@ def edit_pclass(id):
         data.uses_marker = form.uses_marker.data
         data.uses_moderator = form.uses_moderator.data
         data.uses_presentations = form.uses_presentations.data
-        data.number_markers = form.number_markers.data
-        data.number_moderators = form.number_moderators.data
         data.display_marker = form.display_marker.data
         data.display_presentations = form.display_presentations.data
         data.reenroll_supervisors_early = form.reenroll_supervisors_early.data
@@ -2155,12 +2149,6 @@ def edit_pclass(id):
 
             if form.uses_presentations.data is None:
                 form.uses_presentations.data = False
-
-            if form.number_markers.data is None:
-                form.number_markers.data = DEFAULT_ASSIGNED_MARKERS
-
-            if form.number_moderators.data is None:
-                form.number_moderators.data = DEFAULT_ASSIGNED_MODERATORS
 
             if form.display_marker.data is None:
                 form.display_marker.data = True

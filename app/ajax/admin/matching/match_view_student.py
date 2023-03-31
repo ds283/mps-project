@@ -60,11 +60,11 @@ _cohort = \
 _project = \
 """
 {% macro truncate_name(name) %}
-    {% if name|length > 18 %}
+    {%- if name|length > 18 -%}
         {{ name[0:18] }}...
-    {% else %}
+    {%- else -%}
         {{ name }}
-    {% endif %}
+    {%- endif -%}
 {% endmacro %}
 {% macro project_tag(r, show_period) %}
     {% set adjustable = false %}

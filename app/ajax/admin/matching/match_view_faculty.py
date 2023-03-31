@@ -92,11 +92,11 @@ _name = \
 _projects = \
 """
 {% macro truncate_name(name) %}
-    {% if name|length > 18 %}
+    {%- if name|length > 18 -%}
         {{ name[0:18] }}...
-    {% else %}
+    {%- else -%}
         {{ name }}
-    {% endif %}
+    {%- endif -%}
 {% endmacro %}
 {% macro project_tag(r) %}
     {% set adjustable = false %}
@@ -170,11 +170,11 @@ _projects = \
 _marking = \
 """
 {% macro truncate_name(name) %}
-    {% if name|length > 18 %}
+    {%- if name|length > 18 -%}
         {{ name[0:18] }}...
-    {% else %}
+    {%- else -%}
         {{ name }}
-    {% endif %}
+    {%- endif -%}
 {% endmacro %}
 {% macro marker_tag(r) %}
     {% set pclass = r.selector.config.project_class %}

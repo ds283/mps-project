@@ -124,11 +124,11 @@ def register_golive_tasks(celery):
             print('## Filtering projects to accommodate matching "{name}"'.format(name=accommodate_matching.name))
 
             def is_full(supervisor_id):
-                sup_CATS, mark_CATS = accommodate_matching.get_faculty_CATS(supervisor_id)
+                sup_CATS, mark_CATS, mod_CATS = accommodate_matching.get_faculty_CATS(supervisor_id)
                 project_CATS = config.CATS_supervision
 
                 # a supervisor is full if their existing CATS allocation (from the matching we're accommodating)
-                # plus the CATS required to supervise one project for this ProjectClass would
+                # plus the CATS required to supervise one (typical) project for this ProjectClass would
                 # take the supervisor over the maximum allowed CATS.
                 # The maximum is either specified (if full_CATS is not None) or taken from the
                 # matching we're accommodating

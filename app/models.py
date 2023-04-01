@@ -676,25 +676,25 @@ def ProjectConfigurationMixinFactory(backref_label, force_unique_names,
             """
             # only generic projects should have a nonzero supervisor pool
             if not self.generic:
-                count = get_count(self.supervisors) > 0 
+                count = get_count(self.supervisors) > 0
                 if count > 0:
                     self.supervisors = []
                     current_app.logger.info('Regular maintenance: removed supervisor pool from project "{proj}" because '
                                             'it is not of generic type,'.format(proj=self.name))
-                    
+
                     return count
 
             if self.generic:
                 removed = [f for f in self.supervisors if not self._is_supervisor_for_at_least_one_pclass(f)]
                 self.supervisors = [f for f in self.supervisors if self._is_supervisor_for_at_least_one_pclass(f)]
-    
+
                 for f in removed:
                     current_app.logger.info('Regular maintenance: pruned supervisor "{name}" from project "{proj}" since '
                                             'they no longer meet eligibility criteria'.format(name=f.user.name,
                                                                                               proj=self.name))
-    
+
                 return len(removed) > 0
-            
+
             return 0
 
 
@@ -3435,36 +3435,45 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         pclasses =  db.session.query(ProjectClass) \
             .filter(ProjectClass.active, ProjectClass.publish, ProjectClass.include_available).all()
+
         for pcl in pclasses:
+            pcl: ProjectClass
+
             if pcl.id in config_cache:
-                config = config_cache[pcl.id]
+                config: ProjectClassConfig = config_cache[pcl.id]
             else:
-                config = pcl.most_recent_config
+                config: ProjectClassConfig = pcl.most_recent_config
                 config_cache[pcl.id] = config
 
             if config is not None:
-                if config.CATS_supervision > 0:
+                if config.uses_supervisor and config.CATS_supervision is not None and config.CATS_supervision > 0:
                     if max_CATS is None or config.CATS_supervision > max_CATS:
                         max_CATS = float(config.CATS_supervision)
 
         for record in self.enrollments:
+            record: EnrollmentRecord
+
             if record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
                 if record.pclass.active and record.pclass.publish and record.pclass.include_available:
                     if record.pclass_id in config_cache:
-                        config = config_cache[record.pclass_id]
+                        config: ProjectClassConfig = config_cache[record.pclass_id]
                     else:
-                        config = record.pclass.most_recent_config
+                        config: ProjectClassConfig = record.pclass.most_recent_config
                         config_cache[record.pclass_id] = config
 
                     if config is not None:
                         projects = self.projects.filter(Project.project_classes.any(id=record.pclass_id)).all()
 
                         for p in projects:
+                            p: Project
+
                             if p.enforce_capacity:
-                                desc = p.get_description(record.pclass_id)
+                                desc: ProjectDescription = p.get_description(record.pclass_id)
                                 if desc is not None and desc.capacity > 0:
                                     if max_CATS is not None:
-                                        total += (float(config.CATS_supervision) / max_CATS) * float(desc.capacity)
+                                        supv_CATS = desc.CATS_supervision(config)
+                                        if supv_CATS is not None:
+                                            total += (float(supv_CATS) / max_CATS) * float(desc.capacity)
                                     else:
                                         total += float(desc.capacity)
                             else:
@@ -8018,6 +8027,41 @@ class ProjectDescription(db.Model, EditingMetadataMixin,
         return get_count(self.workflow_history) > 0
 
 
+    def CATS_supervision(self, config: ProjectClassConfig):
+        if config.uses_supervisor:
+            if config.CATS_supervision is not None and config.CATS_supervision > 0:
+                return config.CATS_supervision
+
+        return None
+
+
+    @property
+    def CATS_marking(self, config: ProjectClassConfig):
+        if config.uses_marker:
+            if config.CATS_marking is not None and config.CATS_marking > 0:
+                return config.CATS_marking
+
+        return None
+
+
+    @property
+    def CATS_moderation(self, config: ProjectClassConfig):
+        if config.uses_moderator:
+            if config.CATS_moderation is not None and config.CATS_moderation > 0:
+                return config.CATS_moderation
+
+        return None
+
+
+    @property
+    def CATS_presentation(self, config: ProjectClassConfig):
+        if config.uses_presentations:
+            if config.CATS_presentation is not None and config.CATS_presentation > 0:
+                return config.CATS_presentation
+
+        return None
+
+
     def maintenance(self):
         """
         Perform regular basic maintenance, to ensure validity of the database
@@ -8718,13 +8762,13 @@ class LiveProject(db.Model,
 
 
     @property
-    def assessor_list(self):
-        return self.assessor_list_query.all()
+    def supervisor_list(self):
+        return self.supervisor_list_query.all()
 
 
     @property
-    def number_assessors(self):
-        return get_count(self.assessors)
+    def number_supervisors(self):
+        return get_count(self.supervisors)
 
 
     def is_supervisor(self, fac_id):
@@ -8739,6 +8783,50 @@ class LiveProject(db.Model,
         return True
 
 
+    @property
+    def CATS_supervision(self):
+        config: ProjectClassConfig = self.config
+
+        if config.uses_supervisor:
+            if config.CATS_supervision is not None and config.CATS_supervision > 0:
+                return config.CATS_supervision
+
+        return None
+
+
+    @property
+    def CATS_marking(self):
+        config: ProjectClassConfig = self.config
+
+        if config.uses_marker:
+            if config.CATS_marking is not None and config.CATS_marking > 0:
+                return config.CATS_marking
+
+        return None
+
+
+    @property
+    def CATS_moderation(self):
+        config: ProjectClassConfig = self.config
+
+        if config.uses_moderator:
+            if config.CATS_moderation is not None and config.CATS_moderation > 0:
+                return config.CATS_moderation
+
+        return None
+
+
+    @property
+    def CATS_presentation(self):
+        config: ProjectClassConfig = self.config
+
+        if config.uses_presentations:
+            if config.CATS_presentation is not None and config.CATS_presentation > 0:
+                return config.CATS_presentation
+
+        return None
+
+
     def maintenance(self):
         """
         Perform regular basic maintenance, to ensure validity of the database
@@ -8747,6 +8835,7 @@ class LiveProject(db.Model,
         modified = False
 
         modified = super()._maintenance_assessor_remove_duplicates() or modified
+        modified = super()._maintenance_supervisor_remove_duplicates() or modified
 
         return modified
 
@@ -10486,42 +10575,26 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     @property
     def supervising_CATS(self):
-        config = self.previous_config
-
-        if config is not None:
-            return config.CATS_supervision
-
-        return None
+        # TODO: consider whether we really need this method
+        return self.project.CATS_supervising
 
 
     @property
     def marking_CATS(self):
-        config = self.previous_config
-
-        if config is not None:
-            return config.CATS_marking
-
-        return None
+        # TODO: consider whether we really need this method
+        return self.project.CATS_marking
 
 
     @property
     def moderation_CATS(self):
-        config = self.previous_config
-
-        if config is not None:
-            return config.CATS_moderation
-
-        return None
+        # TODO: consider whether we really need this method
+        return self.project.CATS_moderation
 
 
     @property
     def assessor_CATS(self):
-        config = self.previous_config
-
-        if config is not None:
-            return config.CATS_presentation
-
-        return None
+        # TODO: consider whether we really need this method
+        return self.project.CATS_assessor
 
 
     @property
@@ -11441,12 +11514,12 @@ def _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id):
     CATS = 0
 
     for item in obj.get_supervisor_records(fac_id).all():
-        config = item.project.config
+        item: MatchingRecord
+        proj: LiveProject = item.project
 
-        if pclass_id is None or config.pclass_id == pclass_id:
-            if config.uses_supervisor:
-                if config.CATS_supervision is not None and config.CATS_supervision > 0:
-                    CATS += config.CATS_supervision
+        c = proj.CATS_supervision
+        if c is not None:
+            CATS += c
 
     return CATS
 
@@ -11459,12 +11532,30 @@ def _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id):
     CATS = 0
 
     for item in obj.get_marker_records(fac_id).all():
-        config = item.project.config
+        item: MatchingRecord
+        proj: LiveProject = item.project
 
-        if pclass_id is None or config.pclass_id == pclass_id \
-                and config.uses_marker \
-                and config.CATS_marking is not None and config.CATS_marking > 0:
-            CATS += config.CATS_marking
+        c = proj.CATS_marking
+        if c is not None:
+            CATS += c
+
+    return CATS
+
+
+@cache.memoize()
+def _MatchingAttempt_get_faculty_mod_CATS(id, fac_id, pclass_id):
+    # obtain MatchingAttempt
+    obj: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).one()
+
+    CATS = 0
+
+    for item in obj.get_moderator_records(fac_id).all():
+        item: MatchingRecord
+        proj: LiveProject = item.project
+
+        c = proj.CATS_moderation:
+        if c is not None:
+            CATS += c
 
     return CATS
 
@@ -11473,9 +11564,9 @@ def _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id):
 def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
     CATS_sup = _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id)
     CATS_mark = _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id)
-    # TODO: Include CATS for moderation roles
+    CATS_mod = _MatchingAttempt_get_faculty_mod_CATS(id, fac_id, pclass_id)
 
-    return CATS_sup, CATS_mark
+    return CATS_sup, CATS_mark, CATS_mod
 
 
 @cache.memoize()
@@ -11591,7 +11682,7 @@ def _MatchingAttempt_is_valid(id):
             rec = fac.get_enrollment_record(config.pclass_id)
 
             if rec is not None:
-                sup, mark = obj.get_faculty_CATS(fac, pclass_id=config.pclass_id)
+                sup, mark, mod = obj.get_faculty_CATS(fac, pclass_id=config.pclass_id)
 
                 if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
                     errors[('custom_sup', fac.id)] = 'Assignment to {name} violates their custom supervising CATS ' \
@@ -11936,7 +12027,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         if self._CATS_list is not None:
             return
 
-        fsum = lambda x: x[0] + x[1]
+        fsum = lambda x: x[0] + x[1] + x[2]
 
         self._build_faculty_list()
         self._CATS_list = [fsum(self.get_faculty_CATS(fac.id)) for fac in self.faculty]
@@ -12047,7 +12138,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
 
     def is_supervisor_overassigned(self, faculty, include_matches=False, pclass_id=None):
-        sup, mark = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
+        sup, mark, mod = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
 
         limit = self.supervising_limit
         total = sup
@@ -12058,7 +12149,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
         if include_matches:
             for match in self.include_matches:
-                sup, mark = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
+                sup, mark, mod = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
                 included_matches[match.id] = sup
 
             if len(included_matches) > 0:
@@ -12094,7 +12185,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
 
     def is_marker_overassigned(self, faculty, include_matches=False, pclass_id=None):
-        sup, mark = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
+        sup, mark, mod = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
 
         limit = self.marking_limit
         total = mark
@@ -12105,7 +12196,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
         if include_matches:
             for match in self.include_matches:
-                sup, mark = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
+                sup, mark, mod = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
                 included_matches[match.id] = mark
 
             if len(included_matches) > 0:
@@ -12233,7 +12324,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
 
     def _get_group_CATS(self, group):
-        fsum = lambda x: x[0] + x[1]
+        fsum = lambda x: x[0] + x[1] + x[2]
 
         # compute our self-CATS
         CAT_lists = {'self': [fsum(self.get_faculty_CATS(x.id)) for x in group]}

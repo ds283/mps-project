@@ -38,6 +38,8 @@ def estimate_CATS_load():
     presentation_faculty = set()
 
     for pclass in pclasses:
+        pclass: ProjectClass
+
         # get ProjectClassConfig for the current year
         config: ProjectClassConfig = pclass.get_config(year)
 

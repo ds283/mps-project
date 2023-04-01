@@ -11,7 +11,6 @@
 from flask import jsonify, render_template_string
 
 from ....models import MatchingAttempt
-from ....shared.utils import get_count
 
 
 # language=jinja2
@@ -264,7 +263,7 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, sh
         overassigned = sup_overassigned or mark_overassigned
 
         if show_includes:
-            this_sup, this_mark = match_attempt.get_faculty_CATS(f, pclass_id=pclass_filter)
+            this_sup, this_mark, this_mod = match_attempt.get_faculty_CATS(f, pclass_id=pclass_filter)
         else:
             this_sup = CATS_sup
             this_mark = CATS_mark
@@ -303,7 +302,7 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, sh
             if rec is None:
                 continue
 
-            sup, mark = match_attempt.get_faculty_CATS(f, pclass_id=config.pclass_id)
+            sup, mark, mod = match_attempt.get_faculty_CATS(f, pclass_id=config.pclass_id)
 
             if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
                 sup_errors[('custom_sup', f.id)] = 'Assignment to {name} violates custom supervising CATS ' \

@@ -5224,7 +5224,7 @@ def match_dists_view(id):
 
     pclasses = get_automatch_pclasses()
 
-    fsum = lambda x: x[0] + x[1]
+    fsum = lambda x: x[0] + x[1] + x[2]
     CATS_tot = [fsum(record.get_faculty_CATS(f.id, pclass_value if flag else None)) for f in record.faculty]
 
     CATS_plot = figure(title='Workload distribution',

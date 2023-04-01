@@ -43,7 +43,7 @@ def _find_mean_project_CATS(configs):
     number = 0
 
     for config in configs:
-        if config.CATS_supervision is not None:
+        if config.uses_supervisor and config.CATS_supervision is not None:
             CATS_total += config.CATS_supervision
             number += 1
 
@@ -240,13 +240,11 @@ def _enumerate_liveprojects_serialized(record):
         lp_to_number[lp.id] = n
         number_to_lp[n] = lp.id
 
-        if lp.generic:
-            # TODO: replace literal values with something from project class configuration
-            sup = 6.5
-            mk = 3
-        else:
-            sup = lp.config.CATS_supervision
-            mk = lp.config.CATS_marking
+        # differences between ordinary/generic projects (if any) are handled internally
+        # to LiveProject, so we need only use the LiveProject.CATS_supervision and
+        # LiveProject.CATS_marking properties
+        sup = lp.CATS_supervision
+        mk = lp.CATS_marking
 
         CATS_supervisor[n] = sup if sup is not None else FALLBACK_DEFAULT_SUPERVISOR_CATS
         CATS_marker[n] = mk if mk is not None else FALLBACK_DEFAULT_MARKER_CATS
@@ -309,8 +307,8 @@ def _enumerate_liveprojects_primary(configs):
             lp_to_number[item.id] = number
             number_to_lp[number] = item.id
 
-            sup = config.CATS_supervision
-            mk = config.CATS_marking
+            sup = item.CATS_supervision
+            mk = item.CATS_marking
             CATS_supervisor[number] = sup if sup is not None else FALLBACK_DEFAULT_SUPERVISOR_CATS
             CATS_marker[number] = mk if mk is not None else FALLBACK_DEFAULT_MARKER_CATS
 
@@ -757,7 +755,7 @@ def _compute_existing_sup_CATS(record, fac_data):
     CATS = 0
 
     for match in record.include_matches:
-        sup, mark = match.get_faculty_CATS(fac_data.id)
+        sup, mark, mod = match.get_faculty_CATS(fac_data.id)
         CATS += sup
 
     return CATS
@@ -767,7 +765,7 @@ def _compute_existing_mark_CATS(record, fac_data):
     CATS = 0
 
     for match in record.include_matches:
-        sup, mark = match.get_faculty_CATS(fac_data.id)
+        sup, mark, mod = match.get_faculty_CATS(fac_data.id)
         CATS += mark
 
     return CATS

@@ -10576,7 +10576,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     @property
     def supervising_CATS(self):
         # TODO: consider whether we really need this method
-        return self.project.CATS_supervising
+        return self.project.CATS_supervision
 
 
     @property
@@ -11553,7 +11553,7 @@ def _MatchingAttempt_get_faculty_mod_CATS(id, fac_id, pclass_id):
         item: MatchingRecord
         proj: LiveProject = item.project
 
-        c = proj.CATS_moderation:
+        c = proj.CATS_moderation
         if c is not None:
             CATS += c
 

@@ -322,6 +322,9 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, ty
         if len(filter_list) > 0:
             supv_records = [x for x in supv_records if all(f(x) for f in filter_list)]
 
+            if len(supv_records) == 0:
+                continue
+
         # FOR EACH INCLUDED PROJECT CLASS, FACULTY ASSIGNMENTS SHOULD RESPECT ANY CUSTOM CATS LIMITS
         enrollments = {}
         for config in match_attempt.config_members:

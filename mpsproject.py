@@ -556,9 +556,10 @@ def _write_supervisor_pool_data(items):
     for item in items:
         names = []
         if get_count(item.tags.filter_by(id=535)):
-            # data science
+            # computer sciences
             names += ['Mitchell', 'Barrett', 'Roseboom', 'Sherman', 'Weeds', 'Weir', 'Olugbade',
-                      'Simpson', 'Evans', 'Ashby', 'Raman', 'Rosas De Andraca']
+                      'Simpson', 'Evans', 'Ashby', 'Raman', 'Rosas De Andraca', 'Romer', 'Shaw', 'Loveday',
+                      'Iliev', 'Lewis', 'Salvatore']
 
         if get_count(item.tags.filter_by(id=536)):
             # life sciences
@@ -598,7 +599,7 @@ def add_supervisor_pool_data():
 
 app = create_app()
 
-# with app.app_context():
+with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -621,7 +622,7 @@ app = create_app()
     # migrate_liveproject_tags()
     # migrate_submission_roles()
     # migrate_matching_roles()
-    # add_supervisor_pool_data()
+    add_supervisor_pool_data()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

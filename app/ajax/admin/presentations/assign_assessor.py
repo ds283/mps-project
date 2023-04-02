@@ -43,12 +43,12 @@ _name = \
 # language=jinja2
 _sessions = \
 """
-{% macro truncate_name(name) %}
-    {% if name|length > 18 %}
-        {{ name[0:18] }}...
-    {% else %}
+{% macro truncate_name(name, maxlength=25) %}
+    {%- if name|length > maxlength -%}
+        {{ name[0:maxlength] }}...
+    {%- else -%}
         {{ name }}
-    {% endif %}
+    {%- endif -%}
 {% endmacro %}
 {% for slot in slots %}
     <div class="row vertical-top" style="margin-bottom: 3px;">

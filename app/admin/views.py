@@ -14,7 +14,7 @@ from collections import deque
 from datetime import date, datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Tuple
 from urllib.parse import urlsplit
 
 from bokeh.embed import components
@@ -5105,7 +5105,7 @@ def merge_replace_records(src_id, dest_id):
 @admin.route('/match_student_view/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def match_student_view(id):
-    record = MatchingAttempt.query.get_or_404(id)
+    record: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
 
     if not record.finished:
         if record.awaiting_upload:
@@ -5124,7 +5124,10 @@ def match_student_view(id):
     if not validate_match_inspector(record):
         return redirect(redirect_url())
 
-    pclass_filter = request.args.get('pclass_filter')
+    pclass_filter = request.args.get('pclass_filter', default=None)
+    type_filter = request.args.get('type_filter', default=None)
+    hint_filter = request.args.get('hint_filter', default=None)
+
     text = request.args.get('text', None)
     url = request.args.get('url', None)
 
@@ -5132,17 +5135,39 @@ def match_student_view(id):
     if pclass_filter is None and session.get('admin_match_pclass_filter'):
         pclass_filter = session['admin_match_pclass_filter']
 
+    if pclass_filter is not None:
+        session['admin_match_pclass_filter'] = pclass_filter
+
+    if type_filter is None and session.get('admin_match_type_filter'):
+        type_filter = session['admin_match_type_filter']
+
+    if type_filter not in ['all', 'ordinary', 'generic']:
+        type_filter = 'all'
+
+    if type_filter is not None:
+        session['admin_match_type_filter'] = type_filter
+
+    if hint_filter is None and session.get('admin_match_hint_filter'):
+        type_filter = session['admin_match_hint_filter']
+
+    if hint_filter not in ['all', 'satisfied', 'violated']:
+        hint_filter = 'all'
+
+    if hint_filter is not None:
+        session['admin_match_hint_filter'] = hint_filter
+
+
     pclasses = record.available_pclasses
 
     return render_template('admin/match_inspector/student.html', pane='student', record=record,
-                           pclasses=pclasses, pclass_filter=pclass_filter,
-                           text=text, url=url)
+                           pclasses=pclasses, pclass_filter=pclass_filter, type_filter=type_filter,
+                           hint_filter=hint_filter, text=text, url=url)
 
 
 @admin.route('/match_faculty_view/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def match_faculty_view(id):
-    record = MatchingAttempt.query.get_or_404(id)
+    record: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
 
     if not record.finished:
         if record.awaiting_upload:
@@ -5161,8 +5186,10 @@ def match_faculty_view(id):
     if not validate_match_inspector(record):
         return redirect(redirect_url())
 
-    pclass_filter = request.args.get('pclass_filter')
-    show_includes = request.args.get('show_includes')
+    pclass_filter = request.args.get('pclass_filter', default=None)
+    type_filter = request.args.get('type_filter', default=None)
+    hint_filter = request.args.get('hint_filter', default=None)
+    show_includes = request.args.get('show_includes', default=None)
 
     if show_includes is not None and show_includes not in ['true', 'false']:
         show_includes = 'false'
@@ -5177,6 +5204,24 @@ def match_faculty_view(id):
     if pclass_filter is not None:
         session['admin_match_pclass_filter'] = pclass_filter
 
+    if type_filter is None and session.get('admin_match_type_filter'):
+        type_filter = session['admin_match_type_filter']
+
+    if type_filter not in ['all', 'ordinary', 'generic']:
+        type_filter = 'all'
+
+    if type_filter is not None:
+        session['admin_match_type_filter'] = type_filter
+
+    if hint_filter is None and session.get('admin_match_hint_filter'):
+        type_filter = session['admin_match_hint_filter']
+
+    if hint_filter not in ['all', 'satisfied', 'violated']:
+        hint_filter = 'all'
+
+    if hint_filter is not None:
+        session['admin_match_hint_filter'] = hint_filter
+
     if show_includes is None and session.get('admin_match_include_match_CATS'):
         show_includes = session['admin_match_include_match_CATS']
 
@@ -5186,14 +5231,14 @@ def match_faculty_view(id):
     pclasses = get_automatch_pclasses()
 
     return render_template('admin/match_inspector/faculty.html', pane='faculty', record=record,
-                           pclasses=pclasses, pclass_filter=pclass_filter, show_includes=show_includes,
-                           text=text, url=url)
+                           pclasses=pclasses, pclass_filter=pclass_filter, type_filter=type_filter,
+                           hint_filter=hint_filter, show_includes=show_includes, text=text, url=url)
 
 
 @admin.route('/match_dists_view/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def match_dists_view(id):
-    record = MatchingAttempt.query.get_or_404(id)
+    record: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
 
     if not record.finished:
         if record.awaiting_upload:
@@ -5270,7 +5315,7 @@ def match_dists_view(id):
 @admin.route('/match_student_view_ajax/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def match_student_view_ajax(id):
-    record = MatchingAttempt.query.get_or_404(id)
+    record: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
         return jsonify({})
@@ -5281,9 +5326,45 @@ def match_student_view_ajax(id):
     pclass_filter = request.args.get('pclass_filter')
     flag, pclass_value = is_integer(pclass_filter)
 
+    type_filter = request.args.get('type_filter')
+    hint_filter = request.args.get('hint_filter')
+
     data_set = zip(record.selectors, record.selector_deltas)
+
+    filter_list = []
+
     if flag:
-        data_set = [x for x in data_set if (x[0])[0].selector.config.pclass_id == pclass_value]
+        def filt(pclass_value, rs: Tuple[List[MatchingRecord], int]):
+            return any(r.selector.config.pclass_id == pclass_value for r in rs[0])
+
+        filter_list.append(partial(filt, pclass_value))
+
+    if type_filter == 'ordinary':
+        def filt(rs: Tuple[List[MatchingRecord], int]):
+            return any(not r.project.generic for r in rs[0])
+
+        filter_list.append(filt)
+
+    elif type_filter == 'generic':
+        def filt(rs: Tuple[List[MatchingRecord], int]):
+            return any(r.project.generic for r in rs[0])
+
+        filter_list.append(filt)
+
+    if hint_filter == 'satisfied':
+        def filt(rs: Tuple[List[MatchingRecord], int]):
+            return any(len(r.hint_status[0]) > 0 for r in rs[0])
+
+        filter_list.append(filt)
+
+    elif hint_filter == 'violated':
+        def filt(rs: Tuple[List[MatchingRecord], int]):
+            return any(len(r.hint_status[1]) > 0 for r in rs[0])
+
+        filter_list.append(filt)
+
+    if len(filter_list) > 0:
+        data_set = [x for x in data_set if all(f(x) for f in filter_list)]
 
     return ajax.admin.student_view_data(data_set)
 
@@ -5300,12 +5381,14 @@ def match_faculty_view_ajax(id):
         return jsonify({})
 
     pclass_filter = request.args.get('pclass_filter')
+    type_filter = request.args.get('type_filter')
+    hint_filter = request.args.get('hint_filter')
     show_includes = request.args.get('show_includes')
 
     flag, pclass_value = is_integer(pclass_filter)
 
     return ajax.admin.faculty_view_data(record.faculty, record, pclass_value if flag else None,
-                                        show_includes == 'true')
+                                        type_filter, hint_filter, show_includes == 'true')
 
 
 @admin.route('/delete_match_record/<int:record_id>')

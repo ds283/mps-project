@@ -11989,6 +11989,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         self._selector_list = {}
 
         for item in self.records.order_by(MatchingRecord.submission_period.asc()).all():
+            item: MatchingRecord
 
             # if we haven't seen this selector ID before, start a new list containing this record.
             # Otherwise, attach current record to the end of the existing list.
@@ -12005,10 +12006,12 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         self._faculty_list = {}
 
         for item in self.supervisors:
+            item: FacultyData
             if item.id not in self._faculty_list:
                 self._faculty_list[item.id] = item
 
         for item in self.markers:
+            item: FacultyData
             if item.id not in self._faculty_list:
                 self._faculty_list[item.id] = item
 

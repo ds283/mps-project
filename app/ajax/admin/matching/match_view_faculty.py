@@ -7,11 +7,11 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from typing import List
 
 from flask import jsonify, render_template_string
 
-from ....models import MatchingAttempt
-
+from ....models import MatchingAttempt, MatchingRecord
 
 # language=jinja2
 _name = \
@@ -90,9 +90,9 @@ _name = \
 # language=jinja2
 _projects = \
 """
-{% macro truncate_name(name) %}
-    {%- if name|length > 18 -%}
-        {{ name[0:18] }}...
+{% macro truncate_name(name, maxlength=25) %}
+    {%- if name|length > maxlength -%}
+        {{ name[0:maxlength] }}...
     {%- else -%}
         {{ name }}
     {%- endif -%}
@@ -168,9 +168,9 @@ _projects = \
 # language=jinja2
 _marking = \
 """
-{% macro truncate_name(name) %}
-    {%- if name|length > 18 -%}
-        {{ name[0:18] }}...
+{% macro truncate_name(name, maxlength=25) %}
+    {%- if name|length > maxlength -%}
+        {{ name[0:maxlength] }}...
     {%- else -%}
         {{ name }}
     {%- endif -%}
@@ -236,7 +236,7 @@ _workload = \
 """
 
 
-def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, show_includes):
+def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, type_filter, hint_filter, show_includes):
     data = []
 
     for f in faculty:
@@ -290,8 +290,37 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, sh
             if key in included_mark:
                 included_workload[key] = included_sup[key] + included_mark[key]
 
-        supv_records = match_attempt.get_supervisor_records(f.id).all()
-        mark_records = match_attempt.get_marker_records(f.id).all()
+        supv_records: List[MatchingRecord] = match_attempt.get_supervisor_records(f.id).all()
+        mark_records: List[MatchingRecord] = match_attempt.get_marker_records(f.id).all()
+
+        filter_list = []
+
+        if type_filter == 'ordinary':
+            def filt(r: MatchingRecord):
+                return not r.project.generic
+
+            filter_list.append(filt)
+
+        elif type_filter == 'generic':
+            def filt(r: MatchingRecord):
+                return r.project.generic
+
+            filter_list.append(filt)
+
+        if hint_filter == 'satisfied':
+            def filt(r: MatchingRecord):
+                return len(r.hint_status[0]) > 0
+
+            filter_list.append(filt)
+
+        elif hint_filter == 'violated':
+            def filt(r: MatchingRecord):
+                return len(r.hint_status[1]) > 0
+
+            filter_list.append(filt)
+
+        if len(filter_list) > 0:
+            supv_records = [x for x in supv_records if all(f(x) for f in filter_list)]
 
         # FOR EACH INCLUDED PROJECT CLASS, FACULTY ASSIGNMENTS SHOULD RESPECT ANY CUSTOM CATS LIMITS
         enrollments = {}

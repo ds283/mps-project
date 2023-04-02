@@ -59,12 +59,12 @@ _assessors = \
 # language=jinja2
 _talks = \
 """
-{% macro truncate_name(name) %}
-    {% if name|length > 18 %}
-        {{ name[0:18] }}...
-    {% else %}
+{% macro truncate_name(name, maxlength=25) %}
+    {%- if name|length > maxlength -%}
+        {{ name[0:maxlength] }}...
+    {%- else -%}
         {{ name }}
-    {% endif %}
+    {%- endif -%}
 {% endmacro %}
 {% set ns = namespace(count=0) %}
 {% for talk in s.talks %}

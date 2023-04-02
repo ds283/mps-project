@@ -1,6 +1,8 @@
 {% extends "admin/match_inspector/nav.html" %}
 
 {% if pclass_filter is none %}{% set pclass_filter = 'all' %}{% endif %}
+{% if type_filter is none %}{% set type_filter = 'all' %}{% endif %}
+{% if hint_filter is none %}{% set hint_filter = 'all' %}{% endif %}
 
 {% from "datatables.html" import import_datatables %}
 
@@ -15,7 +17,7 @@
             $('#match_student').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/admin/match_student_view_ajax/{{ record.id }}?pclass_filter={{ pclass_filter }}', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/admin/match_student_view_ajax/{{ record.id }}?pclass_filter={{ pclass_filter }}&type_filter={{ type_filter }}&hint_filter={{ hint_filter }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'student',
@@ -68,15 +70,48 @@
                     <div class="col-12">
                         <p>Filter by project class</p>
                         <a class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                            href="{{ url_for('admin.match_student_view', id=record.id, pclass_filter='all', text=text, url=url) }}">
+                            href="{{ url_for('admin.match_student_view', id=record.id, pclass_filter='all', type_filter=type_filter, hint_filter=hint_filter, text=text, url=url) }}">
                             All
                         </a>
                         {% for pclass in pclasses %}
                             <a class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                                href="{{ url_for('admin.match_student_view', id=record.id, pclass_filter=pclass.id, text=text, url=url) }}">
+                                href="{{ url_for('admin.match_student_view', id=record.id, pclass_filter=pclass.id, type_filter=type_filter, hint_filter=hint_filter, text=text, url=url) }}">
                                 {{ pclass.name }}
                             </a>
                         {% endfor %}
+                    </div>
+                </div>
+                <hr class="intro-divider">
+                <div class="row">
+                    <div class="col-6">
+                        <p>Filter by project type</p>
+                        <a class="btn btn-sm filter-btn {% if type_filter is none or type_filter=='all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('admin.match_student_view', id=record.id, pclass_filter=pclass_filter, type_filter='all', hint_filter=hint_filter, text=text, url=url) }}">
+                            All
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if type_filter=='ordinary' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('admin.match_student_view', id=record.id, pclass_filter=pclass_filter, type_filter='ordinary', hint_filter=hint_filter, text=text, url=url) }}">
+                            Ordinary
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if type_filter=='generic' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('admin.match_student_view', id=record.id, pclass_filter=pclass_filter, type_filter='generic', hint_filter=hint_filter, text=text, url=url) }}">
+                            Generic
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <p>Filter by hinting status</p>
+                        <a class="btn btn-sm filter-btn {% if hint_filter is none or hint_filter=='all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('admin.match_student_view', id=record.id, pclass_filter=pclass_filter, type_filter=type_filter, hint_filter='all', text=text, url=url) }}">
+                            All
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if hint_filter=='satisfied' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('admin.match_student_view', id=record.id, pclass_filter=pclass_filter, type_filter=type_filter, hint_filter='satisfied', text=text, url=url) }}">
+                            Hint satisfied
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if hint_filter=='violated' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            href="{{ url_for('admin.match_student_view', id=record.id, pclass_filter=pclass_filter, type_filter=type_filter, hint_filter='violated', text=text, url=url) }}">
+                            Hint violated
+                        </a>
                     </div>
                 </div>
             </div>

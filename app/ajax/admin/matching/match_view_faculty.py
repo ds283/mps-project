@@ -103,29 +103,32 @@ _projects = \
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     {% set has_issues = r.has_issues %}
-    <div class="badge {% if has_issues %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %}" {% if not has_issues and style %}style="{{ style }}"{% endif %}>
-        #{{ r.submission_period }}: {{ r.selector.student.user.last_name }} ({{ truncate_name(r.project.name) }})
-    </div>
-    {# <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="badge text-decoration-none text-nohover-light {% if proj_overassigned %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
-                {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
+    <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
+        <a class="badge text-decoration-none text-nohover-light {% if has_issues %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
+                {% if not has_issues and style %}style="{{ style }}"{% endif %}
                 {% if adjustable %}data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>
-                #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})</a>
+            #{{ r.submission_period }}: {{ r.selector.student.user.last_name }} ({{ truncate_name(r.project.name) }})
+        </a>
         {% if adjustable %}
             {% set list = r.selector.ordered_selections %}
             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                 <div class="dropdown-header">Submitted choices</div>
                 {% for item in list %}
                     {% set disabled = false %}
+                    {% set project = item.liveproject %}
                     {% if item.liveproject_id == r.project_id or not item.is_selectable %}{% set disabled = true %}{% endif %}
                     <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
-                       #{{ item.rank }}:
-                       {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.format_project()|safe }} 
+                       #{{ item.rank }}: {{ item.format_project()|safe }}
+                       {% if project.generic or project.owner is none %}
+                          [generic]
+                       {% else %}
+                          [{{ project.owner.user.name }}]
+                       {% endif %}
                     </a>
                 {% endfor %}
             </div>
         {% endif %}
-    </div> #}
+    </div>
     {% set outcome = r.hint_status %}
     {% if outcome is not none %}
         {% set satisfied, violated = outcome %}

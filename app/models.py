@@ -11003,6 +11003,14 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
 
     @property
     def is_selectable(self):
+        # generic projects are always selectable
+        if self.liveproject.generic:
+            return True
+
+        if not self.liveproject.owner:
+            # something is wrong; default to False
+            return False
+
         # determine whether the project tagged in this selection is really selectable; eg. the supervisor
         # might now be marked on sabbatical or exempted
         record = self.liveproject.owner.get_enrollment_record(self.liveproject.config.pclass_id)

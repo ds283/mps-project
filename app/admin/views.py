@@ -72,7 +72,8 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset, \
     AssetLicense, SubmittedAssetDownloadRecord, GeneratedAssetDownloadRecord, SelectingStudent, EmailNotification, \
-    ProjectTagGroup, ProjectTag, SubmitterAttendanceData, DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS
+    ProjectTagGroup, ProjectTag, SubmitterAttendanceData, DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS, \
+    MatchingRole
 from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
     canonical_submitted_asset_filename
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
@@ -5427,7 +5428,7 @@ def delete_match_record(record_id):
 @admin.route('/reassign_match_project/<int:id>/<int:pid>')
 @roles_accepted('faculty', 'admin', 'root')
 def reassign_match_project(id, pid):
-    record = MatchingRecord.query.get_or_404(id)
+    record: MatchingRecord = MatchingRecord.query.get_or_404(id)
 
     if not validate_match_inspector(record.matching_attempt):
         return redirect(redirect_url())
@@ -5444,26 +5445,54 @@ def reassign_match_project(id, pid):
               'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(redirect_url())
 
-    project = LiveProject.query.get_or_404(pid)
+    project: LiveProject = LiveProject.query.get_or_404(pid)
 
     if record.selector.has_submitted:
         if record.selector.is_project_submitted(project):
-            enroll_record = project.owner.get_enrollment_record(project.config.pclass_id)
+            adjust = False
 
-            if enroll_record is not None and enroll_record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
+            if project.generic:
+                # don't change supervisors here
+                adjust = True
+
+            else:
+                if project.owner is not None:
+                    enroll_record = project.owner.get_enrollment_record(project.config.pclass_id)
+
+                    if enroll_record is not None and \
+                            enroll_record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
+                        adjust = True
+
+                        # remove any previous supervision roles and replace with a supervision role for the new project
+                        existing_supv = record.roles.filter(MatchingRole.role == MatchingRole.ROLE_SUPERVISOR).all()
+                        for item in existing_supv:
+                            record.roles.remove(item)
+
+                        new_supv = MatchingRole(user_id=project.owner_id,
+                                                role=MatchingRole.ROLE_SUPERVISOR)
+                        record.roles.add(new_supv)
+
+                    else:
+                        flash("Could not reassign '{proj}' to {name} because this project's supervisor is no longer "
+                              "enrolled for this project class.".format(proj=project.name,
+                                                                        name=record.selector.student.user.name))
+
+            if adjust:
                 record.project_id = project.id
                 record.rank = record.selector.project_rank(project.id)
 
                 record.matching_attempt.last_edit_id = current_user.id
                 record.matching_attempt.last_edit_timestamp = datetime.now()
 
-                db.session.commit()
-            else:
-                flash("Could not reassign '{proj}' to {name} because this project's supervisor is no longer "
-                      "enrolled for this project class.".format(proj=project.name,
-                                                                name=record.selector.student.user.name))
+                try:
+                    db.session.commit()
+                except SQLAlchemyError as e:
+                    flash('Could not reassign matched project because a database error was encountered.', 'error')
+                    db.session.rollback()
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
         else:
-            flash("Could not reassign '{proj}' to {name}; this project "
+            flash("Could not reassign '{proj}' to {name} because this project "
                   "was not included in this selector's choices".format(proj=project.name,
                                                                        name=record.selector.student.user.name),
                   'error')

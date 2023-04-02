@@ -573,7 +573,6 @@ def _write_supervisor_pool_data(items):
             # physics & astronomy
             names += ['Romer', 'Shaw', 'Loveday', 'Iliev', 'Lewis', 'Salvatore']
 
-        fds = []
         for name in names:
             obj = db.session.query(User) \
                     .join(FacultyData, FacultyData.id == User.id) \
@@ -581,11 +580,11 @@ def _write_supervisor_pool_data(items):
                             User.roles.any(id=3)).one()
 
             if obj is not None and obj.faculty_data is not None:
-                fds.append(obj.faculty_data)
+                fd: FacultyData = obj.faculty_data
+                if fd not in item.supervisors:
+                    item.supervisors.append(fd)
             else:
                 print('Failed to append FacultyData object for supervisor "{name}"'.format(name=name))
-
-        item.supervisors = fds
 
 
 def add_supervisor_pool_data():

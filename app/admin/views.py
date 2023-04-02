@@ -4334,6 +4334,8 @@ def create_match():
                                   programme_bias=form.programme_bias.data,
                                   bookmark_bias=form.bookmark_bias.data,
                                   use_hints=form.use_hints.data,
+                                  require_to_encourage=form.require_to_encourage.data,
+                                  forbid_to_discourage=form.forbid_to_discourage.data,
                                   encourage_bias=form.encourage_bias.data,
                                   discourage_bias=form.discourage_bias.data,
                                   strong_encourage_bias=form.strong_encourage_bias.data,
@@ -4428,6 +4430,8 @@ def create_match():
                 form.bookmark_bias.data = base_match.bookmark_bias
 
                 form.use_hints.data = base_match.use_hints
+                form.require_to_encourage.data = False
+                form.forbid_to_discourage.data = False
 
                 form.supervising_limit.data = base_match.supervising_limit
                 form.marking_limit.data = base_match.marking_limit

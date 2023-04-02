@@ -11871,6 +11871,12 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     # bias for 'strong discourage'
     strong_discourage_bias = db.Column(db.Numeric(8, 3))
 
+    # treat 'require' as 'strong encourage'
+    require_to_encourage = db.Column(db.Boolean())
+
+    # treat 'forbid' as 'strong discourage'
+    forbid_to_discourage = db.Column(db.Boolean())
+
 
     # MATCHING
 

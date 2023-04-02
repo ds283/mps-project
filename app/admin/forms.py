@@ -999,7 +999,20 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                                                'to distinguish these cases.',
                                    validators=[InputRequired(message='Please specify a bookmark bias')])
 
-        use_hints = BooleanField('Use convenor hints')
+        use_hints = BooleanField('Use convenor hints', default=True,
+                                 description='Enforce "require"/"forbid" hints and ask optimizer to respect '
+                                             '(strong) "encourage"/"discourage" hints. Adjust the bias for '
+                                             'encourage/discourage hints below.')
+
+        require_to_encourage = BooleanField('Treat "require" as "strongly encouraged"', default=False,
+                                            description='Treat a "require" hint as "strongly encouraged". Use to '
+                                                        'debug infeasibility issues when too many hints have been '
+                                                        'specified, making the problem over-determined.')
+
+        forbid_to_discourage = BooleanField('Treat "forbid" as "strongly discouraged"', default=False,
+                                            description='Treat a "forbid" hint as "strong discouraged". Use to '
+                                                        'debug infeasibility issues when too many hints have been '
+                                                        'specified, making the problem over-determined.')
 
         encourage_bias = FloatField('Bias for convenor "encouraged" hint', default=2.0,
                                     validators=[InputRequired(message='Please specify a bias')])

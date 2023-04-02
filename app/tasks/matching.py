@@ -527,7 +527,7 @@ def _enumerate_marking_faculty_primary(configs):
     return number, fac_to_number, number_to_fac, limit, fac_dict, config_limits
 
 
-def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict, record):
+def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict, record: MatchingAttempt):
     """
     Construct a dictionary mapping from (student, project) pairs to the rank assigned
     to that project by the student.
@@ -550,6 +550,9 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
     bookmark_bias = float(record.bookmark_bias) if record.bookmark_bias is not None else 1.0
 
     use_hints = record.use_hints
+    require_to_encourage = record.require_to_encourage
+    forbid_to_discourage = record.forbid_to_discourage
+
     encourage_bias = float(record.encourage_bias)
     discourage_bias = float(record.discourage_bias)
     strong_encourage_bias = float(record.strong_encourage_bias)
@@ -580,25 +583,29 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
                 if item.liveproject_id in lp_to_number:
                     valid_projects += 1
 
-                    if item.hint != SelectionRecord.SELECTION_HINT_FORBID or not use_hints:
+                    hint = item.hint
+
+                    if not use_hints or forbid_to_discourage or hint != SelectionRecord.SELECTION_HINT_FORBID:
                         ranks[item.liveproject_id] = item.rank
 
                     w = 1.0
                     if item.converted_from_bookmark:
                         w *= bookmark_bias
                     if use_hints:
-                        if item.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE:
+                        if hint == SelectionRecord.SELECTION_HINT_ENCOURAGE:
                             w *= encourage_bias
-                        elif item.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE:
+                        elif hint == SelectionRecord.SELECTION_HINT_DISCOURAGE:
                             w *= discourage_bias
-                        elif item.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE_STRONG:
+                        elif hint == SelectionRecord.SELECTION_HINT_ENCOURAGE_STRONG \
+                                or (require_to_encourage and hint == SelectionRecord.SELECTION_HINT_REQUIRE):
                             w *= strong_encourage_bias
-                        elif item.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG:
+                        elif hint == SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG \
+                                or (forbid_to_discourage and hint == SelectionRecord.SELECTION_HINT_FORBID):
                             w *= strong_discourage_bias
 
                     weights[item.liveproject_id] = w
 
-                    if use_hints and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
+                    if use_hints and not require_to_encourage and hint == SelectionRecord.SELECTION_HINT_REQUIRE:
                         require.add(item.liveproject_id)
 
             if valid_projects == 0:
@@ -2461,6 +2468,8 @@ def register_matching_tasks(celery):
                                    marking_limit=record.marking_limit,
                                    max_marking_multiplicity=record.max_marking_multiplicity,
                                    use_hints=record.use_hints,
+                                   require_to_encourage=record.require_to_encourage,
+                                   forbid_to_discourage=record.forbid_to_discourage,
                                    encourage_bias=record.encourage_bias,
                                    discourage_bias=record.discourage_bias,
                                    strong_encourage_bias=record.strong_encourage_bias,

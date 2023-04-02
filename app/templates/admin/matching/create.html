@@ -15,7 +15,13 @@
                 selectionCssClass: 'select2--small',
                 dropdownCssClass: 'select2--small',
                 placeholder: 'Select one or more project classes...'
-            });
+            })
+            $('#include_matches').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2-small',
+                placeholder: 'Select one or more existing matchings...'
+            })
         });
     </script>
 {% endblock %}
@@ -45,7 +51,7 @@
                         {{ wtf.render_field(form.name) }}
 
                         <div class="card mt-3 mb-3 card-body bg-well">
-                            <p>Workload guidance (does not account for constraints)</p>
+                            <div class="form-group-heading">Workload guidance (does not account for constraints)</div>
                             <div class="row">
                                 <div class="col-4">
                                     <strong>Supervision CATS</strong>: {{ data['supervision_CATS'] }}
@@ -83,7 +89,7 @@
 
                         <div class="card mt-3 mb-3 card-body bg-well {% if form.pclasses_to_include.errors %}has-error{% endif %}">
                             {% if form.include_only_submitted is defined %}
-                                {{ wtf.render_field(form.include_only_submitted) }}
+                                <div class="mb-2">{{ wtf.render_field(form.include_only_submitted) }}</div>
                             {% endif %}
                             {{ wtf.render_field(form.pclasses_to_include) }}
                             {% if have_base %}
@@ -103,8 +109,10 @@
                         </div>
 
                         <div class="card mt-3 mb-3 card-body bg-well">
-                            <p>Limits</p>
-                            {{ wtf.render_field(form.ignore_per_faculty_limits) }}
+                            <div class="form-group-heading">Limits</div>
+                            <div class="mb-2">
+                                {{ wtf.render_field(form.ignore_per_faculty_limits) }}
+                            </div>
                             {{ wtf.render_field(form.supervising_limit) }}
                             {{ wtf.render_field(form.marking_limit) }}
                             {{ wtf.render_field(form.max_marking_multiplicity) }}
@@ -121,14 +129,16 @@
                         </div>
 
                         <div class="card mt-3 mb-3 card-body bg-well">
-                            <p>Matching parameters</p>
-                            {{ wtf.render_field(form.ignore_programme_prefs) }}
+                            <div class="form-group-heading">Matching parameters</div>
+                            <div class="mb-2">
+                                {{ wtf.render_field(form.ignore_programme_prefs) }}
+                            </div>
                             {{ wtf.render_field(form.programme_bias) }}
                             {{ wtf.render_field(form.bookmark_bias) }}
                         </div>
 
                         <div class="card mt-3 mb-3 card-body bg-well">
-                            <p>Biasing parameters</p>
+                            <div class="form-group-heading">Biasing parameters</div>
                             {{ wtf.render_field(form.levelling_bias) }}
                             {{ wtf.render_field(form.intra_group_tension) }}
                             {{ wtf.render_field(form.supervising_pressure) }}
@@ -136,14 +146,17 @@
                         </div>
 
                         <div class="card mt-3 mb-3 card-body bg-well">
-                            <p>Violation penalties</p>
+                            <div class="form-group-heading">Violation penalties</div>
                             {{ wtf.render_field(form.CATS_violation_penalty) }}
                             {{ wtf.render_field(form.no_assignment_penalty) }}
                         </div>
 
                         <div class="card mt-3 mb-3 card-body bg-well">
-                            <p>Convenor hints</p>
+                            <div class="form-group-heading">Convenor hints</div>
                             {{ wtf.render_field(form.use_hints) }}
+                            {{ wtf.render_field(form.require_to_encourage) }}
+                            {{ wtf.render_field(form.forbid_to_discourage) }}
+                            <hr class="intro-divider">
                             {{ wtf.render_field(form.encourage_bias) }}
                             {{ wtf.render_field(form.discourage_bias) }}
                             {{ wtf.render_field(form.strong_encourage_bias) }}

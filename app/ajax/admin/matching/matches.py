@@ -111,13 +111,19 @@ _info = \
 <div class="mt-1">
     {% if m.use_hints %}
         <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Use hints</span>
+        {% if m.require_to_encourage %}
+            <span class="badge bg-warning text-dark"><i class="fas fa-exclamation"></i> Require &rarr; Encourage</span>
+        {% endif %}
+        {% if m.forbid_to_discourage %}
+            <span class="badge bg-warning text-dark"><i class="fas fa-exclamation"></i> Forbid &rarr; Discourage</span>
+        {% endif %}
+        <span class="badge bg-secondary">Encourage <i class="fas fa-check"></i> {{ m.encourage_bias }}</span>
+        <span class="badge bg-secondary">Discourage <i class="fas fa-times"></i> {{ m.discourage_bias }}</span>
+        <span class="badge bg-secondary">Strong encourage <i class="fas fa-check"></i><i class="fas fa-check ms-1"></i> {{ m.strong_encourage_bias }}</span>
+        <span class="badge bg-secondary">Strong discourage <i class="fas fa-times"></i><i class="fas fa-times ms-1"></i> {{ m.strong_discourage_bias }}</span>
     {% else %}
         <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Ignore hints</span>
     {% endif %}
-    <span class="badge bg-secondary">Encourage <i class="fas fa-times"></i> {{ m.encourage_bias }}</span>
-    <span class="badge bg-secondary">Discourage <i class="fas fa-times"></i> {{ m.discourage_bias }}</span>
-    <span class="badge bg-secondary">Strong encourage <i class="fas fa-times"></i> {{ m.strong_encourage_bias }}</span>
-    <span class="badge bg-secondary">Strong discourage <i class="fas fa-times"></i> {{ m.strong_discourage_bias }}</span>
 </div>
 <div class="mt-1">
     {% if not m.ignore_programme_prefs %}

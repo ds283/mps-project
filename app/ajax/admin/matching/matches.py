@@ -79,7 +79,7 @@ _info = \
     <span class="badge bg-secondary"><i class="fas fa-check"></i> Apply per-faculty limits</span>
 {% endif %}
 {% if m.ignore_programme_prefs %}
-    <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Ignore programmes prefs/span>
+    <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Ignore programmes prefs</span>
 {% else %}
     <span class="badge bg-secondary"><i class="fas fa-check"></i> Apply programme prefs</span>
 {% endif %}

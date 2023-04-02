@@ -94,9 +94,12 @@ _project = \
                         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
                            #{{ item.rank }}: {{ item.format_project()|safe }}
                            {% if project.generic or project.owner is none %}
-                              [generic]
+                              (generic)
                            {% else %}
-                              [{{ project.owner.user.name }}]
+                              ({{ project.owner.user.name }})
+                           {% endif %}
+                           {% if r.original_project_id == item.liveproject_id %}
+                              [automatch]
                            {% endif %}
                         </a>
                     {% endfor %}

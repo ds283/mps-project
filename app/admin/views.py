@@ -5323,11 +5323,11 @@ def match_student_view_ajax(id):
     if not record.finished or not record.solution_usable:
         return jsonify({})
 
-    pclass_filter = request.args.get('pclass_filter')
+    pclass_filter = request.args.get('pclass_filter', default=None)
     flag, pclass_value = is_integer(pclass_filter)
 
-    type_filter = request.args.get('type_filter')
-    hint_filter = request.args.get('hint_filter')
+    type_filter = request.args.get('type_filter', default=None)
+    hint_filter = request.args.get('hint_filter', default=None)
 
     data_set = zip(record.selectors, record.selector_deltas)
 
@@ -5380,10 +5380,10 @@ def match_faculty_view_ajax(id):
     if not record.finished or not record.solution_usable:
         return jsonify({})
 
-    pclass_filter = request.args.get('pclass_filter')
-    type_filter = request.args.get('type_filter')
-    hint_filter = request.args.get('hint_filter')
-    show_includes = request.args.get('show_includes')
+    pclass_filter = request.args.get('pclass_filter', default=None)
+    type_filter = request.args.get('type_filter', default=None)
+    hint_filter = request.args.get('hint_filter', default=None)
+    show_includes = request.args.get('show_includes', default=None)
 
     flag, pclass_value = is_integer(pclass_filter)
 

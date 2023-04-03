@@ -37,6 +37,9 @@ FALLBACK_DEFAULT_SUPERVISOR_CATS = 35
 FALLBACK_DEFAULT_MARKER_CATS = 3
 FALLBACK_DEFAULT_MODERATOR_CATS = 3
 
+# should be a large enough number that capacity for a project is effectively unbounded
+UNBOUNDED_CAPACITY = 100
+
 
 def _find_mean_project_CATS(configs):
     CATS_total = 0
@@ -250,7 +253,7 @@ def _enumerate_liveprojects_serialized(record):
         CATS_marker[n] = mk if mk is not None else FALLBACK_DEFAULT_MARKER_CATS
 
         capacity[n] = lp.capacity if (lp.enforce_capacity and
-                                      lp.capacity is not None and lp.capacity > 0) else 0
+                                      lp.capacity is not None and lp.capacity > 0) else UNBOUNDED_CAPACITY
 
         project_dict[n] = lp
 
@@ -313,7 +316,7 @@ def _enumerate_liveprojects_primary(configs):
             CATS_marker[number] = mk if mk is not None else FALLBACK_DEFAULT_MARKER_CATS
 
             capacity[number] = item.capacity if (item.enforce_capacity and
-                                                 item.capacity is not None and item.capacity > 0) else 0
+                                                 item.capacity is not None and item.capacity > 0) else UNBOUNDED_CAPACITY
 
             project_dict[number] = item
             project_group_dict[config.id].append(number)

@@ -30,7 +30,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, \
     ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules, \
     BuildPossibleOfficeContacts, BuildOfficeContactName, BuildPossibleApprovers, BuildApproverName, \
-    GetActiveProjectTagGroups
+    GetActiveProjectTagGroups, GetActiveFaculty, BuildActiveFacultyName
 from ..shared.forms.wtf_validators import valid_json, NotOptionalIf, \
     globally_unique_group_name, unique_or_original_group_name, \
     globally_unique_group_abbreviation, unique_or_original_group_abbreviation, \
@@ -1084,6 +1084,18 @@ def CompareMatchFormFactory(year, self_id, pclasses, is_root):
         compare = SubmitField('Compare')
 
     return CompareMatchForm
+
+
+class EditSupervisorRolesForm(Form):
+
+    supervisors = QuerySelectMultipleField('Supervisors', query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName)
+
+    @staticmethod
+    def validate_supervisors(form, field):
+        if field.data is None or not isinstance(field.data, list) or len(field.data) == 0:
+            raise ValidationError('At least one supervisor should be selected.')
+
+    submit = SubmitField('Save changes')
 
 
 def PresentationAssessmentMixinFactory(assessment: PresentationAssessment, query_factory):

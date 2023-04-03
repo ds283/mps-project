@@ -60,7 +60,7 @@ from .forms import GlobalConfig, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
     PublicScheduleFormFactory, CompareScheduleFormFactory, \
     AddAssetLicenseForm, EditAssetLicenseForm, AddProjectTagGroupForm, EditProjectTagGroupForm, \
-    AddProjectTagForm, EditProjectTagForm
+    AddProjectTagForm, EditProjectTagForm, EditSupervisorRolesForm
 from ..cache import cache
 from ..database import db
 from ..limiter import limiter
@@ -5503,7 +5503,7 @@ def reassign_match_project(id, pid):
 @admin.route('/reassign_match_marker/<int:id>/<int:mid>')
 @roles_accepted('faculty', 'admin', 'root')
 def reassign_match_marker(id, mid):
-    record = MatchingRecord.query.get_or_404(id)
+    record: MatchingRecord = MatchingRecord.query.get_or_404(id)
 
     if not validate_match_inspector(record.matching_attempt):
         return redirect(redirect_url())
@@ -5542,6 +5542,72 @@ def reassign_match_marker(id, mid):
               'Please contact a system administrator'.format(id=record.id), 'error')
 
     return redirect(redirect_url())
+
+
+@admin.route('/reassign_supervisor_roles/<int:rec_id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def reassign_supervisor_roles(rec_id):
+    record: MatchingRecord = MatchingRecord.query.get_or_404(rec_id)
+
+    if not validate_match_inspector(record.matching_attempt):
+        return redirect(redirect_url())
+
+    if record.matching_attempt.selected:
+        flash('Match "{name}" cannot be edited because an administrative user has marked it as '
+              '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
+              'info')
+        return redirect(redirect_url())
+
+    year = get_current_year()
+    if record.matching_attempt.year != year:
+        flash('Match "{name}" can no longer be modified because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
+        return redirect(redirect_url())
+
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+    if url is None:
+        url = redirect_url()
+
+    assign_form: EditSupervisorRolesForm = EditSupervisorRolesForm(obj=record)
+
+    if assign_form.validate_on_submit():
+        new_supv_roles = assign_form.supervisors.data
+
+        existing_roles = []
+
+        for item in record.roles:
+            item: MatchingRole
+
+            if item.role == MatchingRole.ROLE_SUPERVISOR:
+                if not any(fd.id == item.user_id for fd in new_supv_roles):
+                    record.roles.remove(item)
+                else:
+                    existing_roles.append(item.user_id)
+
+        for fd in new_supv_roles:
+            if fd.id not in existing_roles:
+                new_item = MatchingRole(role=MatchingRole.ROLE_SUPERVISOR,
+                                        user_id=fd.id)
+                record.roles.add(new_item)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not reassign supervisors for this matching record because a database error was '
+                  'encountered.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url)
+
+    else:
+        if request.method == 'GET':
+            supv_roles = [x.user.faculty_data for x in record.roles if x.role == MatchingRole.ROLE_SUPERVISOR]
+            assign_form.supervisors.data = supv_roles
+
+    return render_template('admin/match_inspector/reassign_supervisor.html', form=assign_form, record=record,
+                           url=url, text=text)
 
 
 @admin.route('/publish_matching_selectors/<int:id>')

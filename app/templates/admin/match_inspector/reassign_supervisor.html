@@ -1,0 +1,41 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#supervisors').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Select at least one faculty member to supervise...'
+            });
+        })
+    </script>
+{% endblock %}
+
+{% block title %}
+    Reassign supervision roles
+{% endblock %}
+
+{% block formtitle %}
+    Reassign supervision roles for <i class="fas fa-user"></i> <strong>{{ record.selector.student.user.name }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('admin.reassign_supervisor_roles', rec_id=record.id, text=text, url=url) }}" method="POST" name="assign_form">
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(role_form) }}#}
+
+        {{ wtf.render_field(form.supervisors) }}
+
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+    </form>
+{% endblock %}

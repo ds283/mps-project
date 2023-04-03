@@ -12554,6 +12554,11 @@ def _MatchingRecord_is_valid(id):
     if len(c) > 0:
         errors[('basic', 2)] = 'Some marker and moderator roles coincide'
 
+    # 1A. Usually there should be just one supervisor role
+    if len(supervisor_ids) > 1:
+        warnings[('supervisors', 0)] = 'There are {n} supervision roles assigned for this ' \
+                                       'project'.format(n=len(supervisor_ids))
+
     # 2. IF THERE IS A SUBMISSION LIST, WARN IF ASSIGNED PROJECT IS NOT ON THIS LIST
     if obj.selector.has_submission_list and obj.selector.project_rank(obj.project_id) is None:
         errors[('assignment', 0)] = "Assigned project did not appear in this selector's choices"
@@ -12591,7 +12596,7 @@ def _MatchingRecord_is_valid(id):
         else:
             warnings[('enrolment', 1)] = '"{name}" has been assigned a marking role, but is not a faculty member'
 
-    # 7. STAFF WITH SUPERVISOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
+    # 7. STAFF WITH MODERATION ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
     for u in moderator_roles:
         if u.faculty_data is not None:
             enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
@@ -12626,7 +12631,7 @@ def _MatchingRecord_is_valid(id):
                 errors[('assignment', 3)] = 'Assigned marker "{name}" is not in assessor pool for ' \
                                             'assigned project'.format(name=u.name)
 
-    # 10. ASSIGNED MODERATORS SHOULD: BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
+    # 10. ASSIGNED MODERATORS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
     if config.uses_moderator:
         for u in moderator_roles:
             count = get_count(project.assessor_list_query.filter(FacultyData.id == u.id))
@@ -12635,7 +12640,20 @@ def _MatchingRecord_is_valid(id):
                 errors[('assignment', 4)] = 'Assigned moderator "{name}" is not in assessor pool for ' \
                                             'assigned project'.format(name=u.name)
 
-    # 11. SELECTOR SHOULD BE MARKED FOR CONVERSION
+    # 11. FOR ORDINARY PROJECTS, THE SUPERVISOR SHOULD USUALLY BE A SUPERVISOR
+    if not project.generic:
+        if project.owner is not None and project.owner_id not in supervisor_ids:
+            warnings[('supervisors', 1)] = 'Assigned project owner "{name}" does not have a supervision ' \
+                                           'role'.format(name=project.owner.user.name)
+
+    # 12. For GENERIC PROJECTS, THE SUPERVISOR SHOULD BE IN THE SUPERVISION POOL
+    if project.generic:
+        for u in supervisor_roles:
+            if not any(u.id == fd.id for fd in project.supervisors):
+                errors[('supervisors', 2)] = 'Assigned supervisor "{name}" is not in supervision pool for ' \
+                                             'assigned project'.format(name=u.name)
+
+    # 13. SELECTOR SHOULD BE MARKED FOR CONVERSION
     if not obj.selector.convert_to_submitter:
         # only refuse to validate if we are the first member of the multiplet
         lo_rec = attempt.records \
@@ -12963,6 +12981,22 @@ def _MatchingRecord_insert_handler(mapper, connection, target):
 
 @listens_for(MatchingRecord, 'before_delete')
 def _MatchingRecord_delete_handler(mapper, connection, target):
+    target._validated = False
+
+    with db.session.no_autoflush:
+        _delete_MatchingRecord_cache(target.id, target.matching_id)
+
+
+@listens_for(MatchingRecord.roles, 'append')
+def _MatchingRecord_roles_append_handler(target, value, initiator):
+    target._validated = False
+
+    with db.session.no_autoflush:
+        _delete_MatchingRecord_cache(target.id, target.matching_id)
+
+
+@listens_for(MatchingRecord.roles, 'remove')
+def _MatchingRecord_roles_remove_handler(target, value, initiator):
     target._validated = False
 
     with db.session.no_autoflush:

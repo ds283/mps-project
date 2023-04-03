@@ -129,6 +129,10 @@ _projects = \
                        {% endif %}
                     </a>
                 {% endfor %}
+                <div role="separator" class="dropdown-divider"></div>
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.reassign_supervisor_roles', rec_id=r.id, url=url_for('admin.match_faculty_view', id=r.matching_id)) }}">
+                    Edit supervisor roles...
+                </a>                
             </div>
         {% endif %}
     </div>

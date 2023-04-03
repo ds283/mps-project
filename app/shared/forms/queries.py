@@ -49,6 +49,10 @@ def GetActiveFaculty():
             .order_by(User.last_name, User.first_name)
 
 
+def BuildActiveFacultyName(fac: FacultyData):
+    return fac.user.name
+
+
 def GetPossibleConvenors():
     return db.session.query(FacultyData) \
             .join(User, User.id == FacultyData.id) \
@@ -67,10 +71,6 @@ def BuildPossibleApprovers():
         .filter(User.active, or_(User.roles.any(name='project_approver'),
                                  User.roles.any(name='root'))) \
         .order_by(User.last_name, User.first_name)
-
-
-def BuildActiveFacultyName(fac: FacultyData):
-    return fac.user.name
 
 
 def BuildConvenorRealName(fac: FacultyData):

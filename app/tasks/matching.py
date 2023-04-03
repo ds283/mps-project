@@ -891,6 +891,10 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
     S = pulp.LpVariable.dicts("S", itertools.product(range(number_sup), range(number_lp)),
                               cat=pulp.LpInteger, lowBound=0)
 
+    # boolean version of S indicating whether a supervisor has any assignments to a particular project
+    ss = pulp.LpVariable.dicts("ss", itertools.product(range(number_sup), range(number_lp)),
+                               cat=pulp.LpBinary)
+
     # generate decision variables for marker assignment matrix
     # the indices are (marker, project) and the entries of the matrix are integers, because
     # the same marker can be assigned to mark more than one instance of a particular project (e.g. different
@@ -1092,6 +1096,41 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
                     '_CS{first}{last}_C{cfg}_P{num}_supv_capacity'.format(first=user.first_name, last=user.last_name,
                                                                           cfg=proj.config_id, num=proj.number)
 
+    # ss[k,j] should be constrained to be 0 if supervisor k is not assigned to project j
+    for k in range(number_sup):
+        sup: FacultyData = sup_dict[k]
+        user: User = sup.user
+
+        for j in range(number_lp):
+            proj: LiveProject = lp_dict[j]
+            key = (k, j)
+
+            prob += ss[key] <= S[key], \
+                    '_Css{first}{last}_C{cfg}_P{num}_supv_assigned_upperb'.format(first=user.first_name, last=user.last_name,
+                                                                                  cfg=proj.config_id, num=proj.number)
+
+            prob += ss[key] >= S[key] / 15.0, \
+                    '_Css{first}{last}_C{cfg}_P{num}_supv_assigned_lowerb'.format(first=user.first_name, last=user.last_name,
+                                                                                  cfg=proj.config_id, num=proj.number)
+
+
+    # prevent supervisors from being assigned to more than one group project
+    for k in range(number_sup):
+        sup: FacultyData = sup_dict[k]
+        user: User = sup.user
+
+        sum = 0
+        for j in range(number_lp):
+            proj: LiveProject = lp_dict[k]
+            key = (k, j)
+
+            if proj.generic:
+                sum += ss[key]
+
+        prob += sum <= 1, \
+                '_Cgroup{first}{last}'.format(first=user.first_name, last=user.last_name)
+
+
     # Z[k] should be constrained to be 0 if supervisor k is not assigned to any projects
     for k in range(number_sup):
         sup: FacultyData = sup_dict[k]
@@ -1101,11 +1140,14 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
         prob += Z[k] <= sum(S[(k, j)] for j in range(number_lp)), \
                 '_CZ{first}{last}_upperb'.format(first=user.first_name, last=user.last_name)
 
-        # if any projects are assigned to supervisor k then Z[k] will be allowed to float up to 1,
-        # and the optimizer will choose to do this because the no-assignment-penalty part of the
-        # objective function makes it prefer to do so.
-        # So, we don't explicitly need a constraint to force Z[k] to be nonzero when any projects
-        # are assigned.
+        # force Z[k] to be 1 if any project is assigned to supervisor k
+        for j in range(number_lp):
+            proj: LiveProject = lp_dict[j]
+            key = (k, j)
+
+            prob += Z[k] >= ss[key], \
+                    '_CZ{first}{last}_C{cfg}_P{num}_lowerb'.format(first=user.first_name, last=user.last_name,
+                                                                   cfg=proj.config, num=proj.number)
 
     # markers can only be assigned projects to which they are attached
     for i in range(number_mark):

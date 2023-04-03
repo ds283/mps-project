@@ -10,6 +10,7 @@
 
 from distutils.util import strtobool
 from datetime import datetime
+from typing import List
 
 from celery import group, chain
 from flask import current_app, render_template
@@ -17,7 +18,7 @@ from flask_mailman import EmailMultiAlternatives
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import MatchingAttempt, TaskRecord,  MatchingRecord, FacultyData
+from ..models import MatchingAttempt, TaskRecord, MatchingRecord, FacultyData, User, ProjectClassConfig, ProjectClass
 from ..task_queue import progress_update, register_task
 
 
@@ -26,7 +27,7 @@ def register_matching_email_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def publish_to_selectors(self, match_id, user_id, task_id):
         try:
-            record = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -53,7 +54,7 @@ def register_matching_email_tasks(celery):
     @celery.task(bind=True)
     def publish_to_selectors_finalize(self, match_id, task_id):
         try:
-            record = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -87,7 +88,7 @@ def register_matching_email_tasks(celery):
 
         try:
             record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
-            matches = db.session.query(MatchingRecord) \
+            matches: List[MatchingRecord] = db.session.query(MatchingRecord) \
                 .filter_by(matching_id=match_id, selector_id=sel_id) \
                 .order_by(MatchingRecord.submission_period).all()
         except SQLAlchemyError as e:
@@ -102,9 +103,9 @@ def register_matching_email_tasks(celery):
             self.update_state('FAILURE', meta='Could not load MatchingRecord record from database')
             raise self.retry()
 
-        user = matches[0].selector.student.user
-        config = matches[0].selector.config
-        pclass = config.project_class
+        user: User = matches[0].selector.student.user
+        config: ProjectClassConfig = matches[0].selector.config
+        pclass: ProjectClass = config.project_class
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
@@ -145,7 +146,7 @@ def register_matching_email_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def publish_to_supervisors(self, match_id, user_id, task_id):
         try:
-            record = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -172,7 +173,7 @@ def register_matching_email_tasks(celery):
     @celery.task(bind=True)
     def publish_to_supervisors_finalize(self, match_id, task_id):
         try:
-            record = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -205,8 +206,8 @@ def register_matching_email_tasks(celery):
             is_draft = strtobool(is_draft)
 
         try:
-            record = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
-            fac = db.session.query(FacultyData).filter_by(id=fac_id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
+            fac: FacultyData = db.session.query(FacultyData).filter_by(id=fac_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -219,8 +220,8 @@ def register_matching_email_tasks(celery):
             self.update_state('FAILURE', meta='Could not load FacultyData record from database')
             raise self.retry()
 
-        user = fac.user
-        matches = record.get_supervisor_records(fac.id).all()
+        user: User = fac.user
+        matches: List[MatchingRecord] = record.get_supervisor_records(fac.id).all()
 
         binned_matches = {}
         convenors = set()

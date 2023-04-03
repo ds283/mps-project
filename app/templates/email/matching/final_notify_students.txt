@@ -25,12 +25,15 @@ You have been allocated the following project:
 You have been allocated the following projects:
 {% endif -%}
 {% for item in matches %}
+{%- set supervisors = item.supervisor_roles -%}
+{%- set supervisor_names = [] -%}
+{%- for u in supervisors -%}{%- do supervisor_names.append(u.name + ' <' + u.email + '>') -%}{%- endfor -%}
 {% if number > 1 -%}
 {%- set period = pclass.get_period(item.submission_period) -%}
-{%- set text = period.display_name(config.select_year_a) + ': ' + item.project.name + ' (' + item.project.owner.user.name + ' <' + item.project.owner.user.email + '>, rank ' + item.rank|string + ')' -%}
+{%- set text = period.display_name(config.select_year_a) + ': ' + item.project.name + ' (supervised by ' + supervisor_names|join(", ") + ', rank ' + item.rank|string + ')' -%}
 {{ text|wordwrap(79) }}
 {%- else -%}
-{%- set text = item.project.name + ' (' + item.project.owner.user.name + ' <' + item.project.owner.user.email + '>, rank ' + item.rank|string + ')' -%}
+{%- set text = item.project.name + ' (supervised by ' + supervisor_names|join(", ") + ', rank ' + item.rank|string + ')' -%}
 {{ text|wordwrap(79) }}
 {%- endif %}
 {%- endfor %}

@@ -12664,16 +12664,25 @@ def _MatchingRecord_is_valid(id):
                                           'but is present in this matching'.format(name=obj.selector.student.user.name)
 
     # 14. THE PROJECT SHOULD NOT BE OVERASSIGNED
-    count = get_count(attempt.records.filter_by(project_id=project.id))
+    supervisor_roles = obj.supervisor_roles
+    for supv in supervisor_roles:
+        count = get_count(attempt.records.filter(MatchingRecord.project_id == project.id,
+                                                 MatchingRecord.roles.any(and_(MatchingRole.role == MatchingRole.ROLE_SUPERVISOR,
+                                                                               MatchingRole.user_id == supv.id))))
 
-    if count > project.capacity:
-        # only refuse to validate if we are the first member of the multiplet
-        lo_rec = attempt.records \
-            .filter_by(project_id=project.id).order_by(MatchingRecord.selector_id.asc()).first()
+        if count > project.capacity:
+            # only refuse to validate if we are the first member of the multiplet
+            lo_rec = attempt.records \
+                .filter(MatchingRecord.project_id == project.id,
+                        MatchingRecord.roles.any(and_(MatchingRole.role == MatchingRole.ROLE_SUPERVISOR,
+                                                      MatchingRole.user_id == supv.id))) \
+                .order_by(MatchingRecord.selector_id.asc()).first()
 
-        if lo_rec is not None and lo_rec.id == obj.id:
-            errors[('assignment', 5)] = 'Project "{name}" has maximum capacity {max} but has been assigned to {num} ' \
-                                        'selectors'.format(name=project.name, max=project.capacity, num=count)
+            if lo_rec is not None and lo_rec.id == obj.id:
+                errors[('overasigned', 5)] = 'Project "{name}" has maximum capacity {max} but has been assigned to ' \
+                                             'supervisor "{supv_name}" with {num} ' \
+                                             'selectors'.format(name=project.name, max=project.capacity,
+                                                                supv_name = supv.name, num=count)
 
     is_valid = (len(errors) == 0)
     return is_valid, errors, warnings

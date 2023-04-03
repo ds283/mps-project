@@ -80,7 +80,7 @@ _project = \
                     {% if adjustable %}data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {% if supervisors|length > 0 %}
-                    {{ truncate_name(r.project.name) }} ({{ supervisors[0].last_name }})
+                    {{ truncate_name(r.project.name) }} {% if r.project.generic %}[generic]]{% endif %} ({{ supervisors[0].last_name }})
                 {% endif %}
             </a>
             {% if adjustable %}

@@ -107,7 +107,7 @@ _projects = \
         <a class="badge text-decoration-none text-nohover-light {% if has_issues %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
                 {% if not has_issues and style %}style="{{ style }}"{% endif %}
                 {% if adjustable %}data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>
-            #{{ r.submission_period }}: {{ r.selector.student.user.last_name }} ({{ truncate_name(r.project.name) }})
+            #{{ r.submission_period }}: {{ r.selector.student.user.last_name }} ({{ truncate_name(r.project.name) }} {% if r.project.generic %}[generic]{%- endif -%})
         </a>
         {% if adjustable %}
             {% set list = r.selector.ordered_selections %}

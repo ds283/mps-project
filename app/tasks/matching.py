@@ -1096,6 +1096,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
                     '_CS{first}{last}_C{cfg}_P{num}_supv_capacity'.format(first=user.first_name, last=user.last_name,
                                                                           cfg=proj.config_id, num=proj.number)
 
+
     # ss[k,j] should be constrained to be 0 if supervisor k is not assigned to project j
     for k in range(number_sup):
         sup: FacultyData = sup_dict[k]
@@ -1105,11 +1106,16 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
             proj: LiveProject = lp_dict[j]
             key = (k, j)
 
+            # force ss[k,j] to be zero if S[k,j] is zero
             prob += ss[key] <= S[key], \
                     '_Css{first}{last}_C{cfg}_P{num}_supv_assigned_upperb'.format(first=user.first_name, last=user.last_name,
                                                                                   cfg=proj.config_id, num=proj.number)
 
-            prob += ss[key] >= S[key] / 15.0, \
+            # force ss[k,j] to be 1 if S[k,j] is not zero. There doesn't seem to be a really elegant, clean
+            # way to do this in mixed integer linear programming. We assume that S[k,j] never gets as large as
+            # UNBOUNDED_CAPACITY, and then S[k,j]/UNBOUNDED_CAPACITY will be less than unity but greater than
+            # zero whenver S[k,j] is not zero
+            prob += UNBOUNDED_CAPACITY * ss[key] >= S[key], \
                     '_Css{first}{last}_C{cfg}_P{num}_supv_assigned_lowerb'.format(first=user.first_name, last=user.last_name,
                                                                                   cfg=proj.config_id, num=proj.number)
 
@@ -1119,15 +1125,17 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
         sup: FacultyData = sup_dict[k]
         user: User = sup.user
 
-        sum = 0
+        # build sum of group projects assigned/not assigned flags for this supervisor
+        group_projects = 0
         for j in range(number_lp):
-            proj: LiveProject = lp_dict[k]
+            proj: LiveProject = lp_dict[j]
             key = (k, j)
 
             if proj.generic:
-                sum += ss[key]
+                group_projects += ss[key]
 
-        prob += sum <= 1, \
+        # require that no more than 1 group project has been assigned
+        prob += group_projects <= 1, \
                 '_Cgroup{first}{last}'.format(first=user.first_name, last=user.last_name)
 
 

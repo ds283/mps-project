@@ -12663,6 +12663,18 @@ def _MatchingRecord_is_valid(id):
             warnings[('conversion', 1)] = 'Selector "{name}" is not marked for conversion to submitter, ' \
                                           'but is present in this matching'.format(name=obj.selector.student.user.name)
 
+    # 14. THE PROJECT SHOULD NOT BE OVERASSIGNED
+    count = get_count(attempt.records.filter_by(project_id=project.id))
+
+    if count > project.capacity:
+        # only refuse to validate if we are the first member of the multiplet
+        lo_rec = attempt.records \
+            .filter_by(project_id=project.id).order_by(MatchingRecord.selector_id.asc()).first()
+
+        if lo_rec is not None and lo_rec.id == obj.id:
+            errors[('assignment', 5)] = 'Project "{name}" has maximum capacity {max} but has been assigned to {num} ' \
+                                        'selectors'.format(name=project.name, max=project.capacity, num=count)
+
     is_valid = (len(errors) == 0)
     return is_valid, errors, warnings
 

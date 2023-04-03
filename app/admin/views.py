@@ -4542,9 +4542,24 @@ def delete_match(id):
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(redirect_url())
 
+    if not current_user.has_role('root') and current_user.id != attempt.creator_id:
+        flash('Match "{name}" cannot be deleted because it belongs to another user')
+        return redirect(redirect_url())
+
     if not attempt.finished:
-        flash('Can not delete match "{name}" because it has not terminated.'.format(name=attempt.name),
-              'error')
+        flash('Can not delete match "{name}" because it has not terminated. If you wish to delete this '
+              'match, please terminate it first.'.format(name=attempt.name), 'error')
+        return redirect(redirect_url())
+
+    if attempt.selected:
+        flash('Can not delete match "{name}" because it has been selected for use during rollover of the '
+              'academic year. Please deselect and unpublish this match before attempting to delete '
+              'it.'.format(name=attempt.name), 'error')
+        return redirect(redirect_url())
+
+    if attempt.published:
+        flash('Can not delete match "{name}" because it has been published to convenors. Please unpublish '
+              'this match before attempting to delete it.'.format(name=attempt.name), 'error')
         return redirect(redirect_url())
 
     title = 'Delete match'
@@ -4578,13 +4593,24 @@ def perform_delete_match(id):
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(url)
 
+    if not current_user.has_role('root') and current_user.id != attempt.creator_id:
+        flash('Match "{name}" cannot be deleted because it belongs to another user')
+        return redirect(url)
+
     if not attempt.finished:
         flash('Can not delete match "{name}" because it has not terminated.'.format(name=attempt.name),
               'error')
         return redirect(url)
 
-    if not current_user.has_role('root') and current_user.id != attempt.creator_id:
-        flash('Match "{name}" cannot be deleted because it belongs to another user')
+    if attempt.selected:
+        flash('Can not delete match "{name}" because it has been selected for use during rollover of the '
+              'academic year. Please deselect and unpublish this match before attempting to delete '
+              'it.'.format(name=attempt.name), 'error')
+        return redirect(url)
+
+    if attempt.published:
+        flash('Can not delete match "{name}" because it has been published to convenors. Please unpublish '
+              'this match before attempting to delete it.'.format(name=attempt.name), 'error')
         return redirect(url)
 
     try:

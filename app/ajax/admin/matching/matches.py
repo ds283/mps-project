@@ -302,9 +302,11 @@ _menu = \
             {% endif %}
 
             {% if current_user.has_role('root') or current_user.id == m.creator_id %}
-                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.delete_match', id=m.id) }}">
-                    <i class="fas fa-trash fa-fw"></i> Delete
-                </a>
+                {% if not m.published and not m.selected %}
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.delete_match', id=m.id) }}">
+                        <i class="fas fa-trash fa-fw"></i> Delete
+                    </a>
+                {% endif %}
                 {% if m.can_clean_up %}
                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.clean_up_match', id=m.id) }}">
                         <i class="fas fa-cut fa-fw"></i> Clean up
@@ -339,10 +341,10 @@ _menu = \
                 {% if m.selected or m.published %}
                     <div role="separator" class="dropdown-divider"></div>
                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.publish_matching_selectors', id=m.id) }}">
-                        <i class="fas fa-mail-bulk fa-fw"></i> {% if m.selected %}Final{% else %}Draft{% endif %} to selectors
+                        <i class="fas fa-mail-bulk fa-fw"></i> {% if m.selected %}Final{% else %}Draft{% endif %} email to selectors
                     </a>
                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.publish_matching_supervisors', id=m.id) }}">
-                        <i class="fas fa-mail-bulk fa-fw"></i> {% if m.selected %}Final{% else %}Draft{% endif %} to supervisors
+                        <i class="fas fa-mail-bulk fa-fw"></i> {% if m.selected %}Final{% else %}Draft{% endif %} email to supervisors
                     </a>
                 {% endif %}
             {% endif %}            

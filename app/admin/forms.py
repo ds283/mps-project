@@ -941,10 +941,9 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                                                                 'be assigned to a single supervisor, but for '
                                                                 'efficiency it may be preferable to have a single '
                                                                 'project type. This determines the maximum number of '
-                                                                'different project types assogned to a single '
-                                                                'supervisor.',
-                                                    validators=[InputRequired(message='Please specify a maximum '
-                                                                                      'number')])
+                                                                'different project types assigned to a single '
+                                                                'supervisor. Leave blank to impose no limit.',
+                                                    validators=[Optional()])
 
         include_matches = QuerySelectMultipleField('When levelling workloads, include CATS from existing matches',
                                                    query_factory=include_matches_query, get_label='name')
@@ -1016,12 +1015,12 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                                              'encourage/discourage hints below.')
 
         require_to_encourage = BooleanField('Treat "require" as "strongly encouraged"', default=False,
-                                            description='Treat a "require" hint as "strongly encouraged". Use to '
+                                            description='Convert all "require" hints to "strongly encouraged". Use to '
                                                         'debug infeasibility issues when too many hints have been '
                                                         'specified, making the problem over-determined.')
 
         forbid_to_discourage = BooleanField('Treat "forbid" as "strongly discouraged"', default=False,
-                                            description='Treat a "forbid" hint as "strong discouraged". Use to '
+                                            description='Convert all "forbid" hints to "strongly discouraged". Use to '
                                                         'debug infeasibility issues when too many hints have been '
                                                         'specified, making the problem over-determined.')
 

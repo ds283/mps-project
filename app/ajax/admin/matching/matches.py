@@ -73,6 +73,9 @@ _info = \
 <span class="badge bg-info text-dark">Supervisor <i class="fas fa-less-than-equal"></i> {{ m.supervising_limit }} CATS</span>
 <span class="badge bg-info text-dark">Marker <i class="fas fa-less-than-equal"></i> {{ m.marking_limit }} CATS</span>
 <span class="badge bg-info text-dark">Marker multiplicity <i class="fas fa-less-than-equal"></i> {{ m.max_marking_multiplicity }}</span>
+{% if m.max_different_group_projects is not none %}
+    <span class="badge bg-info text-dark">Max group types <i class="fas fa-less-than-equal"></i> {{ m.max_different_group_projects }}</span>
+{% endif %}
 {% if m.ignore_per_faculty_limits %}
     <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Ignore per-faculty limits</span>
 {% else %}

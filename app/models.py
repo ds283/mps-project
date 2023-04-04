@@ -11861,6 +11861,9 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     # maximum multiplicity for markers
     max_marking_multiplicity = db.Column(db.Integer())
 
+    # maximum number of different types of group project to assign to a single supervisor
+    max_different_group_projects = db.Column(db.Integer())
+
 
     # CONVENOR HINTS
 

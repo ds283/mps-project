@@ -1120,7 +1120,10 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
                                                                                   cfg=proj.config_id, num=proj.number)
 
 
-    # prevent supervisors from being assigned to more than one group project
+    # prevent supervisors from being assigned to more than a fixed number of group projects
+    max_group_project_number = record.max_different_group_projects \
+        if record.max_different_group_projects is not None else 1
+
     for k in range(number_sup):
         sup: FacultyData = sup_dict[k]
         user: User = sup.user
@@ -1135,7 +1138,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
                 group_projects += ss[key]
 
         # require that no more than 1 group project has been assigned
-        prob += group_projects <= 1, \
+        prob += group_projects <= max_group_project_number, \
                 '_Cgroup{first}{last}'.format(first=user.first_name, last=user.last_name)
 
 
@@ -2520,6 +2523,7 @@ def register_matching_tasks(celery):
                                    supervising_limit=record.supervising_limit,
                                    marking_limit=record.marking_limit,
                                    max_marking_multiplicity=record.max_marking_multiplicity,
+                                   max_different_group_projects=record.max_different_group_projects,
                                    use_hints=record.use_hints,
                                    require_to_encourage=record.require_to_encourage,
                                    forbid_to_discourage=record.forbid_to_discourage,

@@ -81,12 +81,12 @@ def _element(user_id, current_user_id):
     cu = db.session.query(User).filter_by(id=current_user_id).one()
 
     return {'name': render_template_string(name, u=u, f=f),
-             'active': u.active_label,
-             'office': f.office,
-             'settings': render_template_string(_settings, f=f),
-             'affiliation': render_template_string(_affiliation, f=f),
-             'enrolled': render_template_string(_enrolled, f=f),
-             'menu': render_template_string(menu, user=u, cuser=cu, pane='faculty')}
+            'active': u.active_label,
+            'office': f.office,
+            'settings': render_template_string(_settings, f=f),
+            'affiliation': render_template_string(_affiliation, f=f),
+            'enrolled': render_template_string(_enrolled, f=f),
+            'menu': render_template_string(menu, user=u, cuser=cu, pane='faculty')}
 
 
 def _process(user_id, current_user_id):

@@ -935,6 +935,17 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                                                             'project, up to the maximum multiplicity specified',
                                                 validators=[InputRequired(message='Please specify a multiplicity')])
 
+        max_different_group_projects = IntegerField('Maximum number of different group project types to assign to a '
+                                                    'single supervisor',
+                                                    description='Students from different types of group projects can '
+                                                                'be assigned to a single supervisor, but for '
+                                                                'efficiency it may be preferable to have a single '
+                                                                'project type. This determines the maximum number of '
+                                                                'different project types assogned to a single '
+                                                                'supervisor.',
+                                                    validators=[InputRequired(message='Please specify a maximum '
+                                                                                      'number')])
+
         include_matches = QuerySelectMultipleField('When levelling workloads, include CATS from existing matches',
                                                    query_factory=include_matches_query, get_label='name')
 

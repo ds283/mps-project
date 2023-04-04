@@ -4326,6 +4326,7 @@ def create_match():
                                   supervising_limit=form.supervising_limit.data,
                                   marking_limit=form.marking_limit.data,
                                   max_marking_multiplicity=form.max_marking_multiplicity.data,
+                                  max_different_group_projects=form.max_different_group_projects.data,
                                   levelling_bias=form.levelling_bias.data,
                                   supervising_pressure=form.supervising_pressure.data,
                                   marking_pressure=form.marking_pressure.data,
@@ -4437,6 +4438,7 @@ def create_match():
                 form.supervising_limit.data = base_match.supervising_limit
                 form.marking_limit.data = base_match.marking_limit
                 form.max_marking_multiplicity.data = base_match.max_marking_multiplicity
+                form.max_different_group_projects.data = base_match.max_different_group_projects
 
                 form.levelling_bias.data = base_match.levelling_bias
                 form.supervising_pressure.data = base_match.supervising_pressure

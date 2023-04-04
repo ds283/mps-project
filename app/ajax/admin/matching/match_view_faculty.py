@@ -136,6 +136,9 @@ _projects = \
             </div>
         {% endif %}
     </div>
+    {% if r.project.generic %}
+        <span class="badge bg-info">GENERIC</span>
+    {% endif %}
     {% set outcome = r.hint_status %}
     {% if outcome is not none %}
         {% set satisfied, violated = outcome %}

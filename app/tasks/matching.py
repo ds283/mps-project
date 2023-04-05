@@ -1137,15 +1137,15 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
             if proj.generic:
                 group_projects += ss[key]
 
-        if record.max_different_group_projects is not None:
-            group_limit = record.max_different_group_projects if record.max_different_group_projects > 0 else 1
+        group_limit = record.max_different_group_projects
+        if group_limit is not None and group_limit > 0:
             prob += group_projects <= group_limit, \
                     '_C{first}{last}_group_limit'.format(first=user.first_name, last=user.last_name)
 
-        if record.max_different_all_projects is not None:
-            all_limit = record.max_different_all_projects if record.max_different_all_projects > 0 \
-                and record.max_different_all_projects >= record.max_different_group_projects \
-                else (record.max_different_group_projects if record.max_different_group_projects > 0 else 1)
+        all_limit = record.max_different_all_projects
+        if all_limit is not None and all_limit > 0:
+            if group_limit is not None and group_limit > all_limit:
+                all_limit = group_limit
 
             prob += all_projects <= all_limit, \
                     '_C{first}{last}_all_limit'.format(first=user.first_name, last=user.last_name)

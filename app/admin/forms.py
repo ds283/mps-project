@@ -935,15 +935,44 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                                                             'project, up to the maximum multiplicity specified',
                                                 validators=[InputRequired(message='Please specify a multiplicity')])
 
-        max_different_group_projects = IntegerField('Maximum number of different group project types to assign to a '
-                                                    'single supervisor',
+        max_different_group_projects = IntegerField('Maximum number of different group project types that can be '
+                                                    'assigned to a single supervisor',
                                                     description='Students from different types of group projects can '
                                                                 'be assigned to a single supervisor, but for '
                                                                 'efficiency it may be preferable to have a single '
                                                                 'project type. This determines the maximum number of '
                                                                 'different project types assigned to a single '
                                                                 'supervisor. Leave blank to impose no limit.',
-                                                    validators=[Optional()])
+                                                    validators=[Optional(),
+                                                                NumberRange(min=1, message='The maximum number of '
+                                                                                           'group project types cannot '
+                                                                                           'be less than 1.')])
+
+        max_different_all_projects = IntegerField('Maximum number of different projects (ordinary or group) that '
+                                                  'can be assigned to a single supervisor',
+                                                  description='Similar to above, but including projects of any '
+                                                              'type (either ordinary projects or group projects). '
+                                                              'If a limit of specified for group projects, this '
+                                                              'limit must be at least as large. Leave blank to '
+                                                              'impose no limit.',
+                                                  validators=[Optional(),
+                                                              NumberRange(min=1, message='The maximum number of '
+                                                                                         'project types cannot be '
+                                                                                         'less than 1.')])
+
+        @staticmethod
+        def validate_max_different_all_projects(form, field):
+            # if no limit for group-type projects is specified, nothing to do
+            if form.max_different_group_projects.data is None:
+                return
+
+            # if no limit is specified, nothing to do (even if a limit for group-type projects is specified)
+            if field.data is None:
+                return
+
+            if field.data < form.max_different_group_projects.data:
+                raise ValidationError('The maximum number of project types must be at least as large as the '
+                                      'maximum number of group project types.')
 
         include_matches = QuerySelectMultipleField('When levelling workloads, include CATS from existing matches',
                                                    query_factory=include_matches_query, get_label='name')

@@ -1120,26 +1120,35 @@ def _create_PuLP_problem(R, M, W, P, cstr, base_X, base_Y, base_S, has_base_matc
                                                                                   cfg=proj.config_id, num=proj.number)
 
 
-    # prevent supervisors from being assigned to more than a fixed number of group projects
-    max_group_project_number = record.max_different_group_projects \
-        if record.max_different_group_projects is not None else 1
-
+    # Prevent supervisors from being assigned to more than a fixed number of projects.
+    # There are separate constraints for group projects and projects of any type
     for k in range(number_sup):
         sup: FacultyData = sup_dict[k]
         user: User = sup.user
 
         # build sum of group projects assigned/not assigned flags for this supervisor
         group_projects = 0
+        all_projects = 0
         for j in range(number_lp):
             proj: LiveProject = lp_dict[j]
             key = (k, j)
 
+            all_projects += ss[key]
             if proj.generic:
                 group_projects += ss[key]
 
-        # require that no more than 1 group project has been assigned
-        prob += group_projects <= max_group_project_number, \
-                '_Cgroup{first}{last}'.format(first=user.first_name, last=user.last_name)
+        if record.max_different_group_projects is not None:
+            group_limit = record.max_different_group_projects if record.max_different_group_projects > 0 else 1
+            prob += group_projects <= group_limit, \
+                    '_C{first}{last}_group_limit'.format(first=user.first_name, last=user.last_name)
+
+        if record.max_different_all_projects is not None:
+            all_limit = record.max_different_all_projects if record.max_different_all_projects > 0 \
+                and record.max_different_all_projects >= record.max_different_group_projects \
+                else (record.max_different_group_projects if record.max_different_group_projects > 0 else 1)
+
+            prob += all_projects <= all_limit, \
+                    '_C{first}{last}_all_limit'.format(first=user.first_name, last=user.last_name)
 
 
     # Z[k] should be constrained to be 0 if supervisor k is not assigned to any projects
@@ -2524,6 +2533,7 @@ def register_matching_tasks(celery):
                                    marking_limit=record.marking_limit,
                                    max_marking_multiplicity=record.max_marking_multiplicity,
                                    max_different_group_projects=record.max_different_group_projects,
+                                   max_different_all_projects=record.max_different_all_projects,
                                    use_hints=record.use_hints,
                                    require_to_encourage=record.require_to_encourage,
                                    forbid_to_discourage=record.forbid_to_discourage,

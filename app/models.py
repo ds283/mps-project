@@ -12562,10 +12562,61 @@ def _MatchingRecord_is_valid(id):
     if len(c) > 0:
         errors[('basic', 2)] = 'Some marker and moderator roles coincide'
 
-    # 1A. Usually there should be just one supervisor role
-    if len(supervisor_ids) > 1:
-        warnings[('supervisors', 0)] = 'There are {n} supervision roles assigned for this ' \
-                                       'project'.format(n=len(supervisor_ids))
+    if config.select_in_previous_cycle:
+        pd: SubmissionPeriodDefinition = pclass.get_period(obj.submission_period)
+        if pd is None:
+            errors[('period', 0)] = 'Missing record for submission period'
+            return False, errors, warnings
+
+        uses_supervisor = pclass.uses_supervisor
+        uses_marker = pclass.uses_marker
+        uses_moderator = pclass.uses_moderator
+        markers_needed = pd.number_markers
+        moderators_needed = pd.number_moderators
+
+    else:
+        pd: SubmissionPeriodRecord = config.get_period(obj.submission_period)
+        if pd is None:
+            errors[('period', 0)] = 'Missing record for submission period'
+            return False, errors, warnings
+
+        uses_supervisor = config.uses_supervisor
+        uses_marker = config.uses_marker
+        uses_moderator = config.uses_moderator
+        markers_needed = pd.number_markers
+        moderators_needed = pd.number_moderators
+
+    if uses_supervisor:
+        # 1A. IF SUPERVISORS ARE USED, AT LEAST ONE SUPERVISOR SHOULD BE PROVIDED
+        if len(supervisor_ids) == 0:
+            errors[('supervisors', 0)] = 'No supervision roles are assigned for this project'
+
+        # 1B. USUALLY THERE SHOULD BE JUST ONE SUPERVISOR ROLE
+        if len(supervisor_ids) > 1:
+            warnings[('supervisors', 0)] = 'There are {n} supervision roles assigned for this ' \
+                                           'project'.format(n=len(supervisor_ids))
+
+    if uses_marker:
+        # 1C. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MARKERS
+        if len(marker_ids) < markers_needed:
+            errors[('markers', 0)] = 'Fewer marker roles are assigned than expected for this project ' \
+                                     '(assigned={assgn}, expected={exp})'.format(assgn=len(marker_ids), exp=markers_needed)
+
+        # 1D. WARN IF MORE MARKERS THAN EXPECTED ASSIGNED
+        if len(marker_ids) > markers_needed:
+            warnings[('markers', 0)] = 'More marker roles are assigned than expected for this project ' \
+                                       '(assigned={assgn}, expected={exp})'.format(assgn=len(marker_ids), exp=markers_needed)
+
+    if uses_moderator:
+        # 1C. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MODERATORS
+        if len(moderator_ids) < moderators_needed:
+            errors[('moderators', 0)] = 'Fewer moderator roles are assigned than expected for this project ' \
+                                        '(assigned={assgn}, expected={exp})'.format(assgn=len(moderator_ids), exp=moderators_needed)
+
+        # 1D. WARN IF MORE MODERATORS THAN EXPECTED ASSIGNED
+        if len(moderator_ids) > moderators_needed:
+            warnings[('moderators', 0)] = 'More moderator roles are assigned than expected for this project ' \
+                                          '(assigned={assgn}, expected={exp})'.format(assgn=len(moderator_ids), exp=moderators_needed)
 
     # 2. IF THERE IS A SUBMISSION LIST, WARN IF ASSIGNED PROJECT IS NOT ON THIS LIST
     if obj.selector.has_submission_list and obj.selector.project_rank(obj.project_id) is None:
@@ -12580,7 +12631,7 @@ def _MatchingRecord_is_valid(id):
             errors[('assignment', 1)] = 'This selector accepted a custom offer for project "{name}", ' \
                                           'but their assigned project is different'.format(name=project.name)
 
-    # 4. ASSIGNED PROJECT MUST BE PART OF THIS PROJECT CLASS
+    # 4. ASSIGNED PROJECT MUST BE PART OF THE PROJECT CLASS
     if project.config_id != obj.selector.config_id:
         errors[('pclass', 0)] = 'Assigned project does not belong to the correct class for this selector'
 
@@ -12648,7 +12699,7 @@ def _MatchingRecord_is_valid(id):
                 errors[('assignment', 4)] = 'Assigned moderator "{name}" is not in assessor pool for ' \
                                             'assigned project'.format(name=u.name)
 
-    # 11. FOR ORDINARY PROJECTS, THE SUPERVISOR SHOULD USUALLY BE A SUPERVISOR
+    # 11. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE A SUPERVISOR
     if not project.generic:
         if project.owner is not None and project.owner_id not in supervisor_ids:
             warnings[('supervisors', 1)] = 'Assigned project owner "{name}" does not have a supervision ' \

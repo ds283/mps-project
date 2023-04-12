@@ -1027,6 +1027,22 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
 
         # SUMMARY DECISION VARIABLES FOR MARKERS
 
+        # On its own, Y[i,j,l] turns the LP problem into something cubic, because we are going to need three
+        # nested loops to explore its index space. This makes setting up the LP problem in PuLP too expensive
+        # when the optimization becomes large (as it now does for e.g. the Data Science MSc).
+        # Instead, we need some auxiliary variables to let us write expressions more economically.
+        # First, Ysel[i, j] slices Y[i,j,l] by summing over selectors l at fixed i,j
+        with Timer() as Ysel_timer:
+            Ysel = pulp_dicts("Ysel", itertools.product(range(number_mark), range(number_lp)),
+                              cat=pulp.LpInteger, lowBound=0)
+        print(' ** created Ysel[i,j] ({num} elements) matrix in time {t}'.format(t=Ysel_timer.interval, num=len(Ysel)))
+
+        # Then, Ymark[l, j] slices Y[i,j,l] by summing over markers i at fixed j, l
+        with Timer() as Ymark_timer:
+            Ymark = pulp_dicts("Ymark", itertools.product(range(number_sel), range(number_lp)),
+                               cat=pulp.LpInteger, lowBound=0)
+        print(' ** created Ymark[l,j] ({num} elements) matrix in time {t}'.format(t=Ymark_timer.interval, num=len(Ymark)))
+
         # boolean version of Y indicating whether a marker has any assignments to a particular project
         with Timer() as yy_timer:
             yy = pulp_dicts("yy", itertools.product(range(number_mark), range(number_lp)), cat=pulp.LpBinary)
@@ -1326,6 +1342,31 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                                                                           cfg=proj.config_id, num=proj.number)
 
 
+        # Ysel[i,j] should slice Y[i,j,l] by summing over selectors l at fixed i and j
+        for i in range(number_mark):
+            mark: FacultyData = mark_dict[i]
+            user: User = mark.user
+
+            for j in range(number_lp):
+                proj: LiveProject = lp_dict[j]
+
+                prob += Ysel[(i, j)] == sum(Y[(i, j, l)] for l in range(number_sel)), \
+                        '_CYsel{first}{last}_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
+                                                                   cfg=proj.config_id, num=proj.number)
+
+
+        # Ymark[l,j] should slice Y[i,j,l] by summing over markers i at fixed j and l
+        for l in range(number_sel):
+            sel: SelectingStudent = sel_dict[l]
+            user: User = sel.student.user
+
+            for j in range(number_lp):
+                proj: LiveProject = lp_dict[j]
+
+                prob += Ymark[(l, j)] == sum(Y[(i, j, l)] for i in range(number_mark)), \
+                        '_CYmark_sel{sel}_C{cfg}_P{num}'.format(sel=user.id, cfg=proj.config_id, num=proj.number)
+
+
         # yy[i,j] should be zero if marker i has no assignments to project j, and otherwise 1
         for i in range(number_mark):
             mark: FacultyData = mark_dict[i]
@@ -1335,14 +1376,14 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 proj: LiveProject = lp_dict[j]
 
                 # force yy[i,j] to be zero if Y[i,j,l] is zero for all selector l
-                prob += yy[(i, j)] <= sum(Y[(i, j, l)] for l in range(number_sel)), \
+                prob += yy[(i, j)] <= Ysel[(i, j)], \
                     '_Cyy{first}{last}_C{cfg}_P{num}_mark_assigned_upperb'.format(first=user.first_name, last=user.last_name,
                                                                                   cfg=proj.config_id, num=proj.number)
 
                 # force yy[i,j] to be 1 if Y[i,j,l] is not zero for any selector l
                 # as above, there is no really clean way to enforce this, so we use the UNBOUNDED_MARKING_CAPACITY
                 # dodge with UNBOUNDED_MARKING_CAPACITY set to a suitable large value
-                prob += UNBOUNDED_MARKING_CAPACITY * yy[(i, j)] >= sum(Y[(i, j, l)] for l in range(number_sel)), \
+                prob += UNBOUNDED_MARKING_CAPACITY * yy[(i, j)] >= Ysel[(i, j)], \
                         '_Cyy{first}{last}_C{cfg}_P{num}_mark_assigned_lowerb'.format(first=user.first_name, last=user.last_name,
                                                                                       cfg=proj.config_id, num=proj.number)
 
@@ -1366,13 +1407,13 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                     sel: SelectingStudent = sel_dict[l]
                     sel_user: User = sel.student.user
 
-                    prob += marker_valence[j] * X[(l, j)] == sum(Y[(i, j, l)] for i in range(number_mark)), \
+                    prob += marker_valence[j] * X[(l, j)] == Ymark[(l, j)], \
                             '_CY_sel{sel}_C{cfg}_P{num}_mark_parity'.format(sel=sel_user.id, cfg=proj.config_id,
                                                                             num=proj.number)
 
             else:
                 # enforce no markers assigned to this project
-                prob += sum(Y[(i, j, l)] for i in range(number_mark) for l in range(number_sel)) == 0, \
+                prob += sum(Ysel[(i, j)] for i in range(number_mark)) == 0, \
                         '_CY_C{cfg}_P{num}_nomark'.format(cfg=proj.config_id, num=proj.number)
 
 
@@ -1485,9 +1526,8 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 raise RuntimeError('Inconsistent matching problem: existing marking CATS load {n} for faculty '
                                    '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=mark.user.name))
 
-            prob += existing_CATS \
-                    + sum(CATS_marker[j] * sum(Y[(i, j, l)] for l in range(number_sel)) for j in range(number_lp)) \
-                    <= lim + mark_elastic_CATS[i], \
+            prob += existing_CATS + sum(CATS_marker[j] * Ysel[(i, j)]
+                                        for j in range(number_lp)) <= lim + mark_elastic_CATS[i], \
                     '_C{first}{last}_mark_CATS'.format(first=user.first_name, last=user.last_name)
 
             # enforce ad-hoc per-project-class marking limits
@@ -1496,8 +1536,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 projects = lp_group_dict.get(config_id, None)
 
                 if i in fac_limits and projects is not None:
-                    prob += sum(CATS_marker[j] * sum(Y[(i, j, l)] for l in range(number_sel)) for j in projects) \
-                            <= fac_limits[i], \
+                    prob += sum(CATS_marker[j] * Ysel[(i, j)] for j in projects) <= fac_limits[i], \
                             '_C{first}{last}_mark_CATS_config_C{cfg}'.format(first=user.first_name, last=user.last_name,
                                                                              cfg=config_id)
 
@@ -1529,8 +1568,8 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # markMin and markMax should bracket the CATS workload of faculty who mark only
         if len(mark_only_numbers) > 0:
             for i in mark_only_numbers:
-                prob += sum(sum(Y[(i, j, l)] for l in range(number_sel)) * CATS_marker[j] for j in range(number_lp)) <= markMax
-                prob += sum(sum(Y[(i, j, l)] for l in range(number_sel)) * CATS_marker[j] for j in range(number_lp)) >= markMin
+                prob += sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= markMax
+                prob += sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp)) >= markMin
 
             prob += globalMin <= markMin
             prob += globalMax >= markMax
@@ -1544,9 +1583,9 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         if len(sup_and_mark_numbers) > 0:
             for k, i in sup_and_mark_numbers:
                 prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) \
-                        + sum(sum(Y[(i, j, l)] for l in range(number_sel)) * CATS_marker[j] for j in range(number_lp)) <= supMarkMax
+                        + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= supMarkMax
                 prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) \
-                        + sum(sum(Y[(i, j, l)] for l in range(number_sel)) * CATS_marker[j] for j in range(number_lp)) >= supMarkMin
+                        + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp)) >= supMarkMin
 
             prob += globalMin <= supMarkMin
             prob += globalMax >= supMarkMax
@@ -1573,7 +1612,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # any individual faculty member
         if number_mark > 0:
             for i in range(number_mark):
-                prob += sum(Y[(i, j, l)] for j in range(number_lp) for l in range(number_sel)) <= maxMarking
+                prob += sum(Ysel[(i, j)] for j in range(number_lp)) <= maxMarking
         else:
             prob += maxMarking == 0
 

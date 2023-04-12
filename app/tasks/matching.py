@@ -2357,7 +2357,7 @@ def register_matching_tasks(celery):
             base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number,
                                                                      mark_to_number)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
                             autocommit=True)
 
             prob, X, Y, S = _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_S,
@@ -2409,7 +2409,7 @@ def register_matching_tasks(celery):
             base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number,
                                                                      mark_to_number)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
                             autocommit=True)
 
             prob, X, Y, S = _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_S,
@@ -2487,7 +2487,7 @@ def register_matching_tasks(celery):
             base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number,
                                                                      mark_to_number)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
                             autocommit=True)
 
             prob, X, Y, S = _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_S,
@@ -2530,7 +2530,7 @@ def register_matching_tasks(celery):
             mark_dict, inverse_mark_dict, submit_dict, inverse_submit_dict, mark_CATS_dict = \
                 _enumerate_missing_markers(self, config, task_id, user)
 
-            progress_update(task_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+            progress_update(task_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
                             autocommit=True)
 
             prob, Y = _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config)

@@ -366,7 +366,7 @@ def _create_PuLP_problem(A, B, record: ScheduleAttempt, number_talks, number_ass
     :return:
     """
 
-    print('Generating PuLP problem for schedule:')
+    print('Building PuLP problem for schedule:')
     print(' -- {l} talks, {m} assessors, {n} slots'.format(l=number_talks, m=number_assessors, n=number_slots))
 
     # generate PuLP problem
@@ -1080,7 +1080,7 @@ def register_scheduling_tasks(celery):
             talk_dict, assessor_dict, slot_dict, period_dict, assessor_limits, \
             A, B, C = _initialize(self, record)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
                             autocommit=True)
 
             prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
@@ -1123,7 +1123,7 @@ def register_scheduling_tasks(celery):
             talk_dict, assessor_dict, slot_dict, period_dict, assessor_limits, \
             A, B, C = _initialize(self, record)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
                             autocommit=True)
 
             oldX, oldY = _reconstruct_XY(self, old_record, number_talks, number_assessors, number_slots,
@@ -1174,7 +1174,7 @@ def register_scheduling_tasks(celery):
             talk_dict, assessor_dict, slot_dict, period_dict, assessor_limits, \
             A, B, C = _initialize(self, record)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
                             autocommit=True)
 
             prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
@@ -1241,7 +1241,7 @@ def register_scheduling_tasks(celery):
             talk_dict, assessor_dict, slot_dict, period_dict, assessor_limits, \
             A, B, C = _initialize(self, record, read_serialized=True)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
                             autocommit=True)
 
             prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,

@@ -120,10 +120,10 @@ _name = \
 {% if s.finished and s.solution_usable %}
     <p></p>
     {% if s.construct_time %}
-        <span class="badge bg-secondary"><i class="fas fa-stopwatch"></i> Construct {{ s.formatted_construct_time }}</span>
+        <span class="badge bg-secondary"><i class="fas fa-stopwatch"></i> Build {{ s.formatted_construct_time }}</span>
     {% endif %}
     {% if s.compute_time %}
-        <span class="badge bg-secondary"><i class="fas fa-stopwatch"></i> Compute {{ s.formatted_compute_time }}</span>
+        <span class="badge bg-secondary"><i class="fas fa-stopwatch"></i> Solve {{ s.formatted_compute_time }}</span>
     {% endif %}
 {% endif %}
 """

@@ -397,10 +397,10 @@ _name = \
 {% if m.finished and m.solution_usable %}
     <div class="mt-1">
         {% if m.construct_time %}
-            <span class="badge bg-secondary"><i class="fas fa-stopwatch"></i> Construct {{ m.formatted_construct_time }}</span>
+            <span class="badge bg-secondary"><i class="fas fa-stopwatch"></i> Build {{ m.formatted_construct_time }}</span>
         {% endif %}
         {% if m.compute_time %}
-            <span class="badge bg-secondary"><i class="fas fa-stopwatch"></i> Compute {{ m.formatted_compute_time }}</span>
+            <span class="badge bg-secondary"><i class="fas fa-stopwatch"></i> Solve {{ m.formatted_compute_time }}</span>
         {% endif %}
     </div>
 {% endif %}

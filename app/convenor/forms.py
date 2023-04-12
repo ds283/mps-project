@@ -186,7 +186,7 @@ def PeriodRecordMixinFactory(enable_canvas=True):
         number_moderators = IntegerField('Number of moderators', default=DEFAULT_ASSIGNED_MODERATORS,
                                          description='Number of moderators that should be assigned to each project. '
                                                      'If required, moderators can be added manually during the marking '
-                                                     'workflow if required.',
+                                                     'workflow.',
                                          validators=[InputRequired('Please enter the required number of moderators'),
                                                      NumberRange(min=0, message='The required number of moderators '
                                                                                 'should not be negative')])

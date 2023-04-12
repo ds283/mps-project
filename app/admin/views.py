@@ -4455,6 +4455,11 @@ def create_match():
                 form.strong_encourage_bias.data = base_match.strong_encourage_bias
                 form.strong_discourage_bias.data = base_match.strong_discourage_bias
 
+                form.solver.data = base_match.solver
+
+            else:
+                form.solver.data = MatchingAttempt.SOLVER_CBC_CMD
+
     # estimate equitable CATS loading
     data = estimate_CATS_load()
 

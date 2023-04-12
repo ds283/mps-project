@@ -12535,32 +12535,11 @@ def _MatchingRecord_is_valid(id):
     attempt: MatchingAttempt = obj.matching_attempt
     project: LiveProject = obj.project
 
-    supervisor_roles: List[User] = obj.supervisor_roles
-    marker_roles: List[User] = obj.marker_roles
-    moderator_roles: List[User] = obj.moderator_roles
-
-    supervisor_ids: Set[int] = set(u.id for u in supervisor_roles)
-    marker_ids: Set[int] = set(u.id for u in marker_roles)
-    moderator_ids: Set[int] = set(u.id for u in moderator_roles)
-
     pclass: ProjectClass = project.config.project_class
     config: ProjectClassConfig = project.config
 
     errors = {}
     warnings = {}
-
-    # 1. SUPERVISOR, MARKER AND MODERATOR ROLES SHOULD BE DISTINCT
-    a = supervisor_ids.intersection(marker_ids)
-    if len(a) > 0:
-        errors[('basic', 0)] = 'Some supervisor and marker roles coincide'
-
-    b = supervisor_ids.intersection(moderator_ids)
-    if len(b) > 0:
-        errors[('basic', 1)] = 'Some supervisor and moderator roles coincide'
-
-    c = marker_ids.intersection(moderator_ids)
-    if len(c) > 0:
-        errors[('basic', 2)] = 'Some marker and moderator roles coincide'
 
     if config.select_in_previous_cycle:
         pd: SubmissionPeriodDefinition = pclass.get_period(obj.submission_period)
@@ -12586,6 +12565,59 @@ def _MatchingRecord_is_valid(id):
         markers_needed = pd.number_markers
         moderators_needed = pd.number_moderators
 
+    supervisor_roles: List[User] = obj.supervisor_roles
+    marker_roles: List[User] = obj.marker_roles
+    moderator_roles: List[User] = obj.moderator_roles
+
+    supervisor_ids: Set[int] = set(u.id for u in supervisor_roles)
+    marker_ids: Set[int] = set(u.id for u in marker_roles)
+    moderator_ids: Set[int] = set(u.id for u in moderator_roles)
+
+    # 1. SUPERVISOR, MARKER AND MODERATOR ROLES SHOULD BE DISTINCT
+    a = supervisor_ids.intersection(marker_ids)
+    if len(a) > 0:
+        errors[('basic', 0)] = 'Some supervisor and marker roles coincide'
+
+    b = supervisor_ids.intersection(moderator_ids)
+    if len(b) > 0:
+        errors[('basic', 1)] = 'Some supervisor and moderator roles coincide'
+
+    c = marker_ids.intersection(moderator_ids)
+    if len(c) > 0:
+        errors[('basic', 2)] = 'Some marker and moderator roles coincide'
+
+    supervisor_counts = {}
+    marker_counts = {}
+    moderator_counts = {}
+
+    supervisor_dict = {}
+    marker_dict = {}
+    moderator_dict = {}
+
+    for u in supervisor_roles:
+        supervisor_dict[u.id] = u
+
+        if u.id not in supervisor_counts:
+            supervisor_counts[u.id] = 1
+        else:
+            supervisor_counts[u.id] += 1
+
+    for u in marker_roles:
+        marker_dict[u.id] = u
+
+        if u.id not in marker_counts:
+            marker_counts[u.id] = 1
+        else:
+            marker_counts[u.id] += 1
+
+    for u in moderator_roles:
+        moderator_dict[u.id] = u
+
+        if u.id not in moderator_counts:
+            moderator_counts[u.id] = 1
+        else:
+            moderator_counts[u.id] += 1
+
     if uses_supervisor:
         # 1A. IF SUPERVISORS ARE USED, AT LEAST ONE SUPERVISOR SHOULD BE PROVIDED
         if len(supervisor_ids) == 0:
@@ -12596,27 +12628,54 @@ def _MatchingRecord_is_valid(id):
             warnings[('supervisors', 0)] = 'There are {n} supervision roles assigned for this ' \
                                            'project'.format(n=len(supervisor_ids))
 
+        # 1C. SUPERVISORS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
+        for u_id in supervisor_counts:
+            count = supervisor_counts[u_id]
+            if count > 1:
+                user: User = supervisor_dict[u_id]
+
+                errors[('supervisors', 1)] = 'Supervisor "{name}" is assigned {n} times for this ' \
+                                             'selector'.format(name=user.name, n=count)
+
     if uses_marker:
-        # 1C. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MARKERS
+        # 1D. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MARKERS
         if len(marker_ids) < markers_needed:
             errors[('markers', 0)] = 'Fewer marker roles are assigned than expected for this project ' \
                                      '(assigned={assgn}, expected={exp})'.format(assgn=len(marker_ids), exp=markers_needed)
 
-        # 1D. WARN IF MORE MARKERS THAN EXPECTED ASSIGNED
+        # 1E. WARN IF MORE MARKERS THAN EXPECTED ASSIGNED
         if len(marker_ids) > markers_needed:
             warnings[('markers', 0)] = 'More marker roles are assigned than expected for this project ' \
                                        '(assigned={assgn}, expected={exp})'.format(assgn=len(marker_ids), exp=markers_needed)
 
+        # 1F. MARKERS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
+        for u_id in marker_counts:
+            count = marker_counts[u_id]
+            if count > 1:
+                user: User = marker_dict[u_id]
+
+                errors[('markers', 1)] = 'Marker "{name}" is assigned {n} times for this ' \
+                                         'selector'.format(name=user.name, n=count)
+
     if uses_moderator:
-        # 1C. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MODERATORS
+        # 1G. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MODERATORS
         if len(moderator_ids) < moderators_needed:
             errors[('moderators', 0)] = 'Fewer moderator roles are assigned than expected for this project ' \
                                         '(assigned={assgn}, expected={exp})'.format(assgn=len(moderator_ids), exp=moderators_needed)
 
-        # 1D. WARN IF MORE MODERATORS THAN EXPECTED ASSIGNED
+        # 1H. WARN IF MORE MODERATORS THAN EXPECTED ASSIGNED
         if len(moderator_ids) > moderators_needed:
             warnings[('moderators', 0)] = 'More moderator roles are assigned than expected for this project ' \
                                           '(assigned={assgn}, expected={exp})'.format(assgn=len(moderator_ids), exp=moderators_needed)
+
+        # 1I. MODERATORS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
+        for u_id in moderator_counts:
+            count = moderator_counts[u_id]
+            if count > 1:
+                user: User = moderator_dict[u_id]
+
+                errors[('moderators', 1)] = 'Moderator "{name}" is assigned {n} times for this ' \
+                                            'selector'.format(name=user.name, n=count)
 
     # 2. IF THERE IS A SUBMISSION LIST, WARN IF ASSIGNED PROJECT IS NOT ON THIS LIST
     if obj.selector.has_submission_list and obj.selector.project_rank(obj.project_id) is None:

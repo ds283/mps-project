@@ -74,9 +74,9 @@
                     <li class="list-group-item list-group-item-primary">
                         {% set messages = config.messages %}
                         {% call icon_block("cogs") %}
-                            <p><strong>Details</strong></p>
+                            <div><strong>Details</strong></div>
                             {% if messages|length > 0 %}
-                                <p>{{ messages|join(', ') }}</p>
+                                <div class="mt-1">{{ messages|join(', ') }}</div>
                             {% endif %}
                         {% endcall %}
                     </li>
@@ -161,7 +161,28 @@
                     <div class="card mt-3 mb-3 border-danger">
                         <div class="card-header bg-danger text-white">Proposed matches are available to view</div>
                         <div class="card-body">
-                            <p>An administrator has published one or more proposals for selector/project matches.</p>
+                            {% if config.select_in_previous_cycle %}
+                                <div class="alert alert-info">
+                                    {% call icon_block("info-circle") %}
+                                        <div><strong>Selections for this project type take place in the cycle prior to submissions.</strong></div>
+                                        <div class="mt-1">
+                                            Once a matching has been selected, it will be used to generate
+                                            submitter records during rollover of the academic year.
+                                        </div>
+                                    {% endcall %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    {% call icon_block("info-circle") %}
+                                        <div><strong>Selections for this project type occur in the same cycle as submissions.</strong></div>
+                                        <div class="mt-1">
+                                            Once a matching has been selected, it may be used immediately
+                                            to generate submitter records for the current academic year.
+                                        </div>
+                                    {% endcall %}
+                                </div>
+                            {% endif %}
+                            <div class="mb-1">An administrator has published one or more proposals for selector/project matches.</div>
                             <a class="text-decoration-none" href="{{ url_for('convenor.audit_matches', pclass_id=config.pclass_id) }}">View or edit proposed matches...</a>
                         </div>
                     </div>

@@ -6628,7 +6628,7 @@ def audit_matches(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    return render_template('convenor/matching/audit.html', pclass_id=pclass_id)
+    return render_template('convenor/matching/audit.html', pclass=pclass)
 
 
 @convenor.route('/audit_matches_ajax/<int:pclass_id>')

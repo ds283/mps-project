@@ -68,7 +68,7 @@ def _min(a, b):
     return a if a <= b else b
 
 
-def pulp_dicts(
+def _pulp_dicts(
         name,
         indices=None,  # required param. enforced within function for backwards compatibility
         lowBound=None,
@@ -120,7 +120,7 @@ def pulp_dicts(
         if len(indices) == 0:
             d = {i: pulp.LpVariable(name % tuple(indexStart + [str(i)]), lowBound, upBound, cat) for i in index}
         else:
-            d = {i: pulp_dicts(name, indices, lowBound, upBound, cat, indexStart + [i]) for i in index}
+            d = {i: _pulp_dicts(name, indices, lowBound, upBound, cat, indexStart + [i]) for i in index}
 
         return d
 
@@ -980,7 +980,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # 1 = selector assigned to project
 
         with Timer() as X_timer:
-            X = pulp_dicts("X", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
+            X = _pulp_dicts("X", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
         print(' ** created X[i,j] matrix ({num} elements) in time {t}'.format(t=X_timer.interval, num=len(X)))
 
         # SUPERVISOR DECISION VARIABLES
@@ -991,21 +991,21 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # who are assigned)
         # value = number of times assigned to this project. Can't be negative.
         with Timer() as S_timer:
-            S = pulp_dicts("S", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpInteger, lowBound=0)
+            S = _pulp_dicts("S", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpInteger, lowBound=0)
         print(' ** created S[k,j] ({num} elements) matrix in time {t}'.format(t=S_timer.interval, num=len(S)))
 
         # SUMMARY DECISION VARIABLES FOR SUPERVISORS
 
         # boolean version of S indicating whether a supervisor has any assignments to a particular project
         with Timer() as ss_timer:
-            ss = pulp_dicts("ss", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpBinary)
+            ss = _pulp_dicts("ss", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpBinary)
         print(' ** created ss[k,j] ({num} elements) matrix in time {t}'.format(t=ss_timer.interval, num=len(ss)))
 
         # generate auxiliary variables that track whether a given supervisor has any projects assigned or not
         # 0 = none assigned
         # 1 = at least one assigned (obtained by biasing the optimizer to produce this from the objective function)
         with Timer() as Z_timer:
-            Z = pulp_dicts("Z", range(number_sup), cat=pulp.LpBinary)
+            Z = _pulp_dicts("Z", range(number_sup), cat=pulp.LpBinary)
         print(' ** created Z[k] ({num} elements) matrix in time {t}'.format(t=Z_timer.interval, num=len(Z)))
 
 
@@ -1021,8 +1021,8 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # 0 = marker not assigned to this selector/project pair
         # 1 = marker assigned to this selector/project pair
         with Timer() as Y_timer:
-            Y = pulp_dicts("Y", itertools.product(range(number_mark), range(number_lp), range(number_sel)),
-                           cat=pulp.LpBinary)
+            Y = _pulp_dicts("Y", itertools.product(range(number_mark), range(number_lp), range(number_sel)),
+                            cat=pulp.LpBinary)
         print(' ** created Y[i,j,l] ({num} elements) matrix in time {t}'.format(t=Y_timer.interval, num=len(Y)))
 
         # SUMMARY DECISION VARIABLES FOR MARKERS
@@ -1033,19 +1033,19 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # Instead, we need some auxiliary variables to let us write expressions more economically.
         # First, Ysel[i, j] slices Y[i,j,l] by summing over selectors l at fixed i,j
         with Timer() as Ysel_timer:
-            Ysel = pulp_dicts("Ysel", itertools.product(range(number_mark), range(number_lp)),
-                              cat=pulp.LpInteger, lowBound=0)
+            Ysel = _pulp_dicts("Ysel", itertools.product(range(number_mark), range(number_lp)),
+                               cat=pulp.LpInteger, lowBound=0)
         print(' ** created Ysel[i,j] ({num} elements) matrix in time {t}'.format(t=Ysel_timer.interval, num=len(Ysel)))
 
         # Then, Ymark[l, j] slices Y[i,j,l] by summing over markers i at fixed j, l
         with Timer() as Ymark_timer:
-            Ymark = pulp_dicts("Ymark", itertools.product(range(number_sel), range(number_lp)),
-                               cat=pulp.LpInteger, lowBound=0)
+            Ymark = _pulp_dicts("Ymark", itertools.product(range(number_sel), range(number_lp)),
+                                cat=pulp.LpInteger, lowBound=0)
         print(' ** created Ymark[l,j] ({num} elements) matrix in time {t}'.format(t=Ymark_timer.interval, num=len(Ymark)))
 
         # boolean version of Y indicating whether a marker has any assignments to a particular project
         with Timer() as yy_timer:
-            yy = pulp_dicts("yy", itertools.product(range(number_mark), range(number_lp)), cat=pulp.LpBinary)
+            yy = _pulp_dicts("yy", itertools.product(range(number_mark), range(number_lp)), cat=pulp.LpBinary)
         print(' ** created yy[i,j] ({num} elements) matrix in time {t}'.format(t=yy_timer.interval, num=len(yy)))
 
         # to implement workload balancing we use pairs of continuous variables that relax
@@ -1079,8 +1079,8 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
 
         # add variables designed to allow violation of maximum CATS if necessary to obtain a feasible
         # solution
-        sup_elastic_CATS = pulp_dicts("A", range(number_sup), cat=pulp.LpContinuous, lowBound=0)
-        mark_elastic_CATS = pulp_dicts("B", range(number_mark), cat=pulp.LpContinuous, lowBound=0)
+        sup_elastic_CATS = _pulp_dicts("A", range(number_sup), cat=pulp.LpContinuous, lowBound=0)
+        mark_elastic_CATS = _pulp_dicts("B", range(number_mark), cat=pulp.LpContinuous, lowBound=0)
 
     print(' -- created decision variables in time {t}'.format(t=variable_timer.interval))
 
@@ -1711,65 +1711,76 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
     :param number_to_mark:
     :return:
     """
+
     # store configuration data
-    for item in sup_dict.values():
-        if item not in record.supervisors:
-            record.supervisors.append(item)
+    with Timer() as config_timer:
+        for item in sup_dict.values():
+            if item not in record.supervisors:
+                record.supervisors.append(item)
 
-    for item in mark_dict.values():
-        if item not in record.markers:
-            record.markers.append(item)
+        for item in mark_dict.values():
+            if item not in record.markers:
+                record.markers.append(item)
 
-    for item in lp_dict.values():
-        if item not in record.projects:
-            record.projects.append(item)
+        for item in lp_dict.values():
+            if item not in record.projects:
+                record.projects.append(item)
+
+    print(' ** updated MatchingAttempt configuration data in time {t}'.format(t=config_timer.interval))
 
     record.mean_CATS_per_project = mean_CATS_per_project
 
     # generate dictionary of supervisor assignments: we map each project id to a list of supervisors
-    supervisors = {}
-    for j in range(number_lp):
-        proj_id = number_to_lp[j]
-        if proj_id in supervisors:
-            raise RuntimeError('PuLP solution has inconsistent supervisor assignment')
+    with Timer() as sup_timer:
+        supervisors = {}
+        for j in range(number_lp):
+            proj_id = number_to_lp[j]
+            if proj_id in supervisors:
+                raise RuntimeError('PuLP solution has inconsistent supervisor assignment')
 
-        assigned = {}
+            assigned = {}
 
-        for k in range(number_sup):
-            S[(k, j)].round()
-            # get multiplicity m with which supervisor k is assigned to project j
-            m = pulp.value(S[(k, j)])
-            if m > 0:
-                assigned.update({number_to_sup[k]: m})
+            for k in range(number_sup):
+                S[(k, j)].round()
+                # get multiplicity m with which supervisor k is assigned to project j
+                m = pulp.value(S[(k, j)])
+                if m > 0:
+                    assigned.update({number_to_sup[k]: m})
 
-        supervisors[proj_id] = assigned
+            supervisors[proj_id] = assigned
+
+    print(' ** parsed supervisor decision variables in time {t}'.format(t=sup_timer.interval))
 
     # generate dictionary of marker assignments; we map each project id to a list of available markers
     markers = {}
-    for j in range(number_lp):
-        proj_id = number_to_lp[j]
-        if proj_id in markers:
-            raise RuntimeError('Marker entry already exists when storing PuLP marker assignment')
 
-        assigned = {}
+    with Timer() as mark_timer:
+        for j in range(number_lp):
+            proj_id = number_to_lp[j]
+            if proj_id in markers:
+                raise RuntimeError('Marker entry already exists when storing PuLP marker assignment')
 
-        for l in range(number_sel):
-            sel_id = number_to_sel[l]
-            if sel_id in assigned:
-                raise RuntimeError('Selector entry already exists when storing PuLP marker assignment')
+            assigned = {}
 
-            sel_marker = set()
+            for l in range(number_sel):
+                sel_id = number_to_sel[l]
+                if sel_id in assigned:
+                    raise RuntimeError('Selector entry already exists when storing PuLP marker assignment')
 
-            for i in range(number_mark):
-                Y[(i, j, l)].round()
-                m = pulp.value(Y[(i, j, l)])
+                sel_marker = set()
 
-                if m > 0:
-                    sel_marker.add(number_to_mark[i])
+                for i in range(number_mark):
+                    Y[(i, j, l)].round()
+                    m = pulp.value(Y[(i, j, l)])
 
-            assigned[sel_id] = sel_marker
+                    if m > 0:
+                        sel_marker.add(number_to_mark[i])
 
-        markers[proj_id] = assigned
+                assigned[sel_id] = sel_marker
+
+            markers[proj_id] = assigned
+
+    print(' ** parsed marker decision variables in time {t}'.format(t=mark_timer.interval))
 
     # loop through all selectors that participated in the matching, generating matching records for each one
     for i in range(number_sel):
@@ -1804,7 +1815,7 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
 
             for pd in config.periods:
                 pd: SubmissionPeriodRecord
-                periods[pd.period] = pd.number_markers
+                periods[pd.submission_period] = pd.number_markers
 
         if len(periods) != multiplicity[i]:
             raise RuntimeError('Number of submission periods does not match expected selector multiplicity')
@@ -1939,7 +1950,7 @@ def _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config):
     # generate decision variables for marker assignment
     number_markers = len(mark_dict)
     number_submitters = len(submit_dict)
-    Y = pulp_dicts("Y", itertools.product(range(number_markers), range(number_submitters)), cat=pulp.LpBinary)
+    Y = _pulp_dicts("Y", itertools.product(range(number_markers), range(number_submitters)), cat=pulp.LpBinary)
 
     # to implement workload balancing we use pairs of continuous variables that relax
     # to the maximum and minimum workload

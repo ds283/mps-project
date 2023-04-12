@@ -978,8 +978,10 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # the indices are (selector, project) and the entries of the matrix are either 0 or 1,
         # 0 = selector not assigned to project
         # 1 = selector assigned to project
-        X = pulp_dicts("X", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
 
+        with Timer() as X_timer:
+            X = pulp_dicts("X", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
+        print(' ** created X[i,j] matrix ({num} elements) in time {t}'.format(t=X_timer.interval, num=len(X)))
 
         # SUPERVISOR DECISION VARIABLES
 
@@ -988,17 +990,23 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # the number of times a supervisor has been assigned to a project (depending on the number of students
         # who are assigned)
         # value = number of times assigned to this project. Can't be negative.
-        S = pulp_dicts("S", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpInteger, lowBound=0)
+        with Timer() as S_timer:
+            S = pulp_dicts("S", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpInteger, lowBound=0)
+        print(' ** created S[k,j] ({num} elements) matrix in time {t}'.format(t=S_timer.interval, num=len(S)))
 
         # SUMMARY DECISION VARIABLES FOR SUPERVISORS
 
         # boolean version of S indicating whether a supervisor has any assignments to a particular project
-        ss = pulp_dicts("ss", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpBinary)
+        with Timer() as ss_timer:
+            ss = pulp_dicts("ss", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpBinary)
+        print(' ** created ss[k,j] ({num} elements) matrix in time {t}'.format(t=ss_timer.interval, num=len(ss)))
 
         # generate auxiliary variables that track whether a given supervisor has any projects assigned or not
         # 0 = none assigned
         # 1 = at least one assigned (obtained by biasing the optimizer to produce this from the objective function)
-        Z = pulp_dicts("Z", range(number_sup), cat=pulp.LpBinary)
+        with Timer() as Z_timer:
+            Z = pulp_dicts("Z", range(number_sup), cat=pulp.LpBinary)
+        print(' ** created Z[k] ({num} elements) matrix in time {t}'.format(t=Z_timer.interval, num=len(Z)))
 
 
         # MARKER DECISION VARIABLES
@@ -1008,18 +1016,21 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # We need this level of granularity to ensure that each selector has an appropriate number of
         # different markers assigned to their project.
         # Notice that the same marker can be assigned to mark more than one instance of a particular project
-        # (e.g. different students sunmitting reports for the same project). The maximum multiplicity is
+        # (e.g. different students submitting reports for the same project). The maximum multiplicity is
         # controlled by the marking matrix M
         # 0 = marker not assigned to this selector/project pair
         # 1 = marker assigned to this selector/project pair
-        Y = pulp_dicts("Y", itertools.product(range(number_mark), range(number_lp), range(number_sel)),
-                       cat=pulp.LpBinary)
+        with Timer() as Y_timer:
+            Y = pulp_dicts("Y", itertools.product(range(number_mark), range(number_lp), range(number_sel)),
+                           cat=pulp.LpBinary)
+        print(' ** created Y[i,j,l] ({num} elements) matrix in time {t}'.format(t=Y_timer.interval, num=len(Y)))
 
         # SUMMARY DECISION VARIABLES FOR MARKERS
 
         # boolean version of Y indicating whether a marker has any assignments to a particular project
-        yy = pulp_dicts("yy", itertools.product(range(number_mark), range(number_lp)),
-                        cat=pulp.LpBinary)
+        with Timer() as yy_timer:
+            yy = pulp_dicts("yy", itertools.product(range(number_mark), range(number_lp)), cat=pulp.LpBinary)
+        print(' ** created yy[i,j] ({num} elements) matrix in time {t}'.format(t=yy_timer.interval, num=len(yy)))
 
         # to implement workload balancing we use pairs of continuous variables that relax
         # to the maximum and minimum workload for each faculty group:
@@ -1055,7 +1066,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         sup_elastic_CATS = pulp_dicts("A", range(number_sup), cat=pulp.LpContinuous, lowBound=0)
         mark_elastic_CATS = pulp_dicts("B", range(number_mark), cat=pulp.LpContinuous, lowBound=0)
 
-    print(' -- created decision variables in time {t}'.format(t=variable_timer.interal))
+    print(' -- created decision variables in time {t}'.format(t=variable_timer.interval))
 
 
     # OBJECTIVE FUNCTION
@@ -1102,7 +1113,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 - elastic_CATS_penalty, \
                 "objective"
 
-    print(' -- created objective function in time {t}'.format(t=obj_timer.interal))
+    print(' -- created objective function in time {t}'.format(t=obj_timer.interval))
 
 
     # STUDENT RANKING
@@ -1172,7 +1183,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                                                                                   scfg=sel.config_id, cfg=proj.config_id,
                                                                                   num=proj.number)
 
-    print(' -- created selector ranking constraints in time {t}'.format(t=sel_timer.interal))
+    print(' -- created selector ranking constraints in time {t}'.format(t=sel_timer.interval))
 
 
     # SUPERVISOR ASSIGNMENTS
@@ -1291,7 +1302,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                         '_CZ{first}{last}_C{cfg}_P{num}_lowerb'.format(first=user.first_name, last=user.last_name,
                                                                        cfg=proj.config_id, num=proj.number)
 
-    print(' -- created supervisor constraints in time {t}'.format(t=sup_timer.interal))
+    print(' -- created supervisor constraints in time {t}'.format(t=sup_timer.interval))
 
 
     ## MARKER ASSIGNMENTS
@@ -1417,7 +1428,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                         .format(first=user.first_name, last=user.last_name, scfg=sel.config_id, cfg=proj.config_id,
                                 num=proj.number)
 
-    print(' -- created marker constraints in time {t}'.format(t=sup_timer.interal))
+    print(' -- created marker constraints in time {t}'.format(t=mark_timer.interval))
 
 
     # WORKLOAD LIMITS
@@ -1490,7 +1501,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                             '_C{first}{last}_mark_CATS_config_C{cfg}'.format(first=user.first_name, last=user.last_name,
                                                                              cfg=config_id)
 
-    print(' -- created faculty workload constraints in time {t}'.format(t=mark_timer.interal))
+    print(' -- created faculty workload constraints in time {t}'.format(t=fac_work_timer.interval))
 
 
     # WORKLOAD LEVELLING
@@ -1566,7 +1577,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         else:
             prob += maxMarking == 0
 
-    print(' -- created workload levelling objectives in time {t}'.format(t=level_timer.interal))
+    print(' -- created workload levelling objectives in time {t}'.format(t=level_timer.interval))
 
     return prob, X, Y, S
 

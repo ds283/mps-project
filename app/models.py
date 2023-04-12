@@ -1281,12 +1281,12 @@ class PuLPStatusMixin:
     SOLVER_SCIP_CMD = 5
 
     # solver names
-    _solvers = {SOLVER_CBC_PACKAGED: 'PuLP-packaged CBC',
-                SOLVER_CBC_CMD: 'CBC external',
-                SOLVER_GLPK_CMD: 'GLPK external',
-                SOLVER_CPLEX_CMD: 'CPLEX external (requires license)',
-                SOLVER_GUROBI_CMD: 'Gurobi external (requires license)',
-                SOLVER_SCIP_CMD: 'SCIP external (requires license)'}
+    _solvers = {SOLVER_CBC_PACKAGED: 'PuLP-packaged CBC (amd64 only)',
+                SOLVER_CBC_CMD: 'CBC external (amd64 or arm64)',
+                SOLVER_GLPK_CMD: 'GLPK external (amd64 or arm64)',
+                SOLVER_CPLEX_CMD: 'CPLEX external (not available in cloud by default, requires license)',
+                SOLVER_GUROBI_CMD: 'Gurobi external (not available in cloud by default, requires license)',
+                SOLVER_SCIP_CMD: 'SCIP external (not available in cloud by default, requires license)'}
 
 
 class AvailabilityRequestStateMixin:

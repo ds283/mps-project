@@ -896,8 +896,12 @@ class PuLPSolverMixin:
 
     solver = SelectField('Solver', choices=solver_choices, coerce=int,
                          description='The optimizer can use a number of different solvers. If in doubt, use the '
-                                     'packaged CBC solver. Alternatively, download a version of the optimization '
-                                     'problem as a .LP or .MPS file and perform the optimization offline.')
+                                     'CBC external solver, which should work on amd64 and arm64 architectures. '
+                                     'CBC is substantially more performant than GLPK. '
+                                     'Alternatively, download a version of the optimization '
+                                     'problem as a .LP or .MPS file and perform the optimization offline using '
+                                     'CPLEX, Gurobi or SCIP. These options are not available by default to '
+                                     'run in the cloud.')
 
 
 def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
@@ -1076,9 +1080,9 @@ def NewMatchFormFactory(year, base_id=None, base_match=None):
 
     class NewMatchForm(Form, Mixin, PuLPSolverMixin):
 
-        submit = SubmitField('Create new match')
+        submit = SubmitField('Run match in the cloud')
 
-        offline = SubmitField('Perform matching offline')
+        offline = SubmitField('Generate .LP and .MPS files for processing offline')
 
         @staticmethod
         def validate_name(form, field):
@@ -1447,9 +1451,9 @@ def NewScheduleFormFactory(assessment):
 
     class NewScheduleForm(Form, ScheduleNameMixin, validator, ScheduleSettingsMixin, PuLPSolverMixin):
 
-        submit = SubmitField('Create new schedule')
+        submit = SubmitField('Run scheduling in the cloud')
 
-        offline = SubmitField('Perform scheduling offline')
+        offline = SubmitField('Generate .LP and .MPS files for processing offline')
 
     return NewScheduleForm
 

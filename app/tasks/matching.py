@@ -68,6 +68,63 @@ def _min(a, b):
     return a if a <= b else b
 
 
+def pulp_dicts(
+        name,
+        indices=None,  # required param. enforced within function for backwards compatibility
+        lowBound=None,
+        upBound=None,
+        cat=pulp.const.LpContinuous,
+        indexStart=[],
+        indexs=None,
+    ):
+        """
+        Re-implementation of pulp.LpVariable.dicts to use list comprehension rather than a for loop, which
+        is absurdly slow for large index sets
+
+        :param name: The prefix to the name of each LP variable created
+        :param indices: A list of strings of the keys to the dictionary of LP
+            variables, and the main part of the variable name itself
+        :param lowBound: The lower bound on these variables' range. Default is
+            negative infinity
+        :param upBound: The upper bound on these variables' range. Default is
+            positive infinity
+        :param cat: The category these variables are in, Integer or
+            Continuous(default)
+        :param indexs: (deprecated) Replaced with `indices` parameter
+
+        :return: A dictionary of :py:class:`LpVariable`
+        """
+
+        # Backwards Compatiblity with Deprecation Warning for indexs
+        if indices is not None and indexs is not None:
+            raise TypeError(
+                "Both 'indices' and 'indexs' provided to LpVariable.dicts.  Use one only, preferably 'indices'."
+            )
+        elif indices is not None:
+            pass
+        elif indexs is not None:
+            indices = indexs
+        else:
+            raise TypeError(
+                "LpVariable.dicts missing both 'indices' and deprecated 'indexs' arguments."
+            )
+
+        if not isinstance(indices, tuple):
+            indices = (indices,)
+        if "%" not in name:
+            name += "_%s" * len(indices)
+
+        index = indices[0]
+        indices = indices[1:]
+
+        if len(indices) == 0:
+            d = {i: pulp.LpVariable(name % tuple(indexStart + [str(i)]), lowBound, upBound, cat) for i in index}
+        else:
+            d = {i: pulp_dicts(name, indices, lowBound, upBound, cat, indexStart + [i]) for i in index}
+
+        return d
+
+
 def _enumerate_selectors(record, configs, read_serialized=False):
     """
     Build a list of SelectingStudents who belong to projects that participate in automatic
@@ -921,7 +978,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # the indices are (selector, project) and the entries of the matrix are either 0 or 1,
         # 0 = selector not assigned to project
         # 1 = selector assigned to project
-        X = pulp.LpVariable.dicts("X", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
+        X = pulp_dicts("X", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
 
 
         # SUPERVISOR DECISION VARIABLES
@@ -931,19 +988,17 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # the number of times a supervisor has been assigned to a project (depending on the number of students
         # who are assigned)
         # value = number of times assigned to this project. Can't be negative.
-        S = pulp.LpVariable.dicts("S", itertools.product(range(number_sup), range(number_lp)),
-                                  cat=pulp.LpInteger, lowBound=0)
+        S = pulp_dicts("S", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpInteger, lowBound=0)
 
         # SUMMARY DECISION VARIABLES FOR SUPERVISORS
 
         # boolean version of S indicating whether a supervisor has any assignments to a particular project
-        ss = pulp.LpVariable.dicts("ss", itertools.product(range(number_sup), range(number_lp)),
-                                   cat=pulp.LpBinary)
+        ss = pulp_dicts("ss", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpBinary)
 
         # generate auxiliary variables that track whether a given supervisor has any projects assigned or not
         # 0 = none assigned
         # 1 = at least one assigned (obtained by biasing the optimizer to produce this from the objective function)
-        Z = pulp.LpVariable.dicts("Z", range(number_sup), cat=pulp.LpBinary)
+        Z = pulp_dicts("Z", range(number_sup), cat=pulp.LpBinary)
 
 
         # MARKER DECISION VARIABLES
@@ -957,22 +1012,14 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # controlled by the marking matrix M
         # 0 = marker not assigned to this selector/project pair
         # 1 = marker assigned to this selector/project pair
-        Y = pulp.LpVariable.dicts("Y", itertools.product(range(number_mark), range(number_lp), range(number_sel)),
-                                     cat=pulp.LpBinary)
+        Y = pulp_dicts("Y", itertools.product(range(number_mark), range(number_lp), range(number_sel)),
+                       cat=pulp.LpBinary)
 
         # SUMMARY DECISION VARIABLES FOR MARKERS
 
         # boolean version of Y indicating whether a marker has any assignments to a particular project
-        yy = pulp.LpVariable.dicts("yy", itertools.product(range(number_mark), range(number_lp)),
-                                   cat=pulp.LpBinary)
-
-
-        # AUXILIARY SUMMARY VARIABLES
-
-        # generate auxiliary variables that track whether a given project has any students assigned or not
-        # 0 = none assigned
-        # 1 = at least one assigned
-        Q = pulp.LpVariable.dicts("Q", range(number_lp), cat=pulp.LpBinary)
+        yy = pulp_dicts("yy", itertools.product(range(number_mark), range(number_lp)),
+                        cat=pulp.LpBinary)
 
         # to implement workload balancing we use pairs of continuous variables that relax
         # to the maximum and minimum workload for each faculty group:
@@ -1005,8 +1052,8 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
 
         # add variables designed to allow violation of maximum CATS if necessary to obtain a feasible
         # solution
-        sup_elastic_CATS = pulp.LpVariable.dicts("A", range(number_sup), cat=pulp.LpContinuous, lowBound=0)
-        mark_elastic_CATS = pulp.LpVariable.dicts("B", range(number_mark), cat=pulp.LpContinuous, lowBound=0)
+        sup_elastic_CATS = pulp_dicts("A", range(number_sup), cat=pulp.LpContinuous, lowBound=0)
+        mark_elastic_CATS = pulp_dicts("B", range(number_mark), cat=pulp.LpContinuous, lowBound=0)
 
     print(' -- created decision variables in time {t}'.format(t=variable_timer.interal))
 
@@ -1083,24 +1130,6 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                         '_C{first}{last}_rank_SC{scfg}_C{cfg}_{tag}_P{num}' \
                             .format(first=user.first_name, last=user.last_name, scfg=sel.config_id,
                                     cfg=proj.config_id, num=proj.number, tag=tag)
-
-
-        # Q[j] should be constrained to be 1 if project j is assigned to any student, otherwise it should be zero
-        for j in range(number_lp):
-            proj: LiveProject = lp_dict[j]
-
-            # force Q[j] to be zero if no students are assigned to project j
-            prob += Q[j] <= sum(X[(l, j)] for l in range(number_sel)), \
-                    '_CQ_upperb_C{cfg}_P{num}'.format(cfg=proj.config_id, num=proj.number)
-
-            # force Q[j] to be nonzero if any students are assigned to project j
-            for l in range(number_sel):
-                sel: SelectingStudent = sel_dict[l]
-                user: User = sel.student.user
-
-                prob += Q[j] >= X[(l, j)], \
-                        '_CQ{first}{last}_lowerb_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
-                                                                       cfg=proj.config_id, num=proj.number)
 
 
         # Enforce desired multiplicity (= total number of projects to be assigned) for each selector
@@ -1860,8 +1889,7 @@ def _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config):
     # generate decision variables for marker assignment
     number_markers = len(mark_dict)
     number_submitters = len(submit_dict)
-    Y = pulp.LpVariable.dicts("Y", itertools.product(range(number_markers), range(number_submitters)),
-                              cat=pulp.LpBinary)
+    Y = pulp_dicts("Y", itertools.product(range(number_markers), range(number_submitters)), cat=pulp.LpBinary)
 
     # to implement workload balancing we use pairs of continuous variables that relax
     # to the maximum and minimum workload

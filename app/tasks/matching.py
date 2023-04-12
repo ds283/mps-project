@@ -913,589 +913,631 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
 
     # SELECTOR DECISION VARIABLES
 
-    # generate decision variables for project assignment matrix
-    # the indices are (selector, project) and the entries of the matrix are either 0 or 1,
-    # 0 = selector not assigned to project
-    # 1 = selector assigned to project
-    X = pulp.LpVariable.dicts("X", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
+    progress_update(record.celery_id, TaskRecord.RUNNING, 22, "Creating decision variables...", autocommit=True)
+
+    with Timer() as variable_timer:
+
+        # generate decision variables for project assignment matrix
+        # the indices are (selector, project) and the entries of the matrix are either 0 or 1,
+        # 0 = selector not assigned to project
+        # 1 = selector assigned to project
+        X = pulp.LpVariable.dicts("X", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
 
 
-    # SUPERVISOR DECISION VARIABLES
+        # SUPERVISOR DECISION VARIABLES
 
-    # generate decision variables for supervisor assignment matrix
-    # the indices are (supervisor, project) and the entries of the matrix are integers representing
-    # the number of times a supervisor has been assigned to a project (depending on the number of students
-    # who are assigned)
-    # value = number of times assigned to this project. Can't be negative.
-    S = pulp.LpVariable.dicts("S", itertools.product(range(number_sup), range(number_lp)),
-                              cat=pulp.LpInteger, lowBound=0)
+        # generate decision variables for supervisor assignment matrix
+        # the indices are (supervisor, project) and the entries of the matrix are integers representing
+        # the number of times a supervisor has been assigned to a project (depending on the number of students
+        # who are assigned)
+        # value = number of times assigned to this project. Can't be negative.
+        S = pulp.LpVariable.dicts("S", itertools.product(range(number_sup), range(number_lp)),
+                                  cat=pulp.LpInteger, lowBound=0)
 
-    # SUMMARY DECISION VARIABLES FOR SUPERVISORS
+        # SUMMARY DECISION VARIABLES FOR SUPERVISORS
 
-    # boolean version of S indicating whether a supervisor has any assignments to a particular project
-    ss = pulp.LpVariable.dicts("ss", itertools.product(range(number_sup), range(number_lp)),
-                               cat=pulp.LpBinary)
+        # boolean version of S indicating whether a supervisor has any assignments to a particular project
+        ss = pulp.LpVariable.dicts("ss", itertools.product(range(number_sup), range(number_lp)),
+                                   cat=pulp.LpBinary)
 
-    # generate auxiliary variables that track whether a given supervisor has any projects assigned or not
-    # 0 = none assigned
-    # 1 = at least one assigned (obtained by biasing the optimizer to produce this from the objective function)
-    Z = pulp.LpVariable.dicts("Z", range(number_sup), cat=pulp.LpBinary)
-
-
-    # MARKER DECISION VARIABLES
-
-    # generate decision variables for marker assignment matrix
-    # the indices are (marker, project, selector) and the entries are boolean variables.
-    # We need this level of granularity to ensure that each selector has an appropriate number of
-    # different markers assigned to their project.
-    # Notice that the same marker can be assigned to mark more than one instance of a particular project
-    # (e.g. different students sunmitting reports for the same project). The maximum multiplicity is
-    # controlled by the marking matrix M
-    # 0 = marker not assigned to this selector/project pair
-    # 1 = marker assigned to this selector/project pair
-    Y = pulp.LpVariable.dicts("Y", itertools.product(range(number_mark), range(number_lp), range(number_sel)),
-                                 cat=pulp.LpBinary)
-
-    # SUMMARY DECISION VARIABLES FOR MARKERS
-
-    # boolean version of Y indicating whether a marker has any assignments to a particular project
-    yy = pulp.LpVariable.dicts("yy", itertools.product(range(number_mark), range(number_lp)),
-                               cat=pulp.LpBinary)
+        # generate auxiliary variables that track whether a given supervisor has any projects assigned or not
+        # 0 = none assigned
+        # 1 = at least one assigned (obtained by biasing the optimizer to produce this from the objective function)
+        Z = pulp.LpVariable.dicts("Z", range(number_sup), cat=pulp.LpBinary)
 
 
-    # AUXILIARY SUMMARY VARIABLES
+        # MARKER DECISION VARIABLES
 
-    # generate auxiliary variables that track whether a given project has any students assigned or not
-    # 0 = none assigned
-    # 1 = at least one assigned
-    Q = pulp.LpVariable.dicts("Q", range(number_lp), cat=pulp.LpBinary)
+        # generate decision variables for marker assignment matrix
+        # the indices are (marker, project, selector) and the entries are boolean variables.
+        # We need this level of granularity to ensure that each selector has an appropriate number of
+        # different markers assigned to their project.
+        # Notice that the same marker can be assigned to mark more than one instance of a particular project
+        # (e.g. different students sunmitting reports for the same project). The maximum multiplicity is
+        # controlled by the marking matrix M
+        # 0 = marker not assigned to this selector/project pair
+        # 1 = marker assigned to this selector/project pair
+        Y = pulp.LpVariable.dicts("Y", itertools.product(range(number_mark), range(number_lp), range(number_sel)),
+                                     cat=pulp.LpBinary)
 
-    # to implement workload balancing we use pairs of continuous variables that relax
-    # to the maximum and minimum workload for each faculty group:
-    # supervisors+marks, supervisors only, markers only
+        # SUMMARY DECISION VARIABLES FOR MARKERS
 
-    # the objective function contains a linear potential that tensions the top and
-    # bottom workload in each band against each other, so the solution is rewarded for
-    # balancing workloads within each group
+        # boolean version of Y indicating whether a marker has any assignments to a particular project
+        yy = pulp.LpVariable.dicts("yy", itertools.product(range(number_mark), range(number_lp)),
+                                   cat=pulp.LpBinary)
 
-    # we also tension the workload between groups, so that the workload of no one group
-    # is pushed too far away from the others, subject to existing CATS caps
-    supMax = pulp.LpVariable("sMax", lowBound=0, cat=pulp.LpContinuous)
-    supMin = pulp.LpVariable("sMin", lowBound=0, cat=pulp.LpContinuous)
 
-    markMax = pulp.LpVariable("mMax", lowBound=0, cat=pulp.LpContinuous)
-    markMin = pulp.LpVariable("mMin", lowBound=0, cat=pulp.LpContinuous)
+        # AUXILIARY SUMMARY VARIABLES
 
-    supMarkMax = pulp.LpVariable("smMax", lowBound=0, cat=pulp.LpContinuous)
-    supMarkMin = pulp.LpVariable("smMin", lowBound=0, cat=pulp.LpContinuous)
+        # generate auxiliary variables that track whether a given project has any students assigned or not
+        # 0 = none assigned
+        # 1 = at least one assigned
+        Q = pulp.LpVariable.dicts("Q", range(number_lp), cat=pulp.LpBinary)
 
-    globalMax = pulp.LpVariable("gMax", lowBound=0, cat=pulp.LpContinuous)
-    globalMin = pulp.LpVariable("gMin", lowBound=0, cat=pulp.LpContinuous)
+        # to implement workload balancing we use pairs of continuous variables that relax
+        # to the maximum and minimum workload for each faculty group:
+        # supervisors+marks, supervisors only, markers only
 
-    # finally, to spread second-marking tasks fairly among a pool of faculty, where any
-    # particular assignment won't significantly affect markMax/markMin or supMarkMax/supMarkMin,
-    # we add a term to the objective function designed to keep down the maximum number of
-    # projects assigned to any individual faculty member.
-    maxProjects = pulp.LpVariable("maxProjects", lowBound=0, cat=pulp.LpContinuous)
-    maxMarking = pulp.LpVariable("maxMarking", lowBound=0, cat=pulp.LpContinuous)
+        # the objective function contains a linear potential that tensions the top and
+        # bottom workload in each band against each other, so the solution is rewarded for
+        # balancing workloads within each group
 
-    # add variables designed to allow violation of maximum CATS if necessary to obtain a feasible
-    # solution
-    sup_elastic_CATS = pulp.LpVariable.dicts("A", range(number_sup), cat=pulp.LpContinuous, lowBound=0)
-    mark_elastic_CATS = pulp.LpVariable.dicts("B", range(number_mark), cat=pulp.LpContinuous, lowBound=0)
+        # we also tension the workload between groups, so that the workload of no one group
+        # is pushed too far away from the others, subject to existing CATS caps
+        supMax = pulp.LpVariable("sMax", lowBound=0, cat=pulp.LpContinuous)
+        supMin = pulp.LpVariable("sMin", lowBound=0, cat=pulp.LpContinuous)
+
+        markMax = pulp.LpVariable("mMax", lowBound=0, cat=pulp.LpContinuous)
+        markMin = pulp.LpVariable("mMin", lowBound=0, cat=pulp.LpContinuous)
+
+        supMarkMax = pulp.LpVariable("smMax", lowBound=0, cat=pulp.LpContinuous)
+        supMarkMin = pulp.LpVariable("smMin", lowBound=0, cat=pulp.LpContinuous)
+
+        globalMax = pulp.LpVariable("gMax", lowBound=0, cat=pulp.LpContinuous)
+        globalMin = pulp.LpVariable("gMin", lowBound=0, cat=pulp.LpContinuous)
+
+        # finally, to spread second-marking tasks fairly among a pool of faculty, where any
+        # particular assignment won't significantly affect markMax/markMin or supMarkMax/supMarkMin,
+        # we add a term to the objective function designed to keep down the maximum number of
+        # projects assigned to any individual faculty member.
+        maxProjects = pulp.LpVariable("maxProjects", lowBound=0, cat=pulp.LpContinuous)
+        maxMarking = pulp.LpVariable("maxMarking", lowBound=0, cat=pulp.LpContinuous)
+
+        # add variables designed to allow violation of maximum CATS if necessary to obtain a feasible
+        # solution
+        sup_elastic_CATS = pulp.LpVariable.dicts("A", range(number_sup), cat=pulp.LpContinuous, lowBound=0)
+        mark_elastic_CATS = pulp.LpVariable.dicts("B", range(number_mark), cat=pulp.LpContinuous, lowBound=0)
+
+    print(' -- created decision variables in time {t}'.format(t=variable_timer.interal))
 
 
     # OBJECTIVE FUNCTION
 
-    # tension top and bottom workloads in each group against each other
-    group_levelling = (supMax - supMin) + (markMax - markMin) + (supMarkMax - supMarkMin)
-    global_levelling = (globalMax - globalMin)
+    progress_update(record.celery_id, TaskRecord.RUNNING, 23, "Building objective function for optimization...", autocommit=True)
 
-    # apart from attempting to balance workloads, there is no need to add a reward for marker assignments;
-    # these only need to satisfy the constraints, and any one solution is as good as another
+    with Timer() as obj_timer:
 
-    # dividing through by mean_CATS_per_project makes a workload discrepancy of 1 project between
-    # upper and lower limits roughly equal to one ranking place in matching to students
-    group_levelling_term = abs(levelling_bias) * group_levelling / mean_CATS_per_project
-    global_levelling_term = abs(intra_group_tension) * global_levelling / mean_CATS_per_project
+        # tension top and bottom workloads in each group against each other
+        group_levelling = (supMax - supMin) + (markMax - markMin) + (supMarkMax - supMarkMin)
+        global_levelling = (globalMax - globalMin)
 
-    # try to keep marking assignments under control by imposing a penalty for the highest number of marking assignments
-    marking_bias = abs(marking_pressure) * maxMarking
+        # apart from attempting to balance workloads, there is no need to add a reward for marker assignments;
+        # these only need to satisfy the constraints, and any one solution is as good as another
 
-    # likewise for supervising
-    supervising_bias = abs(supervising_pressure) * maxProjects
+        # dividing through by mean_CATS_per_project makes a workload discrepancy of 1 project between
+        # upper and lower limits roughly equal to one ranking place in matching to students
+        group_levelling_term = abs(levelling_bias) * group_levelling / mean_CATS_per_project
+        global_levelling_term = abs(intra_group_tension) * global_levelling / mean_CATS_per_project
 
-    # we subtract off a penalty for all 'elastic' variables with a high coefficient, to discourage violation
-    # of CATS limits except where really necessary; notice that these elastic variables are measured in
-    # units of CATS, not projects, so the coefficents really are large
-    elastic_CATS_penalty = abs(CATS_violation_penalty) * \
-                           (sum(sup_elastic_CATS[i] for i in range(number_sup))
-                            + sum(mark_elastic_CATS[i] for i in range(number_mark)))
+        # try to keep marking assignments under control by imposing a penalty for the highest number of marking assignments
+        marking_bias = abs(marking_pressure) * maxMarking
 
-    # we also impose a penalty for every supervisor who does not have any project assignments
-    no_assignment_penalty = 2.0 * abs(no_assignment_penalty) * sum(1-Z[i] for i in range(number_sup))
+        # likewise for supervising
+        supervising_bias = abs(supervising_pressure) * maxProjects
 
-    prob += _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, number_mark, base_X, base_Y, base_S,
-                                  has_base_match, base_bias) \
-            - group_levelling_term \
-            - global_levelling_term \
-            - marking_bias \
-            - no_assignment_penalty \
-            - supervising_bias \
-            - elastic_CATS_penalty, \
-            "objective"
+        # we subtract off a penalty for all 'elastic' variables with a high coefficient, to discourage violation
+        # of CATS limits except where really necessary; notice that these elastic variables are measured in
+        # units of CATS, not projects, so the coefficents really are large
+        elastic_CATS_penalty = abs(CATS_violation_penalty) * \
+                               (sum(sup_elastic_CATS[i] for i in range(number_sup))
+                                + sum(mark_elastic_CATS[i] for i in range(number_mark)))
+
+        # we also impose a penalty for every supervisor who does not have any project assignments
+        no_assignment_penalty = 2.0 * abs(no_assignment_penalty) * sum(1-Z[i] for i in range(number_sup))
+
+        prob += _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, number_mark, base_X, base_Y, base_S,
+                                      has_base_match, base_bias) \
+                - group_levelling_term \
+                - global_levelling_term \
+                - marking_bias \
+                - no_assignment_penalty \
+                - supervising_bias \
+                - elastic_CATS_penalty, \
+                "objective"
+
+    print(' -- created objective function in time {t}'.format(t=obj_timer.interal))
 
 
     # STUDENT RANKING
 
-    # selectors can only be assigned to projects that they have ranked
-    # (unless no ranking data was available, in which case all elements of R were set to 1)
-    for l in range(number_sel):
-        sel: SelectingStudent = sel_dict[l]
-        user: User = sel.student.user
+    progress_update(record.celery_id, TaskRecord.RUNNING, 26, "Setting up student ranking constraints...", autocommit=True)
 
-        for j in range(number_lp):
-            proj: LiveProject = lp_dict[j]
+    with Timer() as sel_timer:
 
-            if proj.generic or proj.owner is None:
-                tag = 'generic'
-            else:
-                user_owner: User = proj.owner.user
-                tag = '{first}{last}'.format(first=user_owner.first_name, last=user_owner.last_name)
-
-            prob += X[(l, j)] <= R[(l, j)], \
-                    '_C{first}{last}_rank_SC{scfg}_C{cfg}_{tag}_P{num}' \
-                        .format(first=user.first_name, last=user.last_name, scfg=sel.config_id,
-                                cfg=proj.config_id, num=proj.number, tag=tag)
-
-
-    # Q[j] should be constrained to be 1 if project j is assigned to any student, otherwise it should be zero
-    for j in range(number_lp):
-        proj: LiveProject = lp_dict[j]
-
-        # force Q[j] to be zero if no students are assigned to project j
-        prob += Q[j] <= sum(X[(l, j)] for l in range(number_sel)), \
-                '_CQ_upperb_C{cfg}_P{num}'.format(cfg=proj.config_id, num=proj.number)
-
-        # force Q[j] to be nonzero if any students are assigned to project j
+        # selectors can only be assigned to projects that they have ranked
+        # (unless no ranking data was available, in which case all elements of R were set to 1)
         for l in range(number_sel):
             sel: SelectingStudent = sel_dict[l]
             user: User = sel.student.user
 
-            prob += Q[j] >= X[(l, j)], \
-                    '_CQ{first}{last}_lowerb_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
-                                                                   cfg=proj.config_id, num=proj.number)
+            for j in range(number_lp):
+                proj: LiveProject = lp_dict[j]
+
+                if proj.generic or proj.owner is None:
+                    tag = 'generic'
+                else:
+                    user_owner: User = proj.owner.user
+                    tag = '{first}{last}'.format(first=user_owner.first_name, last=user_owner.last_name)
+
+                prob += X[(l, j)] <= R[(l, j)], \
+                        '_C{first}{last}_rank_SC{scfg}_C{cfg}_{tag}_P{num}' \
+                            .format(first=user.first_name, last=user.last_name, scfg=sel.config_id,
+                                    cfg=proj.config_id, num=proj.number, tag=tag)
 
 
-    # Enforce desired multiplicity (= total number of projects to be assigned) for each selector
-    # typically this is one project per submission period
-    for l in range(number_sel):
-        sel: SelectingStudent = sel_dict[l]
-        user: User = sel.student.user
+        # Q[j] should be constrained to be 1 if project j is assigned to any student, otherwise it should be zero
+        for j in range(number_lp):
+            proj: LiveProject = lp_dict[j]
 
-        prob += sum(X[(l, j)] for j in range(number_lp)) == multiplicity[l], \
-                '_C{first}{last}_SC{scfg}_assign'.format(first=user.first_name, last=user.last_name, scfg=sel.config_id)
+            # force Q[j] to be zero if no students are assigned to project j
+            prob += Q[j] <= sum(X[(l, j)] for l in range(number_sel)), \
+                    '_CQ_upperb_C{cfg}_P{num}'.format(cfg=proj.config_id, num=proj.number)
 
+            # force Q[j] to be nonzero if any students are assigned to project j
+            for l in range(number_sel):
+                sel: SelectingStudent = sel_dict[l]
+                user: User = sel.student.user
 
-    # Add constraints for any matches marked 'require' by a convenor
-    for idx in cstr:
-        l = idx[0]
-        j = idx[1]
-        sel: SelectingStudent = sel_dict[l]
-        proj: LiveProject = lp_dict[j]
-        user: User = sel.student.user
-
-        # impose 'force' constraints, where we require a student to be allocated a particular project
-        prob += X[idx] == 1, \
-                '_C{first}{last}_SC{scfg}_force_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
-                                                                      scfg=sel.config_id, cfg=proj.config_id,
-                                                                      num=proj.number)
+                prob += Q[j] >= X[(l, j)], \
+                        '_CQ{first}{last}_lowerb_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
+                                                                       cfg=proj.config_id, num=proj.number)
 
 
-    # Implement any "force" constraints from base match
-    if force_base:
-        for idx in base_X:
+        # Enforce desired multiplicity (= total number of projects to be assigned) for each selector
+        # typically this is one project per submission period
+        for l in range(number_sel):
+            sel: SelectingStudent = sel_dict[l]
+            user: User = sel.student.user
+
+            prob += sum(X[(l, j)] for j in range(number_lp)) == multiplicity[l], \
+                    '_C{first}{last}_SC{scfg}_assign'.format(first=user.first_name, last=user.last_name, scfg=sel.config_id)
+
+
+        # Add constraints for any matches marked 'require' by a convenor
+        for idx in cstr:
             l = idx[0]
             j = idx[1]
-
             sel: SelectingStudent = sel_dict[l]
             proj: LiveProject = lp_dict[j]
             user: User = sel.student.user
 
+            # impose 'force' constraints, where we require a student to be allocated a particular project
             prob += X[idx] == 1, \
-                    '_C{first}{last}_SC{scfg}_base_proj_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
-                                                                              scfg=sel.config_id, cfg=proj.config_id,
-                                                                              num=proj.number)
+                    '_C{first}{last}_SC{scfg}_force_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
+                                                                          scfg=sel.config_id, cfg=proj.config_id,
+                                                                          num=proj.number)
+
+
+        # Implement any "force" constraints from base match
+        if force_base:
+            for idx in base_X:
+                l = idx[0]
+                j = idx[1]
+
+                sel: SelectingStudent = sel_dict[l]
+                proj: LiveProject = lp_dict[j]
+                user: User = sel.student.user
+
+                prob += X[idx] == 1, \
+                        '_C{first}{last}_SC{scfg}_base_proj_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
+                                                                                  scfg=sel.config_id, cfg=proj.config_id,
+                                                                                  num=proj.number)
+
+    print(' -- created selector ranking constraints in time {t}'.format(t=sel_timer.interal))
 
 
     # SUPERVISOR ASSIGNMENTS
 
-    # Supervisors can only be assigned to projects that they supervise, or to group/generic projects
-    # for which they are in the supervisor pool
-    for k in range(number_sup):
-        sup: FacultyData = sup_dict[k]
-        user: User = sup.user
+    progress_update(record.celery_id, TaskRecord.RUNNING, 35, "Setting up supervisor assignment constraints...", autocommit=True)
 
+    with Timer() as sup_timer:
+
+        # Supervisors can only be assigned to projects that they supervise, or to group/generic projects
+        # for which they are in the supervisor pool
+        for k in range(number_sup):
+            sup: FacultyData = sup_dict[k]
+            user: User = sup.user
+
+            for j in range(number_lp):
+                proj: LiveProject = lp_dict[j]
+
+                # enforce maximum capacity for each project; each supervisor should have no more assignments than
+                # the specified project capacity
+                prob += S[(k, j)] <= capacity[j] * P[(k, j)], \
+                        '_CS{first}{last}_C{cfg}_P{num}_supv_capacity'.format(first=user.first_name, last=user.last_name,
+                                                                              cfg=proj.config_id, num=proj.number)
+
+
+        # ss[k,j] should be zero if supervisor k has no assignments to project j, and otherwise 1
+        for k in range(number_sup):
+            sup: FacultyData = sup_dict[k]
+            user: User = sup.user
+
+            for j in range(number_lp):
+                proj: LiveProject = lp_dict[j]
+
+                # force ss[k,j] to be zero if S[k,j] is zero
+                prob += ss[(k, j)] <= S[(k, j)], \
+                        '_Css{first}{last}_C{cfg}_P{num}_supv_assigned_upperb'.format(first=user.first_name, last=user.last_name,
+                                                                                      cfg=proj.config_id, num=proj.number)
+
+                # force ss[k,j] to be 1 if S[k,j] is not zero. There doesn't seem to be a really elegant, clean
+                # way to do this in mixed integer linear programming. We assume that S[k,j] never gets as large as
+                # UNBOUNDED_SUPERVISING_CAPACITY, and then S[k,j]/UNBOUNDED_SUPERVISING_CAPACITY will be less than unity but greater than
+                # zero whenver S[k,j] is not zero
+                prob += UNBOUNDED_SUPERVISING_CAPACITY * ss[(k, j)] >= S[(k, j)], \
+                        '_Css{first}{last}_C{cfg}_P{num}_supv_assigned_lowerb'.format(first=user.first_name, last=user.last_name,
+                                                                                      cfg=proj.config_id, num=proj.number)
+
+
+        # If supervisors are being used, a supervisor should be assigned for each project that has been assigned
         for j in range(number_lp):
             proj: LiveProject = lp_dict[j]
+            config: ProjectClassConfig = proj.config
+            pclass: ProjectClass = config.project_class
 
-            # enforce maximum capacity for each project; each supervisor should have no more assignments than
-            # the specified project capacity
-            prob += S[(k, j)] <= capacity[j] * P[(k, j)], \
-                    '_CS{first}{last}_C{cfg}_P{num}_supv_capacity'.format(first=user.first_name, last=user.last_name,
-                                                                          cfg=proj.config_id, num=proj.number)
+            if config.select_in_previous_cycle:
+                uses_supervisor = pclass.uses_supervisor
+            else:
+                uses_supervisor = config.uses_supervisor
 
+            if uses_supervisor:
 
-    # ss[k,j] should be zero if supervisor k has no assignments to project j, and otherwise 1
-    for k in range(number_sup):
-        sup: FacultyData = sup_dict[k]
-        user: User = sup.user
+                # force that total number of assigned supervisors matches total number of assigned students;
+                # (each S[k,j] can be > 1, meaning that the same supervisor is assigned to > 1 students)
+                prob += sum(S[(k, j)] * P[(k, j)] for k in range(number_sup)) == \
+                          sum(X[(i, j)] for i in range(number_sel)), \
+                        '_CS_C{cfg}_P{num}_supv_parity'.format(cfg=proj.config_id, num=proj.number)
 
-        for j in range(number_lp):
-            proj: LiveProject = lp_dict[j]
-
-            # force ss[k,j] to be zero if S[k,j] is zero
-            prob += ss[(k, j)] <= S[(k, j)], \
-                    '_Css{first}{last}_C{cfg}_P{num}_supv_assigned_upperb'.format(first=user.first_name, last=user.last_name,
-                                                                                  cfg=proj.config_id, num=proj.number)
-
-            # force ss[k,j] to be 1 if S[k,j] is not zero. There doesn't seem to be a really elegant, clean
-            # way to do this in mixed integer linear programming. We assume that S[k,j] never gets as large as
-            # UNBOUNDED_SUPERVISING_CAPACITY, and then S[k,j]/UNBOUNDED_SUPERVISING_CAPACITY will be less than unity but greater than
-            # zero whenver S[k,j] is not zero
-            prob += UNBOUNDED_SUPERVISING_CAPACITY * ss[(k, j)] >= S[(k, j)], \
-                    '_Css{first}{last}_C{cfg}_P{num}_supv_assigned_lowerb'.format(first=user.first_name, last=user.last_name,
-                                                                                  cfg=proj.config_id, num=proj.number)
+            else:
+                # enforce no supervisors assigned to this project
+                prob += sum(S[(k, j)] for k in range(number_sup)) == 0, \
+                        '_CS_C{cfg}_P{num}_nosupv'.format(cfg=proj.config_id, num=proj.number)
 
 
-    # If supervisors are being used, a supervisor should be assigned for each project that has been assigned
-    for j in range(number_lp):
-        proj: LiveProject = lp_dict[j]
-        config: ProjectClassConfig = proj.config
-        pclass: ProjectClass = config.project_class
+        # Prevent supervisors from being assigned to more than a fixed number of projects.
+        # There are separate constraints for group projects and projects of any type
+        for k in range(number_sup):
+            sup: FacultyData = sup_dict[k]
+            user: User = sup.user
 
-        if config.select_in_previous_cycle:
-            uses_supervisor = pclass.uses_supervisor
-        else:
-            uses_supervisor = config.uses_supervisor
+            # build sum of group projects assigned/not assigned flags for this supervisor
+            group_projects = 0
+            all_projects = 0
+            for j in range(number_lp):
+                proj: LiveProject = lp_dict[j]
 
-        if uses_supervisor:
+                all_projects += ss[(k, j)]
+                if proj.generic:
+                    group_projects += ss[(k, j)]
 
-            # force that total number of assigned supervisors matches total number of assigned students;
-            # (each S[k,j] can be > 1, meaning that the same supervisor is assigned to > 1 students)
-            prob += sum(S[(k, j)] * P[(k, j)] for k in range(number_sup)) == \
-                      sum(X[(i, j)] for i in range(number_sel)), \
-                    '_CS_C{cfg}_P{num}_supv_parity'.format(cfg=proj.config_id, num=proj.number)
+            group_limit = record.max_different_group_projects
+            if group_limit is not None and group_limit > 0:
+                prob += group_projects <= group_limit, \
+                        '_C{first}{last}_group_limit'.format(first=user.first_name, last=user.last_name)
 
-        else:
-            # enforce no supervisors assigned to this project
-            prob += sum(S[(k, j)] for k in range(number_sup)) == 0, \
-                    '_CS_C{cfg}_P{num}_nosupv'.format(cfg=proj.config_id, num=proj.number)
+            all_limit = record.max_different_all_projects
+            if all_limit is not None and all_limit > 0:
+                if group_limit is not None and group_limit > all_limit:
+                    all_limit = group_limit
 
-
-    # Prevent supervisors from being assigned to more than a fixed number of projects.
-    # There are separate constraints for group projects and projects of any type
-    for k in range(number_sup):
-        sup: FacultyData = sup_dict[k]
-        user: User = sup.user
-
-        # build sum of group projects assigned/not assigned flags for this supervisor
-        group_projects = 0
-        all_projects = 0
-        for j in range(number_lp):
-            proj: LiveProject = lp_dict[j]
-
-            all_projects += ss[(k, j)]
-            if proj.generic:
-                group_projects += ss[(k, j)]
-
-        group_limit = record.max_different_group_projects
-        if group_limit is not None and group_limit > 0:
-            prob += group_projects <= group_limit, \
-                    '_C{first}{last}_group_limit'.format(first=user.first_name, last=user.last_name)
-
-        all_limit = record.max_different_all_projects
-        if all_limit is not None and all_limit > 0:
-            if group_limit is not None and group_limit > all_limit:
-                all_limit = group_limit
-
-            prob += all_projects <= all_limit, \
-                    '_C{first}{last}_all_limit'.format(first=user.first_name, last=user.last_name)
+                prob += all_projects <= all_limit, \
+                        '_C{first}{last}_all_limit'.format(first=user.first_name, last=user.last_name)
 
 
-    # Z[k] should be constrained to be 0 if supervisor k is not assigned to any projects
-    for k in range(number_sup):
-        sup: FacultyData = sup_dict[k]
-        user: User = sup.user
+        # Z[k] should be constrained to be 0 if supervisor k is not assigned to any projects
+        for k in range(number_sup):
+            sup: FacultyData = sup_dict[k]
+            user: User = sup.user
 
-        # force Z[k] to be zero if no projects are assigned to supervisor k
-        prob += Z[k] <= sum(S[(k, j)] for j in range(number_lp)), \
-                '_CZ{first}{last}_upperb'.format(first=user.first_name, last=user.last_name)
+            # force Z[k] to be zero if no projects are assigned to supervisor k
+            prob += Z[k] <= sum(S[(k, j)] for j in range(number_lp)), \
+                    '_CZ{first}{last}_upperb'.format(first=user.first_name, last=user.last_name)
 
-        # force Z[k] to be 1 if any project is assigned to supervisor k
-        for j in range(number_lp):
-            proj: LiveProject = lp_dict[j]
+            # force Z[k] to be 1 if any project is assigned to supervisor k
+            for j in range(number_lp):
+                proj: LiveProject = lp_dict[j]
 
-            prob += Z[k] >= ss[(k, j)], \
-                    '_CZ{first}{last}_C{cfg}_P{num}_lowerb'.format(first=user.first_name, last=user.last_name,
-                                                                   cfg=proj.config_id, num=proj.number)
+                prob += Z[k] >= ss[(k, j)], \
+                        '_CZ{first}{last}_C{cfg}_P{num}_lowerb'.format(first=user.first_name, last=user.last_name,
+                                                                       cfg=proj.config_id, num=proj.number)
+
+    print(' -- created supervisor constraints in time {t}'.format(t=sup_timer.interal))
 
 
     ## MARKER ASSIGNMENTS
 
-    # Markers can only be assigned projects to which they are in the assessor pool
-    for i in range(number_mark):
-        mark: FacultyData = mark_dict[i]
-        user: User = mark.user
+    progress_update(record.celery_id, TaskRecord.RUNNING, 40, "Setting up marker assignment constraints...", autocommit=True)
 
-        for j in range(number_lp):
-            proj: LiveProject = lp_dict[j]
+    with Timer() as mark_timer:
 
-            # recall M[(i,j)] is the allowed multiplicity (i.e. maximum number of times marker i can be assigned
-            # to mark a report from project j)
-            prob += sum(Y[(i, j, l)] for l in range(number_sel)) <= M[(i, j)], \
-                '_CM{first}{last}_C{cfg}_P{num}_mark_capacity'.format(first=user.first_name, last=user.last_name,
-                                                                      cfg=proj.config_id, num=proj.number)
+        # Markers can only be assigned projects to which they are in the assessor pool
+        for i in range(number_mark):
+            mark: FacultyData = mark_dict[i]
+            user: User = mark.user
+
+            for j in range(number_lp):
+                proj: LiveProject = lp_dict[j]
+
+                # recall M[(i,j)] is the allowed multiplicity (i.e. maximum number of times marker i can be assigned
+                # to mark a report from project j)
+                prob += sum(Y[(i, j, l)] for l in range(number_sel)) <= M[(i, j)], \
+                    '_CM{first}{last}_C{cfg}_P{num}_mark_capacity'.format(first=user.first_name, last=user.last_name,
+                                                                          cfg=proj.config_id, num=proj.number)
 
 
-    # yy[i,j] should be zero if marker i has no assignments to project j, and otherwise 1
-    for i in range(number_mark):
-        mark: FacultyData = mark_dict[i]
-        user: User = mark.user
+        # yy[i,j] should be zero if marker i has no assignments to project j, and otherwise 1
+        for i in range(number_mark):
+            mark: FacultyData = mark_dict[i]
+            user: User = mark.user
 
-        for j in range(number_lp):
-            proj: LiveProject = lp_dict[j]
+            for j in range(number_lp):
+                proj: LiveProject = lp_dict[j]
 
-            # force yy[i,j] to be zero if Y[i,j,l] is zero for all selector l
-            prob += yy[(i, j)] <= sum(Y[(i, j, l)] for l in range(number_sel)), \
-                '_Cyy{first}{last}_C{cfg}_P{num}_mark_assigned_upperb'.format(first=user.first_name, last=user.last_name,
-                                                                              cfg=proj.config_id, num=proj.number)
-
-            # force yy[i,j] to be 1 if Y[i,j,l] is not zero for any selector l
-            # as above, there is no really clean way to enforce this, so we use the UNBOUNDED_MARKING_CAPACITY
-            # dodge with UNBOUNDED_MARKING_CAPACITY set to a suitable large value
-            prob += UNBOUNDED_MARKING_CAPACITY * yy[(i, j)] >= sum(Y[(i, j, l)] for l in range(number_sel)), \
-                    '_Cyy{first}{last}_C{cfg}_P{num}_mark_assigned_lowerb'.format(first=user.first_name, last=user.last_name,
+                # force yy[i,j] to be zero if Y[i,j,l] is zero for all selector l
+                prob += yy[(i, j)] <= sum(Y[(i, j, l)] for l in range(number_sel)), \
+                    '_Cyy{first}{last}_C{cfg}_P{num}_mark_assigned_upperb'.format(first=user.first_name, last=user.last_name,
                                                                                   cfg=proj.config_id, num=proj.number)
 
+                # force yy[i,j] to be 1 if Y[i,j,l] is not zero for any selector l
+                # as above, there is no really clean way to enforce this, so we use the UNBOUNDED_MARKING_CAPACITY
+                # dodge with UNBOUNDED_MARKING_CAPACITY set to a suitable large value
+                prob += UNBOUNDED_MARKING_CAPACITY * yy[(i, j)] >= sum(Y[(i, j, l)] for l in range(number_sel)), \
+                        '_Cyy{first}{last}_C{cfg}_P{num}_mark_assigned_lowerb'.format(first=user.first_name, last=user.last_name,
+                                                                                      cfg=proj.config_id, num=proj.number)
 
-    # If markers are being used, number of students assigned to each project must match the required
-    # number of markers assigned to each project; otherwise, number of markers should be zero.
-    # The required number of markers is determined by the value of marker_valence[j]
-    for j in range(number_lp):
-        proj: LiveProject = lp_dict[j]
-        config: ProjectClassConfig = proj.config
-        pclass: ProjectClass = config.project_class
 
-        if config.select_in_previous_cycle:
-            uses_marker = pclass.uses_marker
-        else:
-            uses_marker = config.uses_marker
+        # If markers are being used, number of students assigned to each project must match the required
+        # number of markers assigned to each project; otherwise, number of markers should be zero.
+        # The required number of markers is determined by the value of marker_valence[j]
+        for j in range(number_lp):
+            proj: LiveProject = lp_dict[j]
+            config: ProjectClassConfig = proj.config
+            pclass: ProjectClass = config.project_class
 
-        if uses_marker:
-            # for each selector, the total number of assigned markers should equal the intended valence for project j
-            for l in range(number_sel):
+            if config.select_in_previous_cycle:
+                uses_marker = pclass.uses_marker
+            else:
+                uses_marker = config.uses_marker
+
+            if uses_marker:
+                # for each selector, the total number of assigned markers should equal the intended valence for project j
+                for l in range(number_sel):
+                    sel: SelectingStudent = sel_dict[l]
+                    sel_user: User = sel.student.user
+
+                    prob += marker_valence[j] * X[(l, j)] == sum(Y[(i, j, l)] for i in range(number_mark)), \
+                            '_CY_sel{sel}_C{cfg}_P{num}_mark_parity'.format(sel=sel_user.id, cfg=proj.config_id,
+                                                                            num=proj.number)
+
+            else:
+                # enforce no markers assigned to this project
+                prob += sum(Y[(i, j, l)] for i in range(number_mark) for l in range(number_sel)) == 0, \
+                        '_CY_C{cfg}_P{num}_nomark'.format(cfg=proj.config_id, num=proj.number)
+
+
+        # No supervisor should be assigned to mark their own project, and vice versa
+        for i in range(number_mark):
+            mark: FacultyData = mark_dict[i]
+            mark_user: User = mark.user
+
+            for k in range(number_sup):
+                sup: FacultyData = sup_dict[k]
+                sup_user: User = sup.user
+
+                # if this supervisor and this marker are the same, they should not be assigned to the same project
+                if mark_user.id == sup_user.id:
+                    for j in range(number_lp):
+                        proj: LiveProject = lp_dict[j]
+
+                        prob += ss[(k, j)] + yy[(i, j)] <= 1, \
+                            '_C{first}{last}_C{cfg}_P{num}_supv_mark_disjoint' \
+                                .format(first=sup_user.first_name, last=sup_user.last_name, cfg=proj.config_id,
+                                        num=proj.number)
+
+
+        # Implement any "force" constraints from base match, if one is in use
+        if force_base:
+            for idx in base_Y.keys():
+                i = idx[0]
+                j = idx[1]
+                l = idx[2]
+
+                mark: FacultyData = mark_dict[i]
+                proj: LiveProject = lp_dict[j]
                 sel: SelectingStudent = sel_dict[l]
+
+                mark_user: User = mark.user
                 sel_user: User = sel.student.user
 
-                prob += marker_valence[j] * X[(l, j)] == sum(Y[(i, j, l)] for i in range(number_mark)), \
-                        '_CY_sel{sel}_C{cfg}_P{num}_mark_parity'.format(sel=sel_user.id, cfg=proj.config_id,
-                                                                        num=proj.number)
+                prob += Y[idx] == base_Y[idx], \
+                    '_C{first}{last}_sel{sel}_SC{scfg}_base_mark_C{cfg}_P{num}' \
+                        .format(first=mark_user.first_name, last=mark_user.last_name, sel=sel_user.id, scfg=sel.config_id,
+                                cfg=proj.config_id, num=proj.number)
 
-        else:
-            # enforce no markers assigned to this project
-            prob += sum(Y[(i, j, l)] for i in range(number_mark) for l in range(number_sel)) == 0, \
-                    '_CY_C{cfg}_P{num}_nomark'.format(cfg=proj.config_id, num=proj.number)
+            for idx in base_S.keys():
+                k = idx[0]
+                j = idx[1]
 
+                supv: FacultyData = sup_dict[k]
+                proj: LiveProject = lp_dict[j]
+                user: User = supv.user
 
-    # No supervisor should be assigned to mark their own project, and vice versa
-    for i in range(number_mark):
-        mark: FacultyData = mark_dict[i]
-        mark_user: User = mark.user
+                prob += S[idx] == base_S[idx], \
+                    '_C{first}{last}_SC{scfg}_base_supv_C{cfg}_P{num}' \
+                        .format(first=user.first_name, last=user.last_name, scfg=sel.config_id, cfg=proj.config_id,
+                                num=proj.number)
 
-        for k in range(number_sup):
-            sup: FacultyData = sup_dict[k]
-            sup_user: User = sup.user
-
-            # if this supervisor and this marker are the same, they should not be assigned to the same project
-            if mark_user.id == sup_user.id:
-                for j in range(number_lp):
-                    proj: LiveProject = lp_dict[j]
-
-                    prob += ss[(k, j)] + yy[(i, j)] <= 1, \
-                        '_C{first}{last}_C{cfg}_P{num}_supv_mark_disjoint' \
-                            .format(first=sup_user.first_name, last=sup_user.last_name, cfg=proj.config_id,
-                                    num=proj.number)
-
-
-    # Implement any "force" constraints from base match, if one is in use
-    if force_base:
-        for idx in base_Y.keys():
-            i = idx[0]
-            j = idx[1]
-            l = idx[2]
-
-            mark: FacultyData = mark_dict[i]
-            proj: LiveProject = lp_dict[j]
-            sel: SelectingStudent = sel_dict[l]
-
-            mark_user: User = mark.user
-            sel_user: User = sel.student.user
-
-            prob += Y[idx] == base_Y[idx], \
-                '_C{first}{last}_sel{sel}_SC{scfg}_base_mark_C{cfg}_P{num}' \
-                    .format(first=mark_user.first_name, last=mark_user.last_name, sel=sel_user.id, scfg=sel.config_id,
-                            cfg=proj.config_id, num=proj.number)
-
-        for idx in base_S.keys():
-            k = idx[0]
-            j = idx[1]
-
-            supv: FacultyData = sup_dict[k]
-            proj: LiveProject = lp_dict[j]
-            user: User = supv.user
-
-            prob += S[idx] == base_S[idx], \
-                '_C{first}{last}_SC{scfg}_base_supv_C{cfg}_P{num}' \
-                    .format(first=user.first_name, last=user.last_name, scfg=sel.config_id, cfg=proj.config_id,
-                            num=proj.number)
+    print(' -- created marker constraints in time {t}'.format(t=sup_timer.interal))
 
 
     # WORKLOAD LIMITS
 
-    # CATS assigned to each supervisor must be within bounds
-    for k in range(number_sup):
-        sup: FacultyData = sup_dict[k]
-        user: User = sup.user
+    progress_update(record.celery_id, TaskRecord.RUNNING, 45, "Setting up per-faculty workload constraints...", autocommit=True)
 
-        # enforce global limit, either from optimization configuration or from user's global record
-        lim = record.supervising_limit
-        sup_limit = sup_limits[k]
-        if not record.ignore_per_faculty_limits and sup_limit is not None and sup_limit > 0:
-            if sup_limit < lim:
-                lim = sup_limit
+    with Timer() as fac_work_timer:
 
-        existing_CATS = _compute_existing_sup_CATS(record, sup)
-        if existing_CATS > lim:
-            raise RuntimeError('Inconsistent matching problem: existing supervisory CATS load {n} for faculty '
-                               '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=user.name))
+        # CATS assigned to each supervisor must be within bounds
+        for k in range(number_sup):
+            sup: FacultyData = sup_dict[k]
+            user: User = sup.user
 
-        prob += existing_CATS + sum(S[(k, j)] * CATS_supervisor[j]
-                                    for j in range(number_lp)) <= lim + sup_elastic_CATS[k], \
-                '_C{first}{last}_supv_CATS'.format(first=user.first_name, last=user.last_name)
+            # enforce global limit, either from optimization configuration or from user's global record
+            lim = record.supervising_limit
+            sup_limit = sup_limits[k]
+            if not record.ignore_per_faculty_limits and sup_limit is not None and sup_limit > 0:
+                if sup_limit < lim:
+                    lim = sup_limit
 
-        # enforce ad-hoc per-project-class supervisor limits
-        for config_id in sup_pclass_limits:
-            fac_limits = sup_pclass_limits[config_id]
-            projects = lp_group_dict.get(config_id, None)
+            existing_CATS = _compute_existing_sup_CATS(record, sup)
+            if existing_CATS > lim:
+                raise RuntimeError('Inconsistent matching problem: existing supervisory CATS load {n} for faculty '
+                                   '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=user.name))
 
-            if k in fac_limits and projects is not None:
-                prob += sum(S[(k, j)] * CATS_supervisor[j] for j in projects) <= fac_limits[i], \
-                        '_C{first}{last}_supv_CATS_config_{cfg}'.format(first=user.first_name, last=user.last_name,
-                                                                        cfg=config_id)
+            prob += existing_CATS + sum(S[(k, j)] * CATS_supervisor[j]
+                                        for j in range(number_lp)) <= lim + sup_elastic_CATS[k], \
+                    '_C{first}{last}_supv_CATS'.format(first=user.first_name, last=user.last_name)
 
-    # CATS assigned to each marker must be within bounds
-    for i in range(number_mark):
-        mark: FacultyData = mark_dict[i]
-        user: User = mark.user
+            # enforce ad-hoc per-project-class supervisor limits
+            for config_id in sup_pclass_limits:
+                fac_limits = sup_pclass_limits[config_id]
+                projects = lp_group_dict.get(config_id, None)
 
-        # enforce global limit
-        lim = record.marking_limit
-        mark_limit = mark_limits[i]
-        if not record.ignore_per_faculty_limits and mark_limit is not None and mark_limit > 0:
-            if mark_limit < lim:
-                lim = mark_limit
+                if k in fac_limits and projects is not None:
+                    prob += sum(S[(k, j)] * CATS_supervisor[j] for j in projects) <= fac_limits[i], \
+                            '_C{first}{last}_supv_CATS_config_{cfg}'.format(first=user.first_name, last=user.last_name,
+                                                                            cfg=config_id)
 
-        existing_CATS = _compute_existing_mark_CATS(record, mark)
-        if existing_CATS > lim:
-            raise RuntimeError('Inconsistent matching problem: existing marking CATS load {n} for faculty '
-                               '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=mark.user.name))
+        # CATS assigned to each marker must be within bounds
+        for i in range(number_mark):
+            mark: FacultyData = mark_dict[i]
+            user: User = mark.user
 
-        prob += existing_CATS \
-                + sum(CATS_marker[j] * sum(Y[(i, j, l)] for l in range(number_sel)) for j in range(number_lp)) \
-                <= lim + mark_elastic_CATS[i], \
-                '_C{first}{last}_mark_CATS'.format(first=user.first_name, last=user.last_name)
+            # enforce global limit
+            lim = record.marking_limit
+            mark_limit = mark_limits[i]
+            if not record.ignore_per_faculty_limits and mark_limit is not None and mark_limit > 0:
+                if mark_limit < lim:
+                    lim = mark_limit
 
-        # enforce ad-hoc per-project-class marking limits
-        for config_id in mark_pclass_limits:
-            fac_limits = mark_pclass_limits[config_id]
-            projects = lp_group_dict.get(config_id, None)
+            existing_CATS = _compute_existing_mark_CATS(record, mark)
+            if existing_CATS > lim:
+                raise RuntimeError('Inconsistent matching problem: existing marking CATS load {n} for faculty '
+                                   '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=mark.user.name))
 
-            if i in fac_limits and projects is not None:
-                prob += sum(CATS_marker[j] * sum(Y[(i, j, l)] for l in range(number_sel)) for j in projects) \
-                        <= fac_limits[i], \
-                        '_C{first}{last}_mark_CATS_config_C{cfg}'.format(first=user.first_name, last=user.last_name,
-                                                                         cfg=config_id)
+            prob += existing_CATS \
+                    + sum(CATS_marker[j] * sum(Y[(i, j, l)] for l in range(number_sel)) for j in range(number_lp)) \
+                    <= lim + mark_elastic_CATS[i], \
+                    '_C{first}{last}_mark_CATS'.format(first=user.first_name, last=user.last_name)
+
+            # enforce ad-hoc per-project-class marking limits
+            for config_id in mark_pclass_limits:
+                fac_limits = mark_pclass_limits[config_id]
+                projects = lp_group_dict.get(config_id, None)
+
+                if i in fac_limits and projects is not None:
+                    prob += sum(CATS_marker[j] * sum(Y[(i, j, l)] for l in range(number_sel)) for j in projects) \
+                            <= fac_limits[i], \
+                            '_C{first}{last}_mark_CATS_config_C{cfg}'.format(first=user.first_name, last=user.last_name,
+                                                                             cfg=config_id)
+
+    print(' -- created faculty workload constraints in time {t}'.format(t=mark_timer.interal))
 
 
     # WORKLOAD LEVELLING
 
-    global_trivial = True
+    progress_update(record.celery_id, TaskRecord.RUNNING, 48, "Setting up global workload levelling objectives...", autocommit=True)
 
-    # supMin and supMax should bracket the CATS workload of faculty who supervise only
-    if len(sup_only_numbers) > 0:
-        for k in sup_only_numbers:
-            prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) <= supMax
-            prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) >= supMin
+    with Timer() as level_timer:
 
-        prob += globalMin <= supMin
-        prob += globalMax >= supMax
+        global_trivial = True
 
-        global_trivial = False
-    else:
-        prob += supMax == 0
-        prob += supMin == 0
+        # supMin and supMax should bracket the CATS workload of faculty who supervise only
+        if len(sup_only_numbers) > 0:
+            for k in sup_only_numbers:
+                prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) <= supMax
+                prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) >= supMin
 
-    # markMin and markMax should bracket the CATS workload of faculty who mark only
-    if len(mark_only_numbers) > 0:
-        for i in mark_only_numbers:
-            prob += sum(sum(Y[(i, j, l)] for l in range(number_sel)) * CATS_marker[j] for j in range(number_lp)) <= markMax
-            prob += sum(sum(Y[(i, j, l)] for l in range(number_sel)) * CATS_marker[j] for j in range(number_lp)) >= markMin
+            prob += globalMin <= supMin
+            prob += globalMax >= supMax
 
-        prob += globalMin <= markMin
-        prob += globalMax >= markMax
+            global_trivial = False
+        else:
+            prob += supMax == 0
+            prob += supMin == 0
 
-        global_trivial = False
-    else:
-        prob += markMax == 0
-        prob += markMin == 0
+        # markMin and markMax should bracket the CATS workload of faculty who mark only
+        if len(mark_only_numbers) > 0:
+            for i in mark_only_numbers:
+                prob += sum(sum(Y[(i, j, l)] for l in range(number_sel)) * CATS_marker[j] for j in range(number_lp)) <= markMax
+                prob += sum(sum(Y[(i, j, l)] for l in range(number_sel)) * CATS_marker[j] for j in range(number_lp)) >= markMin
 
-    # supMarkMin and supMarkMAx should bracket the CATS workload of faculty who both supervise and mark
-    if len(sup_and_mark_numbers) > 0:
-        for k, i in sup_and_mark_numbers:
-            prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) \
-                    + sum(sum(Y[(i, j, l)] for l in range(number_sel)) * CATS_marker[j] for j in range(number_lp)) <= supMarkMax
-            prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) \
-                    + sum(sum(Y[(i, j, l)] for l in range(number_sel)) * CATS_marker[j] for j in range(number_lp)) >= supMarkMin
+            prob += globalMin <= markMin
+            prob += globalMax >= markMax
 
-        prob += globalMin <= supMarkMin
-        prob += globalMax >= supMarkMax
+            global_trivial = False
+        else:
+            prob += markMax == 0
+            prob += markMin == 0
 
-        global_trivial = False
-    else:
-        prob += supMarkMax == 0
-        prob += supMarkMin == 0
+        # supMarkMin and supMarkMAx should bracket the CATS workload of faculty who both supervise and mark
+        if len(sup_and_mark_numbers) > 0:
+            for k, i in sup_and_mark_numbers:
+                prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) \
+                        + sum(sum(Y[(i, j, l)] for l in range(number_sel)) * CATS_marker[j] for j in range(number_lp)) <= supMarkMax
+                prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) \
+                        + sum(sum(Y[(i, j, l)] for l in range(number_sel)) * CATS_marker[j] for j in range(number_lp)) >= supMarkMin
 
-    # if no constraints have been emitted for the global variables, issue constraints to tie them to zero:
-    if global_trivial:
-        prob += globalMin == 0
-        prob += globalMax == 0
+            prob += globalMin <= supMarkMin
+            prob += globalMax >= supMarkMax
 
-    # maxProjects should be larger than the total number of projects assigned for supervising to any
-    # individual faculty member
-    if number_sup > 0:
-        for i in range(number_sup):
-            prob += sum(S[(k, j)] for j in range(number_lp)) <= maxProjects
-    else:
-        prob += maxProjects == 0
+            global_trivial = False
+        else:
+            prob += supMarkMax == 0
+            prob += supMarkMin == 0
 
-    # maxMarking should be larger than the total number of projects assigned for marking to
-    # any individual faculty member
-    if number_mark > 0:
-        for i in range(number_mark):
-            prob += sum(Y[(i, j, l)] for j in range(number_lp) for l in range(number_sel)) <= maxMarking
-    else:
-        prob += maxMarking == 0
+        # if no constraints have been emitted for the global variables, issue constraints to tie them to zero:
+        if global_trivial:
+            prob += globalMin == 0
+            prob += globalMax == 0
+
+        # maxProjects should be larger than the total number of projects assigned for supervising to any
+        # individual faculty member
+        if number_sup > 0:
+            for i in range(number_sup):
+                prob += sum(S[(k, j)] for j in range(number_lp)) <= maxProjects
+        else:
+            prob += maxProjects == 0
+
+        # maxMarking should be larger than the total number of projects assigned for marking to
+        # any individual faculty member
+        if number_mark > 0:
+            for i in range(number_mark):
+                prob += sum(Y[(i, j, l)] for j in range(number_lp) for l in range(number_sel)) <= maxMarking
+        else:
+            prob += maxMarking == 0
+
+    print(' -- created workload levelling objectives in time {t}'.format(t=level_timer.interal))
 
     return prob, X, Y, S
 
@@ -1878,6 +1920,8 @@ def _initialize(self, record, read_serialized=False):
         mean_CATS_per_project = _find_mean_project_CATS(configs)
         print(' -- {n} ProjectClassConfig instances participate in this matching'.format(n=len(configs)))
 
+        progress_update(record.celery_id, TaskRecord.RUNNING, 6, "Enumerating selector records...", autocommit=True)
+
         # get lists of selectors and liveprojects, together with auxiliary data such as
         # multiplicities (for selectors) and CATS assignments (for projects)
         with Timer() as sel_timer:
@@ -1885,10 +1929,14 @@ def _initialize(self, record, read_serialized=False):
                 sel_dict = _enumerate_selectors(record, configs, read_serialized=read_serialized)
         print(' -- enumerated {n} selectors in time {s}'.format(n=number_sel, s=sel_timer.interval))
 
+        progress_update(record.celery_id, TaskRecord.RUNNING, 8, "Enumerating LiveProject records...", autocommit=True)
+
         with Timer() as lp_timer:
             number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, \
                 lp_dict, lp_group_dict = _enumerate_liveprojects(record, configs, read_serialized=read_serialized)
         print(' -- enumerated {n} LiveProjects in time {s}'.format(n=number_lp, s=lp_timer.interval))
+
+        progress_update(record.celery_id, TaskRecord.RUNNING, 10, "Enumerating supervising faculty...", autocommit=True)
 
         # get supervising faculty and marking faculty lists
         with Timer() as sup_timer:
@@ -1896,10 +1944,14 @@ def _initialize(self, record, read_serialized=False):
                 _enumerate_supervising_faculty(record, configs)
         print(' -- enumerated {n} supervising faculty in time {s}'.format(n=number_sup, s=sup_timer.interval))
 
+        progress_update(record.celery_id, TaskRecord.RUNNING, 12, "Enumerating marking faculty...", autocommit=True)
+
         with Timer() as mark_timer:
             number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict, mark_pclass_limits = \
                 _enumerate_marking_faculty(record, configs)
         print(' -- enumerated {n} marking faculty in time {s}'.format(n=number_mark, s=mark_timer.interval))
+
+        progress_update(record.celery_id, TaskRecord.RUNNING, 14, "Partioning faculty roles...", autocommit=True)
 
         with Timer() as partition_timer:
             # partition faculty into supervisors, markers and supervisors+markers
@@ -1919,16 +1971,22 @@ def _initialize(self, record, read_serialized=False):
         print('    :: {n} faculty are marking only'.format(n=len(mark_only_numbers)))
         print('    :: {n} faculty are supervising and marking'.format(n=len(sup_and_mark_numbers)))
 
+        progress_update(record.celery_id, TaskRecord.RUNNING, 16, "Building student ranking matrix...", autocommit=True)
+
         # build student ranking matrix
         with Timer() as rank_timer:
             R, W, cstr = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict, record)
         print(' -- built student ranking matrix in time {s}'.format(s=rank_timer.interval))
+
+        progress_update(record.celery_id, TaskRecord.RUNNING, 18, "Building marker compatibility matrix...", autocommit=True)
 
         # build marker compatibility matrix
         with Timer() as mark_matrix_timer:
             mm = record.max_marking_multiplicity
             M, marker_valence = _build_marking_matrix(number_mark, mark_dict, number_lp, lp_dict, mm if mm >= 1 else 1)
         print(' -- built marking compatibility matrix in time {s}'.format(s=mark_matrix_timer.interval))
+
+        progress_update(record.celery_id, TaskRecord.RUNNING, 19, "Building project-to-supervisor mapping matrix...", autocommit=True)
 
         with Timer() as sup_mapping_timer:
             # build project-to-supervisor mapping
@@ -2576,7 +2634,7 @@ def register_matching_tasks(celery):
                 sub.marker = None
 
         try:
-            progress_update(task_id, TaskRecord.SUCCESS, 100, "Finishing remove markers task....",
+            progress_update(task_id, TaskRecord.SUCCESS, 100, "Finishing remove markers task...",
                             autocommit=False)
             db.session.commit()
         except SQLAlchemyError as e:

@@ -1,3 +1,5 @@
+{% from "icon_block.html" import icon_block %}
+
 {% macro selection_closed(config, rollover_in_progress) %}
     <div class="card border-secondary mt-3 mb-3">
         <div class="card-header"><strong>Student selections are now closed</strong></div>
@@ -26,59 +28,77 @@
                     </div>
                 </div>
             </div>
-            <div class="row vertical-top mb-2">
-                <div class="col-12">
-                    {% if submitted == total %}
-                        <p>All students submitted validated choices before selection closed.</p>
-                    {% elif missing == 0 %}
-                        <p>Some students did not submit validated choices, but all students had bookmark data.</p>
-                        {% if config.selection_open_to_all %}
-                            <p><strong>Selection for this project was available to all eligible students on an opt-in basis.</strong></p>
-                            <p>
-                                Students who have not submitted a validated selection
-                                will be assumed not to have opted-in and will be ignored when performing
-                                automatic matching.
-                            </p>
-                        {% else %}
-                            <p>
-                                Where students did not submit validated choices, their bookmark lists
-                                (if valid)
-                                have been converted into submission data. These choices will be downweighted
-                                during matching in order to prioritize rankings from students who
-                                submitted a correct list of choices.
-                            </p>
-                        {% endif %}
+            <div>
+                {% if submitted == total %}
+                    <div class="alert alert-success">
+                        {% call icon_block("check-circle") %}
+                            <div><strong>All students submitted validated choices before selection closed.</strong></div>
+                        {% endcall %}
+                    </div>
+                {% elif missing == 0 %}
+                    <div class="alert alert-success">
+                        {% call icon_block("check-circle") %}
+                            <div><strong>Some students did not submit validated choices, but all students had bookmark data.</strong></div>
+                        {% endcall %}
+                    </div>
+                    {% if config.selection_open_to_all %}
+                        <div class="alert alert-info">
+                            {% call icon_block("info-circle") %}
+                                <div><strong>Selection for this project was available to all eligible students on an opt-in basis.</strong></div>
+                                <div class="mt-1">
+                                    Students who have not submitted a validated selection
+                                    will be assumed not to have opted-in and will be ignored when performing
+                                    automatic matching.
+                                </div>
+                            {% endcall %}
+                        </div>
                     {% else %}
-                        {% if config.selection_open_to_all %}
-                            <p><strong>Selection for this project was available to all eligible students on an opt-in basis.</strong></p>
-                            <p>
-                                Students who have not submitted a validated selection
-                                will be assumed not to have opted-in and will be ignored when performing
-                                automatic matching.
-                            </p>
-                        {% else %}
-                            <p>
-                                Where students did not submit validated choices, their bookmark lists
-                                (if valid)
-                                have been converted into submission data. These choices will be downweighted
-                                during matching in order to prioritize rankings from students who
-                                submitted a correct list of choices.
-                            </p>
-                            <p>
-                                Some students did not have valid bookmark lists.
-                                These students will be allocated an arbitrary project
-                                during automated matching.
-                            </p>
-                        {% endif %}
+                        <div class="alert alert-info">
+                            {% call icon_block("info-circle") %}
+                                <div><strong>Where students did not submit validated choices, their bookmark lists (if valid) have been converted into submission data.</strong></div>
+                                <div class="mt-1">
+                                    These choices will be down-weighted
+                                    during matching in order to prioritize rankings from students who
+                                    submitted a correct list of choices.
+                                </div>
+                            {% endcall %}
+                        </div>
                     {% endif %}
-                </div>
+                {% else %}
+                    {% if config.selection_open_to_all %}
+                        <div class="alert alert-info">
+                            {% call icon_block("info-circle") %}
+                                <div><strong>Selection for this project was available to all eligible students on an opt-in basis.</strong></div>
+                                <div class="mt-1">
+                                    Students who have not submitted a validated selection
+                                    will be assumed not to have opted-in and will be ignored when performing
+                                    automatic matching.
+                                </div>
+                            {% endcall %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            {% call icon_block("info-circle") %}
+                                <div><strong>Where students did not submit validated choices, their bookmark lists (if valid) have been converted into submission data.</strong></div>
+                                <div class="mt-1">
+                                    These choices will be down-weighted
+                                    during matching in order to prioritize rankings from students who
+                                    submitted a correct list of choices.
+                                </div>
+                                <div class="mt-1">
+                                    Some students did not have valid bookmark lists.
+                                    These students will be allocated an arbitrary project
+                                    during automated matching.
+                                </div>
+                            {% endcall %}
+                        </div>
+                    {% endif %}
+                {% endif %}
             </div>
-            <div class="row">
-                <div class="col-12">
-                    <a class="text-decoration-none" href="{{ url_for('convenor.selector_grid', id=config.pclass_id) }}">
-                        Show selector grid ...
-                    </a>
-                </div>
+            <div class="d-flex flex-row justify-content-start align-content-start gap-2">
+                <a class="text-decoration-none" href="{{ url_for('convenor.selector_grid', id=config.pclass_id) }}">
+                    Show selector grid ...
+                </a>
             </div>
         </div>
     </div>

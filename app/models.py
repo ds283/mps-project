@@ -84,9 +84,12 @@ short_academic_titles_dict = dict(short_academic_titles)
 matching_history_choices = [(1, '1 year'), (2, '2 years'), (3, '3 years'), (4, '4 years'), (5, '5 years')]
 
 # PuLP solver choices
-solver_choices = [(0, 'PuLP-packaged CBC'), (1, 'CBC external command'), (2, 'GLPK external command'),
-                  (3, 'CPLEX external command (requires license)'), (4, 'Gurobi external command (requires license)'),
-                  (5, 'SCIP external command (requires license)')]
+solver_choices = [(0, 'PuLP-packaged CBC (amd64 only)'),
+                  (1, 'CBC external command (amd64 or arm64)'),
+                  (2, 'GLPK external command (amd64 or arm64)'),
+                  (3, 'CPLEX external command (not available in cloud by default, requires license)'),
+                  (4, 'Gurobi external command (not available in cloud by default, requires license)'),
+                  (5, 'SCIP external command  (not available in cloud by default, requires license)')]
 
 # session types
 session_choices = [(0, 'Morning'), (1, 'Afternoon')]
@@ -1281,12 +1284,12 @@ class PuLPStatusMixin:
     SOLVER_SCIP_CMD = 5
 
     # solver names
-    _solvers = {SOLVER_CBC_PACKAGED: 'PuLP-packaged CBC (amd64 only)',
-                SOLVER_CBC_CMD: 'CBC external (amd64 or arm64)',
-                SOLVER_GLPK_CMD: 'GLPK external (amd64 or arm64)',
-                SOLVER_CPLEX_CMD: 'CPLEX external (not available in cloud by default, requires license)',
-                SOLVER_GUROBI_CMD: 'Gurobi external (not available in cloud by default, requires license)',
-                SOLVER_SCIP_CMD: 'SCIP external (not available in cloud by default, requires license)'}
+    _solvers = {SOLVER_CBC_PACKAGED: 'PuLP-packaged CBC',
+                SOLVER_CBC_CMD: 'CBC external',
+                SOLVER_GLPK_CMD: 'GLPK external',
+                SOLVER_CPLEX_CMD: 'CPLEX external',
+                SOLVER_GUROBI_CMD: 'Gurobi external',
+                SOLVER_SCIP_CMD: 'SCIP external'}
 
 
 class AvailabilityRequestStateMixin:

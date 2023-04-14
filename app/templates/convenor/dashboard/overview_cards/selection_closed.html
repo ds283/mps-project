@@ -15,36 +15,24 @@
                             <div><strong>All students submitted validated choices before selection closed.</strong></div>
                         {% endcall %}
                     </div>
-                {% elif missing == 0 %}
-                    <div class="alert alert-success">
-                        {% call icon_block("check-circle") %}
-                            <div><strong>Some students did not submit validated choices, but all students had bookmark data.</strong></div>
-                        {% endcall %}
-                    </div>
-                    {% if config.selection_open_to_all %}
-                        <div class="alert alert-info">
-                            {% call icon_block("info-circle") %}
-                                <div><strong>Selection for this project was available to all eligible students on an opt-in basis.</strong></div>
-                                <div class="mt-1">
-                                    Students who have not submitted a validated selection
-                                    will be assumed not to have opted-in and will be ignored when performing
-                                    automatic matching.
-                                </div>
+                {% else %}
+                    {% if missing == 0 %}
+                        <div class="alert alert-success">
+                            {% call icon_block("check-circle") %}
+                                <div><strong>Some students did not submit validated choices, but all students had bookmark data.</strong></div>
                             {% endcall %}
                         </div>
                     {% else %}
-                        <div class="alert alert-info">
-                            {% call icon_block("info-circle") %}
-                                <div><strong>Where students did not submit validated choices, their bookmark lists (if valid) have been converted into submission data.</strong></div>
+                        <div class="alert alert-warning"></div>
+                            {% call icon_block("exclamation-circle") %}
+                                <div><strong>Some students did not submit validated choices. Some of these students did not have valid bookmark lists.</strong></div>
                                 <div class="mt-1">
-                                    These choices will be down-weighted
-                                    during matching in order to prioritize rankings from students who
-                                    submitted a correct list of choices.
+                                    These students may optionally be allocated an arbitrary project
+                                    during automated matching.
                                 </div>
                             {% endcall %}
                         </div>
                     {% endif %}
-                {% else %}
                     {% if config.selection_open_to_all %}
                         <div class="alert alert-info">
                             {% call icon_block("info-circle") %}
@@ -61,14 +49,9 @@
                             {% call icon_block("info-circle") %}
                                 <div><strong>Where students did not submit validated choices, their bookmark lists (if valid) have been converted into submission data.</strong></div>
                                 <div class="mt-1">
-                                    These choices will be down-weighted
+                                    These choices may optionally be down-weighted
                                     during matching in order to prioritize rankings from students who
                                     submitted a correct list of choices.
-                                </div>
-                                <div class="mt-1">
-                                    Some students did not have valid bookmark lists.
-                                    These students will be allocated an arbitrary project
-                                    during automated matching.
                                 </div>
                             {% endcall %}
                         </div>

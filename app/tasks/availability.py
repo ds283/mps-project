@@ -113,7 +113,7 @@ def register_availability_tasks(celery):
         elif isinstance(results, list):
             num_issued = sum(results)
         else:
-            self.update_state('FAILURE', 'Unexpected result type forwarded in attaching assessor records')
+            self.update_state('FAILURE', meta='Unexpected result type forwarded in attaching assessor records')
             raise RuntimeError('Unexpected result type forwarded in attaching assessor records')
 
         progress_update(task_id, TaskRecord.RUNNING, 40,
@@ -146,7 +146,7 @@ def register_availability_tasks(celery):
         elif isinstance(results, list):
             num_attached = sum(results)
         else:
-            self.update_state('FAILURE', 'Unexpected result type forwarded in attaching assessor records')
+            self.update_state('FAILURE', meta='Unexpected result type forwarded in attaching assessor records')
             raise RuntimeError('Unexpected result type forwarded in attaching assessor records')
 
         progress_update(task_id, TaskRecord.RUNNING, 40,

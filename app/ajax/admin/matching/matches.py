@@ -352,9 +352,9 @@ _menu = \
                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.publish_matching_supervisors', id=m.id) }}">
                         <i class="fas fa-mail-bulk fa-fw"></i> {% if m.selected %}Final{% else %}Draft{% endif %} email to supervisors
                     </a>
-                    {% if config is not none and config.select_in_previous_cycle %}
-                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.populate_selectors_from_match', match_id=m.id, config_id=config.id) }}">
-                            <i class="fas fa-wrench fa-fw"></i> Populate selectors
+                    {% if config is not none and not config.select_in_previous_cycle %}
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.populate_submitters_from_match', match_id=m.id, config_id=config.id) }}">
+                            <i class="fas fa-wrench fa-fw"></i> Populate submitters
                         </a>
                     {% endif %}
                 {% endif %}

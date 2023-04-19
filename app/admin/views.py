@@ -5911,9 +5911,9 @@ def deselect_match(id):
     return redirect(redirect_url())
 
 
-@admin.route('/populate_selectors_from_match/<int:match_id>/<int:config_id>')
+@admin.route('/populate_submitterss_from_match/<int:match_id>/<int:config_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def populate_selectors_from_match(match_id, config_id):
+def populate_submitters_from_match(match_id, config_id):
     record: MatchingRecord = MatchingRecord.query.get_or_404(match_id)
     config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(config_id)
 
@@ -5922,14 +5922,20 @@ def populate_selectors_from_match(match_id, config_id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" cannot be used to populate selector records because it belongs to a '
+        flash('Match "{name}" cannot be used to populate submitter records because it belongs to a '
               'previous year'.format(name=record.name), 'info')
         return redirect(redirect_url())
 
     if config.year != record.year:
-        flash('Match "{match_name}" cannot be used to populate selector records for project type "{pcl_name}", '
+        flash('Match "{match_name}" cannot be used to populate submitter records for project type "{pcl_name}", '
               'year = {config_year} because this configuration belongs to a previous '
               'year'.format(match_name=record.name, pcl_name=config.name, config_year=config.year))
+        return redirect(redirect_url())
+
+    if config.select_in_previous_cycle:
+        flash('Match "{match_name}" cannot be used to populate submitter records for project type "{pcl_name}" '
+              'because this project type is not configured to use selection in the same cycle as '
+              'submission'.format(match_name=record.name, pcl_name=config.name))
         return redirect(redirect_url())
 
     if not record.finished:
@@ -5947,17 +5953,17 @@ def populate_selectors_from_match(match_id, config_id):
         return redirect(redirect_url())
 
     if not record.published:
-        flash('Match "{name}" cannot be used to populate selector records because it has not yet been '
+        flash('Match "{name}" cannot be used to populate submitter records because it has not yet been '
               'published to the module convenor. Please publish the match before attempting to generate '
               'selectors.'.format(name=record.name), 'info')
         return redirect(redirect_url())
 
     task_id = register_task('Populate selectors from match', owner=current_user,
-                            description='Populate selector records for project "{pcl}" in the current submission cycle '
+                            description='Populate submitter records for project "{pcl}" in the current submission cycle '
                                         'from match "{name}"'.format(pcl=config.name, name=record.name))
 
     celery = current_app.extensions['celery']
-    task = celery.tasks['app.tasks.matching.populate_selectors']
+    task = celery.tasks['app.tasks.matching.populate_submitters']
 
     task.apply_async(args=(match_id, config_id, current_user.id, task_id), task_id=task_id)
 

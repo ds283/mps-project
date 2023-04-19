@@ -2948,7 +2948,7 @@ def register_matching_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def populate_selectors(self, match_id, config_id, user_id, task_id):
+    def populate_submitters(self, match_id, config_id, user_id, task_id):
         self.update_status(state='STARTED',
                            meta='Looking up database configuration records')
 
@@ -2987,7 +2987,7 @@ def register_matching_tasks(celery):
         if record.year != year:
             self.update_state(state='FAILURE', meta='MatchingAttempt is not for current year')
             progress_update(task_id, TaskRecord.FAILURE, 100, "Match is not for the current year", autocommit=False)
-            user.post_message('Selectors could not be populated because the selected matching is not for the '
+            user.post_message('Submitters could not be populated because the selected matching is not for the '
                               'current academic year (current year={cyr}, '
                               'match year={myr}'.format(cyr=year, myr=record.year), 'error', autocommit=True)
             raise Ignore()
@@ -2997,10 +2997,19 @@ def register_matching_tasks(celery):
                                                     'MatchingAttempt')
             progress_update(task_id, TaskRecord.FAILURE, 100, "Project configuration and matching were for different "
                                                               "years", autocommit=False)
-            user.post_message('Selectors could not be populated because the selected matching does not belong '
+            user.post_message('Submitters could not be populated because the selected matching does not belong '
                               'to the same academic year as the current project configuration (selected matching '
                               'year={myr}, current configuration '
                               'year={cyr}'.format(myr=record.year, cyr=config.year), 'error', autocommit=True)
+            raise Ignore()
+
+        if config.select_in_previous_cycle:
+            self.update_state(state='FAILURE', Meta='ProjectClassConfig does not have select_in_previous_cycle')
+            progress_update(task_id, TaskRecord.FAILURE, 100, "ProjectClassConfig does not have "
+                                                              "select_in_previous_cycle", autocommit=False)
+            user.post_message('Submitters could not be populated because this project type is not '
+                              'configured to use selection in the same cycle as submission', 'error',
+                              autocommit=True)
             raise Ignore()
 
         if not record.finished:
@@ -3008,20 +3017,20 @@ def register_matching_tasks(celery):
                 self.update_state(state='FAILURE', meta='MatchingAttempt still awaiting manual upload')
                 progress_update(task_id, TaskRecord.FAILURE, 100, "Match is still awaiting manual upload",
                                 autocommit=False)
-                user.post_message('Selectors could not be populated because the selecting matching is still '
+                user.post_message('Submitters could not be populated because the selecting matching is still '
                                   'awaiting manual upload of a solution.', 'error', autocommit=True)
             else:
                 self.update_state(state='FAILURE', meta='Matching optimization has not yet terminated')
                 progress_update(task_id, TaskRecord.FAILURE, 100, "Matching optimization has not yet terminated",
                                 autocommit=False)
-                user.post_message('Selectors could not be populated because the matching optimization has '
+                user.post_message('Submitters could not be populated because the matching optimization has '
                                   'not yet terminated.', 'error', autocommit=True)
             raise Ignore()
 
         if not record.solution_usable:
             self.update_state(state='FAILURE', meta='MatchingAttempt solution is not usable')
             progress_update(task_id, TaskRecord.FAILURE, 100, "Matching solution is not usable", autocommit=False)
-            user.post_message('Selectors could not be populated because the selecting matching solution is '
+            user.post_message('Submitters could not be populated because the selecting matching solution is '
                               'not usable.', 'error', autocommit=True)
             raise Ignore()
 
@@ -3029,7 +3038,67 @@ def register_matching_tasks(celery):
             self.update_state(state='FAILURE', meta='MatchingAttempt has not been published')
             progress_update(task_id, TaskRecord.FAILURE, 100, "Matching has not yet been published to convenors",
                             autocommit=True)
-            user.post_message('Selectors could not be populated because the selecting matching has not yet '
+            user.post_message('Submitters could not be populated because the selecting matching has not yet '
                               'been published to convenors. Please publish the match before attempting '
                               'to generate selectors.', 'error', autocommit=True)
+            raise Ignore()
+
+        # pull out MatchingRecord instances that belong to this MatchingAttempt, and which correspond to
+        # the specified ProjectClass(Config)
+        match_records = record.records.join(SelectingStudent, SelectingStudent.id == MatchingRecord.selector_id) \
+            .filter(SelectingStudent.config_id == config_id).all()
+
+        populate_tasks = group(convert_record_to_submitter.s(match_id, config_id, user_id, r.id)
+                               for r in match_records)
+
+        if len(populate_tasks) > 0:
+            work = populate_initial_msg.s(task_id) | populate_tasks | populate_final_msg.s(task_id)
+            return self.replace(work)
+
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Completed with no work to perform", autocommit=False)
+        user.post_message('The populate task completed successfully, but no matching records '
+                          'corresponded to this project class configuration, and therefore '
+                          'no submitter records have been populated.', 'info', autocommit=True)
+
+
+    @celery.task(bind=True)
+    def populate_initial_msg(self, task_id):
+        progress_update(task_id, TaskRecord.RUNNING, 20, "Inspecting matching records to populate submitters...",
+                        autocommit=True)
+
+
+    @celery.task(bind=True)
+    def populate_final_msg(self, task_id):
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Completed import from matching records", autocommit=True)
+
+
+    @celery.task(bind=True)
+    def convert_record_to_submitter(self, match_id, config_id, user_id, data_id):
+        # read database records
+        self.update_status(state='STARTED',
+                           meta='Looking up database configuration records')
+
+        try:
+            record = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
+            config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+            user = db.session.query(User).filter_by(id=user_id).first()
+            data = db.session.query(MatchingRecord).filter_by(id=data_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if user is None:
+            self.update_state(state='FAILURE', meta='Could not load owning User record')
+            raise Ignore()
+
+        if config is None:
+            self.update_state(state='FAILURE', meta='Could not load ProjectClassConfig record')
+            raise Ignore()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            raise Ignore()
+
+        if data is None:
+            self.update_state(state='FAILURE', meta='Could not load MatchingRecord record from database')
             raise Ignore()

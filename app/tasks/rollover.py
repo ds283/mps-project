@@ -150,7 +150,7 @@ def register_rollover_tasks(celery):
 
         # students contains all active student records (so this does not scale well as the number of users goes up);
         # we want to process these to attach submitters/selectors, bearing in mind that some submitter
-        # records will have been generated from conversion of selector records via convert_selectors
+        # records will have been generated from conversion of selector records via convert_selector
         # TODO: probably want to do this in a more intelligent way!
         students = db.session.query(StudentData) \
             .join(User, User.id == StudentData.id) \
@@ -251,7 +251,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', meta='Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 20, 'Converting selector records into submitter records...',
@@ -266,7 +266,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', meta='Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 30, 'Attaching new student records...', autocommit=True)
@@ -280,7 +280,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', meta='Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 40, 'Retiring current student records...', autocommit=True)
@@ -294,7 +294,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', meta='Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 50, 'Checking for faculty re-enrolments...', autocommit=True)
@@ -308,7 +308,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', meta='Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 60, 'Performing routine maintenance...', autocommit=True)
@@ -322,7 +322,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', meta='Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 70, 'Reset project description lifecycles...', autocommit=True)
@@ -336,7 +336,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', meta='Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 80, 'Remove unused confirmation requests...', autocommit=True)
@@ -350,7 +350,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', meta='Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.SUCCESS, 100, 'Rollover complete', autocommit=False)
@@ -363,7 +363,7 @@ def register_rollover_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state('FAILURE', 'Could not load new ProjectClassConfig')
+            self.update_state('FAILURE', meta='Could not load new ProjectClassConfig')
             return
 
         self.update_state(state='SUCCESS')
@@ -832,7 +832,7 @@ def register_rollover_tasks(celery):
         if academic_year is None:
             msg = 'Could not compute academic year (new_config_id={nid}, old_config_id={oid}, sid={sid}, ' \
                   'current_year={cyr}'.format(nid=new_config_id, oid=old_config_id, sid=sid, cyr=current_year)
-            self.update_state('FAILURE', msg)
+            self.update_state('FAILURE', meta=msg)
             print(msg)
             raise Ignore()
 
@@ -1047,7 +1047,7 @@ def register_rollover_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', 'Could not load ProjectDescription')
+            self.update_state('FAILURE', meta='Could not load ProjectDescription')
             return new_config_id
 
         # mark description as not confirmed
@@ -1097,7 +1097,7 @@ def register_rollover_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', 'Could not not ConfirmRequest')
+            self.update_state('FAILURE', meta='Could not not ConfirmRequest')
             return new_config_id
 
         db.session.delete(record)

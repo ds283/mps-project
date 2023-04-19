@@ -11153,7 +11153,7 @@ class EmailLog(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # list of recipients of this email
-    recipients = db.relationship('User', secondary=recipient_list,
+    recipients = db.relationship('User', secondary=recipient_list, lazy='dynamic',
                                  backref=db.backref('received_emails', lazy='dynamic'))
 
     # date of sending attempt

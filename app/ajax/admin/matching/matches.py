@@ -352,6 +352,11 @@ _menu = \
                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.publish_matching_supervisors', id=m.id) }}">
                         <i class="fas fa-mail-bulk fa-fw"></i> {% if m.selected %}Final{% else %}Draft{% endif %} email to supervisors
                     </a>
+                    {% if config is not none and config.select_in_previous_cycle %}
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.populate_selectors_from_match', match_id=m.id, config_id=config.id) }}">
+                            <i class="fas fa-wrench fa-fw"></i> Populate selectors
+                        </a>
+                    {% endif %}
                 {% endif %}
             {% endif %}            
         {% endif %}        
@@ -407,9 +412,10 @@ _name = \
 """
 
 
-def matches_data(matches, text=None, url=None, is_root=False):
+def matches_data(matches, config=None, text=None, url=None, is_root=False):
     """
     Build AJAX JSON payload
+    :param pclass:
     :param matches:
     :return:
     """
@@ -424,6 +430,6 @@ def matches_data(matches, text=None, url=None, is_root=False):
              },
              'info': render_template_string(_info, m=m),
              'menu': render_template_string(_menu, m=m, text=text, url=url, compare=allow_compare,
-                                            is_root=is_root)} for m in matches]
+                                            is_root=is_root, config=config)} for m in matches]
 
     return jsonify(data)

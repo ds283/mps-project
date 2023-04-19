@@ -5673,6 +5673,12 @@ def publish_matching_selectors(id):
               'It cannot be shared by email.'.format(name=record.name), 'info')
         return redirect(redirect_url())
 
+    if not record.published:
+        flash('Match "{name}" cannot be advertised to selecrors because it has not yet been '
+              'published to the module convenor. Please publish the match before attempting to distribute '
+              'notifications.'.format(name=record.name), 'info')
+        return redirect(redirect_url())
+
     task_id = register_task('Send matching to selectors', owner=current_user,
                             description='Email details of match "{name}" to submitters'.format(name=record.name))
 
@@ -5710,6 +5716,12 @@ def publish_matching_supervisors(id):
     if not record.solution_usable:
         flash('Match "{name}" did not yield an optimal solution and is not available for use. '
               'It cannot be shared by email.'.format(name=record.name), 'info')
+        return redirect(redirect_url())
+
+    if not record.published:
+        flash('Match "{name}" cannot be advertised to supervisors because it has not yet been '
+              'published to the module convenor. Please publish the match before attempting to distribute '
+              'notifications.'.format(name=record.name), 'info')
         return redirect(redirect_url())
 
     task_id = register_task('Send matching to supervisors', owner=current_user,
@@ -5824,7 +5836,7 @@ def select_match(id):
 
     if not record.solution_usable:
         flash('Match "{name}" did not yield an optimal solution '
-              'and is not available for use during rollover.'.format(name=record.name), 'info')
+              'and is not available for use.'.format(name=record.name), 'info')
         return redirect(redirect_url())
 
     if not record.is_valid and not force:
@@ -5890,11 +5902,64 @@ def deselect_match(id):
 
     if not record.solution_usable:
         flash('Match "{name}" did not yield an optimal solution '
-              'and is not available for use during rollover.'.format(name=record.name), 'info')
+              'and is not available for use.'.format(name=record.name), 'info')
         return redirect(redirect_url())
 
     record.selected = False
     db.session.commit()
+
+    return redirect(redirect_url())
+
+
+@admin.route('/populate_selectors_from_match/<int:match_id>/<int:config_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def populate_selectors_from_match(match_id, config_id):
+    record: MatchingRecord = MatchingRecord.query.get_or_404(match_id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(config_id)
+
+    if not validate_match_inspector(record):
+        return redirect(redirect_url())
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" cannot be used to populate selector records because it belongs to a '
+              'previous year'.format(name=record.name), 'info')
+        return redirect(redirect_url())
+
+    if config.year != record.year:
+        flash('Match "{match_name}" cannot be used to populate selector records for project type "{pcl_name}", '
+              'year = {config_year} because this configuration belongs to a previous '
+              'year'.format(match_name=record.name, pcl_name=config.name, config_year=config.year))
+        return redirect(redirect_url())
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Match "{name}" is not yet available for use because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Match "{name}" is not yet available for use because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return redirect(redirect_url())
+
+    if not record.solution_usable:
+        flash('Match "{name}" did not yield an optimal solution '
+              'and is not available for use.'.format(name=record.name), 'info')
+        return redirect(redirect_url())
+
+    if not record.published:
+        flash('Match "{name}" cannot be used to populate selector records because it has not yet been '
+              'published to the module convenor. Please publish the match before attempting to generate '
+              'selectors.'.format(name=record.name), 'info')
+        return redirect(redirect_url())
+
+    task_id = register_task('Populate selectors from match', owner=current_user,
+                            description='Populate selector records for project "{pcl}" in the current submission cycle '
+                                        'from match "{name}"'.format(pcl=config.name, name=record.name))
+
+    celery = current_app.extensions['celery']
+    task = celery.tasks['app.tasks.matching.populate_selectors']
+
+    task.apply_async(args=(match_id, config_id, current_user.id, task_id), task_id=task_id)
 
     return redirect(redirect_url())
 

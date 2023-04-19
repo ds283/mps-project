@@ -78,7 +78,7 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def build_backup_paths(self, tag):
-        self.update_state(state='STARTED', meta='Preparing backup')
+        self.update_state(state='STARTED', meta={'msg': 'Preparing backup'})
 
         # get name of backup folder
         backup_folder = current_app.config['BACKUP_FOLDER']
@@ -134,7 +134,7 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def backup_database(self, paths):
-        self.update_state(state='STARTED', meta='Performing database backup')
+        self.update_state(state='STARTED', meta={'msg': 'Performing database backup'})
 
         # get database details from configuraiton
         root_password = current_app.config['DATABASE_ROOT_PASSWORD']
@@ -157,7 +157,7 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def make_backup_archive(self, paths):
-        self.update_state(state='STARTED', meta='Compressing database backup')
+        self.update_state(state='STARTED', meta={'msg': 'Compressing database backup'})
 
         temp_SQL_file, backup_folder, backup_abspath, backup_relpath = paths
 
@@ -177,26 +177,26 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def insert_backup_record(self, paths, owner_id, type, description):
-        self.update_state(state='STARTED', meta='Writing backup receipts')
+        self.update_state(state='STARTED', meta={'msg': 'Writing backup receipts'})
 
         temp_SQL_file, backup_folder, backup_abspath, backup_relpath = paths
 
         if path.exists(temp_SQL_file) and path.isfile(temp_SQL_file):
             db_size = path.getsize(temp_SQL_file)
         else:
-            self.update_state(state='FAILED', meta='Missing database backup file')
+            self.update_state(state='FAILED', meta={'msg': 'Missing database backup file'})
             raise Ignore()
 
         if path.exists(backup_abspath) and path.isfile(backup_abspath):
             archive_size = path.getsize(backup_abspath)
         else:
-            self.update_state(state='FAILED', meta='Missing compressed website archive')
+            self.update_state(state='FAILED', meta={'msg': 'Missing compressed website archive'})
             raise Ignore()
 
         if path.exists(backup_folder) and path.isdir(backup_folder):
             backup_size = _count_dir_size(backup_folder)
         else:
-            self.update_state(state='FAILED', meta='Backup folder is not a directory')
+            self.update_state(state='FAILED', meta={'msg': 'Backup folder is not a directory'})
             raise Ignore()
 
         # store details
@@ -228,8 +228,8 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def thin_bin(self, period: int, unit: str, input_bin: List[Tuple[int, str]]):
-        self.update_state(state='STARTED', meta='Thinning backup bin for '
-                                                '{period} {unit}'.format(period=period, unit=unit))
+        self.update_state(state='STARTED', meta={'msg': 'Thinning backup bin for '
+                                                 '{period} {unit}'.format(period=period, unit=unit)})
 
         # sort records from the bin into order, then retain the oldest record.
         # This means that re-running the thinning task is idempotent and stable under small changes in binning.
@@ -251,7 +251,7 @@ def register_backup_tasks(celery):
                 success, msg = remove_backup(drop_id)
 
                 if not success:
-                    self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
+                    self.update_state(state='FAILED', meta={'msg': 'Delete failed: {msg}'.format(msg=msg)})
                     raise self.retry()
 
             except SQLAlchemyError as e:
@@ -268,7 +268,7 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def do_thinning(self):
-        self.update_state(state='STARTED', meta='Building list of backups to be thinned')
+        self.update_state(state='STARTED', meta={'msg': 'Building list of backups to be thinned'})
 
         keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
 
@@ -334,7 +334,7 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def issue_thinning_result(self, thinning_result, timestamp_str: str, email: str):
-        self.update_state(state='STARTED', meta='Issue backup thinning report to {r}'.format(r=email))
+        self.update_state(state='STARTED', meta={'msg': 'Issue backup thinning report to {r}'.format(r=email)})
 
         # order thinning_result by bins
         def sort_comparator(a, b):
@@ -376,7 +376,7 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def drop_absent_backups(self):
-        self.update_state(state='STARTED', meta='Building list of backups')
+        self.update_state(state='STARTED', meta={'msg': 'Building list of backups'})
 
         # query database for backup records, and queue a retry if it fails
         try:
@@ -392,7 +392,7 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def drop_backup_if_absent(self, id):
-        self.update_state(state='STARTED', meta='Testing whether backup is available')
+        self.update_state(state='STARTED', meta={'msg': 'Testing whether backup is available'})
 
         # query database for backup records, and queue a retry if it fails
         try:
@@ -402,7 +402,7 @@ def register_backup_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Database record could not be loaded')
+            self.update_state(state='FAILURE', meta={'msg': 'Database record could not be loaded'})
             raise self.retry()
 
         backup_folder = current_app.config['BACKUP_FOLDER']
@@ -433,7 +433,7 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def apply_size_limit(self):
-        self.update_state(state='STARTED', meta='Enforcing limit of maximum size of backup folder')
+        self.update_state(state='STARTED', meta={'msg': 'Enforcing limit of maximum size of backup folder'})
 
         keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
 
@@ -476,11 +476,11 @@ def register_backup_tasks(celery):
                     print('apply_size_limit: failed to remove backup {timestamp} '
                           '("{desc}")'.format(timestamp=oldest_backup.timestamp,
                                               desc=oldest_backup.description))
-                    self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
+                    self.update_state(state='FAILED', meta={'msg': 'Delete failed: {msg}'.format(msg=msg)})
                     raise self.retry()
 
             else:
-                self.update_state(state='FAILED', meta='Database record for oldest backup could not be loaded')
+                self.update_state(state='FAILED', meta={'msg': 'Database record for oldest backup could not be loaded'})
                 raise self.retry()
 
             # update cached values
@@ -509,7 +509,7 @@ def register_backup_tasks(celery):
         :param previous_result: Not used, just a placeholder because this item always appears in a chain of tasks
         :return:
         """
-        self.update_state(state='STARTED', meta='Cleaning up backup folder')
+        self.update_state(state='STARTED', meta={'msg': 'Cleaning up backup folder'})
 
         backup_path = current_app.config['BACKUP_FOLDER']
         _prune_empty_folders(backup_path)
@@ -538,9 +538,9 @@ def register_backup_tasks(celery):
             success, msg = remove_backup(id)
 
             if not success:
-                self.update_state(state='FAILED', meta='Prune failed: {msg}'.format(msg=msg))
+                self.update_state(state='FAILED', meta={'msg': 'Prune failed: {msg}'.format(msg=msg)})
             else:
-                self.update_state(state='SUCCESS', meta='Prune backup succeeded')
+                self.update_state(state='SUCCESS', meta={'msg': 'Prune backup succeeded'})
 
 
     @celery.task(bind=True)
@@ -560,6 +560,6 @@ def register_backup_tasks(celery):
             raise self.retry()
 
         if not success:
-            self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
+            self.update_state(state='FAILED', meta={'msg': 'Delete failed: {msg}'.format(msg=msg)})
         else:
-            self.update_state(state='SUCCESS', meta='Delete backup succeeded')
+            self.update_state(state='SUCCESS', meta={'msg': 'Delete backup succeeded'})

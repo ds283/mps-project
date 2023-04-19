@@ -23,7 +23,7 @@ from ..models import LiveProject, ProjectClass, ProjectClassConfig, PopularityRe
 
 def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
     self.update_state(state='STARTED',
-                      meta='Looking up current project class configuration for id={id}'.format(id=cid))
+                      meta={'msg': 'Looking up current project class configuration for id={id}'.format(id=cid)})
 
     try:
         # get most recent configuration record for this project class
@@ -34,8 +34,8 @@ def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
         raise self.retry()
 
     self.update_state(state='STARTED',
-                      meta='Update {type} ranking for project class "{name}"'.format(type=rank_type,
-                                                                                     name=config.name))
+                      meta={'msg': 'Update {type} ranking for project class "{name}"'.format(type=rank_type,
+                                                                                             name=config.name)})
 
     lowest_rank = None
 
@@ -88,7 +88,7 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def compute_popularity_data(self, liveid, datestamp, uuid, num_live):
-        self.update_state(state='STARTED', meta='Computing popularity score')
+        self.update_state(state='STARTED', meta={'msg': 'Computing popularity score'})
 
         try:
             data = db.session.query(LiveProject).filter_by(id=liveid).one()
@@ -145,7 +145,7 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def store_lowest_popularity_score_rank(self, lowest_rank, cid, uuid, num_live):
-        self.update_state(state='STARTED', meta='Storing lowest-rank for popularity score')
+        self.update_state(state='STARTED', meta={'msg': 'Storing lowest-rank for popularity score'})
 
         query = db.session.query(PopularityRecord).filter_by(uuid=uuid, config_id=cid)
 
@@ -225,7 +225,7 @@ def register_popularity_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def update_project_popularity_data(self, pid):
         self.update_state(state='STARTED',
-                          meta='Looking up current project class configuration for id={id}'.format(id=pid))
+                          meta={'msg': 'Looking up current project class configuration for id={id}'.format(id=pid)})
 
         try:
             # get most recent configuration record for this project class
@@ -236,7 +236,7 @@ def register_popularity_tasks(celery):
             raise self.retry()
 
         self.update_state(state='STARTED',
-                          meta='Update popularity data for project class "{name}"'.format(name=config.name))
+                          meta={'msg': 'Update popularity data for project class "{name}"'.format(name=config.name)})
 
         # set up group of tasks to update popularity score of each LiveProject on this configuration
         # only need to work with projects that are open for student selections
@@ -263,7 +263,7 @@ def register_popularity_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def update_popularity_data(self):
 
-        self.update_state(state='STARTED', meta='Update popularity data')
+        self.update_state(state='STARTED', meta={'msg': 'Update popularity data'})
 
         try:
             pclass_ids = db.session.query(ProjectClass.id).filter_by(active=True).all()
@@ -278,8 +278,8 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def thin_bin(self, period: int, unit: str, input_bin: List[Tuple[int, str]]):
-        self.update_state(state='STARTED', meta='Thinning popularity record bin for '
-                                                '{period} {unit}'.format(period=period, unit=unit))
+        self.update_state(state='STARTED', meta={'msg': 'Thinning popularity record bin for '
+                                                 '{period} {unit}'.format(period=period, unit=unit)})
 
         # sort records from the bin into order, then retain the record with the highest score
         # This means that re-running the thinning task is idempotent and stable under small changes in binning.
@@ -331,7 +331,7 @@ def register_popularity_tasks(celery):
     def thin_popularity_data(self, liveid):
 
         self.update_state(state='STARTED',
-                          meta='Building list of popularity records for LiveProject id={id}'.format(id=liveid))
+                          meta={'msg': 'Building list of popularity records for LiveProject id={id}'.format(id=liveid)})
 
         try:
             liveproject: LiveProject = db.session.query(LiveProject).filter_by(id=liveid).first()
@@ -398,7 +398,7 @@ def register_popularity_tasks(celery):
     def thin_project_popularity_data(self, pid):
 
         self.update_state(state='STARTED',
-                          meta='Looking up current project class configuration for id={id}'.format(id=pid))
+                          meta={'msg': 'Looking up current project class configuration for id={id}'.format(id=pid)})
 
         try:
             # get most recent configuration record for this project class
@@ -410,8 +410,7 @@ def register_popularity_tasks(celery):
             raise self.retry()
 
         self.update_state(state='STARTED',
-                          meta='Thin out popularity data for project class "{name}"'.format(
-                              name=config.name))
+                          meta={'msg': 'Thin out popularity data for project class "{name}"'.format(name=config.name)})
 
         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
 
@@ -424,7 +423,7 @@ def register_popularity_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def thin(self):
 
-        self.update_state(state='STARTED', meta='Thin out popularity data')
+        self.update_state(state='STARTED', meta={'msg': 'Thin out popularity data'})
 
         try:
             pclass_ids = db.session.query(ProjectClass.id).filter_by(active=True).all()

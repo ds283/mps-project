@@ -248,13 +248,13 @@ def register_process_report_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load SubmissionRecord instance from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load SubmissionRecord instance from database'})
             raise Ignore()
 
         asset: SubmittedAsset = record.report
 
         if asset is None:
-            self.update_state('FAILURE,', meta='A report has not been uploaded')
+            self.update_state('FAILURE,', meta={'msg': 'A report has not been uploaded'})
             raise Ignore()
 
         # get pathname for
@@ -327,7 +327,7 @@ def register_process_report_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load SubmissionRecord instance from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load SubmissionRecord instance from database'})
             raise Ignore()
 
         record.celery_finished = True
@@ -353,11 +353,11 @@ def register_process_report_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load SubmissionRecord instance from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load SubmissionRecord instance from database'})
             raise Ignore()
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load User model from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load User model from database'})
             raise Ignore()
 
         user.post_message('Errors occurred when processing uploaded report for submitter '

@@ -33,7 +33,7 @@ def register_matching_email_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise self.retry()
 
         progress_update(task_id, TaskRecord.RUNNING, 10, "Building list of student selectors...", autocommit=True)
@@ -60,7 +60,7 @@ def register_matching_email_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise self.retry()
 
         progress_update(task_id, TaskRecord.SUCCESS, 100, "Notification emails to selectors complete", autocommit=False)
@@ -96,11 +96,11 @@ def register_matching_email_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise self.retry()
 
         if len(matches) == 0:
-            self.update_state('FAILURE', meta='Could not load MatchingRecord record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load MatchingRecord record from database'})
             raise self.retry()
 
         user: User = matches[0].selector.student.user
@@ -152,7 +152,7 @@ def register_matching_email_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise self.retry()
 
         progress_update(task_id, TaskRecord.RUNNING, 10, "Building list of project supervisors...", autocommit=True)
@@ -179,7 +179,7 @@ def register_matching_email_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise self.retry()
 
         progress_update(task_id, TaskRecord.SUCCESS, 100, "Notification emails to faculty complete", autocommit=False)
@@ -213,11 +213,11 @@ def register_matching_email_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise self.retry()
 
         if fac is None:
-            self.update_state('FAILURE', meta='Could not load FacultyData record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load FacultyData record from database'})
             raise self.retry()
 
         user: User = fac.user

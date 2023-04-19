@@ -45,7 +45,7 @@ def register_services_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not load database records'})
             raise KeyError("User record corresponding to distribution list id={num} "
                            "is missing".format(num=user_id))
 
@@ -135,7 +135,7 @@ def register_services_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not load database records'})
             raise Ignore()
 
         record.post_message('Email with subject "{subj}" successfully sent to all recipients'.format(subj=subject),
@@ -153,7 +153,7 @@ def register_services_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not load database records'})
             raise Ignore()
 
         record.post_message('An error occurred and your email with subject "{subj}" was not sent '

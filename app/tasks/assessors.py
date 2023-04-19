@@ -23,7 +23,7 @@ def register_assessor_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def projects(self, enroll_id, pclass_id, user_id):
-        self.update_state(state='STARTED', meta='Looking for database records')
+        self.update_state(state='STARTED', meta={'msg': 'Looking for database records'})
 
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
@@ -32,7 +32,7 @@ def register_assessor_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load EnrollmentRecord record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load EnrollmentRecord record from database'})
             raise Ignore()
 
         try:
@@ -42,7 +42,7 @@ def register_assessor_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load User record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load User record from database'})
             raise Ignore()
 
         faculty = record.owner
@@ -79,7 +79,7 @@ def register_assessor_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def live_projects(self, enroll_id, pclass_id, current_year, user_id):
-        self.update_state(state='STARTED', meta='Looking for database records')
+        self.update_state(state='STARTED', meta={'msg': 'Looking for database records'})
 
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
@@ -88,7 +88,7 @@ def register_assessor_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load EnrollmentRecord record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load EnrollmentRecord record from database'})
             raise Ignore()
 
         try:
@@ -98,7 +98,7 @@ def register_assessor_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load User record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load User record from database'})
             raise Ignore()
 
         faculty = record.owner

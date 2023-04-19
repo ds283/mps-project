@@ -918,7 +918,7 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
                                 autocommit=True)
                 user.post_message('Failed to populate markers because LiveProject "{name}" has no active '
                                   'assessors.'.format(name=sub.project.name), 'error', autocommit=True)
-                self.update_state('FAILURE', meta='LiveProject did not have active assessors')
+                self.update_state('FAILURE', meta={'msg': 'LiveProject did not have active assessors'})
                 raise Ignore()
 
             for marker in assessors:
@@ -2479,7 +2479,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def create_match(self, id):
         self.update_state(state='STARTED',
-                          meta='Looking up MatchingAttempt record for id={id}'.format(id=id))
+                          meta={'msg': 'Looking up MatchingAttempt record for id={id}'.format(id=id)})
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
@@ -2488,7 +2488,7 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise Ignore()
 
         with Timer() as create_time:
@@ -2526,7 +2526,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def offline_match(self, matching_id, user_id):
         self.update_state(state='STARTED',
-                          meta='Looking up MatchingAttempt record for id={id}'.format(id=matching_id))
+                          meta={'msg': 'Looking up MatchingAttempt record for id={id}'.format(id=matching_id)})
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -2536,11 +2536,11 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load owning User record')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load owning User record'})
             raise Ignore()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise Ignore()
 
         with Timer() as create_time:
@@ -2599,7 +2599,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def process_offline_solution(self, matching_id, asset_id, user_id):
         self.update_state(state='STARTED',
-                          meta='Looking up TemporaryAsset record for id={id}'.format(id=asset_id))
+                          meta={'msg': 'Looking up TemporaryAsset record for id={id}'.format(id=asset_id)})
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -2610,15 +2610,15 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load owning User record')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load owning User record'})
             raise Ignore()
 
         if asset is None:
-            self.update_state(state='FAILURE', meta='Could not load TemporaryAsset record')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load TemporaryAsset record'})
             raise Ignore()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise Ignore()
 
         with Timer() as create_time:
@@ -2657,7 +2657,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def populate_markers(self, config_id, user_id, task_id):
         self.update_state(state='STARTED',
-                          meta='Looking up ProjectClassConfig record for id={id}'.format(id=config_id))
+                          meta={'msg': 'Looking up ProjectClassConfig record for id={id}'.format(id=config_id)})
 
         try:
             config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
@@ -2667,11 +2667,11 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(state='FAILURE', meta='Could not load ProjectClassConfig record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load ProjectClassConfig record from database'})
             raise Ignore()
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load User record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load User record from database'})
             raise Ignore()
 
         with Timer() as create_time:
@@ -2691,7 +2691,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def remove_markers(self, config_id, user_id, task_id):
         self.update_state(state='STARTED',
-                          meta='Looking up ProjectClassConfig record for id={id}'.format(id=config_id))
+                          meta={'msg': 'Looking up ProjectClassConfig record for id={id}'.format(id=config_id)})
 
         try:
             config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
@@ -2701,11 +2701,11 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(state='FAILURE', meta='Could not load ProjectClassConfig record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load ProjectClassConfig record from database'})
             raise Ignore()
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load User record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load User record from database'})
             raise Ignore()
 
         progress_update(task_id, TaskRecord.RUNNING, 20, "Sorting SubmittingStudent records...",
@@ -2738,7 +2738,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def revert_record(self, id):
         self.update_state(state='STARTED',
-                          meta='Looking up MatchingRecord record for id={id}'.format(id=id))
+                          meta={'msg': 'Looking up MatchingRecord record for id={id}'.format(id=id)})
 
         try:
             record = db.session.query(MatchingRecord).filter_by(id=id).first()
@@ -2747,7 +2747,7 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load MatchingRecord record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingRecord record from database'})
             raise Ignore()
 
         try:
@@ -2767,7 +2767,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def revert_finalize(self, id):
         self.update_state(state='STARTED',
-                          meta='Looking up MatchingAttempt record for id={id}'.format(id=id))
+                          meta={'msg': 'Looking up MatchingAttempt record for id={id}'.format(id=id)})
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
@@ -2776,7 +2776,7 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise Ignore
 
         try:
@@ -2795,7 +2795,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def revert(self, id):
         self.update_state(state='STARTED',
-                          meta='Looking up MatchingAttempt record for id={id}'.format(id=id))
+                          meta={'msg': 'Looking up MatchingAttempt record for id={id}'.format(id=id)})
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
@@ -2804,7 +2804,7 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise Ignore
 
         wg = group(revert_record.si(r.id) for r in record.records.all())
@@ -2816,7 +2816,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def duplicate(self, id, new_name, current_id):
         self.update_state(state='STARTED',
-                          meta='Looking up MatchingAttempt record for id={id}'.format(id=id))
+                          meta={'msg': 'Looking up MatchingAttempt record for id={id}'.format(id=id)})
 
         try:
             record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).first()
@@ -2825,7 +2825,7 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise Ignore
 
         # encapsulate the whole duplication process in a single transaction, so the process is as close to
@@ -2950,7 +2950,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def populate_submitters(self, match_id, config_id, user_id, task_id):
         self.update_status(state='STARTED',
-                           meta='Looking up database configuration records')
+                           meta={'msg': 'Looking up database configuration records'})
 
         progress_update(task_id, TaskRecord.RUNNING, 5, "Loading database records...", autocommit=True)
 
@@ -2963,19 +2963,19 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load owning User record')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load owning User record'})
             user.post_message('Populate selectors task failed due to a database error. '
                               'Please contact a system administrator.', 'error', autocommit=True)
             raise Ignore()
 
         if config is None:
-            self.update_state(state='FAILURE', meta='Could not load ProjectClassConfig record')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load ProjectClassConfig record'})
             user.post_message('Populate selectors task failed due to a database error. '
                               'Please contact a system administrator.', 'error', autocommit=True)
             raise Ignore()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             user.post_message('Populate selectors task failed due to a database error. '
                               'Please contact a system administrator.', 'error', autocommit=True)
             raise Ignore()
@@ -2985,7 +2985,7 @@ def register_matching_tasks(celery):
         year = get_current_year()
 
         if record.year != year:
-            self.update_state(state='FAILURE', meta='MatchingAttempt is not for current year')
+            self.update_state(state='FAILURE', meta={'msg': 'MatchingAttempt is not for current year'})
             progress_update(task_id, TaskRecord.FAILURE, 100, "Match is not for the current year", autocommit=False)
             user.post_message('Submitters could not be populated because the selected matching is not for the '
                               'current academic year (current year={cyr}, '
@@ -2993,8 +2993,8 @@ def register_matching_tasks(celery):
             raise Ignore()
 
         if config.year != record.year:
-            self.update_state(state='FAILURE', meta='ProjectClassConfig does not belong to same year as '
-                                                    'MatchingAttempt')
+            self.update_state(state='FAILURE', meta={'msg': 'ProjectClassConfig does not belong to same year as '
+                                                     'MatchingAttempt'})
             progress_update(task_id, TaskRecord.FAILURE, 100, "Project configuration and matching were for different "
                                                               "years", autocommit=False)
             user.post_message('Submitters could not be populated because the selected matching does not belong '
@@ -3014,13 +3014,13 @@ def register_matching_tasks(celery):
 
         if not record.finished:
             if record.awaiting_upload:
-                self.update_state(state='FAILURE', meta='MatchingAttempt still awaiting manual upload')
+                self.update_state(state='FAILURE', meta={'msg': 'MatchingAttempt still awaiting manual upload'})
                 progress_update(task_id, TaskRecord.FAILURE, 100, "Match is still awaiting manual upload",
                                 autocommit=False)
                 user.post_message('Submitters could not be populated because the selecting matching is still '
                                   'awaiting manual upload of a solution.', 'error', autocommit=True)
             else:
-                self.update_state(state='FAILURE', meta='Matching optimization has not yet terminated')
+                self.update_state(state='FAILURE', meta={'msg': 'Matching optimization has not yet terminated'})
                 progress_update(task_id, TaskRecord.FAILURE, 100, "Matching optimization has not yet terminated",
                                 autocommit=False)
                 user.post_message('Submitters could not be populated because the matching optimization has '
@@ -3028,14 +3028,14 @@ def register_matching_tasks(celery):
             raise Ignore()
 
         if not record.solution_usable:
-            self.update_state(state='FAILURE', meta='MatchingAttempt solution is not usable')
+            self.update_state(state='FAILURE', meta={'msg': 'MatchingAttempt solution is not usable'})
             progress_update(task_id, TaskRecord.FAILURE, 100, "Matching solution is not usable", autocommit=False)
             user.post_message('Submitters could not be populated because the selecting matching solution is '
                               'not usable.', 'error', autocommit=True)
             raise Ignore()
 
         if not record.published:
-            self.update_state(state='FAILURE', meta='MatchingAttempt has not been published')
+            self.update_state(state='FAILURE', meta={'msg': 'MatchingAttempt has not been published'})
             progress_update(task_id, TaskRecord.FAILURE, 100, "Matching has not yet been published to convenors",
                             autocommit=True)
             user.post_message('Submitters could not be populated because the selecting matching has not yet '
@@ -3076,7 +3076,7 @@ def register_matching_tasks(celery):
     def convert_record_to_submitter(self, match_id, config_id, user_id, data_id):
         # read database records
         self.update_status(state='STARTED',
-                           meta='Looking up database configuration records')
+                           meta={'msg': 'Looking up database configuration records'})
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
@@ -3088,17 +3088,17 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load owning User record')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load owning User record'})
             raise Ignore()
 
         if config is None:
-            self.update_state(state='FAILURE', meta='Could not load ProjectClassConfig record')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load ProjectClassConfig record'})
             raise Ignore()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise Ignore()
 
         if data is None:
-            self.update_state(state='FAILURE', meta='Could not load MatchingRecord record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingRecord record from database'})
             raise Ignore()

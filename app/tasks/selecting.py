@@ -78,16 +78,16 @@ def register_selecting_tasks(celery):
             raise self.retry()
 
         if sel is None:
-            self.update_state('FAILURE', meta='Could not load SelectingStudent id={id} from database'.format(od=sel_id))
+            self.update_state('FAILURE', meta={'msg': 'Could not load SelectingStudent id={id} from database'.format(od=sel_id)})
             raise Ignore()
 
         if dest_config is None:
-            self.update_state('FAILURE', meta='Could not load ProjectClassConfig id={id} from '
-                                              'database'.format(id=dest_id))
+            self.update_state('FAILURE', meta={'msg': 'Could not load ProjectClassConfig id={id} from '
+                                               'database'.format(id=dest_id)})
             raise Ignore()
 
         if user is None:
-            self.update_date('FAILURE', meta='Could not load User id={id} from database'.format(id=user_id))
+            self.update_date('FAILURE', meta={'msg': 'Could not load User id={id} from database'.format(id=user_id)})
             raise Ignore()
 
         # # detach any matches of which this selector is a part; they won't make sense after the move

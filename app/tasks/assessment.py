@@ -24,7 +24,7 @@ def register_assessment_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def adjust_submitter(self, submitter_id, current_year):
         self.update_state(state='STARTED',
-                          meta='Looking up SubmittingStudent record for id={id}'.format(id=submitter_id))
+                          meta={'msg': 'Looking up SubmittingStudent record for id={id}'.format(id=submitter_id)})
 
         try:
             submitter = db.session.query(SubmittingStudent).filter_by(id=submitter_id).first()
@@ -33,7 +33,7 @@ def register_assessment_tasks(celery):
             raise self.retry()
 
         if submitter is None:
-            self.update_state('FAILURE', meta='Could not load SubmittingStudent record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load SubmittingStudent record from database'})
             raise Ignore()
 
         # find all assessments that are active this year and for which feedback is still open

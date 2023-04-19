@@ -38,7 +38,7 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load SubmissionPeriodRecord from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load SubmissionPeriodRecord from database'})
             raise Ignore()
 
         print('-- Send marking emails for project class "{proj}", submission period '
@@ -66,7 +66,7 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state('FAILURE', meta='Could not load User record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load User record from database'})
             raise Ignore()
 
         # result data should be a list of lists
@@ -114,7 +114,7 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load SubmissionRecord from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load SubmissionRecord from database'})
             raise Ignore()
 
         # nothing to do if either (1) no project assigned, or (2) no report yet uploaded, or
@@ -340,7 +340,7 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load SubmissionRecord from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load SubmissionRecord from database'})
             raise Ignore()
 
         if not test and not record.email_to_supervisor:
@@ -366,7 +366,7 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load SubmissionRecord from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load SubmissionRecord from database'})
             raise Ignore()
 
         if not test and not record.email_to_marker:

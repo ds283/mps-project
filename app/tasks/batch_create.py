@@ -420,7 +420,7 @@ def register_batch_create_tasks(celery):
             raise self.retry()
 
         if record is None or asset is None or user is None:
-            self.update_state(state='FAILURE', meta='Could not load database records')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load database records'})
 
             record.celery_finished = True
             record.success = False
@@ -588,7 +588,7 @@ def register_batch_create_tasks(celery):
             raise self.retry()
 
         if item is None:
-            self.update_state(state='FAILURE', meta='Could not load database records')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load database records'})
             return OUTCOME_FAILED
 
         if item.dont_convert:
@@ -630,7 +630,7 @@ def register_batch_create_tasks(celery):
             raise self.retry()
 
         if record is None or user is None:
-            self.update_state(state='FAILURE', meta='Could not load database records')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load database records'})
             raise Ignore()
 
         num_created = sum([1 for x in result_data if x == OUTCOME_CREATED])
@@ -665,7 +665,7 @@ def register_batch_create_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load database records')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load database records'})
             raise Ignore()
 
         user.post_message('Errors occurred during batch import', 'error', autocommit=True)
@@ -695,7 +695,7 @@ def register_batch_create_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load database records')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load database records'})
             raise Ignore()
 
         # if imported successfully and not yet converted, don't expire

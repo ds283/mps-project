@@ -69,10 +69,10 @@ def register_golive_tasks(celery):
                                       autocommit=True)
 
             if config is None:
-                self.update_state('FAILURE', meta='Could not load ProjectClassConfig record from database')
+                self.update_state('FAILURE', meta={'msg': 'Could not load ProjectClassConfig record from database'})
 
             if convenor is None:
-                self.update_state('FAILURE', meta='Could not load convenor User record from database')
+                self.update_state('FAILURE', meta={'msg': 'Could not load convenor User record from database'})
 
             raise self.replace(golive_fail.si(task_id, convenor_id))
 
@@ -86,7 +86,7 @@ def register_golive_tasks(celery):
                                   'because confirmation requests have not been '
                                   'issued.'.format(name=config.name, yra=year, yrb=year + 1),
                                   'warning', autocommit=True)
-            self.update_state('FAILURE', meta='Confirmation requests have not been issued')
+            self.update_state('FAILURE', meta={'msg': 'Confirmation requests have not been issued'})
             raise self.replace(golive_fail.si(task_id, convenor_id))
 
         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
@@ -95,7 +95,7 @@ def register_golive_tasks(celery):
                                   'received. If needed, use Force Confirm to remove any blocking '
                                   'responses.'.format(name=config.name, yra=year, yrb=year + 1),
                                   'warning', autocommit=True)
-            self.update_state('FAILURE', meta='Some Go Live confirmations are still outstanding')
+            self.update_state('FAILURE', meta={'msg': 'Some Go Live confirmations are still outstanding'})
             raise self.replace(golive_fail.si(task_id, convenor_id))
 
         pclass_id = config.pclass_id
@@ -166,7 +166,7 @@ def register_golive_tasks(celery):
                                   'check active flags and sabbatical/exemption status for all enrolled faculty.'
                                   ''.format(name=config.name, yra=year, yrb=year+1),
                                   'error', autocommit=True)
-            self.update_state('FAILURE', meta='No attached projects')
+            self.update_state('FAILURE', meta={'msg': 'No attached projects'})
             return golive_fail.apply_async(args=(task_id, convenor_id))
 
         # build group of parallel tasks to take each offerable attached project to a live counterpart
@@ -235,7 +235,7 @@ def register_golive_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state('FAILURE', meta='Could not load database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not load database records'})
             raise Ignore()
 
         # build list of faculty that are enrolled as supervisors
@@ -279,7 +279,7 @@ def register_golive_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state('FAILURE', meta='Could not load database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not load database records'})
             raise Ignore()
 
         # build list of faculty that are enrolled as supervisors
@@ -307,7 +307,7 @@ def register_golive_tasks(celery):
             raise self.retry()
 
         if user is None or config is None:
-            self.update_state('FAILURE', meta='Could not load database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not load database records'})
             raise Ignore()
 
         config.golive_notified.append(user)
@@ -336,7 +336,7 @@ def register_golive_tasks(celery):
             raise self.retry()
 
         if data is None or config is None:
-            self.update_state('FAILURE', meta='Could not load database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not load database records'})
             raise Ignore()
 
         msg = EmailMultiAlternatives(
@@ -388,7 +388,7 @@ def register_golive_tasks(celery):
             raise self.retry()
 
         if data is None or config is None:
-            self.update_state('FAILURE', meta='Could not load database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not load database records'})
             raise Ignore()
 
         msg = EmailMultiAlternatives(
@@ -520,7 +520,7 @@ def register_golive_tasks(celery):
         except KeyError as e:
             db.session.rollback()
             current_app.logger.exception("KeyError exception", exc_info=e)
-            self.update_state(state='FAILURE', meta='Database error: {msg}'.format(msg=str(e)))
+            self.update_state(state='FAILURE', meta={'msg': 'Database error: {msg}'.format(msg=str(e))})
             raise Ignore()
 
 

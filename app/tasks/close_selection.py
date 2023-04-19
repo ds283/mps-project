@@ -40,9 +40,9 @@ def register_close_selection_tasks(celery):
 
         if config is None or convenor is None:
             if config is None:
-                self.update_state('FAILURE', meta='Could not load ProjectClassConfig record from database')
+                self.update_state('FAILURE', meta={'msg': 'Could not load ProjectClassConfig record from database'})
             if convenor is None:
-                self.update_state('FAILURE', meta='Could not load convenor User record from database')
+                self.update_state('FAILURE', meta={'msg': 'Could not load convenor User record from database'})
 
             print('config: {x}'.format(x=config))
             print('convenor: {x}').format(x=convenor)

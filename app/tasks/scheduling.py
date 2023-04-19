@@ -1059,7 +1059,7 @@ def register_scheduling_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def create_schedule(self, id):
         self.update_state(state='STARTED',
-                          meta='Looking up ScheduleAttempt record for id={id}'.format(id=id))
+                          meta={'msg': 'Looking up ScheduleAttempt record for id={id}'.format(id=id)})
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
@@ -1068,7 +1068,7 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load ScheduleAttempt record from database'})
             raise Ignore()
 
         _create_slots(self, record)
@@ -1100,8 +1100,8 @@ def register_scheduling_tasks(celery):
             allow_new_slots = strtobool(allow_new_slots)
 
         self.update_state(state='STARTED',
-                          meta='Looking up ScheduleAttempt records for new_id={new_id}, '
-                               'old_id={old_id}'.format(new_id=new_id, old_id=old_id))
+                          meta={'msg': 'Looking up ScheduleAttempt records for new_id={new_id}, '
+                                'old_id={old_id}'}.format(new_id=new_id, old_id=old_id))
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=new_id).first()
@@ -1111,7 +1111,7 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None or old_record is None:
-            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load ScheduleAttempt record from database'})
             raise Ignore()
 
         _create_slots(self, record)
@@ -1148,7 +1148,7 @@ def register_scheduling_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def offline_schedule(self, schedule_id, user_id):
         self.update_state(state='STARTED',
-                          meta='Looking up ScheduleAttempt record for id={id}'.format(id=schedule_id))
+                          meta={'msg': 'Looking up ScheduleAttempt record for id={id}'.format(id=schedule_id)})
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -1158,11 +1158,11 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load owning User record')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load owning User record'})
             raise Ignore()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load ScheduleAttempt record from database'})
             raise Ignore()
 
         _create_slots(self, record)
@@ -1212,7 +1212,7 @@ def register_scheduling_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def process_offline_solution(self, schedule_id, asset_id, user_id):
         self.update_state(state='STARTED',
-                          meta='Looking up TemporaryAsset record for id={id}'.format(id=asset_id))
+                          meta={'msg': 'Looking up TemporaryAsset record for id={id}'.format(id=asset_id)})
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -1223,15 +1223,15 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load owning User record')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load owning User record'})
             raise Ignore()
 
         if asset is None:
-            self.update_state(state='FAILURE', meta='Could not load TemporaryAsset record')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load TemporaryAsset record'})
             raise Ignore()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load ScheduleAttempt record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load ScheduleAttempt record from database'})
             raise Ignore()
 
         with Timer() as create_time:
@@ -1262,7 +1262,7 @@ def register_scheduling_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def revert_record(self, id):
         self.update_state(state='STARTED',
-                          meta='Looking up ScheduleSlot record for id={id}'.format(id=id))
+                          meta={'msg': 'Looking up ScheduleSlot record for id={id}'.format(id=id)})
 
         try:
             record = db.session.query(ScheduleSlot).filter_by(id=id).first()
@@ -1271,7 +1271,7 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load ScheduleSlot record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load ScheduleSlot record from database'})
             raise Ignore
 
         try:
@@ -1290,7 +1290,7 @@ def register_scheduling_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def revert_finalize(self, id):
         self.update_state(state='STARTED',
-                          meta='Looking up ScheduleAttempt record for id={id}'.format(id=id))
+                          meta={'msg': 'Looking up ScheduleAttempt record for id={id}'.format(id=id)})
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
@@ -1299,7 +1299,7 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise Ignore
 
         try:
@@ -1318,7 +1318,7 @@ def register_scheduling_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def revert(self, id):
         self.update_state(state='STARTED',
-                          meta='Looking up ScheduleAttempt record for id={id}'.format(id=id))
+                          meta={'msg': 'Looking up ScheduleAttempt record for id={id}'.format(id=id)})
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
@@ -1327,7 +1327,7 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise Ignore
 
         wg = group(revert_record.si(s.id) for s in record.slots.all())
@@ -1339,7 +1339,7 @@ def register_scheduling_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def duplicate(self, id, new_name, current_id):
         self.update_state(state='STARTED',
-                          meta='Looking up ScheduleAttempt record for id={id}'.format(id=id))
+                          meta={'msg': 'Looking up ScheduleAttempt record for id={id}'.format(id=id)})
 
         try:
             record: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(id=id).first()
@@ -1348,7 +1348,7 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             return
 
         try:
@@ -1465,7 +1465,7 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load ScheduleAttempt record from database'})
             raise self.retry()
 
         progress_update(task_id, TaskRecord.RUNNING, 10, "Building list of student submitters...", autocommit=True)
@@ -1514,11 +1514,11 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load ScheduleAttempt record from database'})
             raise self.retry()
 
         if attend_data is None:
-            self.update_state('FAILURE', meta='Could not load SubmitterAttendanceData record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load SubmitterAttendanceData record from database'})
             raise self.retry()
 
         sub_record = attend_data.submitter
@@ -1559,7 +1559,7 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load ScheduleAttempt record from database'})
             raise self.retry()
 
         notify = celery.tasks['app.tasks.utilities.email_notification']
@@ -1603,11 +1603,11 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load ScheduleAttempt record from database'})
             raise self.retry()
 
         if attend_data is None:
-            self.update_state('FAILURE', meta='Could not load AssessorAttendanceData record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load AssessorAttendanceData record from database'})
             raise self.retry()
 
         faculty = attend_data.faculty

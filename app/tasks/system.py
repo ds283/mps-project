@@ -95,7 +95,7 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not read database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
             raise Ignore()
 
         record.finished = True
@@ -121,7 +121,7 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not read database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
             raise Ignore()
 
         record.finished = True
@@ -147,7 +147,7 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not read database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
             raise Ignore()
 
         record.celery_finished = True
@@ -172,7 +172,7 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state('FAILURE', meta='Could not read database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
             raise Ignore()
 
         try:
@@ -191,7 +191,7 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state('FAILURE', meta='Could not read database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
             raise Ignore()
 
         try:
@@ -245,7 +245,7 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state('FAILURE', meta='Could not read database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
             raise Ignore()
 
         try:
@@ -264,7 +264,7 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state('FAILURE', meta='Could not read database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
             raise Ignore()
 
         try:
@@ -347,13 +347,13 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state('FAILURE', meta='Could not read database record')
+            self.update_state('FAILURE', meta={'msg': 'Could not read database record'})
 
         if not isinstance(timestamp, datetime):
             timestamp = parser.parse(timestamp)
 
         if not isinstance(timestamp, datetime):
-            self.update_state('FAILURE', meta='Could not decode timestamp parameter')
+            self.update_state('FAILURE', meta={'msg': 'Could not decode timestamp parameter'})
             raise Ignore()
 
         notifications = user.notifications \

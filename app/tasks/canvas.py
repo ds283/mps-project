@@ -63,7 +63,7 @@ def register_canvas_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def canvas_user_checkin(self):
-        self.update_state(state='STARTED', meta='Initiating Canvas synchronization of user data')
+        self.update_state(state='STARTED', meta={'msg': 'Initiating Canvas synchronization of user data'})
 
         tasks = []
 
@@ -94,7 +94,7 @@ def register_canvas_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        self.update_state(state='STARTED', meta='Spawning Canvas subtasks for synchronization of user data')
+        self.update_state(state='STARTED', meta={'msg': 'Spawning Canvas subtasks for synchronization of user data'})
 
         c_tasks = group(*tasks)
         raise self.replace(c_tasks)
@@ -102,7 +102,7 @@ def register_canvas_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def canvas_user_checkin_module(self, pid, API_root: str):
-        self.update_state(state='STARTED', meta='Initiating Canvas checkin for synchronization of student submitters')
+        self.update_state(state='STARTED', meta={'msg': 'Initiating Canvas checkin for synchronization of student submitters'})
 
         try:
             config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=pid).first()
@@ -111,7 +111,7 @@ def register_canvas_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(state='FAILED', meta='Could not read ProjectClassConfig from database')
+            self.update_state(state='FAILED', meta={'msg': 'Could not read ProjectClassConfig from database'})
             raise Ignore()
 
         # if canvas integration is not enabled, assume we can exit
@@ -243,19 +243,19 @@ def register_canvas_tasks(celery):
             print(msg)
             current_app.logger.error(msg)
 
-        self.update_state(state='FINISHED', meta='Finished successfully')
+        self.update_state(state='FINISHED', meta={'msg': 'Finished successfully'})
 
 
     @celery.task(bind=True, default_retry_delay=30)
     def canvas_submission_checkin(self):
-        self.update_state(state='STARTED', meta='Initiating Canvas synchronization of submission availability')
+        self.update_state(state='STARTED', meta={'msg': 'Initiating Canvas synchronization of submission availability'})
 
         main_config: MainConfig = get_main_config()
         API_root = main_config.canvas_root_API
 
         if API_root is None:
             print('** Canvas API integration is not enabled; skipping')
-            self.update_state(state='FINISHED', meta='Canvas API integration is not enabled; skipped')
+            self.update_state(state='FINISHED', meta={'msg': 'Canvas API integration is not enabled; skipped'})
             return
         print('** API root URL is {root}'.format(root=API_root))
 
@@ -294,7 +294,7 @@ def register_canvas_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        self.update_state(state='STARTED', meta='Spawning Canvas subtasks for synchronization of submission availability')
+        self.update_state(state='STARTED', meta={'msg': 'Spawning Canvas subtasks for synchronization of submission availability'})
 
         c_tasks = group(*tasks)
         c_tasks.apply_async()
@@ -302,7 +302,7 @@ def register_canvas_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def canvas_submission_checkin_module(self, pid, API_root: str):
-        self.update_state(state='STARTED', meta='Initiating Canvas checkin for synchronization of submission availability')
+        self.update_state(state='STARTED', meta={'msg': 'Initiating Canvas checkin for synchronization of submission availability'})
 
         try:
             period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=pid).first()
@@ -311,7 +311,7 @@ def register_canvas_tasks(celery):
             raise self.retry()
 
         if period is None:
-            self.update_state(state='FAILED', meta='Could not read SubmissionPeriodRecord from database')
+            self.update_state(state='FAILED', meta={'msg': 'Could not read SubmissionPeriodRecord from database'})
             raise Ignore()
 
         # if canvas integration is not enabled, assume we can exit
@@ -377,7 +377,7 @@ def register_canvas_tasks(celery):
             print(msg)
             current_app.logger.error(msg)
 
-        self.update_state(state='FINISHED', meta='Finished successfully')
+        self.update_state(state='FINISHED', meta={'msg': 'Finished successfully'})
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -387,7 +387,7 @@ def register_canvas_tasks(celery):
 
         if API_root is None:
             print('** Canvas API integration is not enabled; skipping')
-            self.update_state(state='FINISHED', meta='Canvas API integration is not enabled; skipped')
+            self.update_state(state='FINISHED', meta={'msg': 'Canvas API integration is not enabled; skipped'})
             return
 
         user = None
@@ -402,7 +402,7 @@ def register_canvas_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load SubmissionRecord instance from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load SubmissionRecord instance from database'})
             raise Ignore()
 
         period: SubmissionPeriodRecord = record.period
@@ -586,11 +586,11 @@ def register_canvas_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta='Could not load SubmissionRecord instance from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load SubmissionRecord instance from database'})
             raise Ignore()
 
         if asset is None:
-            self.update_state(state='FAILURE', meta='Could not load SubmittedAsset model from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load SubmittedAsset model from database'})
 
         # attach this asset as the uploaded report
         record.report_id = asset.id
@@ -663,11 +663,11 @@ def register_canvas_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load SubmissionRecord instance from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load SubmissionRecord instance from database'})
             raise Ignore()
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load User model from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load User model from database'})
             raise Ignore()
 
         user.post_message('An error occurred when pulling the report for submitter {name} from '
@@ -688,7 +688,7 @@ def register_canvas_tasks(celery):
         fail = len(data) - success
 
         if user is None:
-            self.update_state(state='FAILURE', meta='Could not load User model from database')
+            self.update_state(state='FAILURE', meta={'msg': 'Could not load User model from database'})
             raise Ignore()
 
         tag = 'success' if fail == 0 else 'danger'

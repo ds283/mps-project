@@ -37,7 +37,7 @@ def register_push_feedback_tasks(celery):
             raise self.retry()
 
         if period is None:
-            self.update_state('FAILURE', meta='Could not load database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not load database records'})
             raise Ignore()
 
         recipients = set()
@@ -63,7 +63,7 @@ def register_push_feedback_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load database records')
+            self.update_state('FAILURE', meta={'msg': 'Could not load database records'})
             raise Ignore()
 
         # do nothing if feedback has already been sent

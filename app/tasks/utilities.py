@@ -28,7 +28,7 @@ def register_utility_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state('FAILURE', meta='Could not load User record from database')
+            self.update_state('FAILURE', meta={'msg': 'Could not load User record from database'})
             raise Ignore()
 
         if not isinstance(sent_data, list):

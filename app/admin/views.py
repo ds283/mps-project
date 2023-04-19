@@ -5911,7 +5911,7 @@ def deselect_match(id):
     return redirect(redirect_url())
 
 
-@admin.route('/populate_submitterss_from_match/<int:match_id>/<int:config_id>')
+@admin.route('/populate_submitters_from_match/<int:match_id>/<int:config_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def populate_submitters_from_match(match_id, config_id):
     record: MatchingRecord = MatchingRecord.query.get_or_404(match_id)

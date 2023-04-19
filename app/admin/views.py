@@ -5914,7 +5914,7 @@ def deselect_match(id):
 @admin.route('/populate_submitters_from_match/<int:match_id>/<int:config_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def populate_submitters_from_match(match_id, config_id):
-    record: MatchingRecord = MatchingRecord.query.get_or_404(match_id)
+    record: MatchingAttempt = MatchingAttempt.query.get_or_404(match_id)
     config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(config_id)
 
     if not validate_match_inspector(record):

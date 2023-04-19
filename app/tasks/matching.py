@@ -2949,8 +2949,8 @@ def register_matching_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def populate_submitters(self, match_id, config_id, user_id, task_id):
-        self.update_status(state='STARTED',
-                           meta={'msg': 'Looking up database configuration records'})
+        self.update_state(state='STARTED',
+                          meta={'msg': 'Looking up database configuration records'})
 
         progress_update(task_id, TaskRecord.RUNNING, 5, "Loading database records...", autocommit=True)
 
@@ -3052,7 +3052,7 @@ def register_matching_tasks(celery):
                                for r in match_records)
 
         if len(populate_tasks) > 0:
-            work = populate_initial_msg.s(task_id) | populate_tasks | populate_final_msg.s(task_id)
+            work = populate_initial_msg.si(task_id) | populate_tasks | populate_final_msg.s(task_id)
             return self.replace(work)
 
         progress_update(task_id, TaskRecord.SUCCESS, 100, "Completed with no work to perform", autocommit=False)
@@ -3068,15 +3068,20 @@ def register_matching_tasks(celery):
 
 
     @celery.task(bind=True)
-    def populate_final_msg(self, task_id):
-        progress_update(task_id, TaskRecord.SUCCESS, 100, "Completed import from matching records", autocommit=True)
+    def populate_final_msg(self, _result_data, task_id):
+        filtered_data = [x for x in _result_data if x is not None]
+        imported = sum(filtered_data)
+        progress_update(task_id, TaskRecord.SUCCESS, 100,
+                        "Populate submitters now complete. {n} submitter record{pl} imported from the "
+                        "match".format(n=imported, pl='s were' if imported != 1 else ' was'),
+                        autocommit=True)
 
 
     @celery.task(bind=True)
-    def convert_record_to_submitter(self, match_id, config_id, user_id, data_id):
+    def convert_record_to_submitter(self, _result_data, match_id, config_id, user_id, data_id):
         # read database records
-        self.update_status(state='STARTED',
-                           meta={'msg': 'Looking up database configuration records'})
+        self.update_state(state='STARTED',
+                          meta={'msg': 'Looking up database configuration records'})
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
@@ -3102,3 +3107,6 @@ def register_matching_tasks(celery):
         if data is None:
             self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingRecord record from database'})
             raise Ignore()
+
+        return 0
+

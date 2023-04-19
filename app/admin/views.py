@@ -5674,7 +5674,7 @@ def publish_matching_selectors(id):
         return redirect(redirect_url())
 
     if not record.published:
-        flash('Match "{name}" cannot be advertised to selecrors because it has not yet been '
+        flash('Match "{name}" cannot be advertised to selectors because it has not yet been '
               'published to the module convenor. Please publish the match before attempting to distribute '
               'notifications.'.format(name=record.name), 'info')
         return redirect(redirect_url())

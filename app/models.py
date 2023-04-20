@@ -10307,7 +10307,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     def get_roles(self, role: str):
         """
-        Return user instances corresponding to attached SubmissionRole records for role type 'role'
+        Return attached SubmissionRole instances for role type 'role'
         :param role: specified role type
         :return:
         """
@@ -10328,7 +10328,32 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         Return a set of user ids for User instances obtained from get_roles()
         :return:
         """
-        return set(u.id for u in self.get_roles(role))
+        return set(u.user.id for u in self.get_roles(role))
+
+
+    def get_role_user(self, role, user):
+        """
+        Return SubmissionRole instance for role=<role> and specified user
+        :param role:
+        :param user:
+        :return:
+        """
+        if isinstance(user, User):
+            _user_id = user.id
+        elif isinstance(user, FacultyData):
+            _user_id = user.id
+        elif isinstance(user, int):
+            _user_id = user
+        else:
+            raise RuntimeError('Unexpected user object passed to SubmissionRecord.get_role_user()')
+
+        roles = self.get_roles(role)
+        for role in roles:
+            role: SubmissionRole
+            if role.user_id == _user_id:
+                return role
+
+        return None
 
 
     @property
@@ -10349,6 +10374,15 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return self.get_role_ids('supervisor')
 
 
+    def get_supervisor(self, user):
+        """
+        Convenience function to get the SubmissionRole record for a specific user with role='supervisor'
+        :param user:
+        :return:
+        """
+        return self.get_role_user('supervisor', user)
+
+
     @property
     def marker_roles(self):
         """
@@ -10367,6 +10401,15 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return self.get_role_ids('marker')
 
 
+    def get_marker(self, user):
+        """
+        Convenience function to get the SubmissionRole record for a specific user with role='marker'
+        :param user:
+        :return:
+        """
+        return self.get_role_user('marker', user)
+
+
     @property
     def moderator_roles(self):
         """
@@ -10383,6 +10426,15 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         :return:
         """
         return self.get_role_ids('moderator')
+
+
+    def get_moderator(self, user):
+        """
+        Convenience function to get the SubmissionRole record for a specific user with role='moderator'
+        :param user:
+        :return:
+        """
+        return self.get_role_user('supervisor', user)
 
 
     @property

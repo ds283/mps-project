@@ -2,19 +2,21 @@
 
 {% macro supervisor_assignments(period, current_user, is_sabbatical, is_exempt, reenroll_date) %}
     {% set id = current_user.faculty_data.id %}
-    {% set records = period.get_supervisor_records(id) %}
+    {% set records = period.get_supervisor_records(id) %} {# returns a list of SubmissionRecord instances #}
     {% if records|length > 0 %}
         <table class="table table-striped">
             <thead>
                 <tr>
                     {% if period.config.display_marker %}
                         <th width="20%">Name</th>
-                        <th width="20%">Marker</th>
+                        <th width="20%">Marker roles</th>
+                        <th width="40%">Project</th>
+                        <th width="20%"></th>
                     {% else %}
-                        <th width="40%">Name</th>
+                        <th width="20%">Name</th>
+                        <th width="60%">Project</th>
+                        <th width="20%"></th>
                     {% endif %}
-                    <th width="40%">Project</th>
-                    <th width="20%"></th>
                 </tr>
             </thead>
             <tbody>
@@ -37,7 +39,7 @@
                                 {% endif %}
                             {% endif %}
                             <a class="text-decoration-none" href="mailto:{{ rec.owner.student.user.email }}">{{ rec.student_identifier }}</a>
-                            <div style="padding-top: 6px;">
+                            <div class="pt-2">
                                 {{ rec.owner.student.cohort_label|safe }}
                                 {{ rec.owner.student.programme.short_label|safe }}
                                 {% if not rec.owner.published %}
@@ -45,7 +47,7 @@
                                 {% endif %}
                             </div>
                             {% if rec.owner.student.has_previous_submissions %}
-                                <div style="padding-top: 6px;">
+                                <div class="pt-2 small">
                                     <a class="text-decoration-none" href="{{ url_for('faculty.past_feedback', student_id=rec.owner.student.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">View previous feedback...</a>
                                 </div>
                             {% endif %}
@@ -53,10 +55,15 @@
                         {% if period.config.display_marker %}
                             <td>
                                 {% if period.config.uses_marker %}
-                                    {% if rec.marker is not none %}
-                                        <a class="text-decoration-none" href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
+                                    {% set mark_roles = rec.marker_roles %}
+                                    {% if mark_roles|length > 0 %}
+                                        <div class="d-flex flex-column justify-content-start align-items-start gap-2">
+                                            {% for role in mark_roles %}
+                                                <a class="text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
+                                            {% endfor %}
+                                        </div>
                                     {% else %}
-                                        <span class="badge bg-warning text-dark">Marker not yet assigned</span>
+                                        <span class="small text-danger">No markers assigned</span>
                                     {% endif %}
                                 {% else %}
                                     <span class="badge bg-secondary">Not used</span>
@@ -64,13 +71,21 @@
                             </td>
                         {% endif %}
                         <td>
-                            <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
-                                {{ rec.project.name }} (No. {{ rec.project.number }})
-                            </a>
-                            {% if rec.report %}
-                                <span class="badge bg-success"><i class="fas fa-check"></i> Report uploaded</span>
-                            {% endif %}
                             <div>
+                                <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                    <strong>{{ rec.project.name }}</strong>
+                                </a>
+                                {% if rec.project.generic %}
+                                    <span class="badge bg-info">GENERIC</span>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex flex-row justify-content-start align-content-center gap-2">
+                                {% if rec.generic %}
+                                    <span class="badge bg-info">GENERIC</span>
+                                {% endif %}
+                                {% if rec.report %}
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> Report uploaded</span>
+                                {% endif %}
                                 {% if uses_feedback %}
                                     {% if rec.supervisor_submitted %}
                                         <span class="badge bg-success"><i class="fas fa-check"></i> Feedback submitted</span>
@@ -90,9 +105,18 @@
                                     {% endif %}
                                 {% endif %}
                             </div>
+                            {% set supv_roles = rec.supervisor_roles %}
+                            {% if supv_roles|length > 1 %}
+                                <div class="mt-2 small text-muted"><em>Supervisor roles</em></div>
+                                <div class="d-flex flex-row justify-content-start align-content-start gap-2 small text-muted">
+                                    {% for role in supv_roles if role.user.id != current_user.id %}
+                                        <a class="text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>{%- if loop.index < loop.length -%},{%- endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </td>
                         <td>
-                            <div class="d-flex flex-row justify-content-end">
+                            <div class="d-flex flex-row justify-content-end align-content-start">
                                 {% if uses_project_hub %}
                                     <div class="btn-group">
                                         <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('projecthub.hub', subid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}">Go to hub</a>

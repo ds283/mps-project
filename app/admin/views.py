@@ -83,7 +83,8 @@ from ..shared.forms.queries import ScheduleSessionQuery
 from ..shared.internal_redis import get_redis
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import get_current_year, home_dashboard, get_matching_dashboard_data, \
-    get_rollover_data, get_ready_to_match_data, get_automatch_pclasses, redirect_url, get_main_config
+    get_rollover_data, get_ready_to_match_data, get_automatch_pclasses, redirect_url, get_main_config, \
+    home_dashboard_url
 from ..shared.validators import validate_is_admin_or_convenor, validate_match_inspector, \
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..task_queue import register_task, progress_update
@@ -5911,6 +5912,48 @@ def deselect_match(id):
     return redirect(redirect_url())
 
 
+def _validate_match_populate_submitters(record: MatchingAttempt, config: ProjectClassConfig):
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" cannot be used to populate submitter records because it belongs to a '
+              'previous year'.format(name=record.name), 'info')
+        return False
+
+    if config.year != record.year:
+        flash('Match "{match_name}" cannot be used to populate submitter records for project type "{pcl_name}", '
+              'year = {config_year} because this configuration belongs to a previous '
+              'year'.format(match_name=record.name, pcl_name=config.name, config_year=config.year))
+        return False
+
+    if config.select_in_previous_cycle:
+        flash('Match "{match_name}" cannot be used to populate submitter records for project type "{pcl_name}" '
+              'because this project type is not configured to use selection in the same cycle as '
+              'submission'.format(match_name=record.name, pcl_name=config.name))
+        return False
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Match "{name}" is not yet available for use because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Match "{name}" is not yet available for use because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return False
+
+    if not record.solution_usable:
+        flash('Match "{name}" did not yield an optimal solution '
+              'and is not available for use.'.format(name=record.name), 'info')
+        return False
+
+    if not record.published:
+        flash('Match "{name}" cannot be used to populate submitter records because it has not yet been '
+              'published to the module convenor. Please publish the match before attempting to generate '
+              'selectors.'.format(name=record.name), 'info')
+        return False
+
+    return True
+
+
 @admin.route('/populate_submitters_from_match/<int:match_id>/<int:config_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def populate_submitters_from_match(match_id, config_id):
@@ -5920,43 +5963,43 @@ def populate_submitters_from_match(match_id, config_id):
     if not validate_match_inspector(record):
         return redirect(redirect_url())
 
-    year = get_current_year()
-    if record.year != year:
-        flash('Match "{name}" cannot be used to populate submitter records because it belongs to a '
-              'previous year'.format(name=record.name), 'info')
+    if not _validate_match_populate_submitters(record, config):
         return redirect(redirect_url())
 
-    if config.year != record.year:
-        flash('Match "{match_name}" cannot be used to populate submitter records for project type "{pcl_name}", '
-              'year = {config_year} because this configuration belongs to a previous '
-              'year'.format(match_name=record.name, pcl_name=config.name, config_year=config.year))
+    title = 'Populate submitters from match'
+    panel_title = 'Populate submitters for "{name}" from match ' \
+                  '"{match_name}"'.format(name=config.name, match_name=record.name)
+
+    action_url = url_for('admin.do_populate_submitters_from_match', match_id=record.id, config_id=config.id,
+                         url=redirect_url())
+    message = '<p>Please confirm that you wish to populate submitters for <strong>{name}</strong> from match ' \
+              '<strong>{match_name}</strong>.</p>' \
+              '<p>Changes made during this process cannot be undone.</p>' \
+              '<p>Project assignments for submitters that already exist will not be modified. ' \
+              'New submitters will be generated if required, ' \
+              'and project assignments will be generated from any submission periods in which they are ' \
+              'missing.</p>'.format(name=config.name, match_name=record.name)
+    submit_label = 'Populate submitters'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/do_populate_submitters_from_match/<int:match_id>/<int:config_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def do_populate_submitters_from_match(match_id, config_id):
+    record: MatchingAttempt = MatchingAttempt.query.get_or_404(match_id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(config_id)
+
+    if not validate_match_inspector(record):
         return redirect(redirect_url())
 
-    if config.select_in_previous_cycle:
-        flash('Match "{match_name}" cannot be used to populate submitter records for project type "{pcl_name}" '
-              'because this project type is not configured to use selection in the same cycle as '
-              'submission'.format(match_name=record.name, pcl_name=config.name))
+    if not _validate_match_populate_submitters(record, config):
         return redirect(redirect_url())
 
-    if not record.finished:
-        if record.awaiting_upload:
-            flash('Match "{name}" is not yet available for use because it is still awaiting '
-                  'manual upload.'.format(name=record.name), 'error')
-        else:
-            flash('Match "{name}" is not yet available for use because it has not yet '
-                  'terminated.'.format(name=record.name), 'error')
-        return redirect(redirect_url())
-
-    if not record.solution_usable:
-        flash('Match "{name}" did not yield an optimal solution '
-              'and is not available for use.'.format(name=record.name), 'info')
-        return redirect(redirect_url())
-
-    if not record.published:
-        flash('Match "{name}" cannot be used to populate submitter records because it has not yet been '
-              'published to the module convenor. Please publish the match before attempting to generate '
-              'selectors.'.format(name=record.name), 'info')
-        return redirect(redirect_url())
+    url = request.args.get('url', None)
+    if url is None:
+        url = home_dashboard_url()
 
     task_id = register_task('Populate selectors from match', owner=current_user,
                             description='Populate submitter records for project "{pcl}" in the current submission cycle '
@@ -5967,7 +6010,7 @@ def populate_submitters_from_match(match_id, config_id):
 
     task.apply_async(args=(match_id, config_id, current_user.id, task_id), task_id=task_id)
 
-    return redirect(redirect_url())
+    return redirect(url)
 
 
 @admin.route('/manage_assessments')

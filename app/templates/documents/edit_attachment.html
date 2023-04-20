@@ -8,7 +8,7 @@
 {% endif %}
 
 {% block title %}
-    Edit {{ label }} for {{ record.student_identifier }}
+    Edit {{ label }} for {{ record.student_identifier|safe }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -18,7 +18,7 @@
             <div class="card border-primary mt-3 mb-3">
                 <div class="card-header bg-primary text-white">
                     Edit {{ label }} <strong>{{ asset.target_name if asset.target_name else asset.filename }}</strong>
-                    for <i class="fas fa-user"></i> <strong>{{ record.student_identifier }}</strong> {{ record.period.display_name }}
+                    for <i class="fas fa-user"></i> <strong>{{ record.student_identifier|safe }}</strong> {{ record.period.display_name }}
                 </div>
                 <div class="card-body">
                     <form action="{{ action_url }}" method="POST" enctype="multipart/form-data" name="attachment_form">

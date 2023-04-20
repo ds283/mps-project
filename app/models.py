@@ -3808,6 +3808,14 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
 
 
     @property
+    def exam_number_label(self):
+        if self.exam_number is None:
+            return '<span class="badge bg-secondary">Exam #TBA</span>'
+
+        return '<span class="text-primary">{num}</span>'.format(num=self.exam_number)
+
+
+    @property
     def has_foundation_year(self):
         if self.programme is not None and self.programme.foundation_year:
             return True
@@ -10287,22 +10295,31 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         whereas admin users can see student names
         :return:
         """
+        current_role = None
+        for role in self.roles:
+            if role.user_id == current_user.id:
+                current_role = role
+                break
 
-        # marker can only see exam number
-        if self.marker_id is not None and current_user.id == self.marker_id:
-            return str(self.owner.student.exam_number)
-
-        # root, admin, and office roles can see student name; so can project convenor or co-convenors
+        # root, admin, and office roles can always see student name; so can project convenor or co-convenors
         if current_user.has_role('root') or current_user.has_role('admin') or current_user.has_role('office') \
                 or self.pclass.is_convenor(current_user.id):
             return self.owner.student.user.name
 
-        # project supervisor can see student name
-        if self.project is not None and current_user.id == self.project.owner_id:
-            return self.owner.student.user.name
+        if current_role is not None:
+            # marker roles and moderator roles can only see exam number
+            if current_role.role == SubmissionRole.ROLE_MARKER \
+                    or current_role.role == SubmissionRole.ROLE_MODERATOR:
+                return self.owner.student.exam_number_label
+
+            # supervision team and external examiners can see student name
+            if current_role.role == SubmissionRole.ROLE_SUPERVISOR \
+                    or current_role.role == SubmissionRole.ROLE_EXTERNAL_EXAMINER \
+                    or current_role.role == SubmissionRole.ROLE_EXAM_BOARD:
+                return self.owner.student.user.name
 
         # by default, other users see only the exam number
-        return str(self.owner.student.exam_number)
+        return self.owner.student.exam_number_label
 
 
     def get_roles(self, role: str):

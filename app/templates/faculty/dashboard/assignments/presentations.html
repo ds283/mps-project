@@ -35,7 +35,7 @@
                                     {% set uses_feedback = talk.uses_presentation_feedback %}
                                     <tr>
                                         <td>
-                                            <a class="text-decoration-none" href="mailto:{{ talk.owner.student.user.email }}">{{ talk.student_identifier }}</a>
+                                            <a class="text-decoration-none" href="mailto:{{ talk.owner.student.user.email }}">{{ talk.student_identifier|safe }}</a>
                                         </td>
                                         <td>
                                             <a class="text-decoration-none" href="mailto:{{ talk.project.owner.user.email }}">{{ talk.project.owner.user.name }}</a>

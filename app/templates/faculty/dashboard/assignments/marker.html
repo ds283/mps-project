@@ -20,7 +20,7 @@
                     {% set uses_feedback = rec.uses_marker_feedback %}
                     <tr>
                         <td>
-                            {{ rec.student_identifier }}
+                            {{ rec.student_identifier|safe }}
                         </td>
                         <td>
                             {% set supv_roles = rec.supervisor_roles %}
@@ -36,18 +36,28 @@
                             <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
                                 <strong>{{ rec.project.name }}</strong>
                             </a>
-                            {% if rec.report %}
-                                <span class="badge bg-success"><i class="fas fa-check"></i> Report uploaded</span>
-                            {% endif %}
-                            {% if uses_feedback %}
-                                <div>
-                                    {% if my_role.submitted_feedback %}
-                                        <span class="badge bg-success"><i class="fas fa-check"></i> Feedback submitted</span>
-                                    {% elif period.closed %}
-                                        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Feedback missing</span>
-                                    {% endif %}
+                            {% if rec.project.generic or rec.project.owner is none %}
+                                <span class="badge bg-info">GENERIC</span>
+                            {% elif rec.project.owner_id != current_user.id %}
+                                <div class="small text-muted">
+                                    Owner
+                                    <a class="text-decoration-none" href="mailto:{{ rec.project.owner.user.email }}">{{ rec.project.owner.user.name }}</a>
                                 </div>
                             {% endif %}
+                            <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+                                {% if rec.report %}
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> Report uploaded</span>
+                                {% endif %}
+                                {% if uses_feedback %}
+                                    <div>
+                                        {% if my_role.submitted_feedback %}
+                                            <span class="badge bg-success"><i class="fas fa-check"></i> Feedback submitted</span>
+                                        {% elif period.closed %}
+                                            <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Feedback missing</span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </td>
                         <td>
                             <div class="d-flex flex-row justify-content-end align-items-start gap-2 w-100">

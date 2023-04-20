@@ -183,10 +183,8 @@
 {% endblock %}
 
 {% macro project_card(config, pclass, sdata, show_canvas) %}
-    <div class="row vertical-top">
-        <div class="col-12">
-            <span class="dashboard-project-title">{{ pclass.name }}</span>
-        </div>
+    <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+        <span class="dashboard-project-title">{{ pclass.name }}</span>
     </div>
     <div class="d-flex flex-row justify-content-between align-items-start w-100 mt-2">
         <div>
@@ -195,7 +193,7 @@
                 {{ pclass.convenor_name }}
             </a>
         </div>
-        <div>
+        <div class="small text-muted">
             Commences
             <span class="badge bg-info text-dark">Y{{ pclass.start_year }}</span>
         </div>
@@ -208,24 +206,22 @@
                 {{ sdata.academic_year_label(show_details=False)|safe }}
             {% endif %}
         </div>
-        <div class="d-flex flex-row justify-content-end gap-2">
+        <div class="d-flex flex-row justify-content-end align-items-start gap-2">
             {% if sdata and sdata.live_deadline is defined %}
                 {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                    <span class="badge bg-success">Choices for {{ config.select_year_a }}&ndash;{{ config.select_year_b }} open</span>
+                    <span class="small text-primary">Choices for {{ config.select_year_a }}&ndash;{{ config.select_year_b }} open</span>
                     {% if config.live_deadline %}
-                        <span class="badge bg-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                        <span class="small text-secondary">| Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                     {% endif %}
                 {% else %}
-                    <span class="badge bg-secondary">Student selections not open</span>
+                    <span class="small text-muted">Selections not currently open</span>
                 {% endif %}
             {% endif %}
         </div>
     </div>
-
     {% if show_canvas and config.canvas_enabled %}
-        <hr class="intro-divider">
-        <div class="d-flex flex-row justify-content-start gap-2">
-            <a href="{{ config.canvas_course_URL }}">Go to Canvas site for this module</a>
+        <div class="d-flex flex-row justify-content-start align-items-center gap-2 border-top border-secondary small">
+            <a class="text-decoration-none" href="{{ config.canvas_course_URL }}">Go to Canvas site for this module</a>
             <i class="text-muted fa fa-external-link"></i>
         </div>
     {% endif %}

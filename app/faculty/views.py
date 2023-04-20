@@ -1447,7 +1447,9 @@ def dashboard():
     :return:
     """
     # check for unofferable projects and warn if any are present
-    unofferable = current_user.faculty_data.projects_unofferable
+    fd: FacultyData = current_user.faculty_data
+
+    unofferable = fd.projects_unofferable
     if unofferable > 0:
         plural = '' if unofferable == 1 else 's'
         isare = 'is' if unofferable == 1 else 'are'
@@ -1459,9 +1461,9 @@ def dashboard():
     # build list of current configuration records for all enrolled project classes
     enrollments = []
     valid_panes = []
-    for record in current_user.faculty_data.ordered_enrollments:
-        pclass = record.pclass
-        config = pclass.most_recent_config
+    for record in fd.ordered_enrollments:
+        pclass: ProjectClass = record.pclass
+        config: ProjectClassConfig = pclass.most_recent_config
 
         if pclass.active and pclass.publish and config is not None:
             include = False
@@ -1475,7 +1477,7 @@ def dashboard():
 
             else:
                 for n in range(config.submissions):
-                    period = config.get_period(n+1)
+                    period: SubmissionPeriodRecord = config.get_period(n+1)
 
                     s_records = period.get_supervisor_records(current_user.id)
                     mk_records = period.get_marker_records(current_user.id)
@@ -1506,7 +1508,7 @@ def dashboard():
         include = message.project_classes.first() is None
         if not include:
             for pcl in message.project_classes:
-                if current_user.faculty_data.is_enrolled(pcl):
+                if fd.is_enrolled(pcl):
                     include = True
                     break
 

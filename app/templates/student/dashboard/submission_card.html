@@ -31,9 +31,10 @@
                     {{ period.display_name|safe }}
                 {% endif %}
                 {% if period.canvas_enabled %}
-                    &mdash;
-                    <a href="{{ period.canvas_assignment_URL }}">Go to Canvas submission page</a>
-                    <i class="text-muted fa fa-external-link"></i>
+                    <div class="small">
+                        <a class="text-decoration-none" href="{{ period.canvas_assignment_URL }}">Go to Canvas submission page</a>
+                        <i class="text-muted fa fa-external-link"></i>
+                    </div>
                 {% endif %}
             </div>
             <div class="card-body">

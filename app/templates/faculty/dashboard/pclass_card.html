@@ -2,73 +2,52 @@
 {% from "faculty/dashboard/submitter_card.html" import submitter_card %}
 
 {% macro pclass_card(data, today, home_dashboard_url) %}
-
     {% set config = data['config'] %}
     {% set pclass = config.project_class %}
     {% set sel_state = config.selector_lifecycle %}
     {% set sub_state = config.submitter_lifecycle %}
     {% set record = data['record'] %}
-
     <div class="card mt-3 mb-3 card-body bg-well">
-        <div class="row vertical-align">
-            <div class="col-12">
-                <span class="dashboard-project-title">{{ pclass.name }} {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
-            </div>
+        <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+            <span class="dashboard-project-title">{{ pclass.name }} {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
         </div>
-        <div class="row vertical-align">
-            <div class="col-6">
-                <div class="d-flex flex-row justify-content-start gap-2">
-                    <span>Convenor:
-                        <a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">
-                        {{ config.convenor_name }}
-                        </a>
-                    </span>
-                </div>
+        <div class="d-flex flex-row justify-content-between align-items-start">
+            <div class="d-flex flex-row justify-content-start align-items-start gap-2">
+                <span>Convenor:
+                    <a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">
+                    {{ config.convenor_name }}
+                    </a>
+                </span>
             </div>
-            <div class="col-6">
-                <div class="d-flex flex-row justify-content-end gap-2">
+            <div class="d-flex flex-row justify-content-end align-items-start gap-2">
                 {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
                     {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                        <span class="badge bg-success">Student selection open for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}</span>
+                        <span class="small text-primary">Student selection open for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}</span>
                         {% if config.live_deadline %}
-                            <span class="badge bg-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                            <span class="small text-secondary">| Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                         {% endif %}
                     {% else %}
-                        <span class="badge bg-secondary">Student selection closed</span>
+                        <span class="small text-muted">Student selection closed</span>
                     {% endif %}
                 {% else %}
                     {% if record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                        <span class="badge bg-secondary">On sabbatical</span>
+                        <span class="small text-warning">On sabbatical</span>
                         {% if record.supervisor_reenroll is not none %}
                             {% if pclass.reenroll_supervisors_early %}
-                                <span class="badge bg-secondary">Re-enroll {{ record.supervisor_reenroll-1 }}</span>
+                                <span class="small text-muted">| Re-enrol {{ record.supervisor_reenroll-1 }}</span>
                             {% else %}
-                                <span class="badge bg-secondary">Re-enroll {{ record.supervisor_reenroll }}</span>
+                                <span class="small text-muted">| Re-enrol {{ record.supervisor_reenroll }}</span>
                             {% endif %}
                         {% endif %}
                     {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                        <span class="badge bg-secondary">Exempt from supervision</span>
+                        <span class="small text-danger">Exempt from supervision</span>
                     {% endif %}
                 {% endif %}
-                </div>
             </div>
         </div>
-{#        {% if pclass.coconvenors.first() %}#}
-{#            <div class="row vertical-align">#}
-{#                <div class="col-12">#}
-{#                    <span>Co-convenors:</span>#}
-{#                    {% for fac in pclass.coconvenors %}#}
-{#                        <span><a class="text-decoration-none" href="mailto:{{ fac.user.email }}">#}
-{#                            {{ fac.user.name }}#}
-{#                        </a></span>#}
-{#                    {% endfor %}#}
-{#                </div>#}
-{#            </div>#}
-{#        {% endif %}#}
         {% if config.canvas_enabled %}
-            <hr class="intro-divider">
-            <div class="d-flex flex-row justify-content-start gap-2">
-                <a href="{{ config.canvas_course_URL }}">Go to Canvas site for this module</a>
+            <div class="d-flex flex-row justify-content-start align-items-center gap-2 border-top border-secondary pt-2 small">
+                <a class="text-decoration-none" href="{{ config.canvas_course_URL }}">Go to Canvas site for this module</a>
                 <i class="text-muted fa fa-external-link"></i>
             </div>
         {% endif %}

@@ -106,15 +106,13 @@
                     {{ root_functions(root_dash_data, matching_ready, has_assessments) }}
                 </div>
             {% else %}
-                {% if enrollments and enrollments|length > 0 %}
-                    {% for item in enrollments %}
-                        {% set config = item['config'] %}
-                        {% if pane == config.id|string %}
-                            {% set live_projects = item['projects'] %}
-                            {% set record = item['record'] %}
-                            {{ pclass_card(item, today, home_dashboard_url) }}
-                        {% endif %}
-                    {% endfor %}
+                {% for item in enrollments %}
+                    {% set config = item['config'] %}
+                    {% if pane == config.id|string %}
+                        {% set live_projects = item['projects'] %}
+                        {% set record = item['record'] %}
+                        {{ pclass_card(item, today, home_dashboard_url) }}
+                    {% endif %}
                 {% else %}
                     <div class="card mt-3 mb-3 card-body bg-well">
                         <h3 class="dashboard-subtitle"> You have no active project enrolments</h3>
@@ -132,7 +130,7 @@
                             <a class="text-decoration-none" href="{{ url_for('faculty.settings') }}">View my settings</a>
                         </p>
                     </div>
-                {% endif %}
+                {% endfor %}
             {% endif %}
 
         </div>

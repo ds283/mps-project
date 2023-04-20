@@ -96,7 +96,7 @@ def _pulp_dicts(
         :return: A dictionary of :py:class:`LpVariable`
         """
 
-        # Backwards Compatiblity with Deprecation Warning for indexs
+        # Backwards compatiblity with deprecation Warning for indexs
         if indices is not None and indexs is not None:
             raise TypeError(
                 "Both 'indices' and 'indexs' provided to LpVariable.dicts.  Use one only, preferably 'indices'."
@@ -130,8 +130,8 @@ def _enumerate_selectors(record, configs, read_serialized=False):
     """
     Build a list of SelectingStudents who belong to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
-    Also compute assignment multiplicity for each selector, ie. how many projects they should be
-    assigned (eg. FYP = 1 but MPP = 2 since projects only last one term)
+    Also compute assignment multiplicity for each selector, i.e. how many projects they should be
+    assigned (e.g. FYP = 1 but MPP = 2 since projects only last one term)
     :param record:
     :param configs:
     :return:
@@ -349,7 +349,7 @@ def _enumerate_liveprojects_primary(configs):
     for config in configs:
         # get LiveProject instances that belong to this config instance and are associated with
         # a supervisor who is still enrolled
-        # (eg. enrolment status may have changed since the projects went live)
+        # (e.g. enrolment status may have changed since the projects went live)
         projects = db.session.query(LiveProject).filter_by(config_id=config.id) \
             .join(ProjectClassConfig, ProjectClassConfig.id == LiveProject.config_id) \
             .join(User, User.id == LiveProject.owner_id, isouter=True) \
@@ -763,7 +763,7 @@ def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict,
             else:
                 M[idx] = 0
 
-    # how many markers do we actually have to assign for a project of type j? This depends how many
+    # how many markers do we actually have to assign for a project of type j? This depends on how many
     # markers are used in the different submission periods associated with the project class that owns j.
     # We don't know which submission period the project will be assigned to, so have to allocate enough markers
     # for the largest possible
@@ -1382,7 +1382,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                                                                                   cfg=proj.config_id, num=proj.number)
 
                 # force yy[i,j] to be 1 if Y[i,j,l] is not zero for any selector l
-                # as above, there is no really clean way to enforce this, so we use the UNBOUNDED_MARKING_CAPACITY
+                # as above, there is no clean way to enforce this, so we use the UNBOUNDED_MARKING_CAPACITY
                 # dodge with UNBOUNDED_MARKING_CAPACITY set to a suitable large value
                 prob += UNBOUNDED_MARKING_CAPACITY * yy[(i, j)] >= Ysel[(i, j)], \
                         '_Cyy{first}{last}_C{cfg}_P{num}_mark_assigned_lowerb'.format(first=user.first_name, last=user.last_name,
@@ -2184,9 +2184,9 @@ def _execute_live(self, record, prob, X, Y, S, W, R, create_time, number_sel, nu
         record.awaiting_upload = False
 
         if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
-            status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
+            status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=True, maxSeconds=3600, fracGap=0.25))
         elif record.solver == MatchingAttempt.SOLVER_CBC_CMD:
-            status = prob.solve(pulp_apis.COIN_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
+            status = prob.solve(pulp_apis.COIN_CMD(msg=True, maxSeconds=3600, fracGap=0.25))
         elif record.solver == MatchingAttempt.SOLVER_GLPK_CMD:
             status = prob.solve(pulp_apis.GLPK_CMD())
         elif record.solver == MatchingAttempt.SOLVER_CPLEX_CMD:
@@ -2269,7 +2269,7 @@ def _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user: User
                     autocommit=True)
 
     with Timer() as solve_time:
-        status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
+        status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=True, maxSeconds=3600, fracGap=0.25))
 
     print('-- solved PuLP problem in time {t}'.format(t=solve_time.interval))
 
@@ -2964,8 +2964,6 @@ def register_matching_tasks(celery):
 
         if user is None:
             self.update_state(state='FAILURE', meta={'msg': 'Could not load owning User record'})
-            user.post_message('Populate selectors task failed due to a database error. '
-                              'Please contact a system administrator.', 'error', autocommit=True)
             raise Ignore()
 
         if config is None:

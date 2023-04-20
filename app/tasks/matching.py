@@ -26,7 +26,7 @@ from ..database import db
 from ..models import MatchingAttempt, TaskRecord, LiveProject, SelectingStudent, \
     User, EnrollmentRecord, MatchingRecord, SelectionRecord, ProjectClass, GeneratedAsset, MatchingEnumeration, \
     TemporaryAsset, FacultyData, ProjectClassConfig, SubmissionRecord, SubmissionPeriodRecord, MatchingRole, \
-    SubmissionPeriodDefinition
+    SubmissionPeriodDefinition, SubmittingStudent, SubmissionRole
 from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename, \
     canonical_generated_asset_filename
 from ..shared.sqlalchemy import get_count
@@ -2955,9 +2955,9 @@ def register_matching_tasks(celery):
         progress_update(task_id, TaskRecord.RUNNING, 5, "Loading database records...", autocommit=True)
 
         try:
-            record = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
-            config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
-            user = db.session.query(User).filter_by(id=user_id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
+            config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+            user: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -3084,10 +3084,10 @@ def register_matching_tasks(celery):
                           meta={'msg': 'Looking up database configuration records'})
 
         try:
-            record = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
-            config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
-            user = db.session.query(User).filter_by(id=user_id).first()
-            data = db.session.query(MatchingRecord).filter_by(id=data_id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
+            config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+            user: User = db.session.query(User).filter_by(id=user_id).first()
+            data: MatchingRecord = db.session.query(MatchingRecord).filter_by(id=data_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -3108,5 +3108,102 @@ def register_matching_tasks(celery):
             self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingRecord record from database'})
             raise Ignore()
 
-        return 0
+        needs_commit = False
 
+        self.update_state(state='STARTED', meta={'msg': 'Populating SubmittingStudent record...'})
+
+        # first, determine whether there is an existing SubmittingStudent instance associated with this student
+        sel: SelectingStudent = data.selector
+        sub: SubmittingStudent = config.submitting_students.filter(SubmittingStudent.student_id == sel.student_id).first()
+
+        # if no record, insert one, but otherwise do nothing; this is designed to produce idempotent behaviour on
+        # multiple application
+        if sub is None:
+            try:
+                new_sub = SubmittingStudent(config_id=config_id,
+                                            student_id=sel.student_id,
+                                            selector_id=sel.id,
+                                            published=False,
+                                            retired=False)
+                db.session.add(new_sub)
+                needs_commit = True
+
+                db.session.flush()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                return self.retry()
+            else:
+                sub = new_sub
+
+        # second, determine whether there is an existing SubmissionRecord instance associated with this
+        # submission period
+
+        sr: SubmissionRecord = sub.get_assignment(period=data.submission_period)
+
+        # if no record, insert one, but otherwise do nothing
+        if sr is None:
+            try:
+                pd: SubmissionPeriodRecord = config.get_period(data.submission_period)
+                new_sr = SubmissionRecord(period_id=pd.id,
+                                          retired=False,
+                                          owner_id=sub.id,
+                                          project_id=data.project_id,
+                                          selection_config_id=config.id,
+                                          matching_record_id=data.id,
+                                          use_project_hub=None,
+                                          report_id=None,
+                                          processed_report_id=None,
+                                          celery_started=None,
+                                          celery_finished=None,
+                                          timestamp=None,
+                                          report_exemplar=False,
+                                          canvas_submission_available=None,
+                                          turnitin_outcome=None,
+                                          turnitin_score=None,
+                                          turnitin_web_overlap=None,
+                                          turnitin_publication_overlap=None,
+                                          turnitin_student_overlap=None,
+                                          student_engaged=False,
+                                          student_feedback=None,
+                                          student_feedback_submitted=False,
+                                          student_feedback_timestamp=None)
+
+                db.session.add(new_sr)
+                needs_commit = True
+
+                db.session.flush()
+
+                for role in data.roles:
+                    role: MatchingRole
+                    new_role = SubmissionRole(submission_id=new_sr.id,
+                                              user_id=role.user_id,
+                                              role=role.role,
+                                              marking_email=False,
+                                              positive_feedback=None,
+                                              improvements_feedback=None,
+                                              submitted_feedback=False,
+                                              feedback_timestamp=None,
+                                              acknowledge_student=False,
+                                              response=None,
+                                              submitted_response=False,
+                                              response_timestamp=None)
+
+                    db.session.add(new_role)
+
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                return self.retry()
+
+        if needs_commit:
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                return self.retry()
+
+            return 1
+
+        return 0

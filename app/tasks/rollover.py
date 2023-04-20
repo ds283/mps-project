@@ -24,7 +24,7 @@ from ..models import User, TaskRecord, ProjectClassConfig, \
     SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, SubmissionRecord, \
     SubmissionPeriodRecord, add_notification, EmailNotification, ProjectClass, Project, \
     ProjectDescription, ConfirmRequest, ConvenorGenericTask, MatchingRecord, DegreeProgramme, DegreeType, \
-    SubmissionPeriodDefinition
+    SubmissionPeriodDefinition, MatchingRole, SubmissionRole
 from ..shared.convenor import add_selector, add_blank_submitter
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import get_current_year
@@ -642,35 +642,55 @@ def register_rollover_tasks(celery):
                 for match_rec in match_records:
                     match_rec: MatchingRecord
                     new_period = new_config.get_period(match_rec.submission_period)
-                    new_rec = SubmissionRecord(period_id=new_period.id,
-                                               retired=False,
-                                               owner_id=new_submitter.id,
-                                               project_id=match_rec.project_id,
-                                               marker_id=match_rec.marker_id if use_markers else None,
-                                               selection_config_id=old_config_id,
-                                               matching_record_id=match_rec.id,
-                                               student_engaged=False,
-                                               report_id=None,
-                                               report_exemplar=False,
-                                               email_to_supervisor=False,
-                                               email_to_marker=False,
-                                               supervisor_positive=None,
-                                               supervisor_negative=None,
-                                               supervisor_submitted=False,
-                                               supervisor_timestamp=None,
-                                               marker_positive=None,
-                                               marker_negative=None,
-                                               marker_submitted=False,
-                                               marker_timestamp=None,
-                                               student_feedback=None,
-                                               student_feedback_submitted=False,
-                                               student_feedback_timestamp=None,
-                                               acknowledge_feedback=False,
-                                               faculty_response=None,
-                                               faculty_response_submitted=False,
-                                               faculty_response_timestamp=None)
 
-                    db.session.add(new_rec)
+                    if new_period is not None:
+                        new_rec = SubmissionRecord(period_id=new_period.id,
+                                                   retired=False,
+                                                   owner_id=new_submitter.id,
+                                                   project_id=match_rec.project_id,
+                                                   marker_id=match_rec.marker_id if use_markers else None,
+                                                   selection_config_id=old_config_id,
+                                                   matching_record_id=match_rec.id,
+                                                   use_project_hub=None,
+                                                   report_id=None,
+                                                   processed_report_id=None,
+                                                   celery_started=None,
+                                                   celery_finished=None,
+                                                   timestamp=None,
+                                                   report_exemplar=False,
+                                                   canvas_submission_available=None,
+                                                   turnitin_outcome=None,
+                                                   turnitin_score=None,
+                                                   turnitin_web_overlap=None,
+                                                   turnitin_publication_overlap=None,
+                                                   turnitin_student_overlap=None,
+                                                   student_engaged=False,
+                                                   student_feedback=None,
+                                                   student_feedback_submitted=False,
+                                                   student_feedback_timestamp=None)
+
+                        db.session.add(new_rec)
+                        db.session.flush()
+
+                        for role in match_rec.roles:
+                            role: MatchingRole
+                            new_role = SubmissionRole(submission_id=new_rec.id,
+                                                      user_id=role.user_id,
+                                                      role=role.role,
+                                                      marking_email=False,
+                                                      positive_feedback=None,
+                                                      improvements_feedback=None,
+                                                      submitted_feedback=False,
+                                                      feedback_timestamp=None,
+                                                      acknowledge_student=False,
+                                                      response=None,
+                                                      submitted_response=False,
+                                                      response_timestamp=None)
+
+                            db.session.add(new_role)
+                    else:
+                        print('!! Period record for submission period number #{num} was None; skipped matching '
+                              'assignment'.format(num=match_rec.submission_period))
 
                 db.session.commit()
 
@@ -769,6 +789,24 @@ def register_rollover_tasks(celery):
                                                            faculty_response_timestamp=None)
 
                                 db.session.add(new_rec)
+                                db.session.flush()
+
+                                for role in old_submitter.roles:
+                                    role: SubmissionRole
+                                    new_role = SubmissionRole(submission_id=new_rec.id,
+                                                              user_id=role.user_id,
+                                                              role=role.role,
+                                                              marking_email=False,
+                                                              positive_feedback=None,
+                                                              improvements_feedback=None,
+                                                              submitted_feedback=False,
+                                                              feedback_timestamp=None,
+                                                              acknowledge_student=False,
+                                                              response=None,
+                                                              submitted_response=False,
+                                                              response_timestamp=None)
+
+                                    db.session.add(new_role)
 
                             db.session.commit()
 

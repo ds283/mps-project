@@ -173,6 +173,8 @@ def add_blank_submitter(student, selecting_config_id, submitting_config_id, auto
                                   faculty_response_timestamp=None)
         db.session.add(record)
 
+        # no roles are generated as part of this process
+
     if autocommit:
         # can expect exceptions to be caught by the client code
         db.session.commit()

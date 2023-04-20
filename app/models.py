@@ -10039,7 +10039,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
     @property
     def _supervisor_response_state(self):
         sub: SubmissionRecord = self.submission
-        period: SubmissionPeriodRecord = self.sub.period
+        period: SubmissionPeriodRecord = sub.period
 
         if not period.collect_project_feedback or not period.config.project_class.publish:
             return SubmissionRole.FEEDBACK_NOT_REQUIRED

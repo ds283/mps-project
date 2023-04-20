@@ -22,10 +22,10 @@ _cohort = \
 
 
 # language=jinja2
-_projects = \
+_periods = \
 """
-{% macro feedback_state_tag(obj) %}
-    {% set state = obj.feedback_state %}
+{% macro feedback_state_tag(obj, state=none) %}
+    {% if state is none %}{% set state = obj.feedback_state %}{% endif %}
     {% if state == obj.FEEDBACK_NOT_YET %}
         {# <span class="badge bg-secondary">Feedback not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
@@ -112,29 +112,36 @@ _projects = \
             {% endif %}
         </div>
         {% if r.project is not none %}
-            <div class="dropdown assignment-label">
-                <a class="badge text-decoration-none text-nohover-light {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block dropdown-toggle"
-                        {% if style %}style="{{ style }}"{% endif %}
-                        href="" role="button" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
-                    {% if r.project.name|length < 35 %}
-                        {{ r.project.name }}
-                    {% else %}
-                        {{ r.project.name[0:35] }}...
-                    {% endif %}
-                </a>
-                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                    {% set disabled = period.is_feedback_open or r.student_engaged %}
-                    {% if disabled %}
-                        <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign</a>
-                    {% else %}
-                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
-                            <i class="fas fa-folder fa-fw"></i> Manually reassign
-                        </a>
-                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Remove assignment</a>
-                    {% endif %}
+            <div class="d-flex flex-row justify-content-start align-items-center gap-2 border-bottom border-secondary pb-2">
+                {% if r.project.name|length < 70 %}
+                    <div>{{ r.project.name }}</div>
+                {% else %}
+                    <div>{{ r.project.name[0:70] }}...</div>
+                {% endif %}
+                {% if r.project.generic or r.project.owner is none %}
+                    <div class="badge bg-info">GENERIC</div>
+                {% else %}
+                    <div class="small text-muted">
+                        Owner
+                        <a href="mailto:{{ r.project.owner.user.email }}">{{ r.project.owner.user.name }}</a>
+                    </div>
+                {% endif %}
+                <div class="dropdown assignment-label">
+                    <a class="badge text-decoration-none text-nohover-light bg-secondary dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Change</a>
+                    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                        {% set disabled = period.is_feedback_open or r.student_engaged %}
+                        {% if disabled %}
+                            <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign</a>
+                        {% else %}
+                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
+                                <i class="fas fa-folder fa-fw"></i> Manually reassign
+                            </a>
+                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Remove assignment</a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-            <div class="d-flex flex-row justify-content-start align-items-start gap-2">
+            <div class="d-flex flex-row justify-content-start align-items-start gap-2 mt-2">
                 {% if config.uses_supervisor %}
                     {{ roles_list(r.supervisor_roles, 'Supervisor roles') }}
                 {% endif %}
@@ -143,6 +150,49 @@ _projects = \
                 {% endif %}
                 {% if config.uses_moderator %}
                     {{ roles_list(r.moderator_roles, 'Moderator roles') }}
+                {% endif %}
+                {% if config.uses_presentations and period.has_presentation %}
+                    <div>
+                        <div class="small text-muted">Presentation</div>
+                        {% if period.has_deployed_schedule %}
+                            {% set slot = r.schedule_slot %}
+                            <div class="dropdown assignment-label">
+                                {% if slot is not none %}
+                                    <a class="badge text-decoration-none text-nohover-dark bg-info btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                        {{ slot.short_date_as_string }}
+                                        {{ slot.session_type_string }}
+                                    </a>
+                                {% else %}
+                                    <a class="badge text-decoration-none text-nohover-dark bg-warning btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                        Not attending
+                                    </a>
+                                {% endif %}
+                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                                    {% set disabled = not r.can_assign_feedback %}
+                                    <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                                        <i class="fas fa-comments fa-fw"></i> Add new feedback
+                                    </a>
+                                </div>
+                            </div>
+                            {% if slot is not none %}
+                                {% set fns = namespace(flag=false) %}
+                                {% for a in slot.assessors %}
+                                    <div>
+                                        <a class="badge text-decoration-none text-nohover-light bg-info btn-table-block" href="mailto:{{ a.user.email }}">{{ a.user.name }}</a>
+                                        {{ feedback_state_tag(r, r.presentation_feedback_state(a.id)) }}
+                                        {% if slot.feedback_state(a.id) > slot.FEEDBACK_NOT_YET %}
+                                            {% set fns.flag = true %}
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                                {% if fns.flag and r.number_presentation_feedback == 0 %}
+                                    <div class="badge bg-danger">Feedback required</div>
+                                {% endif %}
+                            {% endif %}
+                        {% else %}
+                            <div class="badge bg-secondary">Awaiting scheduling</div>
+                        {% endif %}
+                    </div>
                 {% endif %}
             </div>
         {% else %}
@@ -160,82 +210,6 @@ _projects = \
         <div class="badge bg-danger">None</div>
     {% endfor %}
 </div>
-"""
-
-
-# language=jinja2
-_presentations = \
-"""
-{% macro feedback_state_tag(obj, state, label) %}
-    {% if state == obj.FEEDBACK_NOT_YET or state == obj.FEEDBACK_NOT_REQUIRED %}
-        {# empty #}
-    {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="badge bg-secondary">{{ label }}: to do</span>
-    {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <span class="badge bg-success">{{ label }}: submitted</span>        
-    {% elif state == obj.FEEDBACK_ENTERED %}
-        <span class="badge bg-warning text-dark">{{ label }}: in progress</span>        
-    {% elif state == obj.FEEDBACK_LATE %}
-        <span class="badge bg-danger">{{ label }}: late</span>
-    {% else %}
-        <span class="badge bg-danger">{{ label }}: error &ndash; unknown state</span>
-    {% endif %}        
-{% endmacro %}
-{% if config.uses_presentations %}
-    {% set recs = sub.ordered_assignments.all() %}
-    {% set ns = namespace(count=0) %}
-    <div class="d-flex flex-row justify-content-start gap-2"></div>    
-        {% for rec in recs %}
-            {% if rec.period.has_presentation %}
-                {% set pclass = rec.owner.config.project_class %}
-                {% set ns.count = ns.count+1 %}
-                <div>
-                    <span class="badge bg-primary">Pd. {{ rec.submission_period }}</span>
-                    {% if rec.period.has_deployed_schedule %}
-                        {% set slot = rec.schedule_slot %}
-                        <div class="dropdown assignment-label">
-                            {% if slot is not none %}
-                                <a class="badge text-decoration-none text-nohover-dark bg-info btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                    {{ slot.short_date_as_string }}
-                                    {{ slot.session_type_string }}
-                                </a>
-                            {% else %}
-                                <a class="badge text-decoration-none text-nohover-dark bg-warning btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                    Not attending
-                                </a>
-                            {% endif %}
-                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                                {% set disabled = not rec.can_assign_feedback %}
-                                <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=rec.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                                    <i class="fas fa-comments fa-fw"></i> Add new feedback
-                                </a>
-                            </div>
-                        </div>
-                        {% if slot is not none %}
-                            {% set fns = namespace(flag=false) %}
-                            {% for a in slot.assessors %}
-                                {{ feedback_state_tag(rec, rec.presentation_feedback_state(a.id), a.user.name) }}
-                                {% if slot.feedback_state(a.id) > slot.FEEDBACK_NOT_YET %}
-                                    {% set fns.flag = true %}
-                                {% endif %}
-                            {% endfor %}
-                            {% if fns.flag and rec.number_presentation_feedback == 0 %}
-                                <span class="badge bg-danger">Feedback required</span>
-                            {% endif %}
-                        {% endif %}
-                    {% else %}
-                        <span class="badge bg-secondary">Awaiting scheduling</span>
-                    {% endif %}
-                </div>
-            {% endif %}
-        {% endfor %}
-        {% if ns.count == 0 %}
-            <span class="badge bg-secondary">None</span>
-        {% endif %}
-    </div>
-{% else %}
-    <span class="badge bg-secondary">Not used</span>
-{% endif %}
 """
 
 
@@ -410,8 +384,7 @@ def submitters_data(students, config, show_name, show_number, sort_number):
                  'display': render_template_string(_cohort, sub=s),
                  'value': s.student.cohort
              },
-             'projects': render_template_string(_projects, sub=s, config=config),
-             'presentations': render_template_string(_presentations, sub=s, config=config),
+             'periods': render_template_string(_periods, sub=s, config=config),
              'menu': render_template_string(_menu, sub=s, allow_delete=allow_delete)} for s in students]
 
     return jsonify(data)

@@ -9870,7 +9870,7 @@ class PresentationFeedback(db.Model):
     timestamp = db.Column(db.DateTime())
 
 
-class SubmissionRole(db.Model, SubmissionRoleTypesMixin):
+class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackStatesMixin):
     """
     Model for each staff member that has a role for a SubmissionRecord: that includes supervisors, markers,
     moderators, exam board members and external examiners (and possibly others)
@@ -9939,6 +9939,132 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin):
 
     # faculty response timestamp
     response_timestamp = db.Column(db.DateTime())
+
+
+    @property
+    def uses_supervisor_feedback(self):
+        return self.submission.period.uses_supervisor_feedback
+
+
+    @property
+    def uses_marker_feedback(self):
+        return self.submission.period.uses_marker_feedback
+
+
+    @property
+    def uses_presentation_feedback(self):
+        return self.submission.period.uses_presentation_feedback
+
+
+    @property
+    def feedback_state(self):
+        if self.role == SubmissionRole.ROLE_SUPERVISOR:
+            return self._supervisor_feedback_state
+        elif self.role == SubmissionRole.ROLE_MARKER:
+            return self._marker_feedback_state
+        elif self.role == SubmissionRole.ROLE_MODERATOR:
+            return self._moderator_feedback_state
+
+        return SubmissionRole.FEEDBACK_NOT_REQUIRED
+
+
+    @property
+    def _supervisor_feedback_state(self):
+        if not self.uses_supervisor_feedback:
+            return SubmissionRole.FEEDBACK_NOT_REQUIRED
+
+        period: SubmissionPeriodRecord = self.submission.period
+
+        if not period.collect_project_feedback or not period.config.project_class.publish:
+            return SubmissionRole.FEEDBACK_NOT_REQUIRED
+
+        return self._internal_feedback_state
+
+    @property
+    def _marker_feedback_state(self):
+        if not self.uses_marker_feedback:
+            return SubmissionRole.FEEDBACK_NOT_REQUIRED
+
+        period: SubmissionPeriodRecord = self.submission.period
+
+        if not period.collect_project_feedback or not period.config.project_class.publish:
+            return SubmissionRole.FEEDBACK_NOT_REQUIRED
+
+        return self._internal_feedback_state
+
+
+    @property
+    def _moderator_feedback_state(self):
+        return SubmissionRole.FEEDBACK_NOT_REQUIRED
+
+
+    @property
+    def _feedback_valid(self):
+        if self.positive_feedback is None or len(self.positive_feedback) == 0:
+            return False
+
+        if self.improvements_feedback is None or len(self.improvements_feedback) == 0:
+            return False
+
+        return True
+
+
+    @property
+    def _internal_feedback_state(self):
+        period: SubmissionPeriodRecord = self.submission.period
+
+        if not period.is_feedback_open:
+            return SubmissionRole.FEEDBACK_NOT_YET
+
+        if self.submitted_feedback:
+            return SubmissionRole.FEEDBACK_SUBMITTED
+
+        if self._feedback_valid:
+            return SubmissionRole.FEEDBACK_ENTERED
+
+        if not period.closed:
+            return SubmissionRole.FEEDBACK_WAITING
+
+        return SubmissionRole.FEEDBACK_LATE
+
+
+    @property
+    def response_state(self):
+        if self.role == SubmissionRole.ROLE_SUPERVISOR:
+            return self._supervisor_response_state
+
+        return SubmissionRole.FEEDBACK_NOT_REQUIRED
+
+
+    @property
+    def _supervisor_response_state(self):
+        sub: SubmissionRecord = self.submission
+        period: SubmissionPeriodRecord = sub.period
+
+        if not period.collect_project_feedback or not period.config.project_class.publish:
+            return SubmissionRole.FEEDBACK_NOT_REQUIRED
+
+        if not period.is_feedback_open or not sub.student_feedback_submitted:
+            return SubmissionRole.FEEDBACK_NOT_YET
+
+        if self.submitted_response:
+            return SubmissionRole.FEEDBACK_SUBMITTED
+
+        if self._response_valid:
+            return SubmissionRole.FEEDBACK_ENTERED
+
+        if not period.closed:
+            return SubmissionRole.FEEDBACK_WAITING
+
+        return SubmissionRole.FEEDBACK_LATE
+
+
+    @property
+    def _response_valid(self):
+        if self.response is None or len(self.response) == 0:
+            return False
+
+        return True
 
 
 
@@ -10194,7 +10320,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             raise KeyError('Unknown role "{role}" in SubmissionRecord.get_roles()'.format(role=role))
 
         role_id = role_map[role]
-        return [role.user for role in self.roles if role.role == role_id]
+        return [role for role in self.roles if role.role == role_id]
 
 
     def get_role_ids(self, role: str):
@@ -10257,18 +10383,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         :return:
         """
         return self.get_role_ids('moderator')
-
-
-    @property
-    def supervisor(self):
-        """
-        supervisor is just a pass-through to the assigned project owner
-        :return:
-        """
-        if self.project is None:
-            return None
-
-        return self.project.owner
 
 
     @property
@@ -10701,30 +10815,30 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         config: ProjectClassConfig = self.current_config
 
-        supervisor_roles: List[User] = self.supervisor_roles
-        marker_roles: List[User] = self.marker_roles
-        moderator_roles: List[User] = self.moderator_roles
+        supervisor_roles: List[SubmissionRole] = self.supervisor_roles
+        marker_roles: List[SubmissionRole] = self.marker_roles
+        moderator_roles: List[SubmissionRole] = self.moderator_roles
 
-        supervisor_ids: Set[int] = set(u.id for u in supervisor_roles)
-        marker_ids: Set[int] = set(u.id for u in marker_roles)
-        moderator_roles: Set[int] = [u.id for u in moderator_roles]
+        supervisor_ids: Set[int] = set(role.user.id for role in supervisor_roles)
+        marker_ids: Set[int] = set(role.user.id for role in marker_roles)
+        moderator_roles: Set[int] = [role.user.id for role in moderator_roles]
 
         if config.uses_supervisor:
-            for u in supervisor_roles:
-                if not asset.has_access(u):
-                    asset.grant_user(u)
+            for role in supervisor_roles:
+                if not asset.has_access(role.user):
+                    asset.grant_user(role.user)
                     modified = True
 
         if config.uses_marker:
-            for u in marker_roles:
-                if not asset.has_access(u):
-                    asset.grant_user(u)
+            for role in marker_roles:
+                if not asset.has_access(role.user):
+                    asset.grant_user(role.user)
                     modified = True
 
         if config.uses_moderator:
-            for u in moderator_roles:
-                if not asset.has_access(u):
-                    asset.grant_user(u)
+            for role in moderator_roles:
+                if not asset.has_access(role.user):
+                    asset.grant_user(role.user)
                     modified = True
 
         for user in asset.access_control_list:
@@ -10794,22 +10908,22 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         def _validate_report_access_control(asset, text_label):
             if config.uses_supervisor:
-                for u in self.supervisor_roles:
-                    if not asset.has_access(u):
+                for role in self.supervisor_roles:
+                    if not asset.has_access(role.user):
                         messages.append('"{name}" has been assigned a supervision role, but does not have download '
-                                        'permissions for the {what}'.format(name=u.name, what=text_label))
+                                        'permissions for the {what}'.format(name=role.user.name, what=text_label))
 
             if config.uses_marker:
-                for u in self.marker_roles:
-                    if not asset.has_access(u):
+                for role in self.marker_roles:
+                    if not asset.has_access(role.user):
                         messages.append('"{name}" has been assigned a marking role, but does not have download '
-                                        'permissions for the {what}'.format(name=u.name, what=text_label))
+                                        'permissions for the {what}'.format(name=role.user.name, what=text_label))
 
             if config.uses_moderator:
-                for u in self.moderator_roles:
-                    if not asset.has_access(u):
+                for role in self.moderator_roles:
+                    if not asset.has_access(role.user):
                         messages.append('"{name}" has been assigned a moderation role, but does not have download '
-                                        'permissions for the {what}'.format(name=u.name, what=text_label))
+                                        'permissions for the {what}'.format(name=role.user.name, what=text_label))
 
             if not asset.has_access(self.current_config.convenor.user):
                 messages.append('Project convenor "{name}" for this submission period does not have download '
@@ -10824,22 +10938,22 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         def _validate_attachment_access_control(asset):
             if config.uses_supervisor:
-                for u in self.supervisor_roles:
-                    if not asset.has_access(u):
+                for role in self.supervisor_roles:
+                    if not asset.has_access(role.user):
                         messages.append('"{name}" has been assigned a supervision role, but does not have download '
-                                        'permissions for attachment "{attach}"'.format(name=u.name, attach=asset.target_name))
+                                        'permissions for attachment "{attach}"'.format(name=role.user.name, attach=asset.target_name))
 
             if config.uses_marker:
-                for u in self.marker_roles:
-                    if not asset.has_access(u):
+                for role in self.marker_roles:
+                    if not asset.has_access(role.user):
                         messages.append('"{name}" has been assigned a marking role, but does not have download '
-                                        'permissions for attachment "{attach}"'.format(name=u.name, attach=asset.target_name))
+                                        'permissions for attachment "{attach}"'.format(name=role.user.name, attach=asset.target_name))
 
             if config.uses_moderator:
-                for u in self.moderator_roles:
-                    if not asset.has_access(u):
+                for role in self.moderator_roles:
+                    if not asset.has_access(role.user):
                         messages.append('"{name}" has been assigned a moderation role, but does not have download '
-                                        'permissions for attachment "{attach}"'.format(name=u.name, attach=asset.target_name))
+                                        'permissions for attachment "{attach}"'.format(name=role.user.name, attach=asset.target_name))
 
             if not asset.has_access(self.current_config.convenor.user):
                 messages.append('The project convenor for this submission period "{name}" does not have download '

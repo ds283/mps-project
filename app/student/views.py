@@ -494,9 +494,15 @@ def submitter_view_project(sid, pid):
     if not verify_open(config, message=True):
         return redirect(redirect_url())
 
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    if url is None and text is None:
+        url = url_for('student.submitter_browse_projects', id=sub.id)
+        text = 'project list'
+
     return render_template('student/show_project.html', title=project.name, sel=None, project=project, desc=project,
-                           text='project list', archived=True,
-                           url=url_for('student.submitter_browse_projects', id=sub.id))
+                           url=url, text=text, archived=True)
 
 
 @student.route('/add_bookmark/<int:sid>/<int:pid>')

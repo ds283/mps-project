@@ -77,42 +77,10 @@ _periods = \
     {% set style = pclass.make_CSS_style() %}
     {% set period = r.period %}
     {% set current_period = config.current_period %}
-    <div class="bg-light p-2 mb-2 {% if config.submissions > 1 and period.submission_period == current_period.submission_period %}border border-info{% endif %}">
-        <div class="d-flex flex-row justify-content-start align-items-center gap-2">
-            {% if show_period %}<div class="small text-muted"><em><strong>{{ period.display_name }}</strong></em></div>{% endif %}
-            {% if sub.published %}
-                <div class="dropdown assignment-label">
-                    <a class="badge text-decoration-none {% if r.student_engaged %}bg-success text-nohover-light{% else %}bg-warning text-nohover-dark{% endif %} btn-table-block dropdown-toggle"
-                        href="" role="button" aria-haspopup="true" aria-expanded="false"
-                        data-bs-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}</a>
-                    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                        {% if r.submission_period > config.submission_period %}
-                            <a class="dropdown-item d-flex gap-2 disabled">Submission period not yet open</a>
-                        {% elif not r.student_engaged %}
-                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_started', id=r.id) }}">
-                                <i class="fas fa-check fa-fw"></i> Mark as started
-                            </a>
-                        {% else %}
-                            {% set disabled = (config.submitter_lifecycle >= config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
-                            <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
-                                <i class="fas fa-times fa-fw"></i> Mark as waiting
-                            </a>
-                        {% endif %}
-                    </div>
-                </div>
-                {% if r.report is not none %}
-                    <div class="badge bg-success"><i class="fas fa-check"></i> Report</div>
-                {% elif period.canvas_enabled and not period.closed and r.canvas_submission_available is true %}
-                    <a class="link-success text-decoration-none" href="{{ url_for('documents.pull_report_from_canvas', rid=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}">Pull report from Canvas...</a>
-                {% endif %}
-                {% set number_attachments = r.number_record_attachments %}
-                {% if number_attachments > 0 %}
-                    <div class="badge bg-success"><i class="fas fa-check"></i> Attachments ({{ number_attachments }})</div>
-                {% endif %}
-            {% endif %}
-        </div>
+    {% set submissions = config.submissions %}
+    <div class="bg-light p-2 mb-2 {% if submissions > 1 and period.submission_period == current_period.submission_period %}border border-info{% endif %}">
         {% if r.project is not none %}
-            <div class="d-flex flex-row justify-content-start align-items-center gap-2 border-bottom border-secondary pb-2">
+            <div class="d-flex flex-row justify-content-start align-items-center gap-2">
                 {% if r.project.name|length < 70 %}
                     <div>{{ r.project.name }}</div>
                 {% else %}
@@ -140,6 +108,39 @@ _periods = \
                         {% endif %}
                     </div>
                 </div>
+            </div>
+            <div class="d-flex flex-row justify-content-start align-items-center gap-2 border-bottom border-secondary pb-2">
+                {% if show_period %}<div class="small text-muted"><em><strong>{{ period.display_name }}</strong></em></div>{% endif %}
+                {% if sub.published %}
+                    <div class="dropdown assignment-label">
+                        <a class="badge text-decoration-none {% if r.student_engaged %}bg-success text-nohover-light{% else %}bg-warning text-nohover-dark{% endif %} btn-table-block dropdown-toggle"
+                            href="" role="button" aria-haspopup="true" aria-expanded="false"
+                            data-bs-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}</a>
+                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                            {% if r.submission_period > config.submission_period %}
+                                <a class="dropdown-item d-flex gap-2 disabled">Submission period not yet open</a>
+                            {% elif not r.student_engaged %}
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_started', id=r.id) }}">
+                                    <i class="fas fa-check fa-fw"></i> Mark as started
+                                </a>
+                            {% else %}
+                                {% set disabled = (config.submitter_lifecycle >= config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
+                                <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
+                                    <i class="fas fa-times fa-fw"></i> Mark as waiting
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if r.report is not none %}
+                        <div class="badge bg-success"><i class="fas fa-check"></i> Report</div>
+                    {% elif period.canvas_enabled and not period.closed and r.canvas_submission_available is true %}
+                        <a class="link-success text-decoration-none" href="{{ url_for('documents.pull_report_from_canvas', rid=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}">Pull report from Canvas...</a>
+                    {% endif %}
+                    {% set number_attachments = r.number_record_attachments %}
+                    {% if number_attachments > 0 %}
+                        <div class="badge bg-success"><i class="fas fa-check"></i> Attachments ({{ number_attachments }})</div>
+                    {% endif %}
+                {% endif %}
             </div>
             <div class="d-flex flex-row justify-content-start align-items-start gap-2 mt-2">
                 {% if config.uses_supervisor %}
@@ -196,8 +197,11 @@ _periods = \
                 {% endif %}
             </div>
         {% else %}
-            <div>
-                <a class="badge text-decoration-none text-nohover-light bg-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">No project allocated</a>
+            <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+                <div class="small text-muted"><em><strong>{{ period.display_name }}</strong></em></div>
+                <div>
+                    <a class="badge text-decoration-none text-nohover-light bg-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">No project allocated</a>
+                </div>
             </div>
         {% endif %}
     </div>
@@ -205,7 +209,8 @@ _periods = \
 {% set recs = sub.ordered_assignments.all() %}
 <div class="d-flex flex-row justify-content-start align-items-start gap-2"></div>
     {% for rec in recs %}
-        {{ project_tag(rec, true) }}
+        {% set submissions = rec.owner.config.submissions %}
+        {{ project_tag(rec, submissions > 1) }}
     {% else %}
         <div class="badge bg-danger">None</div>
     {% endfor %}

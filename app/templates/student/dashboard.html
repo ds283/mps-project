@@ -194,20 +194,19 @@
             </a>
         </div>
         <div class="small text-muted">
-            Commences
-            <span class="badge bg-info text-dark">Y{{ pclass.start_year }}</span>
+            Commences Y{{ pclass.start_year }}
         </div>
     </div>
     <div class="d-flex flex-row justify-content-between align-items-start mt-2">
-        <div class="d-flex flex-row justify-content-start gap-2">
-            {% if sdata %}
+        {% if sdata %}
+            <div class="d-flex flex-row justify-content-start gap-2">
                 {{ sdata.student.cohort_label|safe }}
                 {{ sdata.student.programme.label|safe }}
                 {{ sdata.academic_year_label(show_details=False)|safe }}
-            {% endif %}
-        </div>
-        <div class="d-flex flex-row justify-content-end align-items-start gap-2">
-            {% if sdata and sdata.live_deadline is defined %}
+            </div>
+        {% endif %}
+        {% if sdata and sdata.live_deadline is defined %}
+            <div class="d-flex flex-row justify-content-end align-items-start gap-2">
                 {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                     <span class="small text-primary">Choices for {{ config.select_year_a }}&ndash;{{ config.select_year_b }} open</span>
                     {% if config.live_deadline %}
@@ -216,11 +215,11 @@
                 {% else %}
                     <span class="small text-muted">Selections not currently open</span>
                 {% endif %}
-            {% endif %}
-        </div>
+            </div>
+        {% endif %}
     </div>
     {% if show_canvas and config.canvas_enabled %}
-        <div class="d-flex flex-row justify-content-start align-items-center gap-2 border-top border-secondary small">
+        <div class="d-flex flex-row justify-content-start align-items-center gap-2 border-top border-secondary pt-2 mt-2 small">
             <a class="text-decoration-none" href="{{ config.canvas_course_URL }}">Go to Canvas site for this module</a>
             <i class="text-muted fa fa-external-link"></i>
         </div>

@@ -32,7 +32,6 @@
                         type: 'value'
                       } },
                     { data: 'projects' },
-                    { data: 'markers' },
                     { data: 'presentations' },
                     { data: 'menu' }
                 ],
@@ -189,7 +188,7 @@
                 </div>
             </div>
 
-            <div class="d-flex flex-row justify-content-end align-content-end gap-2">
+            <div class="d-flex flex-row justify-content-end align-items-end gap-2">
                 {% if is_admin or is_root or is_emailer %}
                     <a href="{{ url_for('convenor.email_submitters', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter) }}"
                        class="btn btn-sm btn-outline-primary top-row-button">
@@ -229,8 +228,7 @@
                 <tr>
                     <th width="11%"> Name</th>
                     <th width="10%"> Programme</th>
-                    <th width="26%"> Projects</th>
-                    <th wdith="20%"> Markers</th>
+                    <th width="46%"> Projects</th>
                     <th width="20%"> Presentations</th>
                     <th width="13%"> Actions</th>
                 </tr>

@@ -1,5 +1,5 @@
 {% macro icon_block(icon_glyph, extra_classes=none) %}
-    <div class="d-flex justify-content-between align-content-start {%- if extra_classes is not none %} {{ extra_classes }}{%- endif -%}">
+    <div class="d-flex justify-content-between align-items-start {%- if extra_classes is not none %} {{ extra_classes }}{%- endif -%}">
         <i class="fas fa-{{ icon_glyph }} fa-lg pt-1 me-2"></i>
         <div class="w-100">
             {{ caller() }}

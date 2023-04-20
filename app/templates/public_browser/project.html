@@ -24,7 +24,7 @@
                     </div>
                 </div>
                 {% if not project.generic and project.owner %}
-                    <div class="d-flex flex-row justify-content-between align-content-start sm-gap-below">
+                    <div class="d-flex flex-row justify-content-between align-items-start sm-gap-below">
                         <div>
                             <div class="project-owner-name">
                                 {{ project.owner.user.name }}
@@ -67,7 +67,7 @@
                         {% endcall %}
                     </div>
                     {% if project.group %}
-                        <div class="mt-4 d-flex flex-row justify-content-end align-content-start"></div>
+                        <div class="mt-4 d-flex flex-row justify-content-end align-items-start"></div>
                             <div>
                                 <div class="research-group-banner">{{ project.group.name }}</div>
                                 {% if project.group.website and project.group.website is not none %}

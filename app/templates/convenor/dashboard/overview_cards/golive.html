@@ -36,7 +36,7 @@
                     {% endcall %}
                 {% endif %}
             </div>
-            <div class="d-flex flex-row justify-content-start align-content-center gap-2 mt-3">
+            <div class="d-flex flex-row justify-content-start align-items-center gap-2 mt-3">
                 {{ approvals_state(approval_data) }}
             </div>
             {% if total_projects > 0 %}
@@ -49,7 +49,7 @@
                     {{ wtf.render_field(golive_form.notify_faculty) }}
                     {{ wtf.render_field(golive_form.notify_selectors) }}
                     {{ blocking_task_list(config.get_blocking_tasks[0]) }}
-                    <div class="d-flex flex-row justify-content-end align-content-start gap-2">
+                    <div class="d-flex flex-row justify-content-end align-items-start gap-2">
                         {% if golive_form.live_and_close is defined %}
                             {{ wtf.render_field(golive_form.live_and_close, button_map={'live_and_close': 'outline-secondary'}, button_size='sm') }}
                         {% endif %}

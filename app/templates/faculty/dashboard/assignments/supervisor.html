@@ -2,8 +2,8 @@
 
 {% macro supervisor_assignments(period, current_user, is_sabbatical, is_exempt, reenroll_date) %}
     {% set id = current_user.faculty_data.id %}
-    {% set records = period.get_supervisor_records(id) %} {# returns a list of SubmissionRecord instances #}
-    {% if records|length > 0 %}
+    {% set roles = period.get_supervisor_records(id) %} {# returns a list of SubmissionRole instances #}
+    {% if roles|length > 0 %}
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -20,13 +20,14 @@
                 </tr>
             </thead>
             <tbody>
-                {% for rec in records %}
+                {% for my_role in roles %}
+                    {# role is a SubmissionRole #}
+                    {% set rec = my_role.submission %}
                     {# rec is a SubmissionRecord #}
                     {% set uses_feedback = rec.uses_supervisor_feedback %}
                     {% set uses_project_hub = rec.uses_project_hub %}
                     {# sub is a SubmittingStudent #}
                     {% set sub = rec.owner %}
-                    {% set my_role = rec.get_supervisor(current_user.id) %}
                     <tr>
                         <td>
                             {% if period.canvas_enabled and sub is not none %}

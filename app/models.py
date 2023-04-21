@@ -6140,8 +6140,8 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
         return all([p.all_supervisors_assigned for p in self.periods])
 
 
-    def number_supervisor_records(self, faculty):
-        return sum([p.number_supervisor_records(faculty) for p in self.periods])
+    def number_supervisor_records(self, faculty) -> int:
+        return sum(p.number_supervisor_records(faculty) for p in self.periods)
 
 
     @property
@@ -6454,15 +6454,23 @@ class SubmissionPeriodRecord(db.Model):
 
         role_id = role_map[role]
 
-        return self.submissions \
-            .filter(SubmissionRecord.roles.any(and_(SubmissionRole.role == role_id,
-                                                    SubmissionRole.user_id == user_id))) \
-            .distinct()
+        record_ids = db.session.query(SubmissionRecord.id).filter(SubmissionRecord.period_id == self.id,
+                                                                  SubmissionRecord.retired == False).all()
+
+        # SQLAlchemy returns a list of Row objects, even when we ask for only a single column
+        if len(record_ids) > 0:
+            if isinstance(record_ids[0], Iterable):
+                record_ids = [x[0] for x in record_ids]
+
+        return db.session.query(SubmissionRole) \
+            .filter(SubmissionRole.submission_id.in_(record_ids),
+                    SubmissionRole.role == role_id,
+                    SubmissionRole.user_id == user_id)
 
 
     def _ordered_records_query(self, user, role: str, order_by: str):
         """
-        Same as _unordered_records_query(), but now order by student name
+        Same as _unordered_records_query(), but now order by student name or exam number (as specified)
         :param user: identify staff member, either primary key for User, FacultyData or a User/FacultyData instance
         :param role: one of 'supervisor', 'marker', 'moderator', 'presentation', 'exam_board', 'external'
         :param order_by: one of 'name', 'exam'
@@ -6473,6 +6481,7 @@ class SubmissionPeriodRecord(db.Model):
                            'SubmissionPeriodRecord._ordered_records_query()'.format(type=order_by))
 
         query = self._unordered_records_query(user, role) \
+            .join(SubmissionRecord, SubmissionRecord.id == SubmissionRole.submission_id) \
             .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
 
         if order_by == 'name':
@@ -6486,7 +6495,7 @@ class SubmissionPeriodRecord(db.Model):
         return query
 
 
-    def number_supervisor_records(self, user):
+    def number_supervisor_records(self, user) -> int:
         return get_count(self._unordered_records_query(user, 'supervisor'))
 
 
@@ -6494,7 +6503,7 @@ class SubmissionPeriodRecord(db.Model):
         return self._ordered_records_query(user, 'supervisor', 'name').all()
 
 
-    def number_marker_records(self, user):
+    def number_marker_records(self, user) -> int:
         return get_count(self._unordered_records_query(user, 'marker'))
 
 
@@ -6502,7 +6511,7 @@ class SubmissionPeriodRecord(db.Model):
         return self._ordered_records_query(user, 'marker', 'exam').all()
 
 
-    def number_moderator_records(self, user):
+    def number_moderator_records(self, user) -> int:
         return get_count(self._unordered_records_query(user, 'moderator'))
 
 
@@ -10338,7 +10347,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return self.owner.student.exam_number_label
 
 
-    def get_roles(self, role: str):
+    def get_roles(self, role: str) -> List[SubmissionRole]:
         """
         Return attached SubmissionRole instances for role type 'role'
         :param role: specified role type
@@ -10356,7 +10365,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return [role for role in self.roles if role.role == role_id]
 
 
-    def get_role_ids(self, role: str):
+    def get_role_ids(self, role: str) -> Set[int]:
         """
         Return a set of user ids for User instances obtained from get_roles()
         :return:
@@ -10389,7 +10398,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return None
 
 
-    def get_role(self, user):
+    def get_role(self, user) -> SubmissionRole:
         """
         Return SubmissionRole instance for specified user, if one exists
         :param user:
@@ -10413,7 +10422,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
 
     @property
-    def supervisor_roles(self):
+    def supervisor_roles(self) -> List[SubmissionRole]:
         """
         Convenience function for get_roles() with role='supervisor'
         :return:
@@ -10422,7 +10431,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
 
     @property
-    def supervisor_role_ids(self):
+    def supervisor_role_ids(self) -> Set[int]:
         """
         Convenience function for get_role_ids() with role='supervisor'
         :return:
@@ -10440,7 +10449,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
 
     @property
-    def marker_roles(self):
+    def marker_roles(self) -> List[SubmissionRole]:
         """
         Convenience function for get_roles() with role='marker'
         :return:
@@ -10449,7 +10458,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
 
     @property
-    def marker_role_ids(self):
+    def marker_role_ids(self) -> Set[int]:
         """
         Convenience function for get_role_ids() with role='marker'
         :return:
@@ -10467,7 +10476,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
 
     @property
-    def moderator_roles(self):
+    def moderator_roles(self) -> List[SubmissionRole]:
         """
         Convenience function for get_roles() with role='moderator'
         :return:
@@ -10476,7 +10485,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
 
     @property
-    def moderator_role_ids(self):
+    def moderator_role_ids(self) -> Set[int]:
         """
         Convenience function for get_role_ids() with role='moderator'
         :return:
@@ -13170,9 +13179,9 @@ class MatchingRecord(db.Model):
         return self._filter(self._warnings, include, omit)
 
 
-    def get_roles(self, role: str):
+    def get_roles(self, role: str) -> List[User]:
         """
-        Return user instances corresponding to attached MatchingRole records for role type 'role'
+        Return User instances corresponding to attached MatchingRole records for role type 'role'
         :param role: specified role type
         :return:
         """
@@ -13188,7 +13197,7 @@ class MatchingRecord(db.Model):
         return [role.user for role in self.roles if role.role == role_id]
 
 
-    def get_role_ids(self, role: str):
+    def get_role_ids(self, role: str) -> Set[int]:
         """
         Return a set of user ids for User instances obtained from get_roles()
         :return:
@@ -13197,7 +13206,7 @@ class MatchingRecord(db.Model):
 
 
     @property
-    def supervisor_roles(self):
+    def supervisor_roles(self) -> List[User]:
         """
         Convenience function for get_roles() with role='supervisor'
         :return:
@@ -13206,7 +13215,7 @@ class MatchingRecord(db.Model):
 
 
     @property
-    def supervisor_role_ids(self):
+    def supervisor_role_ids(self) -> Set[int]:
         """
         Convenience function for get_role_ids() with role='supervisor'
         :return:
@@ -13215,7 +13224,7 @@ class MatchingRecord(db.Model):
 
 
     @property
-    def marker_roles(self):
+    def marker_roles(self) -> List[User]:
         """
         Convenience function for get_roles() with role='marker'
         :return:
@@ -13224,7 +13233,7 @@ class MatchingRecord(db.Model):
 
 
     @property
-    def marker_role_ids(self):
+    def marker_role_ids(self) -> Set[int]:
         """
         Convenience function for get_role_ids() with role='marker'
         :return:
@@ -13233,7 +13242,7 @@ class MatchingRecord(db.Model):
 
 
     @property
-    def moderator_roles(self):
+    def moderator_roles(self) -> List[User]:
         """
         Convenience function for get_roles() with role='moderator'
         :return:
@@ -13242,7 +13251,7 @@ class MatchingRecord(db.Model):
 
 
     @property
-    def moderator_role_ids(self):
+    def moderator_role_ids(self) -> Set[int]:
         """
         Convenience function for get_role_ids() with role='moderator'
         :return:

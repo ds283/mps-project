@@ -1480,16 +1480,16 @@ def dashboard():
                 for n in range(config.submissions):
                     period: SubmissionPeriodRecord = config.get_period(n+1)
 
-                    s_records = period.get_supervisor_records(current_user.id)
-                    mk_records = period.get_marker_records(current_user.id)
-                    mo_records = period.get_moderator_records(current_user.id)
+                    num_s_records = period.number_supervisor_records(current_user.id)
+                    num_mk_records = period.number_marker_records(current_user.id)
+                    num_mo_records = period.number_moderator_records(current_user.id)
 
                     pres_slots = period.get_faculty_presentation_slots(current_user.id) \
                         if (period.has_presentation and period.has_deployed_schedule) else []
 
-                    if (pclass.uses_supervisor and len(s_records) > 0) \
-                            or (config.uses_marker and config.display_marker and len(mk_records) > 0) \
-                            or (config.uses_moderator and config.display_marker and len(mo_records) > 0) \
+                    if (pclass.uses_supervisor and num_s_records > 0) \
+                            or (config.uses_marker and config.display_marker and num_mk_records > 0) \
+                            or (config.uses_moderator and config.display_marker and num_mo_records > 0) \
                             or (config.uses_presentations and config.display_presentations and len(pres_slots) > 0):
                         include = True
                         break

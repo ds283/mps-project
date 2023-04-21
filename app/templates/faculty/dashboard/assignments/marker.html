@@ -25,7 +25,7 @@
                         <td>
                             {% set supv_roles = rec.supervisor_roles %}
                             {% if supv_roles|length > 0 %}
-                                <div class="d-flex flex-column justify-content-start align-items-start gap-2">
+                                <div class="d-flex flex-column justify-content-start align-items-start">
                                     {% for role in supv_roles %}
                                         <a class="text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
                                     {% endfor %}

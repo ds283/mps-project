@@ -108,7 +108,7 @@
                             <div class="col-3">
                                 {% set supv_roles = record.supervisor_roles %}
                                 {% if supv_roles|length > 0 %}
-                                    <div class="d-flex flex-column justify-content-start align-content-start gap-2">
+                                    <div class="d-flex flex-column justify-content-start align-content-start">
                                         {% for role in supv_roles %}
                                             <a class="text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
                                         {% endfor %}
@@ -119,7 +119,7 @@
                             </div>
                             <div class="col-9">
                                 <div class="d-flex flex-row justify-content-between align-items-start w-100">
-                                    <div class="d-flex flex-column justify-content-start align-items-start gap-2">
+                                    <div class="d-flex flex-column justify-content-start align-items-start gap-1">
                                         <strong><a class="text-decoration-none" href="{{ url_for('student.submitter_view_project', sid=sub.id, pid=record.project.id, text='dashboard', url=url_for('student.dashboard')) }}">{{ record.project.name }}</a></strong>
                                         <div>
                                             {% if record.student_feedback_submitted and record.acknowledge_feedback %}

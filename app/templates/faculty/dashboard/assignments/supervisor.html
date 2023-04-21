@@ -57,7 +57,7 @@
                                 {% if period.config.uses_marker %}
                                     {% set mark_roles = rec.marker_roles %}
                                     {% if mark_roles|length > 0 %}
-                                        <div class="d-flex flex-column justify-content-start align-items-start gap-2">
+                                        <div class="d-flex flex-column justify-content-start align-items-start">
                                             {% for role in mark_roles %}
                                                 <a class="text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
                                             {% endfor %}

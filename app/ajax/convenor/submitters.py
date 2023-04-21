@@ -109,7 +109,7 @@ _periods = \
                     </div>
                 </div>
             </div>
-            <div class="d-flex flex-row justify-content-start align-items-center gap-2 border-bottom border-secondary pb-2">
+            <div class="d-flex flex-row justify-content-start align-items-center gap-2">
                 {% if show_period %}<div class="small text-muted"><em><strong>{{ period.display_name }}</strong></em></div>{% endif %}
                 {% if sub.published %}
                     <div class="dropdown assignment-label">
@@ -142,7 +142,7 @@ _periods = \
                     {% endif %}
                 {% endif %}
             </div>
-            <div class="d-flex flex-row justify-content-start align-items-start gap-2 mt-2">
+            <div class="d-flex flex-row justify-content-start align-items-start gap-4 mt-1">
                 {% if config.uses_supervisor %}
                     {{ roles_list(r.supervisor_roles, 'Supervisor roles') }}
                 {% endif %}

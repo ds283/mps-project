@@ -41,7 +41,7 @@ from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionSettingsFormFactory, MoveDescriptionFormFactory, \
-    PresentationFeedbackForm, SubmissionRoleFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm, \
+    PresentationFeedbackForm, SubmissionRoleFeedbackForm, MarkerFeedbackForm, SubmissionRoleResponseForm, \
     EditDescriptionContentForm
 from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
@@ -8758,7 +8758,7 @@ def edit_response(id):
               'they have submitted it.', 'info')
         return redirect(redirect_url())
 
-    form = SupervisorResponseForm(request.form)
+    form = SubmissionRoleResponseForm(request.form)
 
     url = request.args.get('url', None)
     if url is None:

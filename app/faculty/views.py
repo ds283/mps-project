@@ -24,7 +24,7 @@ from . import faculty
 from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionSettingsFormFactory, MoveDescriptionFormFactory, \
     FacultyPreviewFormFactory, SubmissionRoleFeedbackForm, MarkerFeedbackForm, PresentationFeedbackForm, \
-    SupervisorResponseForm, FacultySettingsFormFactory, AvailabilityFormFactory, EditDescriptionContentForm
+    SubmissionRoleResponseForm, FacultySettingsFormFactory, AvailabilityFormFactory, EditDescriptionContentForm
 from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
@@ -1889,6 +1889,7 @@ def submit_feedback(id):
     if not validate_submission_role(role, allow_roles=['supervisor', 'marker', 'moderator']):
         return redirect(redirect_url())
 
+    record: SubmissionRecord = role.submission
     period: SubmissionPeriodRecord = record.period
 
     if not period.collect_project_feedback:
@@ -1933,6 +1934,7 @@ def unsubmit_feedback(id):
     if not validate_submission_role(role, allow_roles=['supervisor', 'marker', 'moderator']):
         return redirect(redirect_url())
 
+    record: SubmissionRecord = role.submission
     period: SubmissionPeriodRecord = record.period
 
     if not period.collect_project_feedback:
@@ -2149,22 +2151,22 @@ def view_feedback(id):
 @faculty.route('/edit_response/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty')
 def edit_response(id):
+    # id identifies a SubmissionRole instance
+    role: SubmissionRole = SubmissionRecord.query.get_or_404(id)
+    record: SubmissionRecord = role.submission
 
-    # id identifies a SubmissionRecord
-    record = SubmissionRecord.query.get_or_404(id)
-
-    if not validate_submission_supervisor(record):
+    if not validate_submission_role(role, allow_roles=['supervisor']):
         return redirect(redirect_url())
 
-    period = record.period
+    period: SubmissionPeriodRecord = record.period
 
     if not period.closed:
-        flash('It is only possible to give respond to feedback from your student when '
+        flash('It is only possible to respond to feedback from the submitter when '
               'their own marks and feedback are available. '
               'Try again when this submission period is closed.', 'info')
         return redirect(redirect_url())
 
-    if period.closed and record.faculty_response_submitted:
+    if period.closed and role.submitted_response:
         flash('It is not possible to edit your response once it has been submitted', 'info')
         return redirect(redirect_url())
 
@@ -2173,63 +2175,73 @@ def edit_response(id):
               'they have submitted it.', 'info')
         return redirect(redirect_url())
 
-    form = SupervisorResponseForm(request.form)
+    form = SubmissionRoleResponseForm(request.form)
 
     url = request.args.get('url', None)
     if url is None:
         url = redirect_url()
 
     if form.validate_on_submit():
-        record.faculty_response = form.feedback.data
-        db.session.commit()
+        role.response = form.feedback.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save response due to a database error. Please contact a system administrator.', 'error')
 
         return redirect(url)
 
     else:
 
         if request.method == 'GET':
-            form.feedback.data = record.faculty_response
+            form.feedback.data = role.response
 
-    return render_template('faculty/dashboard/edit_response.html', form=form, record=record,
-                           submit_url = url_for('faculty.edit_response', id=id, url=url), url=url)
+    return render_template('faculty/dashboard/edit_response.html', form=form, record=role,
+                           submit_url=url_for('faculty.edit_response', id=id, url=url), url=url)
 
 
 @faculty.route('/submit_response/<int:id>')
 @roles_accepted('faculty')
 def submit_response(id):
-    # id identifies a SubmissionRecord
-    record = SubmissionRecord.query.get_or_404(id)
+    # id identifies a SubmissionRole instance
+    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
+    record: SubmissionRecord = role.submission
 
-    if not validate_submission_supervisor(record):
+    if not validate_submission_role(role, allow_roles=['supervisor']):
         return redirect(redirect_url())
 
-    period = record.period
+    period: SubmissionPeriodRecord = record.period
 
-    if record.faculty_response_submitted:
+    if role.submitted_response:
         return redirect(redirect_url())
 
     if not period.closed:
-        flash('It is only possible to give respond to feedback from your student when '
+        flash('It is only possible to respond to feedback from the submitter when '
               'their own marks and feedback are available. '
               'Try again when this submission period is closed.', 'info')
         return redirect(redirect_url())
 
-    if period.closed and record.faculty_response_submitted:
-        flash('It is not possible to edit your response once it has been submitted', 'info')
-        return redirect(redirect_url())
-
     if period.closed and not record.student_feedback_submitted:
-        flash('It is not possible to write a response to feedback from your student before '
+        flash('It is not possible to write or submit a response to feedback from your student before '
               'they have submitted it.', 'info')
         return redirect(redirect_url())
 
-    if not record.is_response_valid:
-        flash('Cannot submit your feedback because it is incomplete.', 'info')
+    if not role.response_valid:
+        flash('Your response cannot be submitted because it is incomplete. Please ensure that you '
+              'have provided responses for each category.', 'info')
         return redirect(redirect_url())
 
-    record.faculty_response_submitted = True
-    record.faculty_response_timestamp = datetime.now()
-    db.session.commit()
+    role.submitted_response = True
+    role.response_timestamp = datetime.now()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not submit response due to a database error. Please contact a system administrator.', 'error')
 
     return redirect(redirect_url())
 

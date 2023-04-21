@@ -28,10 +28,10 @@
                     <div class="card mt-3 mb-3">
                         <div class="card-header">
                             <div class="d-flex flex-row justify-content-between align-items-center w-100">
-                                <div>Feedback from <i class="fa fa-user"></i> {{ role.user.name }} ({{ role.role_label }})</div>
+                                <div>Feedback from <i class="fas fa-user"></i> {{ role.user.name }} ({{ role.role_label }})</div>
                                 <div class="d-flex flex-row justify-content-end align-items-center gap-2">
                                     {% if role.submitted_feedback and role.feedback_timestamp %}
-                                        <span class="small text-muted">Submitted at {{ role.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        <span class="small text-success me-2">Submitted at {{ role.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                     {% endif %}
                                     {% if current_user.id == role.user_id %}
                                         {% if (period.is_feedback_open and not period.closed) or (period.closed and not role.submitted_feedback) %}
@@ -141,42 +141,53 @@
             {% endif %}
 
             {% if record.student_feedback_submitted %}
+                {% set supv_roles = record.supervisor_roles %}
                 <div class="card border-success mt-3 mb-3">
                     <div class="card-header">
-                        <div class="row vertical-align">
-                            <div class="col-6">
-                                Student feedback to supervisor
+                        <div class="d-flex flex-row justify-content-between align-items-center w-100">
+                            <div>Submitter feedback</div>
+                            <div class="d-flex flex-row justify-content-end align-items-center gap-2">
+                                {% if record.student_feedback_timestamp %}
+                                    <span class="small text-success me-2">Submitted at {{ record.student_feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                {% endif %}
                             </div>
-                            <div class="col-6">
-                                <div class="float-end">
-                                    {% if record.acknowledge_feedback %}
-                                        <span class="badge bg-success">Acknowledged</span>
-                                    {% endif %}
-                                    <span class="badge bg-secondary">Submitted at {{ record.student_feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                                    {% if record.acknowledge_feedback and not record.faculty_response_submitted %}
-                                        <a href="{{ url_for('faculty.edit_response', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-secondary">Edit</a>
-                                        {% if record.is_response_valid %}
-                                            <a href="{{ url_for('faculty.submit_response', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
-                                        {% endif %}
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="float-end">
                         </div>
                     </div>
                     <div class="card-body">
                         {{ record.student_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
                     </div>
-                    {% if not record.acknowledge_feedback %}
-                        <div class="card-footer">
-                            <a href="{{ url_for('faculty.acknowledge_feedback', id=record.id) }}" class="btn btn-sm btn-primary">Acknowledge</a>
+                    {% for role in supv_roles %}
+                        <div class="card mt-1 mb-1">
+                            <div class="card-header">
+                                <div class="d-flex flex-row justify-content-between align-items-center w-100">
+                                    <div>Response from <i class="fas fa-user"></i> {{ role.user.name }}</div>
+                                    <div class="d-flex flex-row justify-content-end align-items-center gap-2">
+                                        {% if role.submitted_response and role.response_timestamp %}
+                                            <span class="small text-success me-2">Response at {{ role.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        {% endif %}
+                                        {% if role.acknowledge_student %}
+                                            <span class="badge bg-success"><i class="fas fa-check"></i> Acknowledge</span>
+                                        {% endif %}
+                                        {% if role.acknowledge_student and not role.submitted_response %}
+                                            <a href="{{ url_for('faculty.edit_response', id=role.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-outline-secondary">Edit...</a>
+                                            {% if role.response_valid %}
+                                                <a href="{{ url_for('faculty.submit_response', id=role.id) }}" class="btn btn-sm btn-outline-success">Submit</a>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% if not role.acknowledge_student %}
+                                <div class="card-footer">
+                                    <a href="{{ url_for('faculty.acknowledge_feedback', id=role.id) }}" class="btn btn-sm btn-outline-primary">Acknowledge</a>
+                                </div>
+                            {% elif role.submitted_response or (role.response and preview) %}
+                                <div class="card-footer">
+                                    {{ record.faculty_response|latextomarkdown|markdown|bclean|blinkify|safe }}
+                                </div>
+                            {% endif %}
                         </div>
-                    {% elif record.faculty_response_submitted or (record.faculty_response and preview) %}
-                        <div class="card-footer">
-                            {{ record.faculty_response|latextomarkdown|markdown|bclean|blinkify|safe }}
-                        </div>
-                    {% endif %}
+                    {% endfor %}
                 </div>
             {% endif %}
 

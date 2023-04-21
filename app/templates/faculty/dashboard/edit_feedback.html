@@ -1,6 +1,7 @@
 {% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
+{% from "icon_block.html" import icon_block %}
 
 {% block scripts %}
     {{ super() }}
@@ -64,34 +65,49 @@
     <form action="{{ submit_url }}" method="POST" name="feedback_form">
         {{ form.hidden_tag() }}
 
+        {% set ns = namespace(alerts=false) %}
         {% if dont_show_warnings is not defined %}
             {% if period is defined and period is not none and period.closed %}
-                <div class="alert alert-danger">
-                    The convenor has closed this submission period. You are still able to enter and edit feedback,
-                    but once submitted it will not be possible to make further edits, or to unsubmit.
+                <div class="alert alert-danger mb-3">
+                    {% call icon_block("exclamation-circle") %}
+                        <div><strong>The convenor has closed this submission period.</strong>></div>
+                        <div class="mt-1">
+                            You are still able to enter and edit feedback,
+                            but once submitted it will not be possible to make further edits, or to unsubmit.
+                        </div>
+                    {% endcall %}
                 </div>
+                {% set ns.alerts = true %}
             {% endif %}
             {% if assessment is defined and assessment is not none and not assessment.is_feedback_open %}
-                <div class="alert alert-danger">
-                    An administrative user has closed feedback for this assessment event. You are still able to
-                    enter and edit feedback, but once submitted it will not be possible to make further
-                    edits, or to unsubmit.
+                <div class="alert alert-danger mb-3">
+                    {% call icon_block("exclamation-circle") %}
+                        <div><strong>An administrative user has closed feedback for this assessment event.</strong></div>
+                        <div class="mt-1">
+                            You are still able to
+                            enter and edit feedback, but once submitted it will not be possible to make further
+                            edits, or to unsubmit.
+                        </div>
+                    {% endcall %}
                 </div>
+                {% set ns.alerts = true %}
             {% endif %}
         {% endif %}
-
-        {% if form.assessor %}
-            <div class="card mt-3 mb-3 card-body bg-well">
-                {{ wtf.render_field(form.assessor) }}
+        {% if not ns.alerts %}
+            <div class="alert alert-info mb-3">
+                {% call icon_block("info-circle") %}
+                    <div><strong>Feedback entered here is synchronized to Canvas and
+                    pushed to the submitter by email.</strong></div>
+                {% endcall %}
             </div>
         {% endif %}
 
-        <div class="card mt-3 mb-3 card-body bg-well">
-            {{ wtf.render_field(form.positive_feedback) }}
-        </div>
-        <div class="card mt-3 mb-3 card-body bg-well">
-            {{ wtf.render_field(form.improvement_feedback) }}
-        </div>
+        {% if form.assessor %}
+            {{ wtf.render_field(form.assessor) }}
+        {% endif %}
+
+        {{ wtf.render_field(form.positive_feedback) }}
+        {{ wtf.render_field(form.improvement_feedback) }}
 
         {{ wtf.render_field(form.save_feedback) }}
     </form>

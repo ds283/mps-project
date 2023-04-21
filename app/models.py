@@ -10082,7 +10082,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
         if self.submitted_response:
             return SubmissionRole.FEEDBACK_SUBMITTED
 
-        if self._response_valid:
+        if self.response_valid:
             return SubmissionRole.FEEDBACK_ENTERED
 
         if not period.closed:
@@ -10092,7 +10092,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
 
 
     @property
-    def _response_valid(self):
+    def response_valid(self):
         if self.response is None or len(self.response) == 0:
             return False
 

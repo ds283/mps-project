@@ -1,16 +1,18 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import date_field, submission_period_configure_button %}
+{% from "icon_block.html" import icon_block %}
 
 {% macro feedback_marking(config, period, feedback_form) %}
-    <div class="row vertical-top">
-        <div class="col-9">
-            Feedback and marking are currently underway.
-            These are available to release to students when the feedback period closes.
-        </div>
-        <div class="col-3">
-            <div class="float-end">
+    <div class="alert alert-warning mb-3">
+        {% call icon_block("info-circle") %}
+            <div><strong>Feed back and marking are currently underway.</strong></div>
+            <div class="mt-1">
+                Outcomes will become available to release to submitters when the
+                feedback period closes.
+            </div>
+            <div class="mt-2">
                 <a href="{{ url_for('convenor.close_feedback', id=config.id) }}"
-                   class="btn btn-outline-danger">
+                   class="btn btn-sm btn-outline-danger">
                     {% if config.submission_period == config.submissions %}
                         Close feedback
                     {% else %}
@@ -18,9 +20,8 @@
                     {% endif %}
                 </a>
             </div>
-        </div>
+        {% endcall %}
     </div>
-    <hr class="intro-divider">
     <form action="{{ url_for('convenor.open_feedback', id=config.id) }}" method="POST" name="feedback-form">
         {{ feedback_form.hidden_tag() }}
         {{ date_field(feedback_form.feedback_deadline, 'feedback_datetimepicker') }}
@@ -28,7 +29,7 @@
         {{ wtf.render_field(feedback_form.cc_me) }}
         <div class="d-flex flex-row justify-content-end">
             <div class="btn-group mb-1" role="group">
-                {{ submission_period_configure_button(period, config, dropup=true) }}
+                {{ submission_period_configure_button(period, config, dropup=true, small=true) }}
                 {% if feedback_form.test_button is defined %}
                     {{ wtf.render_field(feedback_form.test_button, button_map={'test_button': 'outline-secondary'}, button_size='sm') }}
                 {% endif %}

@@ -350,7 +350,7 @@ class PresentationFeedbackForm(Form, FeedbackMixin):
     pass
 
 
-class SupervisorResponseMixin():
+class SubmissionRoleResponseMixin():
 
     feedback = TextAreaField('Enter your response', render_kw={'rows': 5},
                              description='Your feedback can be structured using Markdown, or use LaTeX formatting '
@@ -360,7 +360,7 @@ class SupervisorResponseMixin():
     save_changes = SubmitField('Save changes')
 
 
-class SupervisorResponseForm(Form, SupervisorResponseMixin):
+class SubmissionRoleResponseForm(Form, SubmissionRoleResponseMixin):
 
     pass
 

@@ -13,8 +13,8 @@
             {% if period.closed %}
                 {# no markup required; formerly panel-default #}
             {% elif period.is_feedback_open %}
-                {% set ns.bgclass = 'bg-danger' %}
-                {% set ns.borderclass = 'border-secondary' %}
+                {% set ns.bgclass = 'bg-primary' %}
+                {% set ns.borderclass = 'border-primary' %}
                 {% set ns.textclass = 'text-white' %}
             {% elif period.start_date and period.start_date > today %}
                 {# no markup required; formerly panel-default #}

@@ -1880,62 +1880,6 @@ def edit_feedback(id):
                            period=period, record=role)
 
 
-@faculty.route('/marker_edit_feedback/<int:id>', methods=['GET', 'POST'])
-@roles_required('faculty')
-def marker_edit_feedback(id):
-    # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
-
-    if not validate_submission_marker(record):
-        return redirect(redirect_url())
-
-    if not record.period.collect_project_feedback:
-        flash('Feedback collection has been disabled for this submission period.', 'info')
-        return redirect(redirect_url())
-
-    period = record.period
-
-    if not period.is_feedback_open:
-        flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
-              'period for feedback and marking.',
-              'error')
-        return redirect(redirect_url())
-
-    if period.closed and record.marker_submitted:
-        flash('It is not possible to edit feedback after the convenor has closed this submission period.',
-              'error')
-        return redirect(redirect_url())
-
-    form = MarkerFeedbackForm(request.form)
-
-    url = request.args.get('url', None)
-    if url is None:
-        url = redirect_url()
-
-    if form.validate_on_submit():
-        record.marker_positive = form.positive_feedback.data
-        record.marker_negative = form.improvement_feedback.data
-
-        if record.marker_submitted:
-            record.marker_timestamp = datetime.now()
-
-        db.session.commit()
-
-        return redirect(url)
-
-    else:
-
-        if request.method == 'GET':
-            form.positive_feedback.data = record.marker_positive
-            form.improvement_feedback.data = record.marker_negative
-
-    return render_template('faculty/dashboard/edit_feedback.html', form=form,
-                           title='Edit marker feedback', unique_id='mark-{id}'.format(id=id),
-                           formtitle='Edit marker feedback for <strong>{num}</strong>'.format(num=record.owner.student.exam_number),
-                           submit_url=url_for('faculty.marker_edit_feedback', id=id, url=url),
-                           period=period, record=record)
-
-
 @faculty.route('/submit_feedback/<int:id>')
 @roles_required('faculty')
 def submit_feedback(id):
@@ -2017,71 +1961,9 @@ def unsubmit_feedback(id):
     return redirect(redirect_url())
 
 
-@faculty.route('/marker_submit_feedback/<int:id>')
+@faculty.route('/acknowledge_feedback/<int:id>')
 @roles_required('faculty')
-def marker_submit_feedback(id):
-    # id is a SubmissionRecord instance
-    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
-
-    if not validate_submission_marker(record):
-        return redirect(redirect_url())
-
-    if not record.period.collect_project_feedback:
-        flash('Feedback collection has been disabled for this submission period.', 'info')
-        return redirect(redirect_url())
-
-    if record.marker_submitted:
-        return redirect(redirect_url())
-
-    period: SubmissionPeriodRecord = record.period
-
-    if not period.is_feedback_open and not period.closed:
-        flash('It is not possible to submit before the feedback period has opened.', 'error')
-        return redirect(redirect_url())
-
-    if not record.is_marker_valid:
-        flash('Cannot submit feedback because it is still incomplete.', 'error')
-        return redirect(redirect_url())
-
-    record.marker_submitted = True
-    record.marker_timestamp = datetime.now()
-    db.session.commit()
-
-    return redirect(redirect_url())
-
-
-@faculty.route('/marker_unsubmit_feedback/<int:id>')
-@roles_required('faculty')
-def marker_unsubmit_feedback(id):
-    # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
-
-    if not validate_submission_marker(record):
-        return redirect(redirect_url())
-
-    if not record.period.collect_project_feedback:
-        flash('Feedback collection has been disabled for this submission period.', 'info')
-        return redirect(redirect_url())
-
-    if not record.marker_submitted:
-        return redirect(redirect_url())
-
-    period = record.period
-
-    if period.closed:
-        flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
-        return redirect(redirect_url())
-
-    record.marker_submitted = False
-    record.marker_timestamp = None
-    db.session.commit()
-
-    return redirect(redirect_url())
-
-
-@faculty.route('/supervisor_acknowledge_feedback/<int:id>')
-@roles_required('faculty')
-def supervisor_acknowledge_feedback(id):
+def acknowledge_feedback(id):
     # id is a SubmissionRecord instance
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 

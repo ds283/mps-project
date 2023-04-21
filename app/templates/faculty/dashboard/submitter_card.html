@@ -26,8 +26,8 @@
             {% if period.closed %}
                 {# no markup required; formerly panel-default #}
             {% elif period.is_feedback_open %}
-                {% set ns.bgclass = 'bg-danger' %}
-                {% set ns.borderclass = 'border-danger' %}
+                {% set ns.bgclass = 'bg-primary' %}
+                {% set ns.borderclass = 'border-primary' %}
                 {% set ns.textclass = 'text-white' %}
             {% elif period.start_date and period.start_date > today %}
                 {# no markup required; formerly panel-default #}
@@ -49,8 +49,8 @@
                 {% endif %}
                 {% if period.canvas_enabled %}
                     <div class="small">
-                        <a class="text-decoration-none" href="{{ period.canvas_assignment_URL }}">Go to Canvas submission page</a>
-                        <i class="text-muted fa fa-external-link"></i>
+                        <a class="text-decoration-none {{ ns.textclass }}" href="{{ period.canvas_assignment_URL }}">Go to Canvas submission page</a>
+                        <i class="{% if ns.textclass|length == 0 %}text-muted{% else %}{{ ns.textclass }}{% endif %} fa fa-external-link"></i>
                     </div>
                 {% endif %}
             </div>

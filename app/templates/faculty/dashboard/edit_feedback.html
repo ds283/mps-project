@@ -9,7 +9,7 @@
     <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
 
     <script>
-        var posiiven_MDE = new EasyMDE({
+        var positive_MDE = new EasyMDE({
             element: document.getElementById('positive'),
             autosave: {
                 enabled: true,
@@ -87,10 +87,10 @@
         {% endif %}
 
         <div class="card mt-3 mb-3 card-body bg-well">
-            {{ wtf.render_field(form.positive) }}
+            {{ wtf.render_field(form.positive_feedback) }}
         </div>
         <div class="card mt-3 mb-3 card-body bg-well">
-            {{ wtf.render_field(form.negative) }}
+            {{ wtf.render_field(form.improvement_feedback) }}
         </div>
 
         {{ wtf.render_field(form.save_feedback) }}

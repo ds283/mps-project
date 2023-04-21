@@ -41,7 +41,7 @@ from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionSettingsFormFactory, MoveDescriptionFormFactory, \
-    PresentationFeedbackForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm, \
+    PresentationFeedbackForm, SubmissionRoleFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm, \
     EditDescriptionContentForm
 from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
@@ -8350,8 +8350,8 @@ def assign_presentation_feedback(id):
     if form.validate_on_submit():
         feedback = PresentationFeedback(owner_id=talk.id,
                                         assessor=form.assessor.data,
-                                        positive=form.positive.data,
-                                        negative=form.negative.data,
+                                        positive=form.positive_feedback.data,
+                                        negative=form.improvement_feedback.data,
                                         submitted=True,
                                         timestamp=datetime.now())
 
@@ -8401,15 +8401,15 @@ def supervisor_edit_feedback(id):
         return redirect(redirect_url())
 
     period = record.period
-    form = SupervisorFeedbackForm(request.form)
+    form = SubmissionRoleFeedbackForm(request.form)
 
     url = request.args.get('url', None)
     if url is None:
         url = redirect_url()
 
     if form.validate_on_submit():
-        record.supervisor_positive = form.positive.data
-        record.supervisor_negative = form.negative.data
+        record.supervisor_positive = form.positive_feedback.data
+        record.supervisor_negative = form.improvement_feedback.data
 
         if record.supervisor_submitted:
             record.supervisor_timestamp = datetime.now()
@@ -8420,8 +8420,8 @@ def supervisor_edit_feedback(id):
 
     else:
         if request.method == 'GET':
-            form.positive.data = record.supervisor_positive
-            form.negative.data = record.supervisor_negative
+            form.positive_feedback.data = record.supervisor_positive
+            form.improvement_feedback.data = record.supervisor_negative
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form, unique_id='supv-{id}'.format(id=id),
                            title='Edit supervisor feedback from {supervisor}'.format(supervisor=record.project.owner.user.name),
@@ -8459,8 +8459,8 @@ def marker_edit_feedback(id):
         url = redirect_url()
 
     if form.validate_on_submit():
-        record.marker_positive = form.positive.data
-        record.marker_negative = form.negative.data
+        record.marker_positive = form.positive_feedback.data
+        record.marker_negative = form.improvement_feedback.data
 
         if record.marker_submitted:
             record.marker_timestamp = datetime.now()
@@ -8471,8 +8471,8 @@ def marker_edit_feedback(id):
 
     else:
         if request.method == 'GET':
-            form.positive.data = record.marker_positive
-            form.negative.data = record.marker_negative
+            form.positive_feedback.data = record.marker_positive
+            form.improvement_feedback.data = record.marker_negative
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form, unique_id='mark-{id}'.format(id=id),
                            title='Edit marker feedback from {supervisor}'.format(supervisor=record.marker.user.name),
@@ -8484,10 +8484,10 @@ def marker_edit_feedback(id):
                            period=period, record=record, dont_show_warnings=True)
 
 
-@convenor.route('/supervisor_submit_feedback/<int:id>')
+@convenor.route('/submit_feedback/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def supervisor_submit_feedback(id):
-    # id is a SubmissionRecord instance
+def submit_feedback(id):
+    # id is a SubmissionRole instance
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     if record.retired:
@@ -8654,8 +8654,8 @@ def presentation_edit_feedback(feedback_id):
         url = redirect_url()
 
     if form.validate_on_submit():
-        feedback.positive = form.positive.data
-        feedback.negative = form.negative.data
+        feedback.positive = form.positive_feedback.data
+        feedback.improvement_feedback = form.improvement_feedback.data
 
         if feedback.submitted:
             feedback.timestamp = datetime.now()
@@ -8666,8 +8666,8 @@ def presentation_edit_feedback(feedback_id):
 
     else:
         if request.method == 'GET':
-            form.positive.data = feedback.positive
-            form.negative.data = feedback.negative
+            form.positive_feedback.data = feedback.positive
+            form.improvement_feedback.data = feedback.improvement_feedback
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form, unique_id='pres-{id}'.format(id=id),
                            title='Edit presentation feedback from {supervisor}'.format(supervisor=feedback.assessor.user.name),

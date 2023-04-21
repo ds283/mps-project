@@ -335,7 +335,7 @@ def FacultyPreviewFormFactory(project_id, show_selector):
     return DescriptionSelectorForm
 
 
-class SupervisorFeedbackForm(Form, FeedbackMixin):
+class SubmissionRoleFeedbackForm(Form, FeedbackMixin):
 
     pass
 

@@ -23,7 +23,7 @@ import app.ajax as ajax
 from . import faculty
 from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionSettingsFormFactory, MoveDescriptionFormFactory, \
-    FacultyPreviewFormFactory, SupervisorFeedbackForm, MarkerFeedbackForm, PresentationFeedbackForm, \
+    FacultyPreviewFormFactory, SubmissionRoleFeedbackForm, MarkerFeedbackForm, PresentationFeedbackForm, \
     SupervisorResponseForm, FacultySettingsFormFactory, AvailabilityFormFactory, EditDescriptionContentForm
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -31,7 +31,8 @@ from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
     EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord, PresentationAssessment, \
     PresentationSession, ScheduleSlot, User, PresentationFeedback, Module, FHEQ_Level, DescriptionComment, \
-    WorkflowMixin, ProjectDescriptionWorkflowHistory, StudentData, SubmittingStudent, SubmissionPeriodRecord
+    WorkflowMixin, ProjectDescriptionWorkflowHistory, StudentData, SubmittingStudent, SubmissionPeriodRecord, \
+    SubmissionRole
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
 from ..shared.projects import create_new_tags, project_list_SQL_handler
@@ -40,7 +41,7 @@ from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_asses
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable, \
     validate_assessment, validate_using_assessment, validate_presentation_assessor, \
-    validate_is_convenor, validate_edit_description, validate_view_project
+    validate_is_convenor, validate_edit_description, validate_view_project, validate_submission_role
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -1816,60 +1817,67 @@ def past_projects_ajax():
     return ajax.faculty.pastproject_data(past_projects)
 
 
-@faculty.route('/supervisor_edit_feedback/<int:id>', methods=['GET', 'POST'])
+@faculty.route('/edit_feedback/<int:id>', methods=['GET', 'POST'])
 @roles_required('faculty')
-def supervisor_edit_feedback(id):
-    # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
+def edit_feedback(id):
+    # id is a SubmissionRole instance
+    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
+    record: SubmissionRecord = role.submission
 
-    if not validate_submission_supervisor(record):
+    if not validate_submission_role(role, allow_roles=['supervisor', 'marker', 'moderator']):
         return redirect(redirect_url())
 
-    if not record.period.collect_project_feedback:
-        flash('Feedback collection has been disabled for this submission period.', 'info')
-        return redirect(redirect_url())
+    period: SubmissionPeriodRecord = record.period
 
-    period = record.period
+    if not period.collect_project_feedback:
+        flash('This operation is not permitted. '
+              'Feedback collection has been disabled for this submission period.', 'info')
+        return redirect(redirect_url())
 
     if not period.is_feedback_open:
-        flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
-              'period for feedback and marking.',
-              'error')
+        flash('It is not yet possible to edit feedback for this submission because the convenor has not '
+              'opened this submission period for feedback and marking.', 'warning')
         return redirect(redirect_url())
 
-    if period.closed and record.supervisor_submitted:
+    if period.closed and role.submitted_feedback:
         flash('It is not possible to edit feedback after the convenor has closed this submission period.',
-              'error')
+              'warning')
         return redirect(redirect_url())
 
-    form = SupervisorFeedbackForm(request.form)
+    form = SubmissionRoleFeedbackForm(request.form)
 
     url = request.args.get('url', None)
     if url is None:
         url = redirect_url()
 
     if form.validate_on_submit():
-        record.supervisor_positive = form.positive.data
-        record.supervisor_negative = form.negative.data
+        role.positive_feedback = form.positive_feedback.data
+        role.improvements_feedback = form.improvement_feedback.data
 
-        if record.supervisor_submitted:
-            record.supervisor_timestamp = datetime.now()
+        if role.submitted_feedback:
+            role.feedback_timestamp = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save feedback due to a database error. Please contact a system administrator.', 'error')
 
         return redirect(url)
 
     else:
 
         if request.method == 'GET':
-            form.positive.data = record.supervisor_positive
-            form.negative.data = record.supervisor_negative
+            form.positive_feedback.data = role.positive_feedback
+            form.improvement_feedback.data = role.improvements_feedback
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
-                           title='Edit supervisor feedback', unique_id='supv-{id}'.format(id=id),
-                           formtitle='Edit supervisor feedback for <i class="fas fa-user"></i> <strong>{name}</strong>'.format(name=record.student_identifier),
-                           submit_url=url_for('faculty.supervisor_edit_feedback', id=id, url=url),
-                           period=period, record=record)
+                           title='Edit feedback', unique_id='role-{id}'.format(id=role.id),
+                           formtitle='Edit feedback for <i class="fas fa-user"></i> '
+                                     '<strong>{name}</strong>'.format(name=record.student_identifier),
+                           submit_url=url_for('faculty.edit_feedback', id=id, url=url),
+                           period=period, record=role)
 
 
 @faculty.route('/marker_edit_feedback/<int:id>', methods=['GET', 'POST'])
@@ -1905,8 +1913,8 @@ def marker_edit_feedback(id):
         url = redirect_url()
 
     if form.validate_on_submit():
-        record.marker_positive = form.positive.data
-        record.marker_negative = form.negative.data
+        record.marker_positive = form.positive_feedback.data
+        record.marker_negative = form.improvement_feedback.data
 
         if record.marker_submitted:
             record.marker_timestamp = datetime.now()
@@ -1918,8 +1926,8 @@ def marker_edit_feedback(id):
     else:
 
         if request.method == 'GET':
-            form.positive.data = record.marker_positive
-            form.negative.data = record.marker_negative
+            form.positive_feedback.data = record.marker_positive
+            form.improvement_feedback.data = record.marker_negative
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
                            title='Edit marker feedback', unique_id='mark-{id}'.format(id=id),
@@ -1928,64 +1936,83 @@ def marker_edit_feedback(id):
                            period=period, record=record)
 
 
-@faculty.route('/supervisor_submit_feedback/<int:id>')
+@faculty.route('/submit_feedback/<int:id>')
 @roles_required('faculty')
-def supervisor_submit_feedback(id):
-    # id is a SubmissionRecord instance
-    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
+def submit_feedback(id):
+    # id is a SubmissionRole instance
+    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
 
-    if not validate_submission_supervisor(record):
-        return redirect(redirect_url())
-
-    if not record.period.collect_project_feedback:
-        flash('Feedback collection has been disabled for this submission period.', 'info')
-        return redirect(redirect_url())
-
-    if record.supervisor_submitted:
+    if not validate_submission_role(role, allow_roles=['supervisor', 'marker', 'moderator']):
         return redirect(redirect_url())
 
     period: SubmissionPeriodRecord = record.period
 
-    if not period.is_feedback_open and not period.closed:
-        flash('It is not possible to submit before the feedback period has opened.', 'error')
+    if not period.collect_project_feedback:
+        flash('This operation is not permitted. '
+              'Feedback collection has been disabled for this submission period.', 'info')
         return redirect(redirect_url())
 
-    if not record.is_supervisor_valid:
-        flash('Cannot submit feedback because it is still incomplete.', 'error')
+    if not period.is_feedback_open:
+        flash('It is not yet possible to submit feedback for this submission because the convenor has not '
+              'opened this submission period for feedback and marking.', 'warning')
         return redirect(redirect_url())
 
-    record.supervisor_submitted = True
-    record.supervisor_timestamp = datetime.now()
-    db.session.commit()
+    if period.closed and role.submitted_feedback:
+        flash('It is not possible to submit feedback after the convenor has closed this submission period.',
+              'warning')
+        return redirect(redirect_url())
+
+    if not role.feedback_valid:
+        flash('It is not yet possible to submit your feedback because it is incomplete. Please ensure that you '
+              'have provided responses for each category.', 'warning')
+        return redirect(redirect_url())
+
+    role.submitted_feedback = True
+    role.feedback_timestamp = datetime.now()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not submit feedback due to a database error. Please contact a system administrator.', 'error')
 
     return redirect(redirect_url())
 
 
-@faculty.route('/supervisor_unsubmit_feedback/<int:id>')
+@faculty.route('/unsubmit_feedback/<int:id>')
 @roles_required('faculty')
-def supervisor_unsubmit_feedback(id):
-    # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
+def unsubmit_feedback(id):
+    # id is a SubmissionRole instance
+    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
 
-    if not validate_submission_supervisor(record):
+    if not validate_submission_role(role, allow_roles=['supervisor', 'marker', 'moderator']):
         return redirect(redirect_url())
 
-    if not record.period.collect_project_feedback:
-        flash('Feedback collection has been disabled for this submission period.', 'info')
+    period: SubmissionPeriodRecord = record.period
+
+    if not period.collect_project_feedback:
+        flash('This operation is not permitted. '
+              'Feedback collection has been disabled for this submission period.', 'info')
         return redirect(redirect_url())
 
-    if not record.supervisor_submitted:
+    if not role.submitted_feedback:
+        flash('Your feedback has not yet been submitted, and cannot be unsubmitted.', 'info')
         return redirect(redirect_url())
 
-    period = record.period
-
-    if period.closed:
-        flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
+    if period.closed and role.submitted_feedback:
+        flash('It is not possible to unsubmit after the feedback period has closed.', 'warning')
         return redirect(redirect_url())
 
-    record.supervisor_submitted = False
-    record.supervisor_timestamp = None
-    db.session.commit()
+    role.submitted_feedback = False
+    role.feedback_timestamp = None
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not unsubmit feedback due to a database error. Please contact a system administrator.', 'error')
 
     return redirect(redirect_url())
 
@@ -2124,8 +2151,8 @@ def presentation_edit_feedback(slot_id, talk_id):
         url = redirect_url()
 
     if form.validate_on_submit():
-        feedback.positive = form.positive.data
-        feedback.negative = form.negative.data
+        feedback.positive = form.positive_feedback.data
+        feedback.negative = form.improvement_feedback.data
 
         if feedback.submitted:
             feedback.timestamp = datetime.now()
@@ -2137,8 +2164,8 @@ def presentation_edit_feedback(slot_id, talk_id):
     else:
 
         if request.method == 'GET':
-            form.positive.data = feedback.positive
-            form.negative.data = feedback.negative
+            form.positive_feedback.data = feedback.positive
+            form.improvement_feedback.data = feedback.negative
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form, unique_id='pres-{id}'.format(id=id),
                            title='Edit presentation feedback',
@@ -2221,7 +2248,7 @@ def presentation_unsubmit_feedback(slot_id, talk_id):
 @roles_required('faculty')
 def view_feedback(id):
     # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_viewable(record):
         return redirect(redirect_url())

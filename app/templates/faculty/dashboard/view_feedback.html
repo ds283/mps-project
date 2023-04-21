@@ -1,6 +1,7 @@
 {% extends "base_app.html" %}
 
 {% from "mathjax.html" import import_mathjax %}
+{% from "icon_block.html" import icon_block %}
 
 {% block scripts %}
     {{ super() }}
@@ -19,94 +20,71 @@
                 </div>
             {% endif %}
 
-            {% if record.period.collect_project_feedback %}
-                {% if record.period.config.uses_supervisor %}
-                    {% if record.supervisor_submitted or (record.supervisor_positive or record.supervisor_negative) and preview %}
-                        <div class="card mt-3 mb-3">
-                            <div class="card-header">
-                                <div class="row vertical-align">
-                                    <div class="col-6">
-                                        Supervisor feedback
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="float-end">
-                                            {% if record.supervisor_timestamp %}
-                                                <span class="badge bg-secondary">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                                            {% endif %}
-                                            {% if current_user.id == record.supervisor.id %}
-                                                {% if (record.period.is_feedback_open and not record.period.closed) or (record.period.closed and not record.supervisor_submitted) %}
-                                                    <a href="{{ url_for('faculty.supervisor_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-secondary">Edit</a>
-                                                    {% if not record.supervisor_submitted %}
-                                                        <a href="{{ url_for('faculty.supervisor_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
-                                                    {% else %}
-                                                        <a href="{{ url_for('faculty.supervisor_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-secondary">Unsubmit</a>
-                                                    {% endif %}
-                                                {% endif %}
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="card-body">
-                                <span class="dashboard-subtitle">Positive aspects</span>
-                                {{ record.supervisor_positive|latextomarkdown|markdown|bclean|blinkify|safe }}
-                                <hr class="intro-divider">
-                                <span class="dashboard-subtitle">Negative aspects</span>
-                                {{ record.supervisor_negative|latextomarkdown|markdown|bclean|blinkify|safe }}
-                            </div>
-                        </div>
-                    {% else %}
-                        <div class="card mt-3 mb-3 card-body bg-well">
-                            Feedback has not yet been recorded from the project supervisor.
-                        </div>
-                    {% endif %}
-                {% endif %}
+            {% set period = record.period %}
+            {% set config = period.config %}
 
-                {% if record.uses_marker_feedback %}
-                    {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
-                        <div class="card mt-3 mb-3">
-                            <div class="card-header">
-                                <div class="row vertical-align">
-                                    <div class="col-6">
-                                        Marker feedback
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="float-end">
-                                            {% if record.marker_timestamp %}
-                                                <span class="badge bg-secondary">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            {% if period.collect_project_feedback %}
+                {% for role in record.roles %}
+                    <div class="card mt-3 mb-3">
+                        <div class="card-header">
+                            <div class="d-flex flex-row justify-content-between align-items-center w-100">
+                                <div>Feedback from <i class="fa fa-user"></i> {{ role.user.name }} ({{ role.role_label }})</div>
+                                <div class="d-flex flex-row justify-content-end align-items-center gap-2">
+                                    {% if role.submitted_feedback and role.feedback_timestamp %}
+                                        <span class="small text-muted">Submitted at {{ role.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                    {% endif %}
+                                    {% if current_user.id == role.user_id %}
+                                        {% if (period.is_feedback_open and not period.closed) or (period.closed and not role.submitted_feedback) %}
+                                            <a href="{{ url_for('faculty.edit_feedback', id=role.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-outline-secondary">Edit...</a>
+                                            {% if not role.submitted_feedback %}
+                                                <a href="{{ url_for('faculty.submit_feedback', id=role.id) }}" class="btn btn-sm btn-outline-success">Submit</a>
+                                                <span data-bs-toggle="tooltip" data-bs-html="false" title="Submit your feedback to indicate that it is ready to be sent to the student. You can unsubmit it later if you change your mind."><i class="fas fa-lg fa-question-circle"></i></span>
+                                            {% else %}
+                                                <a href="{{ url_for('faculty.unsubmit_feedback', id=role.id) }}" class="btn btn-sm btn-outline-secondary">Unsubmit</a>
+                                                <span data-bs-toggle="tooltip" data-bs-html="false" title="Unsubmit your feedback to indicate that it is not yet ready to be sent to the student. For example, you may need extra time to revise what you have written."><i class="fas fa-lg fa-question-circle"></i></span>
                                             {% endif %}
-                                            {% if current_user.id == record.marker_id %}
-                                                {% if (record.period.is_feedback_open and not record.period.closed) or (record.period.closed and not record.marker_submitted) %}
-                                                    <a href="{{ url_for('faculty.marker_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-secondary">Edit</a>
-                                                    {% if not record.marker_submitted %}
-                                                        <a href="{{ url_for('faculty.marker_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
-                                                    {% else %}
-                                                        <a href="{{ url_for('faculty.marker_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-secondary">Unsubmit</a>
-                                                    {% endif %}
-                                                {% endif %}
-                                            {% endif %}
-                                        </div>
-                                    </div>
+                                        {% endif %}
+                                    {% endif %}
                                 </div>
                             </div>
-                            <div class="card-body">
-                                <span class="dashboard-subtitle">Positive aspects</span>
-                                {{ record.marker_positive|latextomarkdown|markdown|bclean|blinkify|safe }}
-                                <hr class="intro-divider">
-                                <span class="dashboard-subtitle">Negative aspects</span>
-                                {{ record.marker_negative|latextomarkdown|markdown|bclean|blinkify|safe }}
-                            </div>
                         </div>
-                    {% else %}
-                        <div class="card mt-3 mb-3 card-body bg-well">
-                            Feedback has not yet been recorded from the project marker.
+                        <div class="card-body">
+                            {% if role.submitted_feedback or (((role.positive_feedback is not none and role.positive_feedback|length > 0) or (role.improvements_feedback is not none and role.improvements_feedback|length > 0)) and preview) %}
+                                <div class="dashboard-subtitle">Positive aspects</div>
+                                <div class="bg-light p-2">
+                                    {% if role.positive_feedback is not none and role.positive_feedback|length > 0 %}
+                                        {{ role.positive_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
+                                    {% else %}
+                                        {% call icon_block("exclamation-circle") %}
+                                            <div>This feedback has not yet been entered.</div>
+                                        {% endcall %}
+                                    {% endif %}
+                                </div>
+                                <div class="dashboard-subtitle mt-2">Suggestions for improvement</div>
+                                <div class="bg-light p-2">
+                                    {% if role.improvements_feedback is not none and role.improvements_feedback|length > 0 %}
+                                        {{ role.improvements_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
+                                    {% else %}
+                                        {% call icon_block("exclamation-circle") %}
+                                            <div>This feedback has not yet been entered.</div>
+                                        {% endcall %}
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    {% call icon_block("exclamation-circle") %}
+                                        <div>Feedback has not yet been recorded by this user.</div>
+                                    {% endcall %}
+                                </div>
+                            {% endif %}
                         </div>
-                    {% endif %}
-                {% endif %}
+                    </div>
+                {% endfor %}
             {% else %}
-                <div class="card mt-3 mb-3">
-                    <div class="card-header">Feedback collection was disabled for this submission period</div>
-                    <div class="card-body">No feedback available.</div>
+                <div class="alert alert-info">
+                    {% call icon_block("info-circle") %}
+                        <div><strong>Collection of project feedback is disabled for this submission.</strong></div>
+                    {% endcall %}
                 </div>
             {% endif %}
 

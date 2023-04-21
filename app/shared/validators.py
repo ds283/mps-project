@@ -16,7 +16,7 @@ from .utils import get_current_year, get_assessment_data
 from ..shared.utils import get_count
 
 from ..database import db
-from ..models import ProjectClassConfig, SubmittingStudent, SubmissionRecord, LiveProject
+from ..models import ProjectClassConfig, SubmittingStudent, SubmissionRecord, LiveProject, SubmissionRole
 
 
 def validate_is_administrator(message=True):
@@ -238,6 +238,33 @@ def validate_match_inspector(record):
     return False
 
 
+def validate_submission_role(role: SubmissionRole, allow_roles=None):
+    """
+    Validate that the logged-in user has an allowed role associated with this SubmissionRole instance
+    :param role:
+    :return:
+    """
+    if role.user_id != current_user.id:
+        flash('This operation is not permitted. Your login credentials do not match those of the provided role.',
+              'error')
+        return False
+
+    role_map = {'supervisor': SubmissionRole.ROLE_SUPERVISOR,
+                'marker': SubmissionRole.ROLE_MARKER,
+                'moderator': SubmissionRole.ROLE_MODERATOR}
+
+    for r in allow_roles:
+        r = r.lower()
+
+        if r in role_map:
+            if role.role == role_map[r]:
+                return True
+
+    flash('This operation is not permitted because your role associated with this submission does not confer '
+          'the necessary privileges. If you think this is an error, please contact a system '
+          'administrator', 'warning')
+    return False
+
 def validate_submission_supervisor(record):
     """
     Validate that the logged-in user is the project supervisor for a SubmissionRecord instance
@@ -267,20 +294,29 @@ def validate_submission_marker(record):
 
 def validate_submission_viewable(record: SubmissionRecord, message: bool=True):
     """
-    Validate that the logged-in user is entitled to view a SubmissionRecord instance
+    Validate that the logged-in user is entitled to view a SubmissionRecord instance, usually because they
+    have a role associated with it
     :param record:
     :return:
     """
-    # check project is assigned
-    # if project is assigned, supervisor can view feedback
-    if record.project is not None and current_user.id == record.project.owner_id:
+    role: SubmissionRole = record.get_role(current_user.id)
+
+    # if the current user has an assigned role for this submission record, they can view the submission
+    if role is not None:
         return True
 
-    # assigned marker van view feedback
-    if record.marker_id is not None and record.marker_id == current_user.id:
+    # if a project has been specified and the current user is the owner of the project, then they are able
+    # to view the submission
+    if record.project is not None and not record.project.generic and record.project.owner_id is not None:
+        if current_user.id == record.project_owner_id:
+            return True
+
+    # project convenors, root/admin users, and users with exam board privileges can always view
+    if current_user.allow_roles(['convenor', 'admin', 'root', 'exam_board', 'external_examiner']):
         return True
 
-    # viewable if this submission period has a presentation, and the logged-in user is one of the assessors
+    # if this submission period has a presentation, and the logged-in user is one of the specified
+    # assessors for the presentation, then it is possible to view
     if record.period.has_presentation:
         slot = record.schedule_slot
         if slot is not None:
@@ -288,26 +324,22 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool=True):
             if count > 0:
                 return True
 
-    # allow this student's current supervisors to view feedback from previous projects
+    # if the logged-in user has a supervisor role on one of this student's currently active projects,
+    # then they are able to view
     owner_query = db.session.query(SubmissionRecord.id) \
         .filter(SubmissionRecord.retired == False) \
         .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
         .filter(SubmittingStudent.student_id == record.owner.student_id) \
-        .join(LiveProject, LiveProject.id == SubmissionRecord.project_id) \
-        .filter(LiveProject.owner_id == current_user.id)
+        .filter(SubmissionRecord.roles.any(SubmissionRole.user_id == current_user.id,
+                                           SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR))
 
     if get_count(owner_query) > 0:
         return True
 
-    # TO DO: allow moderators to view, if set
-
-    # project convenors, and admin users, can view
-    if current_user.allow_roles(['convenor', 'admin', 'root', 'exam_board', 'external_examiner']):
-        return True
-
     if message:
-        flash('Only current supervisors, markers and presentation assessors can perform this operation', 'error')
-
+        flash('This operation is not permitted. You do not have sufficient privileges to view the deatils '
+              'of the specified submission record. If you think this is an error, please contact '
+              'a system administrator.', 'warning')
     return False
 
 

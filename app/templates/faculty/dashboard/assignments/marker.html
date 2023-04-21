@@ -16,7 +16,6 @@
             <tbody>
                 {% for rec in records %}
                     {% set my_role = rec.get_marker(current_user.id) %}
-                    {% set valid = rec.is_marker_valid %}
                     {% set uses_feedback = rec.uses_marker_feedback %}
                     <tr>
                         <td>
@@ -44,7 +43,7 @@
                                     <a class="text-decoration-none" href="mailto:{{ rec.project.owner.user.email }}">{{ rec.project.owner.user.name }}</a>
                                 </div>
                             {% endif %}
-                            <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+                            <div class="d-flex flex-row justify-content-start align-items-center gap-2 mt-1">
                                 {% if rec.report %}
                                     <span class="badge bg-success"><i class="fas fa-check"></i> Report uploaded</span>
                                 {% endif %}
@@ -54,6 +53,8 @@
                                             <span class="badge bg-success"><i class="fas fa-check"></i> Feedback submitted</span>
                                         {% elif period.closed %}
                                             <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Feedback missing</span>
+                                        {% elif period.is_feedback_open %}
+                                            <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-circle"></i> Feedback needed</span>
                                         {% endif %}
                                     </div>
                                 {% endif %}
@@ -69,6 +70,7 @@
                                         <a class="dropdown-item d-flex gap-2" href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ rec.number_attachments }})...</a>
                                         {% if uses_feedback %}
                                             {% set state = my_role.feedback_state %}
+                                            {% set valid = my_role.feedback_valid %}
                                             {% if state > my_role.FEEDBACK_NOT_YET %}
                                                 {% if (period.is_feedback_open and not period.closed) or (period.closed and not my_role.submitted_feedback) %}
                                                     {% if valid %}

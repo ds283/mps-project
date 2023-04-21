@@ -22,7 +22,6 @@
             <tbody>
                 {% for rec in records %}
                     {# rec is a SubmissionRecord #}
-                    {% set valid = rec.is_supervisor_valid %}
                     {% set uses_feedback = rec.uses_supervisor_feedback %}
                     {% set uses_project_hub = rec.uses_project_hub %}
                     {# sub is a SubmittingStudent #}
@@ -83,7 +82,7 @@
                                     <a class="text-decoration-none" href="mailto:{{ rec.project.owner.user.email }}">{{ rec.project.owner.user.name }}</a>
                                 </div>
                             {% endif %}
-                            <div class="d-flex flex-row justify-content-start align-content-center gap-2">
+                            <div class="d-flex flex-row justify-content-start align-content-center gap-2 mt-1">
                                 {% if rec.report %}
                                     <span class="badge bg-success"><i class="fas fa-check"></i> Report uploaded</span>
                                 {% endif %}
@@ -92,15 +91,16 @@
                                         <span class="badge bg-success"><i class="fas fa-check"></i> Feedback submitted</span>
                                     {% elif period.closed %}
                                         <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Feedback missing</span>
+                                    {% elif period.is_feedback_open %}
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-circle"></i> Feedback needed</span>
                                     {% endif %}
                                 {% endif %}
                                 {% if rec.student_feedback_submitted %} {# still want student feedback reported, even if not collecting project feedback #}
-                                    <span class="badge bg-success"><i class="fas fa-check"></i> Student feedback</span>
                                     {% if not my_role.acknowledge_student %}
-                                        <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Acknowledgment required</span>
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Acknowledgment needed</span>
                                     {% endif %}
                                     {% if not my_role.submitted_response %}
-                                        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Response not submitted</span>
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-circle"></i> Response needed</span>
                                     {% else %}
                                         <span class="badge bg-success"><i class="fas fa-check"></i> Response submitted</span>
                                     {% endif %}
@@ -136,6 +136,7 @@
                                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.mark_started', id=rec.id) }}"><i class="fas fa-running fa-fw"></i> Mark as started</a>
                                                 {% endif %}
                                                 {% set state = my_role.feedback_state %}
+                                                {% set valid = my_role.feedback_valid %}
                                                 {% if state > my_role.FEEDBACK_NOT_YET %}
                                                     {% if uses_feedback and (period.is_feedback_open and not period.closed) or (period.closed and not my_role.submitted_feedback) %}
                                                         {% if valid %}

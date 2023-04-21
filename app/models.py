@@ -1367,6 +1367,13 @@ class SubmissionRoleTypesMixin:
     _MIN_ROLE = ROLE_SUPERVISOR
     _MAX_ROLE = ROLE_EXTERNAL_EXAMINER
 
+    _role_labels = {ROLE_SUPERVISOR: 'supervisor',
+                    ROLE_MARKER: 'marker',
+                    ROLE_PRESENTATION_ASSESSOR: 'presentation assessor',
+                    ROLE_MODERATOR: 'moderator',
+                    ROLE_EXAM_BOARD: 'exam board member',
+                    ROLE_EXTERNAL_EXAMINER: 'external examiner'}
+
 
 class AssessorPoolChoicesMixin:
     """
@@ -3812,7 +3819,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         if self.exam_number is None:
             return '<span class="badge bg-secondary">Exam #TBA</span>'
 
-        return '<span class="text-primary">{num}</span>'.format(num=self.exam_number)
+        return '<span>{num}</span>'.format(num=self.exam_number)
 
 
     @property
@@ -9950,6 +9957,14 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
 
 
     @property
+    def role_label(self):
+        if self.role in self._role_labels:
+            return self._role_labels[self.role]
+
+        return 'unknown'
+
+
+    @property
     def uses_supervisor_feedback(self):
         return self.submission.period.uses_supervisor_feedback
 
@@ -10007,7 +10022,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
 
 
     @property
-    def _feedback_valid(self):
+    def feedback_valid(self):
         if self.positive_feedback is None or len(self.positive_feedback) == 0:
             return False
 
@@ -10027,7 +10042,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
         if self.submitted_feedback:
             return SubmissionRole.FEEDBACK_SUBMITTED
 
-        if self._feedback_valid:
+        if self.feedback_valid:
             return SubmissionRole.FEEDBACK_ENTERED
 
         if not period.closed:
@@ -10301,11 +10316,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 current_role = role
                 break
 
-        # root, admin, and office roles can always see student name; so can project convenor or co-convenors
-        if current_user.has_role('root') or current_user.has_role('admin') or current_user.has_role('office') \
-                or self.pclass.is_convenor(current_user.id):
-            return self.owner.student.user.name
-
+        # roles associated with this submission always trump admin rights, even for 'root' and 'admin' users
         if current_role is not None:
             # marker roles and moderator roles can only see exam number
             if current_role.role == SubmissionRole.ROLE_MARKER \
@@ -10317,6 +10328,11 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                     or current_role.role == SubmissionRole.ROLE_EXTERNAL_EXAMINER \
                     or current_role.role == SubmissionRole.ROLE_EXAM_BOARD:
                 return self.owner.student.user.name
+
+        # root, admin, and office roles can always see student name; so can project convenor or co-convenors
+        if current_user.has_role('root') or current_user.has_role('admin') or current_user.has_role('office') \
+                or self.pclass.is_convenor(current_user.id):
+            return self.owner.student.user.name
 
         # by default, other users see only the exam number
         return self.owner.student.exam_number_label
@@ -10366,6 +10382,29 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         roles = self.get_roles(role)
         for role in roles:
+            role: SubmissionRole
+            if role.user_id == _user_id:
+                return role
+
+        return None
+
+
+    def get_role(self, user):
+        """
+        Return SubmissionRole instance for specified user, if one exists
+        :param user:
+        :return:
+        """
+        if isinstance(user, User):
+            _user_id = user.id
+        elif isinstance(user, FacultyData):
+            _user_id = user.id
+        elif isinstance(user, int):
+            _user_id = user
+        else:
+            raise RuntimeError('Unexpected user object passed to SubmissionRecord.get_role()')
+
+        for role in self.roles:
             role: SubmissionRole
             if role.user_id == _user_id:
                 return role

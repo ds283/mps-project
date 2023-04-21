@@ -27,6 +27,7 @@
                     {% set uses_project_hub = rec.uses_project_hub %}
                     {# sub is a SubmittingStudent #}
                     {% set sub = rec.owner %}
+                    {% set my_role = rec.get_supervisor(current_user.id) %}
                     <tr>
                         <td>
                             {% if period.canvas_enabled and sub is not none %}
@@ -87,18 +88,18 @@
                                     <span class="badge bg-success"><i class="fas fa-check"></i> Report uploaded</span>
                                 {% endif %}
                                 {% if uses_feedback %}
-                                    {% if rec.supervisor_submitted %}
+                                    {% if my_role.submitted_feedback %}
                                         <span class="badge bg-success"><i class="fas fa-check"></i> Feedback submitted</span>
-                                    {% elif period.closed and not rec.supervisor_submitted %}
+                                    {% elif period.closed %}
                                         <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Feedback missing</span>
                                     {% endif %}
                                 {% endif %}
                                 {% if rec.student_feedback_submitted %} {# still want student feedback reported, even if not collecting project feedback #}
                                     <span class="badge bg-success"><i class="fas fa-check"></i> Student feedback</span>
-                                    {% if not rec.acknowledge_feedback %}
+                                    {% if not my_role.acknowledge_student %}
                                         <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Acknowledgment required</span>
                                     {% endif %}
-                                    {% if not rec.faculty_response_submitted %}
+                                    {% if not my_role.submitted_response %}
                                         <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Response not submitted</span>
                                     {% else %}
                                         <span class="badge bg-success"><i class="fas fa-check"></i> Response submitted</span>
@@ -134,19 +135,19 @@
                                                 {% if rec.owner.published and not rec.student_engaged and rec.submission_period <= rec.owner.config.submission_period %}
                                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.mark_started', id=rec.id) }}"><i class="fas fa-running fa-fw"></i> Mark as started</a>
                                                 {% endif %}
-                                                {% set state = rec.supervisor_feedback_state %}
-                                                {% if state > rec.FEEDBACK_NOT_YET %}
-                                                    {% if uses_feedback and (period.is_feedback_open and not period.closed) or (period.closed and not rec.supervisor_submitted) %}
+                                                {% set state = my_role.feedback_state %}
+                                                {% if state > my_role.FEEDBACK_NOT_YET %}
+                                                    {% if uses_feedback and (period.is_feedback_open and not period.closed) or (period.closed and not my_role.submitted_feedback) %}
                                                         {% if valid %}
                                                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-search fa-fw"></i> Preview feedback...</a>
                                                         {% else %}
-                                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.supervisor_edit_feedback', id=rec.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit feedback...</a>
+                                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_feedback', id=my_role.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit feedback...</a>
                                                         {% endif %}
                                                     {% endif %}
                                                     {% if period.closed %}
-                                                        {% if rec.student_feedback_submitted and not rec.acknowledge_feedback %}
+                                                        {% if rec.student_feedback_submitted and not my_role.acknowledge_student %}
                                                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil-alt fa-fw"></i> Respond to feedback...</a>
-                                                        {% elif rec.student_feedback_submitted and not rec.faculty_response_submitted %}
+                                                        {% elif rec.student_feedback_submitted and not my_role.submitted_response %}
                                                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil-alt fa-fw"></i> Respond to feedback...</a>
                                                         {% else %}
                                                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-search fa-fw"></i> View feedback...</a>

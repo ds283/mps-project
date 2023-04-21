@@ -69,12 +69,12 @@
                                         <a class="dropdown-item d-flex gap-2" href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ rec.number_attachments }})...</a>
                                         {% if uses_feedback %}
                                             {% set state = my_role.feedback_state %}
-                                            {% if state > rec.FEEDBACK_NOT_YET %}
+                                            {% if state > my_role.FEEDBACK_NOT_YET %}
                                                 {% if (period.is_feedback_open and not period.closed) or (period.closed and not my_role.submitted_feedback) %}
                                                     {% if valid %}
                                                         <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-search fa-fw"></i> Preview feedback...</a>
                                                     {% else %}
-                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.marker_edit_feedback', id=rec.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit feedback...</a>
+                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_feedback', id=my_role.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit feedback...</a>
                                                     {% endif %}
                                                 {% elif period.closed %}
                                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-search fa-fw"></i> View feedback...</a>

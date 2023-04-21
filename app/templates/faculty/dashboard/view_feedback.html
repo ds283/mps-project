@@ -36,10 +36,10 @@
                                     {% if current_user.id == role.user_id %}
                                         {% if (period.is_feedback_open and not period.closed) or (period.closed and not role.submitted_feedback) %}
                                             <a href="{{ url_for('faculty.edit_feedback', id=role.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-outline-secondary">Edit...</a>
-                                            {% if not role.submitted_feedback %}
+                                            {% if not role.submitted_feedback and role.feedback_valid %}
                                                 <a href="{{ url_for('faculty.submit_feedback', id=role.id) }}" class="btn btn-sm btn-outline-success">Submit</a>
                                                 <span data-bs-toggle="tooltip" data-bs-html="false" title="Submit your feedback to indicate that it is ready to be sent to the student. You can unsubmit it later if you change your mind."><i class="fas fa-lg fa-question-circle"></i></span>
-                                            {% else %}
+                                            {% elif role.submitted_feedback %}
                                                 <a href="{{ url_for('faculty.unsubmit_feedback', id=role.id) }}" class="btn btn-sm btn-outline-secondary">Unsubmit</a>
                                                 <span data-bs-toggle="tooltip" data-bs-html="false" title="Unsubmit your feedback to indicate that it is not yet ready to be sent to the student. For example, you may need extra time to revise what you have written."><i class="fas fa-lg fa-question-circle"></i></span>
                                             {% endif %}
@@ -170,7 +170,7 @@
                     </div>
                     {% if not record.acknowledge_feedback %}
                         <div class="card-footer">
-                            <a href="{{ url_for('faculty.supervisor_acknowledge_feedback', id=record.id) }}" class="btn btn-sm btn-primary">Acknowledge</a>
+                            <a href="{{ url_for('faculty.acknowledge_feedback', id=record.id) }}" class="btn btn-sm btn-primary">Acknowledge</a>
                         </div>
                     {% elif record.faculty_response_submitted or (record.faculty_response and preview) %}
                         <div class="card-footer">

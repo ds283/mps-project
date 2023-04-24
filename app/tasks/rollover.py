@@ -923,7 +923,8 @@ def register_rollover_tasks(celery):
                     # (eg. could happen if the task is accidentally run twice)
                     count = get_count(student.selecting.filter_by(retired=False, config_id=new_config_id))
                     if count == 0:
-                        generated_selector_id = add_selector(student, new_config_id, autocommit=False)
+                        generated_selector_id = add_selector(student, new_config_id, convert=not config.is_optional,
+                                                             autocommit=False)
 
             # define a function to test whether a student meets the criteria to attach as a submitter
             def check_attach_submitter():

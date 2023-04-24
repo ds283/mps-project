@@ -48,7 +48,7 @@ def add_student_bookmark(projects, sel):
     data = [{'project': render_template_string(_project, sel=sel, proj=project),
              'owner': {
                  'display': render_template_string(_owner, project=project),
-                 'sortvalue': project.owner.user.last_name + project.owner.user.first_name if not project.generic and project.owner is not none else 'Generic'
+                 'sortvalue': project.owner.user.last_name + project.owner.user.first_name if not project.generic and project.owner is not None else 'Generic'
              },
              'actions': render_template_string(_actions, sel=sel, project=project)} for project in projects]
 

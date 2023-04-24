@@ -5,11 +5,13 @@
 <p><strong>This email is automated. Please do not reply to it directly, because email to the sending address is not monitored.</strong></p>
 
 {% if student.is_optional %}
-<p>You are receiving this email because you have the <strong>option</strong> to apply or enroll as a participant for <em>{{ pclass.name }}</em>. If you are unsure whether you are eligible for "{{ pclass.name }}", please seek guidance from the project convenor whose details are given below.</p>
+<p>You are receiving this email because you have the <strong>option</strong> to apply or enrol as a participant for <em>{{ pclass.name }}</em>. If you are unsure whether you are eligible for "{{ pclass.name }}", please seek guidance from the project convenor whose details are given below.</p>
 
 <p>If this is not relevant for you, then you need take no action and can safely ignore the remainder of this email.</p>
-{% else %}
+{% elif student.programme in pclass.programmes %}
 <p>You are receiving this email because we are expecting you to participate in the <em>{{ pclass.name }}</em> module. This runs in Y{{ pclass.start_year }}, and it is now time to select your preferred projects. If you believe this to be incorrect, for example if you are not expecting to undertake this type of project, please contact the convenor as soon as possible. Contact details are given below.</p>
+{% else %}
+<p>You are receiving this email because you are being invited to submit project preferences for the <em>{{ pclass.name }}</em> module. This runs in Y{{ pclass.start_year }}. If you are not sure why you have been invited to submit preferences for this project, please contact the convenor. Contact details are given below.</p>
 {% endif %}
 
 <p>This year's project list has now been published, and can be inspected by logging in to our web platform: <a href="https://mpsprojects.sussex.ac.uk">https://mpsprojects.sussex.ac.uk</a>.</p>
@@ -32,4 +34,4 @@
 
 <p>If you have questions or encounter difficulties, please contact the project convenor.</p>
 
-<p><a href="mailto:{{ pclass.convenor.user.email }}">{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }}</a> – project convenor</p>
+<p><a href="mailto:{{ pclass.convenor.user.email }}">{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }}</a> &mdash; project convenor</p>

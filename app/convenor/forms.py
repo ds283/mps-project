@@ -49,7 +49,15 @@ def GoLiveFormFactory(submit_label='Go live', live_and_close_label='Go live and 
         # accommodate a matching
         accommodate_matching = QuerySelectField('Accommodate existing matching',
                                                 query_factory=GetAccommodatableMatchings, get_label='name',
-                                                allow_blank=True, blank_text='None')
+                                                allow_blank=True, blank_text='None',
+                                                description='If this selection workflow is part of a sequence of '
+                                                            'selections (such as BSc selections following MPhys '
+                                                            'selections and a provisional matching), you may '
+                                                            'wish projects to be removed from the list if the '
+                                                            'corresponding supervisor is already too heavily '
+                                                            'committed to take on further students. Select a '
+                                                            'published matching here to account for faculty workload '
+                                                            'commitments corresponding to that match.')
 
         # CATS limit before a supervisor is regarded as 'full'
         full_CATS = IntegerField('Maximum number of CATS before a supervisor is full',

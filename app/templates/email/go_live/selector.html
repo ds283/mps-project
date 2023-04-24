@@ -8,7 +8,7 @@
 <p>You are receiving this email because you have the <strong>option</strong> to apply or enrol as a participant for <em>{{ pclass.name }}</em>. If you are unsure whether you are eligible for "{{ pclass.name }}", please seek guidance from the project convenor whose details are given below.</p>
 
 <p>If this is not relevant for you, then you need take no action and can safely ignore the remainder of this email.</p>
-{% elif student.programme in pclass.programmes %}
+{% elif student.student.programme in pclass.programmes %}
 <p>You are receiving this email because we are expecting you to participate in the <em>{{ pclass.name }}</em> module. This runs in Y{{ pclass.start_year }}, and it is now time to select your preferred projects. If you believe this to be incorrect, for example if you are not expecting to undertake this type of project, please contact the convenor as soon as possible. Contact details are given below.</p>
 {% else %}
 <p>You are receiving this email because you are being invited to submit project preferences for the <em>{{ pclass.name }}</em> module. This runs in Y{{ pclass.start_year }}. If you are not sure why you have been invited to submit preferences for this project, please contact the convenor. Contact details are given below.</p>

@@ -145,13 +145,13 @@
                 {% endif %}
 
                 {# show marker assignments #}
-                {% if period.uses_marker_feedback %}
+                {% if config.uses_marker and config.display_marker %}
                     <span class="dashboard-subtitle">Marking</span>
                     {{ marker_assignments(period, current_user, mark_sabbatical, mark_exempt, record.marker_reenroll) }}
                 {% endif %}
 
                 {# show assigned presentation assessments #}
-                {% if period.uses_presentation_feedback %}
+                {% if config.uses_presentations and config.display_presentations %}
                     {{ presentation_assignments(period, current_user.id, pres_sabbatical, pres_exempt, record.presentations_reenroll) }}
                 {% endif %}
 

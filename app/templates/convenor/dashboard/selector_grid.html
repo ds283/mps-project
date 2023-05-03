@@ -48,18 +48,12 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <div class="m-3">
-        <div class="row">
-            <div class="col-12">
-                <div class="float-end">
-                    <a class="btn btn-outline-info" href="{{ url_for('convenor.hints_list', id=pclass.id) }}">Show all convenor hints...</a>
-                </div>
-            </div>
-        </div>
-    </div>
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white">Selector grid for <strong>{{ pclass.name }} {{ config.select_year_a }}&ndash;{{ config.select_year_b }}</strong></div>
         <div class="card-body">
+            <div class="d-flex flex-row justify-content-end align-items-start gap-2 mt-2 mb-2">
+                <a class="btn btn-sm btn-outline-info" href="{{ url_for('convenor.hints_list', id=pclass.id) }}">Show all convenor hints...</a>
+            </div>
             <div class="card mt-3 mb-3 card-body bg-well">
                 {% set needs_rule = false %}
                 <div class="row">

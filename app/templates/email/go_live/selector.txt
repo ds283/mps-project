@@ -6,19 +6,24 @@ This email is automated. Please do not reply to it directly, because email to
 the sending address is not monitored.
 
 {% if student.is_optional -%}
-You are receiving this email because you have the option to apply or enroll
+You are receiving this email because you have the option to apply or enrol
 as a participant for "{{ pclass.name }}". If you are unsure whether you
 are eligible for "{{ pclass.name }}", please seek guidance from the
 project convenor whose details are given below.
 
 If this is not relevant for you, then you need take no action and can safely
 ignore the remainder of this email.
-{%- else -%}
+{%- elif student.student.programme in pclass.programmes -%}
 You are receiving this email because we are expecting you to participate in
 the "{{ pclass.name }}" module. This runs in Y{{ pclass.start_year }}, and it is now
 time to select your preferred projects. If you believe this to be incorrect,
 for example if you are not expecting to undertake this type of project, please
 contact the convenor as soon as possible. Contact details are given below.
+{%- else -%}
+You are receiving this email because you are being invited to submit project
+preferences for the "{{ pclass.name }}" module. This runs in Y{{ pclass.start_year }}.
+If you are not sure why you have been invited to submit preferences for this
+project, please contact the convenor. Contact details are given below.
 {%- endif %}
 
 This year's project list has now been published, and can be inspected

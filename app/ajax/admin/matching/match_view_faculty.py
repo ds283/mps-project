@@ -169,11 +169,9 @@ _projects = \
     <span class="badge bg-secondary btn-table-block">None</span>
 {% endif %}
 {% if err_msgs|length > 0 %}
-    <div class="error-block">
-        {% for msg in err_msgs %}
-            <div class="error-message">{{ msg }}</div>
-        {% endfor %}
-    </div>
+    {% for msg in err_msgs %}
+        <div class="text-danger small">{{ msg }}</div>
+    {% endfor %}
 {% endif %}
 """
 
@@ -223,11 +221,9 @@ _marking = \
     <span class="badge bg-secondary btn-table-block">None</span>
 {% endif %}
 {% if err_msgs|length > 0 %}
-    <div class="error-block">
-        {% for msg in err_msgs %}
-            <div class="error-message">{{ msg }}</div>
-        {% endfor %}
-    </div>
+    {% for msg in err_msgs %}
+        <div class="text-danger small">{{ msg }}</div>
+    {% endfor %}
 {% endif %}
 """
 

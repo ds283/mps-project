@@ -19,11 +19,9 @@ _student = \
     <i class="fas fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 {% if not sel.convert_to_submitter %}
-    <div class="error-block">
-        <div class="error-message">
-            Conversion of this student is disabled.
-        </div>
-    <div>
+    <div class="text-danger small">
+        Conversion of this student is disabled.
+    </div>
     <div>
         <a class="btn btn-sm btn-danger" href="{{ url_for('admin.delete_match_record', record_id=record_id) }}">
             Delete
@@ -157,26 +155,22 @@ _project = \
             <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
         {% endif %}
         {% if errors|length > 0 %}
-            <div class="error-block">
-                {% for item in errors %}
-                    {% if loop.index <= 10 %}
-                        <div class="error-message">{{ item }}</div>
-                    {% elif loop.index == 11 %}
-                        <div class="error-message">...</div>
-                    {% endif %}            
-                {% endfor %}
-            </div>
+            {% for item in errors %}
+                {% if loop.index <= 10 %}
+                    <div class="text-danger small">{{ item }}</div>
+                {% elif loop.index == 11 %}
+                    <div class="text-danger small">...</div>
+                {% endif %}            
+            {% endfor %}
         {% endif %}
         {% if warnings|length > 0 %}
-            <div class="error-block">
-                {% for item in warnings %}
-                    {% if loop.index <= 10 %}
-                        <div class="error-message">Warning: {{ item }}</div>
-                    {% elif loop.index == 11 %}
-                        <div class="error-message">Further errors suppressed...</div>
-                    {% endif %}
-                {% endfor %}
-            </div>
+            {% for item in warnings %}
+                {% if loop.index <= 10 %}
+                    <div class="text-warning small">Warning: {{ item }}</div>
+                {% elif loop.index == 11 %}
+                    <div class="text-warning small">Further warnings suppressed...</div>
+                {% endif %}
+            {% endfor %}
         {% endif %}
     {% endif %}
 {% endfor %}

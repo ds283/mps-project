@@ -16,6 +16,7 @@ from flask_security import current_user, SQLAlchemyUserDatastore, Security, Logi
 from flask_login.signals import user_logged_in
 from .thirdparty.flask_bootstrap5 import Bootstrap
 from .thirdparty.flask_sessionstore import Session
+from .thirdparty.flask_rollbar import Rollbar
 from flask_mailman import Mail, EmailMultiAlternatives
 from flask_assets import Environment
 from app.flask_bleach import Bleach
@@ -30,7 +31,6 @@ from .limiter import limiter
 from .uploads import solution_files, batch_user_files, submitted_files
 from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
-from flask_rollbar import Rollbar
 # from flask_qrcode import QRcode
 from flask_babelex import Babel
 

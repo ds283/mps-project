@@ -142,7 +142,7 @@ _periods = \
                         <div class="badge bg-success"><i class="fas fa-check"></i> Attachments ({{ number_attachments }})</div>
                     {% endif %}
                     {% if r.report is none and period.canvas_enabled and not period.closed and r.canvas_submission_available is true %}
-                        <a class="link-danger text-decoration-none" href="{{ url_for('documents.pull_report_from_canvas', rid=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}">Pull report from Canvas...</a>
+                        <a class="link-danger text-decoration-none small" href="{{ url_for('documents.pull_report_from_canvas', rid=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}">Pull report from Canvas...</a>
                     {% endif %}
                 {% endif %}
             </div>

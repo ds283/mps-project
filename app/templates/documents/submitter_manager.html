@@ -172,7 +172,7 @@
                         {% endcall %}
                     </div>
                 {% endif %}
-                {% set validation_messages = record.validate %}
+                {% set validation_messages = record.validate_documents %}
                 {% if validation_messages is not none and validation_messages|length > 0 %}
                     <ul class="list-group">
                         {% for msg in validation_messages %}
@@ -290,7 +290,7 @@
                             {% if report_uploadable and record.period.canvas_enabled and record.canvas_submission_available %}
                                 <div class="mt-1">
                                     A matching submission has been made to the Canvas assignment for this submission period.
-                                    <a href="{{ url_for('documents.pull_report_from_canvas', rid=record.id, url=url) }}" class="link-success text-decoration-none">Pull report from Canvas...</a>
+                                    <a href="{{ url_for('documents.pull_report_from_canvas', rid=record.id, url=url) }}" class="link-danger text-decoration-none">Pull report from Canvas...</a>
                                 </div>
                             {% endif %}
                         {% endcall %}

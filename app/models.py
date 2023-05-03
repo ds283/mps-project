@@ -9569,6 +9569,7 @@ def _SelectingStudent_delete_handler(mapper, connection, target):
 @cache.memoize()
 def _SubmittingStudent_is_valid(sid):
     obj: SubmittingStudent = db.session.query(SubmittingStudent).filter_by(id=sid).one()
+    config: ProjectClassConfig = obj.config
 
     errors = {}
     warnings = {}
@@ -9583,6 +9584,30 @@ def _SubmittingStudent_is_valid(sid):
     # CONSTRAINT 2 - owning student should not be TWD
     if student.intermitting:
         errors['intermitting'] = 'Student is intermitting'
+
+    # CONSTRAINT 3 - CONSTITUENT SubmissionRecord INSTANCES SHOULD BE INDIVIDUALLY VALID
+    records_errors = False
+    records_warnings = False
+    for record in obj.records:
+        record: SubmissionRecord
+        flag, errors, warnings = record.is_valid
+
+        if flag:
+            if len(errors) > 0:
+                records_errors = True
+            if len(warnings) > 0:
+                records_warnings = True
+
+    if records_errors:
+        if config.submissions > 1:
+            errors['records'] = 'Project or role assignments for some submission periods have errors'
+        else:
+            errors['records'] = 'Project or role assignments have errors'
+    elif records_warnings:
+        if config.submissions > 1:
+            warnings['records'] = 'Project or role assignments for some submission periods have warnings'
+        else:
+            warnings['records'] = 'Project or role assignments have warnings'
 
     if len(errors) > 0:
         return False, errors, warnings
@@ -10099,6 +10124,206 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
         return True
 
 
+def _SubmissionRecord_is_valid(sid):
+    obj: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=sid).one()
+    period: SubmissionPeriodRecord = obj.period
+    config: ProjectClassConfig = period.config
+    pclass: ProjectClass = config.project_class
+    sub: SubmittingStudent = obj.student
+    project: LiveProject = obj.project
+
+    errors = {}
+    warnings = {}
+
+    uses_supervisor = config.uses_supervisor
+    uses_marker = config.uses_marker
+    uses_moderator = config.uses_moderator
+    markers_needed = config.number_markers
+    moderators_needed = config.number_moderators
+
+    supervisor_roles: List[SubmissionRole] = obj.supervisor_roles
+    marker_roles: List[SubmissionRole] = obj.marker_roles
+    moderator_roles: List[SubmissionRole] = obj.moderator_roles
+
+    supervisor_ids: Set[int] = set(r.user.id for r in supervisor_roles)
+    marker_ids: Set[int] = set(r.user.id for r in marker_roles)
+    moderator_ids: Set[int] = set(r.user.id for r in moderator_roles)
+
+    # 1. SUPERVISOR, MARKER, AND MODERATOR ROLES SHOULD BE DISTINCT
+    a = supervisor_ids.intersection(marker_ids)
+    if len(a) > 0:
+        errors[('basic', 0)] = 'Some supervisor and marker roles coincide'
+
+    b = supervisor_ids.intersection(moderator_ids)
+    if len(b) > 0:
+        errors[('basic', 1)] = 'Some supervisor and moderator roles coincide'
+
+    c = marker_ids.intersection(moderator_ids)
+    if len(c) > 0:
+        errors[('basic', 2)] = 'Some marker and moderator roles coincide'
+
+    supervisor_counts = {}
+    marker_counts = {}
+    moderator_counts = {}
+
+    supervisor_dict = {}
+    marker_dict = {}
+    moderator_dict = {}
+
+    for u in supervisor_roles:
+        supervisor_dict[u.id] = u
+
+        if u.id not in supervisor_counts:
+            supervisor_counts[u.id] = 1
+        else:
+            supervisor_counts[u.id] += 1
+
+    for u in marker_roles:
+        marker_dict[u.id] = u
+
+        if u.id not in marker_counts:
+            marker_counts[u.id] = 1
+        else:
+            marker_counts[u.id] += 1
+
+    for u in moderator_roles:
+        moderator_dict[u.id] = u
+
+        if u.id not in moderator_counts:
+            moderator_counts[u.id] = 1
+        else:
+            moderator_counts[u.id] += 1
+
+    if uses_supervisor:
+        # 1A. IF SUPERVISORS ARE USED, AT LEAST ONE SUPERVISOR SHOULD BE PROVIDED
+        if len(supervisor_ids) == 0:
+            errors[('supervisors', 0)] = 'No supervision roles are assigned for this project'
+
+        # 1B. USUALLY THERE SHOULD BE JUST ONE SUPERVISOR ROLE
+        if len(supervisor_ids) > 1:
+            warnings[('supervisors', 0)] = 'There are {n} supervision roles assigned for this ' \
+                                           'project'.format(n=len(supervisor_ids))
+
+        # 1C. SUPERVISORS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
+        for u_id in supervisor_counts:
+            count = supervisor_counts[u_id]
+            if count > 1:
+                user: User = supervisor_dict[u_id]
+
+                errors[('supervisors', 1)] = 'Supervisor "{name}" is assigned {n} times for this ' \
+                                             'submitter'.format(name=user.name, n=count)
+
+    if uses_marker:
+        # 1D. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MARKERS
+        if len(marker_ids) < markers_needed:
+            errors[('markers', 0)] = 'Fewer marker roles are assigned than expected for this project ' \
+                                     '(assigned={assgn}, expected={exp})'.format(assgn=len(marker_ids), exp=markers_needed)
+
+        # 1E. WARN IF MORE MARKERS THAN EXPECTED ASSIGNED
+        if len(marker_ids) > markers_needed:
+            warnings[('markers', 0)] = 'More marker roles are assigned than expected for this project ' \
+                                       '(assigned={assgn}, expected={exp})'.format(assgn=len(marker_ids), exp=markers_needed)
+
+        # 1F. MARKERS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
+        for u_id in marker_counts:
+            count = marker_counts[u_id]
+            if count > 1:
+                user: User = marker_dict[u_id]
+
+                errors[('markers', 1)] = 'Marker "{name}" is assigned {n} times for this ' \
+                                         'submitter'.format(name=user.name, n=count)
+
+    if uses_moderator:
+        # 1G. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MODERATORS
+        if len(moderator_ids) < moderators_needed:
+            errors[('moderators', 0)] = 'Fewer moderator roles are assigned than expected for this project ' \
+                                        '(assigned={assgn}, expected={exp})'.format(assgn=len(moderator_ids), exp=moderators_needed)
+
+        # 1H. WARN IF MORE MODERATORS THAN EXPECTED ASSIGNED
+        if len(moderator_ids) > moderators_needed:
+            warnings[('moderators', 0)] = 'More moderator roles are assigned than expected for this project ' \
+                                          '(assigned={assgn}, expected={exp})'.format(assgn=len(moderator_ids), exp=moderators_needed)
+
+        # 1I. MODERATORS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
+        for u_id in moderator_counts:
+            count = moderator_counts[u_id]
+            if count > 1:
+                user: User = moderator_dict[u_id]
+
+                errors[('moderators', 1)] = 'Moderator "{name}" is assigned {n} times for this ' \
+                                            'submitter'.format(name=user.name, n=count)
+
+    # 2. ASSIGNED PROJECT SHOULD BE PART OF THE PROJECT CLASS
+    if project.config_id != config.id:
+        errors[('config', 0)] = 'Assigned project does not belong to the correct class for this submitter'
+
+    # 3. STAFF WITH SUPERVISOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
+    for u in supervisor_roles:
+        user: User = u.user
+        if user.faculty_data is not None:
+            enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
+            if enrolment is None or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+                errors[('enrolment', 0)] = '"{name}" has been assigned a supervision role, but is not currently ' \
+                                           'enrolled for this project class'.format(name=u.name)
+        else:
+            warnings[('enrolment', 0)] = '"{name}" has been assigned a supervision role, but is not a faculty member'
+
+    # 4. STAFF WITH MODERATOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
+    for u in marker_roles:
+        user: User = u.user
+        if user.faculty_data is not None:
+            enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
+            if enrolment is None or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED:
+                errors[('enrolment', 1)] = '"{name}" has been assigned a marking role, but is not currently ' \
+                                           'enrolled for this project class'.format(name=u.name)
+        else:
+            warnings[('enrolment', 1)] = '"{name}" has been assigned a marking role, but is not a faculty member'
+
+    # 5. STAFF WITH MODERATOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
+    for u in moderator_roles:
+        user: User = u.user
+        if user.faculty_data is not None:
+            enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
+            if enrolment is None or enrolment.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED:
+                errors[('enrolment', 2)] = '"{name}" has been assigned a moderation role, but is not currently ' \
+                                           'enrolled for this project class'.format(name=u.name)
+        else:
+            warnings[('enrolment', 2)] = '"{name}" has been assigned a moderation role, but is not a faculty member'
+
+    # 6. ASSIGNED MARKERS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
+    if uses_marker:
+        for u in marker_roles:
+            count = get_count(project.assessor_list_query.filter(FacultyData.id == u.id))
+
+            if count != 1:
+                errors[('markers', 2)] = 'Assigned marker "{name}" is not in assessor pool for ' \
+                                            'assigned project'.format(name=u.name)
+
+    # 7. ASSIGNED MODERATORS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
+    if uses_moderator:
+        for u in moderator_roles:
+            count = get_count(project.assessor_list_query.filter(FacultyData.id == u.id))
+
+            if count != 1:
+                errors[('moderators', 2)] = 'Assigned moderator "{name}" is not in assessor pool for ' \
+                                            'assigned project'.format(name=u.name)
+
+    # 8. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE A SUPERVISOR
+    if not project.generic:
+        if project.owner is not None and project.owner_id not in supervisor_ids:
+            warnings[('supervisors', 2)] = 'Assigned project owner "{name}" does not have a supervision ' \
+                                           'role'.format(name=project.owner.user.name)
+
+    # 9. For GENERIC PROJECTS, THE SUPERVISOR SHOULD BE IN THE SUPERVISION POOL
+    if project.generic:
+        for u in supervisor_roles:
+            if not any(u.id == fd.id for fd in project.supervisors):
+                errors[('supervisors', 3)] = 'Assigned supervisor "{name}" is not in supervision pool for ' \
+                                             'assigned project'.format(name=u.name)
+
+    is_valid = (len(errors) == 0)
+    return is_valid, errors, warnings
+
 
 class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     """
@@ -10291,6 +10516,20 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # faculty response timestamp
     faculty_response_timestamp = db.Column(db.DateTime())
 
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._validated = False
+        self._errors = False
+        self._warnings = False
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+        self._validated = False
+        self._errors = False
+        self._warnings = False
 
 
     @property
@@ -11010,7 +11249,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
 
     @property
-    def validate(self):
+    def validate_documents(self):
         """
         Return a list of possible issues with the current SubmissionRecord
         :return:
@@ -11091,6 +11330,59 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             _validate_attachment_access_control(item.attachment)
 
         return messages
+
+
+    @property
+    def is_valid(self):
+        flag, self._errors, self._warnings = _SubmissionRecord_is_valid(self.id)
+        self._validated = True
+
+        return flag
+
+
+    @property
+    def has_issues(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._errors) > 0 or len(self._warnings) > 0
+
+
+    @property
+    def errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._errors.values()
+
+
+    @property
+    def warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._warnings.values()
+
+
+@listens_for(SubmissionRecord, 'before_update')
+def _SubmissionRecord_update_handler(mapper, connection, target):
+    target._validated = False
+
+    with db.session.no_autoflush:
+        cache.delete_memoized(_SubmissionRecord_is_valid, target.id)
+
+
+@listens_for(SubmissionRecord, 'before_insert')
+def _SubmissionRecord_insert_handler(mapper, connection, target):
+    target._validated = False
+
+    with db.session.no_autoflush:
+        cache.delete_memoized(_SubmissionRecord_is_valid, target.id)
+
+
+@listens_for(SubmissionRecord, 'before_delete')
+def _SubmissionRecord_delete_handler(mapper, connection, target):
+    target._validated = False
+
+    with db.session.no_autoflush:
+        cache.delete_memoized(_SubmissionRecord_is_valid, target.id)
 
 
 
@@ -12807,7 +13099,7 @@ def _MatchingRecord_is_valid(id):
     marker_ids: Set[int] = set(u.id for u in marker_roles)
     moderator_ids: Set[int] = set(u.id for u in moderator_roles)
 
-    # 1. SUPERVISOR, MARKER AND MODERATOR ROLES SHOULD BE DISTINCT
+    # 1. SUPERVISOR, MARKER, AND MODERATOR ROLES SHOULD BE DISTINCT
     a = supervisor_ids.intersection(marker_ids)
     if len(a) > 0:
         errors[('basic', 0)] = 'Some supervisor and marker roles coincide'
@@ -12975,34 +13267,34 @@ def _MatchingRecord_is_valid(id):
 
     # 9. ASSIGNED MARKERS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
     # (unambiguous to use config here since #4 checks config agrees with obj.selector.config)
-    if config.uses_marker:
+    if uses_marker:
         for u in marker_roles:
             count = get_count(project.assessor_list_query.filter(FacultyData.id == u.id))
 
             if count != 1:
-                errors[('assignment', 3)] = 'Assigned marker "{name}" is not in assessor pool for ' \
-                                            'assigned project'.format(name=u.name)
+                errors[('markers', 2)] = 'Assigned marker "{name}" is not in assessor pool for ' \
+                                         'assigned project'.format(name=u.name)
 
     # 10. ASSIGNED MODERATORS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
-    if config.uses_moderator:
+    if uses_moderator:
         for u in moderator_roles:
             count = get_count(project.assessor_list_query.filter(FacultyData.id == u.id))
 
             if count != 1:
-                errors[('assignment', 4)] = 'Assigned moderator "{name}" is not in assessor pool for ' \
+                errors[('moderators', 2)] = 'Assigned moderator "{name}" is not in assessor pool for ' \
                                             'assigned project'.format(name=u.name)
 
     # 11. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE A SUPERVISOR
     if not project.generic:
         if project.owner is not None and project.owner_id not in supervisor_ids:
-            warnings[('supervisors', 1)] = 'Assigned project owner "{name}" does not have a supervision ' \
+            warnings[('supervisors', 2)] = 'Assigned project owner "{name}" does not have a supervision ' \
                                            'role'.format(name=project.owner.user.name)
 
     # 12. For GENERIC PROJECTS, THE SUPERVISOR SHOULD BE IN THE SUPERVISION POOL
     if project.generic:
         for u in supervisor_roles:
             if not any(u.id == fd.id for fd in project.supervisors):
-                errors[('supervisors', 2)] = 'Assigned supervisor "{name}" is not in supervision pool for ' \
+                errors[('supervisors', 3)] = 'Assigned supervisor "{name}" is not in supervision pool for ' \
                                              'assigned project'.format(name=u.name)
 
     # 13. SELECTOR SHOULD BE MARKED FOR CONVERSION
@@ -13032,10 +13324,10 @@ def _MatchingRecord_is_valid(id):
                     .order_by(MatchingRecord.selector_id.asc()).first()
 
                 if lo_rec is not None and lo_rec.id == obj.id:
-                    errors[('overasigned', 5)] = 'Project "{name}" has maximum capacity {max} but has been assigned to ' \
-                                                 'supervisor "{supv_name}" with {num} ' \
-                                                 'selectors'.format(name=project.name, max=project.capacity,
-                                                                    supv_name = supv.name, num=count)
+                    errors[('overassigned', 5)] = 'Project "{name}" has maximum capacity {max} but has been assigned to ' \
+                                                  'supervisor "{supv_name}" with {num} ' \
+                                                  'selectors'.format(name=project.name, max=project.capacity,
+                                                                     supv_name = supv.name, num=count)
 
     is_valid = (len(errors) == 0)
     return is_valid, errors, warnings

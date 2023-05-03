@@ -86,11 +86,14 @@ _periods = \
                 {% else %}
                     <div>{{ r.project.name[0:70] }}...</div>
                 {% endif %}
+                {% if r.has_issues %}
+                    <i class="fas fa-exclamation-triangle text-danger"></i>
+                {% endif %}
                 {% if r.project.generic or r.project.owner is none %}
                     <div class="badge bg-info">GENERIC</div>
                 {% else %}
                     <div class="small text-muted">
-                        Owner
+                        Project owner
                         <a href="mailto:{{ r.project.owner.user.email }}">{{ r.project.owner.user.name }}</a>
                     </div>
                 {% endif %}
@@ -133,12 +136,13 @@ _periods = \
                     </div>
                     {% if r.report is not none %}
                         <div class="badge bg-success"><i class="fas fa-check"></i> Report</div>
-                    {% elif period.canvas_enabled and not period.closed and r.canvas_submission_available is true %}
-                        <a class="link-success text-decoration-none" href="{{ url_for('documents.pull_report_from_canvas', rid=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}">Pull report from Canvas...</a>
                     {% endif %}
                     {% set number_attachments = r.number_record_attachments %}
                     {% if number_attachments > 0 %}
                         <div class="badge bg-success"><i class="fas fa-check"></i> Attachments ({{ number_attachments }})</div>
+                    {% endif %}
+                    {% if r.report is none and period.canvas_enabled and not period.closed and r.canvas_submission_available is true %}
+                        <a class="link-danger text-decoration-none" href="{{ url_for('documents.pull_report_from_canvas', rid=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}">Pull report from Canvas...</a>
                     {% endif %}
                 {% endif %}
             </div>
@@ -204,6 +208,30 @@ _periods = \
                 </div>
             </div>
         {% endif %}
+        {% if r.has_issues %}
+            {% set errors = r.errors %}
+            {% set warnings = r.warnings %}
+            {% set num_errors = errors|length %}
+            {% set num_warnings = warnings|length %}
+            <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+                {% if num_errors > 0 %}
+                    {% if num_errors == 1 %}
+                        {% set err_string = '1 error' %}
+                    {% else %}
+                        {% set err_string = num_errors|string + ' errors' %}
+                    {% endif %}
+                    <span class="badge bg-danger" data-bs-toggle="tooltip" data-bs-html="true" title="{% for item in errors %}{% if loop.index <= 10 %}<div class='error-message'>{{ item }}</div>{% elif loop.index == 1%}<div class='error-message'>Further errors suppressed...</div>{% endif %}{% endfor %}">{{ err_string}}</span>
+                {% endif %}
+                {% if num_warnings > 0 %}
+                    {% if num_warnings == 1 %}
+                        {% set warn_string = '1 error' %}
+                    {% else %}
+                        {% set warn_string = num_warnings|string + ' warnings' %}
+                    {% endif %}
+                    <span class="badge bg-warning" data-bs-toggle="tooltip" data-bs-html="true" title="{% for item in errors %}{% if loop.index <= 10 %}<div class='error-message'>{{ item }}</div>{% elif loop.index == 1%}<div class='error-message'>Further warnings suppressed...</div>{% endif %}{% endfor %}">{{ warn_string }}</span>
+                {% endif %}
+            </div>
+        {% endif %}
     </div>
 {% endmacro %}
 {% set recs = sub.ordered_assignments.all() %}
@@ -267,7 +295,7 @@ _menu = \
         </a>
         {% if record.report_id is none and period.canvas_enabled and not period.closed and record.canvas_submission_available is true %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('documents.pull_report_from_canvas', rid=record.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
-                <i class="fas fa-download fa-fw"></i> Pull report
+                <i class="fas fa-download fa-fw"></i> Pull report from Canvas
             </a>
         {% endif %}
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.view_feedback', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
@@ -301,9 +329,9 @@ _name = \
 <div>
     {% if config.canvas_enabled and sub is not none %}
         {% if sub.canvas_user_id is not none %}
-            <i class="fa fa-circle me-1" style="color: green;" data-bs-toggle="tooltip" title="This student is enrolled on the linked Canvas site"></i>
+            <i class="fa fa-circle me-1 text-success" data-bs-toggle="tooltip" title="This student is enrolled on the linked Canvas site"></i>
         {% elif sub.canvas_missing %}
-            <i class="fa fa-circle me-1" style="color: red;" data-bs-toggle="tooltip" title="This student is not enrolled on the linked Canvas site"></i>
+            <i class="fa fa-circle me-1 text-danger" data-bs-toggle="tooltip" title="This student is not enrolled on the linked Canvas site"></i>
         {% else %}
             <i class="fa fa-unlink me-1" data-bs-toggle="tooltip" title="Information associated with this student for the linked Canvas site has not yet been synchronized"></i> 
         {% endif %}
@@ -311,7 +339,7 @@ _name = \
     {% if show_name %}
         <a class="text-decoration-none" href="mailto:{{ user.email }}">{{ user.name }}</a>
         {% if sub.has_issues %}
-            <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+            <i class="fas fa-exclamation-triangle text-danger"></i>
         {% endif %}
     {% endif %}
     {% if show_number %}
@@ -367,7 +395,7 @@ _name = \
                     {% if loop.index <= 5 %}
                         <div class="error-message">Warning: {{ item }}</div>
                     {% elif loop.index == 6 %}
-                        <div class="error-message">Further errors suppressed...</div>
+                        <div class="error-message">Further warnings suppressed...</div>
                     {% endif %}
                 {% endfor %}
             </div>

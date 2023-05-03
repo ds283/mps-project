@@ -2839,7 +2839,7 @@ def register_matching_tasks(celery):
                                    force_base=record.force_base,
                                    name=new_name,
                                    config_members=record.config_members,
-                                   published=record.published,
+                                   published=False,
                                    selected=False,
                                    celery_id=None,
                                    finished=record.finished,

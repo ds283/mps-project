@@ -1,0 +1,85 @@
+{% extends "base_app.html" %}
+
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_datatables() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#roles-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: {url: $SCRIPT_ROOT + '/convenor/edit_roles_ajax/{{ record.id }}?url={{ url|urlencode }}&text={{ text|urlencode }}',
+                       type: 'POST',
+                       data: function (args) { return { "args": JSON.stringify(args) }; } },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
+                columns: [
+                    { data: 'name',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'role',
+                      orderable: true,
+                      searchable: false },
+                    { data: 'menu',
+                      orderable: false,
+                      searchable: false }
+                ]
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Edit roles for {{ user.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            {% if url and text %}
+                <div class="top-return-link">
+                    <a class="text-decoration-none" href="{{ url }}">
+                        <i class="fas fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+
+            <div class="card border-primary mt-3 mb-3">
+                <div class="card-header bg-primary text-white">Edit roles for <i class="fas fa-user"></i> <strong>{{ user.name }}</strong> ({{ period.display_name }})</div>
+                <div class="card-body">
+                    <table id="roles-table" class="table table-striped table-bordered">
+                        <thead>
+                        <tr>
+                            <th width="40%"> Name</th>
+                            <th width="40%"> Role</th>
+                            <th width="20%"> Actions</th>
+                        </tr>
+                        </thead>
+                    </table>
+                    <div style="text-align: center;">
+                        <a href="{{ url_for('convenor.add_role', sub_id=record.id, url=url_for('convenor.edit_roles', sub_id=record.id, url=url, text=text)) }}" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-plus"></i>
+                            Add new role
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            {% if url and text %}
+                <div>
+                    <a class="text-decoration-none" href="{{ url }}">
+                        <i class="fas fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

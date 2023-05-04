@@ -9941,6 +9941,11 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
                            backref=db.backref('submission_roles', lazy='dynamic'))
 
     # role identifier, drawn from SubmissionRoleTypesMixin
+    role_options = [(SubmissionRoleTypesMixin.ROLE_SUPERVISOR, 'Supervisor'),
+                    (SubmissionRoleTypesMixin.ROLE_MARKER, 'Marker'),
+                    (SubmissionRoleTypesMixin.ROLE_MODERATOR, 'Moderator'),
+                    (SubmissionRoleTypesMixin.ROLE_EXAM_BOARD, 'Exam board member'),
+                    (SubmissionRoleTypesMixin.ROLE_EXTERNAL_EXAMINER, 'External examiner')]
     role = db.Column(db.Integer(), default=SubmissionRoleTypesMixin.ROLE_SUPERVISOR, nullable=False)
 
     @validates('role')
@@ -10124,6 +10129,25 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
         return True
 
 
+@listens_for(SubmissionRole, 'before_update')
+def _SubmissionRole_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_SubmissionRecord_is_valid, target.submission_id)
+
+
+@listens_for(SubmissionRole, 'before_insert')
+def _SubmissionRole_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_SubmissionRecord_is_valid, target.submission_id)
+
+
+@listens_for(SubmissionRole, 'before_delete')
+def _SubmissionRole_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_SubmissionRecord_is_valid, target.submission_id)
+
+
+@cache.memoize()
 def _SubmissionRecord_is_valid(sid):
     obj: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=sid).one()
     period: SubmissionPeriodRecord = obj.period

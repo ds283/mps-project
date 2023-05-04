@@ -1,0 +1,52 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#role').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Select a role...'
+            });
+            $('#user').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Select a user to assign...'
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Add new role for {{ sub.student.user.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card border-primary mt-3 mb-3">
+                <div class="card-header bg-primary text-white">
+                    Add new role for <i class="fas fa-user"></i> <strong>{{ sub.student.user.name }}</strong> ({{ period.display_name }})
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('convenor.add_role', sub_id=record.id, url=url) }}" method="POST" enctype="multipart/form-data" name="role_form">
+                        {{ form.hidden_tag() }}
+
+                        {{ wtf.render_field(form.role) }}
+                        {{ wtf.render_field(form.user) }}
+
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

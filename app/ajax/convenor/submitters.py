@@ -102,13 +102,14 @@ _periods = \
                     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                         {% set disabled = period.is_feedback_open or r.student_engaged %}
                         {% if disabled %}
-                            <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign</a>
+                            <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign project</a>
                         {% else %}
-                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
+                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
                                 <i class="fas fa-folder fa-fw"></i> Manually reassign
                             </a>
                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Remove assignment</a>
                         {% endif %}
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"><i class="fas fa-user fa-fw"></i> Edit roles...</a>
                     </div>
                 </div>
             </div>

@@ -17,12 +17,12 @@ from wtforms.validators import InputRequired, Optional, Email, Length, Validatio
 from wtforms_alchemy import QuerySelectField
 
 from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig, ConvenorGenericTask, \
-    DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS
+    DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS, SubmissionRole
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, PeriodPresentationsMixin, \
     PeriodSelectorMixinFactory
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
     GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses, GetAccommodatableMatchings, \
-    GetCanvasEnabledConvenors, BuildCanvasLoginUserName
+    GetCanvasEnabledConvenors, BuildCanvasLoginUserName, GetActiveFaculty
 from ..shared.forms.wtf_validators import NotOptionalIf
 
 
@@ -463,3 +463,12 @@ class AddConvenorGenericTask(Form, ConvenorTaskMixin, ConvenorGenericTaskMixin):
 class EditConvenorGenericTask(Form, ConvenorTaskMixin, ConvenorGenericTaskMixin, SaveChangesMixin):
 
     pass
+
+
+class AddSubmitterRoleForm(Form):
+    role = SelectField('Role type', choices=SubmissionRole.role_options, coerce=int)
+
+    user = QuerySelectField('Assign which user?', query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName,
+                            allow_blank=False)
+
+    submit = SubmitField('Add new role')

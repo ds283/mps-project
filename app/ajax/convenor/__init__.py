@@ -25,3 +25,4 @@ from .custom_offers import project_offer_data, student_offer_data, project_offer
 from .teaching_groups import teaching_group_by_faculty, teaching_group_by_student
 from .student_tasks import student_task_data
 from .todo_list import todo_list_data
+from .edit_roles import edit_roles

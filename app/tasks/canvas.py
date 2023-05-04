@@ -599,13 +599,9 @@ def register_canvas_tasks(celery):
         if user_id is not None:
             asset.grant_user(user_id)
 
-        # project supervisor has access
-        if record.project is not None and record.project.owner is not None:
-            asset.grant_user(record.project.owner.user)
-
-        # project examiner has access
-        if record.marker is not None:
-            asset.grant_user(record.marker.user)
+        # users with appropriate roles have access
+        for role in record.roles:
+            asset.grant_user(role.user)
 
         # student can download their own report
         if record.owner is not None and record.owner.student is not None:

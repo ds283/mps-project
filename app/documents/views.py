@@ -296,13 +296,9 @@ def upload_submitter_report(sid):
             # uploading user has access
             asset.grant_user(current_user)
 
-            # project supervisor has access
-            if record.project is not None and record.project.owner is not None:
-                asset.grant_user(record.project.owner.user)
-
-            # project examiner has access
-            if record.marker is not None:
-                asset.grant_user(record.marker.user)
+            # users with appropriate roles have access
+            for role in record.roles:
+                asset.grant_user(role.user)
 
             # student can download their own report
             if record.owner is not None and record.owner.student is not None:
@@ -686,13 +682,9 @@ def upload_submitter_attachment(sid):
             # uploading user has access
             asset.grant_user(current_user)
 
-            # project supervisor has access
-            if record.project is not None and record.project.owner is not None:
-                asset.grant_user(record.project.owner.user)
-
-            # project examiner has access
-            if record.marker is not None:
-                asset.grant_user(record.marker.user)
+            # users with appropriate roles have access
+            for role in record.roles:
+                asset.grant_user(role.user)
 
             # students can't ordinarily download attachments unless permission is given
 

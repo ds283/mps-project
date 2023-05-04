@@ -13,7 +13,8 @@ from sqlalchemy.event import listens_for
 
 from ...cache import cache
 from ...database import db
-from ...models import FacultyData, EnrollmentRecord, SubmissionRecord, ScheduleSlot, LiveProject, ScheduleAttempt
+from ...models import FacultyData, EnrollmentRecord, SubmissionRecord, ScheduleSlot, LiveProject, ScheduleAttempt, \
+    SubmissionRole
 from ...shared.sqlalchemy import get_count
 from ...shared.utils import get_current_year
 
@@ -244,20 +245,9 @@ def _EnrollmentRecord_delete_handler(mapper, connection, target):
 def _SubmissionRecord_delete_cache(target):
     if not target.retired:
 
-        if target.project is not None:
-            _delete_cache_entry(target.project.owner_id)
-
-        # need to allow for possibility target.project has not caught up to target.project_id or vice-versa
-        if target.project_id is not None and (target.project is None
-                                              or (target.project is not None
-                                                  and target.project_id != target.project.id)):
-            proj = db.session.query(LiveProject).filter_by(id=target.project_id).first()
-            if proj is not None:
-                _delete_cache_entry(proj.owner_id)
-
-        _delete_cache_entry(target.marker_id)
-        if target.marker is not None and target.marker.id != target.marker_id:
-            _delete_cache_entry(target.marker.id)
+        for role in target.roles:
+            role: SubmissionRole
+            _delete_cache_entry(role.user_id)
 
 
 @listens_for(SubmissionRecord, 'before_insert')

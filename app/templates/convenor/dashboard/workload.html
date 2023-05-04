@@ -17,7 +17,7 @@
                 ajax: { url: $SCRIPT_ROOT + '/convenor/faculty_workload_ajax/{{ pclass.id }}?enroll_filter={{ enroll_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
                       orderable: true,

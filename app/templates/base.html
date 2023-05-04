@@ -56,10 +56,11 @@
         $(window).resize(determineDropDirection);
     </script>
 
-    {# initialize any tooltips on the page #}
+    {# initialize any tooltips and popovers on the page #}
     <script>
         $(document).ready(function() {
-            $('[data-bs-toggle="tooltip"]').tooltip();
+            $('[data-toggle="tooltip"]').tooltip();
+            $('[data-toggle="popover"]').popover();
         });
     </script>
 

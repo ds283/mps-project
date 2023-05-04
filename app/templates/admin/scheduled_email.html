@@ -18,7 +18,7 @@
                 ajax: { url: $SCRIPT_ROOT + '/admin/scheduled_email_ajax',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'recipient',
                       orderable: true,

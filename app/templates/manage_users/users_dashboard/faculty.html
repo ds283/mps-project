@@ -31,7 +31,7 @@
                 ajax: { url: $SCRIPT_ROOT + '/manage_users/users_faculty_ajax?pclass={{ pclass_filter }}&group={{ group_filter }}&&CATS={{ filter_CATS_coded }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
                       searchable: true,

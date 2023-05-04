@@ -18,7 +18,7 @@
                 ajax: { url: $SCRIPT_ROOT + '/manage_users/users_ajax{% if filter is not none %}?filter={{ filter }}{% endif %}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
                       searchable: true,

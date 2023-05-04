@@ -35,7 +35,7 @@ _names = \
 """
 {% for user in e.recipients %}
     <div>
-        <a href="mailto:{{ user.email }}" {% if user.last_email %}data-bs-toggle="tooltip" title="Last notification at {{ user.last_email.strftime("%a %d %b %Y %H:%M:%S") }}"{% endif %}>{{ user.name }}</a>
+        <a href="mailto:{{ user.email }}" {% if user.last_email %}data-toggle="tooltip" title="Last notification at {{ user.last_email.strftime("%a %d %b %Y %H:%M:%S") }}"{% endif %}>{{ user.name }}</a>
     </div>
 {% else %}
   <span class="badge bg-warning">Not logged</span>

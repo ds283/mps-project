@@ -19,7 +19,7 @@
                 ajax: {url: $SCRIPT_ROOT + '/convenor/edit_roles_ajax/{{ record.id }}?url={{ url|urlencode }}&text={{ text|urlencode }}',
                        type: 'POST',
                        data: function (args) { return { "args": JSON.stringify(args) }; } },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
                       orderable: true,

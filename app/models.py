@@ -167,7 +167,7 @@ class ColouredLabelMixin():
             element += ' style="{sty}"'.format(sty=style)
 
         if popover_text is not None:
-            element += ' data-bs-toggle="tooltip" title="{text}"'.format(text=popover_text)
+            element += ' data-toggle="tooltip" title="{text}"'.format(text=popover_text)
 
         element += '>{msg}</span>'.format(msg=text)
         return element
@@ -6849,7 +6849,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
         if comment is not None:
             bleach = current_app.extensions['bleach']
-            comment_attr = 'data-bs-toggle="tooltip" title="' + bleach.clean(comment) + '"'
+            comment_attr = 'data-toggle="tooltip" title="' + bleach.clean(comment) + '"'
         else:
             comment_attr = None
 
@@ -8708,7 +8708,7 @@ class LiveProject(db.Model,
             project_tags = ['<div>{name} #{rank}</div>'.format(name=rec.owner.student.user.name, rank=rec.rank)
                             for rec in self.bookmarks.order_by(Bookmark.rank).limit(10).all()]
             tooltip = ''.join(project_tags)
-            attrs = 'data-bs-toggle="tooltip" data-bs-html="true" title="{title}"'.format(title=tooltip)
+            attrs = 'data-toggle="tooltip" data-html="true" title="{title}"'.format(title=tooltip)
         else:
             attrs = ''
 
@@ -8740,7 +8740,7 @@ class LiveProject(db.Model,
             project_tags = ['<div>{name} #{rank}</div>'.format(name=rec.owner.student.user.name, rank=rec.rank)
                             for rec in self.selections.order_by(SelectionRecord.rank).limit(10).all()]
             tooltip = ''.join(project_tags)
-            attrs = 'data-bs-toggle="tooltip" data-bs-html="true" title="{title}"'.format(title=tooltip)
+            attrs = 'data-toggle="tooltip" data-html="true" title="{title}"'.format(title=tooltip)
         else:
             attrs = ''
 
@@ -9590,12 +9590,12 @@ def _SubmittingStudent_is_valid(sid):
     records_warnings = False
     for record in obj.records:
         record: SubmissionRecord
-        flag, errors, warnings = record.is_valid
+        flag = record.has_issues
 
         if flag:
-            if len(errors) > 0:
+            if len(record.errors) > 0:
                 records_errors = True
-            if len(warnings) > 0:
+            if len(record.warnings) > 0:
                 records_warnings = True
 
     if records_errors:
@@ -10153,7 +10153,7 @@ def _SubmissionRecord_is_valid(sid):
     period: SubmissionPeriodRecord = obj.period
     config: ProjectClassConfig = period.config
     pclass: ProjectClass = config.project_class
-    sub: SubmittingStudent = obj.student
+    sub: SubmittingStudent = obj.owner
     project: LiveProject = obj.project
 
     errors = {}
@@ -10162,8 +10162,8 @@ def _SubmissionRecord_is_valid(sid):
     uses_supervisor = config.uses_supervisor
     uses_marker = config.uses_marker
     uses_moderator = config.uses_moderator
-    markers_needed = config.number_markers
-    moderators_needed = config.number_moderators
+    markers_needed = period.number_markers
+    moderators_needed = period.number_moderators
 
     supervisor_roles: List[SubmissionRole] = obj.supervisor_roles
     marker_roles: List[SubmissionRole] = obj.marker_roles
@@ -10278,59 +10278,62 @@ def _SubmissionRecord_is_valid(sid):
                                             'submitter'.format(name=user.name, n=count)
 
     # 2. ASSIGNED PROJECT SHOULD BE PART OF THE PROJECT CLASS
-    if project.config_id != config.id:
-        errors[('config', 0)] = 'Assigned project does not belong to the correct class for this submitter'
+    if obj.selection_config is not None:
+        if project.config_id != obj.selection_config_id:
+            errors[('config', 0)] = 'Assigned project does not belong to the correct class for this submitter'
 
     # 3. STAFF WITH SUPERVISOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
-    for u in supervisor_roles:
-        user: User = u.user
+    for r in supervisor_roles:
+        user: User = r.user
         if user.faculty_data is not None:
-            enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
+            enrolment: EnrollmentRecord = user.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
                 errors[('enrolment', 0)] = '"{name}" has been assigned a supervision role, but is not currently ' \
-                                           'enrolled for this project class'.format(name=u.name)
+                                           'enrolled for this project class'.format(name=user.name)
         else:
             warnings[('enrolment', 0)] = '"{name}" has been assigned a supervision role, but is not a faculty member'
 
     # 4. STAFF WITH MODERATOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
-    for u in marker_roles:
-        user: User = u.user
+    for r in marker_roles:
+        user: User = r.user
         if user.faculty_data is not None:
-            enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
+            enrolment: EnrollmentRecord = user.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED:
                 errors[('enrolment', 1)] = '"{name}" has been assigned a marking role, but is not currently ' \
-                                           'enrolled for this project class'.format(name=u.name)
+                                           'enrolled for this project class'.format(name=user.name)
         else:
             warnings[('enrolment', 1)] = '"{name}" has been assigned a marking role, but is not a faculty member'
 
     # 5. STAFF WITH MODERATOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
-    for u in moderator_roles:
-        user: User = u.user
+    for r in moderator_roles:
+        user: User = r.user
         if user.faculty_data is not None:
-            enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
+            enrolment: EnrollmentRecord = user.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED:
                 errors[('enrolment', 2)] = '"{name}" has been assigned a moderation role, but is not currently ' \
-                                           'enrolled for this project class'.format(name=u.name)
+                                           'enrolled for this project class'.format(name=user.name)
         else:
             warnings[('enrolment', 2)] = '"{name}" has been assigned a moderation role, but is not a faculty member'
 
     # 6. ASSIGNED MARKERS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
     if uses_marker:
-        for u in marker_roles:
-            count = get_count(project.assessor_list_query.filter(FacultyData.id == u.id))
+        for r in marker_roles:
+            user: User = r.user
+            count = get_count(project.assessor_list_query.filter(FacultyData.id == user.id))
 
             if count != 1:
                 errors[('markers', 2)] = 'Assigned marker "{name}" is not in assessor pool for ' \
-                                            'assigned project'.format(name=u.name)
+                                            'assigned project'.format(name=user.name)
 
     # 7. ASSIGNED MODERATORS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
     if uses_moderator:
-        for u in moderator_roles:
-            count = get_count(project.assessor_list_query.filter(FacultyData.id == u.id))
+        for r in moderator_roles:
+            user: User = r.user
+            count = get_count(project.assessor_list_query.filter(FacultyData.id == user.id))
 
             if count != 1:
                 errors[('moderators', 2)] = 'Assigned moderator "{name}" is not in assessor pool for ' \
-                                            'assigned project'.format(name=u.name)
+                                            'assigned project'.format(name=user.name)
 
     # 8. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE A SUPERVISOR
     if not project.generic:
@@ -10340,10 +10343,11 @@ def _SubmissionRecord_is_valid(sid):
 
     # 9. For GENERIC PROJECTS, THE SUPERVISOR SHOULD BE IN THE SUPERVISION POOL
     if project.generic:
-        for u in supervisor_roles:
-            if not any(u.id == fd.id for fd in project.supervisors):
+        for r in supervisor_roles:
+            user: User = r.user
+            if not any(user.id == fd.id for fd in project.supervisors):
                 errors[('supervisors', 3)] = 'Assigned supervisor "{name}" is not in supervision pool for ' \
-                                             'assigned project'.format(name=u.name)
+                                             'assigned project'.format(name=user.name)
 
     is_valid = (len(errors) == 0)
     return is_valid, errors, warnings
@@ -11358,8 +11362,14 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     @property
     def is_valid(self):
+        print('SubmissionRecord.is_valid for student id = {id}'.format(id=self.owner.student.id))
         flag, self._errors, self._warnings = _SubmissionRecord_is_valid(self.id)
         self._validated = True
+
+        if self.owner.student.id == 321:
+            print('Lily Joyce SubmissionRecord.is_valid: flag = {flag}'.format(flag=flag))
+            print('errors = {err}'.format(err=self._errors))
+            print('warnings = {warn}'.format(warn=self._warnings))
 
         return flag
 

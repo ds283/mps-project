@@ -10,7 +10,7 @@
 
 from urllib import parse
 
-from flask import render_template_string, current_app, url_for
+from flask import render_template_string, current_app, url_for, get_template_attribute
 from sqlalchemy.event import listens_for
 
 from ...cache import cache
@@ -67,34 +67,7 @@ _project_name_labels = \
 _error_block = \
 """
 <div class="mt-1">
-    {% if errors|length == 1 %}
-        <span class="badge bg-danger">1 error</span>
-    {% elif errors|length > 1 %}
-        <span class="badge bg-danger">{{ errors|length }} errors</span>
-    {% endif %}
-    {% if warnings|length == 1 %}
-        <span class="badge bg-warning text-dark">1 warning</span>
-    {% elif warnings|length > 1 %}
-        <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
-    {% endif %}
-    {% if errors|length > 0 %}
-        {% for item in errors %}
-            {% if loop.index <= 5 %}
-                <div class="text-danger small">{{ item }}</div>
-            {% elif loop.index == 6 %}
-                <div class="text-danger small">Further errors suppressed...</div>
-            {% endif %}            
-        {% endfor %}
-    {% endif %}
-    {% if warnings|length > 0 %}
-        {% for item in warnings %}
-            {% if loop.index <= 5 %}
-                <div class="text-warning small">Warning: {{ item }}</div>
-            {% elif loop.index == 6 %}
-                <div class="text-warning small">Further warnings suppressed...</div>
-            {% endif %}
-        {% endfor %}
-    {% endif %}
+    {{ error_block_popover(errors, warnings) }}
 </div>
 """
 
@@ -475,13 +448,20 @@ def replace_error_block(p: Project, d: ProjectDescription, show_errors: bool, na
     block = ''
     symbol = ''
 
+    error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
+    error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
+
     if show_errors:
         if d is not None and d.has_issues:
-            block = render_template_string(_error_block, errors=d.errors, warnings=d.warnings)
-            symbol = '<i class="fas fa-exclamation-triangle" style="color:red;"></i>'
+            block = render_template_string(_error_block, errors=d.errors, warnings=d.warnings,
+                                           error_block_inline=error_block_inline,
+                                           error_block_popover=error_block_popover)
+            symbol = '<i class="fas fa-exclamation-triangle text-danger"></i>'
         elif p is not None and p.has_issues:
-            block = render_template_string(_error_block, errors=p.errors, warnings=p.warnings)
-            symbol = '<i class="fas fa-exclamation-triangle" style="color:red;"></i>'
+            block = render_template_string(_error_block, errors=p.errors, warnings=p.warnings,
+                                           error_block_inline=error_block_inline,
+                                           error_block_popover=error_block_popover)
+            symbol = '<i class="fas fa-exclamation-triangle text-danger"></i>'
 
     name = name.replace('REPERRORBLOCK', block, 1).replace('REPERRORSYMBOL', symbol, 1)
     return name

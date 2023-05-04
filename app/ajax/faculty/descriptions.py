@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
 _pclasses = \
@@ -61,9 +60,13 @@ def _get_pclass(desc):
 
 
 def descriptions_data(descs, label, menu, pclass_id=None, create=None, config=None, desc_validator=None):
+    error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
+    error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
+
     data = [{'label': render_template_string(label, d=d, desc_pclass_id=_get_pclass(d),
                                              pclass_id=pclass_id, create=create, config=config,
-                                             desc_validator=desc_validator),
+                                             desc_validator=desc_validator, error_block_inline=error_block_inline,
+                                             error_block_popover=error_block_popover),
              'pclasses': render_template_string(_pclasses, d=d),
              'team': render_template_string(_team, d=d),
              'capacity': d.capacity,

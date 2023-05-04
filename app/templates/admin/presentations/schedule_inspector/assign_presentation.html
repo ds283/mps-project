@@ -1,6 +1,7 @@
 {% extends "base_app.html" %}
 
 {% from "datatables.html" import import_datatables %}
+{% from "error_block.html" import error_block_inline, error_block_popover %}
 
 {% block scripts %}
     {{ super() }}
@@ -81,41 +82,14 @@
                                 &ndash;
                                 <strong>{{ slot.room_full_name }}</strong>
                                 {% if slot.has_issues %}
-                                    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+                                    <i class="fas fa-exclamation-triangle text-danger"></i>
                                 {% endif %}
                                 {{ talk.project.config.project_class.make_label()|safe }}
                             </p>
                             {% if slot.has_issues %}
                                 {% set errors = slot.errors %}
                                 {% set warnings = slot.warnings %}
-                                {% if errors|length == 1 %}
-                                    <span class="badge bg-danger">1 error</span>
-                                {% elif errors|length > 1 %}
-                                    <span class="badge bg-danger">{{ errors|length }} errors</span>
-                                {% endif %}
-                                {% if warnings|length == 1 %}
-                                    <span class="badge bg-warning text-dark">1 warning</span>
-                                {% elif warnings|length > 1 %}
-                                    <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
-                                {% endif %}
-                                {% if errors|length > 0 %}
-                                    {% for item in errors %}
-                                        {% if loop.index <= 10 %}
-                                            <div class="text-danger small">{{ item }}</div>
-                                        {% elif loop.index == 11 %}
-                                            <div class="text-danger small">Further errors suppressed...</div>
-                                        {% endif %}
-                                    {% endfor %}
-                                {% endif %}
-                                {% if warnings|length > 0 %}
-                                    {% for item in warnings %}
-                                        {% if loop.index <= 10 %}
-                                            <div class="text-warning small">Warning: {{ item }}</div>
-                                        {% elif loop.index == 11 %}
-                                            <div class="text-warning small">Further warnings suppressed...</div>
-                                        {% endif %}
-                                    {% endfor %}
-                                {% endif %}
+                                {{ error_block_inline(errors, warnings) }}
                             {% endif %}
                             <div class="row vertical-align final-selection-table">
                                 <div class="col-3"><strong>Name</strong></div>

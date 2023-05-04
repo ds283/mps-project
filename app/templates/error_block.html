@@ -7,15 +7,15 @@
         {% else %}
             {% set err_string = num_errors|string + ' errors' %}
         {% endif %}
-        <span class="badge bg-danger" tabindex="0" data-bs-toggle="popover" title="Errors" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul>{% for item in errors %}{% if loop.index <= max_errors %}<li class='text-danger'>{{ item }}</li>{% elif loop.index == max_errors+1 %}<li class='text-danger'>Further errors suppressed...</li>{% endif %}{% endfor %}</ul>">{{ err_string}}</span>
+        <span class="badge bg-danger" tabindex="0" data-bs-toggle="popover" title="Errors" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul>{% for item in errors %}{% if loop.index <= max_errors %}<li class='text-danger'>{{ item }}</li>{% elif loop.index == max_errors+1 %}<li class='text-danger'>Further errors suppressed...</li>{% endif %}{% endfor %}</ul>">{{ err_string}} (click to view)</span>
     {% endif %}
     {% if num_warnings > 0 %}
         {% if num_warnings == 1 %}
-            {% set warn_string = '1 error' %}
+            {% set warn_string = '1 warning' %}
         {% else %}
             {% set warn_string = num_warnings|string + ' warnings' %}
         {% endif %}
-        <span class="badge bg-warning" tabindex="1" data-bs-toggle="popover" title="Warnings" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul>{% for item in errors %}{% if loop.index <= max_warnings %}<li class='text-warning'>{{ item }}</li>{% elif loop.index == max_warnings+1 %}<li class='text-warning'>Further warnings suppressed...</li>{% endif %}{% endfor %}</ul>">{{ warn_string }}</span>
+        <span class="badge bg-warning text-dark" tabindex="1" data-bs-toggle="popover" title="Warnings" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul>{% for item in warnings %}{% if loop.index <= max_warnings %}<li class='text-dark'>{{ item }}</li>{% elif loop.index == max_warnings+1 %}<li class='text-dark'>Further warnings suppressed...</li>{% endif %}{% endfor %}</ul>">{{ warn_string }} (click to view)</span>
     {% endif %}
 {% endmacro %}
 
@@ -56,9 +56,9 @@
             <ul>
                 {% for item in errors %}
                     {% if loop.index <= max_warnings %}
-                        <li class='text-warning'>{{ item }}</li>
+                        <li class='text-dark'>{{ item }}</li>
                     {% elif loop.index == max_warnings+1 %}
-                        <li class='text-warning'>Further warnings suppressed...</li>
+                        <li class='text-dark'>Further warnings suppressed...</li>
                     {% endif %}
                 {% endfor %}
             </ul>

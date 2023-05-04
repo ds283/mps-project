@@ -120,34 +120,7 @@ _desc_label = \
     <div class="mt-2">
         {% set errors = d.errors %}
         {% set warnings = d.warnings %}
-        {% if errors|length == 1 %}
-            <span class="badge bg-danger">1 error</span>
-        {% elif errors|length > 1 %}
-            <span class="badge bg-danger">{{ errors|length }} errors</span>
-        {% endif %}
-        {% if warnings|length == 1 %}
-            <span class="badge bg-warning text-dark">1 warning</span>
-        {% elif warnings|length > 1 %}
-            <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
-        {% endif %}
-        {% if errors|length > 0 %}
-            {% for item in errors %}
-                {% if loop.index <= 5 %}
-                    <div class="text-danger small">{{ item }}</div>
-                {% elif loop.index == 6 %}
-                    <div class="text-danger small">Further errors suppressed...</div>
-                {% endif %}            
-            {% endfor %}
-        {% endif %}
-        {% if warnings|length > 0 %}
-            {% for item in warnings %}
-                {% if loop.index <= 5 %}
-                    <div class="text-warning small>Warning: {{ item }}</div>
-                {% elif loop.index == 6 %}
-                    <div class="text-warning small">Further warnings suppressed...</div>
-                {% endif %}
-            {% endfor %}
-        {% endif %}
+        {{ error_block_popover(errors, warnings) }}
     </div>
 {% endif %}
 """

@@ -59,8 +59,8 @@
     {# initialize any tooltips and popovers on the page #}
     <script>
         $(document).ready(function() {
-            $('[data-toggle="tooltip"]').tooltip();
-            $('[data-toggle="popover"]').popover();
+            $('[data-bs-toggle="tooltip"]').tooltip();
+            $('[data-bs-toggle="popover"]').popover({html: true});
         });
     </script>
 

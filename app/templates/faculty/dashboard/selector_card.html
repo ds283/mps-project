@@ -212,7 +212,7 @@
                                 {% endif %}
                                 {% set num_assessors = project.number_assessors(pclass) %}
                                 {% if num_assessors > 0 %}
-                                    <span class="badge bg-info text-dark" data-toggle="tooltip" data-html="true" title="{% for assessor in project.get_assessor_list(pclass) %}<div>{{ assessor.user.name }}</div>{% endfor %}">{{ num_assessors }} assessor{%- if num_assessors != 1 -%}s{%- endif -%}</span>
+                                    <span class="badge bg-info text-dark" data-bs-toggle="tooltip" data-html="true" title="{% for assessor in project.get_assessor_list(pclass) %}<div>{{ assessor.user.name }}</div>{% endfor %}">{{ num_assessors }} assessor{%- if num_assessors != 1 -%}s{%- endif -%}</span>
                                 {% else %}
                                     <span class="badge bg-danger">No assessors assigned</span>
                                 {% endif %}

@@ -2,6 +2,7 @@
 
 {% from "datatables.html" import import_datatables, bootstrap_spinner %}
 {% from "macros.html" import on_click_selector_field %}
+{% from "icon_block.html" import icon_block %}
 
 {% block scripts %}
     {{ super() }}
@@ -19,7 +20,7 @@
                 ajax: {url: $SCRIPT_ROOT + '/convenor/edit_roles_ajax/{{ record.id }}?url={{ url|urlencode }}&text={{ text|urlencode }}',
                        type: 'POST',
                        data: function (args) { return { "args": JSON.stringify(args) }; } },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true}); },
                 columns: [
                     { data: 'name',
                       orderable: true,
@@ -63,6 +64,47 @@
                     {{ on_click_selector_field(form.selector) }}
                 {% endif %}
             </form>
+
+            {% if record.has_issues %}
+                {% set errors = record.errors %}
+                {% set warnings = record.warnings %}
+                {% if errors|length > 0 %}
+                    <div class="alert alert-danger mb-3">
+                        {% call icon_block("exclamation-circle") %}
+                            <div><strong>There are validation errors.</strong></div>
+                            <div class="mt-1">
+                                <ul>
+                                    {% for e in errors %}
+                                        {% if loop.index <= 25 %}
+                                            <li>{{ e }}</li>
+                                        {% elif loop.index == 26 %}
+                                            <li>Further errors are suppressed...</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endcall %}
+                    </div>
+                {% endif %}
+                {% if warnings|length > 0 %}
+                    <div class="alert alert-warning mb-3">
+                        {% call icon_block("exclamation-circle") %}
+                            <div><strong>There are validation warnings.</strong></div>
+                            <div class="mt-1">
+                                <ul>
+                                    {% for w in warnings %}
+                                        {% if loop.index <= 25 %}
+                                            <li>{{ w }}</li>
+                                        {% elif loop.index == 26 %}
+                                            <li>Further warnings are suppressed...</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endcall %}
+                    </div>
+                {% endif %}
+            {% endif %}
 
             <div class="card border-primary mt-3 mb-3">
                 <div class="card-header bg-primary text-white">Edit roles for <i class="fas fa-user"></i> <strong>{{ user.name }}</strong> ({{ period.display_name }})</div>

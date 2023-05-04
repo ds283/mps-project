@@ -215,14 +215,14 @@ _periods = \
             {% set warnings = r.warnings %}
             {% set num_errors = errors|length %}
             {% set num_warnings = warnings|length %}
-            <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+            <div class="d-flex flex-row justify-content-start align-items-center gap-2 mt-2">
                 {% if num_errors > 0 %}
                     {% if num_errors == 1 %}
                         {% set err_string = '1 error' %}
                     {% else %}
                         {% set err_string = num_errors|string + ' errors' %}
                     {% endif %}
-                    <span class="badge bg-danger" data-toggle="popover" title="Errors" data-trigger="focus" data-content="<ul>{% for item in errors %}{% if loop.index <= 10 %}<li class='text-danger'>{{ item }}</li>{% elif loop.index == 1%}<li class='text-danger'>Further errors suppressed...</li>{% endif %}{% endfor %}</ul>">{{ err_string}}</span>
+                    <span class="badge bg-danger" tabindex=0 data-bs-toggle="popover" title="Errors" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul>{% for item in errors %}{% if loop.index <= 10 %}<li class='text-danger'>{{ item }}</li>{% elif loop.index == 1%}<li class='text-danger'>Further errors suppressed...</li>{% endif %}{% endfor %}</ul>">{{ err_string}}</span>
                 {% endif %}
                 {% if num_warnings > 0 %}
                     {% if num_warnings == 1 %}
@@ -230,7 +230,7 @@ _periods = \
                     {% else %}
                         {% set warn_string = num_warnings|string + ' warnings' %}
                     {% endif %}
-                    <span class="badge bg-warning" data-toggle="popover" title="Warnings" data-trigger="focus" data-content="<ul>{% for item in errors %}{% if loop.index <= 10 %}<li class='text-warning'>{{ item }}</li>{% elif loop.index == 1%}<li class='text-warning'>Further warnings suppressed...</li>{% endif %}{% endfor %}</ul>">{{ warn_string }}</span>
+                    <span class="badge bg-warning" tabindex=1 data-bs-toggle="popover" title="Warnings" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul>{% for item in errors %}{% if loop.index <= 10 %}<li class='text-warning'>{{ item }}</li>{% elif loop.index == 1%}<li class='text-warning'>Further warnings suppressed...</li>{% endif %}{% endfor %}</ul>">{{ warn_string }}</span>
                 {% endif %}
             </div>
         {% endif %}
@@ -334,11 +334,11 @@ _name = \
 <div>
     {% if config.canvas_enabled and sub is not none %}
         {% if sub.canvas_user_id is not none %}
-            <i class="fa fa-circle me-1 text-success" data-toggle="tooltip" title="This student is enrolled on the linked Canvas site"></i>
+            <i class="fa fa-circle me-1 text-success" data-bs-toggle="tooltip" title="This student is enrolled on the linked Canvas site"></i>
         {% elif sub.canvas_missing %}
-            <i class="fa fa-circle me-1 text-danger" data-toggle="tooltip" title="This student is not enrolled on the linked Canvas site"></i>
+            <i class="fa fa-circle me-1 text-danger" data-bs-toggle="tooltip" title="This student is not enrolled on the linked Canvas site"></i>
         {% else %}
-            <i class="fa fa-unlink me-1" data-toggle="tooltip" title="Information associated with this student for the linked Canvas site has not yet been synchronized"></i> 
+            <i class="fa fa-unlink me-1" data-bs-toggle="tooltip" title="Information associated with this student for the linked Canvas site has not yet been synchronized"></i> 
         {% endif %}
     {% endif %}
     {% if show_name %}

@@ -37,7 +37,7 @@
                 ajax: { url: $SCRIPT_ROOT + '/reports/all_projects_ajax?pclass_filter={{ pclass_filter }}&valid_filter={{ valid_filter }}&state_filter={{ state_filter }}&active_filter={{ active_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; }},
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true}); },
                 columns: [
                     { data: 'name',
                       searchable: true,

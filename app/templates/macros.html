@@ -145,7 +145,7 @@
             {% else %}
                 {{ field(class="form-control datetimepicker-input mb-2 mb-sm-0%s" % extra_classes, **kwargs)|safe }}
             {% endif %}
-            <div class="input-group-text" data-target="#{{ id_tag }}" data-toggle="datetimepicker"><span class="fas fa-calendar"></span></div>
+            <div class="input-group-text" data-target="#{{ id_tag }}" data-bs-toggle="datetimepicker"><span class="fas fa-calendar"></span></div>
         </div>
         {% if field.errors %}
             {% for error in field.errors %}

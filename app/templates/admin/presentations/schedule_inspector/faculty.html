@@ -19,7 +19,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/admin/schedule_view_faculty_ajax/{{ record.id }}?pclass_filter={{ pclass_filter }}&building_filter={{ building_filter }}&room_filter={{ room_filter }}&session_filter={{ session_filter }}&url={{ url|urlencode }}&text={{ text|urlencode }}', dataSrc: '' },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true}); },
                 columns: [
                     { data: 'name',
                       render: {

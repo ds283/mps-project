@@ -167,7 +167,7 @@ class ColouredLabelMixin():
             element += ' style="{sty}"'.format(sty=style)
 
         if popover_text is not None:
-            element += ' data-toggle="tooltip" title="{text}"'.format(text=popover_text)
+            element += ' data-bs-toggle="tooltip" title="{text}"'.format(text=popover_text)
 
         element += '>{msg}</span>'.format(msg=text)
         return element
@@ -6849,7 +6849,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
         if comment is not None:
             bleach = current_app.extensions['bleach']
-            comment_attr = 'data-toggle="tooltip" title="' + bleach.clean(comment) + '"'
+            comment_attr = 'data-bs-toggle="tooltip" title="' + bleach.clean(comment) + '"'
         else:
             comment_attr = None
 
@@ -8708,7 +8708,7 @@ class LiveProject(db.Model,
             project_tags = ['<div>{name} #{rank}</div>'.format(name=rec.owner.student.user.name, rank=rec.rank)
                             for rec in self.bookmarks.order_by(Bookmark.rank).limit(10).all()]
             tooltip = ''.join(project_tags)
-            attrs = 'data-toggle="tooltip" data-html="true" title="{title}"'.format(title=tooltip)
+            attrs = 'data-bs-toggle="tooltip" data-html="true" title="{title}"'.format(title=tooltip)
         else:
             attrs = ''
 
@@ -8740,7 +8740,7 @@ class LiveProject(db.Model,
             project_tags = ['<div>{name} #{rank}</div>'.format(name=rec.owner.student.user.name, rank=rec.rank)
                             for rec in self.selections.order_by(SelectionRecord.rank).limit(10).all()]
             tooltip = ''.join(project_tags)
-            attrs = 'data-toggle="tooltip" data-html="true" title="{title}"'.format(title=tooltip)
+            attrs = 'data-bs-toggle="tooltip" data-html="true" title="{title}"'.format(title=tooltip)
         else:
             attrs = ''
 

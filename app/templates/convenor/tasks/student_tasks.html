@@ -24,7 +24,7 @@
                 ajax: { url: $SCRIPT_ROOT + '/convenor/student_tasks_ajax/{{ type }}/{{ obj.id }}?url={{ url|urlencode }}&text={{ text|urlencode }}&status_filter={{ status_filter }}&blocking_filter={{ blocking_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'});},
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});},
                 columns: [
                     { data: 'task',
                       orderable: true,

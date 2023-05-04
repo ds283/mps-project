@@ -50,7 +50,7 @@ _full_enrollments = \
             {% set offered = f.number_projects_offered(record.pclass) %}
             {% if offered > 0 %}
                 {% set projects = f.projects_offered(record.pclass) %}
-                <span class="badge bg-info text-dark" data-toggle="tooltip" data-html="true" title="{% for p in projects %}<p>{{ loop.index }}. {{ p.name }}</p>{% endfor %}">Offered={{ offered }}</span>
+                <span class="badge bg-info text-dark" data-bs-toggle="tooltip" data-html="true" title="{% for p in projects %}<p>{{ loop.index }}. {{ p.name }}</p>{% endfor %}">Offered={{ offered }}</span>
             {% else %}
                 <span class="badge bg-danger">Offered=0</span>
             {% endif %}
@@ -81,7 +81,7 @@ _simple_enrollments = \
         {% if record.pclass.uses_supervisor %}
             {% set offered = f.number_projects_offered(record.pclass) %}
             {% if offered > 0 %}
-                <span class="badge bg-info text-dark" data-toggle="tooltip" data-html="true" title="{% for p in projects %}<p>{{ loop.index }}. {{ p.name }}</p>{% endfor %}">Offered={{ offered }}</span>
+                <span class="badge bg-info text-dark" data-bs-toggle="tooltip" data-html="true" title="{% for p in projects %}<p>{{ loop.index }}. {{ p.name }}</p>{% endfor %}">Offered={{ offered }}</span>
             {% else %}
                 <span class="badge bg-danger">Offered=0</span>
             {% endif %}
@@ -117,9 +117,9 @@ _simple_workload = \
 _availability = \
 """
 {% if u %}
-    <span class="badge bg-info text-dark" data-toggle="tooltip" title="One or more projects do not have a limit on the number of students">Unbounded</span>
+    <span class="badge bg-info text-dark" data-bs-toggle="tooltip" title="One or more projects do not have a limit on the number of students">Unbounded</span>
 {% else %}
-    <span data-toggle="tooltip" data-html="true" title="<i>Availability</i> is the maximum CATS-weighted number of students who could be assigned to this supervisor">{{ t|round(2) }}</span>
+    <span data-bs-toggle="tooltip" data-html="true" title="<i>Availability</i> is the maximum CATS-weighted number of students who could be assigned to this supervisor">{{ t|round(2) }}</span>
 {% endif %}
 """
 

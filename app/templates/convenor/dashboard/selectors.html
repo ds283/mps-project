@@ -19,7 +19,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { url: $SCRIPT_ROOT + '/convenor/selectors_ajax/{{ pclass.id }}?cohort_filter={{ cohort_filter }}&year_filter={{ year_filter }}&prog_filter={{ prog_filter }}&state_filter={{ state_filter }}&convert_filter={{ convert_filter }}&match_filter={{ match_filter }}&match_show={{ match_show }}', dataSrc: '' },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'}); },
                 columns: [
                     { data: 'name',
                       render: {

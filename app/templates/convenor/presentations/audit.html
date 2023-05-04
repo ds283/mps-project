@@ -14,7 +14,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/convenor/audit_schedules_ajax/{{ pclass_id }}', dataSrc: '' },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'}); },
                 columns: [
                     { data: 'name'},
                     { data: 'status' },

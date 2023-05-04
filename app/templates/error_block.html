@@ -1,0 +1,67 @@
+{% macro error_block_popover(errors, warnings, max_errors=10, max_warnings=10) %}
+    {% set num_errors = errors|length %}
+    {% set num_warnings = warnings|length %}
+    {% if num_errors > 0 %}
+        {% if num_errors == 1 %}
+            {% set err_string = '1 error' %}
+        {% else %}
+            {% set err_string = num_errors|string + ' errors' %}
+        {% endif %}
+        <span class="badge bg-danger" tabindex="0" data-bs-toggle="popover" title="Errors" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul>{% for item in errors %}{% if loop.index <= max_errors %}<li class='text-danger'>{{ item }}</li>{% elif loop.index == max_errors+1 %}<li class='text-danger'>Further errors suppressed...</li>{% endif %}{% endfor %}</ul>">{{ err_string}}</span>
+    {% endif %}
+    {% if num_warnings > 0 %}
+        {% if num_warnings == 1 %}
+            {% set warn_string = '1 error' %}
+        {% else %}
+            {% set warn_string = num_warnings|string + ' warnings' %}
+        {% endif %}
+        <span class="badge bg-warning" tabindex="1" data-bs-toggle="popover" title="Warnings" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul>{% for item in errors %}{% if loop.index <= max_warnings %}<li class='text-warning'>{{ item }}</li>{% elif loop.index == max_warnings+1 %}<li class='text-warning'>Further warnings suppressed...</li>{% endif %}{% endfor %}</ul>">{{ warn_string }}</span>
+    {% endif %}
+{% endmacro %}
+
+{% macro error_block_inline(errors, warnings, max_errors=10, max_warnings=10) %}
+    {% set num_errors = errors|length %}
+    {% set num_warnings = warnings|length %}
+    {% if num_errors > 0 %}
+        {% if num_errors == 1 %}
+            {% set err_string = '1 error' %}
+        {% else %}
+            {% set err_string = num_errors|string + ' errors' %}
+        {% endif %}
+        <span class="badge bg-danger">{{ err_string}}</span>
+    {% endif %}
+    {% if num_warnings > 0 %}
+        {% if num_warnings == 1 %}
+            {% set warn_string = '1 error' %}
+        {% else %}
+            {% set warn_string = num_warnings|string + ' warnings' %}
+        {% endif %}
+        <span class="badge bg-warning">{{ warn_string }}</span>
+    {% endif %}
+    {% if num_errors > 0 %}
+        <div class="mt-1 small">
+            <ul>
+                {% for item in errors %}
+                    {% if loop.index <= max_errors %}
+                        <li class='text-danger'>{{ item }}</li>
+                    {% elif loop.index == max_errors+1 %}
+                        <li class='text-danger'>Further errors suppressed...</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+    {% if num_warnings > 0 %}
+        <div class="mt-1 small">
+            <ul>
+                {% for item in errors %}
+                    {% if loop.index <= max_warnings %}
+                        <li class='text-warning'>{{ item }}</li>
+                    {% elif loop.index == max_warnings+1 %}
+                        <li class='text-warning'>Further warnings suppressed...</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+{% endmacro %}

@@ -36,7 +36,7 @@
                 ajax: { url: $SCRIPT_ROOT + '/convenor/attached_ajax/{{ pclass.id }}?valid_filter={{ valid_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; }},
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true}); },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'}); },
                 columns: [
                     { data: 'name',
                       searchable: true,

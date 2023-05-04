@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
+from flask import render_template_string, jsonify, get_template_attribute
 from ...models import ProjectClassConfig
 
 
@@ -213,25 +213,8 @@ _periods = \
         {% if r.has_issues %}
             {% set errors = r.errors %}
             {% set warnings = r.warnings %}
-            {% set num_errors = errors|length %}
-            {% set num_warnings = warnings|length %}
             <div class="d-flex flex-row justify-content-start align-items-center gap-2 mt-2">
-                {% if num_errors > 0 %}
-                    {% if num_errors == 1 %}
-                        {% set err_string = '1 error' %}
-                    {% else %}
-                        {% set err_string = num_errors|string + ' errors' %}
-                    {% endif %}
-                    <span class="badge bg-danger" tabindex=0 data-bs-toggle="popover" title="Errors" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul>{% for item in errors %}{% if loop.index <= 10 %}<li class='text-danger'>{{ item }}</li>{% elif loop.index == 1%}<li class='text-danger'>Further errors suppressed...</li>{% endif %}{% endfor %}</ul>">{{ err_string}}</span>
-                {% endif %}
-                {% if num_warnings > 0 %}
-                    {% if num_warnings == 1 %}
-                        {% set warn_string = '1 error' %}
-                    {% else %}
-                        {% set warn_string = num_warnings|string + ' warnings' %}
-                    {% endif %}
-                    <span class="badge bg-warning" tabindex=1 data-bs-toggle="popover" title="Warnings" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul>{% for item in errors %}{% if loop.index <= 10 %}<li class='text-warning'>{{ item }}</li>{% elif loop.index == 1%}<li class='text-warning'>Further warnings suppressed...</li>{% endif %}{% endfor %}</ul>">{{ warn_string }}</span>
-                {% endif %}
+                {{ error_block_popover(errors, warnings) }}
             </div>
         {% endif %}
     </div>
@@ -373,35 +356,7 @@ _name = \
     {% set errors = sub.errors %}
     {% set warnings = sub.warnings %}
     <div class="mt-1">
-        {% if errors|length == 1 %}
-            <span class="badge bg-danger">1 error</span>
-        {% elif errors|length > 1 %}
-            <span class="badge bg-danger">{{ errors|length }} errors</span>
-        {% endif %}
-        {% if warnings|length == 1 %}
-            <span class="badge bg-warning text-dark">1 warning</span>
-        {% elif warnings|length > 1 %}
-            <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
-        {% endif %}
-        {% if errors|length > 0 %}
-            {% for item in errors %}
-                {% if loop.index <= 5 %}
-                    <div class="text-danger small">{{ item }}</div>
-                {% elif loop.index == 6 %}
-                    <div class="text-danger small">Further errors suppressed...</div>
-                {% endif %}            
-            {% endfor %}
-        {% endif %}
-        {% if warnings|length > 0 %}
-            {% for item in warnings %}
-                {% if loop.index <= 5 %}
-                    <div class="text-warning small">Warning: {{ item }}</div>
-                {% elif loop.index == 6 %}
-                    <div class="text-warning small">Further warnings suppressed...</div>
-                {% endif %}
-            {% endfor %}
-        {% endif %}
-    </div>
+        {{ error_block_inline(errors, warnings, max_errors=5, max_warnings=5) }}
 {% endif %}
 """
 
@@ -410,15 +365,19 @@ def submitters_data(students, config, show_name, show_number, sort_number):
     submittter_state = config.submitter_lifecycle
     allow_delete = submittter_state <= ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
 
+    error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
+    error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
+
     data = [{'name': {
-                'display': render_template_string(_name, sub=s, show_name=show_name, show_number=show_number),
+                'display': render_template_string(_name, sub=s, show_name=show_name, show_number=show_number,
+                                                  error_block_inline=error_block_inline),
                 'sortvalue': s.student.exam_number if sort_number else s.student.user.last_name + s.student.user.first_name
              },
              'cohort': {
                  'display': render_template_string(_cohort, sub=s),
                  'value': s.student.cohort
              },
-             'periods': render_template_string(_periods, sub=s, config=config),
+             'periods': render_template_string(_periods, sub=s, config=config, error_block_popover=error_block_popover),
              'menu': render_template_string(_menu, sub=s, allow_delete=allow_delete)} for s in students]
 
     return jsonify(data)

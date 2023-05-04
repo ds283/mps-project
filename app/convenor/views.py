@@ -36,7 +36,7 @@ from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, Ope
     EditPeriodRecordFormFactory, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
     EditProjectConfigFormFactory, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask, \
-    EditConvenorGenericTask, EditSubmissionPeriodRecordPresentationsForm, AddSubmitterRoleForm
+    EditConvenorGenericTask, EditSubmissionPeriodRecordPresentationsForm, AddSubmitterRoleForm, EditRolesFormFactory
 from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
@@ -2146,22 +2146,44 @@ def do_delete_all_submitters(configid):
     return redirect(url)
 
 
-@convenor.route('/edit_roles/<int:sub_id>')
+@convenor.route('/edit_roles/<int:sub_id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def edit_roles(sub_id):
-    # sub_id is a SubmissionRecord instance
-    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sub_id)
-
-    sub: SubmittingStudent = record.owner
+    # sub_id is a SubmittingStudent instance
+    sub: SubmittingStudent = SubmittingStudent.query.get_or_404(sub_id)
+    config: ProjectClassConfig = sub.config
+    pclass: ProjectClass = config.project_class
     student: StudentData = sub.student
     user: User = student.user
-    period: SubmissionPeriodRecord = record.period
-    config: ProjectClassConfig = period.config
-    pclass: ProjectClass = config.project_class
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
+
+    EditRolesForm = EditRolesFormFactory(config)
+    form = EditRolesForm(request.form)
+
+    # determine whether a specific SubmissionRecord instance has been provided, otherwise use the one from the
+    # selector form, or default to the current submission period
+    record_id = request.args.get('record_id', None)
+    if record_id is not None:
+        record: SubmissionRecord = SubmissionRecord.query.get_or_404(record_id)
+
+        # check that record actually belongs to the specified SubmittingStudent instance
+        if record.owner_id != sub.id:
+            flash('Cannot edit roles for this combination of submitter and submission record, '
+                  'because the specified submission record does not belong to the student.', 'error')
+            return redirect(redirect_url())
+    else:
+        if hasattr(form, 'selector') and form.selector.data is not None:
+            record: SubmissionRecord = sub.get_assignment(period=form.selector.data)
+        else:
+            record = sub.get_assignment()
+
+    period: SubmissionPeriodRecord = record.period
+
+    if hasattr(form, 'selector'):
+        form.selector.data = period
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -2170,16 +2192,17 @@ def edit_roles(sub_id):
         url = url_for('convenor.submitters', id=pclass.id)
         text = 'convenor submitters view'
 
-    return render_template('convenor/submitter/edit_roles.html', pclass=pclass, config=config, record=record,
+    return render_template('convenor/submitter/edit_roles.html', form=form, pclass=pclass, config=config, record=record,
                            sub=sub, student=student, user=user, period=period, url=url, text=text)
 
 
-@convenor.route('edit_roles_ajax/<int:sub_id>', methods=['GET', 'POST'])
+@convenor.route('edit_roles_ajax/<int:record_id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def edit_roles_ajax(sub_id):
+def edit_roles_ajax(record_id):
     # sub_id is a SubmissionRecord instance
-    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sub_id)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(record_id)
 
+    sub: SubmittingStudent = record.owner
     period: SubmissionPeriodRecord = record.period
     config: ProjectClassConfig = period.config
     pclass: ProjectClass = config.project_class
@@ -2208,8 +2231,7 @@ def edit_roles_ajax(sub_id):
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         def row_formatter(roles):
             return ajax.convenor.edit_roles(roles,
-                                            return_url=url_for('convenor.edit_roles', sub_id=record.id, url=url,
-                                                               text=text))
+                    return_url=url_for('convenor.edit_roles', sub_id=sub.id, record_id=record.id, url=url, text=text))
 
         return handler.build_payload(row_formatter)
 
@@ -2235,7 +2257,7 @@ def delete_role(role_id):
     url = request.args.get('url', None)
 
     if url is None:
-        url = url_for('convenor.edit_roles', sub_id=record.id,
+        url = url_for('convenor.edit_roles', sub_id=sub.id, record_id=record.id,
                       url=url_for('convenor.submitters', id=config.project_class.id, text='convenor submitters view'))
 
     title = 'Delete role'
@@ -2261,6 +2283,7 @@ def perform_delete_role(role_id):
     role = SubmissionRole.query.get_or_404(role_id)
 
     record: SubmissionRecord = role.submission
+    sub: SubmittingStudent = record.owner
     period: SubmissionPeriodRecord = record.period
     config: ProjectClassConfig = period.config
 
@@ -2271,7 +2294,7 @@ def perform_delete_role(role_id):
     url = request.args.get('url', None)
 
     if url is None:
-        url = url_for('convenor.edit_roles', sub_id=record.id)
+        url = url_for('convenor.edit_roles', sub_id=sub.id, record_id=record.id)
 
     try:
         db.session.delete(role)
@@ -2285,11 +2308,11 @@ def perform_delete_role(role_id):
     return redirect(url)
 
 
-@convenor.route('/add_role/<int:sub_id>', methods=['GET', 'POST'])
+@convenor.route('/add_role/<int:record_id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def add_role(sub_id):
+def add_role(record_id):
     # sub_id is a SubmissionRecord instance
-    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sub_id)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(record_id)
 
     sub: SubmittingStudent = record.owner
     period: SubmissionPeriodRecord = record.period
@@ -2302,10 +2325,11 @@ def add_role(sub_id):
     url = request.args.get('url', None)
 
     if url is None:
-        url = url_for('convenor.edit_roles', sub_id=record.id,
+        url = url_for('convenor.edit_roles', sub_id=sub.id, record_id=record.id,
                       url=url_for('convenor.submitters', id=config.project_class.id, text='convenor submitters view'))
 
     form = AddSubmitterRoleForm(request.form)
+    form._record = record
 
     if form.validate_on_submit():
         role = SubmissionRole(role=form.role.data,

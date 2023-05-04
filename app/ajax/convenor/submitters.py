@@ -72,7 +72,8 @@ _periods = \
     {% endif %}
 {% endmacro %}
 {% macro project_tag(r, show_period) %}
-    {% set config = r.owner.config %}
+    {% set sub = r.owner %}
+    {% set config = sub.config %}
     {% set pclass = config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     {% set period = r.period %}
@@ -109,7 +110,7 @@ _periods = \
                             </a>
                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Remove assignment</a>
                         {% endif %}
-                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"><i class="fas fa-user fa-fw"></i> Edit roles...</a>
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, record_id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"><i class="fas fa-user fa-fw"></i> Edit roles...</a>
                     </div>
                 </div>
             </div>
@@ -304,6 +305,9 @@ _menu = \
         </a>
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.manual_assign', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
             <i class="fas fa-wrench fa-fw"></i> Manual assignment...
+        </a>
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
+            <i class="fas fa-wrench fa-fw"></i> Edit roles...
         </a>
 
         <div role="separator" class="dropdown-divider"></div>

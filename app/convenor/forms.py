@@ -17,7 +17,7 @@ from wtforms.validators import InputRequired, Optional, Email, Length, Validatio
 from wtforms_alchemy import QuerySelectField
 
 from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig, ConvenorGenericTask, \
-    DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS, SubmissionRole
+    DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS, SubmissionRole, SubmissionRecord, User, SubmittingStudent
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, PeriodPresentationsMixin, \
     PeriodSelectorMixinFactory
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
@@ -436,9 +436,10 @@ class ConvenorGenericTaskMixin():
     repeat_frequency = IntegerField('Repeat frequency', validators=[NotOptionalIf('repeat')])
 
     repeat_from_due_date = BooleanField('Repeat from due date',
-                                        description='Select if the due and defer dates of a repeating task '
-                                                    'should be calculated from the due date of the '
-                                                    'predecessor task, or from its actual completion date.')
+                                        description='If selected, the due and defer dates of a repeating task '
+                                                    'are calculated from the due date of the '
+                                                    'predecessor task. Otherwise, these dates are determined '
+                                                    'from true true completion date of the predecessor task.')
 
     rollover = BooleanField('Rollover with academic year',
                             description='Select if this task should be retained (if not yet complete) when '
@@ -469,6 +470,41 @@ class AddSubmitterRoleForm(Form):
     role = SelectField('Role type', choices=SubmissionRole.role_options, coerce=int)
 
     user = QuerySelectField('Assign which user?', query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName,
-                            allow_blank=False)
+                            allow_blank=True)
+
+    @staticmethod
+    def validate_user(form, field):
+        if field.data is None:
+            raise ValidationError('Please select a user to attach for this role')
+
+        role_type: int = form.role.data
+        user: User = field.data
+
+        record: SubmissionRecord = form._record
+        project: LiveProject = record.project
+
+        if role_type == SubmissionRole.ROLE_MARKER:
+            if user not in project.assessor_list:
+                raise ValidationError('User "{name}" is not in the assessor pool for the assigned project. '
+                                      'Please select a different user to attach for this role, or select '
+                                      'a different role type.'.format(name=user.name))
+
+        if role_type == SubmissionRole.ROLE_SUPERVISOR:
+            if project.generic:
+                if user not in project.supervisor_list:
+                    raise ValidationError('For generic projects, the assigned supervisor should be drawn from '
+                                          'the supervisor pool. User "{name}" is not in the supervisor pool for '
+                                          'this project. Please select a different user to attach for this role, '
+                                          'or select a different role type.'.format(name=user.name))
 
     submit = SubmitField('Add new role')
+
+
+def EditRolesFormFactory(config: ProjectClassConfig):
+
+    PeriodSelectorMixin = PeriodSelectorMixinFactory(config, True)
+
+    class EditRolesForm(Form, PeriodSelectorMixin):
+        pass
+
+    return EditRolesForm

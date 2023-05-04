@@ -36,7 +36,7 @@
                     Add new role for <i class="fas fa-user"></i> <strong>{{ sub.student.user.name }}</strong> ({{ period.display_name }})
                 </div>
                 <div class="card-body">
-                    <form action="{{ url_for('convenor.add_role', sub_id=record.id, url=url) }}" method="POST" enctype="multipart/form-data" name="role_form">
+                    <form action="{{ url_for('convenor.add_role', record_id=record.id, url=url) }}" method="POST" enctype="multipart/form-data" name="role_form">
                         {{ form.hidden_tag() }}
 
                         {{ wtf.render_field(form.role) }}

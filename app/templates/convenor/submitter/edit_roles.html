@@ -1,6 +1,7 @@
 {% extends "base_app.html" %}
 
 {% from "datatables.html" import import_datatables, bootstrap_spinner %}
+{% from "macros.html" import on_click_selector_field %}
 
 {% block scripts %}
     {{ super() }}
@@ -29,7 +30,8 @@
                     { data: 'menu',
                       orderable: false,
                       searchable: false }
-                ]
+                ],
+                order: [[1, 'asc']]
             });
         });
     </script>
@@ -51,9 +53,33 @@
                 </div>
             {% endif %}
 
+            <form action="{{ url_for('convenor.edit_roles', sub_id=sub.id, text=text, url=url) }}" name="selector-form" method="POST">
+                {{ form.hidden_tag() }}
+                {% if form.selector is defined %}
+                    <strong>Select submission period</strong>
+                    {{ on_click_selector_field(form.selector) }}
+                {% endif %}
+            </form>
+
             <div class="card border-primary mt-3 mb-3">
                 <div class="card-header bg-primary text-white">Edit roles for <i class="fas fa-user"></i> <strong>{{ user.name }}</strong> ({{ period.display_name }})</div>
                 <div class="card-body">
+                    <div class="mb-3 p-3 bg-light">
+                        <strong>Currently assigned project</strong>:
+                        {% if record.project is not none %}
+                            <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=record.project_id, text='edit roles view', url=url_for('convenor.edit_roles', sub_id=sub.id, record_id=record.id, url=url, text=text)) }}">
+                                {{ record.project.name }}
+                            </a>
+                            {% if record.project.generic %}
+                                <span class="badge bg-info">GENERIC</span>
+                            {% elif record.project.owner is not none %}
+                                <span class="small text-muted">(project owner <a href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }})</a></span>
+                            {% endif %}
+                        {% else %}
+                            <span text="text-danger"><strong>No project currently assigned</strong></span>
+                        {% endif %}
+                    </div>
+
                     <table id="roles-table" class="table table-striped table-bordered">
                         <thead>
                         <tr>
@@ -64,7 +90,7 @@
                         </thead>
                     </table>
                     <div style="text-align: center;">
-                        <a href="{{ url_for('convenor.add_role', sub_id=record.id, url=url_for('convenor.edit_roles', sub_id=record.id, url=url, text=text)) }}" class="btn btn-secondary btn-lg">
+                        <a href="{{ url_for('convenor.add_role', record_id=record.id, url=url_for('convenor.edit_roles', sub_id=sub.id, record_id=record.id, url=url, text=text)) }}" class="btn btn-secondary btn-lg">
                             <i class="fas fa-plus"></i>
                             Add new role
                         </a>

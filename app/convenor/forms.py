@@ -344,17 +344,13 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
     return EditProjectConfigForm
 
 
-def AssignMarkerFormFactory(live_project: LiveProject, uses_marker: bool,
-                            config: ProjectClassConfig, is_admin: bool):
+def ManualAssignFormFactory(config: ProjectClassConfig, is_admin: bool):
 
-    class AssignMarkerForm(Form, PeriodSelectorMixinFactory(config, is_admin)):
+    PeriodSelectorMixin = PeriodSelectorMixinFactory(config, is_admin)
+    class ManualAssignForm(Form, PeriodSelectorMixin):
+        pass
 
-        if uses_marker:
-            # marker
-            marker = QuerySelectField('Assign marker', query_factory=partial(MarkerQuery, live_project),
-                                      get_label=BuildMarkerLabel, allow_blank=True)
-
-    return AssignMarkerForm
+    return ManualAssignForm
 
 
 def AssignPresentationFeedbackFormFactory(record_id, slot_id=None):

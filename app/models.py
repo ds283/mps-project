@@ -10131,20 +10131,41 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
 
 @listens_for(SubmissionRole, 'before_update')
 def _SubmissionRole_update_handler(mapper, connection, target):
+    if target.submission is not None:
+        target.submission._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_SubmissionRecord_is_valid, target.submission_id)
+
+        record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=target.submission_id).first()
+        if record is not None:
+            cache.delete_memoized(_SubmittingStudent_is_valid, record.owner_id)
 
 
 @listens_for(SubmissionRole, 'before_insert')
 def _SubmissionRole_insert_handler(mapper, connection, target):
+    if target.submission is not None:
+        target.submission._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_SubmissionRecord_is_valid, target.submission_id)
+
+        record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=target.submission_id).first()
+        if record is not None:
+            cache.delete_memoized(_SubmittingStudent_is_valid, record.owner_id)
 
 
 @listens_for(SubmissionRole, 'before_delete')
 def _SubmissionRole_delete_handler(mapper, connection, target):
+    if target.submission is not None:
+        target.submission._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_SubmissionRecord_is_valid, target.submission_id)
+
+        record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=target.submission_id).first()
+        if record is not None:
+            cache.delete_memoized(_SubmittingStudent_is_valid, record.owner_id)
 
 
 @cache.memoize()
@@ -11077,19 +11098,28 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     @property
     def supervising_CATS(self):
         # TODO: consider whether we really need this method
-        return self.project.CATS_supervision
+        if self.project is not None:
+            return self.project.CATS_supervision
+
+        return 0
 
 
     @property
     def marking_CATS(self):
         # TODO: consider whether we really need this method
-        return self.project.CATS_marking
+        if self.project is not None:
+            return self.project.CATS_marking
+
+        return 0
 
 
     @property
     def moderation_CATS(self):
         # TODO: consider whether we really need this method
-        return self.project.CATS_moderation
+        if self.project is not None:
+            return self.project.CATS_moderation
+
+        return 0
 
 
     @property
@@ -11399,24 +11429,36 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 def _SubmissionRecord_update_handler(mapper, connection, target):
     target._validated = False
 
+    if target.owner is not None:
+        target.owner._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_SubmissionRecord_is_valid, target.id)
+        cache.delete_memoized(_SubmittingStudent_is_valid, target.owner_id)
 
 
 @listens_for(SubmissionRecord, 'before_insert')
 def _SubmissionRecord_insert_handler(mapper, connection, target):
     target._validated = False
 
+    if target.owner is not None:
+        target.owner._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_SubmissionRecord_is_valid, target.id)
+        cache.delete_memoized(_SubmittingStudent_is_valid, target.owner_id)
 
 
 @listens_for(SubmissionRecord, 'before_delete')
 def _SubmissionRecord_delete_handler(mapper, connection, target):
     target._validated = False
 
+    if target.owner is not None:
+        target.owner._validated = False
+
     with db.session.no_autoflush:
         cache.delete_memoized(_SubmissionRecord_is_valid, target.id)
+        cache.delete_memoized(_SubmittingStudent_is_valid, target.owner_id)
 
 
 

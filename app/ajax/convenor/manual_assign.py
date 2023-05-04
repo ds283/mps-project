@@ -23,9 +23,11 @@ _workload = \
 """
 {% set s, m, p = data %}
 <div>
-    <span class="badge bg-info text-dark">S {{ s }}</span>
-    <span class="badge bg-info text-dark">M {{ m }}</span>
-    <span class="badge bg-info text-dark">P {{ p }}</span>
+    <span class="badge bg-secondary">
+        S {{ s }}
+        Ma {{ m }}
+        P {{ p }}
+    </span>
     <span class="badge bg-primary">Total {{ s+m+p }}</span>
 </div>
 """

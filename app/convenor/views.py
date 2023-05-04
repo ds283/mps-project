@@ -32,7 +32,7 @@ from sqlalchemy.sql import func, literal_column
 import app.ajax as ajax
 from . import convenor
 from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
-    AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
+    ManualAssignFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
     EditPeriodRecordFormFactory, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
     EditProjectConfigFormFactory, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask, \
@@ -48,7 +48,8 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Bookmark, \
-    ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask, SubmissionRole
+    ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask, SubmissionRole, MatchingRecord, \
+    MatchingRole
 from ..shared.projects import create_new_tags, get_filter_list_for_groups_and_skills, \
     project_list_SQL_handler, project_list_in_memory_handler
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
@@ -8201,12 +8202,10 @@ def manual_assign():
     else:
         new_config: ProjectClassConfig = rec.period.config
 
-    # construct selector form, except that at this stage we might not know what the intended
-    # submission record is -- we'll have to reconstruct later to be sure we get it right
+    # construct selector form
     is_admin = validate_is_convenor(new_config.project_class, message=False)
-    AssignMarkerForm = AssignMarkerFormFactory(rec.project if rec is not None else None, new_config.uses_marker,
-                                               new_config, is_admin)
-    form = AssignMarkerForm(request.form)
+    ManualAssignForm = ManualAssignFormFactory(new_config, is_admin)
+    form = ManualAssignForm(request.form)
 
     # if submitter and record are both specified, check that SubmissionRecord belongs to it.
     # otherwise, we select the SubmissionRecord corresponding to the current period
@@ -8231,10 +8230,6 @@ def manual_assign():
 
     # rec should not be None at this point
 
-    # reconstruct form now we are guaranteed to have the SubmissionRecord available
-    AssignMarkerForm = AssignMarkerFormFactory(rec.project, new_config.uses_marker, new_config, is_admin)
-    form = AssignMarkerForm(request.form)
-
     # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
     old_config = rec.previous_config
     if old_config is None:
@@ -8246,26 +8241,6 @@ def manual_assign():
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
-
-    if form.validate_on_submit():
-        modified = False
-
-        if hasattr(form, 'marker') and form.marker:
-            rec.marker = form.marker.data
-            modified = True
-
-        if modified:
-            try:
-                db.session.commit()
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                flash('Could not reassign this submitter due to a database error. '
-                      'Please contact a system administrator', 'error')
-
-    else:
-        if request.method == 'GET' and hasattr(form, 'marker') and form.marker:
-            form.marker.data = rec.marker
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)
@@ -8320,7 +8295,7 @@ def manual_assign_ajax(id):
 @roles_accepted('faculty', 'admin', 'root')
 def assign_revert(id):
     # id is a SubmissionRecord
-    rec = SubmissionRecord.query.get_or_404(id)
+    rec: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
     config = rec.previous_config
@@ -8343,13 +8318,48 @@ def assign_revert(id):
 
     if rec.matching_record is None:
         flash('Can not revert assignment for {name} '
-              'because automatic data could not be found'.format(name=rec.period.display_name), 'error')
+              'because the automated matching data could not be found'.format(name=rec.period.display_name), 'error')
         return redirect(redirect_url())
 
-    rec.project_id = rec.matching_record.project_id
-    rec.marker_id = rec.matching_record.marker_id
+    now = datetime.now()
 
-    db.session.commit()
+    try:
+        # remove any SubmissionRole instances for supervisor, marker and moderator
+        rec.roles.filter(or_(SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR,
+                             SubmissionRole.role == SubmissionRole.ROLE_MARKER,
+                             SubmissionRole.role == SubmissionRole.ROLE_MODERATOR)).delete()
+
+        match_record: MatchingRecord = rec.matching_record
+        lp = match_record.project
+        rec.project_id = lp.id
+
+        for role in match_record.roles:
+            role: MatchingRole
+            new_role = SubmissionRole(submission_id=new_sr.id,
+                                      user_id=role.user_id,
+                                      role=role.role,
+                                      marking_email=False,
+                                      positive_feedback=None,
+                                      improvements_feedback=None,
+                                      submitted_feedback=False,
+                                      feedback_timestamp=None,
+                                      acknowledge_student=False,
+                                      response=None,
+                                      submitted_response=False,
+                                      response_timestamp=None,
+                                      creator_id=None,
+                                      creation_timestamp=now,
+                                      last_edit_id=None,
+                                      last_edit_timestamp=None)
+
+            db.session.add(new_role)
+
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not revert assignment to match because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -8358,7 +8368,7 @@ def assign_revert(id):
 @roles_accepted('faculty', 'admin', 'root')
 def assign_from_selection(id, sel_id):
     # id is a SubmissionRecord
-    rec = SubmissionRecord.query.get_or_404(id)
+    rec: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
     config = rec.previous_config
@@ -8379,21 +8389,38 @@ def assign_from_selection(id, sel_id):
               'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
         return redirect(redirect_url())
 
-    if rec.matching_record is None:
-        flash('Can not revert assignment for {name} '
-              'because automatic data could not be found'.format(name=rec.period.display_name), 'error')
-        return redirect(redirect_url())
-
     sel = SelectionRecord.query.get_or_404(sel_id)
 
-    rec.project_id = sel.liveproject_id
+    try:
+        # remove any SubmissionRole instances which have the owner as supervisor
+        if rec.project is not None and not rec.project.generic:
+            owner = rec.project.owner
+            if owner is not None:
+                # remove any SubmissionRole instances which have the owner as supervisor
+                rec.roles.filter(SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR,
+                                 SubmissionRole.user_id == owner.id).delete()
 
-    markers = sel.liveproject.assessor_list
-    if rec.marker not in markers:
-        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config))[1])
-        rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
+        lp = sel.liveproject
+        rec.project_id = lp.id
 
-    db.session.commit()
+        if not lp.generic:
+            new_owner = lp.owner
+            if new_owner is not None:
+                role = SubmissionRole(submission_id=rec.id,
+                                      user_id=new_owner.id,
+                                      role=SubmissionRole.ROLE_SUPERVISOR,
+                                      creator_id=current_user.id,
+                                      creation_timestamp=datetime.now(),
+                                      last_edit_id=None,
+                                      last_edit_timestamp=None)
+                db.session.add(role)
+
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not assign project because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -8401,9 +8428,8 @@ def assign_from_selection(id, sel_id):
 @convenor.route('/assign_liveproject/<int:id>/<int:pid>')
 @roles_accepted('faculty', 'admin', 'root')
 def assign_liveproject(id, pid):
-
     # id is a SubmissionRecord
-    rec = SubmissionRecord.query.get_or_404(id)
+    rec: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
     config = rec.previous_config
@@ -8427,19 +8453,39 @@ def assign_liveproject(id, pid):
     lp = LiveProject.query.get_or_404(pid)
 
     if lp.config_id != config.id:
-        flash('Can not assign LiveProject #{num} for {name} because '
-              'their configuration data do not agree'.format(num=lp.number, name=rec.period.display_name),
-              'error')
+        flash('Can not assign LiveProject #{num} for {name} because they do not belong to the same academic '
+              'cycle.'.format(num=lp.number, name=rec.period.display_name), 'error')
         return redirect(redirect_url())
 
-    rec.project_id = lp.id
+    try:
+        # remove any SubmissionRole instances which have the owner as supervisor
+        if rec.project is not None and not rec.project.generic:
+            owner = rec.project.owner
+            if owner is not None:
+                # remove any SubmissionRole instances which have the owner as supervisor
+                rec.roles.filter(SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR,
+                                 SubmissionRole.user_id == owner.id).delete()
 
-    markers = lp.assessor_list
-    if rec.marker not in markers:
-        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config))[1])
-        rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
+        rec.project_id = lp.id
 
-    db.session.commit()
+        if not lp.generic:
+            new_owner = lp.owner
+            if new_owner is not None:
+                role = SubmissionRole(submission_id=rec.id,
+                                      user_id=new_owner.id,
+                                      role=SubmissionRole.ROLE_SUPERVISOR,
+                                      creator_id=current_user.id,
+                                      creation_timestamp=datetime.now(),
+                                      last_edit_id=None,
+                                      last_edit_timestamp=None)
+                db.session.add(role)
+
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not assign project because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -8448,7 +8494,7 @@ def assign_liveproject(id, pid):
 @roles_accepted('faculty', 'admin', 'root')
 def deassign_project(id):
     # id is a SubmissionRecord
-    rec = SubmissionRecord.query.get_or_404(id)
+    rec: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
     config = rec.previous_config
@@ -8471,32 +8517,21 @@ def deassign_project(id):
 
     # as long as we don't set both project and project_id (or marker and marker_id) simultaneously to zero,
     # the before-update listener for SubmissionRecord will invalidate the correct workload cache entries
-    rec.project = None
-    rec.marker = None
-    db.session.commit()
+    try:
+        if rec.project is not None and not rec.project.generic:
+            owner = rec.project.owner
+            if owner is not None:
+                # remove any SubmissionRole instances which have the owner as supervisor
+                rec.roles.filter(SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR,
+                                 SubmissionRole.user_id == owner.id).delete()
 
-    return redirect(redirect_url())
-
-
-@convenor.route('/deassign_marker/<int:id>')
-@roles_accepted('faculty', 'admin', 'root')
-def deassign_marker(id):
-    # id is a SubmissionRecord
-    rec = SubmissionRecord.query.get_or_404(id)
-
-    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
-    config = rec.previous_config
-    if config is None:
-        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
-        return redirect(redirect_url())
-
-    if not validate_is_convenor(config.project_class):
-        return redirect(redirect_url())
-
-    # as long as we don't set both marker and marker_id simultaneously to zero, the before-update listener
-    # for SubmissionRecord will invalidate the correct workload cache entries
-    rec.marker = None
-    db.session.commit()
+        rec.project = None
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not deassign project because of a database error. Please contact a system '
+              'administrator', 'error')
 
     return redirect(redirect_url())
 
@@ -8505,7 +8540,7 @@ def deassign_marker(id):
 @roles_accepted('faculty', 'admin', 'root')
 def assign_presentation_feedback(id):
     # id labels a SubmissionRecord
-    talk = SubmissionRecord.query.get_or_404(id)
+    talk: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     if not validate_is_convenor(talk.owner.config.project_class):
         return redirect(redirect_url())
@@ -8546,7 +8581,7 @@ def assign_presentation_feedback(id):
 @roles_accepted('faculty', 'admin', 'root')
 def delete_presentation_feedback(id):
     # id labels PresentationFeedback record
-    feedback = PresentationFeedback.query.get_or_404(id)
+    feedback: PresentationFeedback = PresentationFeedback.query.get_or_404(id)
 
     talk = feedback.owner
     if not validate_is_convenor(talk.owner.config.project_class):
@@ -8562,7 +8597,7 @@ def delete_presentation_feedback(id):
 @roles_accepted('faculty', 'admin', 'root')
 def supervisor_edit_feedback(id):
     # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')

@@ -141,7 +141,7 @@ _marking = \
                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">
                         <i class="fas fa-folder fa-fw"></i> Manually reassign
                     </a>
-                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_marker', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Remove assignment</a>
+                    {# <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_marker', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Remove assignment</a> #}
                 {% endif %}
             </div>
         </div>

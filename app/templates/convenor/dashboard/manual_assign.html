@@ -57,15 +57,20 @@
         <a class="text-decoration-none" href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
         {% set CATS_supv, CATS_mark, CATS_pres = fac.total_CATS_assignment() %}
         <div>
-            {% if config.uses_supervisor %}
-                <span class="badge bg-info text-dark">S {{ CATS_supv }}</span>
-            {% endif %}
-            {% if config.uses_marker %}
-                <span class="badge bg-info text-dark">M {{ CATS_mark }}</span>
-            {% endif %}
-            {% if config.uses_presentations %}
-                <span class="badge bg-info text-dark">P {{ CATS_pres }}</span>
-            {% endif %}
+            <span class="badge bg-secondary">
+                {% if config.uses_supervisor %}
+                    S {{ CATS_supv }}
+                {% endif %}
+                {% if config.uses_marker %}
+                    Ma {{ CATS_mark }}
+                {% endif %}
+                {% if config.uses_moderator %}
+                    Mo FIXME
+                {% endif %}
+                {% if config.uses_presentations %}
+                    P {{ CATS_pres }}
+                {% endif %}
+            </span>
             <span class="badge bg-primary">Total {{ CATS_supv+CATS_mark+CATS_pres }}</span>
         </div>
     {% else %}
@@ -79,7 +84,7 @@
         {% if item.project is not none %}
             <i class="fas fa-check"></i>
         {% else %}
-            <i class="fas fa-times"></i>
+            <i class="fas fa-exclamation-triangle text-danger"></i>
         {% endif %}
     {% else %}
         <a class="badge text-decoration-none text-nohover-light bg-secondary" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">#{{ item.submission_period }}</a>
@@ -99,192 +104,195 @@
                 {% endif %}
 
                 <form action="{{ url_for('convenor.manual_assign', sub_id=submitter.id, text=text, url=url) }}" name="marker-assign-form" method="POST">
-                {{ form.hidden_tag() }}
-                {% if form.selector is defined %}
-                    <span class="form-text"><strong>Select submission period to be assigned</strong></span>
-                    {{ on_click_selector_field(form.selector) }}
-                {% endif %}
-                    <div class="card border-primary mt-3 mb-3">
-                        <div class="card-header bg-primary text-white">
-                            Manual assignment for <i class="fas fa-user"></i> <strong>{{ rec.owner.student.user.name }}</strong>,
-                            submission period <strong>#{{ rec.submission_period }}</strong>
-                        </div>
-                        <div class="card-body">
-                            <div class="card mt-3 mb-3">
-                                <div class="card-header">Current allocation</div>
-                                <div class="card-body">
-                                    <div class="row vertical-align final-selection-table">
-                                        <div class="col-6"><strong>Project</strong></div>
-                                        <div class="col-3"><strong>Supervisor</strong></div>
-                                        <div class="col-3"><strong>Marker</strong></div>
-                                    </div>
-                                    {% for item in rec.owner.records %}
-                                        <div class="row vertical-top final-selection-table">
-                                            <div class="col-6">
-                                                {% if item.project is not none %}
-                                                    {{ record_label(item, text, url) }}
-                                                    <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
-                                                        {{ item.project.name }}
-                                                    </a>
-                                                {% else %}
-                                                    {{ record_label(item, text, url) }}
-                                                    <a class="badge text-decoration-none text-nohover-light bg-danger" {% if allow_reassign_project %}href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}"{% endif %}>No project allocated</a>
-                                                {% endif %}
-                                            </div>
-                                            <div class="col-3">
-                                                {% if item.project is not none %}
-                                                    <div class="row vertical-top">
-                                                        <div class="col-12">
-                                                            {{ faculty_data(item.project.owner) }}
-                                                        </div>
-                                                    </div>
-                                                    <div class="row vertical-top" style="padding-top: 5px;">
-                                                        <div class="col-12">
-                                                            {% if allow_reassign_project %}
-                                                                <a class="btn btn-sm btn-outline-danger" href="{{ url_for('convenor.deassign_project', id=item.id) }}">Remove</a>
-                                                            {% endif %}
-                                                        </div>
-                                                    </div>
-                                                {% else %}
-                                                    <span class="badge bg-danger">Not allocated</span>
-                                                {% endif %}
-                                            </div>
-                                            <div class="col-3">
-                                                {% if config.uses_marker %}
-                                                    {% if item.marker is not none %}
-                                                        <div class="row vertical-top">
-                                                            <div class="col-12">
-                                                                {{ faculty_data(item.marker) }}
-                                                            </div>
-                                                        </div>
-                                                        <div class="row vertical-top" style="padding-top: 5px;">
-                                                            <div class="col-12">
-                                                                <a class="btn btn-sm btn-outline-danger" href="{{ url_for('convenor.deassign_marker', id=item.id) }}">Remove</a>
-                                                            </div>
-                                                        </div>
-                                                    {% else %}
-                                                        <span class="badge bg-danger">Not allocated</span>
-                                                    {% endif %}
-                                                {% else %}
-                                                    <span class="badge bg-secondary">Not used</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    {% else %}
-                                        <span class="badge bg-danger">Error: missing content</span>
-                                    {% endfor %}
-                                </div>
-                            </div>
-
-                            {% if allow_reassign_project %}
-                                {% if rec.owner.selector is not none %}
-                                    <div class="card mt-3 mb-3">
-                                        <div class="card-header"><i class="fas fa-user"></i> {{ rec.owner.student.user.name }} &ndash; ranked project selection</div>
-                                        <div class="card-body">
-                                            {% if rec.owner.selector.has_submitted %}
-                                                <div class="row vertical-align final-selection-table">
-                                                    <div class="col-6"><strong>Project</strong></div>
-                                                    <div class="col-6"><strong>Supervisor</strong></div>
-                                                </div>
-                                                {% for item in rec.owner.selector.ordered_selections.all() %}
-                                                    <div class="row vertical-align final-selection-table">
-                                                        <div class="col-6">
-                                                            <span class="badge bg-success">#{{ item.rank }}</span>
-                                                            <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=item.liveproject_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
-                                                                {{ item.format_project()|safe }}
-                                                            </a>
-                                                            {% if item.converted_from_bookmark %}
-                                                                <span class="badge bg-warning text-dark">Bookmark</span>
-                                                            {% endif %}
-                                                        </div>
-                                                        <div class="col-4">
-                                                            {{ faculty_data(item.liveproject.owner) }}
-                                                        </div>
-                                                        <div class="col-2">
-                                                            <div class="float-end">
-                                                                <a href="{{ url_for('convenor.assign_from_selection', id=rec.id, sel_id=item.id) }}" class="btn btn-outline-secondary btn-sm">Assign</a>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                {% else %}
-                                                    <span class="badge bg-danger">Error: missing content</span>
-                                                {% endfor %}
-                                            {% else %}
-                                                Did not submit a valid project selection.
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                {% endif %}
-
-                                {% if rec.matching_record is not none %}
-                                    {% set item = rec.matching_record %}
-                                    <div class="card mt-3 mb-3">
-                                        <div class="card-header">Automatic matching proposal</div>
-                                        <div class="card-body">
-                                            <div class="row vertical-align final-selection-table">
-                                                <div class="col-5"><strong>Project</strong></div>
-                                                <div class="col-1"><strong>Rank</strong></div>
-                                                <div class="col-3"><strong>Supervisor</strong></div>
-                                                <div class="col-3"><strong>Marker</strong></div>
-                                            </div>
-                                            <div class="row vertical-align final-selection-table">
-                                                <div class="col-5">
-                                                    <span class="badge bg-secondary">#{{ item.submission_period }}</span>
-                                                    <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
-                                                        {{ item.project.name }}
-                                                    </a>
-                                                </div>
-                                                <div class="col-1"><span class="badge bg-success">#{{ item.rank }}</span></div>
-                                                <div class="col-3">
-                                                    {{ faculty_data(item.project.owner) }}
-                                                </div>
-                                                <div class="col-3">
-                                                    {{ faculty_data(item.marker) }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="card-footer">
-                                            <div class="d-flex flex-row justify-content-end gap-2">
-                                                <a href="{{ url_for('convenor.assign_revert', id=rec.id) }}" class="btn btn-outline-secondary btn-sm">Revert</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endif %}
-
-                                <hr class="intro-divider">
-                                {% if rec.matching_record is not none %}
-                                    <p>Alternatively, select a project from the full list:</p>
-                                {% else %}
-                                    <p>Select a project from the full list:</p>
-                                {% endif %}
-
-                                <table id="manual-assign-table" class="table table-striped">
-                                    <thead>
-                                    <tr>
-                                        <th width="35%"> Project</th>
-                                        <th width="25%"> Supervisor</th>
-                                        <th width="25%"> Current workload</th>
-                                        <th width="15%"> Actions</th>
-                                    </tr>
-                                    </thead>
-                                </table>
-                            {% endif %}
-
-                            {% if form.marker is defined %}
-                                <hr class="intro-divider">
-                                {{ on_click_selector_field(form.marker, true) }}
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    {% if url and text %}
-                        <div>
-                            <a class="text-decoration-none" href="{{ url }}">
-                                <i class="fas fa-backward"></i> Return to {{ text }}
-                            </a>
-                        </div>
+                    {{ form.hidden_tag() }}
+                    {% if form.selector is defined %}
+                        <span class="form-text"><strong>Select submission period to be assigned</strong></span>
+                        {{ on_click_selector_field(form.selector) }}
                     {% endif %}
                 </form>
+                <div class="card border-primary mt-3 mb-3">
+                    <div class="card-header bg-primary text-white">
+                        Manual assignment for <i class="fas fa-user"></i> <strong>{{ rec.owner.student.user.name }}</strong>,
+                        submission period <strong>#{{ rec.submission_period }}</strong>
+                    </div>
+                    <div class="card-body">
+                        <div class="card mt-3 mb-3">
+                            <div class="card-header">Current project allocation</div>
+                            <div class="card-body">
+                                <div class="row vertical-align final-selection-table">
+                                    <div class="col-6"><strong>Project</strong></div>
+                                    <div class="col-3"><strong>Supervisor roles</strong></div>
+                                    <div class="col-3"><strong>Marker roles</strong></div>
+                                </div>
+                                {% for item in rec.owner.records %}
+                                    <div class="row vertical-top final-selection-table p-3 ms-1 me-1 bg-light">
+                                        <div class="col-6">
+                                            {% if item.project is not none %}
+                                                <div>
+                                                    {{ record_label(item, text, url) }}
+                                                    <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
+                                                        {{ item.project.name }}
+                                                    </a>
+                                                </div>
+                                                {% if item.project.generic %}
+                                                    <span class="badge bg-info">GENERIC</span>
+                                                {% elif item.project.owner is not none %}
+                                                    <span class="text-muted small">(Project owner <a href="mailto:{{ item.project.owner.user.email }}">{{ item.project.owner.user.name }}</a>)</span>
+                                                {% endif %}
+                                                {% if allow_reassign_project %}
+                                                    <a class="text-decoration-none text-danger" href="{{ url_for('convenor.deassign_project', id=item.id) }}">Deassign project...</a>
+                                                {% endif %}
+                                            {% else %}
+                                                <div>
+                                                    {{ record_label(item, text, url) }}
+                                                    <a class="badge bg-danger text-decoration-none text-nohover-light">No project allocated</a>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-3">
+                                            {% set supervisor_roles = item.supervisor_roles %}
+                                            {% for role in supervisor_roles %}
+                                                <div class="mt-1 mb-1">{{ faculty_data(role.user.faculty_data) }}</div>
+                                            {% else %}
+                                                {% if config.uses_supervisor %}
+                                                    <span class="text-danger mt-1 mb-1">None allocated</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary mt-1 mb-1">Not used</span>
+                                                {% endif %}
+                                            {% endfor %}
+                                            <div class="mt-1">
+                                                <a class="text-decoration-none text-danger" href="{{ url_for('convenor.edit_roles', sub_id=item.owner_id, record_id=item.id, url=url_for('convenor.manual_assign', id=item.id, text=text, url=url), text='manual reassignment view') }}">
+                                                    Edit roles...
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="col-3">
+                                            {% set marker_roles = item.marker_roles %}
+                                            {% for role in marker_roles %}
+                                                <div class="mt-1 mb-1">{{ faculty_data(role.user.faculty_data) }}</div>
+                                            {% else %}
+                                                {% if config.uses_marker %}
+                                                    <span class="text-danger mt-1 mb-1">None allocated</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary mt-1 mb-1">Not used</span>
+                                                {% endif %}
+                                            {% endfor %}
+                                            <div class="mt-1">
+                                                <a class="text-decoration-none text-danger" href="{{ url_for('convenor.edit_roles', sub_id=item.owner_id, record_id=item.id, url=url_for('convenor.manual_assign', id=item.id, text=text, url=url), text='manual reassignment view') }}">
+                                                    Edit roles...
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="badge bg-danger">Error: missing content</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        {% if allow_reassign_project %}
+                            {% if rec.owner.selector is not none %}
+                                <div class="card mt-3 mb-3">
+                                    <div class="card-header"><i class="fas fa-user"></i> <strong>{{ rec.owner.student.user.name }}</strong> &ndash; ranked project selection</div>
+                                    <div class="card-body">
+                                        {% if rec.owner.selector.has_submitted %}
+                                            <div class="row vertical-align final-selection-table">
+                                                <div class="col-6"><strong>Project</strong></div>
+                                                <div class="col-6"><strong>Supervisor</strong></div>
+                                            </div>
+                                            {% for item in rec.owner.selector.ordered_selections.all() %}
+                                                <div class="row vertical-align final-selection-table">
+                                                    <div class="col-6">
+                                                        <span class="badge bg-success">#{{ item.rank }}</span>
+                                                        <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=item.liveproject_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
+                                                            {{ item.format_project()|safe }}
+                                                        </a>
+                                                        {% if item.converted_from_bookmark %}
+                                                            <span class="badge bg-warning text-dark">Bookmark</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="col-4">
+                                                        {{ faculty_data(item.liveproject.owner) }}
+                                                    </div>
+                                                    <div class="col-2">
+                                                        <div class="float-end">
+                                                            <a href="{{ url_for('convenor.assign_from_selection', id=rec.id, sel_id=item.id) }}" class="btn btn-outline-secondary btn-sm">Assign</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <span class="badge bg-danger">Error: missing content</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            Did not submit a valid project selection.
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {% if rec.matching_record is not none %}
+                                {% set item = rec.matching_record %}
+                                <div class="card mt-3 mb-3">
+                                    <div class="card-header">Automatic matching proposal</div>
+                                    <div class="card-body">
+                                        <div class="row vertical-align final-selection-table">
+                                            <div class="col-5"><strong>Project</strong></div>
+                                            <div class="col-1"><strong>Rank</strong></div>
+                                            <div class="col-3"><strong>Supervisor</strong></div>
+                                            <div class="col-3"><strong>Marker</strong></div>
+                                        </div>
+                                        <div class="row vertical-align final-selection-table">
+                                            <div class="col-5">
+                                                <span class="badge bg-secondary">#{{ item.submission_period }}</span>
+                                                <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
+                                                    {{ item.project.name }}
+                                                </a>
+                                            </div>
+                                            <div class="col-1"><span class="badge bg-success">#{{ item.rank }}</span></div>
+                                            <div class="col-3">
+                                                {{ faculty_data(item.project.owner) }}
+                                            </div>
+                                            <div class="col-3">
+                                                {{ faculty_data(item.marker) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer">
+                                        <div class="d-flex flex-row justify-content-end gap-2">
+                                            <a href="{{ url_for('convenor.assign_revert', id=rec.id) }}" class="btn btn-outline-secondary btn-sm">Revert</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <hr class="intro-divider">
+                            {% if rec.matching_record is not none %}
+                                <div>Alternatively, select a project from the full list:</div>
+                            {% else %}
+                                <div>Select a project from the full list:</div>
+                            {% endif %}
+
+                            <table id="manual-assign-table" class="table table-striped">
+                                <thead>
+                                <tr>
+                                    <th width="35%"> Project</th>
+                                    <th width="25%"> Supervisor</th>
+                                    <th width="25%"> Current workload</th>
+                                    <th width="15%"> Actions</th>
+                                </tr>
+                                </thead>
+                            </table>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if url and text %}
+                    <div>
+                        <a class="text-decoration-none" href="{{ url }}">
+                            <i class="fas fa-backward"></i> Return to {{ text }}
+                        </a>
+                    </div>
+                {% endif %}
             </div>
             <div class="col-1"></div>
         </div>

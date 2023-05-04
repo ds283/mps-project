@@ -16,7 +16,8 @@ MPS-Project.sqlite
 mysql
 nginx
 profiling
-thirdparty
 venv
 worker-output
 sonar-project.properties
+test_pdf.py
+Deployments

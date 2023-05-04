@@ -3138,6 +3138,7 @@ def register_matching_tasks(celery):
         # submission period
 
         sr: SubmissionRecord = sub.get_assignment(period=data.submission_period)
+        now = datetime.now()
 
         # if no record, insert one, but otherwise do nothing
         if sr is None:
@@ -3185,7 +3186,11 @@ def register_matching_tasks(celery):
                                               acknowledge_student=False,
                                               response=None,
                                               submitted_response=False,
-                                              response_timestamp=None)
+                                              response_timestamp=None,
+                                              creator_id=None,
+                                              creation_timestamp=now,
+                                              last_edit_id=None,
+                                              last_edit_timestamp=None)
 
                     db.session.add(new_role)
 

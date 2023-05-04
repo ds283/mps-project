@@ -627,6 +627,8 @@ def register_rollover_tasks(celery):
             if len(match_records) == 0:
                 match_records = None
 
+        now = datetime.now()
+
         # if a match has been assigned, use this to generate a SubmittingStudent record and populate its
         # SubmissionRecord list
         if match_records is not None:
@@ -685,7 +687,11 @@ def register_rollover_tasks(celery):
                                                       acknowledge_student=False,
                                                       response=None,
                                                       submitted_response=False,
-                                                      response_timestamp=None)
+                                                      response_timestamp=None,
+                                                      creator_id=None,
+                                                      creation_timestamp=now,
+                                                      last_edit_it=None,
+                                                      last_edit_timestamp=None)
 
                             db.session.add(new_role)
                     else:
@@ -804,7 +810,11 @@ def register_rollover_tasks(celery):
                                                               acknowledge_student=False,
                                                               response=None,
                                                               submitted_response=False,
-                                                              response_timestamp=None)
+                                                              response_timestamp=None,
+                                                              creator_id=None,
+                                                              creation_timestamp=now,
+                                                              last_edit_id=None,
+                                                              last_edit_timestamp=None)
 
                                     db.session.add(new_role)
 

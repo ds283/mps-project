@@ -38,9 +38,47 @@ _menu = \
 """
 
 
+# language=jinja2
+_details = \
+"""
+{% if role.created_by is not none %}
+    <div>
+        Created by
+        <i class="fas fa-user"></i>
+        <a class="text-decoration-none" href="mailto:{{ role.created_by.email }}">{{ role.created_by.name }}</a>
+        {% if role.creation_timestamp is not none %}
+            on {{ role.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+        {% endif %}
+    </div>
+{% else %}
+    <div>
+        Automatically populated
+        {% if role.creation_timestamp is not none %}
+            on {{ role.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+        {% endif %}
+        {% if role.submission.matching_record is not none %}
+            {% set attempt = role.submission.matching_record.matching_attempt %}
+            from match <strong>{{ attempt.name }}</strong>
+        {% endif %}
+    </div>
+{% endif %}
+{% if role.last_edited_by is not none %}
+    <div class="mt-1">
+        Last edited by 
+        <i class="fs fa-user"></i>
+        <a class="text-decoration-none" href="mailto:{{ role.last_edited_by.email }}">{{ role.last_edited_by.name }}</a>
+        {% if role.last_edit_timestamp is not none %}
+            on {{ role.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+        {% endif %}
+    </div>
+{% endif %}
+"""
+
+
 def edit_roles(roles: List[SubmissionRole], return_url=None):
     data = [{'name': render_template_string(_name, user=r.user),
              'role': r.role_label,
+             'details': render_template_string(_details, role=r),
              'menu': render_template_string(_menu, role=r, return_url=return_url)} for r in roles]
 
     return data

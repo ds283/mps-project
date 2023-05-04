@@ -2334,7 +2334,11 @@ def add_role(record_id):
     if form.validate_on_submit():
         role = SubmissionRole(role=form.role.data,
                               user=form.user.data.user,
-                              submission_id=record.id)
+                              submission_id=record.id,
+                              creator_id=current_user.id,
+                              creation_timestamp=datetime.now(),
+                              last_edit_id=None,
+                              last_edit_timestamp=None)
 
         try:
             db.session.add(role)

@@ -9919,7 +9919,7 @@ class PresentationFeedback(db.Model):
     timestamp = db.Column(db.DateTime())
 
 
-class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackStatesMixin):
+class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackStatesMixin, EditingMetadataMixin):
     """
     Model for each staff member that has a role for a SubmissionRecord: that includes supervisors, markers,
     moderators, exam board members and external examiners (and possibly others)

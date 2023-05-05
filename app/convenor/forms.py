@@ -17,7 +17,8 @@ from wtforms.validators import InputRequired, Optional, Email, Length, Validatio
 from wtforms_alchemy import QuerySelectField
 
 from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig, ConvenorGenericTask, \
-    DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS, SubmissionRole, SubmissionRecord, User, SubmittingStudent
+    DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS, SubmissionRole, SubmissionRecord, User, SubmittingStudent, \
+    FacultyData
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, PeriodPresentationsMixin, \
     PeriodSelectorMixinFactory
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
@@ -474,24 +475,24 @@ class AddSubmitterRoleForm(Form):
             raise ValidationError('Please select a user to attach for this role')
 
         role_type: int = form.role.data
-        user: User = field.data
+        fd: FacultyData = field.data
 
         record: SubmissionRecord = form._record
         project: LiveProject = record.project
 
         if role_type == SubmissionRole.ROLE_MARKER:
-            if user not in project.assessor_list:
+            if fd not in project.assessor_list:
                 raise ValidationError('User "{name}" is not in the assessor pool for the assigned project. '
                                       'Please select a different user to attach for this role, or select '
-                                      'a different role type.'.format(name=user.name))
+                                      'a different role type.'.format(name=fd.user.name))
 
         if role_type == SubmissionRole.ROLE_SUPERVISOR:
             if project.generic:
-                if user not in project.supervisor_list:
+                if fd not in project.supervisor_list:
                     raise ValidationError('For generic projects, the assigned supervisor should be drawn from '
                                           'the supervisor pool. User "{name}" is not in the supervisor pool for '
                                           'this project. Please select a different user to attach for this role, '
-                                          'or select a different role type.'.format(name=user.name))
+                                          'or select a different role type.'.format(name=fd.user.name))
 
     submit = SubmitField('Add new role')
 

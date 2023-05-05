@@ -106,9 +106,9 @@ _periods = \
                             <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign project</a>
                         {% else %}
                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
-                                <i class="fas fa-folder fa-fw"></i> Manually reassign
+                                <i class="fas fa-folder fa-fw"></i> Assign project...
                             </a>
-                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Remove assignment</a>
+                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Deassign project</a>
                         {% endif %}
                         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, record_id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"><i class="fas fa-user fa-fw"></i> Edit roles...</a>
                     </div>
@@ -287,7 +287,7 @@ _menu = \
             <i class="fas fa-comments fa-fw"></i> View feedback...
         </a>
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.manual_assign', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-            <i class="fas fa-wrench fa-fw"></i> Manual assignment...
+            <i class="fas fa-wrench fa-fw"></i> Assign project...
         </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
             <i class="fas fa-wrench fa-fw"></i> Edit roles...

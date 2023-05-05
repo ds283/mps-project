@@ -49,7 +49,7 @@
 {% endblock %}
 
 {% block title %}
-    Manually assign project
+    Assign project
 {% endblock %}
 
 {% macro faculty_data(fac) %}
@@ -112,7 +112,7 @@
                 </form>
                 <div class="card border-primary mt-3 mb-3">
                     <div class="card-header bg-primary text-white">
-                        Manual assignment for <i class="fas fa-user"></i> <strong>{{ rec.owner.student.user.name }}</strong>,
+                        Assign project for <i class="fas fa-user"></i> <strong>{{ rec.owner.student.user.name }}</strong>,
                         submission period <strong>#{{ rec.submission_period }}</strong>
                     </div>
                     <div class="card-body">

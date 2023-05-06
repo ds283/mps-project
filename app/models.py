@@ -3239,7 +3239,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         items = sum([int(config_id is None), int(config is None), int(pclass_id is None), int(pclass is None)])
         if items != 3:
             raise RuntimeError('At most one project-class specifier should be passed to '
-                               'FacultyData.marker_assignments. Received types were:'
+                               'FacultyData.presentation_assignments. Received types were:'
                                'config_id={ty1}, config={ty2}, pclass_id={ty3}, '
                                'pclass={ty4}'.format(ty1=type(config_id), ty2=type(config),
                                                      ty3=type(pclass_id), ty4=type(pclass)))

@@ -21,14 +21,15 @@ _name = \
 # language=jinja2
 _workload = \
 """
-{% set s, m, p = data %}
+{% set s, ma, mo, p = data %}
 <div>
     <span class="badge bg-secondary">
         S {{ s }}
-        Ma {{ m }}
+        Ma {{ ma }}
+        Mo {{ mo }}
         P {{ p }}
     </span>
-    <span class="badge bg-primary">Total {{ s+m+p }}</span>
+    <span class="badge bg-primary">Total {{ s+ma+mo+p }}</span>
 </div>
 """
 

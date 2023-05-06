@@ -927,7 +927,7 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
                 if marker not in inverse_mark_dict:
                     mark_dict[number_markers] = marker
                     inverse_mark_dict[marker] = number_markers
-                    mark_CATS_dict[number_markers] = marker.CATS_assignment(config)
+                    mark_CATS_dict[number_markers] = sum(marker.CATS_assignment(config))
                     number_markers += 1
 
     return mark_dict, inverse_mark_dict, submit_dict, inverse_submit_dict, mark_CATS_dict

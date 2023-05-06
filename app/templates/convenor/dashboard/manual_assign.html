@@ -140,7 +140,7 @@
                                                     <span class="text-muted small">(Project owner <a href="mailto:{{ item.project.owner.user.email }}">{{ item.project.owner.user.name }}</a>)</span>
                                                 {% endif %}
                                                 {% if allow_reassign_project %}
-                                                    <a class="text-decoration-none text-danger" href="{{ url_for('convenor.deassign_project', id=item.id) }}">Deassign project...</a>
+                                                    <a class="text-decoration-none text-danger" href="{{ url_for('convenor.deassign_project', id=item.id) }}">Deassign project</a>
                                                 {% endif %}
                                             {% else %}
                                                 <div>

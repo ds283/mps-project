@@ -260,10 +260,11 @@ def MarkerQuery(live_project):
 
 
 def BuildMarkerLabel(fac):
-    CATS_supv, CATS_mark, CATS_pres = fac.total_CATS_assignment()
-    return '{name} (CATS: S {supv} M {mark} P {pres} ' \
-           'Total {tot})'.format(name=fac.user.name, supv=CATS_supv, mark=CATS_mark, pres=CATS_pres,
-                                 tot=CATS_supv + CATS_mark + CATS_pres)
+    CATS_supv, CATS_mark, CATS_moderate, CATS_pres = fac.total_CATS_assignment()
+    return '{name} (CATS: S {supv} Ma {mark} Mo {moderate} P {pres} ' \
+           'Total {tot})'.format(name=fac.user.name, supv=CATS_supv, mark=CATS_mark,
+                                 moderate=CATS_moderate, pres=CATS_pres,
+                                 tot=CATS_supv + CATS_mark + CATS_moderate + CATS_pres)
 
 
 def GetUnattachedSubmissionPeriods(assessment_id):

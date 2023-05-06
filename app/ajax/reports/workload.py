@@ -14,7 +14,7 @@ from sqlalchemy.event import listens_for
 from ...cache import cache
 from ...database import db
 from ...models import FacultyData, EnrollmentRecord, SubmissionRecord, ScheduleSlot, LiveProject, ScheduleAttempt, \
-    SubmissionRole
+    SubmissionRole, ProjectClassConfig
 from ...shared.sqlalchemy import get_count
 from ...shared.utils import get_current_year
 

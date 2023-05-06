@@ -8049,8 +8049,8 @@ def faculty_workload_ajax(id):
         fd: FacultyData
         u, fd = row
 
-        CATS_sup, CATS_mark, CATS_pres = fd.CATS_assignment(config)
-        return CATS_sup + CATS_mark + CATS_pres
+        CATS_sup, CATS_mark, CATS_moderate, CATS_pres = fd.CATS_assignment(config)
+        return CATS_sup + CATS_mark + CATS_moderate + CATS_pres
 
     name = {'search': search_name,
             'order': sort_name}

@@ -3171,37 +3171,34 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return '<span class="badge bg-info"><i class="fas fa-check"></i> Assessor for {n}</span>'.format(n=num)
 
 
-    def supervisor_assignments(self, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
-        """
-        Return a list of current SubmissionRecord instances for which we are supervisor
-        :return:
-        """
+    def _apply_assignment_filters(self, role, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
         # at most one of config_id, config, pclass_id, pclass should be defined
         items = sum([int(config_id is None), int(config is None), int(pclass_id is None), int(pclass is None)])
         if items != 3:
             raise RuntimeError('At most one project-class specifier should be passed to '
-                               'FacultyData.supervisor_assignments. Received types were:'
+                               'FacultyData._apply_assignment_filters. Received types were:'
                                'config_id={ty1}, config={ty2}, pclass_id={ty3}, '
                                'pclass={ty4}'.format(ty1=type(config_id), ty2=type(config),
                                                      ty3=type(pclass_id), ty4=type(pclass)))
 
-        lp_query = self.live_projects.subquery()
-
         query = db.session.query(SubmissionRecord) \
-            .join(lp_query, lp_query.c.id == SubmissionRecord.project_id) \
-            .filter(SubmissionRecord.retired == False) \
+            .filter(and_(SubmissionRecord.retired == False,
+                         SubmissionRecord.roles.any(and_(SubmissionRole.role == role,
+                                                         SubmissionRole.user_id == self.id)))) \
+            .join(LiveProject, LiveProject.id == SubmissionRecord.project_id) \
             .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id) \
-            .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id) \
-            .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id)
+            .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
 
         if config_id is not None:
-            query = query.filter(ProjectClassConfig.id == config_id)
+            query = query.filter(SubmittingStudent.config_id == config_id)
         elif config is not None:
-            query = query.filter(ProjectClassConfig.id == config.id)
+            query = query.filter(SubmittingStudent.config_id == config.id)
         elif pclass_id is not None:
-            query = query.filter(ProjectClassConfig.pclass_id == pclass_id)
+            query = query.join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id) \
+                .filter(ProjectClassConfig.pclass_id == pclass_id)
         elif pclass is not None:
-            query = query.filter(ProjectClassConfig.pclass_id == pclass.id)
+            query = query.join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id) \
+                .filter(ProjectClassConfig.pclass_id == pclass.id)
 
         if period is None:
             query = query.order_by(SubmissionPeriodRecord.submission_period.asc())
@@ -3211,6 +3208,14 @@ class FacultyData(db.Model, EditingMetadataMixin):
             raise ValueError('Expected period identifier to be an integer')
 
         return query
+
+
+    def supervisor_assignments(self, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
+        """
+        Return a list of current SubmissionRecord instances for which we are supervisor
+        :return:
+        """
+        return self._apply_assignment_filters(SubmissionRole.ROLE_SUPERVISOR, config_id, config, pclass_id, pclass, period)
 
 
     def marker_assignments(self, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
@@ -3218,38 +3223,15 @@ class FacultyData(db.Model, EditingMetadataMixin):
         Return a list of current SubmissionRecord instances for which we are marker
         :return:
         """
-        # at most one of config_id, config, pclass_id, pclass should be defined
-        items = sum([int(config_id is None), int(config is None), int(pclass_id is None), int(pclass is None)])
-        if items != 3:
-            raise RuntimeError('At most one project-class specifier should be passed to '
-                               'FacultyData.marker_assignments. Received types were:'
-                               'config_id={ty1}, config={ty2}, pclass_id={ty3}, '
-                               'pclass={ty4}'.format(ty1=type(config_id), ty2=type(config),
-                                                     ty3=type(pclass_id), ty4=type(pclass)))
+        return self._apply_assignment_filters(SubmissionRole.ROLE_MARKER, config_id, config, pclass_id, pclass, period)
 
-        query = db.session.query(SubmissionRecord) \
-            .filter_by(retired=False, marker_id=self.id) \
-            .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id) \
-            .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id) \
-            .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
 
-        if config_id is not None:
-            query = query.filter(ProjectClassConfig.id == config_id)
-        elif config is not None:
-            query = query.filter(ProjectClassConfig.id == config.id)
-        elif pclass_id is not None:
-            query = query.filter(ProjectClassConfig.pclass_id == pclass_id)
-        elif pclass is not None:
-            query = query.filter(ProjectClassConfig.pclass_id == pclass.id)
-
-        if period is None:
-            query = query.order_by(SubmissionPeriodRecord.submission_period.asc())
-        elif isinstance(period, int):
-            query = query.filter(SubmissionPeriodRecord.submission_period == period)
-        else:
-            raise ValueError('Expected period identifier to be an integer')
-
-        return query
+    def moderator_assignments(self, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
+        """
+        Return a list of current SubmissionRecord instances for which we are moderator
+        :return:
+        """
+        return self._apply_assignment_filters(SubmissionRole.ROLE_MODERATOR, config_id, config, pclass_id, pclass, period)
 
 
     def presentation_assignments(self, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
@@ -3318,40 +3300,49 @@ class FacultyData(db.Model, EditingMetadataMixin):
         if config.uses_supervisor:
             supv = self.supervisor_assignments(config_id=config.id)
             supv_CATS = [x.supervising_CATS for x in supv]
-            supv_total = sum([x for x in supv_CATS if x is not None])
+            supv_total = sum(x for x in supv_CATS if x is not None)
         else:
             supv_total = 0
 
         if config.uses_marker:
             mark = self.marker_assignments(config_id=config.id)
             mark_CATS = [x.marking_CATS for x in mark]
-            mark_total = sum([x for x in mark_CATS if x is not None])
+            mark_total = sum(x for x in mark_CATS if x is not None)
         else:
             mark_total = 0
+
+        if config.uses_moderator:
+            moderate = self.moderator_assignments(config_id=config.id)
+            moderate_CATS = [x.moderating_CATS for x in moderate]
+            moderate_total = sum(x for x in moderate_CATS if x is not None)
+        else:
+            moderate_total = 0
 
         if config.uses_presentations:
             pres = self.presentation_assignments(config_id=config.id)
             pres_CATS = [x.assessor_CATS for x in pres]
-            pres_total = sum([x for x in pres_CATS if x is not None])
+            pres_total = sum(x for x in pres_CATS if x is not None)
         else:
             pres_total = 0
 
-        return supv_total, mark_total, pres_total
+        return supv_total, mark_total, moderate_total, pres_total
 
 
     def total_CATS_assignment(self):
         supv = 0
         mark = 0
+        moderate = 0
         pres = 0
 
         for record in self.enrollments:
-            s, m, p = self.CATS_assignment(record.pclass)
+            s, ma, mo, p = self.CATS_assignment(record.pclass)
 
             supv += s
-            mark += m
+            mark += ma
+            moderate += mo
             pres += p
 
-        return supv, mark, pres
+        return supv, mark, moderate, pres
 
 
     def has_late_feedback(self, config_proxy, faculty_id):

@@ -13,7 +13,7 @@ from flask import render_template_string
 from ...models import ProjectClassConfig, User, FacultyData
 
 # language=jinja2
-_projects = \
+_supervising = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
@@ -32,8 +32,12 @@ _projects = \
     {% endif %}        
 {% endmacro %}
 {% macro project_tag(r, show_period) %}
-    {% set pclass = r.owner.config.project_class %}
-    {% set enable_engagement = (r.submission_period <= r.owner.config.submission_period) and (r.owner.config.submitter_lifecycle < r.owner.config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
+    {% set sub = r.owner %}
+    {% set config = sub.config %}
+    {% set pclass = config.project_class %}
+    {% set student = sub.student %}
+    {% set user = student.user %}
+    {% set enable_engagement = (r.submission_period <= config.submission_period) and (config.submitter_lifecycle < config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
     {% set colour = "bg-secondary" %}
     {% if enable_engagement %}
         {% if r.student_engaged %}
@@ -61,7 +65,7 @@ _projects = \
                     <i class="fas fa-comments fa-fw"></i> Show feedback
                 </a>
                 
-                {% if not disabled and r.owner.published and enable_engagement %}
+                {% if not disabled and sub.published and enable_engagement %}
                     {% if not r.student_engaged %}
                         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_started', id=r.id) }}">
                             <i class="fas fa-check fa-fw"></i> Mark as started
@@ -79,11 +83,14 @@ _projects = \
                     <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign</a>
                 {% else %}
                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">
-                        <i class="fas fa-folder fa-fw"></i> Manually reassign
+                        <i class="fas fa-folder fa-fw"></i> Assign project...
                     </a>
-                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Remove assignment</a>
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Deassign project</a>
                 {% endif %}
-            </div>
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, record_id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">
+                    <i class="fas fa-user fa-fw"></i> Edit roles...
+                </a>
+             </div>
         </div>
         {{ feedback_state_tag(r, r.supervisor_feedback_state, 'Feedback') }}
         {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
@@ -102,7 +109,7 @@ _projects = \
 
 
 # language=jinja2
-_marking = \
+_assessing = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
@@ -121,28 +128,25 @@ _marking = \
     {% endif %}        
 {% endmacro %}
 {% macro marker_tag(r, show_period) %}
-    {% set pclass = r.owner.config.project_class %}
+    {% set sub = r.owner %}
+    {% set config = sub.config %}
+    {% set pclass = config.project_class %}
+    {% set student = sub.student %}
+    {% set user = student.user %}
     <div>
         <div class="dropdown assignment-label">
             <a class="badge text-decoration-none text-nohover-light bg-secondary btn-table-block dropdown-toggle" href="" role="button" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
-                {{ r.owner.student.user.name }}
+                {{ user.name }}
             </a>
             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                 {% set disabled = not pclass.publish %}
                 <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>
                     <i class="fas fa-comments fa-fw"></i> Show feedback
                 </a>
-                
-                {% set no_reassign = r.period.is_feedback_open %}
-                {% if no_reassign %}
-                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign</a>
-                {% else %}
-                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">
-                        <i class="fas fa-folder fa-fw"></i> Manually reassign
-                    </a>
-                    {# <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_marker', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Remove assignment</a> #}
-                {% endif %}
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, record_id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">
+                    <i class="fas fa-user fa-fw"></i> Edit roles...
+                </a>
             </div>
         </div>
         {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
@@ -217,16 +221,21 @@ _presentations = \
 # language=jinja2
 _workload = \
 """
-{% if config.uses_supervisor %}
-    <span class="badge bg-info text-dark">S {{ CATS_sup }}</span>
-{% endif %}
-{% if config.uses_marker %}
-    <span class="badge bg-info text-dark">M {{ CATS_mark }}</span>
-{% endif %}
-{% if config.uses_presentations %}
-    <span class="badge bg-info text-dark">P {{ CATS_pres }}</span>
-{% endif %}
-<span class="badge bg-primary">Total {{ CATS_sup+CATS_mark+CATS_pres }}</span>
+<span class="badge bg-secondary">
+    {% if config.uses_supervisor %}
+        S {{ CATS_sup }}
+    {% endif %}
+    {% if config.uses_marker %}
+        Ma {{ CATS_mark }}
+    {% endif %}
+    {% if config.uses_moderator %}
+        Mo {{ CATS_moderate }}
+    {% endif %}
+    {% if config.uses_presentations %}
+        P {{ CATS_pres }}
+    {% endif %}
+</span>
+<span class="badge bg-primary">T {{ CATS_sup+CATS_mark+CATS_moderate+CATS_pres }}</span>
 """
 
 
@@ -236,21 +245,24 @@ def faculty_workload_data(config: ProjectClassConfig, faculty):
     count = 0
 
     u: User
-    d: FacultyData
-    for u, d in faculty:
+    fd: FacultyData
+    for u, fd in faculty:
         count += 1
 
-        CATS_sup, CATS_mark, CATS_pres = d.CATS_assignment(config)
-        projects = d.supervisor_assignments(config_id=config.id).all()
-        marking = d.marker_assignments(config_id=config.id).all()
-        presentations = d.presentation_assignments(config_id=config.id).all()
+        CATS_sup, CATS_mark, CATS_moderate, CATS_pres = fd.CATS_assignment(config)
+        projects = fd.supervisor_assignments(config_id=config.id).all()
+        marking = fd.marker_assignments(config_id=config.id).all()
+        moderating = fd.moderator_assignments(config_id=config.id).all()
+        presentations = fd.presentation_assignments(config_id=config.id).all()
 
         data.append({'name': '<a class="text-decoration-none" '
                              'href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
-                     'projects': render_template_string(_projects, f=d, config=config, recs=projects),
-                     'marking': render_template_string(_marking, f=d, config=config, recs=marking),
-                     'presentations': render_template_string(_presentations, f=d, config=config, slots=presentations),
+                     'supervising': render_template_string(_supervising, f=fd, config=config, recs=projects),
+                     'marking': render_template_string(_assessing, f=fd, config=config, recs=marking),
+                     'moderating': render_template_string(_assessing, f=fd, config=config, recs=moderating),
+                     'presentations': render_template_string(_presentations, f=fd, config=config, slots=presentations),
                      'workload': render_template_string(_workload, CATS_sup=CATS_sup, CATS_mark=CATS_mark,
-                                                        CATS_pres=CATS_pres, f=d, config=config)})
+                                                        CATS_moderate=CATS_moderate, CATS_pres=CATS_pres,
+                                                        f=fd, config=config)})
 
     return data

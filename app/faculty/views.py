@@ -1793,6 +1793,10 @@ def edit_feedback(id):
     role: SubmissionRole = SubmissionRole.query.get_or_404(id)
     record: SubmissionRecord = role.submission
 
+    if record.retired:
+        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
+        return redirect(redirect_url())
+
     if not validate_submission_role(role, allow_roles=['supervisor', 'marker', 'moderator']):
         return redirect(redirect_url())
 
@@ -1854,6 +1858,11 @@ def edit_feedback(id):
 def submit_feedback(id):
     # id is a SubmissionRole instance
     role: SubmissionRole = SubmissionRole.query.get_or_404(id)
+    record: SubmissionRecord = role.submission
+
+    if record.retired:
+        flash('It is not possible to submit feedback for submissions that have been retired.', 'error')
+        return redirect(redirect_url())
 
     if not validate_submission_role(role, allow_roles=['supervisor', 'marker', 'moderator']):
         return redirect(redirect_url())
@@ -1881,10 +1890,13 @@ def submit_feedback(id):
               'have provided responses for each category.', 'warning')
         return redirect(redirect_url())
 
-    role.submitted_feedback = True
-    role.feedback_timestamp = datetime.now()
+    if role.submitted_feedback:
+        return redirect(redirect_url())
 
     try:
+        role.submitted_feedback = True
+        role.feedback_timestamp = datetime.now()
+
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -1899,6 +1911,11 @@ def submit_feedback(id):
 def unsubmit_feedback(id):
     # id is a SubmissionRole instance
     role: SubmissionRole = SubmissionRole.query.get_or_404(id)
+    record: SubmissionRecord = role.submission
+
+    if record.retired:
+        flash('It is not possible to unsubmit feedback for submissions that have been retired.', 'error')
+        return redirect(redirect_url())
 
     if not validate_submission_role(role, allow_roles=['supervisor', 'marker', 'moderator']):
         return redirect(redirect_url())
@@ -1919,10 +1936,10 @@ def unsubmit_feedback(id):
         flash('It is not possible to unsubmit after the feedback period has closed.', 'warning')
         return redirect(redirect_url())
 
-    role.submitted_feedback = False
-    role.feedback_timestamp = None
-
     try:
+        role.submitted_feedback = False
+        role.feedback_timestamp = None
+
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -1937,6 +1954,10 @@ def unsubmit_feedback(id):
 def acknowledge_feedback(id):
     # id is a SubmissionRecord instance
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
+
+    if record.retired:
+        flash('It is not possible to acknowledge student feedback for submissions that have been retired.', 'error')
+        return redirect(redirect_url())
 
     if not validate_submission_supervisor(record):
         return redirect(redirect_url())
@@ -2124,6 +2145,10 @@ def edit_response(id):
     role: SubmissionRole = SubmissionRecord.query.get_or_404(id)
     record: SubmissionRecord = role.submission
 
+    if record.retired:
+        flash('It is not possible to edit a response to the submitted for submissions that have been retired.', 'error')
+        return redirect(redirect_url())
+
     if not validate_submission_role(role, allow_roles=['supervisor']):
         return redirect(redirect_url())
 
@@ -2178,6 +2203,10 @@ def submit_response(id):
     role: SubmissionRole = SubmissionRole.query.get_or_404(id)
     record: SubmissionRecord = role.submission
 
+    if record.retired:
+        flash('It is not possible to submit a response to the submitter for submissions that have been retired.', 'error')
+        return redirect(redirect_url())
+
     if not validate_submission_role(role, allow_roles=['supervisor']):
         return redirect(redirect_url())
 
@@ -2193,7 +2222,7 @@ def submit_response(id):
         return redirect(redirect_url())
 
     if period.closed and not record.student_feedback_submitted:
-        flash('It is not possible to write or submit a response to feedback from your student before '
+        flash('It is not possible to respond to feedback from your student before '
               'they have submitted it.', 'info')
         return redirect(redirect_url())
 
@@ -2202,10 +2231,10 @@ def submit_response(id):
               'have provided responses for each category.', 'info')
         return redirect(redirect_url())
 
-    role.submitted_response = True
-    role.response_timestamp = datetime.now()
-
     try:
+        role.submitted_response = True
+        role.response_timestamp = datetime.now()
+
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()

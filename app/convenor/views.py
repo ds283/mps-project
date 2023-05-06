@@ -8593,25 +8593,27 @@ def delete_presentation_feedback(id):
     return redirect(redirect_url())
 
 
-@convenor.route('/supervisor_edit_feedback/<int:id>', methods=['GET', 'POST'])
+@convenor.route('/edit_feedback/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def supervisor_edit_feedback(id):
-    # id is a SubmissionRecord instance
-    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
+def edit_feedback(id):
+    # id is a SubmissionRole instance
+    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
+    record: SubmissionRecord = role.submission
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
-        return redirect(redirect_url())
-
-    if not record.period.collect_project_feedback:
-        flash('Feedback collection has been disabled for this submission period.', 'info')
         return redirect(redirect_url())
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
         return redirect(redirect_url())
 
-    period = record.period
+    if not record.period.collect_project_feedback:
+        flash('This operation is not permitted. '
+              'Feedback collection has been disabled for this submission period.', 'info')
+        return redirect(redirect_url())
+
+    period: SubmissionPeriodRecord = record.period
     form = SubmissionRoleFeedbackForm(request.form)
 
     url = request.args.get('url', None)
@@ -8619,222 +8621,119 @@ def supervisor_edit_feedback(id):
         url = redirect_url()
 
     if form.validate_on_submit():
-        record.supervisor_positive = form.positive_feedback.data
-        record.supervisor_negative = form.improvement_feedback.data
+        role.positive_feedback = form.positive_feedback.data
+        role.improvements_feedback = form.improvement_feedback.data
 
-        if record.supervisor_submitted:
-            record.supervisor_timestamp = datetime.now()
+        if role.submitted_feedback:
+            role.feedback_timestamp = datetime.now()
 
-        db.session.commit()
-
-        return redirect(url)
-
-    else:
-        if request.method == 'GET':
-            form.positive_feedback.data = record.supervisor_positive
-            form.improvement_feedback.data = record.supervisor_negative
-
-    return render_template('faculty/dashboard/edit_feedback.html', form=form, unique_id='supv-{id}'.format(id=id),
-                           title='Edit supervisor feedback from {supervisor}'.format(supervisor=record.project.owner.user.name),
-                           formtitle='Edit supervisor feedback from <i class="fas fa-user"></i> '
-                                     '<strong>{supervisor}</strong> '
-                                     'for <i class="fas fa-user"></i> <strong>{name}</strong>'.format(supervisor=record.project.owner.user.name,
-                                                                                                     name=record.student_identifier),
-                           submit_url=url_for('convenor.supervisor_edit_feedback', id=id, url=url),
-                           period=period, record=record, dont_show_warnings=True)
-
-
-@convenor.route('/marker_edit_feedback/<int:id>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'root')
-def marker_edit_feedback(id):
-    # id is a SubmissionRecord instance
-    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
-
-    if record.retired:
-        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
-        return redirect(redirect_url())
-
-    if not record.period.collect_project_feedback:
-        flash('Feedback collection has been disabled for this submission period.', 'info')
-        return redirect(redirect_url())
-
-    # check is convenor for the project's class
-    if not validate_is_convenor(record.project.config.project_class):
-        return redirect(redirect_url())
-
-    period = record.period
-    form = MarkerFeedbackForm(request.form)
-
-    url = request.args.get('url', None)
-    if url is None:
-        url = redirect_url()
-
-    if form.validate_on_submit():
-        record.marker_positive = form.positive_feedback.data
-        record.marker_negative = form.improvement_feedback.data
-
-        if record.marker_submitted:
-            record.marker_timestamp = datetime.now()
-
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save feedback due to a database error. Please contact a system administrator.', 'error')
 
         return redirect(url)
 
     else:
-        if request.method == 'GET':
-            form.positive_feedback.data = record.marker_positive
-            form.improvement_feedback.data = record.marker_negative
 
-    return render_template('faculty/dashboard/edit_feedback.html', form=form, unique_id='mark-{id}'.format(id=id),
-                           title='Edit marker feedback from {supervisor}'.format(supervisor=record.marker.user.name),
-                           formtitle='Edit marker feedback from <i class="fas fa-user"></i> '
-                                     '<strong>{supervisor}</strong> '
-                                     'for <strong>{num}</strong>'.format(supervisor=record.marker.user.name,
-                                                                         num=record.owner.student.exam_number),
-                           submit_url=url_for('convenor.marker_edit_feedback', id=id, url=url),
-                           period=period, record=record, dont_show_warnings=True)
+        if request.method == 'GET':
+            form.positive_feedback.data = role.positive_feedback
+            form.improvement_feedback.data = role.improvements_feedback
+
+    return render_template('faculty/dashboard/edit_feedback.html', form=form,
+                           title='Edit feedback', unique_id='role-{id}'.format(id=id),
+                           formtitle='Edit feedback for <i class="fas fa-user"></i> '
+                                     '<strong>{name}</strong>'.format(name=record.student_identifier),
+                           submit_url=url_for('convenor.edit_feedback', id=id, url=url),
+                           period=period, record=role, dont_show_warnings=True)
 
 
 @convenor.route('/submit_feedback/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def submit_feedback(id):
     # id is a SubmissionRole instance
-    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
+    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
+    record: SubmissionRecord = role.submission
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
         return redirect(redirect_url())
 
-    if not record.period.collect_project_feedback:
-        flash('Feedback collection has been disabled for this submission period.', 'info')
-        return redirect(redirect_url())
-
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
+        return redirect(redirect_url())
+
+    if not record.period.collect_project_feedback:
+        flash('This operation is not permitted. '
+              'Feedback collection has been disabled for this submission period.', 'info')
         return redirect(redirect_url())
 
     period: SubmissionPeriodRecord = record.period
 
-    if not period.is_feedback_open and not period.closed:
-        flash('It is not possible to submit before the feedback period has opened.', 'error')
+    if not period.is_feedback_open:
+        flash('This operation is not permitted. '
+              'It is not possible to submit before the feedback period has opened.', 'warning')
         return redirect(redirect_url())
 
-    if not record.is_supervisor_valid:
-        flash('Cannot submit feedback because it is still incomplete.', 'error')
+    if not role.feedback_valid:
+        flash('It is not yet possible to submit this feedback because it is incomplete. Please ensure that you '
+              'have provided responses for each category.', 'warning')
         return redirect(redirect_url())
 
-    if record.supervisor_submitted:
+    if role.submitted_feedback:
         return redirect(redirect_url())
 
-    record.supervisor_submitted = True
-    record.supervisor_timestamp = datetime.now()
-    db.session.commit()
+    try:
+        role.submitted_feedback = True
+        role.feedback_timestamp = datetime.now()
+
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not submit feedback due to a database error. Please contact a system administrator.', 'error')
 
     return redirect(redirect_url())
 
 
-@convenor.route('/supervisor_unsubmit_feedback/<int:id>')
+@convenor.route('/unsubmit_feedback/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def supervisor_unsubmit_feedback(id):
-    # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
+def unsubmit_feedback(id):
+    # id is a SubmissionRole instance
+    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
+    record: SubmissionRecord = role.submission
 
     if record.retired:
         flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
-        return redirect(redirect_url())
-
-    if not record.period.collect_project_feedback:
-        flash('Feedback collection has been disabled for this submission period.', 'info')
         return redirect(redirect_url())
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
         return redirect(redirect_url())
 
-    period = record.period
-
-    if period.closed:
-        flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
-        return redirect(redirect_url())
-
-    if not record.supervisor_submitted:
-        return redirect(redirect_url())
-
-    record.supervisor_submitted = False
-    record.supervisor_timestamp = None
-    db.session.commit()
-
-    return redirect(redirect_url())
-
-
-@convenor.route('/marker_submit_feedback/<int:id>')
-@roles_accepted('faculty', 'admin', 'root')
-def marker_submit_feedback(id):
-    # id is a SubmissionRecord instance
-    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
-
-    if record.retired:
-        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
-        return redirect(redirect_url())
-
     if not record.period.collect_project_feedback:
-        flash('Feedback collection has been disabled for this submission period.', 'info')
-        return redirect(redirect_url())
-
-    # check is convenor for the project's class
-    if not validate_is_convenor(record.project.config.project_class):
+        flash('This operation is not permitted. '
+              'Feedback collection has been disabled for this submission period.', 'info')
         return redirect(redirect_url())
 
     period: SubmissionPeriodRecord = record.period
 
-    if not period.is_feedback_open and not period.closed:
-        flash('It is not possible to submit before the feedback period has opened.', 'error')
-        return redirect(redirect_url())
-
-    if not record.is_marker_valid:
-        flash('Cannot submit feedback because it is still incomplete.', 'error')
-        return redirect(redirect_url())
-
-    if record.marker_submitted:
-        return redirect(redirect_url())
-
-    record.marker_submitted = True
-    record.marker_timestamp = datetime.now()
-    db.session.commit()
-
-    return redirect(redirect_url())
-
-
-@convenor.route('/marker_unsubmit_feedback/<int:id>')
-@roles_accepted('faculty', 'admin', 'root')
-def marker_unsubmit_feedback(id):
-    # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
-
-    if record.retired:
-        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
-        return redirect(redirect_url())
-
-    if not record.period.collect_project_feedback:
-        flash('Feedback collection has been disabled for this submission period.', 'info')
-        return redirect(redirect_url())
-
-    # check is convenor for the project's class
-    if not validate_is_convenor(record.project.config.project_class):
-        return redirect(redirect_url())
-
-    period = record.period
-
     if period.closed:
-        flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
+        flash('This operation is not permitted. '
+              'It is not possible to unsubmit after the feedback period has closed.', 'error')
         return redirect(redirect_url())
 
-    if not record.marker_submitted:
-        return redirect(redirect_url())
+    try:
+        role.submitted_feedback = False
+        role.feedback_timestamp = None
 
-    record.marker_submitted = False
-    record.marker_timestamp = None
-    db.session.commit()
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not unsubmit feedback due to a database error. Please contact a system administrator.', 'error')
 
     return redirect(redirect_url())
 
@@ -8953,11 +8852,12 @@ def presentation_unsubmit_feedback(feedback_id):
 @convenor.route('/edit_response/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def edit_response(id):
-    # id is a SubmissionRecord instance
-    record = SubmissionRecord.query.get_or_404(id)
+    # id identifies a SubmissionRole instance
+    role: SubmissionRole = SubmissionRecord.query.get_or_404(id)
+    record: SubmissionRecord = role.submission
 
     if record.retired:
-        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
+        flash('It is not possible to edit a response to the submitted for submissions that have been retired.', 'error')
         return redirect(redirect_url())
 
     # check is convenor for the project's class
@@ -8965,7 +8865,8 @@ def edit_response(id):
         return redirect(redirect_url())
 
     if not record.student_feedback_submitted:
-        flash('It is not possible to write a response to feedback from the student before '
+        flash('This operation is not permitted. '
+              'It is not possible to write a response to feedback from the student before '
               'they have submitted it.', 'info')
         return redirect(redirect_url())
 
@@ -8992,32 +8893,41 @@ def edit_response(id):
 @convenor.route('/submit_response/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def submit_response(id):
-    # id identifies a SubmissionRecord
-    record = SubmissionRecord.query.get_or_404(id)
+    # id identifies a SubmissionRole instance
+    role: SubmissionRole = SubmissionRecord.query.get_or_404(id)
+    record: SubmissionRecord = role.submission
 
     if record.retired:
-        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
+        flash('It is not possible to edit a response to the submitted for submissions that have been retired.', 'error')
         return redirect(redirect_url())
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
         return redirect(redirect_url())
 
+    if role.submitted_response:
+        return redirect(redirect_url())
+
     if not record.student_feedback_submitted:
-        flash('It is not possible to write a response to feedback from the student before '
+        flash('This operation is not permitted. '
+              'It is not possible to respond to feedback from the student before '
               'they have submitted it.', 'info')
         return redirect(redirect_url())
 
-    if record.faculty_response_submitted:
+    if not role.response_valid:
+        flash('This response cannot be submitted because it is incomplete. Please ensure that you '
+              'have provided responses for each category.', 'info')
         return redirect(redirect_url())
 
-    if not record.is_response_valid:
-        flash('Cannot submit your feedback because it is incomplete.', 'info')
-        return redirect(redirect_url())
+    try:
+        role.submitted_response = True
+        role.response_timestamp = datetime.now()
 
-    record.faculty_response_submitted = True
-    record.faculty_response_timestamp = datetime.now()
-    db.session.commit()
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not submit response due to a database error. Please contact a system administrator.', 'error')
 
     return redirect(redirect_url())
 

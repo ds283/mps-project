@@ -166,7 +166,7 @@
                                             <span class="small text-success me-2">Response at {{ role.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                         {% endif %}
                                         {% if role.acknowledge_student %}
-                                            <span class="badge bg-success"><i class="fas fa-check"></i> Acknowledge</span>
+                                            <span class="badge bg-success"><i class="fas fa-check"></i> Acknowledged</span>
                                         {% endif %}
                                         {% if role.acknowledge_student and not role.submitted_response %}
                                             <a href="{{ url_for('faculty.edit_response', id=role.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-outline-secondary">Edit...</a>

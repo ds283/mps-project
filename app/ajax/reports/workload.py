@@ -14,7 +14,7 @@ from sqlalchemy.event import listens_for
 from ...cache import cache
 from ...database import db
 from ...models import FacultyData, EnrollmentRecord, SubmissionRecord, ScheduleSlot, LiveProject, ScheduleAttempt, \
-    SubmissionRole, ProjectClassConfig
+    SubmissionRole, ProjectClassConfig, ProjectClass
 from ...shared.sqlalchemy import get_count
 from ...shared.utils import get_current_year
 
@@ -323,6 +323,20 @@ def _delete_cache_entry(fac_id):
     cache.delete_memoized(_element_simple, fac_id)
 
 
+def _delete_enrolled_cache_entries(target: ProjectClass):
+    for fd in target.enrollments:
+        fd: FacultyData
+        _delete_cache_entry(fd.owner_id)
+
+
+def _SubmissionRecord_delete_cache(target: SubmissionRecord):
+    if not target.retired:
+
+        for role in target.roles:
+            role: SubmissionRole
+            _delete_cache_entry(role.user_id)
+
+
 @listens_for(FacultyData.affiliations, 'append')
 def _FacultyData_affiliations_append_handler(target, value, initiator):
     with db.session.no_autoflush:
@@ -353,14 +367,6 @@ def _EnrollmentRecord_delete_handler(mapper, connection, target):
         _delete_cache_entry(target.owner_id)
 
 
-def _SubmissionRecord_delete_cache(target):
-    if not target.retired:
-
-        for role in target.roles:
-            role: SubmissionRole
-            _delete_cache_entry(role.user_id)
-
-
 @listens_for(SubmissionRecord, 'before_insert')
 def _SubmissionRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
@@ -389,14 +395,41 @@ def _SubmissionRecord_project_set_receiver(target, value, oldvalue, initiator):
             _delete_cache_entry(value.owner_id)
 
 
-@listens_for(SubmissionRecord.marker, 'set', active_history=True)
-def _SubmissionRecord_project_set_receiver(target, value, oldvalue, initiator):
+@listens_for(SubmissionRole, 'before_insert')
+def _SubmissionRole_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        if isinstance(oldvalue, FacultyData):
-            _delete_cache_entry(oldvalue.id)
+        _delete_cache_entry(target.user_id)
 
-        if isinstance(value, FacultyData):
-            _delete_cache_entry(value.id)
+
+@listens_for(SubmissionRole, 'before_update')
+def _SubmissionRole_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _delete_cache_entry(target.user_id)
+
+
+@listens_for(SubmissionRole, 'before_delete')
+def _SubmissionRole_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _delete_cache_entry(target.user_id)
+
+
+@listens_for(ProjectClassConfig, 'before_update')
+def _ProjectClassConfig_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _delete_enrolled_cache_entries(target.project_class)
+
+
+@listens_for(ProjectClass, 'before_update')
+def _ProjectClass_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _delete_enrolled_cache_entries(target)
+
+
+# no need for an insert handler for ProjectClassConfig or ProjectClass since at the point of insertion,
+# adding new project types cannot change anyone's workload
+
+# no need for a delete handler for ProjectClassConfig or ProjectClass since that will be entailed by the
+# removal of the corresponding EnrollmentRecord
 
 
 def _ScheduleSlot_assessors_delete_cache(target: ScheduleSlot, value):

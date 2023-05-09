@@ -6727,7 +6727,8 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
     # pointer to project class for which this is an enrolment record
     pclass_id = db.Column(db.Integer(), db.ForeignKey('project_classes.id'))
-    pclass = db.relationship('ProjectClass', uselist=False, foreign_keys=[pclass_id])
+    pclass = db.relationship('ProjectClass', uselist=False, foreign_keys=[pclass_id],
+                             backref=db.backref('enrollments', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # pointer to faculty member this record is associated with
     owner_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))

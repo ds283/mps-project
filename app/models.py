@@ -6888,37 +6888,6 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
                                    EnrollmentRecord.PRESENTATIONS_EXEMPT)
 
 
-
-    @property
-    def short_supervisor_label(self):
-        return self._generic_label('S', self.supervisor_state,
-                                   self.supervisor_reenroll, self.supervisor_comment,
-                                   EnrollmentRecord.SUPERVISOR_ENROLLED, EnrollmentRecord.SUPERVISOR_SABBATICAL,
-                                   EnrollmentRecord.SUPERVISOR_EXEMPT)
-
-
-    @property
-    def short_marker_label(self):
-        return self._generic_label('Mk', self.marker_state, self.marker_reenroll, self.marker_comment,
-                                   EnrollmentRecord.MARKER_ENROLLED, EnrollmentRecord.MARKER_SABBATICAL,
-                                   EnrollmentRecord.MARKER_EXEMPT)
-
-
-    @property
-    def short_moderator_label(self):
-        return self._generic_label('Mo', self.moderator_state, self.moderator_reenroll, self.moderator_comment,
-                                   EnrollmentRecord.MODERATOR_ENROLLED, EnrollmentRecord.MODERATOR_SABBATICAL,
-                                   EnrollmentRecord.MODERATOR_EXEMPT)
-
-
-    @property
-    def short_presentation_label(self):
-        return self._generic_label('P', self.presentations_state,
-                                   self.presentations_reenroll, self.presentations_comment,
-                                   EnrollmentRecord.PRESENTATIONS_ENROLLED, EnrollmentRecord.PRESENTATIONS_SABBATICAL,
-                                   EnrollmentRecord.PRESENTATIONS_EXEMPT)
-
-
     @property
     def enrolled_labels(self):
         label = ''

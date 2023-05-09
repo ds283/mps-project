@@ -88,7 +88,7 @@ def workload_ajax():
 
     faculty_ids = [f[0] for f in fac_query.all()]
 
-    return ajax.reports.workload_data(faculty_ids, detail == 'simple')
+    return ajax.reports.workload_data(faculty_ids, detail=='simple')
 
 
 @reports.route('/all_projects')

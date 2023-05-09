@@ -44,30 +44,133 @@ _groups = \
 _full_enrollments = \
 """
 {% for record in f.ordered_enrollments %}
-    <div {% if loop.index > 1 %}style="top-padding: 8px;"{% endif %}>
-        {{ record.pclass.make_label()|safe }}
-
-        {% if record.pclass.uses_supervisor %}
-            {% set offered = f.number_projects_offered(record.pclass) %}
-            {% if offered > 0 %}
-                {% set projects = f.projects_offered(record.pclass) %}
-                <span class="badge bg-info text-dark" data-bs-toggle="tooltip" data-html="true" title="{% for p in projects %}<p>{{ loop.index }}. {{ p.name }}</p>{% endfor %}">Offered={{ offered }}</span>
-            {% else %}
-                <span class="badge bg-danger">Offered=0</span>
+    <div class="bg-light p-2 mb-2">
+        <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+            {% set swatch_colour = record.pclass.make_CSS_style() %}
+            {% if swatch_colour is not none %}
+                <div class="me-1" style="width: 1rem; height: 1rem; {{ swatch_colour|safe }}"></div>
             {% endif %}
-            {{ record.short_supervisor_label|safe }}
-        {% endif %}
-
-        {% if record.pclass.uses_marker %}
-            {{ record.short_marker_label|safe }}
-        {% endif %}
-
-        {% if record.pclass.uses_presentations %}
-            {{ record.short_presentation_label|safe }}
-        {% endif %}
+            {{ record.pclass.name }}
+        </div>
+        <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+            {% if record.pclass.uses_supervisor %}
+                <div>
+                    {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
+                        {% set offered = f.number_projects_offered(record.pclass) %}
+                        <span class="text-success small">
+                            S: enrolled
+                        </span>
+                        {% if offered == 0 %}
+                            <span class="ms-1 small text-danger">No projects</span>
+                        {% else %}
+                            {% set projects = f.projects_offered(record.pclass) %}
+                            <span class="ms-1 small text-muted">
+                                {% if offered == 1 %}
+                                    1 project
+                                {% else %}
+                                    {{ offered }} projects
+                                {% endif %}
+                                <i class="fas fa-info-circle" tabindex="0" data-bs-toggle="popover" title="Projects offered" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{% for p in projects %}<div>{{ loop.index }}. {{ p.name }}</div>{% endfor %}"></i>
+                            </span>
+                        {% endif %}
+                    {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
+                        <span class="text-muted small">
+                            S: sabbatical
+                            {% if record.supervisor_comment is not none and record.supervisor_comment|length > 0 %}
+                                <i class="fas fa-info-circle" tabindex="0" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.supervisor_comment }}</div>{% if record.supervisor_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.supervisor_reenroll }}</div>{% endif %}"></i>
+                            {% endif %}
+                        </span>
+                    {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
+                        <span class="text-muted small">
+                            S: exempt
+                            {% if record.supervisor_comment is not none and record.supervisor_comment|length > 0 %}
+                                <i class="fas fa-info-circle" tabindex="0" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.supervisor_comment }}</div>{% if record.supervisor_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.supervisor_reenroll }}</div>{% endif %}"></i>
+                            {% endif %}
+                        </span>
+                    {% else %}
+                        <span class="small text-danger">Supervisor: unknown status</span>
+                    {% endif %}
+                </div>
+            {% endif %}
+            {% if record.pclass.uses_marker %}
+                <div>
+                    {% if record.marker_state == record.MARKER_ENROLLED %}
+                        <span class="text-success small">
+                            Ma: enrolled
+                        </span>
+                    {% elif record.marker_state == record.MARKER_SABBATICAL %}
+                        <span class="text-muted small">
+                            Ma: sabbatical
+                            {% if record.marker_comment is not none and record.marker_comment|length > 0 %}
+                                <i class="fas fa-info-circle" tabindex="1" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.marker_comment }}</div>{% if record.marker_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.marker_reenroll }}</div>{% endif %}"></i>
+                            {% endif %}
+                        </span>
+                    {% elif record.marker_state == record.MARKER_EXEMPT %}
+                        <span class="text-muted small">
+                            Ma: exempt
+                            {% if record.marker_comment is not none and record.marker_comment|length > 0 %}
+                                    <i class="fas fa-info-circle" tabindex="1" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.marker_comment }}</div>{% if record.marker_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.marker_reenroll }}</div>{% endif %}"></i>
+                            {% endif %}
+                        </span>
+                    {% else %}
+                        <span class="small text-danger">Marker: unknown status</span>
+                    {% endif %}
+                </div>
+            {% endif %}
+            {% if record.pclass.uses_moderator %}
+                <div>
+                    {% if record.moderator_state == record.MARKER_ENROLLED %}
+                        <span class="text-success small">
+                            Mo: enrolled
+                        </span>
+                    {% elif record.moderator_state == record.MARKER_SABBATICAL %}
+                        <span class="text-muted small">
+                            Mo: sabbatical
+                            {% if record.moderator_comment is not none and record.moderator_comment|length > 0 %}
+                                <i class="fas fa-info-circle" tabindex="2" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.moderator_comment }}</div>{% if record.moderator_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.moderator_reenroll }}</div>{% endif %}"></i>
+                            {% endif %}
+                        </span>
+                    {% elif record.moderator_state == record.MARKER_EXEMPT %}
+                        <span class="text-muted small">
+                            Mo: exempt
+                            {% if record.moderator_comment is not none and record.moderator_comment|length > 0 %}
+                                    <i class="fas fa-info-circle" tabindex="2" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.moderator_comment }}</div>{% if record.moderator_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.moderator_reenroll }}</div>{% endif %}"></i>
+                            {% endif %}
+                        </span>
+                    {% else %}
+                        <span class="small text-danger">Moderator: unknown status</span>
+                    {% endif %}
+                </div>
+            {% endif %}
+            {% if record.pclass.uses_presentations %}
+                <div>
+                    {% if record.presentations_state == record.MARKER_ENROLLED %}
+                        <span class="text-success small">
+                            P: enrolled
+                        </span>
+                    {% elif record.presentations_state == record.MARKER_SABBATICAL %}
+                        <span class="text-muted small">
+                            P: sabbatical
+                            {% if record.presentations_comment is not none and record.presentations_comment|length > 0 %}
+                                <i class="fas fa-info-circle" tabindex="3" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.presentations_comment }}</div>{% if record.presentations_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.presentations_reenroll }}</div>{% endif %}"></i>
+                            {% endif %}
+                        </span>
+                    {% elif record.presentations_state == record.MARKER_EXEMPT %}
+                        <span class="text-muted small">
+                            P: exempt
+                            {% if record.presentations_comment is not none and record.presentations_comment|length > 0 %}
+                                    <i class="fas fa-info-circle" tabindex="3" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.presentations_comment }}</div>{% if record.presentations_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.presentations_reenroll }}</div>{% endif %}"></i>
+                            {% endif %}
+                        </span>
+                    {% else %}
+                        <span class="small text-danger">Presentations: unknown status</span>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
     </div>
 {% else %}
-    <span class="badge bg-secondary">None</span>
+    <span class="alert alert-danger p-1"><strong>None</strong></span>
 {% endfor %}
 """
 

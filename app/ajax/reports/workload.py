@@ -43,7 +43,8 @@ _groups = \
 # language=jinja2
 _full_enrollments = \
 """
-{% for record in f.ordered_enrollments %}
+{% for record in enrolments %}
+    {% set config = configs[record.pclass_id] %}
     <div class="bg-light p-2 mb-2">
         <div class="d-flex flex-row justify-content-start align-items-center gap-2">
             {% set swatch_colour = record.pclass.make_CSS_style() %}
@@ -53,7 +54,7 @@ _full_enrollments = \
             {{ record.pclass.name }}
         </div>
         <div class="d-flex flex-row justify-content-start align-items-center gap-2">
-            {% if record.pclass.uses_supervisor %}
+            {% if config.uses_supervisor %}
                 <div>
                     {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
                         {% set offered = f.number_projects_offered(record.pclass) %}
@@ -92,7 +93,7 @@ _full_enrollments = \
                     {% endif %}
                 </div>
             {% endif %}
-            {% if record.pclass.uses_marker %}
+            {% if config.uses_marker %}
                 <div>
                     {% if record.marker_state == record.MARKER_ENROLLED %}
                         <span class="text-success small">
@@ -117,7 +118,7 @@ _full_enrollments = \
                     {% endif %}
                 </div>
             {% endif %}
-            {% if record.pclass.uses_moderator %}
+            {% if config.uses_moderator %}
                 <div>
                     {% if record.moderator_state == record.MARKER_ENROLLED %}
                         <span class="text-success small">
@@ -142,7 +143,7 @@ _full_enrollments = \
                     {% endif %}
                 </div>
             {% endif %}
-            {% if record.pclass.uses_presentations %}
+            {% if config.uses_presentations %}
                 <div>
                     {% if record.presentations_state == record.MARKER_ENROLLED %}
                         <span class="text-success small">
@@ -178,11 +179,12 @@ _full_enrollments = \
 # language=jinja2
 _simple_enrollments = \
 """
-{% for record in f.ordered_enrollments %}
+{% for record in enrolments %}
+    {% set config = configs[record.pclass_id] %}
     <div {% if loop.index > 1 %}style="top-padding: 8px;"{% endif %}>
         {{ record.pclass.make_label()|safe }}
 
-        {% if record.pclass.uses_supervisor %}
+        {% if config.uses_supervisor %}
             {% set offered = f.number_projects_offered(record.pclass) %}
             {% if offered > 0 %}
                 <span class="badge bg-info text-dark" data-bs-toggle="tooltip" data-html="true" title="{% for p in projects %}<p>{{ loop.index }}. {{ p.name }}</p>{% endfor %}">Offered={{ offered }}</span>
@@ -248,32 +250,37 @@ _simple_assignments = \
 """
 
 
-def _element_base(faculty_id, enrollment_template, assignments_template, workload_template):
+def _element_base(faculty_id, enrolment_template, assignments_template, workload_template):
     f: FacultyData = db.session.query(FacultyData).filter_by(id=faculty_id).one()
 
     workload = {}
     supervising = {}
     marking = {}
     presentations = {}
+    configs = {}
 
     total_workload = 0
 
-    for record in f.enrollments:
+    enrolments = f.ordered_enrollments
+
+    for record in enrolments:
         record: EnrollmentRecord
 
         CATS = sum(f.CATS_assignment(record.pclass))
-        workload[record.pclass_id] = CATS
+        pclass_id = record.pclass_id
+        workload[pclass_id] = CATS
 
         config: ProjectClassConfig = record.pclass.most_recent_config
+        configs[pclass_id] = config
 
         if config.uses_supervisor:
-            supervising[record.pclass_id] = get_count(f.supervisor_assignments(config_id=config.id))
+            supervising[pclass_id] = get_count(f.supervisor_assignments(config_id=config.id))
 
         if config.uses_marker:
-            marking[record.pclass_id] = get_count(f.marker_assignments(config_id=config.id))
+            marking[pclass_id] = get_count(f.marker_assignments(config_id=config.id))
 
         if config.uses_presentations:
-            presentations[record.pclass_id] = get_count(f.presentation_assignments(config_id=config.id))
+            presentations[pclass_id] = get_count(f.presentation_assignments(config_id=config.id))
 
         total_workload += CATS
 
@@ -286,7 +293,8 @@ def _element_base(faculty_id, enrollment_template, assignments_template, workloa
     return {'name': {'display': render_template_string(_name, f=f),
                      'sortstring': f.user.last_name + f.user.first_name},
             'groups': render_template_string(_groups, f=f),
-            'enrollments': {'display': render_template_string(enrollment_template, f=f),
+            'enrollments': {'display': render_template_string(enrolment_template, f=f, enrolments=enrolments,
+                                                              configs=configs),
                             'sortvalue': get_count(f.enrollments)},
             'supervising': {'display': render_template_string(assignments_template, f=f, data=supervising, total=total_supervising),
                             'sortvalue': total_supervising},

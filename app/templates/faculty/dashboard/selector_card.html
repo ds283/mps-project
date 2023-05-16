@@ -86,8 +86,8 @@
                     {% call icon_block('exclamation-circle') %}
                         <div>
                             <strong>
-                                Please review your projects to ensure their descriptions are up-to-date,
-                                and those you wish to offer next year are listed below.
+                                Please review your projects to check their descriptions are up-to-date.
+                                Ensure those projects you wish to offer next year are listed below.
                             </strong>
                         </div>
                         {% if config.request_deadline %}
@@ -113,19 +113,19 @@
             <div class="alert {{ ns.bgclass }} mt-1 mb-3">
                 {% call icon_block(ns.iconclass) %}
                     <div>
-                        <strong>{{ nproj }} active project{{ nproj_plural }} attached to this project class.</strong>
+                        You have <strong>{{ nproj }}</strong> active project{{ nproj_plural }} attached to this project class.
+                        <a href="{{ url_for('faculty.edit_projects') }}" class="text-decoration-none ms-1">Go to project library...</a>
                     </div>
                     {% if nproj > 0 and sel_state <= config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
                         <div class="mt-1">
                             Projects appearing here will be included when the project list is
                             published.
+                        </div>
+                        <div class="mt-1">
                             To remove a project, use the Actions menu and select
                             &ldquo;Don't offer this project&rdquo;.
                         </div>
                     {% endif %}
-                    <div class="mt-1">
-                        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-sm {% if nproj==0 %}btn-warning{% else %}btn-outline-secondary{% endif %} text-nowrap">Go to project library</a>
-                    </div>
                 {% endcall %}
             </div>
 {#            {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and variants_missing_aims and variants_missing_aims|length > 0 %}#}
@@ -179,43 +179,49 @@
                             <strong>{{ loop.index }}</strong>
                         </div>
                         <div class="col-8">
-                            <a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=project.id, url=url_for('faculty.dashboard', id=pclass.id), text='dashboard', pclass=pclass.id) }}">{{ project.name }}</a>
                             <div>
-                                {% if project.meeting_reqd == project.MEETING_REQUIRED %}
-                                    <span class="badge bg-primary">Meeting required</span>
-                                    {% if not faculty_data.sign_off_students %}
-                                        <span class="badge bg-danger"><i class="fas fa-cross"></i> Disabled in settings</span>
-                                    {% endif %}
-                                {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-                                    <span class="badge bg-primary">Meeting optional</span>
-                                    {% if not faculty_data.sign_off_students %}
-                                        <span class="badge bg-danger"><i class="fas fa-cross"></i> Disabled in settings</span>
-                                    {% endif %}
-                                {% elif project.meeting_reqd == project.MEETING_NONE %}
-                                    <span class="badge bg-secondary">Meeting not required</span>
-                                {% endif %}
+                                <a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=project.id, url=url_for('faculty.dashboard', id=pclass.id), text='dashboard', pclass=pclass.id) }}">{{ project.name }}</a>
                                 {% set ns = namespace(affiliation=false) %}
                                 {% if project.group %}
-                                    {{ project.group.make_label()|safe }}
+                                    {{ project.group.make_label(user_classes='ms-1')|safe }}
                                     {% set ns.affiliation = true %}
                                 {% endif %}
                                 {% for tag in project.forced_group_tags %}
                                     {% if tag.name|length > 15 %}
-                                        {{ tag.make_label(tag.name[0:15]+'...')|safe }}
+                                        {{ tag.make_label(tag.name[0:15]+'...', user_classes='ms-1')|safe }}
                                     {% else %}
-                                        {{ tag.make_label()|safe }}
+                                        {{ tag.make_label(user_classes='ms-1')|safe }}
                                     {% endif %}
                                     {% set ns.affiliation = true %}
                                 {% endfor %}
                                 {% if not ns.affiliation %}
-                                    <span class="badge bg-warning text-dark">No affiliations</span>
+                                    <span class="small text-danger ms-2">No affiliations</span>
                                 {% endif %}
+                            </div>
+                            <div>
+                                {% if project.meeting_reqd == project.MEETING_REQUIRED %}
+                                    <span class="small text-success">Meeting confirmation required</span>
+                                    {% if not faculty_data.sign_off_students %}
+                                        <span class="small text-muted">|</span> <span class="small text-danger">Note: meeting confirmation requests are disabled in your settings. <a class="text-decoration-none" href="{{ url_for('faculty.settings') }}">Fix...</a></span>
+                                    {% endif %}
+                                {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
+                                    <span class="small text-dark">Meeting confirmation optional</span>
+                                    {% if not faculty_data.sign_off_students %}
+                                        <span class="small text-muted">|</span> <span class="small text-danger">Note: meeting confirmation requests are disabled in your settings. <a class="text-decoration-none" href="{{ url_for('faculty.settings') }}">Fix...</a></span>
+                                    {% endif %}
+                                {% elif project.meeting_reqd == project.MEETING_NONE %}
+                                    <span class="small text-dark">Meeting confirmation not required</span>
+                                {% endif %}
+                                <span class="small text-muted">|</span>
                                 {% set num_assessors = project.number_assessors(pclass) %}
                                 {% if num_assessors > 0 %}
-                                    <span class="badge bg-info text-dark" data-bs-toggle="tooltip" data-html="true" title="{% for assessor in project.get_assessor_list(pclass) %}<div>{{ assessor.user.name }}</div>{% endfor %}">{{ num_assessors }} assessor{%- if num_assessors != 1 -%}s{%- endif -%}</span>
+                                    <span class="small text-dark">{{ num_assessors }} assessor{%- if num_assessors != 1 -%}s{%- endif -%}</span>
+                                    <i class="small fas fa-info-circle text-secondary" tabindex="0" data-bs-toggle="popover" data-bs-container="body" data-bs-trigger="focus" title="Assessors for this project" data-bs-content="<div class='small text-muted'><ul>{%- for assessor in project.get_assessor_list(pclass) -%}<li>{{ assessor.user.name }}</li>{%- endfor -%}</ul></div>"></i>
                                 {% else %}
-                                    <span class="badge bg-danger">No assessors assigned</span>
+                                    <span class="small text-danger">No assessors assigned</span>
                                 {% endif %}
+                            </div>
+                            <div>
                             </div>
                             {% if not available %}
                                 <div class="mt-1">
@@ -272,9 +278,13 @@
                 {% set number_live_plural = 's' %}
             {% endif %}
             {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and live_projects.first() %}
-                <div class="mt-1 mb-1">
-                    You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
-                    on the live system for students making selections for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}.
+                <div class="alert alert-info mt-1 mb-3">
+                    {% call icon_block("info-circle") %}
+                        <div>
+                            You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
+                            on the live system for students making selections for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}.
+                        </div>
+                    {% endcall %}
                 </div>
                 <div class="container-fluid">
                     <div class="row fac-project-table">
@@ -308,7 +318,7 @@
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">
                                         {% set has_recommended = sel.satisfies_recommended(project) %}
-                                        <a class="badge text-decoration-none text-nohover-light {% if has_recommended %}bg-primary{% else %}bg-warning text-dark{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fas fa-exclamation-triangle" style="color:red;"></i> {% endif %}</a>
+                                        <a class="badge text-decoration-none text-nohover-light {% if has_recommended %}bg-primary{% else %}bg-warning text-dark{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fas fa-exclamation-triangle text-danger"></i> {% endif %}</a>
                                         {% if req.viewed is not none and not req.viewed %}
                                             <span class="badge bg-info text-dark">NEW</span>
                                         {% endif %}
@@ -328,10 +338,10 @@
                                                     <i class="fas fa-trash fa-fw"></i> Delete
                                                 </a>
                                             {% else %}
-                                                <a class=""dropdown-item d-flex gap-2 disabled">
+                                                <a class="dropdown-item d-flex gap-2 disabled">
                                                     <i class="fas fa-check fa-fw"></i> Confirm
                                                 </a>
-                                                <a class=""dropdown-item d-flex gap-2 disabled">
+                                                <a class="dropdown-item d-flex gap-2 disabled">
                                                     <i class="fas fa-trash fa-fw"></i> Delete
                                                 </a>
                                             {% endif %}
@@ -366,7 +376,6 @@
                     {% endfor %}
                 </div>
             {% endif %}
-
         </div>
     </div>
 {% endmacro %}

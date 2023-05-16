@@ -60,13 +60,16 @@ def FacultyDataMixinFactory(admin=False, enable_canvas=False):
         academic_title = SelectField('Academic title', choices=academic_titles, coerce=int)
 
         use_academic_title = BooleanField('Use academic title', default=True,
-                                          description='Prefix your name with Dr, Professor or similar in student-facing web pages.')
+                                          description='Prefix your name with Dr, Professor, or similar '
+                                                      'in student-facing web pages.')
 
         # project defaults
 
-        sign_off_students = BooleanField('Ask to confirm student meetings', default=True,
-                                         description='If meetings are required before project selection, '
-                                                     'confirmation is needed before allowing students to sign up.')
+        sign_off_students = BooleanField('Enforce confirmation requests', default=True,
+                                         description='Projects may optionally be set to require students to obtain '
+                                                     'confirmation before they can be included in a ranked selection. '
+                                                     'Disable this option to ignore all confirmation requirements '
+                                                     'for your own projects.')
 
         enforce_capacity = BooleanField('Enforce maximum capacity', default=True,
                                         description='Select if you wish to prevent the automated matching algorithm '
@@ -78,7 +81,8 @@ def FacultyDataMixinFactory(admin=False, enable_canvas=False):
                                                     'the corresponding description.')
 
         project_capacity = IntegerField('Default project capacity',
-                                        description='Default number of students that can be assigned to a project',
+                                        description='Default maximum number of students that can be assigned to a '
+                                                    'project',
                                         validators=[NotOptionalIf('enforce_capacity')])
 
         show_popularity = BooleanField('Show popularity indicators', default=True,
@@ -91,7 +95,7 @@ def FacultyDataMixinFactory(admin=False, enable_canvas=False):
 
         dont_clash_presentations = BooleanField("Don't schedule presentations with other students taking "
                                                 "the same project", default=True,
-                                                description='Select if you wish to prevent multiple students taking '
+                                                description='Enable if you wish to prevent multiple students taking '
                                                             'your projects from being scheduled to give presentations '
                                                             'in the same session. Students often prefer this '
                                                             'arrangement, so by default it is usually enabled. '

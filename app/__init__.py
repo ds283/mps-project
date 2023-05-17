@@ -131,23 +131,6 @@ def create_app():
 
     cache.init_app(app)
 
-    # add Flask-profiler and rate limiter in production mode
-    if config_name == 'production':
-        profiler = Profiler(app)
-
-        # set up Flask-Limiter
-        limiter.init_app(app)
-
-    # add debug toolbar if in debug mode
-    if config_name == 'development':
-        toolbar = DebugToolbarExtension(app)
-        # api_toolbar = DebugAPIExtension(app)
-
-        # panels = list(app.config['DEBUG_TB_PANELS'])
-        # panels.append('flask_debug_api.BrowseAPIPanel')
-        # panels.append('flask_debugtoolbar_lineprofilerpanel.panels.LineProfilerPanel')
-        # app.config['DEBUG_TB_PANELS'] = panels
-
     # set up CSS and javascript assets
     env = Environment(app)
 
@@ -437,5 +420,23 @@ def create_app():
 
     from .public_browser import public_browser as public_browser_blueprint
     app.register_blueprint(public_browser_blueprint, url_prefix='/public')
+
+    # add Flask-profiler and rate limiter in production mode
+    if config_name == 'production':
+        # profiler needs to be added near the end, because it has to wrap existing endpoints
+        profiler = Profiler(app)
+
+        # set up Flask-Limiter
+        limiter.init_app(app)
+
+    # add debug toolbar if in debug mode
+    if config_name == 'development':
+        toolbar = DebugToolbarExtension(app)
+        # api_toolbar = DebugAPIExtension(app)
+
+        # panels = list(app.config['DEBUG_TB_PANELS'])
+        # panels.append('flask_debug_api.BrowseAPIPanel')
+        # panels.append('flask_debugtoolbar_lineprofilerpanel.panels.LineProfilerPanel')
+        # app.config['DEBUG_TB_PANELS'] = panels
 
     return app

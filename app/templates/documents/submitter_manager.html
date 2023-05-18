@@ -218,7 +218,7 @@
                                 {% if not is_student or attachment.publish_to_students %}
                                     {{ asset_line(asset, attachment,
                                                   download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
-                                                  delete_url=url_for('convenor.delete_period_attachment', aid=attachment.id),
+                                                  delete_url=url_for('convenor.delete_period_attachment', aid=attachment.id, url=url, text=text),
                                                   edit_url=url_for('convenor.edit_period_attachment', aid=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                                   acl_url=url_for('documents.attachment_acl', attach_type=0, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                                   log_url=url_for('documents.attachment_download_log', attach_type=0, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
@@ -335,7 +335,7 @@
                                 {% if not is_student or (current_user.id == attachment.uploaded_id or asset.has_access(current_user.id))%}
                                     {{ asset_line(asset, attachment,
                                                   download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
-                                                  delete_url=url_for('documents.delete_submitter_attachment', aid=attachment.id),
+                                                  delete_url=url_for('documents.delete_submitter_attachment', aid=attachment.id, url=url, text=text),
                                                   edit_url=url_for('documents.edit_submitter_attachment', aid=attachment.id, url=url, text=text),
                                                   acl_url=url_for('documents.attachment_acl', attach_type=1, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                                   log_url=url_for('documents.attachment_download_log', attach_type=1, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),

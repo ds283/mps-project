@@ -72,8 +72,7 @@ If the marks returned by examiners or other assigned supervision staff
 If this happens you will be contacted by email.
 
 If you have been assigned further projects to mark, they will be delivered in
-separate emails to help with identifying the required marking materials via
-search.
+separate emails.
 
 If you have any questions, please direct these to the project convenor:
 {{ config.convenor_name }} <{{ config.convenor_email }}>

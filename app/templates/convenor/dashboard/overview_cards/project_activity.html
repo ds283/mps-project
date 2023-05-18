@@ -76,19 +76,17 @@
         {{ date_field(feedback_form.feedback_deadline, 'deadline_datetimepicker') }}
         {{ wtf.render_field(feedback_form.max_attachment) }}
         {{ wtf.render_field(feedback_form.cc_me) }}
-        <div class="d-flex flex-row justify-content-end">
-            <div class="btn-group mb-1">
-                {% if feedback_form.test_button is defined  %}
-                    {{ wtf.render_field(feedback_form.test_button, button_map={'test_button': 'outline-secondary'}, button_size='sm') }}
-                {% endif %}
-                {% if feedback_form.send_notifications is defined %}
-                    {{ wtf.render_field(feedback_form.send_notifications, button_map={'send_notifications': 'outline-secondary'}, button_size='sm') }}
-                {% endif %}
-                {% if feedback_form.close_button is defined %}
-                    {{ wtf.render_field(feedback_form.close_button, button_map={'close_button': 'outline-secondary'}, button_size='sm') }}
-                {% endif %}
-                {{ wtf.render_field(feedback_form.submit_button, button_map={'submit_button': 'outline-danger'}, button_size='sm') }}
-            </div>
+        <div class="d-flex flex-row justify-content-end gap-2">
+            {% if feedback_form.test_button is defined  %}
+                {{ wtf.render_field(feedback_form.test_button, button_map={'test_button': 'outline-secondary'}, button_size='sm') }}
+            {% endif %}
+            {% if feedback_form.send_notifications is defined %}
+                {{ wtf.render_field(feedback_form.send_notifications, button_map={'send_notifications': 'outline-secondary'}, button_size='sm') }}
+            {% endif %}
+            {% if feedback_form.close_button is defined %}
+                {{ wtf.render_field(feedback_form.close_button, button_map={'close_button': 'outline-secondary'}, button_size='sm') }}
+            {% endif %}
+            {{ wtf.render_field(feedback_form.submit_button, button_map={'submit_button': 'outline-danger'}, button_size='sm') }}
         </div>
     </form>
 {% endmacro %}

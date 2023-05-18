@@ -9,7 +9,7 @@
 <p><strong>Other supervision team members</strong>
 <ul>
 {% for role in supervisors %}
-<li><a href="mailto:{{ role.user.email }}">{{ role.user.name }}</a> &langle;<a href="mailto:{{ role.user.email }}">{{ role.user.email }}</a>&rangle;</li>
+<li><a href="mailto:{{ role.user.email }}">{{ role.user.name }}</a> &lt;<a href="mailto:{{ role.user.email }}">{{ role.user.email }}</a>&gt;</li>
 {% endfor %}
 </ul></p>
 {%- endif %}
@@ -17,7 +17,7 @@
 <p><strong>Assigned examiners</strong>
 <ul>
 {% for role in markers %}
-<li><a href="mailto:{{ role.user.email }}">{{ role.user.name }}</a> &langle;<a href="mailto:{{ role.user.email }}">{{ role.user.email }}</a>&rangle;</li>
+<li><a href="mailto:{{ role.user.email }}">{{ role.user.name }}</a> &lt;<a href="mailto:{{ role.user.email }}">{{ role.user.email }}</a>&gt;</li>
 {% endfor %}
 </ul></p>
 {%- else -%}
@@ -42,7 +42,7 @@
 
 <ul><li><a href="https://universityofsussex.eu.qualtrics.com/jfe/form/SV_cHfXFOjPMsY9omq">https://universityofsussex.eu.qualtrics.com/jfe/form/SV_cHfXFOjPMsY9omq</a></li></ul>
 
-<p>The form requests a short justification of the mark you assign in each category. Please also enter feedback for the studentdddddddddddd.</p>
+<p>The form requests a short justification of the mark you assign in each category. Please also enter feedback for the student.</p>
 
 <p>If the marks returned by examiners or other assigned supervision staff (if any) differ significantly, you may be asked to arrive at an agreed mark. If this happens you will be contacted by email.</p>
 

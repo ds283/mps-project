@@ -9,7 +9,7 @@
 <p><strong>Supervision team members</strong>
 <ul>
 {% for role in supervisors %}
-<li><a href="mailto:{{ role.user.email }}">{{ role.user.name }}</a> &langle;<a href="mailto:{{ role.user.email }}">{{ role.user.email }}</a>&rangle;</li>
+<li><a href="mailto:{{ role.user.email }}">{{ role.user.name }}</a> &lt;<a href="mailto:{{ role.user.email }}">{{ role.user.email }}</a>&gt;</li>
 {% endfor %}
 </ul></p>
 {%- else -%}
@@ -19,7 +19,7 @@
 <p><strong>Other assigned examiners</strong>
 <ul>
 {% for role in markers %}
-<li><a href="mailto:{{ role.user.email }}">{{ role.user.name }}</a> &langle;<a href="mailto:{{ role.user.email }}">{{ role.user.email }}</a>&rangle;</li>
+<li><a href="mailto:{{ role.user.email }}">{{ role.user.name }}</a> &lt;<a href="mailto:{{ role.user.email }}">{{ role.user.email }}</a>&gt;</li>
 {% endfor %}
 </ul></p>
 {%- endif %}

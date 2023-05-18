@@ -3,17 +3,38 @@
 {% from "icon_block.html" import icon_block %}
 
 {% macro report_status(period) %}
-    {% if period.number_submitters_without_reports > 0 %}
-        <div class="mt-2">
-            {{  period.number_submitters_without_reports }} submitters are waiting for reports to be uploaded.
-        </div>
-    {% endif %}
-    {% if period.canvas_enabled and period.number_submitters_canvas_report_available > 0 %}
-        <div class="mt-1">
-            {{ period.number_submitters_canvas_report_available }} submitters have a report that can be pulled from Canvas.
-            <a class="link-danger text-decoration-none" href="{{ url_for('documents.pull_all_reports_from_canvas', pid=period.id) }}">Pull all reports...</a>
-        </div>
-    {% endif %}
+    {% set to_email = period.number_reports_to_email %}
+    {% set without_reports = period.number_submitters_without_reports %}
+    {% set reports_available = period.number_submitters_canvas_report_available %}
+    <ul>
+        {% if to_email > 0 %}
+            {% if to_email == 1 %}
+                {% set plural = " is" %}
+            {% else %}
+                {% set plural = "s are" %}
+            {% endif %}
+            <li class="text-primary">{{ to_email }} report{{ plural }} waiting for marking notifications to be sent.</li>
+        {% endif %}
+        {% if without_reports > 0 %}
+            {% if without_reports == 1 %}
+                {% set plural = " is" %}
+            {% else %}
+                {% set plural = "s are" %}
+            {% endif %}
+            <li class="text-danger">{{  without_reports }} submitter{{ plural }} waiting for reports to be uploaded.</li>
+        {% endif %}
+        {% if period.canvas_enabled and reports_available > 0 %}
+            {% if reports_available == 1 %}
+                {% set plural = " has" %}
+            {% else %}
+                {% set plural = "s have" %}
+            {% endif %}
+            <li>
+                <span class="text-primary">{{ reports_available }} submitter{{ plural }} a report that can be pulled from Canvas.</span>
+                <a class="link-success text-decoration-none" href="{{ url_for('documents.pull_all_reports_from_canvas', pid=period.id) }}">Pull all reports...</a>
+            </li>
+        {% endif %}
+    </ul>
 {% endmacro %}
 
 {% macro project_activity_banner(period, today) %}

@@ -7,6 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from typing import List
 
 from flask import current_app, render_template
 from flask_mailman import EmailMultiAlternatives, EmailMessage
@@ -19,13 +20,14 @@ from celery.exceptions import Ignore
 from ..database import db
 from ..models import SubmissionPeriodRecord, SubmissionRecord, User, SubmittedAsset, ProjectClassConfig, \
     ProjectClass, FacultyData, SubmittingStudent, StudentData, PeriodAttachment, SubmissionAttachment, \
-    GeneratedAsset
+    GeneratedAsset, SubmissionRole
 
 from ..task_queue import register_task
 
 from pathlib import Path
 from dateutil import parser
 
+from datetime import date
 
 def register_marking_tasks(celery):
 
@@ -105,6 +107,98 @@ def register_marking_tasks(celery):
                           'info', autocommit=True)
 
 
+    def _build_supervisor_email(role: SubmissionRole, record: SubmissionRecord, config: ProjectClassConfig,
+                                pclass: ProjectClass, submitter: SubmittingStudent, student: StudentData,
+                                period: SubmissionPeriodRecord, asset: GeneratedAsset, deadline: date,
+                                supervisors: List[SubmissionRole], markers: List[SubmissionRole],
+                                test_email: bool, cc_convenor: bool, max_attachment: int) -> EmailMultiAlternatives:
+        filename_path: Path = Path(asset.filename)
+        extension: str = filename_path.suffix.lower()
+
+        user: User = role.user
+
+        print('-- preparing email to supervisor "{name}" for submitter '
+              '"{sub_name}"'.format(name=user.name, sub_name=student.user.name))
+
+        filename: Path = \
+            Path('{year}_{abbv}_candidate_{number}'.format(year=config.year, abbv=pclass.abbreviation,
+                                                           number=student.exam_number)).with_suffix(extension)
+        print('-- attachment filename = "{path}"'.format(path=str(filename)))
+
+        subject = 'IMPORTANT: {abbv} project marking: {stu} - DEADLINE {deadline} ' \
+                  '- DO NOT REPLY'.format(abbv=pclass.abbreviation, stu=student.user.name,
+                                          deadline=deadline.strftime("%a %d %b"))
+
+        msg = EmailMultiAlternatives(subject=subject,
+                                     from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=[pclass.convenor_email],
+                                     to=[test_email if test_email is not None else user.email])
+
+        if cc_convenor:
+            msg.cc([config.convenor_email])
+
+        attached_documents = _attach_documents(msg, record, filename, max_attachment, role='supervisor')
+
+        msg.body = render_template('email/marking/supervisor.txt', role=role, config=config, pclass=pclass,
+                                   period=period, markers=markers, supervisors=supervisors, submitter=submitter,
+                                   project=record.project, student=student, record=record,
+                                   deadline=deadline, attached_documents=attached_documents)
+
+        html = render_template('email/marking/supervisor.html', role=role, config=config, pclass=pclass,
+                               period=period, markers=markers, supervisors=supervisors, submitter=submitter,
+                               project=record.project, student=student, record=record,
+                               deadline=deadline, attached_documents=attached_documents)
+        msg.attach_alternative(html, "text/html")
+
+        return msg
+
+
+    def _build_marker_email(role: SubmissionRole, record: SubmissionRecord, config: ProjectClassConfig,
+                            pclass: ProjectClass, submitter: SubmittingStudent, student: StudentData,
+                            period: SubmissionPeriodRecord, asset: GeneratedAsset, deadline: date,
+                            supervisors: List[SubmissionRole], markers: List[SubmissionRole],
+                            test_email: bool, cc_convenor: bool, max_attachment: int) -> EmailMultiAlternatives:
+        filename_path: Path = Path(asset.filename)
+        extension: str = filename_path.suffix.lower()
+
+        user: User = role.user
+
+        print('-- preparing email to marker "{name}" for submiter '
+              '"{sub_name}"'.format(name=user.name, sub_name=student.user.name))
+
+        filename: Path = \
+            Path('{year}_{abbv}_candidate_{number}'.format(year=config.year, abbv=pclass.abbreviation,
+                                                           number=student.exam_number)).with_suffix(extension)
+        print('-- attachment filename = "{path}"'.format(path=str(filename)))
+
+        subject = 'IMPORTANT: {abbv} project marking: candidate {number} - DEADLINE {deadline} ' \
+                  '- DO NOT REPLY'.format(abbv=pclass.abbreviation, number=student.exam_number,
+                                          deadline=deadline.strftime("%a %d %b"))
+
+        msg = EmailMultiAlternatives(subject=subject,
+                                     from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                                     reply_to=[pclass.convenor_email],
+                                     to=[test_email if test_email is not None else yser.user.email])
+
+        if cc_convenor:
+            msg.cc([config.convenor_email])
+
+        attached_documents = _attach_documents(msg, record, filename, max_attachment, role='marker')
+
+        msg.body = render_template('email/marking/marker.txt', config=config, pclass=pclass,
+                                   period=period, markers=markers, supervisors=supervisors, submitter=submitter,
+                                   project=record.project, student=student, record=record,
+                                   deadline=deadline, attached_documents=attached_documents)
+
+        html = render_template('email/marking/marker.html', config=config, pclass=pclass,
+                               period=period, markers=markers, supervisors=supervisors, submitter=submitter,
+                               project=record.project, student=student, record=record,
+                               deadline=deadline, attached_documents=attached_documents)
+        msg.attach_alternative(html, "text/html")
+
+        return msg
+
+
     @celery.task(bind=True, default_retry_delay=30)
     def dispatch_emails(self, record_id, cc_convenor, max_attachment, test_email, deadline):
         try:
@@ -118,7 +212,8 @@ def register_marking_tasks(celery):
             raise Ignore()
 
         # nothing to do if either (1) no project assigned, or (2) no report yet uploaded, or
-        # (3) processed report not yet generaed
+        # (3) processed report not yet generated; SubmissionRecord instances in this position will
+        # need to have marking emails sent later
         if record.project is None or record.processed_report is None:
             return
 
@@ -128,104 +223,55 @@ def register_marking_tasks(celery):
         period: SubmissionPeriodRecord = record.period
         config: ProjectClassConfig = period.config
         pclass: ProjectClass = config.project_class
-        supervisor: FacultyData = record.project.owner
-        marker: FacultyData = record.marker
         submitter: SubmittingStudent = record.owner
         student: StudentData = submitter.student
 
-        filename_path: Path = Path(asset.filename)
-        extension: str = filename_path.suffix.lower()
+        supervisors: List[SubmissionRole] = record.supervisor_roles
+        markers: List[SubmissionRole] = record.marker_roles
 
         tasks = []
 
-        deadline = parser.parse(deadline).date()
+        deadline: date = parser.parse(deadline).date()
 
-        # check whether we need to email the supervisor
-        if not record.email_to_supervisor and supervisor is not None:
-            print('-- preparing email to supervisor')
+        # check which supervisors need to be sent a marking notification, if any
+        for role in supervisors:
+            role: SubmissionRole
+            if not role.marking_email:
+                filtered_supervisors: List[SubmissionRole] = [x for x in supervisors if x.id != role.id]
 
-            filename: Path = \
-                Path('{year}_{abbv}_candidate_{number}'.format(year=config.year, abbv=pclass.abbreviation,
-                                                               number=student.exam_number)).with_suffix(extension)
-            print('-- attachment filename = "{path}"'.format(path=str(filename)))
+                msg: EmailMultiAlternatives = _build_supervisor_email(role, record, config, pclass, submitter, student,
+                                                                      period, asset, deadline, filtered_supervisors, markers,
+                                                                      test_email, cc_convenor, max_attachment)
 
-            subject = 'IMPORTANT: {abbv} project marking: {stu} - DEADLINE {deadline} ' \
-                      '- DO NOT REPLY'.format(abbv=pclass.abbreviation, stu=student.user.name,
-                                              deadline=deadline.strftime("%a %d %b"))
+                # register a new task in the database
+                task_id = register_task(msg.subject,
+                                        description='Send supervisor marking request to '
+                                                    '{r}'.format(r=', '.join(msg.to)))
 
-            msg = EmailMultiAlternatives(subject=subject,
-                                         from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                         reply_to=[pclass.convenor_email],
-                                         to=[test_email if test_email is not None else supervisor.user.email])
-
-            if cc_convenor:
-                msg.cc([config.convenor_email])
-
-            attached_documents = _attach_documents(msg, record, filename, max_attachment, role='supervisor')
-
-            msg.body = render_template('email/marking/supervisor.txt', config=config, pclass=pclass,
-                                       period=period, marker=marker, supervisor=supervisor, submitter=submitter,
-                                       project=record.project, student=student, record=record,
-                                       deadline=deadline, attached_documents=attached_documents)
-
-            html = render_template('email/marking/supervisor.html', config=config, pclass=pclass,
-                                       period=period, marker=marker, supervisor=supervisor, submitter=submitter,
-                                       project=record.project, student=student, record=record,
-                                       deadline=deadline, attached_documents=attached_documents)
-            msg.attach_alternative(html, "text/html")
-
-            # register a new task in the database
-            task_id = register_task(msg.subject,
-                                    description='Send supervisor marking request to '
-                                                '{r}'.format(r=', '.join(msg.to)))
-
-            # set up a task to email the supervisor
-            taskchain = chain(send_log_email.s(task_id, msg),
-                              mark_supervisor_sent.s(record_id, test_email is not None)).set(serializer='pickle')
-            tasks.append(taskchain)
-
-        if not record.email_to_marker and marker is not None:
-            print('-- preparing email to marker')
-
-            filename: Path = \
-                Path('{year}_{abbv}_candidate_{number}'.format(year=config.year, abbv=pclass.abbreviation,
-                                                               number=student.exam_number)).with_suffix(extension)
-            print('-- attachment filename = "{path}"'.format(path=str(filename)))
+                # set up a task to email the supervisor
+                taskchain = chain(send_log_email.s(task_id, msg),
+                                  record_marking_email_sent.s(role.id, test_email is not None, 'supervisor')).set(serializer='pickle')
+                tasks.append(taskchain)
 
 
-            subject = 'IMPORTANT: {abbv} project marking: candidate {number} - DEADLINE {deadline} ' \
-                      '- DO NOT REPLY'.format(abbv=pclass.abbreviation, number=student.exam_number,
-                                              deadline=deadline.strftime("%a %d %b"))
+        # check which markers need to be sent a marking notification, if any
+        for role in markers:
+            role: SubmissionRole
+            if not role.marking_email:
+                filtered_markers: List[SubmissionRole] = [x for x in markers if x.id != role.id]
 
-            msg = EmailMultiAlternatives(subject=subject,
-                                         from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                         reply_to=[pclass.convenor_email],
-                                         to=[test_email if test_email is not None else marker.user.email])
+                msg: EmailMultiAlternatives = _build_marker_email(role, record, config, pclass, submitter, student,
+                                                                   period, asset, deadline, supervisors, filtered_markers,
+                                                                   test_email, cc_convenor, max_attachment)
 
-            if cc_convenor:
-                msg.cc([config.convenor_email])
+                # register a new task in the database
+                task_id = register_task(msg.subject,
+                                        description='Send examiner marking request to '
+                                                    '{r}'.format(r=', '.join(msg.to)))
 
-            attached_documents = _attach_documents(msg, record, filename, max_attachment, role='marker')
-
-            msg.body = render_template('email/marking/marker.txt', config=config, pclass=pclass,
-                                       period=period, marker=marker, supervisor=supervisor, submitter=submitter,
-                                       project=record.project, student=student, record=record,
-                                       deadline=deadline, attached_documents=attached_documents)
-
-            html = render_template('email/marking/marker.html', config=config, pclass=pclass,
-                                       period=period, marker=marker, supervisor=supervisor, submitter=submitter,
-                                       project=record.project, student=student, record=record,
-                                       deadline=deadline, attached_documents=attached_documents)
-            msg.attach_alternative(html, "text/html")
-
-            # register a new task in the database
-            task_id = register_task(msg.subject,
-                                    description='Send examiner marking request to '
-                                                '{r}'.format(r=', '.join(msg.to)))
-
-            taskchain = chain(send_log_email.s(task_id, msg),
-                              mark_marker_sent.s(record_id, test_email is not None)).set(serializer='pickle')
-            tasks.append(taskchain)
+                taskchain = chain(send_log_email.s(task_id, msg),
+                                  record_marking_email_sent.s(role.id, test_email is not None, 'marker')).set(serializer='pickle')
+                tasks.append(taskchain)
 
         if len(tasks) > 0:
             return self.replace(group(tasks).set(serializer='pickle'))
@@ -330,21 +376,21 @@ def register_marking_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def mark_supervisor_sent(self, result_data, record_id, test):
+    def record_marking_email_sent(self, result_data, role_id, test, role_string):
         # result_data is forwarded from previous task in the chain, and is not used in the current implementation
 
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            role: SubmissionRole = db.session.query(SubmissionRole).filter_by(id=role_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load SubmissionRecord from database'})
+        if role is None:
+            self.update_state('FAILURE', meta={'msg': 'Could not load SubmissionRole from database'})
             raise Ignore()
 
-        if not test and not record.email_to_supervisor:
-            record.email_to_supervisor = True
+        if not test and not role.marking_email:
+            role.marking_email = True
 
             try:
                 db.session.commit()
@@ -352,30 +398,4 @@ def register_marking_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        return {'supervisor': 1}
-
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def mark_marker_sent(self, result_data, record_id, test):
-        # result_data is forwarded from previous task in the chain, and is not used in the current implementation
-
-        try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load SubmissionRecord from database'})
-            raise Ignore()
-
-        if not test and not record.email_to_marker:
-            record.email_to_marker = True
-
-            try:
-                db.session.commit()
-            except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
-
-        return {'marker': 1}
+        return {role_string: 1}

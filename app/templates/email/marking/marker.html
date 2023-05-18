@@ -1,34 +1,53 @@
-<p>Dear {{ marker.user.first_name }}</p>
+<p>Dear {{ role.user.first_name }}</p>
 
 <p><strong>This email is automated. Please do not reply to it directly, because email to the sending address is not monitored.</strong></p>
 
-<p>You have been assigned as second marker for a {{ pclass.abbreviation }} student (candidate number {{ student.exam_number }}).</p>
+<p>You have been assigned as an <strong>examiner</strong> for a {{ pclass.abbreviation }} student (candidate number {{ student.exam_number }}).</p>
 
-<p>Title: {{ project.name }}
-<br>Supervisor: {{ supervisor.user.name }} <{{ supervisor.user.email }}></p>
+<p>Title: {{ project.name }} {% if not project.generic and project.owner is not none and project.owner.id != role.user_id %}(project owner: {{ project.owner.user.name }}){% endif %}</p>
+{% if supervisors|length > 0 %}
+<p><strong>Supervision team members</strong>
+<ul>
+{% for role in supervisors %}
+<li><a href="mailto:{{ role.user.email }}">{{ role.user.name }}</a> &langle;<a href="mailto:{{ role.user.email }}">{{ role.user.email }}</a>&rangle;</li>
+{% endfor %}
+</ul></p>
+{%- else -%}
+<p><strong>Supervision team:</strong> no supervisors have yet been assigned</p>
+{%- endif %}
+{% if markers|length > 0 %}
+<p><strong>Other assigned examiners</strong>
+<ul>
+{% for role in markers %}
+<li><a href="mailto:{{ role.user.email }}">{{ role.user.name }}</a> &langle;<a href="mailto:{{ role.user.email }}">{{ role.user.email }}</a>&rangle;</li>
+{% endfor %}
+</ul></p>
+{%- endif %}
 
 {% if project.aims and project.aims|length > 0 -%}
-<p>The supervisor has given the following statement of aims, which you may wish to bear in mind when forming your opinion of the report.</p>
+<p>The project owner has supplied the following statement of aims, which you may wish to bear in mind when forming your opinion of the report.</p>
 
 <p><strong>AIMS:</strong>
 <br>{{ project.aims }}</p>
+{%- else -%}
+<p>The project owner has not yet supplied a statement of aims for this project.</p>
 {% endif -%}
 
 {% if project.review_only -%}
-<p>Please be aware that the project supervisor has marked this project as "review only", which usually means that the project is a literature review and does not contain a component of original work.</p>
-
-<p>The marks for "review only" projects are <strong>not</strong> capped, and a very good review (for example, synthesizing a subject area which has not yet been reviewed in the literature) should attract the same credit as any other good report.</p>
+<p>This project has been marked as "review only". Please be aware that the marks for such projects are <strong>not</strong> capped, and a very good review (for example, synthesizing a subject area which has not yet  been reviewed in the literature) should attract the same credit as any other good report.</p>
 {% endif -%}
 
-<p>The submitted report (or a link to download it) is attached to this email. After following the link, your download will begin immediately if you are logged in to <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a>. If not, you will be redirected to a login page and the download will begin automatically once you log in.</p>
+<p>The submitted report is attached to this email, unless it is too large. In this case, you can download it using the provided link. After following the link your download will begin immediately if you are logged in to <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a>. If not, you will be redirected to a login page and the download will begin automatically once you log in.</p>
 
-<p>Alternatively, you can download the report from your dashboard at <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a>. The convenor has requested that marking and feedback be completed by noon on {{ deadline.strftime("%a %d %b %Y") }}.</p>
+<p>The convenor has requested that marking and feedback be completed by mid-day on {{ deadline.strftime("%a %d %b %Y") }}.</p>
 
-<p>When you have formed your opinion of the report, please complete the attached marksheet. The exam board requires a short justification of the mark you assign in each category. When the sheet is complete you will need to agree a final mark with the second marker. Your mark schemes are different and there is no expectation that your marks will agree, or be related to each other in a simple way. However, if your marks are more than 10% different, you should record a brief rationale for the relative weighting you adopt in order to assist the exam board with their work.</p>
+<p>A bundle of marking materials is attached (see manifest below). Your assessment of the project should be based <strong>only</strong> on the submitted report. Please record your assessments using <a href="https://universityofsussex.eu.qualtrics.com/jfe/form/SV_bpdT55z0Zsoy5gy">this online form</a>.</p>
 
-<p>Both supervisor and marker sheets should be returned to the project convenor (<a href="mailto:{{ config.convenor_email }}">{{ config.convenor_email }}</a>), together with the agreed mark and its rationale. Only one copy of this is needed.</p>
+<ul><li><a href="https://universityofsussex.eu.qualtrics.com/jfe/form/SV_bpdT55z0Zsoy5gy">https://universityofsussex.eu.qualtrics.com/jfe/form/SV_cHfXFOjPMsY9omq</a></li></ul>
 
-<p>Please also enter your feedback for the student online at <a href="https://mpsprojects.sussex.ac.uk">mpsprojects.sussex.ac.uk</a> using the <em>Edit feedback</em> button for this project visible on your dashboard. By capturing your feedback electronically we ensure that it is pushed directly to the student by email.</p>
+<p>The form requests a short justification of the mark you assign in each category. Please also enter feedback for the student.</p>
+
+<p>If the marks returned by other examiners (if any) or assigned supervision staff differ significantly, you may be asked to arrive at an agreed mark. If this happens you will be contacted by email.</p>
 
 <p>If you have been assigned further projects to mark, they will be delivered in separate emails to help with identifying the required marking materials via search.</p>
 

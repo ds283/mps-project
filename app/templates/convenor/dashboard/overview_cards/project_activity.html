@@ -18,10 +18,12 @@
         {% if without_reports > 0 %}
             {% if without_reports == 1 %}
                 {% set plural = " is" %}
+                {% set report = "a report" %}
             {% else %}
                 {% set plural = "s are" %}
+                {% set report = "reports" %}
             {% endif %}
-            <li class="text-danger">{{  without_reports }} submitter{{ plural }} waiting for reports to be uploaded.</li>
+            <li class="text-danger">{{  without_reports }} submitter{{ plural }} waiting for {{ report }} to be uploaded.</li>
         {% endif %}
         {% if period.canvas_enabled and reports_available > 0 %}
             {% if reports_available == 1 %}

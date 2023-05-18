@@ -20,8 +20,6 @@ Other assigned examiners:
 {% for role in markers -%}
 - {{ role.user.name }} <{{ role.user.email }}>
 {% endfor -%}
-{%- else -%}
-Examiners: No examiners have yet been assigned
 {%- endif %}
 
 {% if project.aims and project.aims|length > 0 -%}

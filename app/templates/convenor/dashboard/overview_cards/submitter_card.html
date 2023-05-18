@@ -1,7 +1,7 @@
 {% from "convenor/dashboard/overview_cards/period_settings.html" import period_settings %}
 {% from "convenor/dashboard/overview_cards/period_closed.html" import period_closed %}
 {% from "convenor/dashboard/overview_cards/project_activity.html" import project_activity_banner, project_activity_form %}
-{% from "convenor/dashboard/overview_cards/feedback_marking.html" import feedback_marking %}
+{% from "convenor/dashboard/overview_cards/feedback_marking.html" import feedback_marking_banner, feedback_marking_form %}
 {% from "icon_block.html" import icon_block %}
 
 {% macro submitter_card(config, n, today, feedback_form) %}
@@ -63,8 +63,9 @@
                     </div>
                 {% else %}
                     {% if period.is_feedback_open %}
+                        {{ feedback_marking_banner(period, today) }}
                         {{ period_settings(config, period) }}
-                        {{ feedback_marking(config, period, feedback_form) }}
+                        {{ feedback_marking_form(config, period, feedback_form) }}
                     {% else %}
                         {{ project_activity_banner(period, today) }}
                         {{ period_settings(config, period) }}

@@ -111,7 +111,7 @@ def register_marking_tasks(celery):
                                 pclass: ProjectClass, submitter: SubmittingStudent, student: StudentData,
                                 period: SubmissionPeriodRecord, asset: GeneratedAsset, deadline: date,
                                 supervisors: List[SubmissionRole], markers: List[SubmissionRole],
-                                test_email: bool, cc_convenor: bool, max_attachment: int) -> EmailMultiAlternatives:
+                                test_email: str, cc_convenor: bool, max_attachment: int) -> EmailMultiAlternatives:
         filename_path: Path = Path(asset.filename)
         extension: str = filename_path.suffix.lower()
 
@@ -135,7 +135,7 @@ def register_marking_tasks(celery):
                                      to=[test_email if test_email is not None else user.email])
 
         if cc_convenor:
-            msg.cc([config.convenor_email])
+            msg.cc = [config.convenor_email]
 
         attached_documents = _attach_documents(msg, record, filename, max_attachment, role='supervisor')
 
@@ -157,13 +157,13 @@ def register_marking_tasks(celery):
                             pclass: ProjectClass, submitter: SubmittingStudent, student: StudentData,
                             period: SubmissionPeriodRecord, asset: GeneratedAsset, deadline: date,
                             supervisors: List[SubmissionRole], markers: List[SubmissionRole],
-                            test_email: bool, cc_convenor: bool, max_attachment: int) -> EmailMultiAlternatives:
+                            test_email: str, cc_convenor: bool, max_attachment: int) -> EmailMultiAlternatives:
         filename_path: Path = Path(asset.filename)
         extension: str = filename_path.suffix.lower()
 
         user: User = role.user
 
-        print('-- preparing email to marker "{name}" for submiter '
+        print('-- preparing email to marker "{name}" for submitter '
               '"{sub_name}"'.format(name=user.name, sub_name=student.user.name))
 
         filename: Path = \
@@ -178,19 +178,19 @@ def register_marking_tasks(celery):
         msg = EmailMultiAlternatives(subject=subject,
                                      from_email=current_app.config['MAIL_DEFAULT_SENDER'],
                                      reply_to=[pclass.convenor_email],
-                                     to=[test_email if test_email is not None else yser.user.email])
+                                     to=[test_email if test_email is not None else user.email])
 
         if cc_convenor:
-            msg.cc([config.convenor_email])
+            msg.cc = [config.convenor_email]
 
         attached_documents = _attach_documents(msg, record, filename, max_attachment, role='marker')
 
-        msg.body = render_template('email/marking/marker.txt', config=config, pclass=pclass,
+        msg.body = render_template('email/marking/marker.txt', role=role, config=config, pclass=pclass,
                                    period=period, markers=markers, supervisors=supervisors, submitter=submitter,
                                    project=record.project, student=student, record=record,
                                    deadline=deadline, attached_documents=attached_documents)
 
-        html = render_template('email/marking/marker.html', config=config, pclass=pclass,
+        html = render_template('email/marking/marker.html', role=role, config=config, pclass=pclass,
                                period=period, markers=markers, supervisors=supervisors, submitter=submitter,
                                project=record.project, student=student, record=record,
                                deadline=deadline, attached_documents=attached_documents)
@@ -249,8 +249,8 @@ def register_marking_tasks(celery):
                                                     '{r}'.format(r=', '.join(msg.to)))
 
                 # set up a task to email the supervisor
-                taskchain = chain(send_log_email.s(task_id, msg),
-                                  record_marking_email_sent.s(role.id, test_email is not None, 'supervisor')).set(serializer='pickle')
+                taskchain = chain(send_log_email.si(task_id, msg),
+                                  record_marking_email_sent.si(role.id, test_email is not None, 'supervisor')).set(serializer='pickle')
                 tasks.append(taskchain)
 
 
@@ -269,8 +269,8 @@ def register_marking_tasks(celery):
                                         description='Send examiner marking request to '
                                                     '{r}'.format(r=', '.join(msg.to)))
 
-                taskchain = chain(send_log_email.s(task_id, msg),
-                                  record_marking_email_sent.s(role.id, test_email is not None, 'marker')).set(serializer='pickle')
+                taskchain = chain(send_log_email.si(task_id, msg),
+                                  record_marking_email_sent.si(role.id, test_email is not None, 'marker')).set(serializer='pickle')
                 tasks.append(taskchain)
 
         if len(tasks) > 0:
@@ -376,7 +376,7 @@ def register_marking_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def record_marking_email_sent(self, result_data, role_id, test, role_string):
+    def record_marking_email_sent(self, role_id, test, role_string):
         # result_data is forwarded from previous task in the chain, and is not used in the current implementation
 
         try:

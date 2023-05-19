@@ -626,7 +626,7 @@ def add_asset_size_data():
 
 app = create_app()
 
-with app.app_context():
+# with app.app_context():
     # migrate_availability_data()
     # migrate_confirmation_data()
     # populate_email_options()
@@ -650,7 +650,7 @@ with app.app_context():
     # migrate_submission_roles()
     # migrate_matching_roles()
     # add_supervisor_pool_data()
-    add_asset_size_data()
+    # add_asset_size_data()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

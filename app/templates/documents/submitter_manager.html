@@ -60,10 +60,10 @@
                 <span class="text-primary">{{ asset.human_file_size }}</span>
                 {% if admin_rights %}
                     <span class="text-muted">|</span>
-                    <i class="fas fa-cloud text-secondary"></i> <span class="text-secondary">Downloads: <strong>{{ asset.number_downloads }}</strong></span>
+                    <i class="fas fa-cloud text-muted small"></i> <span class="text-muted small">Downloads: <strong>{{ asset.number_downloads }}</strong></span>
                 {% endif %}
             </div>
-            <div class="small mt-1">
+            <div class="text-muted small mt-1">
                 {% if asset.timestamp %}
                     <div>
                         {{ asset.verb_label }} on {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}

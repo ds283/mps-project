@@ -1,4 +1,5 @@
 {% from "macros.html" import submission_period_configure_button %}
+{% from "convenor/dashboard/overview_cards/period_status.html" import period_status %}
 
 {% macro period_settings(config, period) %}
     <ul class="list-group border-0 mb-3">
@@ -9,8 +10,7 @@
                     {{ submission_period_configure_button(period, config, small=true, margin=false) }}
                 </div>
             </div>
-            {% set messages = period.messages %}
-            <span class="text-muted">{{ messages|join(', ') }}</span>
+            {{ period_status(period) }}
         </li>
         {% if period.has_presentation %}
             <li class="list-group-item">

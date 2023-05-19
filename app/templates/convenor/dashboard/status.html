@@ -10,6 +10,8 @@
 {% from "convenor/dashboard/overview_cards/selection_open.html" import selection_open %}
 {% from "convenor/dashboard/overview_cards/selection_closed.html" import selection_closed %}
 
+{% from "convenor/dashboard/overview_cards/period_status.html" import period_status %}
+
 {% set rollover_in_progress = config.year < current_year %}
 
 {% block scripts %}
@@ -135,10 +137,7 @@
                                 {% endif %}
                             </div>
                             <div class="mb-2">
-                                {% set messages = p.messages %}
-                                {% if messages|length > 0 %}
-                                    <span class="text-muted">{{ messages|join(', ') }}</span>
-                                {% endif %}
+                                {{ period_status(p) }}
                             </div>
                         </li>
                     {% else %}

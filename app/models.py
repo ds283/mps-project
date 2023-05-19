@@ -6311,12 +6311,6 @@ class SubmissionPeriodRecord(db.Model):
         messages.append('Markers={m}'.format(m=self.number_markers))
         messages.append('Moderators={m}'.format(m=self.number_moderators))
 
-        if self.start_date:
-            messages.append('Start date {d}'.format(d=self.start_date.strftime("%a %d %b %Y")))
-
-        if self.hand_in_date:
-            messages.append('Hand-in date {d}'.format(d=self.hand_in_date.strftime("%a %d %b %Y")))
-
         if self.config.main_config.enable_canvas_sync:
             if self.canvas_enabled:
                 messages.append('Canvas integration enabled')
@@ -6339,32 +6333,6 @@ class SubmissionPeriodRecord(db.Model):
                 messages.append('Collect presentation feedback')
             else:
                 messages.append('Do not collect presentation feedback')
-
-        if self.feedback_open:
-            if self.closed:
-                messages.append('Feedback closed')
-                if self.feedback_id:
-                    if self.feedback_timestamp:
-                        messages.append('Feedback opened by {name} at {time}'.format(name=self.feedback_by.name,
-                                                                                     time=self.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S")))
-                    else:
-                        messages.append('Feedback opened by {name}'.format(name=self.feedback_by.name))
-
-                if self.closed_id:
-                    if self.closed_timestamp:
-                        messages.append('Feedback closed by {name} at {time}'.format(name=self.closed_by.name,
-                                                                                     time=self.closed_timestamp.strftime("%a %d %b %Y %H:%M:%S")))
-                    else:
-                        messages.append('Feedback closed by {name}'.format(name=self.closed_by.name))
-
-            else:
-                messages.append('Feedback open')
-                if self.feedback_id:
-                    if self.feedback_timestamp:
-                        messages.append('Feedback opened by {name} at {time}'.format(name=self.feedback_by.name,
-                                                                                     time=self.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S")))
-                    else:
-                        messages.append('Feedback opened by {name}'.format(name=self.feedback_by.name))
 
         return messages
 

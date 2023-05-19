@@ -1,0 +1,49 @@
+{% macro period_status(p) %}
+    {% set messages = p.messages %}
+    {% if messages|length > 0 %}
+        <div class="text-muted mb-1 small">Status <i class="fas fa-info-circle" tabindex="0" data-bs-toggle="popover" title="{{ p.display_name }}" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul class='small'>{% for msg in messages %}<li>{{ msg }}</li>{% endfor %}</ul>"></i></div>
+    {% endif %}
+    {% if p.start_date %}
+        <div class="text-primary small"><i class="fa fa-calendar"></i> Start date <strong>{{ p.start_date.strftime("%a %d %b %Y") }}</strong></div>
+    {% endif %}
+    {% if p.hand_in_date %}
+        <div class="text-primary small"><i class="fa fa-calendar"></i> Hand-in date <strong>{{ p.hand_in_date.strftime("%a %d %b %Y") }}</strong></div>
+    {% endif %}
+    {% if p.feedback_open %}
+        <div class="text-secondary mt-1">
+            {% if p.closed %}
+                <div class="mt-1"><i class="fas fa-lock"></i> Feedback closed</div>
+                <ul>
+                    {% if p.feedback_id %}
+                        <li>
+                            Feedback opened by <i class="fas fa-user-circle"></i> {{ p.feedback_by.name }}
+                            {% if p.feedback_timestamp %}
+                                at {{ p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                            {% endif %}
+                        </li>
+                    {% endif %}
+                    {% if p.closed_id %}
+                        <li>
+                            Feedback closed by <i class="fas fa-user-circle"></i> {{ p.closed_by.name }}
+                            {% if p.closed_timestamp %}
+                                at {{ p.closed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                            {% endif %}
+                        </li>
+                    {% endif %}
+                </ul>
+            {% else %}
+                <div class="mt-1"><i class="fas fa-lock-open"></i> Feedback open</div>
+                <ul>
+                    {% if p.feedback_id %}
+                        <li>
+                            Feedback opened by <i class="fas fa-user-circle"></i> {{ p.feedback_by.name }}
+                            {% if p.feedback_timestamp %}
+                                at {{ p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                            {% endif %}
+                        </li>
+                    {% endif %}
+                </ul>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endmacro %}

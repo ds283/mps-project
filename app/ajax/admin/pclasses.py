@@ -126,13 +126,13 @@ _workload = \
     <span class="badge bg-primary">S {{ p.CATS_supervision }}</span>
 {% endif %}
 {% if p.uses_marker %}
-    <span class="badge bg-info text-dark">Mk {{ p.CATS_marking }}</span>
+    <span class="badge bg-info">Mk {{ p.CATS_marking }}</span>
 {% endif %}
 {% if p.uses_moderator %}
-    <span class="badge bg-info text-dark">Mo {{ p.CATS_moderation }}</span>
+    <span class="badge bg-info">Mo {{ p.CATS_moderation }}</span>
 {% endif %}
 {% if p.uses_presentations %}
-    <span class="badge bg-info text-dark">P {{ p.CATS_presentation }}</span>
+    <span class="badge bg-info">P {{ p.CATS_presentation }}</span>
 {% endif %}
 """
 
@@ -183,15 +183,15 @@ _submissions = \
 """
 <span class="badge bg-primary">{{ p.submissions }}/yr</span>
 {% if p.uses_marker %}
-    <span class="badge bg-info text-dark">Marked</span>
+    <span class="badge bg-info">Marked</span>
 {% endif %}
 {% if p.uses_moderator %}
-    <span class="badge bg-info text-dark">Moderated</span>
+    <span class="badge bg-info">Moderated</span>
 {% endif %}
 {% if p.uses_presentations %}
     {% for item in p.periods.all() %}
         {% if item.has_presentation %}
-            <span class="badge bg-info text-dark">Present: Prd #{{ item.period }}</span>
+            <span class="badge bg-info">Present: Prd #{{ item.period }}</span>
         {% endif %}
     {% endfor %}
 {% endif %}

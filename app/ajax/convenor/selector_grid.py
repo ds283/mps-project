@@ -74,7 +74,7 @@ _selections = \
     <div class="row vertical-align">
         <div class="col-12">
             {% if sel.number_bookmarks >= sel.number_choices %}
-                <span class="badge bg-info text-dark">Bookmarks available</span>
+                <span class="badge bg-info">Bookmarks available</span>
                 <a class="text-decoration-none" href="{{ url_for('convenor.force_convert_bookmarks', sel_id=sel.id) }}">
                     Force conversion...
                 </a>

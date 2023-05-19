@@ -52,7 +52,7 @@ name = \
         </div>
     {% endif %}
     {% if u.last_email %}
-        <span class="badge bg-info text-dark">Notify &commat;{{ u.last_email.strftime("%d/%m/%y") }}</span>
+        <span class="badge bg-info">Notify &commat;{{ u.last_email.strftime("%d/%m/%y") }}</span>
     {% endif %}
 </div>
 """

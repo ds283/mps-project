@@ -67,7 +67,7 @@ _bookmarks = \
 """
 {% set bookmarks = project.number_bookmarks %}
 {% if bookmarks > 0 %}
-    <span class="badge bg-info text-dark">{{ bookmarks }}</span>
+    <span class="badge bg-info">{{ bookmarks }}</span>
     <a class="text-decoration-none" href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
        Show...
    </a>

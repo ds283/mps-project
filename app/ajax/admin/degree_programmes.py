@@ -76,10 +76,10 @@ _name = \
 """
 {{ p.name }} {{ p.short_label|safe }}
 {% if p.foundation_year %}
-    <span class="badge bg-info text-dark">Foundation year</span>
+    <span class="badge bg-info">Foundation year</span>
 {% endif %}
 {% if p.year_out %}
-    <span class="badge bg-info text-dark">Year out{%- if p.year_out_value %} Y{{ p.year_out_value}}{% endif %}</span>
+    <span class="badge bg-info">Year out{%- if p.year_out_value %} Y{{ p.year_out_value}}{% endif %}</span>
 {% endif %}
 {% if levels|length > 0 %}
     <div class="mt-3">

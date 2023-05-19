@@ -58,9 +58,9 @@ _active = \
 _info = \
 """
 <span class="badge bg-primary">Capacity {{ r.capacity }}</span>
-<span class="badge bg-info text-dark">Max occupancy {{ r.maximum_occupancy }}</span>
+<span class="badge bg-info">Max occupancy {{ r.maximum_occupancy }}</span>
 {% if r.lecture_capture %}
-    <span class="badge bg-info text-dark">Lecture capture</span>
+    <span class="badge bg-info">Lecture capture</span>
 {% endif %}
 """
 

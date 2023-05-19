@@ -320,7 +320,7 @@
                                         {% set has_recommended = sel.satisfies_recommended(project) %}
                                         <a class="badge text-decoration-none text-nohover-light {% if has_recommended %}bg-primary{% else %}bg-warning text-dark{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fas fa-exclamation-triangle text-danger"></i> {% endif %}</a>
                                         {% if req.viewed is not none and not req.viewed %}
-                                            <span class="badge bg-info text-dark">NEW</span>
+                                            <span class="badge bg-info">NEW</span>
                                         {% endif %}
                                         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                             {% if not has_recommended %}

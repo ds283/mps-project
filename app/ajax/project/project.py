@@ -37,7 +37,7 @@ _project_name = \
             {% set num = project.num_descriptions %}
             {% if num > 0 %}
                 {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
-                <span class="badge bg-info text-dark">{{ num }} variant{{ pl }}</span>
+                <span class="badge bg-info">{{ num }} variant{{ pl }}</span>
             {% endif %}
         {% endif %}
     </div>
@@ -496,7 +496,7 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                 elif state == Project.SOME_DESCRIPTIONS_QUEUED:
                     repapprove = '<span class="badge bg-warning text-dark">Approval: Queued</span>'
                 elif state == Project.SOME_DESCRIPTIONS_REJECTED:
-                    repapprove = '<span class="badge bg-info text-dark">Approval: In progress</span>'
+                    repapprove = '<span class="badge bg-info">Approval: In progress</span>'
                 elif state == Project.SOME_DESCRIPTIONS_UNCONFIRMED:
                     repapprove = '<span class="badge bg-secondary">Approval: Unconfirmed</span>'
                 elif state == Project.APPROVALS_NOT_ACTIVE:
@@ -530,14 +530,14 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                         elif state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
                             repapprove = '<span class="badge bg-warning text-dark">Approval: Queued</span>'
                         elif state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
-                            repapprove = '<span class="badge bg-info text-dark">Approval: In progress</span>'
+                            repapprove = '<span class="badge bg-info">Approval: In progress</span>'
                         else:
                             repapprove = '<span class="badge bg-danger">Unknown approval state</span>'
 
                         if desc.validated_by:
-                            repapprove += ' <span class="badge bg-info text-dark">Signed-off: ' + desc.validated_by.name + '</span>'
+                            repapprove += ' <span class="badge bg-info">Signed-off: ' + desc.validated_by.name + '</span>'
                             if desc.validated_timestamp:
-                                repapprove += ' <span class="badge bg-info text-dark">' + desc.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") + '</span>'
+                                repapprove += ' <span class="badge bg-info">' + desc.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") + '</span>'
         else:
             repapprove = '<span class="badge bg-secondary"><i class="fas fa-ban"></i> Can\'t approve</span>'
 

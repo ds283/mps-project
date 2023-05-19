@@ -36,7 +36,7 @@ _name = \
         <span class="badge bg-success">Availability requested</span>
         {% set num_outstanding = a.availability_outstanding_count %}
         {% if num_outstanding > 0 %}
-            <span class="badge bg-info text-dark">{{ num_outstanding }} outstanding</span>
+            <span class="badge bg-info">{{ num_outstanding }} outstanding</span>
         {% endif %}
     {% elif state == a.AVAILABILITY_CLOSED %}
         <span class="badge bg-primary">Availability closed</span>
@@ -47,13 +47,13 @@ _name = \
     {% endif %}
     {% set sessions = a.number_sessions %}
     {% set pl = 's' %}{% if sessions == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-info text-dark">{{ sessions }} session{{ pl }}</span>
+    <span class="badge bg-info">{{ sessions }} session{{ pl }}</span>
     {% set slots = a.number_slots %}
     {% set pl = 's' %}{% if slots == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-info text-dark">{{ slots }} slot{{ pl }}</span>
+    <span class="badge bg-info">{{ slots }} slot{{ pl }}</span>
     {% set schedules = a.number_schedules %}
     {% set pl = 's' %}{% if schedules == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-info text-dark">{{ schedules }} schedule{{ pl }}</span>
+    <span class="badge bg-info">{{ schedules }} schedule{{ pl }}</span>
 </div>
 """
 
@@ -67,7 +67,7 @@ _periods = \
         {% set num = period.number_projects %}
         {% set pl = 's' %}
         {% if num == 1 %}{% set pl = '' %}{% endif %}
-        <span class="badge bg-info text-dark">{{ num }} project{{ pl }}</span>
+        <span class="badge bg-info">{{ num }} project{{ pl }}</span>
     </div>
 {% endfor %}
 {% set total = a.number_talks %}
@@ -95,7 +95,7 @@ _sessions = \
             {{ session.label|safe }}
             {% set available = session.number_available_faculty %}
             {% set ifneeded = session.number_ifneeded_faculty %}
-            <span class="badge bg-info text-dark">{{ available }}{% if ifneeded > 0 %}(+{{ ifneeded }}){% endif %} available</span>
+            <span class="badge bg-info">{{ available }}{% if ifneeded > 0 %}(+{{ ifneeded }}){% endif %} available</span>
         </div>
     {% else %}
         {{ session.label|safe }}

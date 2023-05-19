@@ -59,7 +59,7 @@ _confirmed = \
 {% if rec.confirmed %}
     <span class="badge bg-primary">Yes</span>
     {% if rec.confirmed_timestamp is not none %}
-        <span class="badge bg-info text-dark">{{ rec.confirmed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        <span class="badge bg-info">{{ rec.confirmed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
     {% endif %}
 {% else %}
     <span class="badge bg-warning text-dark">No</span>
@@ -128,13 +128,13 @@ _name = \
             <span class="badge bg-primary">Assignment limit {{ rec.assigned_limit }}</span>
         {% endif %}
         {% if rec.request_email_sent %}
-            <span class="badge bg-info text-dark"><i class="fas fa-envelope"></i> Invite sent</span>
+            <span class="badge bg-info"><i class="fas fa-envelope"></i> Invite sent</span>
             {% if rec.request_timestamp is not none %}
                 <span class="badge bg-secondary">{{ rec.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
             {% endif %}
         {% endif %}
         {% if rec.reminder_email_sent %}
-            <span class="badge bg-info text-dark"><i class="fas fa-envelope"></i> Reminder sent</span>
+            <span class="badge bg-info"><i class="fas fa-envelope"></i> Reminder sent</span>
             {% if rec.last_reminder_timestamp is not none %}
                 <span class="badge bg-secondary">{{ rec.last_reminder_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
             {% endif %}

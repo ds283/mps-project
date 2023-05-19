@@ -14,9 +14,9 @@ from flask import render_template_string, jsonify
 _state = \
 """
 {% if state == 0 %}
-    <span class="badge bg-info text-dark">PENDING</span>
+    <span class="badge bg-info">PENDING</span>
 {% elif state == 1 %}
-    <span class="badge bg-info text-dark">RUNNING</span>
+    <span class="badge bg-info">RUNNING</span>
 {% elif state == 2 %}
     <span class="badge bg-success">SUCCESS</span>
 {% else %}

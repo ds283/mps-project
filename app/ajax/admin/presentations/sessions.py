@@ -118,7 +118,7 @@ _availability = \
             {% if fac_unavailable > 0 %}
                 <span class="badge bg-danger">{{ fac_unavailable }} unavailable</span>
             {% endif %}
-            <span class="badge bg-info text-dark">Total {{ fac_available + fac_ifneeded }}</span>
+            <span class="badge bg-info">Total {{ fac_available + fac_ifneeded }}</span>
         </div>
     {% else %}
         <span class="badge bg-danger">No availability</span>

@@ -85,12 +85,12 @@
                         {% set num_sel = config.number_selectors %}
                         {% set pl = 's' %}
                         {% if num_sel == 1 %}{% set pl = '' %}{% endif %}
-                        <span class="badge bg-info text-dark">{{ num_sel }} selector{{ pl }}</span>
+                        <span class="badge bg-info">{{ num_sel }} selector{{ pl }}</span>
 
                         {% set num_sub = config.number_submitters %}
                         {% set pl = 's' %}
                         {% if num_sub == 1 %}{% set pl = '' %}{% endif %}
-                        <span class="badge bg-info text-dark">{{ num_sub }} submitter{{ pl }}</span>
+                        <span class="badge bg-info">{{ num_sub }} submitter{{ pl }}</span>
 
                         {% if sel_state <= config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
                             {% if capacity < num_sel %}

@@ -29,7 +29,7 @@ _exemptions = \
 """
 {% macro display(state, sabbatical_state, exempt_state, reenroll, comment) %}
     {% if state == sabbatical_state %}
-        <span class="badge bg-info text-dark">Sabbatical</span>
+        <span class="badge bg-info">Sabbatical</span>
         {% if reenroll %}
             <span class="badge bg-secondary">Re-enroll {{ reenroll }}</span>
         {% endif %}

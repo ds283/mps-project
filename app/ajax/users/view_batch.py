@@ -23,7 +23,7 @@ _name = \
 <div>
     {{ item.first_name }} {{ item.last_name }}
     {% if item.registration_number is not none %}
-        <span class="badge bg-info text-dark">Registration #{{ item.registration_number }}</span>
+        <span class="badge bg-info">Registration #{{ item.registration_number }}</span>
     {% endif %}
     {% set warnings = item.warnings %}
     {% set w_length = warnings|length %}
@@ -77,7 +77,7 @@ _cohort = \
     {{ item.academic_year_label()|safe }}
 </div>
 {% if item.foundation_year %}
-    <span class="badge bg-info text-dark">Foundation year</span>
+    <span class="badge bg-info">Foundation year</span>
 {% endif %}
 {% if item.repeated_years is not none and item.repeated_years > 0 %}
     {% set pl = 's' %}{% if item.repeated_years == 1 %}{% set pl = '' %}{% endif %}

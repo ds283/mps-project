@@ -46,7 +46,7 @@
         {% set pl = 's' %}
         {% if count == 1 %}{% set pl = '' %}{% endif %}
         &emsp;
-        <span class="badge bg-info text-dark">{{ count }} session{{ pl }}</span>
+        <span class="badge bg-info">{{ count }} session{{ pl }}</span>
         {% if slot.session.faculty_ifneeded(fac.id) %}
             <span class="badge bg-warning text-dark">If needed</span>
         {% endif %}

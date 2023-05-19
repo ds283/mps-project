@@ -72,7 +72,7 @@
                             <div class="col-3">
                                 {% if record.pclass.uses_supervisor %}
                                     {% if record.supervisor_state == record.SUPERVISOR_ENROLLED  %}
-                                        <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Enrolled</span>
+                                        <span class="badge bg-info"><i class="fas fa-check"></i> Enrolled</span>
                                     {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
                                         <span class="badge bg-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
                                         {% if record.supervisor_reenroll is not none %}
@@ -92,7 +92,7 @@
                             <div class="col-3">
                                 {% if record.pclass.uses_marker %}
                                     {% if record.marker_state == record.MARKER_ENROLLED %}
-                                        <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Enrolled</span>
+                                        <span class="badge bg-info"><i class="fas fa-check"></i> Enrolled</span>
                                     {% elif record.marker_state == record.MARKER_SABBATICAL %}
                                         <span class="badge bg-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
                                         {% if record.marker_reenroll is not none %}
@@ -112,7 +112,7 @@
                             <div class="col-3">
                                 {% if record.pclass.uses_moderator %}
                                     {% if record.moderator_state == record.MODERATOR_ENROLLED %}
-                                        <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Enrolled</span>
+                                        <span class="badge bg-info"><i class="fas fa-check"></i> Enrolled</span>
                                     {% elif record.moderator_state == record.MODERATOR_SABBATICAL %}
                                         <span class="badge bg-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
                                         {% if record.moderator_reenroll is not none %}
@@ -132,7 +132,7 @@
                             <div class="col-3">
                                 {% if record.pclass.uses_presentations %}
                                     {% if record.presentations_state == record.PRESENTATIONS_ENROLLED %}
-                                        <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Enrolled</span>
+                                        <span class="badge bg-info"><i class="fas fa-check"></i> Enrolled</span>
                                     {% elif record.presentations_state == record.PRESENTATIONS_SABBATICAL %}
                                         <span class="badge bg-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
                                         {% if record.presentations_reenroll is not none %}

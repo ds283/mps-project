@@ -41,14 +41,14 @@ _enrolled = \
 _settings = \
 """
 {% if f.sign_off_students %}
-    <span class="badge bg-info text-dark">Require meetings</span>
+    <span class="badge bg-info">Require meetings</span>
 {% endif %}
 <span class="badge bg-primary">Default capacity {{ f.project_capacity }}</span>
 {% if f.enforce_capacity %}
-    <span class="badge bg-info text-dark">Enforce capacity</span>
+    <span class="badge bg-info">Enforce capacity</span>
 {% endif %}
 {% if f.show_popularity %}
-    <span class="badge bg-info text-dark">Show popularity</span>
+    <span class="badge bg-info">Show popularity</span>
 {% endif %}
 <p>
 {% if f.CATS_supervision is not none %}

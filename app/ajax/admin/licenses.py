@@ -20,7 +20,7 @@ _name = \
 <div>
     {{ l.make_label(popover=false)|safe }}
     {% if l.version and l.version|length > 0 %}
-        <span class="badge bg-info text-dark">{{ l.version }}</span>
+        <span class="badge bg-info">{{ l.version }}</span>
     {% endif %}
 </div>
 """

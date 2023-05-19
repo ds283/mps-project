@@ -19,7 +19,7 @@ _supervising = \
     {% if state == obj.FEEDBACK_NOT_YET %}
         {# <span class="badge bg-secondary">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="badge bg-info text-dark">{{ label }} to do</span>
+        <span class="badge bg-info">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
         <span class="badge bg-success">{{ label }} submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}
@@ -115,7 +115,7 @@ _assessing = \
     {% if state == obj.FEEDBACK_NOT_YET %}
         {# <span class="badge bg-secondary">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="badge bg-info text-dark">{{ label }} to do</span>
+        <span class="badge bg-info">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
         <span class="badge bg-success">{{ label }} submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}
@@ -171,7 +171,7 @@ _presentations = \
     {% if state == obj.FEEDBACK_NOT_REQUIRED or state == obj.FEEDBACK_NOT_YET %}
         {# empty #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="badge bg-info text-dark">{{ label }} to do</span>
+        <span class="badge bg-info">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
         <span class="badge bg-success">{{ label }} submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}

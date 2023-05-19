@@ -237,7 +237,7 @@ _workload = \
 {% if included_sup is not none and included_mark is not none and included_workload is not none and included_workload|length > 0 %}
     <p></p>
     {% for match in m.include_matches %}
-        <span class="badge bg-info text-dark">{{ match.name }} S {{ included_sup[match.id] }} M {{ included_mark[match.id] }} T {{ included_workload[match.id] }}</span>
+        <span class="badge bg-info">{{ match.name }} S {{ included_sup[match.id] }} M {{ included_mark[match.id] }} T {{ included_workload[match.id] }}</span>
     {% endfor %}
     <p></p>
     <span class="badge {% if sup_overassigned or mark_overassigned %}bg-danger{% else %}bg-primary{% endif %}">Total {{ total_CATS_value }}</span>

@@ -27,7 +27,7 @@ _name = \
     {% set rec = slot.owner %}
     {% set count = rec.get_number_faculty_slots(a.faculty_id) %}
     {% set pl = 's' %}{% if count == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-info text-dark">{{ count }} session{{ pl }}</span>
+    <span class="badge bg-info">{{ count }} session{{ pl }}</span>
     {% if slot.assessor_has_overlap(a.faculty_id) %}
         <span class="badge bg-success"><i class="fas fa-check"></i> Pool overlap</span>
     {% else %}

@@ -14,9 +14,9 @@
                 {% if slot.belongs_to(period) %}
                     {% set ns.count = ns.count + 1 %}
                     <p>
-                        <span class="badge bg-info text-dark">{{ slot.date_as_string }}</span>
-                        <span class="badge bg-info text-dark">{{ slot.session_type_string }}</span>
-                        <span class="badge bg-info text-dark">{{ slot.room_full_name }}</span>
+                        <span class="badge bg-info">{{ slot.date_as_string }}</span>
+                        <span class="badge bg-info">{{ slot.session_type_string }}</span>
+                        <span class="badge bg-info">{{ slot.room_full_name }}</span>
                     </p>
                     <table class="table table-striped">
                         <thead>

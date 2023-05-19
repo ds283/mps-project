@@ -37,7 +37,7 @@ _status = \
 {% elif overdue %}
     <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Overdue</span>
 {% elif available %}
-    <span class="badge bg-info text-dark"><i class="fas fa-thumbs-up"></i> Available</span>
+    <span class="badge bg-info"><i class="fas fa-thumbs-up"></i> Available</span>
 {% else %}
     <span class="badge bg-secondary"><i class="fas fa-ban"></i> Not yet available</span>
 {% endif %}

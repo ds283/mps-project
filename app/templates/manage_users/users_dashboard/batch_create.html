@@ -21,7 +21,7 @@
                                    onchange="$('#filename-data').html(this.files[0].name)">
                             Select file...
                         </label>
-                        <span class="badge bg-info text-dark" id="filename-data"></span>
+                        <span class="badge bg-info" id="filename-data"></span>
 
                         <hr class="intro-divider">
                         {{ wtf.render_field(form.current_year) }}
@@ -47,7 +47,7 @@
                         <div class="col-4">
                             <div>
                                 {% if not batch.celery_finished %}
-                                    <span class="badge bg-info text-dark">In progress</span>
+                                    <span class="badge bg-info">In progress</span>
                                 {% else %}
                                     {% if batch.success %}
                                         <span class="badge bg-success"><i class="fas fa-check"></i> Read succeeded</span>
@@ -75,10 +75,10 @@
                                         <span class="badge bg-success"><i class="fas fa-check"></i> All lines processed</span>
                                     {% endif %}
                                 {% endif %}
-                                <span class="badge bg-info text-dark">{{ batch.number_items }} items</span>
+                                <span class="badge bg-info">{{ batch.number_items }} items</span>
                             </div>
                             <div>
-                                <span class="badge bg-info text-dark">Reference academic year {{ batch.academic_year }}</span>
+                                <span class="badge bg-info">Reference academic year {{ batch.academic_year }}</span>
                                 {% if batch.trust_cohort %}
                                     <span class="badge bg-success"><i class="fas fa-check"></i> Cohort data</span>
                                 {% else %}
@@ -90,7 +90,7 @@
                                     <span class="badge bg-secondary"><i class="fas fa-times"></i> Registration numbers</span>
                                 {% endif %}
                                 {% if batch.ignore_Y0 %}
-                                    <span class="badge bg-info text-dark"><i class="fas fa-times"></i> Y0 students</span>
+                                    <span class="badge bg-info"><i class="fas fa-times"></i> Y0 students</span>
                                 {% endif %}
                             </div>
                         </div>

@@ -83,7 +83,7 @@ _desc_label = \
 </a>
 <div>
     {% if d.review_only %}
-        <span class="badge bg-info text-dark">Review project</span>
+        <span class="badge bg-info">Review project</span>
     {% endif %}
 </div>
 {% set state = d.workflow_state %}
@@ -97,15 +97,15 @@ _desc_label = \
         {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
             <span class="badge bg-warning text-dark">Approval: Queued</span>
         {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
-            <span class="badge bg-info text-dark">Approval: In progress</span>
+            <span class="badge bg-info">Approval: In progress</span>
         {% else %}
             <span class="badge bg-danger">Unknown approval state</span>
         {% endif %}
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED and current_user.has_role('project_approver') and d.validated_by %}
             <div>
-                <span class="badge bg-info text-dark">Signed-off: {{ d.validated_by.name }}</span>
+                <span class="badge bg-info">Signed-off: {{ d.validated_by.name }}</span>
                 {% if d.validated_timestamp %}
-                    <span class="badge bg-info text-dark">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                    <span class="badge bg-info">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                 {% endif %}
             </div>
         {% endif %}

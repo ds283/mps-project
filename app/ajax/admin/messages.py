@@ -15,7 +15,7 @@ from flask import render_template_string, jsonify, url_for
 _messages_pclasses = \
 """
 {% for pclass in message.project_classes %}
-    <span class="badge bg-info text-dark">{{ pclass.name }}</span>
+    <span class="badge bg-info">{{ pclass.name }}</span>
 {% else %}
     <span class="badge bg-secondary">Broadcast</span>
 {% endfor %}

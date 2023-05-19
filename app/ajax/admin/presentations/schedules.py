@@ -32,10 +32,10 @@ _status = \
     <p></p>
     {% if s.solution_usable %}
         {% if s.draft_to_submitters is not none %}
-            <span class="badge bg-info text-dark">Draft to submitters: {{ s.draft_to_submitters.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            <span class="badge bg-info">Draft to submitters: {{ s.draft_to_submitters.strftime("%a %d %b %Y %H:%M:%S") }}</span>
         {% endif %}
         {% if s.draft_to_assessors is not none %}
-            <span class="badge bg-info text-dark">Draft to assessors: {{ s.draft_to_assessors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            <span class="badge bg-info">Draft to assessors: {{ s.draft_to_assessors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
         {% endif %}
         {% if s.final_to_submitters is not none %}
             <span class="badge bg-primary">Final to submitters: {{ s.final_to_submitters.strftime("%a %d %b %Y %H:%M:%S") }}</span>
@@ -133,15 +133,15 @@ _name = \
 # language=jinja2
 _info = \
 """
-<span class="badge bg-info text-dark">Assignments &le; {{ s.assessor_assigned_limit }}</span>
-<span class="badge bg-info text-dark">Session multiplicity &le; {{ s.assessor_multiplicity_per_session }}</span>
-<span class="badge bg-info text-dark">If-needed cost {{ s.if_needed_cost }}</span>
-<span class="badge bg-info text-dark">Levelling tension {{ s.levelling_tension }}</span>
+<span class="badge bg-info">Assignments &le; {{ s.assessor_assigned_limit }}</span>
+<span class="badge bg-info">Session multiplicity &le; {{ s.assessor_multiplicity_per_session }}</span>
+<span class="badge bg-info">If-needed cost {{ s.if_needed_cost }}</span>
+<span class="badge bg-info">Levelling tension {{ s.levelling_tension }}</span>
 {% if s.ignore_coscheduling %}
     <span class="badge bg-warning text-dark">Ignore coscheduling</span>
 {% endif %}
 {% if s.all_assessors_in_pool == s.ALL_IN_POOL %}
-    <span class="badge bg-info text-dark">Assessors in pool</span>
+    <span class="badge bg-info">Assessors in pool</span>
 {% elif s.all_assessors_in_pool == s.AT_LEAST_ONE_IN_POOL %}
     <span class="badge bg-secondary">&ge; 1 assessor in pool</span>
 {% elif s.all_assessors_in_pool == s.ALL_IN_RESEARCH_GROUP %}
@@ -332,7 +332,7 @@ _periods = \
         {% set num = period.number_projects %}
         {% set pl = 's' %}
         {% if num == 1 %}{% set pl = '' %}{% endif %}
-        <span class="badge bg-info text-dark">{{ num }} project{{ pl }}</span>
+        <span class="badge bg-info">{{ num }} project{{ pl }}</span>
     </div>
 {% endfor %}
 {% set total = a.number_talks %}

@@ -46,7 +46,7 @@ _status = \
     {% endif %}
     <div class="mt-1">
         {% if m.published and current_user.has_role('root') %}
-            <span class="badge bg-info text-dark">Published</span>
+            <span class="badge bg-info">Published</span>
         {% endif %}
         {% if m.selected %}
             <span class="badge bg-success">Selected</span>
@@ -54,7 +54,7 @@ _status = \
     </div>
 {% else %}
     {% if m.awaiting_upload %}
-        <span class="badge bg-info text-dark">Awaiting upload</span>
+        <span class="badge bg-info">Awaiting upload</span>
         {% if m.lp_file is not none %}
             <a class="text-decoration-none" href="{{ url_for('admin.download_generated_asset', asset_id=m.lp_file.id) }}">LP</a>
         {% endif %}
@@ -62,7 +62,7 @@ _status = \
             <a class="text-decoration-none" href="{{ url_for('admin.download_generated_asset', asset_id=m.mps_file.id) }}">MPS</a>
         {% endif %}
     {% else %}
-        <span class="badge bg-info text-dark">In progress</span>
+        <span class="badge bg-info">In progress</span>
     {% endif %}
 {% endif %}
 """
@@ -70,14 +70,14 @@ _status = \
 # language=jinja2
 _info = \
 """
-<span class="badge bg-info text-dark">Supervisor <i class="fas fa-less-than-equal"></i> {{ m.supervising_limit }} CATS</span>
-<span class="badge bg-info text-dark">Marker <i class="fas fa-less-than-equal"></i> {{ m.marking_limit }} CATS</span>
-<span class="badge bg-info text-dark">Marker multiplicity <i class="fas fa-less-than-equal"></i> {{ m.max_marking_multiplicity }}</span>
+<span class="badge bg-info">Supervisor <i class="fas fa-less-than-equal"></i> {{ m.supervising_limit }} CATS</span>
+<span class="badge bg-info">Marker <i class="fas fa-less-than-equal"></i> {{ m.marking_limit }} CATS</span>
+<span class="badge bg-info">Marker multiplicity <i class="fas fa-less-than-equal"></i> {{ m.max_marking_multiplicity }}</span>
 {% if m.max_different_all_projects is not none %}
-    <span class="badge bg-info text-dark">Max all types <i class="fas fa-less-than-equal"></i> {{ m.max_different_all_projects }}</span>
+    <span class="badge bg-info">Max all types <i class="fas fa-less-than-equal"></i> {{ m.max_different_all_projects }}</span>
 {% endif %}
 {% if m.max_different_group_projects is not none %}
-    <span class="badge bg-info text-dark">Max group types <i class="fas fa-less-than-equal"></i> {{ m.max_different_group_projects }}</span>
+    <span class="badge bg-info">Max group types <i class="fas fa-less-than-equal"></i> {{ m.max_different_group_projects }}</span>
 {% endif %}
 {% if m.ignore_per_faculty_limits %}
     <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Ignore per-faculty limits</span>
@@ -95,7 +95,7 @@ _info = \
     <span class="badge bg-secondary"><i class="fas fa-check"></i> All selectors</span>
 {% endif %}
 <div>
-    <span class="badge bg-info text-dark">Solver {{ m.solver_name }}</span>
+    <span class="badge bg-info">Solver {{ m.solver_name }}</span>
 </div>
 <div class="mt-1">
     <strong class="mr-1">Matching</strong>
@@ -116,7 +116,7 @@ _info = \
 </div>
 <div class="mt-1">
     {% if m.use_hints %}
-        <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Use hints</span>
+        <span class="badge bg-info"><i class="fas fa-check"></i> Use hints</span>
         {% if m.require_to_encourage %}
             <span class="badge bg-warning text-dark"><i class="fas fa-exclamation"></i> Require &rarr; Encourage</span>
         {% endif %}
@@ -385,9 +385,9 @@ _name = \
         {% if m.base is not none %}
             <p><span class="badge bg-success"><i class="fas fa-plus-circle"></i></span> <strong>Base</strong>: {{ m.base.name }}</p>
             {% if m.force_base %}
-                <span class="badge bg-info text-dark">Force match</span>
+                <span class="badge bg-info">Force match</span>
             {% else %}
-                <span class="badge bg-info text-dark">Bias {{ m.base_bias }}</span>
+                <span class="badge bg-info">Bias {{ m.base_bias }}</span>
             {% endif %}
         {% endif %}
         {% for match in m.include_matches %}

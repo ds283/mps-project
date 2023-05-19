@@ -45,19 +45,23 @@
             {% endif %}
             <div>
                 {% if attachment and attachment.publish_to_students is defined and attachment.publish_to_students %}
-                    <span class="badge bg-info text-dark"><i class="fas fa-eye"></i> Publish</span>
+                    <span class="badge bg-info"><i class="fas fa-eye"></i> Publish</span>
                 {% endif %}
                 {% if attachment and attachment.include_marker_emails is defined and attachment.include_marker_emails %}
-                    <span class="badge bg-info text-dark"><i class="fas fa-envelope"></i> Marker</span>
+                    <span class="badge bg-info"><i class="fas fa-envelope"></i> Marker</span>
                 {% endif %}
                 {% if attachment and attachment.include_supervisor_emails is defined and attachment.include_supervisor_emails %}
-                    <span class="badge bg-info text-dark"><i class="fas fa-envelope"></i> Supervisor</span>
+                    <span class="badge bg-info"><i class="fas fa-envelope"></i> Supervisor</span>
                 {% endif %}
             </div>
         </td>
         <td>
             <div>
-                {{ asset.human_file_size }}
+                <span class="text-primary">{{ asset.human_file_size }}</span>
+                {% if admin_rights %}
+                    <span class="text-muted">|</span>
+                    <i class="fas fa-cloud text-secondary"></i> <span class="text-secondary">Downloads: <strong>{{ asset.number_downloads }}</strong></span>
+                {% endif %}
             </div>
             <div class="small mt-1">
                 {% if asset.timestamp %}
@@ -67,12 +71,7 @@
                 {% endif %}
                 {% if asset.uploaded_by is defined and asset.uploaded_by %}
                     <div>
-                        <i class="fas fa-user-circle"></i> {{ asset.uploaded_by.name }}
-                    </div>
-                {% endif %}
-                {% if admin_rights %}
-                    <div>
-                        <i class="fas fa-cloud-arrow-down"></i> <span class="text-primary">Downloads: <strong>{{ asset.number_downloads }}</strong></span>
+                        {{ asset.verb_label }} by <i class="fas fa-user-circle"></i> {{ asset.uploaded_by.name }}
                     </div>
                 {% endif %}
             </div>
@@ -80,7 +79,7 @@
         <td>
             {% if asset.license %}
                 {{ asset.license.make_label()|safe }}
-                <span class="badge bg-info text-dark">{{ asset.license.version }}</span>
+                <span class="badge bg-info">{{ asset.license.version }}</span>
             {% else %}
                 <strong>Unset</strong>
             {% endif %}

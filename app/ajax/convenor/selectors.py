@@ -226,7 +226,7 @@ _name = \
 {% set num_tasks = sel.number_available_tasks %}
 {% set pl = 's' %}{% if num_tasks == 1 %}{% set pl = '' %}{% endif %}
 {% if num_tasks > 0 %}
-    <span class="badge bg-info text-dark">{{ num_tasks }} task{{ pl }}</span>
+    <span class="badge bg-info">{{ num_tasks }} task{{ pl }}</span>
 {% endif %}
 </div>
 {% if sel.has_issues %}

@@ -35,7 +35,7 @@ _records = \
 {% if r.project_id != c.project_id %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style()|safe %}
-    <span class="badge bg-info text-dark" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}:
+    <span class="badge bg-info" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}:
         {{ r.supervisor.user.name }} (No. {{ r.project.number }})</span>
 {% else %}
     <span class="badge bg-success">PROJECT MATCH</span>

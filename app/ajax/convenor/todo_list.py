@@ -49,10 +49,10 @@ _project_task = \
         <span class="badge bg-warning text-dark"><i class="fas fa-hand-paper"></i> Blocking</span>
     {% endif %}
     {% if tk.repeat %}
-        <span class="badge bg-info text-dark"><i class="fas fa-redo"></i> Repeat</span>
+        <span class="badge bg-info"><i class="fas fa-redo"></i> Repeat</span>
     {% endif %}
     {% if tk.rollover %}
-        <span class="badge bg-info text-dark"><i class="fas fa-arrow-alt-circle-right"></i> Rollover</span>
+        <span class="badge bg-info"><i class="fas fa-arrow-alt-circle-right"></i> Rollover</span>
     {% endif %}
 </div>
 {% if tk.notes and tk.notes|length > 0 %}
@@ -71,7 +71,7 @@ _status = \
 {% elif overdue %}
     <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Overdue</span>
 {% elif available %}
-    <span class="badge bg-info text-dark"><i class="fas fa-thumbs-up"></i> Available</span>
+    <span class="badge bg-info"><i class="fas fa-thumbs-up"></i> Available</span>
 {% else %}
     <span class="badge bg-secondary"><i class="fas fa-ban"></i> Not yet available</span>
 {% endif %}

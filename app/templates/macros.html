@@ -74,7 +74,7 @@
                         {% if fac_data is defined and fac_data is not none %}
                             {% for pclass in message.project_classes %}
                                 {% if fac_data.is_enrolled(pclass) %}
-                                    <span class="badge bg-info text-dark">{{ pclass.name }}</span>
+                                    <span class="badge bg-info">{{ pclass.name }}</span>
                                 {% endif %}
                             {% endfor %}
                         {% endif %}

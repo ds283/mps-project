@@ -23,7 +23,7 @@
                                    onchange="$('#filename-data').html(this.files[0].name); $('#target_name').val(this.files[0].name);">
                             Select file...
                         </label>
-                        <span class="badge bg-info text-dark" id="filename-data" style="height: 24px;"></span>
+                        <span class="badge bg-info" id="filename-data" style="height: 24px;"></span>
 
                         <hr class="intro-divider">
                         {{ wtf.render_field(form.license) }}

@@ -23,11 +23,11 @@ _status = \
 """
 {% if m.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
-    <span class="badge bg-info text-dark">First taught {{ m.first_taught }}</span>
+    <span class="badge bg-info">First taught {{ m.first_taught }}</span>
 {% else %}
     <span class="badge bg-secondary"><i class="fas fa-times"></i> Retired</span>
-    <span class="badge bg-info text-dark">First taught {{ m.first_taught }}</span>
-    <span class="badge bg-info text-dark">Last taught {{ m.last_taught }}</span>
+    <span class="badge bg-info">First taught {{ m.first_taught }}</span>
+    <span class="badge bg-info">Last taught {{ m.last_taught }}</span>
 {% endif %}
 """
 

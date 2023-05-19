@@ -26,14 +26,14 @@ _presentation = \
     <span class="badge bg-primary">Assessors per group = {{ p.number_assessors }}</span>
     <span class="badge bg-primary">Max group size = {{ p.max_group_size }}</span> 
     {% if p.lecture_capture %}
-        <span class="badge bg-info text-dark">Requires lecture capture</span>
+        <span class="badge bg-info">Requires lecture capture</span>
     {% else %}
         <span class="badge bg-secondary">Lecture capture not required</span>
     {% endif %}
     <p></p>
-    <span class="badge bg-info text-dark">Morning: {{ p.morning_session }}</span>
-    <span class="badge bg-info text-dark">Afternoon: {{ p.afternoon_session }}</span>
-    <span class="badge bg-info text-dark">Format: {{ p.talk_format }}</span>
+    <span class="badge bg-info">Morning: {{ p.morning_session }}</span>
+    <span class="badge bg-info">Afternoon: {{ p.afternoon_session }}</span>
+    <span class="badge bg-info">Format: {{ p.talk_format }}</span>
 {% else %}
     <span class="badge bg-secondary">Not required</span>
 {% endif %}
@@ -69,12 +69,12 @@ _name = \
 {% endif %}
 {% if p.start_date %}
     <div>
-        <span class="badge bg-info text-dark">Start: {{ p.start_date.strftime("%a %d %b %Y") }}</span>
+        <span class="badge bg-info">Start: {{ p.start_date.strftime("%a %d %b %Y") }}</span>
     </div>
 {% endif %}
 {% if p.collect_project_feedback %}
     <div>
-        <span class="badge bg-info text-dark"><i class="fas fa-check"></i> Collect feedback</span>
+        <span class="badge bg-info"><i class="fas fa-check"></i> Collect feedback</span>
     </div>
 {% endif %}  
 """

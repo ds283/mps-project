@@ -368,7 +368,7 @@ _name = \
     {% if m.finished and m.solution_usable %}
         <a class="text-decoration-none" href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}"><strong>{{ m.name }}</strong></a>
         {% if m.has_issues %}
-            <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+            <i class="fas fa-exclamation-triangle text-danger"></i>
         {% endif %}
     {% else %}
         {{ m.name }}

@@ -21,7 +21,7 @@ _name = \
     <a class="text-decoration-none" href="{{ url_for('admin.assessment_manage_sessions', id=a.id) }}">{{ a.name }}</a>
 {% endif %}
 {% if a.has_issues %}
-    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+    <i class="fas fa-exclamation-triangle text-danger"></i>
 {% endif %}
 <div class="mt-1">
     {% if a.is_deployed %}

@@ -17,7 +17,7 @@ title = \
     {%- if project -%}{{ project.name }}{%- else -%}<unnamed project>{%- endif -%}/{%- if r.label -%}{{ r.label }}{%- else -%}<unnamed description>{%- endif -%}
 </a>
 {% if not project.is_offerable %}
-    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+    <i class="fas fa-exclamation-triangle text-danger"></i>
     <div>
         This project has validation errors that will prevent it from being published.
     </div>

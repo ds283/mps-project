@@ -49,7 +49,7 @@ _sessions = \
         </div>
         {{ slot.room.label|safe }}
         {% if slot.has_issues %}
-            <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+            <i class="fas fa-exclamation-triangle text-danger"></i>
         {% endif %}
         &emsp;
         {% for talk in slot.talks %}
@@ -65,7 +65,7 @@ _sessions = \
                 </div>
             </div>
             {% if slot.session.submitter_unavailable(talk.id) %}
-                <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+                <i class="fas fa-exclamation-triangle text-danger"></i>
             {% endif %}
         {% endfor %}
     </div>

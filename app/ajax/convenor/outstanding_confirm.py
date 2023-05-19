@@ -23,7 +23,7 @@ _projects = \
                 {{ p.name }}
             </a>
             {% if not offerable %}
-                <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+                <i class="fas fa-exclamation-triangle text-danger"></i>
             {% endif %}
         </div>
         <div class="outstanding-confirm-row">

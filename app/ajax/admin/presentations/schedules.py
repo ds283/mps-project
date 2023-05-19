@@ -111,7 +111,7 @@ _name = \
         <a class="text-decoration-none" href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">{{ s.name }}</a>
         <span class="badge bg-secondary">{{ s.tag }}</span>
         {% if s.has_issues %}
-            <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+            <i class="fas fa-exclamation-triangle text-danger"></i>
         {% endif %}
     {% else %}
         {{ s.name }}

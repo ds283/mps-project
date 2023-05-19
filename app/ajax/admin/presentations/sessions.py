@@ -18,7 +18,7 @@ _date = \
 """
 {{ s.date_as_string }}
 {% if s.has_issues %}
-    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+    <i class="fas fa-exclamation-triangle text-danger"></i>
     {% set errors = s.errors %}
     {% set warnings = s.warnings %}
     <div class="mt-1">

@@ -74,7 +74,7 @@ _desc_label = \
 """
 {% set valid = not d.has_issues %}
 {% if not valid %}
-    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+    <i class="fas fa-exclamation-triangle text-danger"></i>
 {% endif %}
 <a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=desc_pclass_id,
                     url=url_for('faculty.edit_descriptions', id=d.parent.id, create=create),

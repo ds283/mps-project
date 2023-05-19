@@ -16,7 +16,7 @@ _student = \
 """
 <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 {% if not valid %}
-    <i class="fas fa-exclamation-triangle" style="color:red;"></i>
+    <i class="fas fa-exclamation-triangle text-danger"></i>
 {% endif %}
 {% if not sel.convert_to_submitter %}
     <div class="text-danger small">

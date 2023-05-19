@@ -44,7 +44,7 @@ _details = \
 {% if role.created_by is not none %}
     <div>
         Created by
-        <i class="fas fa-user"></i>
+        <i class="fas fa-user-circle"></i>
         <a class="text-decoration-none" href="mailto:{{ role.created_by.email }}">{{ role.created_by.name }}</a>
         {% if role.creation_timestamp is not none %}
             on {{ role.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
@@ -65,7 +65,7 @@ _details = \
 {% if role.last_edited_by is not none %}
     <div class="mt-1">
         Last edited by 
-        <i class="fs fa-user"></i>
+        <i class="fs fa-user-circle"></i>
         <a class="text-decoration-none" href="mailto:{{ role.last_edited_by.email }}">{{ role.last_edited_by.name }}</a>
         {% if role.last_edit_timestamp is not none %}
             on {{ role.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}

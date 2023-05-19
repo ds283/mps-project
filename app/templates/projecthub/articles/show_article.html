@@ -21,12 +21,12 @@
                 <div class="d-flex justify-content-between">
                     {% if article.creation_timestamp %}
                         <div class="text-muted">
-                            <small>Created by <i class="fas fa-user"></i> <a class="text-decoration-none" href="mailto:{{ article.created_by.email }}">{{ article.created_by.name }}</a> {{ article.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</small>
+                            <small>Created by <i class="fas fa-user-circle"></i> <a class="text-decoration-none" href="mailto:{{ article.created_by.email }}">{{ article.created_by.name }}</a> {{ article.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</small>
                         </div>
                     {% endif %}
                     {% if article.last_edit_timestamp %}
                         <div class="text-muted">
-                            <small>Last edit by <i class="fas fa-user"></i> <a class="text-decoration-none" href="mailto:{{ article.last_edited_by.email }}">{{ article.last_edited_by.name }}</a> {{ article.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</small>
+                            <small>Last edit by <i class="fas fa-user-circle"></i> <a class="text-decoration-none" href="mailto:{{ article.last_edited_by.email }}">{{ article.last_edited_by.name }}</a> {{ article.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</small>
                         </div>
                     {% endif %}
                 </div>

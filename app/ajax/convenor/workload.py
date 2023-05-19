@@ -88,7 +88,7 @@ _supervising = \
                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Deassign project</a>
                 {% endif %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, record_id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">
-                    <i class="fas fa-user fa-fw"></i> Edit roles...
+                    <i class="fas fa-user-circle fa-fw"></i> Edit roles...
                 </a>
              </div>
         </div>
@@ -145,7 +145,7 @@ _assessing = \
                     <i class="fas fa-comments fa-fw"></i> Show feedback
                 </a>
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, record_id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">
-                    <i class="fas fa-user fa-fw"></i> Edit roles...
+                    <i class="fas fa-user-circle fa-fw"></i> Edit roles...
                 </a>
             </div>
         </div>

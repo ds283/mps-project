@@ -110,7 +110,7 @@ _periods = \
                             </a>
                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Deassign project</a>
                         {% endif %}
-                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, record_id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"><i class="fas fa-user fa-fw"></i> Edit roles...</a>
+                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, record_id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"><i class="fas fa-user-circle fa-fw"></i> Edit roles...</a>
                     </div>
                 </div>
             </div>
@@ -290,7 +290,7 @@ _menu = \
             <i class="fas fa-wrench fa-fw"></i> Assign project...
         </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
-            <i class="fas fa-user fa-fw"></i> Edit roles...
+            <i class="fas fa-user-circle fa-fw"></i> Edit roles...
         </a>
 
         <div role="separator" class="dropdown-divider"></div>

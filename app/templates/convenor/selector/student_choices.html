@@ -52,7 +52,7 @@
         <div class="col-10">
             <div class="card mt-3 mb-3">
                 <div class="card-header">
-                    View submitted choices for student <i class="fas fa-user"></i> <strong>{{ sel.student.user.name }}</strong>
+                    View submitted choices for student <i class="fas fa-user-circle"></i> <strong>{{ sel.student.user.name }}</strong>
                 </div>
                 <div class="card-body">
                     {% if lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING %}
@@ -72,7 +72,7 @@
                                     the project
                                     <strong>{{ project.name }}</strong>
                                     supervised by
-                                    <i class="fas fa-user"></i> {{ project.owner.user.name }}
+                                    <i class="fas fa-user-circle"></i> {{ project.owner.user.name }}
                                 </div>
                             {% else %}
                                 <span class="badge bg-danger">MISSING ACCEPTED PROJECT</span>

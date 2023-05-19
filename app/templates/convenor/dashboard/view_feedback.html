@@ -34,7 +34,7 @@
                     <div class="card mt-3 mb-3">
                         <div class="card-header">
                             <div class="d-flex flex-row justify-content-between align-items-center w-100">
-                                <div>Feedback from <i class="fas fa-user"></i> {{ role.user.name }} ({{ role.role_label }})</div>
+                                <div>Feedback from <i class="fas fa-user-circle"></i> {{ role.user.name }} ({{ role.role_label }})</div>
                                 <div class="d-flex flex-row justify-content-end align-items-center gap-2">
                                     {% if role.submitted_feedback and role.feedback_timestamp %}
                                         <span class="small text-success me-2">Submitted at {{ role.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
@@ -140,7 +140,7 @@
                         <div class="card mt-1 mb-1">
                             <div class="card-header">
                                 <div class="d-flex flex-row justify-content-between align-items-center w-100">
-                                    <div>Response from <i class="fas fa-user"></i> {{ role.user.name }}</div>
+                                    <div>Response from <i class="fas fa-user-circle"></i> {{ role.user.name }}</div>
                                     <div class="d-flex flex-row justify-content-end align-items-center gap-2">
                                         {% if role.submitted_response and role.response_timestamp %}
                                             <span class="small text-success me-2">Response at {{ role.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>

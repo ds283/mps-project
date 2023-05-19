@@ -1274,10 +1274,10 @@ def delete_selector(sid):
             url = redirect_url()
 
         title = 'Delete selector "{name}"'.format(name=sel.student.user.name)
-        panel_title = 'Delete selector <i class="fas fa-user"></i> <strong>{name}</strong>'.format(name=sel.student.user.name)
+        panel_title = 'Delete selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(name=sel.student.user.name)
 
         action_url = url_for('convenor.do_delete_selector', sid=sid, url=url)
-        message = '<p>Are you sure that you wish to delete selector <i class="fas fa-user"></i> <strong>{name}</strong>?</p>' \
+        message = '<p>Are you sure that you wish to delete selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>?</p>' \
                   '<p>This selector has stored bookmarks, submitted a list of project choices, or has been included ' \
                   'in a matching.</p>' \
                   '<p>This action cannot be undone. Any bookmarks and submitted preferences will be lost, and ' \
@@ -2000,10 +2000,10 @@ def delete_submitter(sid):
         url = redirect_url()
 
     title = 'Delete submitter "{name}"'.format(name=sub.student.user.name)
-    panel_title = 'Delete submitter <i class="fas fa-user"></i> <strong>{name}</strong>'.format(name=sub.student.user.name)
+    panel_title = 'Delete submitter <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(name=sub.student.user.name)
 
     action_url = url_for('convenor.do_delete_submitter', sid=sid, url=url)
-    message = '<p>Are you sure that you wish to delete submitter <i class="fas fa-user"></i> <strong>{name}</strong>?</p>' \
+    message = '<p>Are you sure that you wish to delete submitter <i class="fas fa-user-circle"></i> <strong>{name}</strong>?</p>' \
               '<p>This action cannot be undone.</p>'.format(name=sub.student.user.name)
     submit_label = 'Delete submitter'
 
@@ -2235,13 +2235,13 @@ def delete_role(role_id):
                       url=url_for('convenor.submitters', id=config.project_class.id, text='convenor submitters view'))
 
     title = 'Delete role'
-    panel_title = 'Delete {type} role for <i class="fas fa-user"></i> ' \
+    panel_title = 'Delete {type} role for <i class="fas fa-user-circle"></i> ' \
                   '<strong>{name}</strong>'.format(type=role.role_label, name=sub_user.name)
 
     action_url = url_for('convenor.perform_delete_role', role_id=role_id, url=url)
     message = '<p>Please confirm that you wish to delete the {type} role for ' \
-              '<i class="fas fa-user"></i> <strong>{role_name}</strong> ' \
-              'belonging to submitter <i class="fas fa-user"></i> <strong>{user_name}</strong>.</p>' \
+              '<i class="fas fa-user-circle"></i> <strong>{role_name}</strong> ' \
+              'belonging to submitter <i class="fas fa-user-circle"></i> <strong>{user_name}</strong>.</p>' \
               '<p>This action cannot be undone.</p>'.format(type=role.role_label, role_name=role_user.name,
                                                             user_name=sub_user.name)
     submit_label = 'Delete role'
@@ -5895,11 +5895,11 @@ def delete_student_bookmark(sid, bid):
         return redirect(redirect_url())
 
     title = 'Delete selector bookmark'
-    panel_title = 'Delete bookmark for selector <i class="fas fa-user"></i> <strong>{name}</strong>, ' \
+    panel_title = 'Delete bookmark for selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>, ' \
                   'project <strong>{proj}</strong>'.format(name=sel.student.user.name,
                                                            proj=bookmark.liveproject.name)
     action_url = url_for('convenor.perform_delete_student_bookmark', sid=sid, bid=bid)
-    message = '<p>Please confirm that you wish to delete <i class="fas fa-user"></i> <strong>{name}</strong> ' \
+    message = '<p>Please confirm that you wish to delete <i class="fas fa-user-circle"></i> <strong>{name}</strong> ' \
               'bookmark for project <strong>{proj}</strong>.</p>' \
               '<p>This action cannot be undone.</p>'.format(name=sel.student.user.name,
                                                             proj=bookmark.liveproject.name)
@@ -6138,11 +6138,11 @@ def delete_student_choice(sid, cid):
         return redirect(redirect_url())
 
     title = 'Delete selector ranking'
-    panel_title = 'Delete ranking for selector <i class="fas fa-user"></i> <strong>{name}</strong>, ' \
+    panel_title = 'Delete ranking for selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>, ' \
                   'project <strong>{proj}</strong>'.format(name=sel.student.user.name,
                                                            proj=record.liveproject.name)
     action_url = url_for('convenor.perform_delete_student_choice', sid=sid, cid=cid)
-    message = '<p>Please confirm that you wish to delete <i class="fas fa-user"></i> <strong>{name}</strong> ' \
+    message = '<p>Please confirm that you wish to delete <i class="fas fa-user-circle"></i> <strong>{name}</strong> ' \
               'ranking #{num} for project <strong>{proj}</strong>.</p>' \
               '<p>This action cannot be undone.</p>' \
               '<p><strong>Student-submitted rankings should be deleted only when there ' \
@@ -8644,7 +8644,7 @@ def edit_feedback(id):
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
                            title='Edit feedback', unique_id='role-{id}'.format(id=id),
-                           formtitle='Edit feedback for <i class="fas fa-user"></i> '
+                           formtitle='Edit feedback for <i class="fas fa-user-circle"></i> '
                                      '<strong>{name}</strong>'.format(name=record.student_identifier),
                            submit_url=url_for('convenor.edit_feedback', id=id, url=url),
                            period=period, record=role, dont_show_warnings=True)
@@ -8781,9 +8781,9 @@ def presentation_edit_feedback(feedback_id):
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form, unique_id='pres-{id}'.format(id=id),
                            title='Edit presentation feedback from {supervisor}'.format(supervisor=feedback.assessor.user.name),
-                           formtitle='Edit presentation feedback from <i class="fas fa-user"></i> '
+                           formtitle='Edit presentation feedback from <i class="fas fa-user-circle"></i> '
                                      '<strong>{supervisor}</strong> '
-                                     'for <i class="fas fa-user"></i> <strong>{name}</strong>'.format(supervisor=feedback.assessor.user.name,
+                                     'for <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(supervisor=feedback.assessor.user.name,
                                                                                                      name=talk.owner.student.user.name),
                            submit_url=url_for('convenor.presentation_edit_feedback', feedback_id=feedback_id, url=url),
                            assessment=slot.owner.owner, dont_show_warnings=True)
@@ -9638,10 +9638,10 @@ def delete_task(tid):
 
     if task_type == 1 or task_type == 2:
         title = 'Delete student task'
-        panel_title = 'Delete task for student <i class="fas fa-user"></i> {name}'.format(name=obj.student.user.name)
+        panel_title = 'Delete task for student <i class="fas fa-user-circle"></i> {name}'.format(name=obj.student.user.name)
 
         message = '<p>Are you sure that you wish to delete the following task for student ' \
-                  '<i class="fas fa-user"></i> {name}?</p>' \
+                  '<i class="fas fa-user-circle"></i> {name}?</p>' \
                   '<p><strong>{desc}</strong></p>' \
                   '<p>This action cannot be undone.</p>'.format(name=obj.student.user.name, desc=task.description)
 

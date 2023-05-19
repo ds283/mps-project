@@ -61,7 +61,7 @@
                     {{ asset.verb_label }} on {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
                 {% endif %}
                 {% if asset.uploaded_by is defined and asset.uploaded_by %}
-                    <i class="fas fa-user"></i> {{ asset.uploaded_by.name }}
+                    <i class="fas fa-user-circle"></i> {{ asset.uploaded_by.name }}
                 {% endif %}
             </div>
             {% if admin_rights %}
@@ -153,7 +153,7 @@
     {% endif %}
 
     <div class="card border-primary mt-3 mb-3">
-        <div class="card-header bg-primary text-white">Manage documents for <i class="fas fa-user"></i> <strong>{{ record.student_identifier|safe }}</strong> {{ record.period.display_name }}</div>
+        <div class="card-header bg-primary text-white">Manage documents for <i class="fas fa-user-circle"></i> <strong>{{ record.student_identifier|safe }}</strong> {{ record.period.display_name }}</div>
         <div class="card-body">
             {% if admin_rights %}
                 {% if period.closed %}

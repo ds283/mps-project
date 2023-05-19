@@ -23,7 +23,7 @@ _title = \
 
 _author = \
 """
-<i class="fas fa-user"></i> <a class="text-decoration-none" href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}</a>
+<i class="fas fa-user-circle"></i> <a class="text-decoration-none" href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}</a>
 """
 
 

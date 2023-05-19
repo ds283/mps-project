@@ -250,7 +250,7 @@
                                         </td>
                                         <td>
                                             {% if tk_type == 1 or tk_type == 2 %}
-                                                <i class="fas fa-user"></i>
+                                                <i class="fas fa-user-circle"></i>
                                                 <a class="text-decoration-none" href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.status', id=pclass.id), text='convenor dashboard') }}">
                                                     {{ obj.student.user.name }}
                                                 </a>

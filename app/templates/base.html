@@ -513,14 +513,14 @@
                     {% if current_user.is_authenticated %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
-                                <i class="fas fa-user"></i>
+                                <i class="fas fa-user-circle fa-lg"></i>
                                 {{ current_user.username }}
                                 {% if current_user.has_role('office') %}
                                     (School Office)
                                 {% elif current_user.has_role('faculty') %}
-                                    (faculty)
+                                    (Faculty)
                                 {% elif current_user.has_role('student') %}
-                                    (student)
+                                    (Student)
                                 {% endif %}
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
@@ -567,7 +567,7 @@
                                 </a>
                                 <div role="separator" class="dropdown-divider"></div>
                                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('auth.logout') }}">
-                                    <i class="fas fa-sign-out-alt fa-fw"></i>
+                                    <i class="fas fa-power-off fa-fw"></i>
                                     {% if real_user %}
                                         Return to normal role
                                     {% else %}
@@ -634,7 +634,7 @@
                 <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Build {{ build_version }} | Copyright (c) {{ website_copyright_dates }} MPS, University of Sussex</span>
                 {% if real_user %}
                     <span class="navbar-text small" style="float: right;">You
-                        are viewing as <i class="fas fa-user"></i>
+                        are viewing as <i class="fas fa-user-circle"></i>
                         {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" style="color: antiquewhite;">Return to my normal role</a></span>
                 {% endif %}
             </div>

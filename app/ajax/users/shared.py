@@ -144,7 +144,7 @@ menu = \
             <div role="separator" class="dropdown-divider"></div>
             <div class="dropdown-header">Superuser functions</div>
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.login_as', id=user.id) }}">
-                <i class="fas fa-user fa-fw"></i> Login as user
+                <i class="fas fa-user-circle fa-fw"></i> Login as user
             </a>
         {% endif %}
     </div>

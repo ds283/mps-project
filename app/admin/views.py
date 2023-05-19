@@ -3101,7 +3101,7 @@ def delete_notification(eid):
 
     action_url = url_for('admin.do_delete_notification', eid=eid)
     message = '<p>Please confirm that you wish to delete a scheduled email notification to ' \
-              '<i class="fas fa-user"></i> <strong>{name}</strong></p>' \
+              '<i class="fas fa-user-circle"></i> <strong>{name}</strong></p>' \
               '<p>This action cannot be undone.</p>'.format(name=notification.owner.name)
     submit_label = 'Delete'
 
@@ -9949,7 +9949,7 @@ def move_selector(sid):
         available.add(config)
 
     if len(available) == 0:
-        flash('Selector <i class="fas fa-user"></i> {name} cannot be moved at this time because there are no '
+        flash('Selector <i class="fas fa-user-circle"></i> {name} cannot be moved at this time because there are no '
               'live project classes available as destinations.'.format(name=sel.student.user.name), 'info')
         return redirect(url)
 
@@ -9969,20 +9969,20 @@ def do_move_selector(sid, dest_id):
 
     # reject if source and destination are the same
     if sel.config_id == dest_config.id:
-        flash('Cannot move selector <i class="fas fa-user"></i> {name} to project class "{pcl}" because it '
+        flash('Cannot move selector <i class="fas fa-user-circle"></i> {name} to project class "{pcl}" because it '
               'is already attached.'.format(name=sel.student.user.name, pcl=dest_config.name), 'error')
         return redirect(url)
 
     # reject is destination has not gone live
     if not dest_config.live:
-        flash('Cannot move selector <i class="fas fa-user"></i> {name} to project class "{pcl}" because it '
+        flash('Cannot move selector <i class="fas fa-user-circle"></i> {name} to project class "{pcl}" because it '
               'is not yet live in this academic '
               'cycle.'.format(name=sel.student.user.name, pcl=dest_config.name), 'error')
         return redirect(url)
 
     # reject is this student is already selecting for destination
     if get_count(dest_config.selecting_students.filter(SelectingStudent.student_id == sel.student_id)) > 0:
-        flash('Cannot move selector <i class="fas fa-user"></i> {name} to project class "{pcl}" '
+        flash('Cannot move selector <i class="fas fa-user-circle"></i> {name} to project class "{pcl}" '
               'because this student is already selecting for '
               'it.'.format(name=sel.student.user.name, pcl=dest_config.name), 'error')
         return redirect(url)

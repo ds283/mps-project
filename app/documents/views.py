@@ -168,7 +168,7 @@ def delete_submitter_report(sid):
     action_url = url_for('documents.perform_delete_submitter_report', sid=sid, url=url, text=text)
 
     message = '<p>Please confirm that you wish to remove the project report for ' \
-              '<i class="fas fa-user"></i> {student} {period}.</p>' \
+              '<i class="fas fa-user-circle"></i> {student} {period}.</p>' \
               '<p>This action cannot be undone.</p>'.format(student=record.student_identifier,
                                                             period=record.period.display_name)
     submit_label = 'Remove report'
@@ -550,7 +550,7 @@ def delete_submitter_attachment(aid):
 
     name = asset.target_name if asset.target_name is not None else asset.filename
     message = '<p>Please confirm that you wish to remove the attachment <strong>{name}</strong> for ' \
-              '<i class="fas fa-user"></i> {student} {period}.</p>' \
+              '<i class="fas fa-user-circle"></i> {student} {period}.</p>' \
               '<p>This action cannot be undone.</p>'.format(name=name, student=record.student_identifier,
                                                             period=record.period.display_name)
     submit_label = 'Remove attachment'

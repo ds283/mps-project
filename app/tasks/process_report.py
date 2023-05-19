@@ -290,6 +290,7 @@ def register_process_report_tasks(celery):
             passet = GeneratedAsset(timestamp=datetime.now(),
                                     expiry=None,
                                     filename=str(rel_processed_path),
+                                    filesize=abs_processed_path.stat().st_size,
                                     parent_asset_id=asset.id,
                                     target_name=asset.target_name,
                                     mimetype=asset.mimetype,

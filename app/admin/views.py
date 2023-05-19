@@ -9746,7 +9746,8 @@ def upload_schedule(schedule_id):
                     now = datetime.now()
                     asset = TemporaryAsset(timestamp=now,
                                            expiry=now + timedelta(days=1),
-                                           filename=str(filename))
+                                           filename=str(filename),
+                                           filesize=abs_path.stat().st_size)
                     asset.grant_user(current_user)
 
                     uuid = register_task('Process offline solution for "{name}"'.format(name=record.name),
@@ -9814,7 +9815,8 @@ def upload_match(match_id):
                     now = datetime.now()
                     asset = TemporaryAsset(timestamp=now,
                                            expiry=now + timedelta(days=1),
-                                           filename=str(filename))
+                                           filename=str(filename),
+                                           filesize=abs_path.stat().st_size)
                     asset.grant_user(current_user)
 
                     uuid = register_task('Process offline solution for "{name}"'.format(name=record.name),

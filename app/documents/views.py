@@ -277,6 +277,7 @@ def upload_submitter_report(sid):
                                    uploaded_id=current_user.id,
                                    expiry=None,
                                    filename=str(subfolder/filename),
+                                   filesize=abs_path.state().st_size,
                                    target_name=form.target_name.data,
                                    mimetype=str(report_file.content_type),
                                    license=form.license.data)
@@ -645,6 +646,7 @@ def upload_submitter_attachment(sid):
                                    uploaded_id=current_user.id,
                                    expiry=None,
                                    filename=str(subfolder/filename),
+                                   filesize=abs_path.state().st_size,
                                    target_name=form.target_name.data,
                                    mimetype=str(attachment_file.content_type),
                                    license=form.license.data)

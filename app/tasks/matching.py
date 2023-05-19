@@ -2402,10 +2402,11 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
 
     now = datetime.now()
 
-    def make_asset(name, target):
+    def make_asset(name, size, target):
         asset = GeneratedAsset(timestamp=now,
                                expiry=None,
                                filename=str(name),
+                               filesize=size,
                                mimetype='text/plain',
                                target_name=target)
         asset.grant_user(user)
@@ -2413,8 +2414,8 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
 
         return asset
 
-    lp_asset = make_asset(lp_name, 'matching.lp')
-    mps_asset = make_asset(mps_name, 'matching.mps')
+    lp_asset = make_asset(lp_name, lp_abs_path.stat().st_size, 'matching.lp')
+    mps_asset = make_asset(mps_name, mps_abs_path().stat().st_size, 'matching.mps')
 
     # write new assets to database, so they get a valid primary key
     db.session.flush()
@@ -2922,6 +2923,7 @@ def register_matching_tasks(celery):
                     new_asset = GeneratedAsset(timestamp=now,
                                                expiry=None,
                                                filename=str(new_name),
+                                               filesize=new_abs_path.stat().st_size,
                                                mimetype='text/plain',
                                                target_name=target)
                     # TODO: find a way to perform a deep copy without exposing implementation details

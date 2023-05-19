@@ -511,6 +511,7 @@ def register_canvas_tasks(celery):
                                uploaded_id=user_id,
                                expiry=None,
                                filename=str(subfolder / filename),
+                               filesize=abs_path.state().st_size,
                                target_name=attachment['filename'],
                                mimetype=attachment['content-type'],
                                license=default_report_license)

@@ -1,8 +1,8 @@
 {% macro period_status(p) %}
-    <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+    <div class="d-flex flex-row justify-content-start align-items-center gap-3">
         {% set messages = p.messages %}
         {% if messages|length > 0 %}
-            <div class="text-muted small">Status <i class="fas fa-info-circle" tabindex="0" data-bs-toggle="popover" title="{{ p.display_name }}" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul class='small'>{% for msg in messages %}<li>{{ msg }}</li>{% endfor %}</ul>"></i></div>
+            <div class="text-primary small">Status <i class="fas fa-info-circle" tabindex="0" data-bs-toggle="popover" title="{{ p.display_name }}" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul class='small'>{% for msg in messages %}<li>{{ msg }}</li>{% endfor %}</ul>"></i></div>
         {% endif %}
         {% if p.start_date %}
             <div class="text-primary small"><i class="fa fa-calendar"></i> Start date <strong>{{ p.start_date.strftime("%a %d %b %Y") }}</strong></div>

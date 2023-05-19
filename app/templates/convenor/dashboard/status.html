@@ -89,28 +89,28 @@
                                 {% if config.uses_supervisor %}
                                     <div class="list-group">
                                         <div class="list-group-item">
-                                            <span class="me-2">Supervision <span class="badge bg-secondary rounded-pill">{{ config.CATS_supervision }} CATS</span> {%- if config.CATS_supervision != pclass.CATS_supervision -%}<i class="fas fa-exclamation-triangle ms-1" style="color:red;"></i>{%- endif -%}</span>
+                                            <span class="me-2">Supervision <span class="text-primary">{{ config.CATS_supervision }} CATS</span> {%- if config.CATS_supervision != pclass.CATS_supervision -%}<i class="fas fa-exclamation-triangle ms-1" style="color:red;"></i>{%- endif -%}</span>
                                         </div>
                                     </div>
                                 {% endif %}
                                 {% if config.uses_marker %}
                                     <div class="list-group">
                                         <div class="list-group-item">
-                                            <span class="me-2">Marking <span class="badge bg-secondary rounded-pill">{{ config.CATS_marking }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle ms-1" style="color:red;"></i>{%- endif -%}</span>
+                                            <span class="me-2">Marking <span class="text-primary">{{ config.CATS_marking }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle ms-1" style="color:red;"></i>{%- endif -%}</span>
                                         </div>
                                     </div>
                                 {% endif %}
                                 {% if config.uses_moderator %}
                                     <div class="list-group">
                                         <div class="list-group-item">
-                                            <span class="me-2">Moderation <span class="badge bg-secondary rounded-pill">{{ config.CATS_moderation }} CATS</span> {%- if config.CATS_moderation != pclass.CATS_moderation -%}<i class="fas fa-exclamation-triangle ms-1" style="color:red;"></i>{%- endif -%}</span>
+                                            <span class="me-2">Moderation <span class="text-primary">{{ config.CATS_moderation }} CATS</span> {%- if config.CATS_moderation != pclass.CATS_moderation -%}<i class="fas fa-exclamation-triangle ms-1" style="color:red;"></i>{%- endif -%}</span>
                                         </div>
                                     </div>
                                 {% endif %}
                                 {% if config.uses_presentations %}
                                     <div class="list-group">
                                         <div class="list-group-item">
-                                            <span class="me-2">Presentation <span class="badge bg-secondary rounded-pill">{{ config.CATS_presentation }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle ms-1" style="color:red;"></i>{%- endif -%}</span>
+                                            <span class="me-2">Presentation <span class="text-primary">{{ config.CATS_presentation }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle ms-1" style="color:red;"></i>{%- endif -%}</span>
                                         </div>
                                     </div>
                                 {% endif %}

@@ -1029,6 +1029,9 @@ def AssetMixinFactory(acl_name, acr_name):
 
         @property
         def human_file_size(self):
+            if self.filesize is None or self.filesize < 0:
+                return 'None'
+
             return humanize.naturalsize(self.filesize)
 
     return AssetMixin

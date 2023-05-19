@@ -17,7 +17,10 @@ from app.models import PresentationAssessment, \
     AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
     SelectingStudent, ProjectDescription, Project, WorkflowMixin, EnrollmentRecord, StudentDataWorkflowHistory, \
     ProjectDescriptionWorkflowHistory, MainConfig, AssetLicense, EmailLog, ProjectTag, LiveProject, SubmissionRecord, \
-    SubmissionRole, PresentationFeedback, MatchingRecord, MatchingRole, FacultyData
+    SubmissionRole, PresentationFeedback, MatchingRecord, MatchingRole, FacultyData, SubmittedAsset, GeneratedAsset, \
+    TemporaryAsset
+from app.shared.asset_tools import canonical_submitted_asset_filename, canonical_generated_asset_filename, \
+    canonical_temporary_asset_filename
 from app.shared.sqlalchemy import get_count
 
 
@@ -596,6 +599,28 @@ def add_supervisor_pool_data():
 
     db.session.commit()
 
+
+def add_asset_size_data():
+    submitted = db.session.query(SubmittedAsset).all()
+
+    for asset in submitted:
+        path = canonical_submitted_asset_filename(asset.filename)
+        asset.size = path.stat().st_size
+
+    generated = db.session.query(GeneratedAsset).all()
+
+    for asset in generated:
+        path = canonical_generated_asset_filename(asset.filename)
+        asset.size = path.stat().st_size
+
+    temporary = db.session.query(TemporaryAsset).all()
+
+    for asset in temporary:
+        path = canonical_temporary_asset_filename(asset.filename)
+        asset.size = path.stat().st_size
+
+    db.session.commit()
+
 app = create_app()
 
 # with app.app_context():
@@ -622,6 +647,7 @@ app = create_app()
     # migrate_submission_roles()
     # migrate_matching_roles()
     # add_supervisor_pool_data()
+    # add_asset_size_data()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

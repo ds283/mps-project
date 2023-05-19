@@ -17,6 +17,7 @@ from typing import List, Set
 from urllib.parse import urljoin
 from uuid import uuid4
 
+import humanize
 from celery import schedules
 from flask import current_app
 from flask_security import current_user, UserMixin, RoleMixin, AsaList
@@ -846,6 +847,9 @@ def AssetMixinFactory(acl_name, acr_name):
         # relative filename
         filename = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
+        # filesize
+        filesize = db.Column(db.Integer())
+
         # access control list: which users are authorized to view or download this file?
         @declared_attr
         def access_control_list(self):
@@ -1021,6 +1025,11 @@ def AssetMixinFactory(acl_name, acr_name):
 
             for role in roles:
                 self.revoke_role(role)
+
+
+        @property
+        def human_file_size(self):
+            return humanize.naturalsize(self.filesize)
 
     return AssetMixin
 

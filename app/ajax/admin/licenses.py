@@ -39,7 +39,7 @@ _properties = \
 {% else %}
     <span class="badge bg-secondary"><i class="fas fa-times"></i> No redistribution</span>
 {% endif %}
-<div style="padding-top: 5px;">
+<div class="mt-2">
     Created by
     <a class="text-decoration-none" href="mailto:{{ l.created_by.email }}">{{ l.created_by.name }}</a>
     on
@@ -49,12 +49,13 @@ _properties = \
         <span class="badge bg-secondary">Unknown</span>
     {% endif %}
     {% if l.last_edited_by is not none %}
-        <p></p>
-        Last edited by 
-        <a class="text-decoration-none" href="mailto:{{ l.last_edited_by.email }}">{{ l.last_edited_by.name }}</a>
-        {% if l.last_edit_timestamp is not none %}
-            {{ l.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-        {% endif %}
+        <div class="mt-1 text-muted">
+            Last edited by <i class="fas fa-user-circle"></i>
+            <a class="text-decoration-none" href="mailto:{{ l.last_edited_by.email }}">{{ l.last_edited_by.name }}</a>
+            {% if l.last_edit_timestamp is not none %}
+                {{ l.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+            {% endif %}
+        </div>
     {% endif %}
 </div>
 """

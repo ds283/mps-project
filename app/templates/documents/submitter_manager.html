@@ -39,8 +39,8 @@
                 </div>
             {% endif %}
             {% if attachment and attachment.description is defined and attachment.description|length > 0 %}
-                <div class="mt-1">
-                    {{ attachment.description }}
+                <div class="mt-1 small text-muted">
+                    <i class="fas fa-paperclip"></i> {{ attachment.description }}
                 </div>
             {% endif %}
             <div>
@@ -56,19 +56,23 @@
             </div>
         </td>
         <td>
-            <div>
+            <div class="small mt-1">
                 {% if asset.timestamp %}
-                    {{ asset.verb_label }} on {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                    <div>
+                        {{ asset.verb_label }} on {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                    </div>
                 {% endif %}
                 {% if asset.uploaded_by is defined and asset.uploaded_by %}
-                    <i class="fas fa-user-circle"></i> {{ asset.uploaded_by.name }}
+                    <div>
+                        <i class="fas fa-user-circle"></i> {{ asset.uploaded_by.name }}
+                    </div>
+                {% endif %}
+                {% if admin_rights %}
+                    <div>
+                        <i class="fas fa-cloud-arrow-down"></i> <span class="text-primary">Downloads: <strong>{{ asset.number_downloads }}</strong></span>
+                    </div>
                 {% endif %}
             </div>
-            {% if admin_rights %}
-                <div>
-                    <span class="badge bg-secondary">Downloads: {{ asset.number_downloads }}</span>
-                </div>
-            {% endif %}
         </td>
         <td>
             {% if asset.license %}
@@ -290,7 +294,7 @@
                             {% if report_uploadable and record.period.canvas_enabled and record.canvas_submission_available %}
                                 <div class="mt-1">
                                     A matching submission has been made to the Canvas assignment for this submission period.
-                                    <a href="{{ url_for('documents.pull_report_from_canvas', rid=record.id, url=url) }}" class="link-danger text-decoration-none">Pull report from Canvas...</a>
+                                    <a href="{{ url_for('documents.pull_report_from_canvas', rid=record.id, url=url) }}" class="link-success text-decoration-none">Pull report from Canvas...</a>
                                 </div>
                             {% endif %}
                         {% endcall %}

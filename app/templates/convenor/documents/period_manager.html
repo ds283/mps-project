@@ -57,8 +57,8 @@
                 {% endif %}
             </div>
             {% if attachment and attachment.description and attachment.description|length > 0 %}
-                <div style="padding-top: 3px;">
-                    {{ attachment.description }}
+                <div class="mt-2 small text-muted">
+                    <i class="fas fa-paperclip"></i> {{ attachment.description }}
                 </div>
             {% endif %}
             <div>

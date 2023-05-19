@@ -184,7 +184,7 @@ _presentations = \
 {% endmacro %}
 {% if slots|length >= 1 %}
     {% for slot in slots %}
-        <div {% if loop.index < loop.length %}style="padding-bottom: 10px;"{% endif %}>
+        <div {% if loop.index < loop.length %}class="mb-2"{% endif %}>
             <div class="dropdown assignment-label">
                 <a class="badge text-decoration-none text-nohover-light bg-info text-dark btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                     {{ slot.short_date_as_string }}

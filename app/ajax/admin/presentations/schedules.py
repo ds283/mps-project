@@ -81,12 +81,13 @@ on
     <span class="badge bg-secondary">Unknown</span>
 {% endif %}
 {% if s.last_edited_by is not none %}
-    <p></p>
-    Last edited by 
-    <a class="text-decoration-none" href="mailto:{{ s.last_edited_by.email }}">{{ s.last_edited_by.name }}</a>
-    {% if s.last_edit_timestamp is not none %}
-        {{ s.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-    {% endif %}
+    <div class="mt-1 text-muted">
+        Last edited by <i class="fas fa-user-circle"></i> 
+        <a class="text-decoration-none" href="mailto:{{ s.last_edited_by.email }}">{{ s.last_edited_by.name }}</a>
+        {% if s.last_edit_timestamp is not none %}
+            {{ s.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+        {% endif %}
+    </div>
 {% endif %}
 """
 

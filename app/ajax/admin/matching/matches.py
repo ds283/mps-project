@@ -168,8 +168,8 @@ _info = \
     {% endif %}
 </div>
 {% if m.last_edited_by is not none %}
-    <div class="mt-1">
-        Last edited by 
+    <div class="mt-1 text-muted">
+        Last edited by <i class="fas fa-user-circle"></i>
         <a class="text-decoration-none" href="mailto:{{ m.last_edited_by.email }}">{{ m.last_edited_by.name }}</a>
         {% if m.last_edit_timestamp is not none %}
             {{ m.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}

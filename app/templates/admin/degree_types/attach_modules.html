@@ -19,8 +19,8 @@
                     {% set ns = namespace(count=0) %}
                     {% for level in levels %}
                         {% if prog.number_level_modules(level.id) > 0 %}
-                            <div {% if ns.count > 0 %}style="padding-top: 15px;"{% endif %}>
-                                <span style="font-weight: lighter; margin-bottom: 2px;">{{ level.name }}</span>
+                            <div {% if ns.count > 0 %}class="mt-2"{% endif %}>
+                                <span class="mb-1" style="font-weight: lighter;">{{ level.name }}</span>
                             </div>
                             {% set ns.count = ns.count + 1 %}
                             {% for module in prog.get_level_modules(level.id) %}

@@ -111,7 +111,7 @@
                                                 {% if ns.count > 1 %}
                                                     <hr class="intro-divider">
                                                 {% endif %}
-                                                <div class="dashboard-subtitle" style="padding-bottom: 8px;">{{ record.period.display_name }}</div>
+                                                <div class="dashboard-subtitle mb-2">{{ record.period.display_name }}</div>
                                                 {% if record.project %}
                                                     <div class="row vertical-top">
                                                         <div class="col-3">
@@ -160,7 +160,7 @@
                                                         {% if period.has_deployed_schedule %}
                                                             {% set schedule = period.deployed_schedule %}
                                                             {% set slot = period.get_student_presentation_slot(rec.id) %}
-                                                            <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</div>
+                                                            <div class="dashboard-subtitle mt-3 mb-2">{{ schedule.event_name }}</div>
                                                             {% if slot is not none %}
                                                                 <span class="badge bg-primary">{{ slot.date_as_string }}</span>
                                                                 <span class="badge bg-info text-dark">{{ slot.session_type_string }}</span>
@@ -174,7 +174,7 @@
                                                                 <span class="badge bg-warning text-dark">Did not attend</span>
                                                             {% endif %}
                                                         {% else %}
-                                                            <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">Presentation assessment</div>
+                                                            <div class="dashboard-subtitle mt-3 mb-2">Presentation assessment</div>
                                                             <p>Schedule information is not available</p>
                                                         {% endif %}
                                                     {% endif %}

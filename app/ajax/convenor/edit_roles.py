@@ -63,9 +63,8 @@ _details = \
     </div>
 {% endif %}
 {% if role.last_edited_by is not none %}
-    <div class="mt-1">
-        Last edited by 
-        <i class="fs fa-user-circle"></i>
+    <div class="mt-1 text-muted">
+        Last edited by <i class="fs fa-user-circle"></i>
         <a class="text-decoration-none" href="mailto:{{ role.last_edited_by.email }}">{{ role.last_edited_by.name }}</a>
         {% if role.last_edit_timestamp is not none %}
             on {{ role.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}

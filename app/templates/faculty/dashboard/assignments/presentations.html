@@ -4,7 +4,7 @@
     {% if period.has_deployed_schedule %}
         {% set schedule = period.deployed_schedule %}
         <div>
-            <span class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</span>
+            <span class="dashboard-subtitle mt-3 mb-2">{{ schedule.event_name }}</span>
             (<a class="text-decoration-none" href="{{ url_for('admin.view_schedule', tag=schedule.tag) }}">view full schedule</a>)
         </div>
         {% set records = period.get_faculty_presentation_slots(faculty_id) %}

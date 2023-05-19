@@ -1,18 +1,20 @@
 {% macro period_status(p) %}
-    {% set messages = p.messages %}
-    {% if messages|length > 0 %}
-        <div class="text-muted mb-1 small">Status <i class="fas fa-info-circle" tabindex="0" data-bs-toggle="popover" title="{{ p.display_name }}" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul class='small'>{% for msg in messages %}<li>{{ msg }}</li>{% endfor %}</ul>"></i></div>
-    {% endif %}
-    {% if p.start_date %}
-        <div class="text-primary small"><i class="fa fa-calendar"></i> Start date <strong>{{ p.start_date.strftime("%a %d %b %Y") }}</strong></div>
-    {% endif %}
-    {% if p.hand_in_date %}
-        <div class="text-primary small"><i class="fa fa-calendar"></i> Hand-in date <strong>{{ p.hand_in_date.strftime("%a %d %b %Y") }}</strong></div>
-    {% endif %}
+    <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+        {% set messages = p.messages %}
+        {% if messages|length > 0 %}
+            <div class="text-muted small">Status <i class="fas fa-info-circle" tabindex="0" data-bs-toggle="popover" title="{{ p.display_name }}" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul class='small'>{% for msg in messages %}<li>{{ msg }}</li>{% endfor %}</ul>"></i></div>
+        {% endif %}
+        {% if p.start_date %}
+            <div class="text-primary small"><i class="fa fa-calendar"></i> Start date <strong>{{ p.start_date.strftime("%a %d %b %Y") }}</strong></div>
+        {% endif %}
+        {% if p.hand_in_date %}
+            <div class="text-primary small"><i class="fa fa-calendar"></i> Hand-in date <strong>{{ p.hand_in_date.strftime("%a %d %b %Y") }}</strong></div>
+        {% endif %}
+    </div>
     {% if p.feedback_open %}
-        <div class="text-secondary mt-1">
+        <div class="text-secondary small mt-2">
             {% if p.closed %}
-                <div class="mt-1"><i class="fas fa-lock"></i> Feedback closed</div>
+                <div><i class="fas fa-lock"></i> Feedback closed</div>
                 <ul>
                     {% if p.feedback_id %}
                         <li>
@@ -32,7 +34,7 @@
                     {% endif %}
                 </ul>
             {% else %}
-                <div class="mt-1"><i class="fas fa-lock-open"></i> Feedback open</div>
+                <div><i class="fas fa-lock-open"></i> Feedback open</div>
                 <ul>
                     {% if p.feedback_id %}
                         <li>

@@ -55,7 +55,7 @@
 {% macro faculty_data(fac) %}
     {% if fac is not none %}
         <a class="text-decoration-none" href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
-        {% set CATS_supv, CATS_mark, CATS_pres = fac.total_CATS_assignment() %}
+        {% set CATS_supv, CATS_mark, CATS_mod, CATS_pres = fac.total_CATS_assignment() %}
         <div>
             <span class="badge bg-secondary">
                 {% if config.uses_supervisor %}
@@ -65,13 +65,13 @@
                     Ma {{ CATS_mark }}
                 {% endif %}
                 {% if config.uses_moderator %}
-                    Mo FIXME
+                    Mo {{ CATS_mod }}
                 {% endif %}
                 {% if config.uses_presentations %}
                     P {{ CATS_pres }}
                 {% endif %}
             </span>
-            <span class="badge bg-primary">Total {{ CATS_supv+CATS_mark+CATS_pres }}</span>
+            <span class="badge bg-primary">Total {{ CATS_supv+CATS_mark+CATS_mod+CATS_pres }}</span>
         </div>
     {% else %}
         <span class="badge bg-danger">Not allocated</span>

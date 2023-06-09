@@ -35,7 +35,7 @@
                         </td>
                         <td>
                             <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
-                                <strong>{{ rec.project.name }}</strong>
+                                {{ rec.project.name }}
                             </a>
                             {% if rec.project.generic or rec.project.owner is none %}
                                 <span class="badge bg-info">GENERIC</span>

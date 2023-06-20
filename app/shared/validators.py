@@ -11,12 +11,12 @@
 
 from flask import flash
 from flask_login import current_user
+from sqlalchemy import and_
 
 from .utils import get_current_year, get_assessment_data
-from ..shared.utils import get_count
-
 from ..database import db
 from ..models import ProjectClassConfig, SubmittingStudent, SubmissionRecord, LiveProject, SubmissionRole
+from ..shared.utils import get_count
 
 
 def validate_is_administrator(message=True):
@@ -330,14 +330,14 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool=True):
         .filter(SubmissionRecord.retired == False) \
         .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
         .filter(SubmittingStudent.student_id == record.owner.student_id) \
-        .filter(SubmissionRecord.roles.any(SubmissionRole.user_id == current_user.id,
-                                           SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR))
+        .filter(SubmissionRecord.roles.any(and_(SubmissionRole.user_id == current_user.id,
+                                                SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR)))
 
     if get_count(owner_query) > 0:
         return True
 
     if message:
-        flash('This operation is not permitted. You do not have sufficient privileges to view the deatils '
+        flash('This operation is not permitted. You do not have sufficient privileges to view details '
               'of the specified submission record. If you think this is an error, please contact '
               'a system administrator.', 'warning')
     return False

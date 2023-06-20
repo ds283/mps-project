@@ -55,12 +55,12 @@ _actions = \
 <div style="text-align: right;">
     <div class="float-end">
         {% if in_user_acl %}
-            <a class="btn btn-sm btn-secondary" href="{{ url_for('documents.remove_user_acl', user_id=user.id, attach_type=type, attach_id=attachment.id) }}">
-                <i class="fas fa-times"></i> Remove access
+            <a class="btn btn-sm btn-outline- secondary" href="{{ url_for('documents.remove_user_acl', user_id=user.id, attach_type=type, attach_id=attachment.id) }}">
+                <i class="fas fa-trash"></i> Remove access
             </a>
         {% else %}
-            <a class="btn btn-sm btn-primary" href="{{ url_for('documents.add_user_acl', user_id=user.id, attach_type=type, attach_id=attachment.id) }}">
-                <i class="fas fa-times"></i> Grant access
+            <a class="btn btn-sm btn-outline-success" href="{{ url_for('documents.add_user_acl', user_id=user.id, attach_type=type, attach_id=attachment.id) }}">
+                <i class="fas fa-check"></i> Grant access
             </a>
         {% endif %}
     </div>

@@ -779,8 +779,9 @@ def attachment_acl(attach_type, attach_id):
     if state_filter is None and session.get('documents_acl_state_filter'):
         state_filter = session['documents_acl_state_filter']
 
-    if state_filter not in ['all', 'access', 'no-access']:
-        state_filter = 'all'
+    if state_filter not in ['al l', 'access', 'no-access']:
+        # default to showing only users that have access
+        state_filter = 'access'
 
     if state_filter is not None:
         session['documents_acl_state_filter'] = state_filter

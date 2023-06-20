@@ -55,7 +55,7 @@ _actions = \
 <div style="text-align: right;">
     <div class="float-end">
         {% if in_user_acl %}
-            <a class="btn btn-sm btn-outline- secondary" href="{{ url_for('documents.remove_user_acl', user_id=user.id, attach_type=type, attach_id=attachment.id) }}">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('documents.remove_user_acl', user_id=user.id, attach_type=type, attach_id=attachment.id) }}">
                 <i class="fas fa-trash"></i> Remove access
             </a>
         {% else %}

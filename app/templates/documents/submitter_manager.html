@@ -337,17 +337,20 @@
                         <tbody>
                             {% for attachment in record.attachments %}
                                 {% set asset = attachment.attachment %}
-                                {# students can only see attachments they have uploaded themselves, #}
-                                {# or which they are able to download #}
-                                {% if not is_student or (current_user.id == attachment.uploaded_id or asset.has_access(current_user.id))%}
-                                    {{ asset_line(asset, attachment,
-                                                  download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
-                                                  delete_url=url_for('documents.delete_submitter_attachment', aid=attachment.id, url=url, text=text),
-                                                  edit_url=url_for('documents.edit_submitter_attachment', aid=attachment.id, url=url, text=text),
-                                                  acl_url=url_for('documents.attachment_acl', attach_type=1, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
-                                                  log_url=url_for('documents.attachment_download_log', attach_type=1, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
-                                                  deletable=deletable, allow_student=true, is_editable=is_editable,
-                                                  admin_rights=admin_rights) }}
+                                {# students can only see attachments they have uploaded themselves, or which they are able to download #}
+                                {# no matter whether the student is on an access control list or not, students can only view/download #}
+                                {# attachments that have explicitly been published #}
+                                {% if (is_student and record.publish_to_students) or (not is_student) %}
+                                    {% if current_user.id == attachment.uploaded_id or asset.has_access(current_user.id))%}
+                                        {{ asset_line(asset, attachment,
+                                                      download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
+                                                      delete_url=url_for('documents.delete_submitter_attachment', aid=attachment.id, url=url, text=text),
+                                                      edit_url=url_for('documents.edit_submitter_attachment', aid=attachment.id, url=url, text=text),
+                                                      acl_url=url_for('documents.attachment_acl', attach_type=1, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
+                                                      log_url=url_for('documents.attachment_download_log', attach_type=1, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
+                                                      deletable=deletable, allow_student=true, is_editable=is_editable,
+                                                      admin_rights=admin_rights) }}
+                                    {% endif %}
                                 {% endif %}
                             {% endfor %}
                         </tbody>

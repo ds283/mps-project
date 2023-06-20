@@ -539,6 +539,10 @@ def delete_submitter_attachment(aid):
         flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
         return redirect(redirect_url())
 
+    if current_user.has_role('student') and not attachment.publish_to_students:
+        # give no indication that this asset actually exists
+        abort(404)
+
     # check user has sufficient privileges to perform the deletion
     if not is_deletable(record, message=True):
         return redirect(redirect_url())
@@ -608,7 +612,7 @@ def perform_delete_submitter_attachment(aid, sid):
 @login_required
 def upload_submitter_attachment(sid):
     # sid is a SubmissionRecord id
-    record = SubmissionRecord.query.get_or_404(sid)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
 
     # check is convenor for the project's class, or has suitable admin/root privileges
     config = record.owner.config
@@ -676,6 +680,7 @@ def upload_submitter_attachment(sid):
                 attachment.type = SubmissionAttachment.ATTACHMENT_OTHER
 
                 if current_user.has_role('student'):
+                    # if uploaded by a student, assume published to students, otherwise not
                     attachment.publish_to_students = True
 
                 else:
@@ -689,6 +694,8 @@ def upload_submitter_attachment(sid):
                 asset.grant_user(role.user)
 
             # students can't ordinarily download attachments unless permission is given
+            if attachment.publish_to_students:
+                asset.grant_user(record.owner.student.user)
 
             # set up list of roles that should have access, if they exist
             asset.grant_roles(['office', 'convenor', 'moderator', 'exam_board', 'external_examiner'])

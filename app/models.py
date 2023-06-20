@@ -11212,14 +11212,14 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 continue
 
             # OK for assigned markers to have download rights
-            if config.uses_marker and user.id in marker_roles:
+            if config.uses_marker and user.id in marker_ids:
                 continue
 
             # OK for assigned moderators to have download rights
-            if config.uses_moderator and user.id in moderator_roles:
+            if config.uses_moderator and user.id in moderator_ids:
                 continue
 
-            # if allow_student flag is set, OK for student to download their own report
+            # if allow_student flag is set, OK for student to download
             if allow_student and user.id == self.owner.student.id:
                 continue
 
@@ -11252,7 +11252,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         for attachment in self.attachments:
             attachment: SubmissionAttachment
             asset: SubmittedAsset = attachment.attachment
-            modified = modified | self._check_access_control_users(asset, allow_student=False)
+            modified = modified | self._check_access_control_users(asset, allow_student=attachment.publish_to_students)
 
         return modified
 
@@ -11275,25 +11275,28 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             if config.uses_supervisor:
                 for role in self.supervisor_roles:
                     if not asset.has_access(role.user):
-                        messages.append('"{name}" has been assigned a supervision role, but does not have download '
+                        messages.append('{name} has been assigned a supervision role, but does not have access '
                                         'permissions for the {what}'.format(name=role.user.name, what=text_label))
 
             if config.uses_marker:
                 for role in self.marker_roles:
                     if not asset.has_access(role.user):
-                        messages.append('"{name}" has been assigned a marking role, but does not have download '
+                        messages.append('{name} has been assigned a marking role, but does not have access '
                                         'permissions for the {what}'.format(name=role.user.name, what=text_label))
 
             if config.uses_moderator:
                 for role in self.moderator_roles:
                     if not asset.has_access(role.user):
-                        messages.append('"{name}" has been assigned a moderation role, but does not have download '
+                        messages.append('{name} has been assigned a moderation role, but does not have access '
                                         'permissions for the {what}'.format(name=role.user.name, what=text_label))
 
             if not asset.has_access(self.current_config.convenor.user):
-                messages.append('Project convenor "{name}" for this submission period does not have download '
+                messages.append('Convenor {name} does not have access '
                                 'permissions for the {what}'.format(name=self.current_config.convenor_name,
                                                                     what=text_label))
+            if not asset.has_access(self.owner.student.user):
+                messages.append('Submitter {name} does not have access permissions for their '
+                                'report'.format(attach=asset.target_name, name=self.owner.student.user.name))
 
             if exam_license is not None:
                 if asset.license_id != exam_license.id:
@@ -11301,29 +11304,33 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                                     '"{license}"'.format(license=asset.license.name, what=text_label))
 
 
-        def _validate_attachment_access_control(asset):
+        def _validate_attachment_access_control(asset, publish_to_students=False):
             if config.uses_supervisor:
                 for role in self.supervisor_roles:
                     if not asset.has_access(role.user):
-                        messages.append('"{name}" has been assigned a supervision role, but does not have download '
+                        messages.append('{name} has been assigned a supervision role, but does not have access '
                                         'permissions for attachment "{attach}"'.format(name=role.user.name, attach=asset.target_name))
 
             if config.uses_marker:
                 for role in self.marker_roles:
                     if not asset.has_access(role.user):
-                        messages.append('"{name}" has been assigned a marking role, but does not have download '
+                        messages.append('{name} has been assigned a marking role, but does not have access '
                                         'permissions for attachment "{attach}"'.format(name=role.user.name, attach=asset.target_name))
 
             if config.uses_moderator:
                 for role in self.moderator_roles:
                     if not asset.has_access(role.user):
-                        messages.append('"{name}" has been assigned a moderation role, but does not have download '
+                        messages.append('{name} has been assigned a moderation role, but does not have access '
                                         'permissions for attachment "{attach}"'.format(name=role.user.name, attach=asset.target_name))
 
             if not asset.has_access(self.current_config.convenor.user):
-                messages.append('The project convenor for this submission period "{name}" does not have download '
-                                'permissions for the attachment '
+                messages.append('Convenor {name} does not have access permissions for the attachment '
                                 '"{attach}"'.format(name=self.current_config.convenor_name, attach=asset.target_name))
+
+            if publish_to_students:
+                if not asset.has_access(self.owner.student.user):
+                    messages.append('Attachment "{attach}" is published to students, but the submitter '
+                                    '{name} does not have access permissions'.format(attach=asset.target_name, name=self.owner.student.user.name))
 
         if self.period.closed and self.report is None:
             messages.append('This submission period is closed, but no report has been uploaded.')
@@ -11336,7 +11343,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         for item in self.attachments:
             item: SubmissionAttachment
-            _validate_attachment_access_control(item.attachment)
+            _validate_attachment_access_control(item.attachment, item.publish_to_students)
 
         return messages
 

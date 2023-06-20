@@ -73,7 +73,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset, \
     AssetLicense, SubmittedAssetDownloadRecord, GeneratedAssetDownloadRecord, SelectingStudent, EmailNotification, \
     ProjectTagGroup, ProjectTag, SubmitterAttendanceData, DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS, \
-    MatchingRole
+    MatchingRole, SubmissionAttachment
 from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
     canonical_submitted_asset_filename
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
@@ -9687,7 +9687,17 @@ def download_generated_asset(asset_id):
 @login_required
 def download_submitted_asset(asset_id):
     # asset_is is a SubmittedAsset
-    asset = SubmittedAsset.query.get_or_404(asset_id)
+    asset: SubmittedAsset = SubmittedAsset.query.get_or_404(asset_id)
+    attachment: SubmissionAttachment = asset.submission_attachment
+
+    if attachment is None:
+        flash('The specified asset is not associated with a submission attachment. This is an internal error. '
+              'Please contact a system administrator.', 'error')
+        return redirect(redirect_url())
+
+    if current_user.has_role('student') and not attachment.publish_to_students:
+        # give no indication that this asset actually exists
+        abort(404)
 
     if not asset.has_access(current_user.id):
         flash('You do not have permissions to download this asset. If you think this is a mistake, please contact '

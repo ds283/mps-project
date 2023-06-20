@@ -83,10 +83,11 @@ _periods = \
         {% if r.project is not none %}
             <div class="d-flex flex-row justify-content-start align-items-center gap-2">
                 {% if r.project.name|length < 70 %}
-                    <div>{{ r.project.name }}</div>
+                    {% set proj_name = r.project.name %}
                 {% else %}
-                    <div>{{ r.project.name[0:70] }}...</div>
+                    {% set proj_mame = r.project.name[0:70] + '...' %}
                 {% endif %}
+                <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=r.project_id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">{{ proj_name }}</a>
                 {% if r.has_issues %}
                     <i class="fas fa-exclamation-triangle text-danger"></i>
                 {% endif %}

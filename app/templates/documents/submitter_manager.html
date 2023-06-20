@@ -341,7 +341,7 @@
                                 {# no matter whether the student is on an access control list or not, students can only view/download #}
                                 {# attachments that have explicitly been published #}
                                 {% if (is_student and record.publish_to_students) or (not is_student) %}
-                                    {% if current_user.id == attachment.uploaded_id or asset.has_access(current_user.id))%}
+                                    {% if current_user.id == attachment.uploaded_id or asset.has_access(current_user.id) %}
                                         {{ asset_line(asset, attachment,
                                                       download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
                                                       delete_url=url_for('documents.delete_submitter_attachment', aid=attachment.id, url=url, text=text),

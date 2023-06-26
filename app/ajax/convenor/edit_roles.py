@@ -42,7 +42,7 @@ _menu = \
 _details = \
 """
 {% if role.created_by is not none %}
-    <div>
+    <div class="small">
         Created by
         <i class="fas fa-user-circle"></i>
         <a class="text-decoration-none" href="mailto:{{ role.created_by.email }}">{{ role.created_by.name }}</a>
@@ -51,7 +51,7 @@ _details = \
         {% endif %}
     </div>
 {% else %}
-    <div>
+    <div class="small">
         Automatically populated
         {% if role.creation_timestamp is not none %}
             on {{ role.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
@@ -63,7 +63,7 @@ _details = \
     </div>
 {% endif %}
 {% if role.last_edited_by is not none %}
-    <div class="mt-1 text-muted">
+    <div class="mt-1 small">
         Last edited by <i class="fs fa-user-circle"></i>
         <a class="text-decoration-none" href="mailto:{{ role.last_edited_by.email }}">{{ role.last_edited_by.name }}</a>
         {% if role.last_edit_timestamp is not none %}

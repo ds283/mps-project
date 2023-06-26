@@ -39,7 +39,7 @@
             <div class="card-body">
                 <ul>
                     {% if item.created_by %}
-                        <li class="text-muted">
+                        <li class="text-muted small">
                             Created by <i class="fas fa-user-circle"></i> {{ item.created_by.name_and_username }}
                             {% if item.creation_timestamp %}
                                 on {{ item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
@@ -47,7 +47,7 @@
                         </li>
                     {% endif %}
                     {% if item.last_edited_by %}
-                        <li class="text-muted">
+                        <li class="text-muted small">
                             Last edited by <i class="fas fa-user-circle"></i> {{ item.last_edited_by.name_and_username }}
                             {% if item.last_edit_timestamp %}
                                 on {{ item.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}

@@ -32,7 +32,7 @@ from .uploads import solution_files, batch_user_files, submitted_files
 from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
 # from flask_qrcode import QRcode
-from flask_babelex import Babel
+from flask_babel import Babel
 
 from .config import app_config, site_revision, site_copyright_dates
 from .build_data import git_tag

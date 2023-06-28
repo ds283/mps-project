@@ -13,7 +13,7 @@ import json
 from flask import current_app
 from flask_security import password_length_validator, password_complexity_validator, \
     password_breached_validator
-from usernames import is_safe_username
+from python_usernames import is_safe_username
 from werkzeug.local import LocalProxy
 from wtforms import ValidationError
 from wtforms.validators import Optional

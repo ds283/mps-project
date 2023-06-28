@@ -9848,7 +9848,8 @@ def inject_liveproject(pid, pclass_id, type):
     pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
     if type not in [1, 2]:
-        flash('Ignored request to attach LiveProject of unknown type "{type}"'.format(type=type))
+        flash('Could not handle request to attach LiveProject of unknown type "{type}". '
+              'Please contact a system administrator.'.format(type=type))
         return redirect(redirect_url())
 
     config: ProjectClassConfig = pclass.most_recent_config

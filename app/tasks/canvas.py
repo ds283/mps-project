@@ -161,7 +161,8 @@ def register_canvas_tasks(celery):
                     .join(StudentData, StudentData.id == SubmittingStudent.student_id) \
                     .join(User, User.id == StudentData.id) \
                     .filter(or_(User.email == email,
-                                func.concat(User.first_name, ' ', User.last_name) == name)).all()
+                                func.concat(User.first_name, ' ', User.last_name) == name,
+                                func.concat(func.left(User.first_name, 1), '.', User.last_name, '@sussex.ac.uk') == email)).all()
                 num = len(match)
 
                 if num > 1:

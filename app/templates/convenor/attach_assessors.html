@@ -95,12 +95,17 @@
                                 {% else %}
                                     <span class="badge bg-secondary">{{ num }}</span>
                                 {% endif %}
-                                {% set live_counterpart = data.live_counterpart(config.id) %}
+                                {% set selector_counterpart = data.selector_live_counterpart(config.id) if config.select_in_previous_cycle else none %}
                                 {% set running_counterpart = data.running_counterpart(config.id) %}
                                 {% if running_counterpart is not none %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
                                         <a class="badge text-decoration-none text-nohover-light bg-danger dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                            RUNNING {{ running_counterpart.number_assessors }}
+                                            {% if config.select_in_previous_cycle %}
+                                                RUNNING
+                                            {% else %}
+                                                SELECTING/RUNNING
+                                            {% endif %}
+                                            {{ running_counterpart.number_assessors }}
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=running_counterpart.id) }}">
@@ -109,13 +114,13 @@
                                         </div>
                                     </div>
                                 {% endif %}
-                                {% if live_counterpart is not none %}
+                                {% if selector_counterpart is not none %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
                                         <a class="badge text-decoration-none text-nohover-light bg-success dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                            SELECTING {{ live_counterpart.number_assessors }}
+                                            SELECTING {{ selector_counterpart.number_assessors }}
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=live_counterpart.id) }}">
+                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=selector_counterpart.id) }}">
                                                 <i class="fas fa-sync fa-fw"></i> Sync with library version
                                             </a>
                                         </div>
@@ -127,7 +132,7 @@
                                     <div class="dropdown project-status-button" style="display: inline-block;">
                                         {% if running_counterpart is not none and running_counterpart.is_assessor(marker.id) %}
                                             <a class="badge text-decoration-none text-nohover-light bg-danger dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
-                                        {% elif live_counterpart is not none and live_counterpart.is_assessor(marker.id) %}
+                                        {% elif selector_counterpart is not none and selector_counterpart.is_assessor(marker.id) %}
                                             <a class="badge text-decoration-none text-nohover-light bg-success dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
                                         {% else %}
                                             <a class="badge text-decoration-none text-nohover-light bg-secondary dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>
@@ -148,15 +153,15 @@
 
                                                 {% endif %}
                                             {% endif %}
-                                            {% if live_counterpart is none %}
+                                            {% if selector_counterpart is none %}
                                                 <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-times"></i> No live project</a>
                                             {% else %}
-                                                {% if live_counterpart.is_assessor(marker.id) %}
-                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
+                                                {% if selector_counterpart.is_assessor(marker.id) %}
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=selector_counterpart.id, fac_id=marker.id) }}">
                                                         <i class="fas fa-trash fa-fw"></i> Remove from live project
                                                     </a>
                                                 {% else %}
-                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
+                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=selector_counterpart.id, fac_id=marker.id) }}">
                                                         <i class="fas fa-plus fa-fw"></i> Attach to live project
                                                     </a>
                                                 {% endif %}
@@ -175,15 +180,15 @@
                                                     <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"{% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
                                                         <i class="fas fa-plus fa-fw"></i> Attach to library version
                                                     </a>
-                                                    {% if live_counterpart is none %}
+                                                    {% if selector_counterpart is none %}
                                                         <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-times fa-fw"></i> No live project</a>
                                                     {% else %}
-                                                        {% if live_counterpart.is_assessor(marker.id) %}
-                                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
+                                                        {% if selector_counterpart.is_assessor(marker.id) %}
+                                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_remove_assessor', live_id=selector_counterpart.id, fac_id=marker.id) }}">
                                                                 <i class="fas fa-trash fa-fw"></i> Remove from live project
                                                             </a>
                                                         {% else %}
-                                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
+                                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.liveproject_attach_assessor', live_id=selector_counterpart.id, fac_id=marker.id) }}">
                                                                 <i class="fas fa-plus fa-fw"></i> Attach to live project
                                                             </a>
                                                         {% endif %}
@@ -193,8 +198,8 @@
                                         {% endif %}
                                     {% endfor %}
                                 {% endif %}
-                                {% if live_counterpart is not none %}
-                                    {% for marker in live_counterpart.assessor_list %}
+                                {% if selector_counterpart is not none %}
+                                    {% for marker in selector_counterpart.assessor_list %}
                                         {% if not data.is_assessor(marker.id) and (running_counterpart is none or (running_counterpart is not none and not running_counterpart.is_assessor(marker.id))) %}
                                             <div class="dropdown project-status-button" style="display: inline-block;">
                                                 <a class="badge text-decoration-none text-nohover-dark bg-warning" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ marker.user.name }}</a>

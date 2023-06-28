@@ -1999,7 +1999,6 @@ class User(db.Model, UserMixin):
     def post_task_update(self, uuid, payload, remove_on_load=False, autocommit=False):
         """
         Add a notification to this user
-        :param user_id:
         :param payload:
         :return:
         """
@@ -7537,7 +7536,7 @@ class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
         return get_count(self.descriptions)
 
 
-    def live_counterpart(self, config):
+    def selector_live_counterpart(self, config):
         """
         :param config_id: current ProjectClassConfig instance
         :return:
@@ -7547,45 +7546,37 @@ class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
         elif isinstance(config, ProjectClassConfig):
             config_id = config.id
         else:
-            raise RuntimeError('Unexpected type for "config" in Project.live_counterpart()')
+            raise RuntimeError('Unexpected type for "config" in Project.selector_live_counterpart()')
 
         return self.live_projects.filter_by(config_id=config_id).first()
 
 
-    def _prior_counterpart_query(self, cfg):
+    def submitter_live_counterpart(self, cfg):
         config: ProjectClassConfig
+
         if isinstance(cfg, int):
             config = db.session.query(ProjectClassConfig).filter_by(id=cfg).first()
         elif isinstance(cfg, ProjectClassConfig):
             config = cfg
         else:
-            raise RuntimeError('Unexpected type for "config" in Project.prior_counterpart()')
+            raise RuntimeError('Unexpected type for "config" in Project.submitter_live_counterpart()')
 
         if config is None:
             return None
 
-        previous_config = config.previous_config
-        if previous_config is None:
-            return None
+        if config.select_in_previous_cycle:
+            previous_config = config.previous_config
+            if previous_config is None:
+                return None
 
-        return self.live_projects.filter_by(config_id=previous_config.id)
+            return self.live_projects.filter_by(config_id=previous_config.id).first()
 
-
-    def prior_counterpart(self, cfg):
-        query = self._prior_counterpart_query(cfg)
-
-        if query is None:
-            return None
-
-        return self._prior_counterpart_query(cfg).first()
+        return self.live_projects.filter_by(config_id=config.id).first()
 
 
-    def running_counterpart(self, config):
-        """
-        :param config_id: current ProjectClassConfig instance
-        :return:
-        """
-        project = self.prior_counterpart(config)
+    def running_counterpart(self, cfg):
+        project: LiveProject = self.submitter_live_counterpart(cfg)
+
         if project is None:
             return None
 
@@ -11186,7 +11177,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         supervisor_ids: Set[int] = set(role.user.id for role in supervisor_roles)
         marker_ids: Set[int] = set(role.user.id for role in marker_roles)
-        moderator_roles: Set[int] = [role.user.id for role in moderator_roles]
+        moderator_ids: Set[int] = [role.user.id for role in moderator_roles]
 
         if config.uses_supervisor:
             for role in supervisor_roles:

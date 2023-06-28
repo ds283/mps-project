@@ -31,7 +31,8 @@ _project_name = \
 {% if project.active %}
 <div class="mt-1">
         {{ 'REPNEWCOMMENTS'|safe }}
-        REPISLIVE
+        REPSELECTING
+        REPSUBMITTING
         REPISRUNNING
         {% if desc is none %}
             {% set num = project.num_descriptions %}
@@ -259,10 +260,27 @@ _convenor_menu = \
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=pclass_id) }}">
             <i class="fas fa-cogs fa-fw"></i> Degree programmes...
         </a>
-        {% if not in_current %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.inject_liveproject', pid=project.id, pclass_id=pclass_id) }}">
-                <i class="fas fa-cogs fa-fw"></i> Generate LiveProject...
-            </a>
+        {% if select_in_previous_cycle %}
+            {% if not in_selector or not in_submitter %}
+                <div role="separator" class="dropdown-divider"></div>
+            {% endif %}
+            {% if not in_selector %}
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.inject_liveproject', pid=project.id, pclass_id=pclass_id, type=1) }}">
+                    <i class="fas fa-cogs fa-fw"></i> Attach selector LiveProject...
+                </a>
+            {% endif %}
+            {% if not in_submitter %}
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.inject_liveproject', pid=project.id, pclass_id=pclass_id, type=2) }}">
+                    <i class="fas fa-cogs fa-fw"></i> Attach submitter LiveProject...
+                </a>
+            {% endif %}
+        {% else %}
+            <div role="separator" class="dropdown-divider"></div>
+            {% if not in_selector %} {# in_selector and in_submitter should be the same thing #}
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.inject_liveproject', pid=project.id, pclass_id=pclass_id, type=1) }}">
+                    <i class="fas fa-cogs fa-fw"></i> Attach LiveProject...
+                </a>
+            {% endif %}
         {% endif %}
 
         <div role="separator" class="dropdown-divider"></div>
@@ -369,7 +387,7 @@ def _name_labels(project_id):
 
 
 @cache.memoize()
-def _element(project_id, desc_id, menu_template, in_current):
+def _element(project_id, desc_id, menu_template, in_selector, in_submitter, select_in_previous_cycle):
     p: Project = db.session.query(Project).filter_by(id=project_id).one()
     d: ProjectDescription = None
     if desc_id is not None:
@@ -385,8 +403,11 @@ def _element(project_id, desc_id, menu_template, in_current):
              'group': render_template_string(_affiliation, project=p),
              'prefer': render_template_string(_project_prefer, project=p),
              'skills': render_template_string(_project_skills, skills=p.ordered_skills),
-             'menu': render_template_string(menu_string, project=p, desc=d, config_id=_config_proxy, pclass_id=_pclass_proxy,
-                                            in_current=in_current, text='REPTEXT', url='REPURL')}
+             'menu': render_template_string(menu_string, project=p, desc=d,
+                                            config_id=_config_proxy, pclass_id=_pclass_proxy,
+                                            in_selector=in_selector, in_submitter=in_submitter,
+                                            select_in_previous_cycle=select_in_previous_cycle,
+                                            text='REPTEXT', url='REPURL')}
 
 
 def _process(project_id, config, current_user_id, menu_template, name_labels, text_enc, url_enc,
@@ -403,11 +424,12 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
         e = None
 
     is_running = (p.running_counterpart(config.id) is not None) if config is not None else False
-    is_live = (p.live_counterpart(config.id) is not None) if config is not None else False
-    in_current = (p.prior_counterpart(config.id) is not None) if config is not None else False
+
+    in_selector = (p.selector_live_counterpart(config.id) is not None) if config is not None else False
+    in_submitter = (p.submitter_live_counterpart(config.id) is not None) if config is not None else False
 
     # _element is cached
-    record = _element(project_id, desc_id, menu_template, in_current)
+    record = _element(project_id, desc_id, menu_template, in_selector, in_submitter, config.select_in_previous_cycle)
 
     # need to replace text and url in 'name' field
     # need to replace text, url, config_id and pclass_id in 'menu' field
@@ -425,14 +447,19 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
         name = name.replace('REPNAMELABELS', '', 1)
 
     if is_running:
-        name = name.replace('REPISRUNNING', '<span class="badge bg-danger">RUNNING</span>', 1)
+        name = name.replace('REPISRUNNING', '<span class="badge bg-success">RUNNING</span>', 1)
     else:
         name = name.replace('REPISRUNNING', '', 1)
 
-    if is_live:
-        name = name.replace('REPISLIVE', '<span class="badge bg-success">LIVE</span>', 1)
+    if in_selector:
+        name = name.replace('REPSELECTING', '<span class="badge bg-primary">SELECTING</span>', 1)
     else:
-        name = name.replace('REPISLIVE', '', 1)
+        name = name.replace('REPSELECTING', '', 1)
+
+    if in_submitter:
+        name = name.replace('REPSUBMITTING', '<span class="badge bg-primary">SUBMITTING</span>', 1)
+    else:
+        name = name.replace('REPSUBMITTING', '', 1)
 
     status = replace_enrollment_text(e, status)
     name = replace_error_block(p, d, show_errors, name)

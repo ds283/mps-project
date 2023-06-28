@@ -9841,15 +9841,19 @@ def mark_task_dropped(tid):
     return redirect(redirect_url())
 
 
-@convenor.route('/inject_liveproject/<int:pid>/<int:pclass_id>')
+@convenor.route('/inject_liveproject/<int:pid>/<int:pclass_id>/<int:type>')
 @roles_accepted('faculty', 'admin', 'root')
-def inject_liveproject(pid, pclass_id):
+def inject_liveproject(pid, pclass_id, type):
     project: Project = Project.query.get_or_404(pid)
     pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
+    if type not in [1, 2]:
+        flash('Ignored request to attach LiveProject of unknown type "{type}"'.format(type=type))
+        return redirect(redirect_url())
+
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash('Could not inject project "{proj}" into project classs "{pcl}" because the '
+        flash('Could not attach LiveProject "{proj}" into project classs "{pcl}" because the '
               'current configuration record could not be '
               'found'.format(proj=project.name, pcl=config.name), 'info')
         return redirect(redirect_url())
@@ -9858,33 +9862,54 @@ def inject_liveproject(pid, pclass_id):
     if not validate_is_convenor(config.project_class, message=True):
         return redirect(redirect_url())
 
-    # check project is attached to this project class
+    # check project is available for this project class
     if config.project_class not in project.project_classes:
-        flash('Could not inject project "{proj}" into project class "{pcl}" because this project '
+        flash('Could not attach LiveProject "{proj}" into project class "{pcl}" because this project '
               'is not attached to that class.'.format(proj=project.name, pcl=config.name), 'info')
         return redirect(redirect_url())
 
     # check a counterpart LiveProject does not already exist
-    prior = project.prior_counterpart(config)
-    if prior is not None:
-        flash('Ignored request to inject project "{proj}" into project class "{pcl}" for '
-              'academic year {yra}-{yrb} because counterpart LiveProject already '
-              'exists.'.format(proj=project.name, pcl=config.name, yra=config.submit_year_a-1, yrb=config.year),
+    if config.select_in_previous_cycle:
+        if type == 1:
+            inject_config = config
+        elif type == 2:
+            inject_config = config.previous_config
+        else:
+            flash('Internal error: unexpected type in convenor.inject_liveproject. '
+                  'Please contact a system administrator', 'error')
+            return redirect(redirect_url())
+    else:
+        inject_config = config
+
+    if inject_config is None:
+        flash('Could not attach LiveProject for "{proj}" to project class "{pcl}" for '
+              '{type} because the prior configuration record does not exist. Please contact a system '
+              'administrator'.format(proj=project.name, pcl=config.name, type='selectors' if type == 1 else 'submitters'),
+              'warning')
+        return redirect(redirect_url())
+
+    # this logic is a bit confusing
+    # we are just checking whether inject_config already has a LiveProject attached for this project instance,
+    # whether it is to be used for a selector or submitter.
+    # However, that means we have to use Project.selector_live_counterpart(), because this is the one that just
+    # uses the raw provided ProjectClassConfig object; Project.submitter_live_counterpart() will adjust to
+    # the previous config if ProjectClassConfig.select_in_previous_cycle is set
+
+    # the same applies for yra and yrb
+    yra = inject_config.submit_year_a
+    yrb = inject_config.submit_year_b
+
+    existing = project.selector_live_counterpart(inject_config)
+    if existing is not None:
+        flash('Could not attach LiveProject for "{proj}" to project class "{pcl}" for '
+              'academic year {yra}-{yrb} because a counterpart LiveProject already '
+              'exists.'.format(proj=project.name, pcl=config.name, yra=yra, yrb=yrb),
               'info')
         return redirect(redirect_url())
 
-    previous_config = config.previous_config
-    if previous_config is None:
-        flash('Ignored request to inject project "{proj}" into project class "{pcl}" for '
-              'academic year {yra}-{yrb} because the prior configuration record does not '
-              'exist.'.format(proj=project.name, pcl=config.name, yra=config.submit_year_a-1, yrb=config.year),
-              'info')
-        return redirect(redirect_url())
-
-    tk_name = 'Manually insert LiveProject'
+    tk_name = 'Manually attach LiveProject'
     tk_description = 'Insert project "{proj}" into project class "{pcl}" for academic year ' \
-                     '{yra}-{yrb}'.format(proj=project.name, pcl=config.name,
-                                          yra=config.submit_year_a-1, yrb=config.year)
+                     '{yra}-{yrb}'.format(proj=project.name, pcl=config.name, yra=yra, yrb=yrb)
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     celery = current_app.extensions['celery']
@@ -9895,10 +9920,10 @@ def inject_liveproject(pid, pclass_id):
 
     attach = celery.tasks['app.tasks.go_live.project_golive']
 
-    number = get_count(previous_config.live_projects)+1
+    number = get_count(inject_config.live_projects)+1
 
     seq = chain(init.si(task_id, tk_name),
-                attach.si(number, pid, previous_config.id),
+                attach.si(number, pid, inject_config.id),
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 

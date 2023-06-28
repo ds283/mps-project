@@ -7,10 +7,12 @@
 #
 # Contributors: ds283$ <$>
 #
+
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from flask import current_app
+from sqlalchemy import or_, func
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -158,7 +160,8 @@ def register_canvas_tasks(celery):
                 match = config.submitting_students \
                     .join(StudentData, StudentData.id == SubmittingStudent.student_id) \
                     .join(User, User.id == StudentData.id) \
-                    .filter(User.email == email).all()
+                    .filter(or_(User.email == email,
+                                func.concat(User.first_name, ' ', User.last_name) == name)).all()
                 num = len(match)
 
                 if num > 1:

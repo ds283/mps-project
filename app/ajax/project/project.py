@@ -447,17 +447,23 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
         name = name.replace('REPNAMELABELS', '', 1)
 
     if is_running:
-        name = name.replace('REPISRUNNING', '<span class="badge bg-success">RUNNING</span>', 1)
+        name = name.replace('REPISRUNNING', '<span class="badge bg-success" data-bs-toggle="tooltip" title="One or '
+                                            'more students are submitters for this project in the current '
+                                            'cycle">RUNNING</span>', 1)
     else:
         name = name.replace('REPISRUNNING', '', 1)
 
     if in_selector:
-        name = name.replace('REPSELECTING', '<span class="badge bg-primary">SELECTING</span>', 1)
+        name = name.replace('REPSELECTING', '<span class="badge bg-primary" data-bs-toggle="tooltip" title="A '
+                                            'version of this project is live for students who are selecting in the '
+                                            'current cycle">SELECTING</span>', 1)
     else:
         name = name.replace('REPSELECTING', '', 1)
 
     if in_submitter:
-        name = name.replace('REPSUBMITTING', '<span class="badge bg-primary">SUBMITTING</span>', 1)
+        name = name.replace('REPSUBMITTING', '<span class="badge bg-primary" data-bs-toggle="tooltip" title="A '
+                                             'version of this project is live and can be assigned for students '
+                                             'who are submitting in the current cycle">SUBMITTING</span>', 1)
     else:
         name = name.replace('REPSUBMITTING', '', 1)
 

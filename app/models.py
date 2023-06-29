@@ -9615,10 +9615,17 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
 
     @property
     def selector_config(self):
+        # if we already have a cached SelectingStudent instance, use that to determine the config
         if self.selector is not None:
             return self.selector.config
 
-        return self.config.previous_config
+        # otherwise, work it out "by hand"
+        current_config: ProjectClassConfig = self.config
+
+        if current_config.select_in_previous_cycle:
+            return current_config.previous_config
+
+        return current_config
 
 
     @property
@@ -11018,13 +11025,18 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
 
     @property
-    def previous_config(self):
-        # return cached value if we have it
+    def selector_config(self):
+        # if we already have a cached record of the ProjectClassConfig that was used during selection, use that
         if self.selection_config:
             return self.selection_config
 
+        # otherwise, we have to work it out "by hand"
         current_config: ProjectClassConfig = self.current_config
-        return current_config.previous_config
+
+        if current_config.select_in_previous_cycle:
+            return current_config.previous_config
+
+        return current_config
 
 
     @property

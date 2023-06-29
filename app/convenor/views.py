@@ -8198,13 +8198,13 @@ def manual_assign():
     rec: SubmissionRecord = SubmissionRecord.query.get_or_404(sid) if sid is not None else None
 
     if submitter is not None:
-        new_config: ProjectClassConfig = submitter.config
+        current_config: ProjectClassConfig = submitter.config
     else:
-        new_config: ProjectClassConfig = rec.period.config
+        current_config: ProjectClassConfig = rec.period.config
 
     # construct selector form
-    is_admin = validate_is_convenor(new_config.project_class, message=False)
-    ManualAssignForm = ManualAssignFormFactory(new_config, is_admin)
+    is_admin = validate_is_convenor(current_config.project_class, message=False)
+    ManualAssignForm = ManualAssignFormFactory(current_config, is_admin)
     form = ManualAssignForm(request.form)
 
     # if submitter and record are both specified, check that SubmissionRecord belongs to it.
@@ -8228,16 +8228,17 @@ def manual_assign():
         assert rec is not None
         submitter = rec.owner
 
-    # rec should not be None at this point
-
-    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
-    old_config = rec.previous_config
-    if old_config is None:
+    # find the ProjectClassConfig from which we will draw the list of available LiveProjects
+    # (this could be the current one or a previous one, depending on when the student selected, and whether
+    # selection occurs in a previous cycle)
+    select_config = rec.selector_config
+    if select_config is None:
         flash('Can not reassign because the list of available Live Projects could not be found', 'error')
         return redirect(redirect_url())
 
-    # reject if logged-in user is not a convenor for the project class associated with this submission record
-    pclass = new_config.project_class
+    # reject if logged-in user is not *currently* a convenor for the project class associated with this submission
+    # record (note they don't have to be the historical convenor associated with select_config)
+    pclass = current_config.project_class
 
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
@@ -8252,7 +8253,7 @@ def manual_assign():
     if hasattr(form, 'selector'):
         form.selector.data = period
 
-    return render_template('convenor/dashboard/manual_assign.html', rec=rec, config=old_config, url=url, text=text,
+    return render_template('convenor/dashboard/manual_assign.html', rec=rec, config=select_config, url=url, text=text,
                            form=form, submitter=submitter,
                            allow_reassign_project=rec.project_id is None or
                                                   (not period.is_feedback_open and not rec.student_engaged))
@@ -8264,16 +8265,18 @@ def manual_assign_ajax(id):
     # id is a SubmissionRecord
     rec: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
-    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
-    config = rec.previous_config
-    if config is None:
+    # find the ProjectClassConfig from which we will draw the list of available LiveProjects
+    # (this could be the current one or a previous one, depending on when the student selected, and whether
+    # selection occurs in a previous cycle)
+    select_config = rec.selector_config
+    if select_config is None:
         flash('Can not reassign because the list of available Live Projects could not be found', 'error')
         return jsonify({})
 
-    if not validate_is_convenor(config.project_class):
+    if not validate_is_convenor(select_config.project_class):
         return jsonify({})
 
-    base_query = config.live_projects \
+    base_query = select_config.live_projects \
         .join(FacultyData, FacultyData.id == LiveProject.owner_id) \
         .join(User, User.id == FacultyData.id)
 
@@ -8297,13 +8300,15 @@ def assign_revert(id):
     # id is a SubmissionRecord
     rec: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
-    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
-    config = rec.previous_config
-    if config is None:
+    # find the ProjectClassConfig from which we will draw the list of available LiveProjects
+    # (this could be the current one or a previous one, depending on when the student selected, and whether
+    # selection occurs in a previous cycle)
+    select_config = rec.selector_config
+    if select_config is None:
         flash('Can not revert assignment because the list of available Live Projects could not be found', 'error')
         return redirect(redirect_url())
 
-    if not validate_is_convenor(config.project_class):
+    if not validate_is_convenor(select_config.project_class):
         return redirect(redirect_url())
 
     if rec.period.is_feedback_open:
@@ -8335,7 +8340,7 @@ def assign_revert(id):
 
         for role in match_record.roles:
             role: MatchingRole
-            new_role = SubmissionRole(submission_id=new_sr.id,
+            new_role = SubmissionRole(submission_id=rec.id,
                                       user_id=role.user_id,
                                       role=role.role,
                                       marking_email=False,
@@ -8370,13 +8375,15 @@ def assign_from_selection(id, sel_id):
     # id is a SubmissionRecord
     rec: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
-    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
-    config = rec.previous_config
-    if config is None:
+    # find the ProjectClassConfig from which we will draw the list of available LiveProjects
+    # (this could be the current one or a previous one, depending on when the student selected, and whether
+    # selection occurs in a previous cycle)
+    select_config = rec.selector_config
+    if select_config is None:
         flash('Can not reassign because the list of available Live Projects could not be found', 'error')
         return redirect(redirect_url())
 
-    if not validate_is_convenor(config.project_class):
+    if not validate_is_convenor(select_config.project_class):
         return redirect(redirect_url())
 
     if rec.period.is_feedback_open:
@@ -8431,13 +8438,15 @@ def assign_liveproject(id, pid):
     # id is a SubmissionRecord
     rec: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
-    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
-    config = rec.previous_config
-    if config is None:
+    # find the ProjectClassConfig from which we will draw the list of available LiveProjects
+    # (this could be the current one or a previous one, depending on when the student selected, and whether
+    # selection occurs in a previous cycle)
+    select_config = rec.selector_config
+    if select_config is None:
         flash('Can not reassign because the list of available Live Projects could not be found', 'error')
         return redirect(redirect_url())
 
-    if not validate_is_convenor(config.project_class):
+    if not validate_is_convenor(select_config.project_class):
         return redirect(redirect_url())
 
     if rec.period.is_feedback_open:
@@ -8452,7 +8461,7 @@ def assign_liveproject(id, pid):
 
     lp = LiveProject.query.get_or_404(pid)
 
-    if lp.config_id != config.id:
+    if lp.config_id != select_config.id:
         flash('Can not assign LiveProject #{num} for {name} because they do not belong to the same academic '
               'cycle.'.format(num=lp.number, name=rec.period.display_name), 'error')
         return redirect(redirect_url())
@@ -8496,13 +8505,15 @@ def deassign_project(id):
     # id is a SubmissionRecord
     rec: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
-    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
-    config = rec.previous_config
-    if config is None:
+    # find the ProjectClassConfig from which we will draw the list of available LiveProjects
+    # (this could be the current one or a previous one, depending on when the student selected, and whether
+    # selection occurs in a previous cycle)
+    select_config = rec.selector_config
+    if select_config is None:
         flash('Can not reassign because the list of available Live Projects could not be found', 'error')
         return redirect(redirect_url())
 
-    if not validate_is_convenor(config.project_class):
+    if not validate_is_convenor(select_config.project_class):
         return redirect(redirect_url())
 
     if rec.period.is_feedback_open:

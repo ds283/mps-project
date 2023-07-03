@@ -429,7 +429,8 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
     in_submitter = (p.submitter_live_counterpart(config.id) is not None) if config is not None else False
 
     # _element is cached
-    record = _element(project_id, desc_id, menu_template, in_selector, in_submitter, config.select_in_previous_cycle)
+    record = _element(project_id, desc_id, menu_template, in_selector, in_submitter,
+                      config.select_in_previous_cycle if config is not None else True)
 
     # need to replace text and url in 'name' field
     # need to replace text, url, config_id and pclass_id in 'menu' field

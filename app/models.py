@@ -1918,9 +1918,9 @@ class User(db.Model, UserMixin):
     # DEFAULT CONTENT LICENSE
 
     # default license id
-    default_license_id = db.Column(db.Integer(), db.ForeignKey('asset_licenses.id'))
+    default_license_id = db.Column(db.Integer(), db.ForeignKey('asset_licenses.id', use_alter=True))
     default_license = db.relationship('AssetLicense', foreign_keys=[default_license_id], uselist=False,
-                                      backref=db.backref('users', lazy='dynamic'))
+                                      post_update=True, backref=db.backref('users', lazy='dynamic'))
 
 
     # KEEP-ALIVE AND PRECOMPUTE
@@ -7260,7 +7260,7 @@ class Project(db.Model, EditingMetadataMixin, ProjectApprovalStatesMixin,
     # Project and ProjectDescription which we solve using the SQLAlchemy post_update option)
 
     # link to default description, if one exists
-    default_id = db.Column(db.Integer(), db.ForeignKey('descriptions.id'))
+    default_id = db.Column(db.Integer(), db.ForeignKey('descriptions.id', use_alter=True))
     default = db.relationship('ProjectDescription', foreign_keys=[default_id], uselist=False, post_update=True,
                               backref=db.backref('default', uselist=False))
 

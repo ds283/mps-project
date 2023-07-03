@@ -16424,6 +16424,7 @@ class AssetLicense(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     # license URL
     url = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
+
     # LICENSE PROPERTIES
 
     # license allows redistribution?

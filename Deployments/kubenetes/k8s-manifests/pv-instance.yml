@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-instance
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 10M
+  storageClassName: standard
+  accessModes:
+    - ReadOnlyMany
+  hostPath:
+    path: "/Users/ds283/Documents/Code/MPS-Project/app/instance"
+    type: Directory

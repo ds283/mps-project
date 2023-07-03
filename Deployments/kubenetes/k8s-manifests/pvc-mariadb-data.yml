@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-mariadb-data
+  labels:
+    type: local
+spec:
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  volumeName: pv-mariadb-data

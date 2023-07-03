@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: default-worker
+  labels:
+    name: default-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      service: default-worker
+  template:
+    metadata:
+      labels:
+        service: default-worker
+    spec:
+      containers:
+        - name: webapp
+          image: mpsproject/webapp:latest
+          imagePullPolicy: IfNotPresent
+          command: ["./launch_celery.sh"]
+          resources:
+            limits:
+              cpu: "1"
+            requests:
+              cpu: "0.5"
+          env:
+            - name: SERVER_NAME
+              value: localhost
+            - name: REDIS_HOSTNAME
+              value: redis
+            - name: MONGODB_HOSTNAME
+              value: mongodb
+            - name: DATABASE_HOSTNAME
+              value: mariadb
+            - name: CELERY_RESULT_BACKEND
+              value: redis://$(REDIS_HOSTNAME):6379
+            - name: CELERY_BROKER_URL
+              value: redis://$(REDIS_HOSTNAME):6379
+            - name: CACHE_REDIS_URL
+              value: redis://$(REDIS_HOSTNAME):6379
+            - name: RATELIMIT_REDIS_URI
+              value: redis://$(REDIS_HOSTNAME):6379
+            # root password needed for backups; consider whether there is some alternative approach
+            - name: DATABASE_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-credentials
+                  key: root_password
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-credentials
+                  key: username
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-credentials
+                  key: password
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-credentials
+                  key: database
+            - name: DATABASE_URL
+              value: mysql+pymysql://$(DATABASE_USER):$(DATABASE_PASSWORD)@$(DATABASE_HOSTNAME)/$(DATABASE_NAME)
+            - name: MONGODB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: root_username
+            - name: MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: root_password
+            - name: SESSION_MONGO_URL
+              value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
+            - name: BACKUP_FOLDER
+              value: /home/mpsproject/backups
+            - name: ASSETS_FOLDER
+              value: /home/mpsproject/assets
+            - name: LOG_FILE
+              value: /home/mpsproject/logs/mps_project.log
+            - name: PROFILER_SQLITE_FILE
+              value: /home/mpsproject/profiling/flask_profiler.sql
+            - name: PROFILER_SQLITE_TABLE
+              value: measurements
+            - name: WORKER_QUEUES
+              value: default,priority
+          volumeMounts:
+            - mountPath: /home/mpsproject/assets
+              name: mount-assets
+            - mountPath: /home/mpsproject/backups
+              name: mount-backups
+            - mountPath: /home/mpsproject/app/instance
+              name: mount-instance
+            - mountPath: /home/mpsproject/logs
+              name: mount-logs
+            - mountPath: /home/mpsproject/profiling
+              name: mount-profiling
+      volumes:
+        - name: mount-assets
+          persistentVolumeClaim:
+            claimName: pvc-assets
+        - name: mount-backups
+          persistentVolumeClaim:
+            claimName: pvc-backups
+        - name: mount-instance
+          persistentVolumeClaim:
+            claimName: pvc-instance
+        - name: mount-logs
+          persistentVolumeClaim:
+            claimName: pvc-logs
+        - name: mount-profiling
+          persistentVolumeClaim:
+            claimName: pvc-profiling
+      restartPolicy: Always

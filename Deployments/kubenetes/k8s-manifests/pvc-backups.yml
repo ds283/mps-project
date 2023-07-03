@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-backups
+  labels:
+    type: local
+spec:
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  volumeName: pv-backups

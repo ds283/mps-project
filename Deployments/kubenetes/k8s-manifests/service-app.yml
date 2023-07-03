@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp
+  labels:
+    service: webapp
+spec:
+  selector:
+    service: webapp
+  type: ClusterIP
+  ports:
+    - port: 5000

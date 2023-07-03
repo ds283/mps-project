@@ -1,8 +1,8 @@
 {% macro import_datatables() %}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs5/dt-1.12.1/cr-1.5.6/fc-4.1.0/r-2.3.0/datatables.min.css"/>
+    <link href="https://cdn.datatables.net/v/bs5/dt-1.13.4/cr-1.6.2/fc-4.2.2/fh-3.3.2/r-2.4.1/datatables.min.css" rel="stylesheet"/>
 
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs5/dt-1.12.1/cr-1.5.6/fc-4.1.0/r-2.3.0/datatables.min.js"></script>
+    <script src="https://cdn.datatables.net/v/bs5/dt-1.13.4/cr-1.6.2/fc-4.2.2/fh-3.3.2/r-2.4.1/datatables.min.js"></script>
 {% endmacro %}
 
 {#{% macro bootstrap_spinner() -%}#}

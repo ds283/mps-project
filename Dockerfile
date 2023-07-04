@@ -23,6 +23,7 @@ RUN pip3 install -U -r requirements.txt
 
 COPY --chown=mpsproject:mpsproject app ./app/
 COPY --chown=mpsproject:mpsproject migrations ./migrations/
+COPY --chown=mpsproject:mpsproject basic_database ./basic_database/
 COPY --chown=mpsproject:mpsproject mpsproject.py serve.py celery_node.py boot.sh launch_celery.sh launch_beat.sh launch_flower.sh ./
 
 USER mpsproject

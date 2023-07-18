@@ -54,6 +54,9 @@ spec:
           persistentVolumeClaim:
             claimName: pvc-mariadb-data
         - name: mount-mariadb-conf
-          persistentVolumeClaim:
-            claimName: pvc-mariadb-conf
+          configMap:
+            name: configmap-mariadb
+            items:
+              - key: my.cnf
+                path: my.cnf
       restartPolicy: Always

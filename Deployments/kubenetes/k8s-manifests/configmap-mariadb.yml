@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configmap-mariadb
+  labels:
+data:
+  my.cnf: |-
+    [mysqld]
+    server-id=1
+    log-bin=mysql-bin
+    datadir=/var/lib/mysql
+    port=3306
+    ignore_db_dirs=lost+found
+    wait_timeout = 28800

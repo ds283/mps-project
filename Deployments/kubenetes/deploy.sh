@@ -6,7 +6,6 @@ kubectl apply -f ./k8s-manifests/pv-assets.yml
 kubectl apply -f ./k8s-manifests/pv-backups.yml
 kubectl apply -f ./k8s-manifests/pv-instance.yml
 kubectl apply -f ./k8s-manifests/pv-logs.yml
-kubectl apply -f ./k8s-manifests/pv-mariadb-conf.yml
 kubectl apply -f ./k8s-manifests/pv-mariadb-data.yml
 kubectl apply -f ./k8s-manifests/pv-mongodb-data.yml
 kubectl apply -f ./k8s-manifests/pv-profiling.yml
@@ -17,7 +16,6 @@ kubectl apply -f ./k8s-manifests/pvc-assets.yml
 kubectl apply -f ./k8s-manifests/pvc-backups.yml
 kubectl apply -f ./k8s-manifests/pvc-instance.yml
 kubectl apply -f ./k8s-manifests/pvc-logs.yml
-kubectl apply -f ./k8s-manifests/pvc-mariadb-conf.yml
 kubectl apply -f ./k8s-manifests/pvc-mariadb-data.yml
 kubectl apply -f ./k8s-manifests/pvc-mongodb-data.yml
 kubectl apply -f ./k8s-manifests/pvc-profiling.yml
@@ -33,6 +31,10 @@ kubectl apply -f ./k8s-manifests/secrets/secrets-mongodb.yml
 echo "Creating NGINX credentials..."
 
 kubectl apply -f ./k8s-manifests/secrets/secrets-nginx.yml
+
+echo "Creating MariaDB ConfigMaps..."
+
+kubectl apply -f ./k8s-manifests/configmap-mariadb.yml
 
 echo "Creating MariaDB deployment and service..."
 

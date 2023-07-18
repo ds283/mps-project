@@ -18,6 +18,29 @@ from waitress import serve
 from app import create_app, db
 
 
+def execute_query(query):
+    try:
+        result = db.session.execute(text(query))
+    except SQLAlchemyError as e:
+        print('** Encountered exception while emplacing SQL line')
+        print(f'     {query}')
+        print(e)
+
+
+def get_current_datetime_str():
+    now = datetime.now()
+    now_str = now.strftime('%Y-%m-%d %H:%M:%S')
+    return now_str
+
+
+def execute_scripts(scripts, now_str):
+    for script in scripts:
+        with open(script, 'r') as file:
+            while line := file.readline():
+                line_replace = line.replace('$$TIMESTAMP', now_str)
+                execute_query(line_replace)
+
+
 def populate_database():
     print('!! EXECUTING POPULATE_DATABASE()')
 
@@ -31,22 +54,10 @@ def populate_database():
                'basic_database/faculty_data.sql',
                'basic_database/roles_users.sql']
 
-    now = datetime.now()
-    now_str = now.strftime('%Y-%m-%d %H:%M:%S')
+    now_str = get_current_datetime_str()
 
     db.session.execute(text('SET FOREIGN_KEY_CHECKS = 0;'))
-
-    for script in scripts:
-        with open(script, 'r') as file:
-            while line := file.readline():
-                line_replace = line.replace('$$TIMESTAMP', now_str)
-                try:
-                    result = db.session.execute(text(line_replace))
-                except SQLAlchemyError as e:
-                    print('** Encountered exception while emplacing SQL line')
-                    print('     {line}'.format(line=line_replace))
-                    print(e)
-
+    execute_scripts(scripts, now_str)
     db.session.execute(text('SET FOREIGN_KEY_CHECKS = 1;'))
 
     db.session.commit()

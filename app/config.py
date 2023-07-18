@@ -37,8 +37,6 @@ class Config(object):
     """
     Common configuration options
     """
-    SERVER_NAME = os.environ.get('SERVER_NAME') or None
-
 
     # SQLALCHEMY_DATABASE_URI is set in instance/secrets.py
 

@@ -25,8 +25,6 @@ spec:
             requests:
               cpu: "0.5"
           env:
-            - name: SERVER_NAME
-              value: localhost
             - name: REDIS_HOSTNAME
               value: redis
             - name: MONGODB_HOSTNAME

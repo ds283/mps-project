@@ -16,10 +16,18 @@ from ..database import db
 
 
 def liveness():
+    """
+    Check if the program is alive.
+    Currently, does not perform a check, needs implementation.
+    """
     pass
 
 def readiness():
+    """
+    Check if the program can connect to a SQL database.
+    If it can't, raise a HealthError.
+    """
     try:
         db.session.execute(text("SELECT 1"))
     except SQLAlchemyError as e:
-        raise HealthError("Can't connect to the SQL database: {what}".format(what=e))
+        raise HealthError(f"Can't connect to the SQL database: {e}")

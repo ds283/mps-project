@@ -41,10 +41,12 @@ class Config(object):
 
 
     # SQLALCHEMY_DATABASE_URI is set in instance/secrets.py
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False         # suppress notifications on database changes
 
 
     # CELERY_RESULT_BACKEND and CELERY_BROKER_URL are set in instance/secrets.py
+
     CELERY_ACCEPT_CONTENT = ['json', 'pickle']
 
     CELERY_CREATE_MISSING_QUEUES = True
@@ -53,10 +55,12 @@ class Config(object):
 
 
     # Configure maximum upload size
+
     MAX_CONTENT_LENGTH = 96*1024*1024
 
 
     # Flask-Security features
+
     SECURITY_CONFIRMABLE = True
     SECURITY_RECOVERABLE = True
     SECURITY_TRACKABLE = True
@@ -81,6 +85,7 @@ class Config(object):
 
 
     # Flask-Sessionstore
+
     # SESSION_MONGO_URL is set in instance/secrets.py
     SESSION_TYPE = 'mongodb'
     SESSION_PERMANENT = True
@@ -100,11 +105,21 @@ class Config(object):
     CACHE_DEFAULT_TIMEOUT = 86400
 
 
-    # logging
+    # Logging
+
     LOG_FILE = os.environ.get('LOG_FILE') or 'logs/mps_project.log'
 
 
+    # Kubernetes-style health and readiness probes via Flask-Healthz
+
+    HEALTHZ = {
+        "live": "app.checks.liveness",
+        "ready": "app.checks.readiness",
+    }
+
+
     # MPS-Project configuration
+
     BACKUP_FOLDER = os.environ.get('BACKUP_FOLDER') or 'backups'
 
     ASSETS_FOLDER = os.environ.get('ASSETS_FOLDER') or 'assets'
@@ -121,6 +136,7 @@ class Config(object):
 
 
     # DEFAULT ASSET LICENSES
+
     FACULTY_DEFAULT_LICENSE = "Work"
     STUDENT_DEFAULT_LICENSE = "Exam"
     OFFICE_DEFAULT_LICENSE = "Work"

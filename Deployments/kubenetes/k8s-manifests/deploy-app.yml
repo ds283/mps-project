@@ -98,8 +98,18 @@ spec:
               name: mount-logs
             - mountPath: /home/mpsproject/profiling
               name: mount-profiling
-          livenessProbe:
-
+#          livenessProbe:
+#            httpGet:
+#              path: /healthz/live
+#              port: 5000
+#            initialDelaySeconds: 5
+#            timeoutSeconds: 1
+#          readinessProbe:
+#            httpGet:
+#              path: /healthz/ready
+#              port: 5000
+#            initialDelaySeconds: 10
+#            timeoutSeconds: 5
       volumes:
         - name: mount-assets
           persistentVolumeClaim:

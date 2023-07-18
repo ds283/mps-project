@@ -33,6 +33,7 @@ from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
 # from flask_qrcode import QRcode
 from flask_babel import Babel
+from flask_healthz import Healthz
 
 from .config import app_config, site_revision, site_copyright_dates
 from .build_data import git_tag
@@ -126,6 +127,7 @@ def create_app():
     rb = Rollbar(app)
     # qr = QRcode(app)
     bbl = Babel(app)
+    healthz = Healthz(app)
 
     session_store = Session(app)
 
@@ -402,9 +404,6 @@ def create_app():
 
     from .project_approver import project_approver as project_approver_blueprint
     app.register_blueprint(project_approver_blueprint, url_prefix='/project_approver')
-
-    from .loadbalancer import alb as alb_blueprint
-    app.register_blueprint(alb_blueprint, url_prefix='/alb')
 
     from .manage_users import manage_users as manage_users_blueprint
     app.register_blueprint(manage_users_blueprint, url_prefix='/manage_users')

@@ -3,16 +3,16 @@ kind: Deployment
 metadata:
   name: redis
   labels:
-    name: database
+    app.kubernetes.io/name: database
 spec:
   replicas: 1
   selector:
     matchLabels:
-      service: redis
+      app.kubernetes.io/name: redis
   template:
     metadata:
       labels:
-        service: redis
+        app.kubernetes.io/name: redis
     spec:
       containers:
         - name: redis

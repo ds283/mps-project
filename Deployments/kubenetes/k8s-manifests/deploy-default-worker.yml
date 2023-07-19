@@ -3,16 +3,16 @@ kind: Deployment
 metadata:
   name: default-worker
   labels:
-    name: default-worker
+    app.kubernetes.io/name: default-worker
 spec:
   replicas: 2
   selector:
     matchLabels:
-      service: default-worker
+      app.kubernetes.io/name: default-worker
   template:
     metadata:
       labels:
-        service: default-worker
+        app.kubernetes.io/name: default-worker
     spec:
       containers:
         - name: webapp

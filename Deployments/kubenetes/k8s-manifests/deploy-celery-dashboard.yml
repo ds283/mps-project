@@ -3,16 +3,16 @@ kind: Deployment
 metadata:
   name: celery-dashboard
   labels:
-    name: celery-dashboard
+    app.kubernetes.io/name: celery-dashboard
 spec:
   replicas: 1
   selector:
     matchLabels:
-      service: celery-dashboard
+      app.kubernetes.io/name: celery-dashboard
   template:
     metadata:
       labels:
-        service: celery-dashboard
+        app.kubernetes.io/name: celery-dashboard
     spec:
       containers:
         - name: webapp

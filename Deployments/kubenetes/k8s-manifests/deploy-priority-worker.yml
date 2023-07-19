@@ -3,16 +3,16 @@ kind: Deployment
 metadata:
   name: priority-worker
   labels:
-    name: priority-worker
+    app.kubernetes.io/name: priority-worker
 spec:
   replicas: 1
   selector:
     matchLabels:
-      service: priority-worker
+      app.kubernetes.io/name: priority-worker
   template:
     metadata:
       labels:
-        service: priority-worker
+        app.kubernetes.io/name: priority-worker
     spec:
       containers:
         - name: webapp

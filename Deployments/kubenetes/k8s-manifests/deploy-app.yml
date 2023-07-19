@@ -3,16 +3,16 @@ kind: Deployment
 metadata:
   name: webapp
   labels:
-    name: webapp
+    app.kubernetes.io/name: webapp
 spec:
   replicas: 2
   selector:
     matchLabels:
-      service: webapp
+      app.kubernetes.io/name: webapp
   template:
     metadata:
       labels:
-        service: webapp
+        app.kubernetes.io/name: webapp
     spec:
       containers:
         - name: webapp

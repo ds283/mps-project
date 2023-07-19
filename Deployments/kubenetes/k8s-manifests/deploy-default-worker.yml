@@ -86,6 +86,13 @@ spec:
               value: measurements
             - name: WORKER_QUEUES
               value: default,priority
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
           volumeMounts:
             - mountPath: /home/mpsproject/assets
               name: mount-assets
@@ -97,6 +104,11 @@ spec:
               name: mount-logs
             - mountPath: /home/mpsproject/profiling
               name: mount-profiling
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: mount-assets
           persistentVolumeClaim:

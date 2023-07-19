@@ -78,6 +78,13 @@ spec:
               value: /home/mpsproject/profiling/flask_profiler.sql
             - name: PROFILER_SQLITE_TABLE
               value: measurements
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
           volumeMounts:
             - mountPath: /home/mpsproject/app/instance
               name: mount-instance
@@ -85,6 +92,11 @@ spec:
               name: mount-logs
             - mountPath: /home/mpsproject/profiling
               name: mount-profiling
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: mount-instance
           persistentVolumeClaim:

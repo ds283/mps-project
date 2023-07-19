@@ -3,16 +3,16 @@ kind: Deployment
 metadata:
   name: celery-scheduler
   labels:
-    name: celery-scheduler
+    app.kubernetes.io/name: celery-scheduler
 spec:
   replicas: 1
   selector:
     matchLabels:
-      service: celery-scheduler
+      app.kubernetes.io/name: celery-scheduler
   template:
     metadata:
       labels:
-        service: celery-scheduler
+        app.kubernetes.io/name: celery-scheduler
     spec:
       containers:
         - name: webapp

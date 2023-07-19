@@ -3,16 +3,16 @@ kind: Deployment
 metadata:
   name: mariadb
   labels:
-    name: database
+    app.kubernetes.io/name: database
 spec:
   replicas: 1
   selector:
     matchLabels:
-      service: mariadb
+      app.kubernetes.io/name: mariadb
   template:
     metadata:
       labels:
-        service: mariadb
+        app.kubernetes.io/name: mariadb
     spec:
       containers:
         - name: mariadb

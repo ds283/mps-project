@@ -3,16 +3,16 @@ kind: Deployment
 metadata:
   name: mongodb
   labels:
-    name: database
+    app.kubernetes.io/name: database
 spec:
   replicas: 1
   selector:
     matchLabels:
-      service: mongodb
+      app.kubernetes.io/name: mongodb
   template:
     metadata:
       labels:
-        service: mongodb
+        app.kubernetes.io/name: mongodb
     spec:
       containers:
         - name: mongodb

@@ -3,10 +3,10 @@ kind: Service
 metadata:
   name: webapp
   labels:
-    service: webapp
+    app.kubernetes.io/name: webapp
 spec:
   selector:
-    service: webapp
+    app.kubernetes.io/name: webapp
   type: ClusterIP
   ports:
     - port: 5000

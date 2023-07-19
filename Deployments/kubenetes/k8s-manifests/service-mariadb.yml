@@ -3,10 +3,10 @@ kind: Service
 metadata:
   name: mariadb
   labels:
-    service: mariadb
+    app.kubernetes.io/name: mariadb
 spec:
   selector:
-    service: mariadb
+    app.kubernetes.io/name: mariadb
   type: ClusterIP
   ports:
     - port: 3306

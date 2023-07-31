@@ -11,8 +11,8 @@
 from functools import partial
 
 from flask import request
-from flask_security.forms import get_form_field_label, email_required, email_validator, EqualTo, Form, \
-    RegisterFormMixin, UniqueEmailFormMixin, NextFormMixin
+from flask_security.forms import get_form_field_label, email_required, EqualTo, Form, \
+    RegisterFormMixin, UniqueEmailFormMixin, NextFormMixin, EmailValidation
 from wtforms import StringField, BooleanField, PasswordField, SelectField, SubmitField, IntegerField, RadioField, \
     TextAreaField
 from wtforms.validators import InputRequired, Length, Optional
@@ -41,7 +41,8 @@ class EditEmailFormMixin():
 
     email = StringField(
         get_form_field_label('email'),
-        validators=[Length(max=DEFAULT_STRING_LENGTH), email_required, email_validator, unique_or_original_email])
+        validators=[Length(max=DEFAULT_STRING_LENGTH), email_required, EmailValidation(verify=True),
+                    unique_or_original_email])
 
 
 class AskConfirmAddFormMixin():
@@ -223,7 +224,8 @@ def EditStudentBatchItemFormFactory(batch):
                                                      partial(unique_or_original_batch_item_userid, batch.id)])
 
         email = StringField('Email address', validators=[InputRequired('Email address is required'),
-                                                         Length(max=DEFAULT_STRING_LENGTH), email_validator,
+                                                         Length(max=DEFAULT_STRING_LENGTH),
+                                                         EmailValidation(verify=True),
                                                          partial(unique_or_original_batch_item_email, batch.id)])
 
         last_name = StringField('Last name', validators=[InputRequired('Last name is required'),

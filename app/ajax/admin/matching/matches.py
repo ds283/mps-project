@@ -36,7 +36,7 @@ _status = \
             <span class="badge bg-secondary">Original</span>
         {% endif %}
     </div>
-    {% if m.finished %}
+    {% if m.solution_usable %}
         <div class="mt-1">
             <span class="badge bg-secondary">{{ m.records.count() }} selectors</span>
             <span class="badge bg-secondary">{{ m.supervisors.count() }} supervisors</span>

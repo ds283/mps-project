@@ -956,7 +956,7 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                                                   'can be assigned to a single supervisor',
                                                   description='Similar to above, but including projects of any '
                                                               'type (either ordinary projects or group projects). '
-                                                              'If a limit of specified for group projects, this '
+                                                              'If a limit has been specified for group projects, this '
                                                               'limit must be at least as large. Leave blank to '
                                                               'impose no limit.',
                                                   validators=[Optional(),

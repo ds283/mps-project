@@ -222,12 +222,12 @@
                         <table class="table table-sm table-striped">
                             <thead>
                                 <tr>
-                                    <th width="30%">Task</th>
+                                    <th width="38%">Task</th>
                                     <th width="15%">Student</th>
-                                    <th width="17%">Defer date</th>
-                                    <th width="17%">Due date</th>
+                                    <th width="14%">Defer date</th>
+                                    <th width="14%">Due date</th>
                                     <th width="10%">Status</th>
-                                    <th width="11%"></th>
+                                    <th width="7%"></th>
                                 </tr>
                             </thead>
                             <tbody class="table-group-divider">
@@ -252,9 +252,12 @@
                                     {% endif %}
                                     <tr {% if tk_status_class is not none %}class="{{ tk_status_class }}"{% endif %}>
                                         <td>
-                                            {{ tk.description|truncate(40) }}
+                                            <a href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
+                                            {% if tk.notes and tk.notes|length > 0 %}
+                                                <span class="ms-1 text-muted" tabindex="0" data-bs-toggle="popover" title="Task notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ tk.notes|truncate(600) }}">(Notes <i class="ms-1 fas fa-lg fa-caret-right"></i>)</span>
+                                            {% endif %}
                                             {% if tk.blocking %}
-                                                <span class="badge bg-warning text-dark"><i class="fas fa-hand-paper"></i> Blocking</span>
+                                                <span class="badge bg-warning text-dark ms-1"><i class="fas fa-hand-paper"></i> Blocking</span>
                                             {% endif %}
                                         </td>
                                         <td>

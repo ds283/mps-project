@@ -17,12 +17,12 @@ from ...models import ConvenorTask
 # language=jinja2
 _task = \
 """
-{{ tk.description }}
+<div><strong>{{ tk.description }}</strong></div>
 {% if tk.blocking %}
     <span class="badge bg-warning text-dark"><i class="fas fa-hand-paper"></i> Blocking</span>
 {% endif %}
 {% if tk.notes and tk.notes|length > 0 %}
-    <div class="text-muted">{{ tk.notes|truncate(150) }}</div>
+    <span class="text-muted small" tabindex="0" data-bs-toggle="popover" title="Task notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ tk.notes|truncate(600) }}">Show notes <i class="ms-1 fas fa-lg fa-caret-right"></i></span>
 {% endif %}
 """
 

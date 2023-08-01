@@ -18,7 +18,7 @@ from ...models import ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGener
 # language=jinja2
 _student_task = \
 """
-<strong>{{ tk.description }}</strong>
+<div><strong>{{ tk.description }}</strong></div>
 <div>
     <i class="fas fa-user-circle"></i>
     <a class="text-decoration-none" href="{{ url_for('convenor.student_tasks', type=type, sid=tk.parent.id, url=return_url) }}">
@@ -34,7 +34,7 @@ _student_task = \
     {% endif %}
 </div>
 {% if tk.notes and tk.notes|length > 0 %}
-    <div class="text-muted">{{ tk.notes|truncate(150) }}</div>
+    <span class="text-muted small" tabindex="0" data-bs-toggle="popover" title="Task notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ tk.notes|truncate(600) }}">Show notes <i class="ms-1 fas fa-lg fa-caret-right"></i></span>
 {% endif %}
 """
 
@@ -42,7 +42,7 @@ _student_task = \
 # language=jinja2
 _project_task = \
 """
-<strong>{{ tk.description }}</strong>
+<div><strong>{{ tk.description }}</strong></div>
 <div>
     <span class="badge bg-secondary">Project</span>
     {% if tk.blocking %}
@@ -56,7 +56,7 @@ _project_task = \
     {% endif %}
 </div>
 {% if tk.notes and tk.notes|length > 0 %}
-    <div class="text-muted">{{ tk.notes|truncate(150) }}</div>
+    <span class="text-muted small" tabindex="0" data-bs-toggle="popover" title="Task notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ tk.notes|truncate(600) }}">Show notes <i class="ms-1 fas fa-lg fa-caret-right"></i></span>
 {% endif %}
 """
 

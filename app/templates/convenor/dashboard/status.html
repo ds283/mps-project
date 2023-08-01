@@ -218,8 +218,8 @@
                 <div class="card border-secondary mt-3 mb-3">
                     {% set pl = 's' %}{% if num_to_dos == 1 %}{% set pl = '' %}{% endif %}
                     <div class="card-header bg-warning">Upcoming tasks (<strong>{{ num_to_dos }}</strong> task{{ pl }} available)</div>
-                    <div class="card-body">
-                        <table class="table table-striped">
+                    <div class="card-body small">
+                        <table class="table table-sm table-striped">
                             <thead>
                                 <tr>
                                     <th width="30%">Task</th>
@@ -230,7 +230,7 @@
                                     <th width="11%"></th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="table-group-divider">
                                 {% for tk in top_to_dos %}
                                     {% set tk_type = tk.__mapper_args__['polymorphic_identity'] %}
                                     {% set obj = tk.parent %}
@@ -240,7 +240,17 @@
                                         {% set tk_config = obj %}
                                     {% endif %}
                                     {% set tk_pclass = tk_config.project_class %}
-                                    <tr>
+                                    {% set tk_status_class = none %}
+                                    {% if tk.dropped %}
+                                        {% set tk_status_class = 'table-info' %}
+                                    {% elif tk.complete %}
+                                        {% set tk_status_class = 'table-success' %}
+                                    {% elif tk.is_overdue %}
+                                        {% set tk_status_class = 'table-danger' %}
+                                    {% elif tk.is_available %}
+                                        {% set tk_status_class = 'table-info' %}
+                                    {% endif %}
+                                    <tr {% if tk_status_class is not none %}class="{{ tk_status_class }}"{% endif %}>
                                         <td>
                                             {{ tk.description|truncate(40) }}
                                             {% if tk.blocking %}
@@ -280,23 +290,23 @@
                                         </td>
                                         <td>
                                             <div class="dropdown">
-                                                <button class="btn btn-outline-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                <button class="btn btn-outline-secondary btn-xs full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                                     Actions
                                                 </button>
-                                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+                                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
                                                     {% if tk_type == 1 or tk_type == 2 %}
-                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
+                                                        <a class="dropdown-item d-flex gap-2 small" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
                                                             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
                                                         </a>
                                                     {% elif tk_type == 3 %}
-                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
+                                                        <a class="dropdown-item d-flex gap-2 small" href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
                                                             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
                                                         </a>
                                                     {% endif %}
-                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_task_complete', tid=tk.id, action='complete') }}">
+                                                    <a class="dropdown-item d-flex gap-2 small" href="{{ url_for('convenor.mark_task_complete', tid=tk.id, action='complete') }}">
                                                         <i class="fas fa-check fa-fw"></i> Complete
                                                     </a>
-                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_task_dropped', tid=tk.id, action='drop') }}">
+                                                    <a class="dropdown-item d-flex gap-2 small" href="{{ url_for('convenor.mark_task_dropped', tid=tk.id, action='drop') }}">
                                                         <i class="fas fa-ban fa-fw"></i> Drop
                                                     </a>
                                                 </div>

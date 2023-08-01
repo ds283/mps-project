@@ -538,7 +538,7 @@ def get_root_dashboard_data():
     return data
 
 
-def get_convenor_dashboard_data(pclass, config):
+def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig):
     """
     Efficiently retrieve statistics needed to render the convenor dashboard
     :param pclass:
@@ -582,16 +582,17 @@ def get_convenor_dashboard_data(pclass, config):
             'todo_count': todo_count}
 
 
-def get_convenor_todo_data(config):
+def get_convenor_todo_data(config: ProjectClassConfig, task_limit=10):
     # get list of available tasks (not available != all, even excluding dropped and completed tasks)
     tks = build_convenor_tasks_query(config, status_filter='available', due_date_order=True)
 
-    top_tks = tks.limit(10).all()
+    top_tks = tks.limit(task_limit).all()
 
     return {'top_to_dos': top_tks}
 
 
-def build_convenor_tasks_query(config, status_filter='all', blocking_filter='all', due_date_order=True):
+def build_convenor_tasks_query(config: ProjectClassConfig, status_filter='all', blocking_filter='all',
+                               due_date_order=True):
     """
     Return a query that extracts convenor tasks for a particular config instance
     :param blocking_filter:

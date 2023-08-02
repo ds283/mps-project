@@ -31,7 +31,7 @@ commonmark==0.9.1
 contourpy==1.1.0
 convertdate==2.4.0
 cppy==1.2.1
-cryptography==41.0.2
+cryptography==41.0.3
 cssmin==0.2.0
 cssutils==2.7.1
 cycler==0.11.0

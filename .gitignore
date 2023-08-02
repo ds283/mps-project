@@ -1,2 +1,5 @@
+/instance
 /app/build_data.py
+/app/static/gen
+/app/static/.webassets-cache
 /Deployments/kubenetes/k8s-manifests/secrets

@@ -9,7 +9,7 @@ assets
 AWS
 backups
 database-copies
-app/instance
+instance
 logs
 mongodb
 MPS-Project.sqlite

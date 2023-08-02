@@ -93,16 +93,16 @@ class PatchedMailUtil(MailUtil):
 def create_app():
     # get current configuration, or default to 'production' for safety
     config_name = os.environ.get('FLASK_ENV') or 'production'
+    config_obj = app_config[config_name]
 
     # load configuration files from 'instance' folder
-    instance_dir = (Path(__file__).parent / "instance").absolute()
-    app = Flask(__name__, instance_relative_config=True, instance_path=str(instance_dir))
+    instance_folder = os.environ.get('INSTANCE_FOLDER') or '/instance'
+    app = Flask(__name__, instance_relative_config=True, instance_path=str(instance_folder))
 
     app.config.from_object(app_config[config_name])
     app.config.from_pyfile('secrets.py')
     app.config.from_pyfile('mail.py')
     app.config.from_pyfile('rollbar.py')
-    # app.config.from_pyfile('scout.py')
     app.config.from_pyfile('local.py')
 
     # create a long-lived Redis connection

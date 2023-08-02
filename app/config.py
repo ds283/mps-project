@@ -119,8 +119,8 @@ class Config(object):
     # MPS-Project configuration
 
     BACKUP_FOLDER = os.environ.get('BACKUP_FOLDER') or 'backups'
-
     ASSETS_FOLDER = os.environ.get('ASSETS_FOLDER') or 'assets'
+    INSTANCE_FOLDER = os.environ.get('INSTANCE_FOLDER') or 'instance'
 
     ASSETS_GENERATED_SUBFOLDER = os.environ.get('ASSETS_GENERATED_SUBFOLDER') or 'generated'
 

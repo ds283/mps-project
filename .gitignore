@@ -1,4 +1,7 @@
+admin_passwords.pwd
+docker-compose.yml
 /instance
+/nginx
 /app/build_data.py
 /app/static/gen
 /app/static/.webassets-cache

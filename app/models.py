@@ -847,8 +847,12 @@ def AssetMixinFactory(acl_name, acr_name):
         # relative filename
         filename = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
+        # unique filename
+        unique_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
         # filesize
         filesize = db.Column(db.Integer())
+
 
         # access control list: which users are authorized to view or download this file?
         @declared_attr

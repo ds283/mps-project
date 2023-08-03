@@ -79,7 +79,7 @@ class AssetCloudAdapter:
 
 class AssetUploadManager:
 
-    def __init__(self, asset, bytes, length, mimetype, storage: ObjectStore):
+    def __init__(self, asset, bytes, storage: ObjectStore, length=None, mimetype=None):
         self._asset = asset
         self._key = str(uuid4())
 

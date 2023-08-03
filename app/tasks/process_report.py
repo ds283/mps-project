@@ -286,10 +286,11 @@ def register_process_report_tasks(celery):
                                        target_name='processed-' + asset.target_name,
                                        license=asset.license)
 
+            object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
             with open(output_path, 'rb') as f:
-                with AssetUploadManager(new_asset, bytes=BytesIO(f.read()),
+                with AssetUploadManager(new_asset, bytes=BytesIO(f.read()), storage=object_store,
                                         length=output_path.stat().st_size,
-                                        mimetype=asset.mimetype) as storage:
+                                        mimetype=asset.mimetype) as upload_mgr:
                     pass
 
             # remove temporary files which are now unneeded

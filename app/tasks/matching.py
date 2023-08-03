@@ -2407,6 +2407,8 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
 
     now = datetime.now()
 
+    object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+
     def make_asset(name, source_path: Path, target_name: str):
         asset = GeneratedAsset(timestamp=now,
                                expiry=None,
@@ -2417,7 +2419,8 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
         size = source_path.stat().st_size
 
         with open(source_path, 'rb') as f:
-            with AssetUploadManager(asset, bytes=BytesIO(f.read()), length=size, mimetype='text/plain') as manager:
+            with AssetUploadManager(asset, bytes=BytesIO(f.read()), storage=object_store,
+                                    length=size, mimetype='text/plain') as upload_mgr:
                 pass
 
         asset.grant_user(user)

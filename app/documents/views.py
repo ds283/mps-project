@@ -262,10 +262,9 @@ def upload_submitter_report(sid):
                                    target_name=form.target_name.data,
                                    license=form.license.data)
 
-            with AssetUploadManager(asset, bytes=report_file.stream.read(),
-                                    length=report_file.content_length,
-                                    mimetype=report_file.content_type,
-                                    storage=current_app.config.get('OBJECT_STORAGE_ASSETS')) as storage:
+            object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+            with AssetUploadManager(asset, bytes=report_file.stream.read(), storage=object_store,
+                                    length=report_file.content_length, mimetype=report_file.content_type) as upload_mgr:
                 pass
 
             try:
@@ -623,10 +622,10 @@ def upload_submitter_attachment(sid):
                                    target_name=form.target_name.data,
                                    license=form.license.data)
 
-            with AssetUploadManager(asset, bytes=attachment_file.stream.read(),
+            object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+            with AssetUploadManager(asset, bytes=attachment_file.stream.read(), storage=object_store,
                                     length=attachment_file.content_length,
-                                    mimetype=attachment_file.content_type,
-                                    storage=current_app.config.get('OBJECT_STORAGE_ASSETS')) as storage:
+                                    mimetype=attachment_file.content_type) as upload_mgr:
                 pass
 
             try:

@@ -650,7 +650,9 @@ def batch_create_users():
                 now = datetime.now()
                 asset = TemporaryAsset(timestamp=now, expiry=now + timedelta(days=1))
 
-                with AssetUploadManager(asset, bytes=batch_file.stream.read(), length=batch_file.content_length) as storage:
+                object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+                with AssetUploadManager(asset, bytes=batch_file.stream.read(), storage=object_store,
+                                        length=batch_file.content_length) as upload_mgr:
                     pass
 
                 asset.grant_user(current_user)

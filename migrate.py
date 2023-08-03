@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from io import BytesIO
 from uuid import uuid4
 
 from object_store import ObjectStore
@@ -30,7 +31,7 @@ def migrate_object_storage(AssetModel, canonicalize):
 
         filename = canonicalize(asset.filename)
         with open(filename, 'rb') as f:
-            storage.put(filename, f)
+            storage.put(asset.unique_name, BytesIO(f.read()))
 
     db.session.commit()
 

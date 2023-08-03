@@ -8,18 +8,14 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from os import path, makedirs
+from pathlib import Path
 from uuid import uuid4
 
 from flask import current_app
-
-from pathlib import Path
-
 from object_store import ObjectStore
-
+from object_store._internal import ObjectMeta
 
 _DEFAULT_STREAMING_CHUNKSIZE = 1024 * 1024
-
 
 
 class AssetCloudAdapter:
@@ -32,8 +28,38 @@ class AssetCloudAdapter:
         self._size = self._asset.filesize
 
 
+    def record(self):
+        return self._asset
+
+
+    def exists(self):
+        blobs = self._storage.list()
+        return self._key in blobs
+
+
     def get(self):
         return self._storage.get(self._key)
+
+
+    def delete(self):
+        self._storage.delete(self._key)
+
+
+    def duplicate(self):
+        new_key = str(uuid4())
+        self._storage.copy(self._key, new_key)
+        return new_key
+
+
+    def download_to_scratch(self):
+        scratch_folder = Path(current_app.config.get('SCRATCH_FOLDER'))
+        scratch_file = str(uuid4())
+        scratch_path = scratch_folder / scratch_file
+
+        with open(scratch_path, 'wb') as f:
+            f.write(self.get())
+
+        return scratch_path
 
 
     def stream(self, chunksize=_DEFAULT_STREAMING_CHUNKSIZE):
@@ -51,122 +77,37 @@ class AssetCloudAdapter:
             yield self._storage.get_range(self._key, start=start, length=length)
 
 
-def _make_asset_filename(asset_folder=None, subfolder=None, ext=None):
-    """
-    Generate a unique filename for an asset
-    """
-    if asset_folder is None:
-        raise RuntimeError('asset folder not specified in _make_asset_filename')
-    if subfolder is None:
-        raise RuntimeError('subfolder not specified in _make_asset_filename')
+class AssetUploadManager:
 
-    if ext is not None:
-        if not ext.startswith('.'):
-            ext = "." + ext
-        filename = Path(str(uuid4())).with_suffix(ext)
-    else:
-        filename = Path(str(uuid4()))
+    def __init__(self, asset, bytes, length, mimetype, storage: ObjectStore):
+        self._asset = asset
+        self._key = str(uuid4())
 
-    if not isinstance(asset_folder, Path):
-        asset_folder = Path(asset_folder)
-    if not isinstance(subfolder, Path):
-        subfolder = Path(subfolder)
+        self._storage = storage
 
-    # make sure destination folder exists
-    destination = asset_folder / subfolder
-    destination.mkdir(parents=True, exist_ok=True)
+        self._asset.unique_name = self._key
 
-    return filename, destination/filename
+        if length is not None and hasattr(self._asset, 'filesize'):
+            self._asset.filesize = length
 
+        if mimetype is not None and hasattr(self._asset, 'mimetype'):
+            self._asset.mimetype = mimetype
 
-def _make_canonical_asset_filename(filename, asset_folder=None, subfolder=None):
-    """
-    Turn a relative asset filename into an absolute path
-    """
-    if asset_folder is None:
-        raise RuntimeError('asset folder not specified in _make_canonical_asset_filename')
-    if subfolder is None:
-        raise RuntimeError('subfolder not specified in _make_canonical_asset_filename')
+        self._storage.put(self._key, bytes)
 
-    if not isinstance(filename, Path):
-        filename = Path(filename)
-    if not isinstance(asset_folder, Path):
-        asset_folder = Path(asset_folder)
-    if not isinstance(subfolder, Path):
-        subfolder = Path(subfolder)
+        meta: ObjectMeta = self._storage.head(self._key)
+        if self._asset.filesize is None or self._asset.filesize == 0:
+            print('AssetUploadManager: self._asset has zero length; ObjectMeta reports '
+                  'length = {len}'.format(len=meta.size))
+            self._asset.filesize = meta.size
 
-    return asset_folder / subfolder / filename
+        elif self._asset.filesize != meta.size:
+            print('AssetUploadManager: user-supplied filesize ({user}) does not match ObjectMeta size reported from '
+                  'backend ({cloud})'.format(user=self._asset.filesize, cloud=meta.size))
 
 
-def make_generated_asset_filename(ext=None, subpath=None):
-    """
-    Generate a unique filename for a newly-generated asset
-    :return:
-    """
-    if subpath is not None and not isinstance(subpath, Path):
-        subpath = Path(subpath)
+    def __enter__(self):
+        pass
 
-    assets_subfolder = Path(current_app.config.get('ASSETS_GENERATED_SUBFOLDER'))
-
-    if subpath is not None:
-        subfolder = assets_subfolder / subpath
-    else:
-        subfolder = assets_subfolder
-
-    return _make_asset_filename(asset_folder=current_app.config.get('ASSETS_FOLDER'),
-                                subfolder=subfolder, ext=ext)
-
-
-def canonical_generated_asset_filename(filename):
-    """
-    Turn a unique filename for a generated asset into an absolute path
-    :param filename:
-    :return:
-    """
-    return _make_canonical_asset_filename(filename, asset_folder=current_app.config.get('ASSETS_FOLDER'),
-                                          subfolder=current_app.config.get('ASSETS_GENERATED_SUBFOLDER'))
-
-
-def make_temporary_asset_filename(ext=None):
-    """
-    Generate a unique filename for an uploaded asset
-    :return:
-    """
-    return _make_asset_filename(asset_folder=current_app.config.get('ASSETS_FOLDER'),
-                                subfolder=current_app.config.get('ASSETS_UPLOADED_SUBFOLDER'), ext=ext)
-
-
-def canonical_temporary_asset_filename(filename):
-    """
-    Turn a unique filename for an temporary asset into an absolute path
-    :param filename:
-    :return:
-    """
-    return _make_canonical_asset_filename(filename, asset_folder=current_app.config.get('ASSETS_FOLDER'),
-                                          subfolder=current_app.config.get('ASSETS_UPLOADED_SUBFOLDER'))
-
-
-def make_submitted_asset_filename(ext=None, subpath=None, root_folder='ASSETS_SUBMITTED_SUBFOLDER'):
-    """
-    Generate a unique filename for a submitted asset
-    """
-    if subpath is not None and not isinstance(subpath, Path):
-        subpath = Path(subpath)
-
-    assets_subfolder = Path(current_app.config.get(root_folder))
-
-    if subpath is not None:
-        subfolder = assets_subfolder / subpath
-    else:
-        subfolder = assets_subfolder
-
-    return _make_asset_filename(asset_folder=current_app.config.get('ASSETS_FOLDER'),
-                                subfolder=subfolder, ext=ext)
-
-
-def canonical_submitted_asset_filename(filename, root_folder='ASSETS_SUBMITTED_SUBFOLDER'):
-    """
-    Turn a unique filename for a submitted asset into an absolute path
-    """
-    return _make_canonical_asset_filename(filename, asset_folder=current_app.config.get('ASSETS_FOLDER'),
-                                          subfolder=current_app.config.get(root_folder))
+    def __exit__(self, type, value, traceback):
+        pass

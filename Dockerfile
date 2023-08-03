@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -qq -y build-essential gcc gfortran mariad
 # uid = 500 needed for deployment on Amazon, where ecs-user has uid 500
 RUN adduser --disabled-password --shell /bin/bash --gecos '' --uid 500 mpsproject
 
+RUN mkdir -p /scratch && chown mpsproject:mpsproject /scratch
 RUN mkdir -p /mpsproject && chown mpsproject:mpsproject /mpsproject
 WORKDIR /mpsproject
 

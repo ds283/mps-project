@@ -21,6 +21,7 @@ from ..database import db
 from ..models import SubmissionPeriodRecord, SubmissionRecord, User, SubmittedAsset, ProjectClassConfig, \
     ProjectClass, FacultyData, SubmittingStudent, StudentData, PeriodAttachment, SubmissionAttachment, \
     GeneratedAsset, SubmissionRole
+from ..shared.asset_tools import AssetCloudAdapter
 
 from ..task_queue import register_task
 
@@ -279,10 +280,10 @@ def register_marking_tasks(celery):
         return None
 
 
-    def _attach_documents(msg: EmailMessage, record: SubmissionRecord, report_filename: Path, max_attachment: int,
+    def _attach_documents(msg: EmailMessage, record: SubmissionRecord, report_filename: Path, max_attached_size: int,
                           role=None):
         # track cumulative size of added assets, packed on a 'first-come, first-served' system
-        attached_size = 0
+        current_size = 0
 
         # track attached documents
         attached_documents = []
@@ -292,15 +293,12 @@ def register_marking_tasks(celery):
         if report_asset is None:
             raise RuntimeError('_attach_documents() called with a null processed report')
 
-        asset_folder: Path = Path(current_app.config.get('ASSETS_FOLDER'))
-        generated_subfolder: Path = Path(current_app.config.get('ASSETS_GENERATED_SUBFOLDER'))
-        submitted_subfolder: Path = Path(current_app.config.get('ASSETS_SUBMITTED_SUBFOLDER'))
-
         # attach report or generate link for download later
-        report_abs_path = asset_folder / generated_subfolder / report_asset.filename
-        attached_size = _attach_asset(msg, report_asset, attached_size, attached_documents, report_abs_path,
-                                      filename=report_filename, max_attachment=max_attachment,
-                                      description="student's submitted report",
+        object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+
+        report_storage = AssetCloudAdapter(report_asset, object_store)
+        current_size += _attach_asset(msg, report_storage, current_size, attached_documents, filename=report_filename,
+                                      max_attached_size=max_attached_size, description="student's submitted report",
                                       endpoint='download_generated_asset')
 
         # attach any other documents provided by the project convenor
@@ -311,11 +309,10 @@ def register_marking_tasks(celery):
                 if (role in ['marker'] and attachment.include_marker_emails) or \
                     (role in ['supervisor'] and attachment.include_supervisor_emails):
                     asset: SubmittedAsset = attachment.attachment
+                    asset_storage = AssetCloudAdapter(asset, object_store)
 
-                    # TODO: consider rationalizing how filenames work with assets. Currently it's a bit inconsistent.
-                    attachment_abs_path = asset_folder / submitted_subfolder / asset.filename
-                    attached_size = _attach_asset(msg, asset, attached_size, attached_documents, attachment_abs_path,
-                                                  max_attachment=max_attachment, description=attachment.description,
+                    current_size += _attach_asset(msg, asset_storage, current_size, attached_documents,
+                                                  max_attached_size=max_attached_size, description=attachment.description,
                                                   endpoint='download_submitted_asset')
 
             for attachment in record.ordered_record_attachments:
@@ -324,32 +321,27 @@ def register_marking_tasks(celery):
                 if (role in ['marker'] and attachment.include_marker_emails) or \
                     (role in ['supervisor'] and attachment.include_supervisor_emails):
                     asset: SubmittedAsset = attachment.attachment
+                    asset_storage = AssetCloudAdapter(asset, object_store)
 
-                    # TODO: consider rationalizing how filenames work with assets. Currently it's a bit inconsistent.
-                    attachment_abs_path = asset_folder / submitted_subfolder / asset.filename
-                    attached_size = _attach_asset(msg, asset, attached_size, attached_documents, attachment_abs_path,
-                                                  max_attachment=max_attachment, description=attachment.description,
+                    current_size += _attach_asset(msg, asset_storage, current_size, attached_documents,
+                                                  max_attached_size=max_attached_size, description=attachment.description,
                                                   endpoint='download_submitted_asset')
 
         return attached_documents
 
 
-    def _attach_asset(msg: EmailMessage, asset: SubmittedAsset, current_size: int, attached_documents,
-                      asset_abs_path: Path, filename=None, max_attachment=None, description=None,
-                      endpoint='download_submitted_asset'):
-        if not asset_abs_path.exists():
-            raise RuntimeError('_attach_documents() could not find asset at absolute path '
-                               '"{path}"'.format(path=asset_abs_path))
-        if not asset_abs_path.is_file():
-            raise RuntimeError('_attach_documents() detected that asset at absolute path '
-                               '"{path}" is not an ordinary file'.format(path=asset_abs_path))
+    def _attach_asset(msg: EmailMessage, storage: AssetCloudAdapter, current_size: int, attached_documents, filename=None,
+                      max_attached_size=None, description=None, endpoint='download_submitted_asset'):
+        if not storage.exists():
+            raise RuntimeError('_attach_documents() could not find asset in object store')
 
         # get size of file to be attached, in bytes
-        asset_size = asset_abs_path.stat().st_size
+        asset = storage.record()
+        asset_size = asset.filesize
 
         # if attachment is too large, generate a link instead
-        if max_attachment is not None \
-                and float(current_size + asset_size)/(1024*1024) > max_attachment:
+        if max_attached_size is not None \
+                and float(current_size + asset_size)/(1024*1024) > max_attached_size:
             if filename is not None:
                 link = 'https://mpsprojects.sussex.ac.uk/admin/{endpoint}/' \
                        '{asset_id}?filename={fnam}'.format(endpoint=endpoint, asset_id=asset.id,
@@ -358,6 +350,7 @@ def register_marking_tasks(celery):
                 link = 'https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}'.format(endpoint=endpoint,
                                                                                       asset_id=asset.id)
             attached_documents.append((False, link, description))
+            asset_size = 0
 
         # otherwise, perform the attachment
         else:
@@ -365,14 +358,11 @@ def register_marking_tasks(celery):
                 str(asset.target_name) if asset.target_name is not None else \
                     str(asset.filename)
 
-            with asset_abs_path.open(mode='rb') as f:
-                msg.attach(filename=attached_name, mimetype=asset.mimetype, content=f.read())
+            msg.attach(filename=attached_name, mimetype=asset.mimetype, content=storage.get())
 
             attached_documents.append((True, attached_name, description))
 
-            current_size += asset_size
-
-        return current_size
+        return asset_size
 
 
     @celery.task(bind=True, default_retry_delay=30)

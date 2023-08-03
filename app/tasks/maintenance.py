@@ -9,21 +9,19 @@
 #
 
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from celery import group
 from celery.exceptions import Ignore
 from flask import current_app
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import User, Project, LiveProject, AssessorAttendanceData, SubmitterAttendanceData, \
     PresentationAssessment, GeneratedAsset, TemporaryAsset, ScheduleEnumeration, ProjectDescription, \
     MatchingEnumeration, SubmittedAsset, SubmissionRecord, ProjectClass, ProjectClassConfig, StudentData, \
     DegreeProgramme, DegreeType
-from ..shared.asset_tools import canonical_generated_asset_filename, canonical_temporary_asset_filename, \
-    canonical_submitted_asset_filename
+from ..shared.asset_tools import AssetCloudAdapter
 from ..shared.utils import get_current_year, get_count
 
 
@@ -365,10 +363,10 @@ def register_maintenance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        expiry = group(asset_check_expiry.si(r.id, GeneratedAsset, canonical_generated_asset_filename) for r in records)
+        expiry = group(asset_check_expiry.si(r.id, GeneratedAsset, "OBJECT_STORAGE_ASSETS") for r in records)
         expiry.apply_async()
 
-        orphan = group(asset_check_orphan.si(r.id, GeneratedAsset, canonical_generated_asset_filename) for r in records)
+        orphan = group(asset_check_orphan.si(r.id, GeneratedAsset, "OBJECT_STORAGE_ASSETS") for r in records)
         orphan.apply_async()
 
 
@@ -380,10 +378,10 @@ def register_maintenance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        expiry = group(asset_check_expiry.si(r.id, TemporaryAsset, canonical_temporary_asset_filename) for r in records)
+        expiry = group(asset_check_expiry.si(r.id, TemporaryAsset, "OBJECT_STORAGE_ASSETS") for r in records)
         expiry.apply_async()
 
-        orphan = group(asset_check_orphan.si(r.id, TemporaryAsset, canonical_temporary_asset_filename) for r in records)
+        orphan = group(asset_check_orphan.si(r.id, TemporaryAsset, "OBJECT_STORAGE_ASSETS") for r in records)
         orphan.apply_async()
 
 
@@ -395,10 +393,10 @@ def register_maintenance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        expiry = group(asset_check_expiry.si(r.id, SubmittedAsset, canonical_submitted_asset_filename) for r in records)
+        expiry = group(asset_check_expiry.si(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in records)
         expiry.apply_async()
 
-        orphan = group(asset_check_orphan.si(r.id, SubmittedAsset, canonical_submitted_asset_filename) for r in records)
+        orphan = group(asset_check_orphan.si(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in records)
         orphan.apply_async()
 
         try:
@@ -413,9 +411,9 @@ def register_maintenance_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30, serializer='pickle')
-    def asset_check_expiry(self, id, RecordType, canonicalizer):
+    def asset_check_expiry(self, id, RecordType, storage_key: str):
         try:
-            record = db.session.query(RecordType).filter_by(id=id).first()
+            record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -424,41 +422,11 @@ def register_maintenance_tasks(celery):
             raise Ignore()
 
         if record.expiry < datetime.now():
-            # canonicalizer is expected to return an object of type Path, or a class interoperable with it
-            asset: Path = canonicalizer(record.filename)
+            asset_name = record.target_name if record.target_name is not None else record.unique_name
 
-            if asset.exists() and asset.is_file():
-                try:
-                    asset.unlink()
-                except FileNotFoundError as e:
-                    print('** Garbage collection failed to remove file "{file}"'.format(file=asset))
-                    raise Ignore()
+            storage = AssetCloudAdapter(record, current_app.config.get(storage_key))
+            storage.delete()
 
-                print('** Garbage collection removed file "{file}"'.format(file=asset))
-
-                try:
-                    db.session.delete(record)
-                    db.session.commit()
-                except SQLAlchemyError as e:
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                    raise self.retry()
-
-
-    @celery.task(bind=True, default_retry_delay=30, serializer='pickle')
-    def asset_check_orphan(self, id, RecordType, canonicalizer):
-        try:
-            record = db.session.query(RecordType).filter_by(id=id).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if record is None:
-            raise Ignore()
-
-        asset: Path = canonicalizer(record.filename)
-
-        # check if asset exists on disk; if not, remove the database record
-        if not asset.exists():
             try:
                 db.session.delete(record)
                 db.session.commit()
@@ -466,11 +434,40 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
+            print('** Garbage collection removed expired file "{file}"'.format(file=asset_name))
+
+
+    @celery.task(bind=True, default_retry_delay=30, serializer='pickle')
+    def asset_check_orphan(self, id, RecordType, storage_key: str):
+        try:
+            record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if record is None:
+            raise Ignore()
+
+        storage = AssetCloudAdapter(record, current_app.config.get(storage_key))
+
+        # check if asset exists in the object store; if not, remove the database record
+        if not storage.exists():
+            asset_name = record.target_name if record.target_name is not None else record.unique_name
+
+            try:
+                db.session.delete(record)
+                db.session.commit()
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+            print('** Garbage collection removed orphaned asset record for "{file}"'.format(file=asset_name))
+
 
     @celery.task(bind=True, default_retry_delay=30, serializer='pickle')
     def asset_check_attached(self, id, RecordType):
         try:
-            record = db.session.query(RecordType).filter_by(id=id).first()
+            record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -485,7 +482,6 @@ def register_maintenance_tasks(celery):
 
             try:
                 record.expiry = datetime.now() + timedelta(days=30)
-
                 db.session.commit()
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

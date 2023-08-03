@@ -23,7 +23,7 @@ from app.manage_users.actions import register_user
 from ..database import db
 from ..models import TemporaryAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData, \
     AssetLicense
-from ..shared.asset_tools import canonical_temporary_asset_filename
+from ..shared.asset_tools import AssetCloudAdapter
 from ..task_queue import progress_update
 
 OUTCOME_CREATED = 0
@@ -435,7 +435,11 @@ def register_batch_create_tasks(celery):
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 10, "Inspecting uploaded user list...", autocommit=True)
 
-        with open(canonical_temporary_asset_filename(asset.filename), 'r', encoding='utf-8') as f:
+        object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+        storage = AssetCloudAdapter(asset, object_store)
+        scratch_path = storage.download_to_scratch()
+
+        with open(scratch_path, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
 
             # force column headers to lower case
@@ -555,6 +559,8 @@ def register_batch_create_tasks(celery):
 
                     ignored_lines.append(skip_info)
                     print('>> SUMMARY: skipped line {info}'.format(info=skip_info))
+
+        scratch_path.unlink()
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 90, "Finalizing import...", autocommit=False)
 

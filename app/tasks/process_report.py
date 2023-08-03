@@ -10,7 +10,9 @@
 
 import re
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
+from uuid import uuid4
 
 import fitz
 from celery.exceptions import Ignore
@@ -19,10 +21,10 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import SubmissionRecord, SubmittedAsset, User, ProjectClassConfig, ProjectClass, GeneratedAsset, \
+from ..models import SubmissionRecord, SubmittedAsset, User, ProjectClassConfig, GeneratedAsset, \
     StudentData
-from ..shared.asset_tools import canonical_submitted_asset_filename, make_generated_asset_filename
-
+from ..shared.asset_tools import AssetCloudAdapter, \
+    AssetUploadManager
 
 _title_label_size = 24
 _subtitle_label_size = 18
@@ -254,50 +256,48 @@ def register_process_report_tasks(celery):
         asset: SubmittedAsset = record.report
 
         if asset is None:
-            self.update_state('FAILURE,', meta={'msg': 'A report has not been uploaded'})
+            self.update_state('FAILURE', meta={'msg': 'A report has not been uploaded'})
             raise Ignore()
 
-        # get pathname for
-        abs_path = canonical_submitted_asset_filename(asset.filename, root_folder='ASSETS_SUBMITTED_SUBFOLDER')
+        object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+        input_storage = AssetCloudAdapter(record, object_store)
 
-        config: ProjectClassConfig = record.owner.config
-        pclass: ProjectClass = config.project_class
+        if not input_storage.exists():
+            self.update_state('FAILURE', meta={'msg': 'Could not find report in object store'})
+            raise Ignore()
 
-        # build subfolder path (within main generated asset folder) for this report
-        root_subfolder = current_app.config.get('ASSETS_REPORTS_SUBFOLDER') or 'reports'
+        # generate scratch names
+        scratch_folder = Path(current_app.config.get('SCRATCH_FOLDER'))
+        output_name = str(uuid4())
+        output_path = scratch_folder / output_name
 
-        year_string = str(config.year)
-        pclass_string = pclass.abbreviation
-
-        source_filename = Path(asset.filename)
-        extension = source_filename.suffix.lower()
-
-        subfolder = Path(root_subfolder) / Path(pclass_string) / Path(year_string)
-
-        processed_filename, abs_processed_path = make_generated_asset_filename(ext=extension, subpath=subfolder)
-        rel_processed_path = subfolder/processed_filename
-
-        # ensure folders exist
-        abs_processed_path.mkdir(parents=True, exist_ok=True)
+        input_path = input_storage.download_to_scratch()
 
         try:
-            _process_report(abs_path, abs_processed_path, record)
+            _process_report(input_path, output_path, record)
         except ValueError as e:
             # document was not a PDF
             record.processed_report = None
         else:
-            # generate asset record
-            passet = GeneratedAsset(timestamp=datetime.now(),
-                                    expiry=None,
-                                    filename=str(rel_processed_path),
-                                    filesize=abs_processed_path.stat().st_size,
-                                    parent_asset_id=asset.id,
-                                    target_name=asset.target_name,
-                                    mimetype=asset.mimetype,
-                                    license=asset.license)
+            # generate asset record and upload to object store
+            new_asset = GeneratedAsset(timestamp=datetime.now(),
+                                       expiry=None,
+                                       parent_asset_id=asset.id,
+                                       target_name='processed-' + asset.target_name,
+                                       license=asset.license)
+
+            with open(output_path, 'rb') as f:
+                with AssetUploadManager(new_asset, bytes=BytesIO(f.read()),
+                                        length=output_path.stat().st_size,
+                                        mimetype=asset.mimetype) as storage:
+                    pass
+
+            # remove temporary files which are now unneeded
+            input_path.unlink()
+            output_path.unlink()
 
             try:
-                db.session.add(passet)
+                db.session.add(new_asset)
                 db.session.flush()
             except SQLAlchemyError as e:
                 db.session.rollback()
@@ -305,11 +305,11 @@ def register_process_report_tasks(celery):
                 raise self.retry()
 
             # attach asset to the SubmissionRecord
-            record.processed_report_id = passet.id
+            record.processed_report_id = new_asset.id
 
             # set ACLs for processed report to match those of uploaded report
-            passet.access_control_list = asset.access_control_list
-            passet.access_control_roles = asset.access_control_roles
+            new_asset.access_control_list = asset.access_control_list
+            new_asset.access_control_roles = asset.access_control_roles
 
         try:
             db.session.commit()

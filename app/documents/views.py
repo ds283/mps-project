@@ -10,9 +10,8 @@
 
 from datetime import datetime, timedelta
 from functools import partial
-from pathlib import Path
 
-from celery import chain, group, chord
+from celery import chain, chord
 from flask import render_template, redirect, url_for, flash, request, current_app, jsonify, abort, session
 from flask_security import login_required, roles_accepted, current_user
 from sqlalchemy import or_, and_
@@ -22,15 +21,14 @@ import app.ajax as ajax
 from . import documents
 from .forms import UploadReportForm, UploadSubmitterAttachmentFormFactory, EditReportForm, \
     EditSubmitterAttachmentFormFactory
-from .utils import is_editable, is_deletable, is_listable, is_uploadable, is_admin, is_processable
+from .utils import is_editable, is_deletable, is_listable, is_uploadable, is_admin
 from ..database import db
 from ..models import SubmissionRecord, SubmittedAsset, GeneratedAsset, SubmissionAttachment, Role, \
     SubmissionPeriodRecord, ProjectClassConfig, ProjectClass, PeriodAttachment, User, AssetLicense, SubmittingStudent
-from ..shared.asset_tools import make_submitted_asset_filename
+from ..shared.asset_tools import AssetUploadManager
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.utils import redirect_url
-from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor
-from ..uploads import submitted_files
+from ..shared.validators import validate_is_convenor
 
 ATTACHMENT_TYPE_PERIOD = 0
 ATTACHMENT_TYPE_SUBMISSION = 1
@@ -258,29 +256,17 @@ def upload_submitter_report(sid):
         if 'report' in request.files:
             report_file = request.files['report']
 
-            # generate unique filename for upload
-            incoming_filename = Path(report_file.filename)
-            extension = incoming_filename.suffix.lower()
-
-            root_subfolder = current_app.config.get('ASSETS_REPORTS_SUBFOLDER') or 'reports'
-
-            year_string = str(config.year)
-            pclass_string = pclass.abbreviation
-
-            subfolder = Path(root_subfolder) / Path(pclass_string) / Path(year_string)
-
-            filename, abs_path = make_submitted_asset_filename(ext=extension, subpath=subfolder)
-            submitted_files.save(report_file, folder=str(subfolder), name=str(filename))
-
-            # generate asset record
             asset = SubmittedAsset(timestamp=datetime.now(),
                                    uploaded_id=current_user.id,
                                    expiry=None,
-                                   filename=str(subfolder/filename),
-                                   filesize=abs_path.state().st_size,
                                    target_name=form.target_name.data,
-                                   mimetype=str(report_file.content_type),
                                    license=form.license.data)
+
+            with AssetUploadManager(asset, bytes=report_file.stream.read(),
+                                    length=report_file.content_length,
+                                    mimetype=report_file.content_type,
+                                    storage=current_app.config.get('OBJECT_STORAGE_ASSETS')) as storage:
+                pass
 
             try:
                 db.session.add(asset)
@@ -326,7 +312,7 @@ def upload_submitter_report(sid):
                 flash('Could not upload report due to a database issue. Please contact an administrator.', 'error')
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             else:
-                flash('Report "{file}" was successfully uploaded.'.format(file=incoming_filename), 'info')
+                flash('Report "{file}" was successfully uploaded.'.format(file=report_file.filename), 'info')
 
             # set up asynchronous task to process this report
             celery = current_app.extensions['celery']
@@ -446,8 +432,8 @@ def edit_submitter_report(sid):
 
         # update processed report license to match
         if record.processed_report is not None:
-            passet: GeneratedAsset = record.processed_report
-            passet.license = form.license.data
+            processed_asset: GeneratedAsset = record.processed_report
+            processed_asset.license = form.license.data
 
         try:
             db.session.commit()
@@ -631,29 +617,17 @@ def upload_submitter_attachment(sid):
         if 'attachment' in request.files:
             attachment_file = request.files['attachment']
 
-            # generate unique filename for upload
-            incoming_filename = Path(attachment_file.filename)
-            extension = incoming_filename.suffix.lower()
-
-            root_subfolder = current_app.config.get('ASSETS_ATTACHMENTS_SUBFOLDER') or 'attachments'
-
-            year_string = str(config.year)
-            pclass_string = pclass.abbreviation
-
-            subfolder = Path(root_subfolder) / Path(pclass_string) / Path(year_string)
-
-            filename, abs_path = make_submitted_asset_filename(ext=extension, subpath=subfolder)
-            submitted_files.save(attachment_file, folder=str(subfolder), name=str(filename))
-
-            # generate asset record
             asset = SubmittedAsset(timestamp=datetime.now(),
                                    uploaded_id=current_user.id,
                                    expiry=None,
-                                   filename=str(subfolder/filename),
-                                   filesize=abs_path.stat().st_size,
                                    target_name=form.target_name.data,
-                                   mimetype=str(attachment_file.content_type),
                                    license=form.license.data)
+
+            with AssetUploadManager(asset, bytes=attachment_file.stream.read(),
+                                    length=attachment_file.content_length,
+                                    mimetype=attachment_file.content_type,
+                                    storage=current_app.config.get('OBJECT_STORAGE_ASSETS')) as storage:
+                pass
 
             try:
                 db.session.add(asset)
@@ -708,7 +682,8 @@ def upload_submitter_attachment(sid):
                       'Please contact an administrator.', 'error')
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             else:
-                flash('Attachment "{file}" was successfully uploaded.'.format(file=incoming_filename), 'info')
+                flash('Attachment "{file}" was successfully uploaded.'.format(file=attachment_file.filename),
+                      'info')
 
             return redirect(url_for('documents.submitter_documents', sid=sid, url=url, text=text))
 

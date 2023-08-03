@@ -11,10 +11,8 @@
 
 from datetime import date, datetime, timedelta
 from functools import partial
-from pathlib import Path
 from typing import List
 from uuid import uuid4
-from ordered_set import OrderedSet
 
 import parse
 from celery import chain
@@ -23,6 +21,7 @@ from dateutil.relativedelta import relativedelta
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session, abort
 from flask_mailman import EmailMultiAlternatives
 from flask_security import roles_accepted, current_user
+from ordered_set import OrderedSet
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm import with_polymorphic
@@ -33,15 +32,15 @@ import app.ajax as ajax
 from . import convenor
 from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
     ManualAssignFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
-    EditPeriodRecordFormFactory, UploadPeriodAttachmentForm, \
-    EditPeriodAttachmentForm, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
+    EditPeriodRecordFormFactory, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
     EditProjectConfigFormFactory, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask, \
     EditConvenorGenericTask, EditSubmissionPeriodRecordPresentationsForm, AddSubmitterRoleForm, EditRolesFormFactory
+from ..documents.forms import UploadPeriodAttachmentForm, EditPeriodAttachmentForm
 from ..admin.forms import LevelSelectorForm
 from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionSettingsFormFactory, MoveDescriptionFormFactory, \
-    PresentationFeedbackForm, SubmissionRoleFeedbackForm, MarkerFeedbackForm, SubmissionRoleResponseForm, \
+    PresentationFeedbackForm, SubmissionRoleFeedbackForm, SubmissionRoleResponseForm, \
     EditDescriptionContentForm
 from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
@@ -50,13 +49,13 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Bookmark, \
     ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask, SubmissionRole, MatchingRecord, \
     MatchingRole
-from ..shared.projects import create_new_tags, get_filter_list_for_groups_and_skills, \
-    project_list_SQL_handler, project_list_in_memory_handler
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
-from ..shared.asset_tools import make_submitted_asset_filename
+from ..shared.asset_tools import AssetUploadManager
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
+from ..shared.projects import create_new_tags, get_filter_list_for_groups_and_skills, \
+    project_list_SQL_handler, project_list_in_memory_handler
 from ..shared.sqlalchemy import get_count, clone_model
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     get_convenor_filter_record, filter_assessors, build_enrol_selector_candidates, \
@@ -68,7 +67,6 @@ from ..shared.validators import validate_is_convenor, validate_is_administrator,
 from ..student.actions import store_selection
 from ..task_queue import register_task
 from ..tools import ServerSideSQLHandler, ServerSideInMemoryHandler
-from ..uploads import submitted_files
 
 STUDENT_TASKS_SELECTOR = SelectingStudent.polymorphic_identity()
 STUDENT_TASKS_SUBMITTER = SubmittingStudent.polymorphic_identity()
@@ -9223,29 +9221,17 @@ def upload_period_attachment(pid):
         if 'attachment' in request.files:
             attachment_file = request.files['attachment']
 
-            # generate unique filename for upload
-            incoming_filename = Path(attachment_file.filename)
-            extension = incoming_filename.suffix.lower()
-
-            root_subfolder = current_app.config.get('ASSETS_PERIODS_SUBFOLDER') or 'periods'
-
-            year_string = str(config.year)
-            pclass_string = pclass.abbreviation
-
-            subfolder = Path(root_subfolder) / Path(pclass_string) / Path(year_string)
-
-            filename, abs_path = make_submitted_asset_filename(ext=extension, subpath=subfolder)
-            submitted_files.save(attachment_file, folder=str(subfolder), name=str(filename))
-
-            # generate asset record
             asset = SubmittedAsset(timestamp=datetime.now(),
                                    uploaded_id=current_user.id,
                                    expiry=None,
-                                   filename=str(subfolder/filename),
-                                   filesize=abs_path.stat().st_size,
-                                   target_name=str(incoming_filename),
-                                   mimetype=str(attachment_file.content_type),
+                                   target_name=form.target_name.data,
                                    license=form.license.data)
+
+            with AssetUploadManager(asset, bytes=attachment_file.stream.read(),
+                                    length=attachment_file.content_length,
+                                    mimetype=attachment_file.content_type,
+                                    storage=current_app.config.get('OBJECT_STORAGE_ASSETS')) as storage:
+                pass
 
             try:
                 db.session.add(asset)
@@ -9286,7 +9272,8 @@ def upload_period_attachment(pid):
                       'Please contact an administrator.', 'error')
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-            flash('Attachment "{file}" was successfully uploaded.'.format(file=incoming_filename), 'info')
+            flash('Attachment "{file}" was successfully uploaded.'.format(file=attachment_file.filename),
+                  'info')
 
             return redirect(url_for('convenor.submission_period_documents', pid=pid, url=url, text=text))
 

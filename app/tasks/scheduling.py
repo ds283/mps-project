@@ -7,14 +7,15 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-
-import itertools
 from datetime import datetime
 from distutils.util import strtobool
 from functools import partial
+from io import BytesIO
 from os import path
-from shutil import copyfile
+from pathlib import Path
+from uuid import uuid4
 
+import itertools
 import pulp
 import pulp.apis as pulp_apis
 from celery import group, chain
@@ -28,8 +29,7 @@ from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, 
     ScheduleEnumeration, SubmissionRecord, SubmissionPeriodRecord, AssessorAttendanceData, \
     EnrollmentRecord, SubmitterAttendanceData, PresentationSession, Room, FacultyData, LiveProject, ResearchGroup, \
     ProjectClassConfig
-from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename, \
-    canonical_generated_asset_filename
+from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
 from ..task_queue import progress_update, register_task
@@ -987,13 +987,13 @@ def _send_offline_email(celery, record, user, lp_asset, mps_asset):
 
     msg.body = render_template('email/scheduling/generated.txt', name=record.name, user=user)
 
-    lp_path = canonical_generated_asset_filename(lp_asset.filename)
-    with open(lp_path, 'rb') as fd:
-        msg.attach(filename=str('schedule.lp'), mimetype=lp_asset.mimetype, content=fd.read())
+    # TODO: will be problems when generated LP/MPS files are too large; should instead send a download link
+    object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+    lp_storage = AssetCloudAdapter(lp_asset, object_store)
+    mps_storage = AssetCloudAdapter(mps_asset, object_store)
 
-    mps_path = canonical_generated_asset_filename(mps_asset.filename)
-    with open(mps_path, 'rb') as fd:
-        msg.attach(filename=str('schedule.mps'), mimetype=mps_asset.mimetype, content=fd.read())
+    msg.attach(filename=str('schedule.lp'), mimetype=lp_asset.mimetype, content=lp_storage.get())
+    msg.attach(filename=str('schedule.mps'), mimetype=mps_asset.mimetype, content=mps_storage.get())
 
     # register a new task in the database
     task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.to)))
@@ -1001,27 +1001,43 @@ def _send_offline_email(celery, record, user, lp_asset, mps_asset):
 
 
 def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
-    lp_name, lp_abs_path = make_generated_asset_filename('lp')
-    mps_name, mps_abs_path = make_generated_asset_filename('mps')
-    prob.writeLP(lp_abs_path)
-    prob.writeMPS(mps_abs_path)
+    scratch_folder = Path(current_app.config.get('SCRATCH_FOLDER'))
+
+    lp_name = str(uuid4())
+    mps_name = str(uuid4())
+
+    lp_path = scratch_folder / lp_name
+    mps_path = scratch_folder / mps_name
+
+    prob.writeLP(lp_path)
+    prob.writeMPS(mps_path)
 
     now = datetime.now()
 
-    def make_asset(name, size, target):
+    def make_asset(name, source_path: Path, target_name: str):
         asset = GeneratedAsset(timestamp=now,
                                expiry=None,
-                               filename=str(name),
-                               filesize=size,
-                               mimetype='text/plain',
-                               target_name=target)
+                               target_name=target_name,
+                               parent_asset_id=None,
+                               license_id=None)
+
+        size = source_path.stat().st_size
+
+        with open(source_path, 'rb') as f:
+            with AssetUploadManager(asset, bytes=BytesIO(f.read()), length=size, mimetype='text/plain') as manager:
+                pass
+
         asset.grant_user(user)
         db.session.add(asset)
 
         return asset
 
-    lp_asset = make_asset(lp_name, lp_abs_path.stat().st_size, 'schedule.lp')
-    mps_asset = make_asset(mps_name, mps_abs_path.stat().st_size, 'schedule.mps')
+    lp_asset = make_asset(lp_name, lp_path, 'matching.lp')
+    mps_asset = make_asset(mps_name, mps_path, 'matching.mps')
+
+    # delete unneded temporary files
+    lp_path.unlink()
+    mps_path.unlink()
 
     # write new assets to database, so they get a valid primary key
     db.session.flush()
@@ -1235,6 +1251,10 @@ def register_scheduling_tasks(celery):
             self.update_state(state='FAILURE', meta={'msg': 'Could not load ScheduleAttempt record from database'})
             raise Ignore()
 
+        object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+        storage = AssetCloudAdapter(asset, object_store)
+        scratch_path = storage.download_to_scratch()
+
         with Timer() as create_time:
             number_talks, number_assessors, number_slots, number_periods, \
             talk_to_number, assessor_to_number, slot_to_number, period_to_number, \
@@ -1255,9 +1275,12 @@ def register_scheduling_tasks(celery):
         # ScheduleEnumeration records will be purged during normal database maintenance cycle,
         # so there is no need to delete them explicitly here
 
-        return _execute_from_solution(self, canonical_temporary_asset_filename(asset.filename), record,
+        soln = _execute_from_solution(self, scratch_path, record,
                                       prob, X, Y, create_time, number_talks, number_assessors, number_slots,
                                       talk_dict, assessor_dict, slot_dict)
+
+        scratch_path.unlink()
+        return soln
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -1343,54 +1366,54 @@ def register_scheduling_tasks(celery):
                           meta={'msg': 'Looking up ScheduleAttempt record for id={id}'.format(id=id)})
 
         try:
-            record: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(id=id).first()
+            old_record: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(id=id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if record is None:
+        if old_record is None:
             self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             return
 
         try:
             # generate a new ScheduleAttempt
-            data = ScheduleAttempt(owner_id=record.owner_id,
-                                   name=new_name,
-                                   tag=None,
-                                   solver=record.solver,
-                                   construct_time=record.construct_time,
-                                   compute_time=record.compute_time,
-                                   celery_id=None,
-                                   awaiting_upload=record.awaiting_upload,
-                                   outcome=record.outcome,
-                                   finished=record.finished,
-                                   celery_finished=True,
-                                   score=record.score,
-                                   published=record.published,
-                                   deployed=False,
-                                   assessor_assigned_limit=record.assessor_assigned_limit,
-                                   assessor_multiplicity_per_session=record.assessor_multiplicity_per_session,
-                                   if_needed_cost=record.if_needed_cost,
-                                   levelling_tension=record.levelling_tension,
-                                   ignore_coscheduling=record.ignore_coscheduling,
-                                   all_assessors_in_pool=record.all_assessors_in_pool,
-                                   creator_id=current_id,
-                                   creation_timestamp=datetime.now(),
-                                   last_edit_id=None,
-                                   last_edit_timestamp=None,
-                                   lp_file_id=None,
-                                   mps_file_id=None)
+            new_record = ScheduleAttempt(owner_id=old_record.owner_id,
+                                         name=new_name,
+                                         tag=None,
+                                         solver=old_record.solver,
+                                         construct_time=old_record.construct_time,
+                                         compute_time=old_record.compute_time,
+                                         celery_id=None,
+                                         awaiting_upload=old_record.awaiting_upload,
+                                         outcome=old_record.outcome,
+                                         finished=old_record.finished,
+                                         celery_finished=True,
+                                         score=old_record.score,
+                                         published=old_record.published,
+                                         deployed=False,
+                                         assessor_assigned_limit=old_record.assessor_assigned_limit,
+                                         assessor_multiplicity_per_session=old_record.assessor_multiplicity_per_session,
+                                         if_needed_cost=old_record.if_needed_cost,
+                                         levelling_tension=old_record.levelling_tension,
+                                         ignore_coscheduling=old_record.ignore_coscheduling,
+                                         all_assessors_in_pool=old_record.all_assessors_in_pool,
+                                         creator_id=current_id,
+                                         creation_timestamp=datetime.now(),
+                                         last_edit_id=None,
+                                         last_edit_timestamp=None,
+                                         lp_file_id=None,
+                                         mps_file_id=None)
 
-            db.session.add(data)
+            db.session.add(new_record)
             db.session.flush()
 
-            data.tag = 'schedule_{n}'.format(n=data.id)
+            new_record.tag = 'schedule_{n}'.format(n=new_record.id)
 
             # duplicate all slots
             slot_map = {}
-            for slot in record.slots:
+            for slot in old_record.slots:
                 slot: ScheduleSlot
-                rec = ScheduleSlot(owner_id=data.id,
+                rec = ScheduleSlot(owner_id=new_record.id,
                                    session_id=slot.session_id,
                                    room_id=slot.room_id,
                                    occupancy_label=slot.occupancy_label,
@@ -1405,8 +1428,8 @@ def register_scheduling_tasks(celery):
                 slot_map[slot.id] = rec.id
 
             # duplicate all enumerations
-            if data.awaiting_upload:
-                for item in record.enumerations:
+            if new_record.awaiting_upload:
+                for item in old_record.enumerations:
                     if item.category != ScheduleEnumeration.SLOT:
                         new_key = item.key
                     else:
@@ -1418,23 +1441,25 @@ def register_scheduling_tasks(celery):
                     en = ScheduleEnumeration(category=item.category,
                                              enumeration=item.enumeration,
                                              key=new_key,
-                                             schedule_id=data.id)
+                                             schedule_id=new_record.id)
                     db.session.add(en)
 
                 now = datetime.now()
 
-                def copy_asset(old_asset, target, ext=None):
-                    old_path = canonical_generated_asset_filename(old_asset.filename)
-                    new_name, new_abs_path = make_generated_asset_filename(ext=ext)
-
-                    copyfile(old_path, new_abs_path)
+                object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+                def copy_asset(old_asset):
+                    old_storage = AssetCloudAdapter(old_asset, object_store)
+                    new_key = old_storage.duplicate()
 
                     new_asset = GeneratedAsset(timestamp=now,
                                                expiry=None,
-                                               filename=str(new_name),
-                                               filesize=new_abs_path.stat().st_size,
-                                               mimetype='text/plain',
-                                               target_name=target)
+                                               unique_name=new_key,
+                                               filesize=old_asset.filesize,
+                                               mimetype=old_asset.mimetype,
+                                               target_name=old_asset.target_name,
+                                               parent_asset_id=old_asset.parent_asset_id,
+                                               license_id=old_asset.license_id)
+
                     # TODO: find a way to perform a deep copy without exposing implementation details
                     new_asset.access_control_list = old_asset.access_control_list
                     new_asset.access_control_roles = old_asset.access_control_roles
@@ -1442,11 +1467,11 @@ def register_scheduling_tasks(celery):
 
                     return new_asset
 
-                if record.lp_file is not None:
-                    data.lp_file = copy_asset(record.lp_file, 'schedule.lp', ext='lp')
+                if old_record.lp_file is not None:
+                    new_record.lp_file = copy_asset(old_record.lp_file, 'schedule.lp', ext='lp')
 
-                if record.mps_file is not None:
-                    data.mps_file = copy_asset(record.mps_file, 'schedule.mps', ext='mps')
+                if old_record.mps_file is not None:
+                    new_record.mps_file = copy_asset(old_record.mps_file, 'schedule.mps', ext='mps')
 
             db.session.commit()
 

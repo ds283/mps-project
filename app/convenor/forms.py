@@ -17,12 +17,11 @@ from wtforms.validators import InputRequired, Optional, Email, Length, Validatio
 from wtforms_alchemy import QuerySelectField
 
 from ..models import DEFAULT_STRING_LENGTH, LiveProject, ProjectClassConfig, ConvenorGenericTask, \
-    DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS, SubmissionRole, SubmissionRecord, User, SubmittingStudent, \
-    FacultyData
+    DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS, SubmissionRole, SubmissionRecord, FacultyData
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, PeriodPresentationsMixin, \
     PeriodSelectorMixinFactory
-from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
-    GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses, GetAccommodatableMatchings, \
+from ..shared.forms.queries import GetPresentationFeedbackFaculty, \
+    GetPresentationAssessorFaculty, BuildActiveFacultyName, GetAccommodatableMatchings, \
     GetCanvasEnabledConvenors, BuildCanvasLoginUserName, GetActiveFaculty
 from ..shared.forms.wtf_validators import NotOptionalIf
 
@@ -366,32 +365,6 @@ def AssignPresentationFeedbackFormFactory(record_id, slot_id=None):
         assessor = QuerySelectField('Assign feedback to assessor', query_factory=qf, get_label=BuildActiveFacultyName)
 
     return AssignPresentationFeedbackForm
-
-
-class PeriodAttachmentMixin():
-
-    description = StringField('Comment', description='Give a short description of the attachment. This will be '
-                                                     'included as an explanation if the document is published to '
-                                                     'end-users.')
-
-    publish_to_students = BooleanField('Publish this document to students')
-
-    include_marker_emails = BooleanField('Attach this document to marking notifications sent to examiners')
-
-    include_supervisor_emails = BooleanField('Attach this document to marking notifications sent to supervisors')
-
-    license = QuerySelectField('License', query_factory=GetActiveAssetLicenses, get_label='name',
-                               allow_blank=True, blank_text='Unset (no license specified)')
-
-
-class UploadPeriodAttachmentForm(Form, PeriodAttachmentMixin):
-
-    submit = SubmitField('Upload attachment')
-
-
-class EditPeriodAttachmentForm(Form, PeriodAttachmentMixin, SaveChangesMixin):
-
-    pass
 
 
 class ConvenorTaskMixin():

@@ -14,7 +14,7 @@ from collections import deque
 from datetime import date, datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Tuple
 from urllib.parse import urlsplit
 
 from bokeh.embed import components
@@ -22,7 +22,7 @@ from bokeh.models import Label
 from bokeh.plotting import figure
 from celery import chain, group
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, \
-    stream_with_context, send_file, abort
+    stream_with_context, abort
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 from math import pi
 from numpy import histogram
@@ -72,10 +72,8 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset, \
     AssetLicense, SubmittedAssetDownloadRecord, GeneratedAssetDownloadRecord, SelectingStudent, EmailNotification, \
-    ProjectTagGroup, ProjectTag, SubmitterAttendanceData, DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS, \
-    MatchingRole, SubmissionAttachment
-from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
-    canonical_submitted_asset_filename, AssetCloudAdapter
+    ProjectTagGroup, ProjectTag, SubmitterAttendanceData, MatchingRole, SubmissionAttachment
+from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.conversions import is_integer
 from ..shared.formatters import format_size
@@ -89,7 +87,6 @@ from ..shared.validators import validate_is_admin_or_convenor, validate_match_in
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..task_queue import register_task, progress_update
 from ..tools import ServerSideSQLHandler
-from ..uploads import solution_files
 
 
 @admin.route('/global_config', methods=['GET', 'POST'])
@@ -9754,14 +9751,12 @@ def upload_schedule(schedule_id):
                     flash('Solution files for the CBC optimizer must be in .LP format', 'error')
 
                 else:
-                    filename, abs_path = make_temporary_asset_filename(ext=extension)
-                    solution_files.save(sol_file, name=str(filename))
-
                     now = datetime.now()
-                    asset = TemporaryAsset(timestamp=now,
-                                           expiry=now + timedelta(days=1),
-                                           filename=str(filename),
-                                           filesize=abs_path.stat().st_size)
+                    asset = TemporaryAsset(timestamp=now, expiry=now + timedelta(days=1))
+
+                    with AssetUploadManager(asset, bytes=sol_file.stream.read(), length=sol_file.content_length) as storage:
+                        pass
+
                     asset.grant_user(current_user)
 
                     uuid = register_task('Process offline solution for "{name}"'.format(name=record.name),
@@ -9823,14 +9818,12 @@ def upload_match(match_id):
                     flash('Solution files for the CBC optimizer must be in .LP format', 'error')
 
                 else:
-                    filename, abs_path = make_temporary_asset_filename(ext=extension)
-                    solution_files.save(sol_file, name=str(filename))
-
                     now = datetime.now()
-                    asset = TemporaryAsset(timestamp=now,
-                                           expiry=now + timedelta(days=1),
-                                           filename=str(filename),
-                                           filesize=abs_path.stat().st_size)
+                    asset = TemporaryAsset(timestamp=now, expiry=now + timedelta(days=1))
+
+                    with AssetUploadManager(asset, bytes=sol_file.stream.read(), length=sol_file.content_length) as storage:
+                        pass
+
                     asset.grant_user(current_user)
 
                     uuid = register_task('Process offline solution for "{name}"'.format(name=record.name),

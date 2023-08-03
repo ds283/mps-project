@@ -7,12 +7,13 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from datetime import datetime
+from io import BytesIO
+from os import path
+from pathlib import Path
+from uuid import uuid4
 
 import itertools
-from datetime import datetime
-from os import path
-from shutil import copyfile
-
 import pulp
 import pulp.apis as pulp_apis
 from celery import group, chain
@@ -27,13 +28,11 @@ from ..models import MatchingAttempt, TaskRecord, LiveProject, SelectingStudent,
     User, EnrollmentRecord, MatchingRecord, SelectionRecord, ProjectClass, GeneratedAsset, MatchingEnumeration, \
     TemporaryAsset, FacultyData, ProjectClassConfig, SubmissionRecord, SubmissionPeriodRecord, MatchingRole, \
     SubmissionPeriodDefinition, SubmittingStudent, SubmissionRole
-from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename, \
-    canonical_generated_asset_filename
+from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
 from ..shared.utils import get_current_year
 from ..task_queue import progress_update, register_task
-
 
 FALLBACK_DEFAULT_SUPERVISOR_CATS = 35
 FALLBACK_DEFAULT_MARKER_CATS = 3
@@ -2381,13 +2380,13 @@ def _send_offline_email(celery, record: MatchingAttempt, user, lp_asset: Generat
 
     msg.body = render_template('email/matching/generated.txt', name=record.name, user=user)
 
-    lp_path = canonical_generated_asset_filename(lp_asset.filename)
-    with open(lp_path, 'rb') as fd:
-        msg.attach(filename=str('schedule.lp'), mimetype=lp_asset.mimetype, content=fd.read())
+    # TODO: will be problems when generated LP/MPS files are too large; should instead send a download link
+    object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+    lp_storage = AssetCloudAdapter(lp_asset, object_store)
+    mps_storage = AssetCloudAdapter(mps_asset, object_store)
 
-    mps_path = canonical_generated_asset_filename(mps_asset.filename)
-    with open(mps_path, 'rb') as fd:
-        msg.attach(filename=str('schedule.mps'), mimetype=mps_asset.mimetype, content=fd.read())
+    msg.attach(filename=str('schedule.lp'), mimetype=lp_asset.mimetype, content=lp_storage.get())
+    msg.attach(filename=str('schedule.mps'), mimetype=mps_asset.mimetype, content=mps_storage.get())
 
     # register a new task in the database
     task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.to)))
@@ -2395,27 +2394,43 @@ def _send_offline_email(celery, record: MatchingAttempt, user, lp_asset: Generat
 
 
 def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
-    lp_name, lp_abs_path = make_generated_asset_filename(ext='lp')
-    mps_name, mps_abs_path = make_generated_asset_filename(ext='mps')
-    prob.writeLP(lp_abs_path)
-    prob.writeMPS(mps_abs_path)
+    scratch_folder = Path(current_app.config.get('SCRATCH_FOLDER'))
+
+    lp_name = str(uuid4())
+    mps_name = str(uuid4())
+
+    lp_path = scratch_folder / lp_name
+    mps_path = scratch_folder / mps_name
+
+    prob.writeLP(lp_path)
+    prob.writeMPS(mps_path)
 
     now = datetime.now()
 
-    def make_asset(name, size, target):
+    def make_asset(name, source_path: Path, target_name: str):
         asset = GeneratedAsset(timestamp=now,
                                expiry=None,
-                               filename=str(name),
-                               filesize=size,
-                               mimetype='text/plain',
-                               target_name=target)
+                               target_name=target_name,
+                               parent_asset_id=None,
+                               license_id=None)
+
+        size = source_path.stat().st_size
+
+        with open(source_path, 'rb') as f:
+            with AssetUploadManager(asset, bytes=BytesIO(f.read()), length=size, mimetype='text/plain') as manager:
+                pass
+
         asset.grant_user(user)
         db.session.add(asset)
 
         return asset
 
-    lp_asset = make_asset(lp_name, lp_abs_path.stat().st_size, 'matching.lp')
-    mps_asset = make_asset(mps_name, mps_abs_path().stat().st_size, 'matching.mps')
+    lp_asset = make_asset(lp_name, lp_path, 'matching.lp')
+    mps_asset = make_asset(mps_name, mps_path, 'matching.mps')
+
+    # delete unneded temporary files
+    lp_path.unlink()
+    mps_path.unlink()
 
     # write new assets to database, so they get a valid primary key
     db.session.flush()
@@ -2622,6 +2637,10 @@ def register_matching_tasks(celery):
             self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise Ignore()
 
+        object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+        storage = AssetCloudAdapter(asset, object_store)
+        scratch_path = storage.download_to_scratch()
+
         with Timer() as create_time:
             number_sel, number_lp, number_sup, number_mark, \
             sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
@@ -2649,10 +2668,13 @@ def register_matching_tasks(celery):
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
-        return _execute_from_solution(self, canonical_temporary_asset_filename(asset.filename), record, prob, X, Y, S,
+        soln = _execute_from_solution(self, scratch_path, record, prob, X, Y, S,
                                       W, R, create_time, number_sel, number_to_sel, number_lp, number_to_lp, number_sup,
                                       number_to_sup, number_mark, number_to_mark, sel_dict, lp_dict, sup_dict,
                                       mark_dict, multiplicity, mean_CATS_per_project)
+
+        scratch_path.unlink()
+        return soln
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -2820,12 +2842,12 @@ def register_matching_tasks(celery):
                           meta={'msg': 'Looking up MatchingAttempt record for id={id}'.format(id=id)})
 
         try:
-            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).first()
+            old_record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if record is None:
+        if old_record is None:
             self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
             raise Ignore
 
@@ -2834,65 +2856,66 @@ def register_matching_tasks(celery):
 
         try:
             # generate a new MatchingRecord
-            data = MatchingAttempt(year=record.year,
-                                   base_id=record.base_id,
-                                   base_bias=record.base_bias,
-                                   force_base=record.force_base,
-                                   name=new_name,
-                                   config_members=record.config_members,
-                                   published=False,
-                                   selected=False,
-                                   celery_id=None,
-                                   finished=record.finished,
-                                   celery_finished=True,
-                                   awaiting_upload=record.awaiting_upload,
-                                   outcome=record.outcome,
-                                   solver=record.solver,
-                                   construct_time=record.construct_time,
-                                   compute_time=record.compute_time,
-                                   include_only_submitted=record.include_only_submitted,
-                                   ignore_per_faculty_limits=record.ignore_per_faculty_limits,
-                                   ignore_programme_prefs=record.ignore_programme_prefs,
-                                   years_memory=record.years_memory,
-                                   supervising_limit=record.supervising_limit,
-                                   marking_limit=record.marking_limit,
-                                   max_marking_multiplicity=record.max_marking_multiplicity,
-                                   max_different_group_projects=record.max_different_group_projects,
-                                   max_different_all_projects=record.max_different_all_projects,
-                                   use_hints=record.use_hints,
-                                   require_to_encourage=record.require_to_encourage,
-                                   forbid_to_discourage=record.forbid_to_discourage,
-                                   encourage_bias=record.encourage_bias,
-                                   discourage_bias=record.discourage_bias,
-                                   strong_encourage_bias=record.strong_encourage_bias,
-                                   strong_discourage_bias=record.strong_discourage_bias,
-                                   bookmark_bias=record.bookmark_bias,
-                                   levelling_bias=record.levelling_bias,
-                                   supervising_pressure=record.supervising_pressure,
-                                   marking_pressure=record.marking_pressure,
-                                   CATS_violation_penalty=record.CATS_violation_penalty,
-                                   no_assignment_penalty=record.no_assignment_penalty,
-                                   intra_group_tension=record.intra_group_tension,
-                                   programme_bias=record.programme_bias,
-                                   include_matches=record.include_matches,
-                                   score=record.current_score,  # note that current score becomes original score
-                                   supervisors=record.supervisors,
-                                   markers=record.markers,
-                                   projects=record.projects,
-                                   mean_CATS_per_project=record.mean_CATS_per_project,
-                                   creator_id=current_id,
-                                   creation_timestamp=datetime.now(),
-                                   last_edit_id=None,
-                                   last_edit_timestamp=None,
-                                   lp_file_id=None,
-                                   mps_file_id=None)
+            new_record = MatchingAttempt(year=old_record.year,
+                                         base_id=old_record.base_id,
+                                         base_bias=old_record.base_bias,
+                                         force_base=old_record.force_base,
+                                         name=new_name,
+                                         config_members=old_record.config_members,
+                                         published=False,
+                                         selected=False,
+                                         celery_id=None,
+                                         finished=old_record.finished,
+                                         celery_finished=True,
+                                         awaiting_upload=old_record.awaiting_upload,
+                                         outcome=old_record.outcome,
+                                         solver=old_record.solver,
+                                         construct_time=old_record.construct_time,
+                                         compute_time=old_record.compute_time,
+                                         include_only_submitted=old_record.include_only_submitted,
+                                         ignore_per_faculty_limits=old_record.ignore_per_faculty_limits,
+                                         ignore_programme_prefs=old_record.ignore_programme_prefs,
+                                         years_memory=old_record.years_memory,
+                                         supervising_limit=old_record.supervising_limit,
+                                         marking_limit=old_record.marking_limit,
+                                         max_marking_multiplicity=old_record.max_marking_multiplicity,
+                                         max_different_group_projects=old_record.max_different_group_projects,
+                                         max_different_all_projects=old_record.max_different_all_projects,
+                                         use_hints=old_record.use_hints,
+                                         require_to_encourage=old_record.require_to_encourage,
+                                         forbid_to_discourage=old_record.forbid_to_discourage,
+                                         encourage_bias=old_record.encourage_bias,
+                                         discourage_bias=old_record.discourage_bias,
+                                         strong_encourage_bias=old_record.strong_encourage_bias,
+                                         strong_discourage_bias=old_record.strong_discourage_bias,
+                                         bookmark_bias=old_record.bookmark_bias,
+                                         levelling_bias=old_record.levelling_bias,
+                                         supervising_pressure=old_record.supervising_pressure,
+                                         marking_pressure=old_record.marking_pressure,
+                                         CATS_violation_penalty=old_record.CATS_violation_penalty,
+                                         no_assignment_penalty=old_record.no_assignment_penalty,
+                                         intra_group_tension=old_record.intra_group_tension,
+                                         programme_bias=old_record.programme_bias,
+                                         include_matches=old_record.include_matches,
+                                         score=old_record.current_score,
+                                         # note that current score becomes original score
+                                         supervisors=old_record.supervisors,
+                                         markers=old_record.markers,
+                                         projects=old_record.projects,
+                                         mean_CATS_per_project=old_record.mean_CATS_per_project,
+                                         creator_id=current_id,
+                                         creation_timestamp=datetime.now(),
+                                         last_edit_id=None,
+                                         last_edit_timestamp=None,
+                                         lp_file_id=None,
+                                         mps_file_id=None)
 
-            db.session.add(data)
+            db.session.add(new_record)
             db.session.flush()
 
             # duplicate all matching records
-            for item in record.records:
-                rec = MatchingRecord(matching_id=data.id,
+            for item in old_record.records:
+                rec = MatchingRecord(matching_id=new_record.id,
                                      selector_id=item.selector_id,
                                      submission_period=item.submission_period,
                                      project_id=item.project_id,
@@ -2903,29 +2926,31 @@ def register_matching_tasks(celery):
                 db.session.add(rec)
 
             # duplicate all enumerations
-            if data.awaiting_upload:
-                for item in record.enumerations:
+            if new_record.awaiting_upload:
+                for item in old_record.enumerations:
                     en = MatchingEnumeration(category=item.category,
                                              enumeration=item.enumeration,
                                              key=item.key,
                                              key2=item.key2,
-                                             matching_id=data.id)
+                                             matching_id=new_record.id)
                     db.session.add(en)
 
                 now = datetime.now()
 
-                def copy_asset(old_asset, target, ext=None):
-                    old_path = canonical_generated_asset_filename(old_asset.filename)
-                    new_name, new_abs_path = make_generated_asset_filename(ext=ext)
-
-                    copyfile(old_path, new_abs_path)
+                object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+                def copy_asset(old_asset):
+                    old_storage = AssetCloudAdapter(old_asset, object_store)
+                    new_key = old_storage.duplicate()
 
                     new_asset = GeneratedAsset(timestamp=now,
                                                expiry=None,
-                                               filename=str(new_name),
-                                               filesize=new_abs_path.stat().st_size,
-                                               mimetype='text/plain',
-                                               target_name=target)
+                                               unique_name=new_key,
+                                               filesize=old_asset.filesize,
+                                               mimetype=old_asset.mimetype,
+                                               target_name=old_asset.target_name,
+                                               parent_asset_id=old_asset.parent_asset_id,
+                                               license_id=old_asset.license_id)
+
                     # TODO: find a way to perform a deep copy without exposing implementation details
                     new_asset.access_control_list = old_asset.access_control_list
                     new_asset.access_control_roles = old_asset.access_control_roles
@@ -2933,11 +2958,11 @@ def register_matching_tasks(celery):
 
                     return new_asset
 
-                if record.lp_file is not None:
-                    data.lp_file = copy_asset(record.lp_file, 'matching.lp', ext='lp')
+                if old_record.lp_file is not None:
+                    new_record.lp_file = copy_asset(old_record.lp_file)
 
-                if record.mps_file is not None:
-                    data.mps_file = copy_asset(record.mps_file, 'matching.mps', ext='mps')
+                if old_record.mps_file is not None:
+                    new_record.mps_file = copy_asset(old_record.mps_file)
 
             db.session.commit()
 

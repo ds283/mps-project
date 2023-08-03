@@ -23,12 +23,10 @@ from app.flask_bleach import Bleach
 from flaskext.markdown import Markdown
 from flask_debugtoolbar import DebugToolbarExtension
 # from flask_debug_api import DebugAPIExtension
-from flask_uploads import configure_uploads
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 from .cache import cache
 from .limiter import limiter
-from .uploads import solution_files, batch_user_files, submitted_files
 from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
 # from flask_qrcode import QRcode
@@ -155,22 +153,6 @@ def create_app():
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=app.config.get('PROFILE_DIRECTORY'))
 
         app.logger.info('Profiling to disk enabled')
-
-    # configure behaviour for uploaded files
-    asset_folder = Path(app.config.get('ASSETS_FOLDER'))
-    uploaded_subfolder = Path(app.config.get('ASSETS_UPLOADED_SUBFOLDER'))
-    submitted_subfolder = Path(app.config.get('ASSETS_SUBMITTED_SUBFOLDER'))
-
-    abs_uploaded_path = asset_folder / uploaded_subfolder
-    abs_uploaded_path.mkdir(parents=True, exist_ok=True)
-
-    abs_submissions_path = asset_folder / submitted_subfolder
-    abs_submissions_path.mkdir(parents=True, exist_ok=True)
-
-    app.config['UPLOADED_SOLUTIONS_DEST'] = abs_uploaded_path
-    app.config['UPLOADED_BATCHUSERLIST_DEST'] = abs_uploaded_path
-    app.config['UPLOADED_SUBMISSIONS_DEST'] = abs_submissions_path
-    configure_uploads(app, [solution_files, batch_user_files, submitted_files])
 
     # configure Flask-Security, which needs access to the database models for User and Role
     from app import models

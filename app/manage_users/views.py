@@ -37,14 +37,13 @@ from ..limiter import limiter
 from ..models import User, FacultyData, StudentData, StudentBatch, StudentBatchItem, EnrollmentRecord, \
     DegreeProgramme, DegreeType, ProjectClass, ResearchGroup, Role, TemporaryAsset, TaskRecord, BackupRecord, \
     AssetLicense, WorkflowMixin, faculty_affiliations
-from ..shared.asset_tools import make_temporary_asset_filename
+from ..shared.asset_tools import AssetUploadManager
 from ..shared.conversions import is_integer, is_boolean
 from ..shared.sqlalchemy import func
 from ..shared.utils import get_current_year, get_main_config, home_dashboard_url, redirect_url
 from ..shared.validators import validate_is_convenor
 from ..task_queue import register_task, progress_update
 from ..tools import ServerSideSQLHandler
-from ..uploads import batch_user_files
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -648,14 +647,12 @@ def batch_create_users():
             extension = incoming_filename.suffix.lower()
 
             if extension in ('.csv'):
-                filename, abs_path = make_temporary_asset_filename(ext=extension)
-                batch_user_files.save(batch_file, name=str(filename))
-
                 now = datetime.now()
-                asset = TemporaryAsset(timestamp=now,
-                                       expiry=now + timedelta(days=1),
-                                       filename=str(filename),
-                                       filesize=abs_path.stat().st_size)
+                asset = TemporaryAsset(timestamp=now, expiry=now + timedelta(days=1))
+
+                with AssetUploadManager(asset, bytes=batch_file.stream.read(), length=batch_file.content_length) as storage:
+                    pass
+
                 asset.grant_user(current_user)
 
                 tk_name = "Process batch user list '{name}'".format(name=incoming_filename)

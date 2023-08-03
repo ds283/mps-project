@@ -119,18 +119,8 @@ class Config(object):
     # MPS-Project configuration
 
     BACKUP_FOLDER = os.environ.get('BACKUP_FOLDER') or 'backups'
-    ASSETS_FOLDER = os.environ.get('ASSETS_FOLDER') or 'assets'
     INSTANCE_FOLDER = os.environ.get('INSTANCE_FOLDER') or 'instance'
-
-    ASSETS_GENERATED_SUBFOLDER = os.environ.get('ASSETS_GENERATED_SUBFOLDER') or 'generated'
-
-    ASSETS_UPLOADED_SUBFOLDER = os.environ.get('ASSETS_UPLOADED_SUBFOLDER') or 'uploaded'
-
-    ASSETS_SUBMITTED_SUBFOLDER = os.environ.get('ASSETS_SUBMITTED_SUBFOLDER') or 'submitted'
-    ASSETS_REPORTS_SUBFOLDER = os.environ.get('ASSETS_REPORTS_SUBFOLDER') or 'reports'
-    ASSETS_ATTACHMENTS_SUBFOLDER = os.environ.get('ASSETS_ATTACHMENTS_SUBFOLDER') or 'attachments'
-    ASSETS_PERIODS_SUBFOLDER = os.environ.get('ASSETS_PERIODS_SUBFOLDER') or 'periods'
-
+    SCRATCH_FOLDER = os.environ.get('SCRATCH_FOLDER') or 'scratch'
 
 
     # DEFAULT ASSET LICENSES

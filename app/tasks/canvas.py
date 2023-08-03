@@ -9,27 +9,22 @@
 #
 
 from datetime import datetime, timedelta
-from pathlib import Path
+from urllib.parse import urljoin
 
-from flask import current_app
-from sqlalchemy import or_, func
-
-from sqlalchemy.exc import SQLAlchemyError
-
+import requests
 from celery import group, chain
 from celery.exceptions import Ignore
+from flask import current_app
+from nameparser import HumanName
+from sqlalchemy import or_, func
+from sqlalchemy.exc import SQLAlchemyError
+from url_normalize import url_normalize
 
 from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SubmissionPeriodRecord, SubmissionRecord, SubmittingStudent, \
     CanvasStudent, StudentData, User, SubmittedAsset, AssetLicense, MainConfig
-from ..shared.asset_tools import make_submitted_asset_filename
+from ..shared.asset_tools import AssetUploadManager, AssetCloudAdapter
 from ..shared.utils import get_main_config
-
-from urllib.parse import urljoin
-from url_normalize import url_normalize
-
-import requests
-from nameparser import HumanName
 
 
 def _URL_query(session: requests.Session, URL, **kwargs):
@@ -490,35 +485,25 @@ def register_canvas_tasks(celery):
 
         print('** [Canvas, {pcl}]: Downloading attachment "{file}" for submitting student {name}'.format(pcl=config.name, file=attachment['id'], name=submitter.student.user.name))
 
-        incoming_filename = Path(attachment['filename'])
-        extension = incoming_filename.suffix.lower()
-
-        root_subfolder = current_app.config.get('ASSETS_REPORTS_SUBFOLDER') or 'reports'
-
-        year_string = str(config.year)
-        pclass_string = config.project_class.abbreviation
-
-        subfolder = Path(root_subfolder) / Path(pclass_string) / Path(year_string)
-
-        filename, abs_path = make_submitted_asset_filename(ext=extension, subpath=subfolder)
-
-        get_pdf_report = session.get(attachment['url'])
-        pdf = open(abs_path, 'wb')
-        pdf.write(get_pdf_report.content)
-        pdf.close()
-
         default_report_license = db.session.query(AssetLicense).filter_by(abbreviation='Exam').first()
         if default_report_license is None:
             default_report_license = submitter.student.user.default_license
 
+        get_pdf_report = session.get(attachment['url'])
+
         asset = SubmittedAsset(timestamp=datetime.now(),
                                uploaded_id=user_id,
                                expiry=None,
-                               filename=str(subfolder / filename),
-                               filesize=abs_path.stat().st_size,
                                target_name=attachment['filename'],
-                               mimetype=attachment['content-type'],
                                license=default_report_license)
+
+        with AssetUploadManager(asset, bytes=get_pdf_report.content,
+                                length=attachment['size'],
+                                mimetype=attachment['content-type'],
+                                storage=current_app.config.get('OBJECT_STORAGE_ASSETS')) as storage:
+            pass
+
+        adapter = AssetCloudAdapter(asset, storage)
 
         similarity_score = None
         web_overlap = None
@@ -555,7 +540,7 @@ def register_canvas_tasks(celery):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            abs_path.unlink()
+            adapter.delete()
             raise Ignore()
 
         return {'asset_id': asset.id,

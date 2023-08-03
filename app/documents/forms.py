@@ -8,7 +8,6 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-
 from flask_security.forms import Form
 from wtforms import SubmitField, StringField, BooleanField, SelectField
 from wtforms.validators import InputRequired
@@ -28,7 +27,11 @@ class LicenseMixin():
 
 class DownloadableAttachmentMixin():
 
-    target_name = StringField('Filename', description='The externally-visible filename used for this attachment',
+    target_name = StringField('Filename',
+                              description='The filename to be used for this attachment. This name is used in the '
+                                          'user interface and when the file is downloaded by users. '
+                                          'The name you supply here does not need to match the local name '
+                                          'of the file you are importing from your own machine.',
                               validators=[InputRequired()])
 
 
@@ -85,3 +88,29 @@ def EditSubmitterAttachmentFormFactory(admin=False):
         pass
 
     return EditSubmitterAttachmentForm
+
+
+class PeriodAttachmentMixin():
+
+    description = StringField('Comment', description='Give a short description of the attachment. This will be '
+                                                     'included as an explanation if the document is published to '
+                                                     'end-users.')
+
+    publish_to_students = BooleanField('Publish this document to students')
+
+    include_marker_emails = BooleanField('Attach this document to marking notifications sent to examiners')
+
+    include_supervisor_emails = BooleanField('Attach this document to marking notifications sent to supervisors')
+
+    license = QuerySelectField('License', query_factory=GetActiveAssetLicenses, get_label='name',
+                               allow_blank=True, blank_text='Unset (no license specified)')
+
+
+class UploadPeriodAttachmentForm(Form, PeriodAttachmentMixin, DownloadableAttachmentMixin):
+
+    submit = SubmitField('Upload attachment')
+
+
+class EditPeriodAttachmentForm(Form, PeriodAttachmentMixin, SaveChangesMixin):
+
+    pass

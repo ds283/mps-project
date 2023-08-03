@@ -75,7 +75,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     ProjectTagGroup, ProjectTag, SubmitterAttendanceData, DEFAULT_ASSIGNED_MARKERS, DEFAULT_ASSIGNED_MODERATORS, \
     MatchingRole, SubmissionAttachment
 from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
-    canonical_submitted_asset_filename
+    canonical_submitted_asset_filename, AssetCloudAdapter
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.conversions import is_integer
 from ..shared.formatters import format_size
@@ -9677,10 +9677,12 @@ def download_generated_asset(asset_id):
               'error')
         return redirect(redirect_url())
 
-    abs_path = canonical_generated_asset_filename(asset.filename)
-    return send_file(abs_path, as_attachment=True,
-                     download_name=filename if filename is not None else asset.target_name,
-                     mimetype=asset.mimetype)
+    storage = AssetCloudAdapter(asset, current_app.config['OBJECT_STORAGE_ASSETS'])
+
+    return Response(storage.stream(),
+                    mimetype=asset.mimetype,
+                    headers={"Content-Disposition": "attachment;filename={name}".format(
+                        name=filename if filename is not None else asset.target_name)})
 
 
 @admin.route('/download_submitted_asset/<int:asset_id>')
@@ -9722,10 +9724,12 @@ def download_submitted_asset(asset_id):
               'error')
         return redirect(redirect_url())
 
-    abs_path = canonical_submitted_asset_filename(asset.filename, root_folder='ASSETS_SUBMITTED_SUBFOLDER')
-    return send_file(abs_path, as_attachment=True,
-                     download_name=filename if filename is not None else asset.target_name,
-                     mimetype=asset.mimetype)
+    storage = AssetCloudAdapter(asset, current_app.config['OBJECT_STORAGE_ASSETS'])
+
+    return Response(storage.stream(),
+                    mimetype=asset.mimetype,
+                    headers={"Content-Disposition": "attachment;filename={name}".format(
+                        name=filename if filename is not None else asset.target_name)})
 
 
 @admin.route('/upload_schedule/<int:schedule_id>', methods=['GET', 'POST'])

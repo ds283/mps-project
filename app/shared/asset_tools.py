@@ -15,6 +15,41 @@ from flask import current_app
 
 from pathlib import Path
 
+from object_store import ObjectStore
+
+
+_DEFAULT_STREAMING_CHUNKSIZE = 1024 * 1024
+
+
+
+class AssetCloudAdapter:
+
+    def __init__(self, asset, storage: ObjectStore):
+        self._asset = asset
+        self._storage = storage
+
+        self._key = self._asset.unique_name
+        self._size = self._asset.filesize
+
+
+    def get(self):
+        return self._storage.get(self._key)
+
+
+    def stream(self, chunksize=_DEFAULT_STREAMING_CHUNKSIZE):
+        # adapted from https://stackoverflow.com/questions/43215889/downloading-a-file-from-an-s3-bucket-to-the-users-computer
+        offset = 0
+        total_bytes = self._size
+
+        while total_bytes > 0:
+            start = offset
+            length = chunksize if chunksize < total_bytes else total_bytes
+
+            offset += length
+            total_bytes -= length
+
+            yield self._storage.get_range(self._key, start=start, length=length)
+
 
 def _make_asset_filename(asset_folder=None, subfolder=None, ext=None):
     """

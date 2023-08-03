@@ -422,7 +422,7 @@ def create_app():
 
     # add Flask-profiler and rate limiter in production mode
     if config_name == 'production':
-        # profiler needs to be added near the end, because it has to wrap existing endpoints
+        # profiler needs to be added near the end, because it has to wrap all existing endpoints
         profiler = Profiler(app)
 
         # set up Flask-Limiter

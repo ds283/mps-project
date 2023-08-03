@@ -10,7 +10,7 @@
 
 from uuid import uuid4
 
-from cloudstorage import Driver, Container
+from object_store import ObjectStore
 
 from app import create_app, db
 from app.models import SubmittedAsset, GeneratedAsset, TemporaryAsset
@@ -19,8 +19,7 @@ from app.shared.asset_tools import canonical_submitted_asset_filename, canonical
 
 
 def migrate_object_storage(AssetModel, canonicalize):
-    storage: Driver = app.config['OBJECT_STORAGE_DRIVER']
-    container: Container = storage.get_container(app.config['OBJECT_STORAGE_CONTAINER'])
+    storage: ObjectStore = app.config['OBJECT_STORAGE_ASSETS']
 
     assets = db.session.query(AssetModel).all()
 
@@ -30,11 +29,8 @@ def migrate_object_storage(AssetModel, canonicalize):
         asset.unique_name = str(uuid4())
 
         filename = canonicalize(asset.filename)
-
-        if hasattr(asset, 'mimetype'):
-            container.upload_blob(filename, blob_name=asset.unique_name, content_type=asset.mimetype)
-        else:
-            container.upload_blob(filename, blob_name=asset.unique_name)
+        with open(filename, 'rb') as f:
+            storage.put(filename, f)
 
     db.session.commit()
 
@@ -42,9 +38,6 @@ def migrate_object_storage(AssetModel, canonicalize):
 app = create_app()
 
 with app.app_context():
-    storage: Driver = app.config['OBJECT_STORAGE_DRIVER']
-    container: Container = storage.create_container(app.config['OBJECT_STORAGE_CONTAINER'])
-
     def make_canonical_submitted(name):
         return canonical_submitted_asset_filename(name, root_folder='ASSETS_SUBMITTED_SUBFOLDER')
 

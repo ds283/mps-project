@@ -437,130 +437,127 @@ def register_batch_create_tasks(celery):
 
         object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
         storage = AssetCloudAdapter(asset, object_store)
-        scratch_path = storage.download_to_scratch()
+        with storage.download_to_scratch() as scratch_path:
+            with open(scratch_path.path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
 
-        with open(scratch_path, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
+                # force column headers to lower case
+                reader.fieldnames = [name.lower() for name in reader.fieldnames]
 
-            # force column headers to lower case
-            reader.fieldnames = [name.lower() for name in reader.fieldnames]
+                progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Reading uploaded user list...", autocommit=True)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Reading uploaded user list...", autocommit=True)
+                current_line = 1
+                interpreted_lines = 0
 
-            current_line = 1
-            interpreted_lines = 0
+                ignored_lines = []
 
-            ignored_lines = []
+                for row in reader:
+                    current_line += 1
 
-            for row in reader:
-                current_line += 1
-
-                # in Python 3.6, row is an OrderedDict
-                first_name = None
-                last_name = None
-                username = None
-                year_of_course = None
-
-                try:
-                    # username and email are first things to extract
-                    username = _get_username(row, current_line)
-
-                    email = _get_email(row, current_line)
-                    # ignore cases where the email address is 'INTERMITTING' or 'RESITTING'
-                    if email.lower() == 'intermitting' or email.lower() == 'resitting':
-                        print('## skipping row "{user}" because email is "{email}"'.format(user=username, email=email))
-                        raise SkipRow
-
-                    # try to match this data to an existing record
-                    dont_convert, existing_record = _match_existing_student(username, email, current_line)
-
-                    # get name and break into comma-separated parts
-                    first_name, last_name = _get_name(row, current_line)
-                    intermitting = _get_intermitting(row, current_line)
-                    registration_number = _get_registration_number(row, current_line)
-                    year_of_course = _get_course_year(row, current_line)
-                    programme = _get_course_code(row, current_line)
-
-                    if year_of_course == 0 and record.ignore_Y0:
-                        print('## skipping row "{user}" because Y0 students are being ignored'.format(user=username))
-                        raise SkipRow
-
-                    # attempt to deduce whether a foundation year or repeated years have been involved
-                    if existing_record is None:
-                        cohort = _get_cohort(row, current_line)
-                        fyear_hint = None
-                    else:
-                        if not record.trust_cohort and existing_record.cohort is not None:
-                            cohort = existing_record.cohort
-                        else:
-                            cohort = _get_cohort(row, current_line)
-
-                        fyear_hint = existing_record.foundation_year
-
-                    year_data = _guess_year_data(cohort, year_of_course, current_year, programme, fyear_hint=fyear_hint)
-                    foundation_year = year_data['fdn_year']
-                    repeated_years = year_data['repeated']
-
-                    # sometimes the cohort will need adjustment based on what we could guess about the
-                    # students current academic year; see discussion in _guess_year_data()
-                    if 'new_cohort' in year_data:
-                        cohort = year_data['new_cohort']
-
-                    if existing_record is not None:
-                        if not record.trust_registration and existing_record.registration_number is not None:
-                            registration_number = existing_record.registration_number
-
-                    item = StudentBatchItem(parent_id=record.id,
-                                            existing_id=existing_record.id if existing_record is not None else None,
-                                            user_id=username,
-                                            first_name=first_name,
-                                            last_name=last_name,
-                                            email=email,
-                                            registration_number=registration_number,
-                                            cohort=cohort,
-                                            programme_id=programme.id if programme is not None else None,
-                                            foundation_year=foundation_year,
-                                            repeated_years=repeated_years,
-                                            intermitting=intermitting,
-                                            dont_convert=dont_convert)
-
-                    interpreted_lines += 1
+                    # in Python 3.6, row is an OrderedDict
+                    first_name = None
+                    last_name = None
+                    username = None
+                    year_of_course = None
 
                     try:
-                        db.session.add(item)
-                    except SQLAlchemyError as e:
-                        raise SkipRow
+                        # username and email are first things to extract
+                        username = _get_username(row, current_line)
 
-                    if item.academic_year is None:
-                        if not item.programme.year_out or year_of_course != item.programme.year_out_value:
-                            print('!! ERROR: computed academic year is None, but imported year of course '
-                                  'does not match the specified year-out value for this programme')
-                            raise SkipRow
-                    else:
-                        if item.academic_year != year_of_course:
-                            print('!! ERROR: computed academic year {yr} for {first} {last} does not match imported '
-                                  'value {imp} (current_year={cy}, cohort={ch}, FY={fy}, '
-                                  'repeated_years={ry})'.format(yr=item.academic_year, first=first_name, last=last_name,
-                                                                imp=year_of_course, cy=current_year, ch=cohort,
-                                                                fy=1 if item.has_foundation_year else 0,
-                                                                ry=repeated_years))
+                        email = _get_email(row, current_line)
+                        # ignore cases where the email address is 'INTERMITTING' or 'RESITTING'
+                        if email.lower() == 'intermitting' or email.lower() == 'resitting':
+                            print('## skipping row "{user}" because email is "{email}"'.format(user=username, email=email))
                             raise SkipRow
 
-                except SkipRow:
-                    if username is None:
-                        skip_info = '<line #{no}>'.format(no=current_line)
+                        # try to match this data to an existing record
+                        dont_convert, existing_record = _match_existing_student(username, email, current_line)
 
-                    else:
-                        if first_name is not None and last_name is not None:
-                            skip_info = '{user} ({first} {last} Y{yr})'.format(user=username, first=first_name,
-                                                                               last=last_name, yr=year_of_course)
+                        # get name and break into comma-separated parts
+                        first_name, last_name = _get_name(row, current_line)
+                        intermitting = _get_intermitting(row, current_line)
+                        registration_number = _get_registration_number(row, current_line)
+                        year_of_course = _get_course_year(row, current_line)
+                        programme = _get_course_code(row, current_line)
+
+                        if year_of_course == 0 and record.ignore_Y0:
+                            print('## skipping row "{user}" because Y0 students are being ignored'.format(user=username))
+                            raise SkipRow
+
+                        # attempt to deduce whether a foundation year or repeated years have been involved
+                        if existing_record is None:
+                            cohort = _get_cohort(row, current_line)
+                            fyear_hint = None
                         else:
-                            skip_info = '{user} Y{yr}'.format(user=username, yr=year_of_course)
+                            if not record.trust_cohort and existing_record.cohort is not None:
+                                cohort = existing_record.cohort
+                            else:
+                                cohort = _get_cohort(row, current_line)
 
-                    ignored_lines.append(skip_info)
-                    print('>> SUMMARY: skipped line {info}'.format(info=skip_info))
+                            fyear_hint = existing_record.foundation_year
 
-        scratch_path.unlink()
+                        year_data = _guess_year_data(cohort, year_of_course, current_year, programme, fyear_hint=fyear_hint)
+                        foundation_year = year_data['fdn_year']
+                        repeated_years = year_data['repeated']
+
+                        # sometimes the cohort will need adjustment based on what we could guess about the
+                        # students current academic year; see discussion in _guess_year_data()
+                        if 'new_cohort' in year_data:
+                            cohort = year_data['new_cohort']
+
+                        if existing_record is not None:
+                            if not record.trust_registration and existing_record.registration_number is not None:
+                                registration_number = existing_record.registration_number
+
+                        item = StudentBatchItem(parent_id=record.id,
+                                                existing_id=existing_record.id if existing_record is not None else None,
+                                                user_id=username,
+                                                first_name=first_name,
+                                                last_name=last_name,
+                                                email=email,
+                                                registration_number=registration_number,
+                                                cohort=cohort,
+                                                programme_id=programme.id if programme is not None else None,
+                                                foundation_year=foundation_year,
+                                                repeated_years=repeated_years,
+                                                intermitting=intermitting,
+                                                dont_convert=dont_convert)
+
+                        interpreted_lines += 1
+
+                        try:
+                            db.session.add(item)
+                        except SQLAlchemyError as e:
+                            raise SkipRow
+
+                        if item.academic_year is None:
+                            if not item.programme.year_out or year_of_course != item.programme.year_out_value:
+                                print('!! ERROR: computed academic year is None, but imported year of course '
+                                      'does not match the specified year-out value for this programme')
+                                raise SkipRow
+                        else:
+                            if item.academic_year != year_of_course:
+                                print('!! ERROR: computed academic year {yr} for {first} {last} does not match imported '
+                                      'value {imp} (current_year={cy}, cohort={ch}, FY={fy}, '
+                                      'repeated_years={ry})'.format(yr=item.academic_year, first=first_name, last=last_name,
+                                                                    imp=year_of_course, cy=current_year, ch=cohort,
+                                                                    fy=1 if item.has_foundation_year else 0,
+                                                                    ry=repeated_years))
+                                raise SkipRow
+
+                    except SkipRow:
+                        if username is None:
+                            skip_info = '<line #{no}>'.format(no=current_line)
+
+                        else:
+                            if first_name is not None and last_name is not None:
+                                skip_info = '{user} ({first} {last} Y{yr})'.format(user=username, first=first_name,
+                                                                                   last=last_name, yr=year_of_course)
+                            else:
+                                skip_info = '{user} Y{yr}'.format(user=username, yr=year_of_course)
+
+                        ignored_lines.append(skip_info)
+                        print('>> SUMMARY: skipped line {info}'.format(info=skip_info))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 90, "Finalizing import...", autocommit=False)
 

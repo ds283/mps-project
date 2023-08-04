@@ -239,6 +239,25 @@ def _attach_sticker(page, w, ytop, colour, text):
     return ytop + _title_label_size + rheight + _vertical_margin
 
 
+class ScratchFileManager:
+
+    def __init__(self, path: Path):
+        self._path = path
+
+
+    def __enter__(self):
+        pass
+
+
+    def __exit__(self, type, value, traceback):
+        self._path.unlink(missing_ok=True)
+
+
+    @property
+    def path(self):
+        return self._path
+
+
 def register_process_report_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -271,46 +290,42 @@ def register_process_report_tasks(celery):
         output_name = str(uuid4())
         output_path = scratch_folder / output_name
 
-        input_path = input_storage.download_to_scratch()
+        with ScratchFileManager(output_path) as output_path_mgr:
+            with input_storage.download_to_scratch() as input_path:
+                try:
+                    _process_report(input_path, output_path, record)
+                except ValueError as e:
+                    # document was not a PDF
+                    record.processed_report = None
+                else:
+                    # generate asset record and upload to object store
+                    new_asset = GeneratedAsset(timestamp=datetime.now(),
+                                               expiry=None,
+                                               parent_asset_id=asset.id,
+                                               target_name='processed-' + asset.target_name,
+                                               license=asset.license)
 
-        try:
-            _process_report(input_path, output_path, record)
-        except ValueError as e:
-            # document was not a PDF
-            record.processed_report = None
-        else:
-            # generate asset record and upload to object store
-            new_asset = GeneratedAsset(timestamp=datetime.now(),
-                                       expiry=None,
-                                       parent_asset_id=asset.id,
-                                       target_name='processed-' + asset.target_name,
-                                       license=asset.license)
+                    object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+                    with open(output_path, 'rb') as f:
+                        with AssetUploadManager(new_asset, bytes=BytesIO(f.read()), storage=object_store,
+                                                length=output_path.stat().st_size,
+                                                mimetype=asset.mimetype) as upload_mgr:
+                            pass
 
-            object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-            with open(output_path, 'rb') as f:
-                with AssetUploadManager(new_asset, bytes=BytesIO(f.read()), storage=object_store,
-                                        length=output_path.stat().st_size,
-                                        mimetype=asset.mimetype) as upload_mgr:
-                    pass
+                    try:
+                        db.session.add(new_asset)
+                        db.session.flush()
+                    except SQLAlchemyError as e:
+                        db.session.rollback()
+                        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                        raise self.retry()
 
-            # remove temporary files which are now unneeded
-            input_path.unlink()
-            output_path.unlink()
+                    # attach asset to the SubmissionRecord
+                    record.processed_report_id = new_asset.id
 
-            try:
-                db.session.add(new_asset)
-                db.session.flush()
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
-
-            # attach asset to the SubmissionRecord
-            record.processed_report_id = new_asset.id
-
-            # set ACLs for processed report to match those of uploaded report
-            new_asset.access_control_list = asset.access_control_list
-            new_asset.access_control_roles = asset.access_control_roles
+                    # set ACLs for processed report to match those of uploaded report
+                    new_asset.access_control_list = asset.access_control_list
+                    new_asset.access_control_roles = asset.access_control_roles
 
         try:
             db.session.commit()

@@ -2642,41 +2642,40 @@ def register_matching_tasks(celery):
 
         object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
         storage = AssetCloudAdapter(asset, object_store)
-        scratch_path = storage.download_to_scratch()
 
-        with Timer() as create_time:
-            number_sel, number_lp, number_sup, number_mark, \
-            sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
-            number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
-            sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
-            sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
-            sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
-            multiplicity, capacity, \
-            mean_CATS_per_project, CATS_supervisor, CATS_marker, \
-            R, W, cstr, M, marker_valence, P = _initialize(self, record, read_serialized=True)
+        with storage.download_to_scratch() as scratch_path:
+            with Timer() as create_time:
+                number_sel, number_lp, number_sup, number_mark, \
+                sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
+                number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
+                sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
+                sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
+                sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
+                multiplicity, capacity, \
+                mean_CATS_per_project, CATS_supervisor, CATS_marker, \
+                R, W, cstr, M, marker_valence, P = _initialize(self, record, read_serialized=True)
 
-            base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number,
-                                                                     mark_to_number)
+                base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number,
+                                                                         mark_to_number)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
-                            autocommit=True)
+                progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
+                                autocommit=True)
 
-            prob, X, Y, S = _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_S,
-                                                 has_base_match, record.force_base, CATS_supervisor, CATS_marker,
-                                                 capacity, sup_limits, sup_pclass_limits, mark_limits,
-                                                 mark_pclass_limits, multiplicity, number_lp, number_mark, number_sel,
-                                                 number_sup, record, sel_dict, sup_dict, mark_dict, lp_dict,
-                                                 lp_group_dict, sup_only_numbers, mark_only_numbers,
-                                                 sup_and_mark_numbers, mean_CATS_per_project)
+                prob, X, Y, S = _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_S,
+                                                     has_base_match, record.force_base, CATS_supervisor, CATS_marker,
+                                                     capacity, sup_limits, sup_pclass_limits, mark_limits,
+                                                     mark_pclass_limits, multiplicity, number_lp, number_mark, number_sel,
+                                                     number_sup, record, sel_dict, sup_dict, mark_dict, lp_dict,
+                                                     lp_group_dict, sup_only_numbers, mark_only_numbers,
+                                                     sup_and_mark_numbers, mean_CATS_per_project)
 
-        print(' -- creation complete in time {t}'.format(t=create_time.interval))
+            print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
-        soln = _execute_from_solution(self, scratch_path, record, prob, X, Y, S,
-                                      W, R, create_time, number_sel, number_to_sel, number_lp, number_to_lp, number_sup,
-                                      number_to_sup, number_mark, number_to_mark, sel_dict, lp_dict, sup_dict,
-                                      mark_dict, multiplicity, mean_CATS_per_project)
+            soln = _execute_from_solution(self, scratch_path.path, record, prob, X, Y, S,
+                                          W, R, create_time, number_sel, number_to_sel, number_lp, number_to_lp, number_sup,
+                                          number_to_sup, number_mark, number_to_mark, sel_dict, lp_dict, sup_dict,
+                                          mark_dict, multiplicity, mean_CATS_per_project)
 
-        scratch_path.unlink()
         return soln
 
 

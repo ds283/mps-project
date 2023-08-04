@@ -18,6 +18,25 @@ from object_store._internal import ObjectMeta
 _DEFAULT_STREAMING_CHUNKSIZE = 1024 * 1024
 
 
+class AssetCloudScratchContextManager:
+
+    def __init__(self, path: Path):
+        self._path = path
+
+
+    def __enter__(self):
+        pass
+
+
+    def __exit__(self, type, value, traceback):
+        self._path.unlink(missing_ok=True)
+
+
+    @property
+    def path(self):
+        return self._path
+
+
 class AssetCloudAdapter:
 
     def __init__(self, asset, storage: ObjectStore):
@@ -59,7 +78,7 @@ class AssetCloudAdapter:
         with open(scratch_path, 'wb') as f:
             f.write(self.get())
 
-        return scratch_path
+        return AssetCloudScratchContextManager(scratch_path)
 
 
     def stream(self, chunksize=_DEFAULT_STREAMING_CHUNKSIZE):

@@ -1255,33 +1255,32 @@ def register_scheduling_tasks(celery):
 
         object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
         storage = AssetCloudAdapter(asset, object_store)
-        scratch_path = storage.download_to_scratch()
+        with storage.download_to_scratch() as scratch_path:
 
-        with Timer() as create_time:
-            number_talks, number_assessors, number_slots, number_periods, \
-            talk_to_number, assessor_to_number, slot_to_number, period_to_number, \
-            number_to_talk, number_to_assessor, number_to_slot, number_to_period, \
-            talk_dict, assessor_dict, slot_dict, period_dict, assessor_limits, \
-            A, B, C = _initialize(self, record, read_serialized=True)
+            with Timer() as create_time:
+                number_talks, number_assessors, number_slots, number_periods, \
+                talk_to_number, assessor_to_number, slot_to_number, period_to_number, \
+                number_to_talk, number_to_assessor, number_to_slot, number_to_period, \
+                talk_dict, assessor_dict, slot_dict, period_dict, assessor_limits, \
+                A, B, C = _initialize(self, record, read_serialized=True)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
-                            autocommit=True)
+                progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
+                                autocommit=True)
 
-            prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
-                                              number_periods, assessor_to_number, period_to_number, talk_dict,
-                                              assessor_dict, slot_dict, period_dict, assessor_limits,
-                                              partial(_generate_minimize_objective, C))
+                prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
+                                                  number_periods, assessor_to_number, period_to_number, talk_dict,
+                                                  assessor_dict, slot_dict, period_dict, assessor_limits,
+                                                  partial(_generate_minimize_objective, C))
 
-        print(' -- creation complete in time {t}'.format(t=create_time.interval))
+            print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
-        # ScheduleEnumeration records will be purged during normal database maintenance cycle,
-        # so there is no need to delete them explicitly here
+            # ScheduleEnumeration records will be purged during normal database maintenance cycle,
+            # so there is no need to delete them explicitly here
 
-        soln = _execute_from_solution(self, scratch_path, record,
-                                      prob, X, Y, create_time, number_talks, number_assessors, number_slots,
-                                      talk_dict, assessor_dict, slot_dict)
+            soln = _execute_from_solution(self, scratch_path.path, record,
+                                          prob, X, Y, create_time, number_talks, number_assessors, number_slots,
+                                          talk_dict, assessor_dict, slot_dict)
 
-        scratch_path.unlink()
         return soln
 
 

@@ -11437,12 +11437,13 @@ class SubmissionAttachment(db.Model, SubmissionAttachmentTypesMixin):
     # unique ID
     id = db.Column(db.Integer(), primary_key=True)
 
-    # parent submission record, ie. what submission is this attached to?
+    # parent submission record, i.e., what submission is this attached to?
     parent_id = db.Column(db.Integer(), db.ForeignKey('submission_records.id'), nullable=False)
     parent = db.relationship('SubmissionRecord', foreign_keys=[parent_id], uselist=False,
                              backref=db.backref('attachments', lazy='dynamic'))
 
     # attached file
+    # TODO: in the longer term, this field should be renamed asset_id rather than attachment_id
     attachment_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), default=None)
     attachment = db.relationship('SubmittedAsset', foreign_keys=[attachment_id], uselist=False,
                                  backref=db.backref('submission_attachment', uselist=False))
@@ -11476,6 +11477,7 @@ class PeriodAttachment(db.Model):
                              backref=db.backref('attachments', lazy='dynamic'))
 
     # attached file
+    # TODO: in the longer term, this field should be renamed to asset_id rather than attachment_id
     attachment_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), default=False)
     attachment = db.relationship('SubmittedAsset', foreign_keys=[attachment_id], uselist=False,
                                  backref=db.backref('period_attachment', uselist=False))

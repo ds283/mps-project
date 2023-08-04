@@ -72,7 +72,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset, \
     AssetLicense, SubmittedAssetDownloadRecord, GeneratedAssetDownloadRecord, SelectingStudent, EmailNotification, \
-    ProjectTagGroup, ProjectTag, SubmitterAttendanceData, MatchingRole, SubmissionAttachment
+    ProjectTagGroup, ProjectTag, SubmitterAttendanceData, MatchingRole, SubmissionAttachment, PeriodAttachment
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.conversions import is_integer
@@ -9687,19 +9687,26 @@ def download_generated_asset(asset_id):
 def download_submitted_asset(asset_id):
     # asset_is is a SubmittedAsset
     asset: SubmittedAsset = SubmittedAsset.query.get_or_404(asset_id)
-    attachment: SubmissionAttachment = asset.submission_attachment
 
-    if attachment is None:
-        flash('The specified asset is not associated with a submission attachment. This is an internal error. '
-              'Please contact a system administrator.', 'error')
-        return redirect(redirect_url())
+    sub_attachment: SubmissionAttachment = asset.submission_attachment
+    period_attachment: PeriodAttachment = asset.period_attachment
 
-    if current_user.has_role('student') and not attachment.publish_to_students:
-        # give no indication that this asset actually exists
-        abort(404)
+    attachment = sub_attachment if sub_attachment is not None \
+        else period_attachment if period_attachment is not None \
+        else None
+
+    # attachment may be 'None' if this is an asset that does not have a specific attachment record, e.g., the
+    # unprocessed report is usually of this type
+
+    # if an attachment record is available, check its 'publish_to_students' flag
+    if attachment is not None:
+        if current_user.has_role('student') and not attachment.publish_to_students:
+            # give no indication that this asset actually exists
+            abort(404)
 
     if not asset.has_access(current_user.id):
-        flash('You do not have permissions to download this asset. If you think this is a mistake, please contact '
+        flash('You do not have permissions to download this asset. '
+              'If you think this is a mistake, please contact '
               'a system administrator.', 'info')
         return redirect(redirect_url())
 

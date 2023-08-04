@@ -72,10 +72,15 @@ spec:
                   key: root_password
             - name: SESSION_MONGO_URL
               value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
+            - name: INSTANCE_FOLDER
+              value: /instance
+            # object storage should be directed to S3 or GCS bucket on a production cluster
+            - name: OBJECT_STORAGE_ASSETS_URI
+              value: file:///object_storage/assets
             - name: LOG_FILE
-              value: /home/mpsproject/logs/mps_project.log
+              value: /logs/mps_project.log
             - name: PROFILER_SQLITE_FILE
-              value: /home/mpsproject/profiling/flask_profiler.sql
+              value: /profiling/flask_profiler.sql
             - name: PROFILER_SQLITE_TABLE
               value: measurements
           securityContext:
@@ -87,11 +92,14 @@ spec:
             runAsNonRoot: true
             runAsUser: 500
           volumeMounts:
-            - mountPath: /home/mpsproject/app/instance
+            # would not be used in a production cluster, instead the object store would be a S3 or GCS bucket
+            - mountPath: /object_storage
+              name: mount-object-store
+            - mountPath: /instance
               name: mount-instance
-            - mountPath: /home/mpsproject/logs
+            - mountPath: /logs
               name: mount-logs
-            - mountPath: /home/mpsproject/profiling
+            - mountPath: /profiling
               name: mount-profiling
       automountServiceAccountToken: false
       securityContext:
@@ -99,6 +107,9 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       volumes:
+        - name: mount-object-store
+          persistentVolumeClaim:
+            claimName: pvc-object-store
         - name: mount-instance
           persistentVolumeClaim:
             claimName: pvc-instance

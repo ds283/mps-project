@@ -2,22 +2,22 @@
 
 echo "Creating volumes..."
 
-kubectl apply -f ./k8s-manifests/pv-assets.yml
 kubectl apply -f ./k8s-manifests/pv-backups.yml
 kubectl apply -f ./k8s-manifests/pv-instance.yml
 kubectl apply -f ./k8s-manifests/pv-logs.yml
 kubectl apply -f ./k8s-manifests/pv-mariadb-data.yml
 kubectl apply -f ./k8s-manifests/pv-mongodb-data.yml
+kubectl apply -f ./k8s-manifests/pv-object-store.yml
 kubectl apply -f ./k8s-manifests/pv-profiling.yml
 
 echo "Creating volume claims..."
 
-kubectl apply -f ./k8s-manifests/pvc-assets.yml
 kubectl apply -f ./k8s-manifests/pvc-backups.yml
 kubectl apply -f ./k8s-manifests/pvc-instance.yml
 kubectl apply -f ./k8s-manifests/pvc-logs.yml
 kubectl apply -f ./k8s-manifests/pvc-mariadb-data.yml
 kubectl apply -f ./k8s-manifests/pvc-mongodb-data.yml
+kubectl apply -f ./k8s-manifests/pvc-object-store.yml
 kubectl apply -f ./k8s-manifests/pvc-profiling.yml
 
 echo "Creating MariaDB credentials..."

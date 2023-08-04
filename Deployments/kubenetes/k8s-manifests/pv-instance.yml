@@ -11,5 +11,5 @@ spec:
   accessModes:
     - ReadOnlyMany
   hostPath:
-    path: "/Users/ds283/Documents/Code/MPS-Project/app/instance"
+    path: "/Users/ds283/Documents/Code/MPS-Project/instance"
     type: Directory

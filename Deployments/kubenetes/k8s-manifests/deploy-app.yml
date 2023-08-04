@@ -76,13 +76,16 @@ spec:
             - name: SESSION_MONGO_URL
               value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
             - name: BACKUP_FOLDER
-              value: /home/mpsproject/backups
-            - name: ASSETS_FOLDER
-              value: /home/mpsproject/assets
+              value: /backups
+            - name: INSTANCE_FOLDER
+              value: /instance
+            # object storage should be directed to S3 or GCS bucket on a production cluster
+            - name: OBJECT_STORAGE_ASSETS_URI
+              value: file:///object_storage/assets
             - name: LOG_FILE
-              value: /home/mpsproject/logs/mps_project.log
+              value: /logs/mps_project.log
             - name: PROFILER_SQLITE_FILE
-              value: /home/mpsproject/profiling/flask_profiler.sql
+              value: /profiling/flask_profiler.sql
             - name: PROFILER_SQLITE_TABLE
               value: measurements
           securityContext:
@@ -94,15 +97,18 @@ spec:
             runAsNonRoot: true
             runAsUser: 500
           volumeMounts:
-            - mountPath: /home/mpsproject/assets
-              name: mount-assets
-            - mountPath: /home/mpsproject/backups
+            # would not be used in a production cluster, instead the object store would be a S3 or GCS bucket
+            - mountPath: /object_storage
+              name: mount-object-store
+            # TODO: change backups to use an S3 or GCS bucket
+            - mountPath: /backups
               name: mount-backups
-            - mountPath: /home/mpsproject/app/instance
+            - mountPath: /instance
               name: mount-instance
-            - mountPath: /home/mpsproject/logs
+            # would not be used in a production cluster
+            - mountPath: /logs
               name: mount-logs
-            - mountPath: /home/mpsproject/profiling
+            - mountPath: /profiling
               name: mount-profiling
           livenessProbe:
             httpGet:
@@ -122,9 +128,9 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       volumes:
-        - name: mount-assets
+        - name: mount-object-store
           persistentVolumeClaim:
-            claimName: pvc-assets
+            claimName: pvc-object-store
         - name: mount-backups
           persistentVolumeClaim:
             claimName: pvc-backups

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pvc-assets
+  name: pvc-object-store
   labels:
     type: local
 spec:
@@ -10,5 +10,5 @@ spec:
       storage: 2Gi
   storageClassName: standard
   accessModes:
-    - ReadWriteOnce
-  volumeName: pv-assets
+    - ReadWriteMany
+  volumeName: pv-object-store

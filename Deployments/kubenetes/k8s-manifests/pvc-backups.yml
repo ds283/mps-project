@@ -10,5 +10,5 @@ spec:
       storage: 10Gi
   storageClassName: standard
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   volumeName: pv-backups

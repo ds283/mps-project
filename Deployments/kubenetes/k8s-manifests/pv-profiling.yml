@@ -9,7 +9,7 @@ spec:
     storage: 1Gi
   storageClassName: standard
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   hostPath:
     path: "/Users/ds283/Documents/Code/MPS-Project/profiling"
     type: Directory

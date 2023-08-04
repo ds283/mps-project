@@ -10,5 +10,5 @@ spec:
       storage: 1Gi
   storageClassName: standard
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   volumeName: pv-profiling

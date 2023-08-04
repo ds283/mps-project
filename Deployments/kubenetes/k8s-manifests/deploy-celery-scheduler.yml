@@ -85,6 +85,7 @@ spec:
               - ALL
             readOnlyRootFilesystem: false
             runAsNonRoot: true
+            runAsUser: 500
           volumeMounts:
             - mountPath: /home/mpsproject/app/instance
               name: mount-instance

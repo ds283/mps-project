@@ -844,11 +844,9 @@ def AssetMixinFactory(acl_name, acr_name):
         # timestamp
         timestamp = db.Column(db.DateTime(), index=True)
 
-        # relative filename
-        filename = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
-
         # unique filename
-        unique_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+        unique_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'),
+                                nullable=False, unique=True)
 
         # filesize
         filesize = db.Column(db.Integer())

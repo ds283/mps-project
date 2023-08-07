@@ -38,7 +38,7 @@ def backups_data(backups: List[BackupRecord]):
              'type': b.type_to_string(),
              'description': b.description if b.description is not None and len(b.description) > 0
              else '<span class="badge bg-secondary">None</span>',
-             'filename': b.filename,
+             'key': '<span class="small">{key}</span>'.format(key=b.unique_name),
              'db_size': b.readable_db_size,
              'archive_size': b.readable_archive_size,
              'menu': render_template_string(_manage_backups_menu, backup=b)} for b in backups]

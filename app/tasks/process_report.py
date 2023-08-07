@@ -25,6 +25,7 @@ from ..models import SubmissionRecord, SubmittedAsset, User, ProjectClassConfig,
     StudentData
 from ..shared.asset_tools import AssetCloudAdapter, \
     AssetUploadManager
+from ..shared.scratch import ScratchFileManager
 
 _title_label_size = 24
 _subtitle_label_size = 18
@@ -239,25 +240,6 @@ def _attach_sticker(page, w, ytop, colour, text):
     return ytop + _title_label_size + rheight + _vertical_margin
 
 
-class ScratchFileManager:
-
-    def __init__(self, path: Path):
-        self._path = path
-
-
-    def __enter__(self):
-        pass
-
-
-    def __exit__(self, type, value, traceback):
-        self._path.unlink(missing_ok=True)
-
-
-    @property
-    def path(self):
-        return self._path
-
-
 def register_process_report_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -286,14 +268,10 @@ def register_process_report_tasks(celery):
             raise Ignore()
 
         # generate scratch names
-        scratch_folder = Path(current_app.config.get('SCRATCH_FOLDER'))
-        output_name = str(uuid4())
-        output_path = scratch_folder / output_name
-
-        with ScratchFileManager(output_path) as output_path_mgr:
+        with ScratchFileManager() as output_path:
             with input_storage.download_to_scratch() as input_path:
                 try:
-                    _process_report(input_path, output_path, record)
+                    _process_report(input_path.path, output_path.path, record)
                 except ValueError as e:
                     # document was not a PDF
                     record.processed_report = None
@@ -306,7 +284,7 @@ def register_process_report_tasks(celery):
                                                license=asset.license)
 
                     object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-                    with open(output_path, 'rb') as f:
+                    with open(output_path.path, 'rb') as f:
                         with AssetUploadManager(new_asset, bytes=BytesIO(f.read()), storage=object_store,
                                                 length=output_path.stat().st_size,
                                                 mimetype=asset.mimetype) as upload_mgr:

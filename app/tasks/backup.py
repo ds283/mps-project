@@ -8,262 +8,118 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-
-import errno
 import functools
 import subprocess
 import tarfile
 from datetime import datetime, timedelta
+from io import BytesIO
 from operator import itemgetter
-from os import path, makedirs, rmdir, remove, scandir
+from os import path, rmdir, scandir
 from typing import List, Tuple
+from uuid import uuid4
 
-from celery import group, chain, chord
+from celery import group, chain
 from celery.exceptions import Ignore
 from dateutil import parser
 from flask import current_app, render_template
 from flask_mailman import EmailMessage
 from math import floor
+from object_store import ObjectStore
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 from .. import register_task
 from ..database import db
 from ..models import BackupRecord
-from ..shared.backup import get_backup_config, get_backup_count, get_backup_size, remove_backup
+from ..shared.asset_tools import AssetUploadManager
+from ..shared.backup import get_backup_config, compute_current_backup_count, compute_current_backup_size, remove_backup
 from ..shared.formatters import format_size
-
-
-def _count_dir_size(path):
-    size = 0
-
-    for entry in scandir(path):
-        if entry.is_dir(follow_symlinks=False):
-            size += _count_dir_size(entry.path)
-
-        else:
-            size += entry.stat(follow_symlinks=False).st_size
-
-    return size
-
-
-def _prune_empty_folders(path):
-    file_count = 0
-
-    for entry in scandir(path):
-
-        if entry.is_dir(follow_symlinks=False):
-            files_inside = _prune_empty_folders(entry.path)
-
-            if files_inside == 0:
-                rmdir(entry.path)
-
-            else:
-                file_count += files_inside
-
-        else:
-            file_count += 1
-
-    return file_count
+from ..shared.scratch import ScratchFileManager
 
 
 def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def backup(self, owner_id=None, type=BackupRecord.SCHEDULED_BACKUP, tag='backup', description=None):
-        seq = chain(build_backup_paths.s(tag), backup_database.s(), make_backup_archive.s(),
-                    insert_backup_record.s(owner_id, type, description), clean_up.si())
+        self.update_state(state='STARTED', meta={'msg': 'Initiating database backup'})
 
-        raise self.replace(seq)
+        # get backup object store
+        object_store = current_app.config['OBJECT_STORAGE_BACKUP']
 
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def build_backup_paths(self, tag):
-        self.update_state(state='STARTED', meta={'msg': 'Preparing backup'})
-
-        # get name of backup folder
-        backup_folder = current_app.config['BACKUP_FOLDER']
-
-        # get current time
+        # construct unique key for backup object
         now = datetime.now()
+        key = '{yr}-{mo}-{dy}-{tag}-{time}-{uuid}.tar.gz'.format(yr=now.strftime("%Y"),
+                                                                 mo=now.strftime("%m"),
+                                                                 dy=now.strftime("%d"),
+                                                                 time=now.strftime("%H_%M_%S"),
+                                                                 tag=tag, uuid=str(uuid4()))
 
-        # convert to filename-friendly format
-        now_str = now.strftime("%H_%M_%S")
+        with ScratchFileManager() as SQL_scratch:
+            SQL_scratch_path = SQL_scratch.path
 
-        # set up folder hierarchy
-        backup_subfolder = path.join(now.strftime("%Y"), now.strftime("%m"), now.strftime("%d"))
-        backup_absfolder = path.join(backup_folder, backup_subfolder)
+            self.update_state(state='STARTED', meta={'msg': 'Performing mysqldump on main database'})
 
-        backup_leafname = "{tag}_{time}.tar.gz".format(tag=tag, time=now_str)
-        backup_relpath = path.join(backup_subfolder, backup_leafname)
-        backup_abspath = path.join(backup_absfolder, backup_leafname)
+            # get database details from configuraiton
+            root_password = current_app.config['DATABASE_ROOT_PASSWORD']
+            db_hostname = current_app.config['DATABASE_HOSTNAME']
 
-        # ensure backup destination exists on disk
-        if not path.exists(backup_absfolder):
-            try:
-                makedirs(backup_absfolder)
-            except OSError as e:
-                if e.errno != errno.EEXIST:
+            # dump database to SQL document
+            p = subprocess.Popen(
+                ["mysqldump", "-h", db_hostname, "-uroot", "-p{pwd}".format(pwd=root_password), "--opt", "--all-databases",
+                 "--skip-lock-tables", "-r", str(SQL_scratch_path)])
+            stdout, stderr = p.communicate()
+
+            if not path.exists(SQL_scratch_path) or not path.isfile(SQL_scratch_path):
+                self.update_state(state='FAILURE', meta={'msg': 'mysqldump failed or did not produce a readable file'})
+                raise Ignore()
+
+            self.update_state(state='STARTED', meta={'msg': 'Compressing mysqldump output'})
+
+            with ScratchFileManager() as archive_scratch:
+                archive_scratch_path = archive_scratch.path
+
+                with tarfile.open(name=archive_scratch_path, mode="w:gz", format=tarfile.PAX_FORMAT) as archive:
+                    archive.add(name=SQL_scratch_path, arcname="database.sql")
+
+                    archive.close()
+
+                if not path.exists(archive_scratch_path) or not path.isfile(archive_scratch_path):
+                    self.update_state(state='FAILURE',
+                                      meta={'msg': 'archive construction failed or did not produce a readable file'})
+                    raise Ignore()
+
+                # store details
+                uncompressed_size = SQL_scratch_path.stat().st_size
+                this_archive_size = archive_scratch_path.stat().st_size
+
+                current_backup_size = db.session.query(func.sum(BackupRecord.archive_size)).scalar()
+                if current_backup_size is None:
+                    current_backup_size = 0
+
+                data = BackupRecord(owner_id=owner_id,
+                                    date=datetime.now(),
+                                    type=type,
+                                    description=description,
+                                    db_size=uncompressed_size,
+                                    archive_size=this_archive_size,
+                                    backup_size=current_backup_size + this_archive_size)
+
+                with open(archive_scratch_path, 'rb') as f:
+                    with AssetUploadManager(data, bytes=BytesIO(f.read()), storage=object_store,
+                                            key=key, length=this_archive_size,
+                                            mimetype='application/gzip', size_attr='archive_size') as upload_mgr:
+                        pass
+
+                try:
+                    db.session.add(data)
+                    db.session.commit()
+
+                except SQLAlchemyError as e:
+                    db.session.rollback()
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     raise self.retry()
 
-        # ensure final archive name is unique
-        count = 1
-        if path.exists(backup_abspath):
-            while path.exists(backup_abspath):
-                backup_leafname = "{tag}_{time}_{ct}.tar.gz".format(tag=tag, time=now_str, ct=count)
-                backup_relpath = path.join(backup_subfolder, backup_leafname)
-                backup_abspath = path.join(backup_absfolder, backup_leafname)
-
-                count += 1
-                if count > 50:
-                    raise self.retry()
-
-        # name of temporary SQL dump file
-        temp_SQL_file = path.join(backup_absfolder, 'SQL_temp_{tag}.sql'.format(tag=now_str))
-
-        count = 1
-        if path.exists(temp_SQL_file):
-            while path.exists(temp_SQL_file):
-                temp_SQL_file = path.join(backup_absfolder, 'SQL_temp_{tag}_{ct}.sql'.format(tag=now_str, ct=count))
-
-                count += 1
-                if count > 50:
-                    raise self.retry()
-
-        return temp_SQL_file, backup_folder, backup_abspath, backup_relpath
-
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def backup_database(self, paths):
-        self.update_state(state='STARTED', meta={'msg': 'Performing database backup'})
-
-        # get database details from configuraiton
-        root_password = current_app.config['DATABASE_ROOT_PASSWORD']
-        db_hostname = current_app.config['DATABASE_HOSTNAME']
-
-        temp_SQL_file, backup_folder, backup_abspath, backup_relpath = paths
-
-        # dump database to SQL document
-        p = subprocess.Popen(
-            ["mysqldump", "-h", db_hostname, "-uroot", "-p{pwd}".format(pwd=root_password), "--opt", "--all-databases",
-             "--skip-lock-tables", "-r", temp_SQL_file])
-        stdout, stderr = p.communicate()
-
-        if path.exists(temp_SQL_file) and path.isfile(temp_SQL_file):
-            self.update_state(state='SUCCESS')
-            return paths
-
-        raise self.retry()
-
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def make_backup_archive(self, paths):
-        self.update_state(state='STARTED', meta={'msg': 'Compressing database backup'})
-
-        temp_SQL_file, backup_folder, backup_abspath, backup_relpath = paths
-
-        # embed into tar archive
-        with tarfile.open(name=backup_abspath, mode="w:gz", format=tarfile.PAX_FORMAT) as archive:
-            archive.add(name=temp_SQL_file, arcname="database.sql")
-
-            archive.close()
-
-        if path.exists(backup_abspath) and path.isfile(backup_abspath):
-
-            self.update_state(state='SUCCESS')
-            return paths
-
-        raise self.retry()
-
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def insert_backup_record(self, paths, owner_id, type, description):
-        self.update_state(state='STARTED', meta={'msg': 'Writing backup receipts'})
-
-        temp_SQL_file, backup_folder, backup_abspath, backup_relpath = paths
-
-        if path.exists(temp_SQL_file) and path.isfile(temp_SQL_file):
-            db_size = path.getsize(temp_SQL_file)
-        else:
-            self.update_state(state='FAILED', meta={'msg': 'Missing database backup file'})
-            raise Ignore()
-
-        if path.exists(backup_abspath) and path.isfile(backup_abspath):
-            archive_size = path.getsize(backup_abspath)
-        else:
-            self.update_state(state='FAILED', meta={'msg': 'Missing compressed website archive'})
-            raise Ignore()
-
-        if path.exists(backup_folder) and path.isdir(backup_folder):
-            backup_size = _count_dir_size(backup_folder)
-        else:
-            self.update_state(state='FAILED', meta={'msg': 'Backup folder is not a directory'})
-            raise Ignore()
-
-        # store details
-        try:
-            data = BackupRecord(owner_id=owner_id,
-                                date=datetime.now(),
-                                type=type,
-                                description=description,
-                                filename=backup_relpath,
-                                db_size=db_size,
-                                archive_size=archive_size,
-                                backup_size=backup_size)
-            db.session.add(data)
-            db.session.commit()
-
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        try:
-            remove(temp_SQL_file)
-        except OSError as e:
-            current_app.logger.critical('** CRITICAL ERROR: remove of temporary SQL archive failed in '
-                                        'insert_backup_record()', exc_info=e)
-
-        self.update_state(state='SUCCESS')
-
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def thin_bin(self, period: int, unit: str, input_bin: List[Tuple[int, str]]):
-        self.update_state(state='STARTED', meta={'msg': 'Thinning backup bin for '
-                                                 '{period} {unit}'.format(period=period, unit=unit)})
-
-        # sort records from the bin into order, then retain the oldest record.
-        # This means that re-running the thinning task is idempotent and stable under small changes in binning.
-        # output_bin will eventually contain the retained record from this bin
-        output_bin = sorted(((r[0], parser.parse(r[1])) for r in input_bin), key=itemgetter(1))
-
-        # keep a list of backups that we drop
-        dropped = []
-
-        while len(output_bin) > 1:
-            # get the last element
-            drop_element = output_bin.pop()
-            drop_id = drop_element[0]
-
-            try:
-                drop_record: BackupRecord = db.session.query(BackupRecord).filter_by(id=drop_id).first()
-                dropped.append((drop_id, str(drop_record.date)))
-
-                success, msg = remove_backup(drop_id)
-
-                if not success:
-                    self.update_state(state='FAILED', meta={'msg': 'Delete failed: {msg}'.format(msg=msg)})
-                    raise self.retry()
-
-            except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
-
-        retained_record: BackupRecord = db.session.query(BackupRecord).filter_by(id=(output_bin[0])[0]).first()
-
-        self.update_state(state='SUCCESS')
-        return {'period': period, 'unit': unit,
-                'retained': (retained_record.id, str(retained_record.date)),
-                'dropped': dropped}
+        return True
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -333,6 +189,46 @@ def register_backup_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
+    def thin_bin(self, period: int, unit: str, input_bin: List[Tuple[int, str]]):
+        self.update_state(state='STARTED', meta={'msg': 'Thinning backup bin for '
+                                                        '{period} {unit}'.format(period=period, unit=unit)})
+
+        # sort records from the bin into order, then retain the oldest record.
+        # This means that re-running the thinning task is idempotent and stable under small changes in binning.
+        # output_bin will eventually contain the retained record from this bin
+        output_bin = sorted(((r[0], parser.parse(r[1])) for r in input_bin), key=itemgetter(1))
+
+        # keep a list of backups that we drop
+        dropped = []
+
+        while len(output_bin) > 1:
+            # get the last element
+            drop_element = output_bin.pop()
+            drop_id = drop_element[0]
+
+            try:
+                drop_record: BackupRecord = db.session.query(BackupRecord).filter_by(id=drop_id).first()
+                dropped.append((drop_id, str(drop_record.date)))
+
+                success, msg = remove_backup(drop_id)
+
+                if not success:
+                    self.update_state(state='FAILED', meta={'msg': 'Delete failed: {msg}'.format(msg=msg)})
+                    raise self.retry()
+
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+        retained_record: BackupRecord = db.session.query(BackupRecord).filter_by(id=(output_bin[0])[0]).first()
+
+        self.update_state(state='SUCCESS')
+        return {'period': period, 'unit': unit,
+                'retained': (retained_record.id, str(retained_record.date)),
+                'dropped': dropped}
+
+
+    @celery.task(bind=True, default_retry_delay=30)
     def issue_thinning_result(self, thinning_result, timestamp_str: str, email: str):
         self.update_state(state='STARTED', meta={'msg': 'Issue backup thinning report to {r}'.format(r=email)})
 
@@ -370,7 +266,7 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def thin(self):
-        seq = chain(drop_absent_backups.si(), do_thinning.si(), clean_up.si())
+        seq = chain(drop_absent_backups.si(), do_thinning.si())
         raise self.replace(seq)
 
 
@@ -378,57 +274,25 @@ def register_backup_tasks(celery):
     def drop_absent_backups(self):
         self.update_state(state='STARTED', meta={'msg': 'Building list of backups'})
 
+        # build list of objects in store, but only do it once so that we are not generating a lot of
+        # LIST API requests that will each be billed
+        object_store: ObjectStore = current_app.config['OBJECT_STORAGE_BACKUP']
+        contents = object_store.list()
+
         # query database for backup records, and queue a retry if it fails
         try:
-            records = db.session.query(BackupRecord.id).all()
+            records = db.session.query(BackupRecord).all()
+
+            for record in records:
+                if record.unique_key not in contents:
+                    db.session.delete(record)
+
+            db.session.commit()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        # build a group of tasks, one for each backup
-        seq = group(drop_backup_if_absent.si(i.id) for i in records)
-        raise self.replace(seq)
-
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def drop_backup_if_absent(self, id):
-        self.update_state(state='STARTED', meta={'msg': 'Testing whether backup is available'})
-
-        # query database for backup records, and queue a retry if it fails
-        try:
-            record = db.session.query(BackupRecord).filter_by(id=id).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if record is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Database record could not be loaded'})
-            raise self.retry()
-
-        backup_folder = current_app.config['BACKUP_FOLDER']
-        abspath = path.join(backup_folder, record.filename)
-
-        # return value is 'found' if the backup was found; otherwise it is 'missing' if the backup file
-        # was not found but the database entry cannot be dropped, or 'dropped' if the database
-        # entry was purged
-        state = 'found'
-
-        if not path.exists(abspath):
-            # switch return value to 'missing'
-            state = 'missing'
-
-            try:
-                db.session.delete(record)
-                db.session.commit()
-
-                # switch return value to 'dropped'
-                state = 'dropped'
-
-            except SQLAlchemyError as e:
-                pass
-
-        self.update_state(state='SUCCESS')
-        return state
+        return True
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -442,8 +306,8 @@ def register_backup_tasks(celery):
             return
 
         # cache current size of backup folder and number of recorded backups
-        current_size = get_backup_size()
-        current_count = get_backup_count()
+        current_size = compute_current_backup_size()
+        current_count = compute_current_backup_count()
 
         # remember initial size and count
         initial_size = current_size
@@ -457,7 +321,8 @@ def register_backup_tasks(celery):
                   '{maxsize}, backup count = {count}'.format(current=format_size(current_size),
                                                              maxsize=format_size(backup_max), count=current_count))
             try:
-                oldest_backup: BackupRecord = db.session.query(BackupRecord.id).order_by(BackupRecord.date.asc()).first()
+                oldest_backup: BackupRecord = \
+                    db.session.query(BackupRecord.id).order_by(BackupRecord.date.asc()).first()
 
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -484,8 +349,8 @@ def register_backup_tasks(celery):
                 raise self.retry()
 
             # update cached values
-            current_size = get_backup_size()
-            current_count = get_backup_count()
+            current_size = compute_current_backup_size()
+            current_count = compute_current_backup_count()
 
         # return status (currently ignored by caller, but useful for debugging Celery jobs)
         return {'initial size': initial_size,
@@ -497,24 +362,8 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def limit_size(self):
-        seq = chain(drop_absent_backups.si(), apply_size_limit.si(), clean_up.si())
+        seq = chain(drop_absent_backups.si(), apply_size_limit.si())
         raise self.replace(seq)
-
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def clean_up(self):
-        """
-        Apply clean-up operations to the backup folder
-        :param self:
-        :param previous_result: Not used, just a placeholder because this item always appears in a chain of tasks
-        :return:
-        """
-        self.update_state(state='STARTED', meta={'msg': 'Cleaning up backup folder'})
-
-        backup_path = current_app.config['BACKUP_FOLDER']
-        _prune_empty_folders(backup_path)
-
-        self.update_state(state='SUCCESS')
 
 
     @celery.task(bind=True, serializer='pickle')

@@ -11840,7 +11840,7 @@ class BackupRecord(db.Model):
     # optional text description
     description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
-    # date of backup
+    # datestamp of backup
     date = db.Column(db.DateTime(), index=True)
 
     # type of backup
@@ -11860,8 +11860,9 @@ class BackupRecord(db.Model):
 
     type = db.Column(db.Integer())
 
-    # filename
-    filename = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+    # unique key, used to identify the payload for this backup within a bucket
+    unique_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'),
+                            nullable=False, unique=True)
 
     # uncompressed database size, in bytes
     db_size = db.Column(db.BigInteger())
@@ -11870,6 +11871,8 @@ class BackupRecord(db.Model):
     archive_size = db.Column(db.BigInteger())
 
     # total size of backups at this time, in bytes
+    # used only to plot historical trends
+    # the actual value in here is unreliable, because intermediate backups may have been thinned
     backup_size = db.Column(db.BigInteger())
 
 

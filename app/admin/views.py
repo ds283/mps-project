@@ -74,7 +74,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     AssetLicense, SubmittedAssetDownloadRecord, GeneratedAssetDownloadRecord, SelectingStudent, EmailNotification, \
     ProjectTagGroup, ProjectTag, SubmitterAttendanceData, MatchingRole, SubmissionAttachment, PeriodAttachment
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
-from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
+from ..shared.backup import get_backup_config, set_backup_config, compute_current_backup_count, compute_current_backup_size, remove_backup
 from ..shared.conversions import is_integer
 from ..shared.formatters import format_size
 from ..shared.forms.queries import ScheduleSessionQuery
@@ -3687,8 +3687,8 @@ def backups_overview():
     keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
     limit, units = lim
 
-    backup_count = get_backup_count()
-    backup_total_size = get_backup_size()
+    backup_count = compute_current_backup_count()
+    backup_total_size = compute_current_backup_size()
 
     if backup_total_size is None:
         size = '(no backups currently held)'
@@ -3813,7 +3813,7 @@ def manage_backups():
     if type_filter is not None:
         session['admin_backup_type_filter'] = type_filter
 
-    backup_count = get_backup_count()
+    backup_count = compute_current_backup_count()
 
     form = BackupManageForm(request.form)
 
@@ -3858,8 +3858,8 @@ def manage_backups_ajax():
     description = {'search': BackupRecord.description,
                    'order': BackupRecord.description,
                    'search_collation': 'utf8_general_ci'}
-    filename = {'search': BackupRecord.filename,
-                'order': BackupRecord.filename,
+    key = {'search': BackupRecord.unique_name,
+                'order': BackupRecord.unique_name,
                 'search_collation': 'utf8_general_ci'}
     db_size = {'order': BackupRecord.db_size}
     archive_size = {'order': BackupRecord.archive_size}
@@ -3868,7 +3868,7 @@ def manage_backups_ajax():
                'initiated': initiated,
                'type': type,
                'description': description,
-               'filename': filename,
+               'key': key,
                'db_size': db_size,
                'archive_size': archive_size}
 

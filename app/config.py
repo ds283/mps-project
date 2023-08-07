@@ -11,8 +11,9 @@
 import os
 from datetime import timedelta
 
-from flask_security import uia_email_mapper
 from bleach import clean
+from flask_security import uia_email_mapper
+from object_store import ObjectStore
 
 
 def uia_username_mapper(identity):
@@ -117,11 +118,16 @@ class Config(object):
     }
 
 
-    # MPS-Project configuration
+    # MPSPROJECT INTERNAL (i.e. in-container) AND EXTERNAL LOCATIONS
 
-    BACKUP_FOLDER = os.environ.get('BACKUP_FOLDER') or 'backups'
     INSTANCE_FOLDER = os.environ.get('INSTANCE_FOLDER') or 'instance'
     SCRATCH_FOLDER = os.environ.get('SCRATCH_FOLDER') or 'scratch'
+
+    OBJECT_STORAGE_ASSETS_URI = os.environ.get("OBJECT_STORAGE_ASSETS_URI") or 'file:///assets'
+    OBJECT_STORAGE_ASSETS = ObjectStore(OBJECT_STORAGE_ASSETS_URI)
+
+    OBJECT_STORAGE_BACKUP_URI = os.environ.get("OBJECT_STORAGE_BACKUP_URI") or 'file:///backups'
+    OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI)
 
 
     # DEFAULT ASSET LICENSES

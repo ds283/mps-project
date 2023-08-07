@@ -13,6 +13,7 @@ from flask import current_app
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
+from .asset_tools import AssetCloudAdapter
 from ..database import db
 from ..models import BackupConfiguration, BackupRecord
 
@@ -92,12 +93,28 @@ def set_backup_config(keep_hourly, keep_daily, limit, units):
     db.session.commit()
 
 
-def get_backup_count():
+def compute_current_backup_count():
+    """
+    This method is used to get the count of backup records in the database.
+
+    :return: The count of backup records in the database.
+    """
     return get_count(db.session.query(BackupRecord))
 
 
-def get_backup_size():
-    return db.session.query(func.sum(BackupRecord.archive_size)).scalar()
+def compute_current_backup_size():
+    """
+    Returns the total size of the most recent backup record.
+
+    :return: The total size of the most recent backup record. If no backup record exists, returns 0.
+    """
+    # find most recent backup record and return its recorded total size
+    size = db.session.query(func.sum(BackupRecord.archive_size)).scalar()
+
+    if size is None:
+        return 0
+
+    return size
 
 
 def remove_backup(id):
@@ -106,19 +123,21 @@ def remove_backup(id):
     if record is None:
         return False, 'database record for backup {id} could not be found'.format(id=id)
 
-    backup_folder = current_app.config['BACKUP_FOLDER']
-    abspath = path.join(backup_folder, record.filename)
+    object_store = current_app.config.get('OBJECT_STORAGE_BACKUP')
+    storage = AssetCloudAdapter(record, object_store, size_attr='archive_size')
 
-    if not path.exists(abspath):
-        return False, 'archive file "{file}" not found'.format(file=abspath)
-
-    remove(abspath)
-
+    # delete database record first; if this succeeds but the storage deletion doesn't, then the stored
+    # file will be orphaned and hopefully will be picked up by garbage collection. This is better than the
+    # alternative of storage deletion succeeding (so the data is lost) but the database record remaining
+    # (so we are misled about what backups are being retained)
     try:
         db.session.delete(record)
         db.session.commit()
 
     except SQLAlchemyError as e:
+        db.session.rollback()
         return False, 'could not delete database entry for this backup'
 
-    return True, ''
+    storage.delete()
+
+    return True, None

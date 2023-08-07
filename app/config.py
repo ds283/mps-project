@@ -105,7 +105,8 @@ class Config(object):
 
     # Logging
 
-    LOG_FILE = os.environ.get('LOG_FILE') or 'logs/mps_project.log'
+    # if LOG_FILE is none, then logging to a file is disabled
+    LOG_FILE = os.environ.get('LOG_FILE')
 
 
     # Kubernetes-style health and readiness probes via Flask-Healthz

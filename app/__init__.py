@@ -140,12 +140,15 @@ def create_app():
 
         basicConfig(level=INFO)
 
-        file_handler = RotatingFileHandler(app.config['LOG_FILE'], 'a', 1 * 1024 * 1024, 10)
-        file_handler.setFormatter(Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
-        app.logger.setLevel(INFO)
-        file_handler.setLevel(INFO)
-        app.logger.addHandler(file_handler)
-        app.logger.info('MPS Project Manager starting')
+        log_file = app.config.get('LOG_FILE')
+        if log_file is not None:
+            file_handler = RotatingFileHandler(app.config['LOG_FILE'], 'a', 1 * 1024 * 1024, 10)
+            file_handler.setFormatter(Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
+            app.logger.setLevel(INFO)
+            file_handler.setLevel(INFO)
+            app.logger.addHandler(file_handler)
+
+    app.logger.info('MPS Project Manager starting')
 
     # use Werkzeug built-in profiler if profile-to-disk is enabled
     if app.config.get('PROFILE_TO_DISK', False):

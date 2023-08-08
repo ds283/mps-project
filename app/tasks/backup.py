@@ -14,7 +14,7 @@ import tarfile
 from datetime import datetime, timedelta
 from io import BytesIO
 from operator import itemgetter
-from os import path, rmdir, scandir
+from os import path
 from typing import List, Tuple
 from uuid import uuid4
 

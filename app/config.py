@@ -39,6 +39,10 @@ class Config(object):
     Common configuration options
     """
 
+    # needed for Celery tasks to build URLs outside a resource context
+    SERVER_NAME = os.environ.get('SERVER_NAME') or None
+
+
     # SQLALCHEMY_DATABASE_URI is set in instance/secrets.py
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False         # suppress notifications on database changes

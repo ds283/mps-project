@@ -1,4 +1,7 @@
-FROM nginx:latest
+# more recent versions of nginx do not seem to build on the Sussex virtual machine, apparently because
+# the version of Docker is too outdated. It's possible that versions a bit later than 1.19.10 will work
+# but this has not been tested systematically
+FROM nginx:1.19.10
 MAINTAINER NGINX Amplify Engineering
 
 COPY nginx.conf /etc/nginx/nginx.conf

@@ -24,7 +24,7 @@ from dateutil import parser
 from flask import current_app, render_template
 from flask_mailman import EmailMessage
 from math import floor
-from object_store import ObjectStore
+from ..shared.cloud_object_store import ObjectStore
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 

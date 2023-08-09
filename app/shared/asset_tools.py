@@ -12,8 +12,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from flask import current_app
-from object_store import ObjectStore
-from object_store._internal import ObjectMeta
+from .cloud_object_store import ObjectStore, ObjectMeta
 
 
 _DEFAULT_STREAMING_CHUNKSIZE = 1024 * 1024
@@ -218,7 +217,7 @@ class AssetUploadManager:
         if mimetype is not None and self._mimetype_attr is not None:
             setattr(self._asset, self._mimetype_attr, mimetype)
 
-        self._storage.put(self._key, bytes)
+        self._storage.put(self._key, bytes, mimetype=mimetype)
 
         meta: ObjectMeta = self._storage.head(self._key)
         if self._size_attr is not None:

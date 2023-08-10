@@ -48,7 +48,8 @@ class GoogleCloudStorageDriver:
 
     def get_range(self, key: Path, start: int, length: int) -> bytes:
         blob: Blob = self._bucket.get_blob(str(key))
-        return blob.download_as_bytes(start=start, end=start+length)
+        # start is first byte returned, end is last byte returned (so need the -1)
+        return blob.download_as_bytes(start=start, end=start+length-1)
 
 
     def put(self, key: Path, data: bytes, mimetype: str = None) -> None:

@@ -3,7 +3,7 @@ FROM python:3.11-slim-bullseye
 RUN apt-get update && apt-get install -qq -y build-essential gcc gfortran mariadb-client mysqltuner libssl-dev libjpeg-dev zlib1g-dev libglpk-dev glpk-utils coinor-cbc git pkg-config swig wget libcairo2-dev libmagic1 --no-install-recommends
 
 # uid = 500 needed for deployment on Amazon, where ecs-user has uid 500
-RUN adduser --disabled-password --shell /bin/bash --gecos '' --uid 500 mpsproject
+RUN adduser --disabled-password --shell /bin/bash --gecos '' --uid 1000 mpsproject
 
 RUN mkdir -p /scratch && chown mpsproject:mpsproject /scratch
 RUN mkdir -p /mpsproject && chown mpsproject:mpsproject /mpsproject

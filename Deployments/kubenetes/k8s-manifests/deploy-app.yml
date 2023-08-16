@@ -95,7 +95,7 @@ spec:
               - ALL
             readOnlyRootFilesystem: false
             runAsNonRoot: true
-            runAsUser: 500
+            runAsUser: 1000
           volumeMounts:
             # would not be used in a production cluster, instead the object store would be a S3 or GCS bucket
             - mountPath: /object_storage

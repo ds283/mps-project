@@ -75,19 +75,16 @@ spec:
                   key: root_password
             - name: SESSION_MONGO_URL
               value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
-            - name: BACKUP_FOLDER
-              value: /backups
             - name: INSTANCE_FOLDER
               value: /instance
-            # object storage should be directed to S3 or GCS bucket on a production cluster
             - name: OBJECT_STORAGE_ASSETS_URI
-              value: file:///object_storage/assets
-            - name: LOG_FILE
-              value: /logs/mps_project.log
-            - name: PROFILER_SQLITE_FILE
-              value: /profiling/flask_profiler.sql
-            - name: PROFILER_SQLITE_TABLE
-              value: measurements
+              value: gs://mpsprojects-physics-assets
+            - name: OBJECT_STORAGE_BACKUP_URI
+              value: gs://mpsprojects-physics-backup
+            - name: OBJECT_STORAGE_SERVICE_ACCOUNT_FILE
+              value: /instance/mpsprojects-physics-cf4adebe8529.json
+            - name: PROFILER_MONGO_URL
+              value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -97,19 +94,8 @@ spec:
             runAsNonRoot: true
             runAsUser: 1000
           volumeMounts:
-            # would not be used in a production cluster, instead the object store would be a S3 or GCS bucket
-            - mountPath: /object_storage
-              name: mount-object-store
-            # TODO: change backups to use an S3 or GCS bucket
-            - mountPath: /backups
-              name: mount-backups
             - mountPath: /instance
               name: mount-instance
-            # would not be used in a production cluster
-            - mountPath: /logs
-              name: mount-logs
-            - mountPath: /profiling
-              name: mount-profiling
           livenessProbe:
             httpGet:
               path: /healthz/live
@@ -128,19 +114,7 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       volumes:
-        - name: mount-object-store
-          persistentVolumeClaim:
-            claimName: pvc-object-store
-        - name: mount-backups
-          persistentVolumeClaim:
-            claimName: pvc-backups
         - name: mount-instance
           persistentVolumeClaim:
             claimName: pvc-instance
-        - name: mount-logs
-          persistentVolumeClaim:
-            claimName: pvc-logs
-        - name: mount-profiling
-          persistentVolumeClaim:
-            claimName: pvc-profiling
       restartPolicy: Always

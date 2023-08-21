@@ -261,7 +261,7 @@ def register_process_report_tasks(celery):
             raise Ignore()
 
         object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-        input_storage = AssetCloudAdapter(record, object_store)
+        input_storage = AssetCloudAdapter(asset, object_store)
 
         if not input_storage.exists():
             self.update_state('FAILURE', meta={'msg': 'Could not find report in object store'})

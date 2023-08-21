@@ -34,7 +34,7 @@ _student_task = \
     {% endif %}
 </div>
 {% if tk.notes and tk.notes|length > 0 %}
-    <span class="text-muted small" tabindex="0" data-bs-toggle="popover" title="Task notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ tk.notes|truncate(600) }}">Show notes <i class="ms-1 fas fa-lg fa-caret-right"></i></span>
+    <span class="text-muted small" tabindex="0" data-bs-toggle="popover" title="Task notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ tk.notes|truncate(600) }}">Show notes <i class="ms-1 fas fa-chevron-right"></i></span>
 {% endif %}
 """
 
@@ -56,7 +56,7 @@ _project_task = \
     {% endif %}
 </div>
 {% if tk.notes and tk.notes|length > 0 %}
-    <span class="text-muted small" tabindex="0" data-bs-toggle="popover" title="Task notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ tk.notes|truncate(600) }}">Show notes <i class="ms-1 fas fa-lg fa-caret-right"></i></span>
+    <span class="text-muted small" tabindex="0" data-bs-toggle="popover" title="Task notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ tk.notes|truncate(600) }}">Show notes <i class="ms-1 fas fa-chevron-right"></i></span>
 {% endif %}
 """
 

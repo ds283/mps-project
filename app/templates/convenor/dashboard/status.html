@@ -260,7 +260,7 @@
                                                 {{ tk.description|truncate(40) }}
                                             {% endif %}
                                             {% if tk.notes and tk.notes|length > 0 %}
-                                                <span class="ms-1 text-muted" tabindex="0" data-bs-toggle="popover" title="Task notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ tk.notes|truncate(600) }}">(Notes <i class="ms-1 fas fa-lg fa-caret-right"></i>)</span>
+                                                <span class="ms-1 text-muted" tabindex="0" data-bs-toggle="popover" title="Task notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ tk.notes|truncate(600) }}">(Notes <i class="ms-1 fas fa-chevron-right"></i>)</span>
                                             {% endif %}
                                             {% if tk.blocking %}
                                                 <span class="badge bg-warning text-dark ms-1"><i class="fas fa-hand-paper"></i> Blocking</span>

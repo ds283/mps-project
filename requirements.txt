@@ -40,7 +40,7 @@ flask-mailman==0.3.0
 Flask-Markdown==0.3
 Flask-Migrate==4.0.4
 Flask-Principal==0.4.0
-flask-profiler @ git+https://github.com/ds283/flask-profiler.git@864da71fe2019c879d3807b62d82b8ca458356c1
+flask-profiler @ git+https://github.com/ds283/flask-profiler.git@642c55c14725869eea3b290354f07bda139bdbf2
 flask-redis==0.4.0
 Flask-Security-Too==5.3.0
 Flask-SQLAlchemy==3.0.5

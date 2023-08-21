@@ -43,6 +43,10 @@ def register_backup_tasks(celery):
     def backup(self, owner_id=None, type=BackupRecord.SCHEDULED_BACKUP, tag='backup', description=None):
         self.update_state(state='STARTED', meta={'msg': 'Initiating database backup'})
 
+        # don't execute if we are not on a live backup platform
+        if not current_app.config.get('BACKUP_IS_LIVE', False):
+            raise Ignore()
+
         # get backup object store
         object_store = current_app.config['OBJECT_STORAGE_BACKUP']
 
@@ -126,6 +130,10 @@ def register_backup_tasks(celery):
     def do_thinning(self):
         self.update_state(state='STARTED', meta={'msg': 'Building list of backups to be thinned'})
 
+        # don't execute if we are not on a live backup platform
+        if not current_app.config.get('BACKUP_IS_LIVE', False):
+            raise Ignore()
+
         keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
 
         max_hourly_age = timedelta(days=keep_hourly)
@@ -193,6 +201,10 @@ def register_backup_tasks(celery):
         self.update_state(state='STARTED', meta={'msg': 'Thinning backup bin for '
                                                         '{period} {unit}'.format(period=period, unit=unit)})
 
+        # don't execute if we are not on a live backup platform
+        if not current_app.config.get('BACKUP_IS_LIVE', False):
+            raise Ignore()
+
         # sort records from the bin into order, then retain the oldest record.
         # This means that re-running the thinning task is idempotent and stable under small changes in binning.
         # output_bin will eventually contain the retained record from this bin
@@ -232,6 +244,10 @@ def register_backup_tasks(celery):
     def issue_thinning_result(self, thinning_result, timestamp_str: str, email: str):
         self.update_state(state='STARTED', meta={'msg': 'Issue backup thinning report to {r}'.format(r=email)})
 
+        # don't execute if we are not on a live backup platform
+        if not current_app.config.get('BACKUP_IS_LIVE', False):
+            raise Ignore()
+
         # order thinning_result by bins
         def sort_comparator(a, b):
             a_unit = a['unit']
@@ -266,12 +282,20 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def thin(self):
+        # don't execute if we are not on a live backup platform
+        if not current_app.config.get('BACKUP_IS_LIVE', False):
+            raise Ignore()
+
         seq = chain(drop_absent_backups.si(), do_thinning.si())
         raise self.replace(seq)
 
 
     @celery.task(bind=True, default_retry_delay=30)
     def drop_absent_backups(self):
+        # don't execute if we are not on a live backup platform
+        if not current_app.config.get('BACKUP_IS_LIVE', False):
+            raise Ignore()
+
         self.update_state(state='STARTED', meta={'msg': 'Building list of backups'})
 
         # build list of objects in store, but only do it once so that we are not generating a lot of
@@ -298,6 +322,10 @@ def register_backup_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def apply_size_limit(self):
         self.update_state(state='STARTED', meta={'msg': 'Enforcing limit of maximum size of backup folder'})
+
+        # don't execute if we are not on a live backup platform
+        if not current_app.config.get('BACKUP_IS_LIVE', False):
+            raise Ignore()
 
         keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
 
@@ -362,6 +390,10 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def limit_size(self):
+        # don't execute if we are not on a live backup platform
+        if not current_app.config.get('BACKUP_IS_LIVE', False):
+            raise Ignore()
+
         seq = chain(drop_absent_backups.si(), apply_size_limit.si())
         raise self.replace(seq)
 
@@ -374,6 +406,10 @@ def register_backup_tasks(celery):
         :param interval:
         :return:
         """
+        # don't execute if we are not on a live backup platform
+        if not current_app.config.get('BACKUP_IS_LIVE', False):
+            raise Ignore()
+
         if isinstance(limit, str):
             limit = parser.parse(limit)
 
@@ -401,6 +437,10 @@ def register_backup_tasks(celery):
         :param id:
         :return:
         """
+        # don't execute if we are not on a live backup platform
+        if not current_app.config.get('BACKUP_IS_LIVE', False):
+            raise Ignore()
+
         try:
             success, msg = remove_backup(id)
         except SQLAlchemyError as e:

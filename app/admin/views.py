@@ -9679,7 +9679,8 @@ def download_generated_asset(asset_id):
     return Response(storage.stream(),
                     mimetype=asset.mimetype,
                     headers={"Content-Disposition": "attachment;filename={name}".format(
-                        name=filename if filename is not None else asset.target_name)})
+                        name=filename if filename is not None else asset.target_name),
+                        "Content-Length": asset.filesize})
 
 
 @admin.route('/download_submitted_asset/<int:asset_id>')
@@ -9733,7 +9734,25 @@ def download_submitted_asset(asset_id):
     return Response(storage.stream(),
                     mimetype=asset.mimetype,
                     headers={"Content-Disposition": "attachment;filename={name}".format(
-                        name=filename if filename is not None else asset.target_name)})
+                        name=filename if filename is not None else asset.target_name),
+                        "Content-Length": asset.filesize})
+
+
+@admin.route('/download_backup/<int:backup_id>')
+@roles_required('root')
+def download_backup(backup_id):
+    # backup_id is a BackupRecord instance
+    backup: BackupRecord = BackupRecord.query.get_or_404(backup_id)
+
+    filename = request.args.get('filename', None)
+
+    storage = AssetCloudAdapter(backup, current_app.config['OBJECT_STORAGE_BACKUP'], size_attr='archive_size')
+
+    return Response(storage.stream(),
+                    mimetype='application/gzip',
+                    headers={"Content-Disposition": "attachment;filename={name}".format(
+                        name=filename if filename is not None else backup.unique_name),
+                        "Content-Length": backup.archive_size})
 
 
 @admin.route('/upload_schedule/<int:schedule_id>', methods=['GET', 'POST'])

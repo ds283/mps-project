@@ -21,6 +21,9 @@ _manage_backups_menu = \
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.download_backup', backup_id=backup.id) }}">
+            <i class="fas fa-download fa-fw"></i> Download
+        </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.confirm_delete_backup', id=backup.id) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>

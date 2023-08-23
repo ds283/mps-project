@@ -1,5 +1,6 @@
 {%- extends "bootstrap/base.html" -%}
-{%-from "macros.html" import flashed_messages -%}
+{%- from "macros.html" import flashed_messages -%}
+{%- from "megamenu.html" import megamenu_columns  %}
 
 {%- set real_user = get_previous_login() -%}
 
@@ -278,47 +279,11 @@
         <div class="dropdown-menu megamenu-body" data-bs-theme="dark" role="menu">
             <div class="container">
                 <div class="mb-2"><strong>Convenor roles</strong></div>
-                <div class="row">
-                    <div class="col-4">
-                        <ul>
-                            {% for project_class in pclasses %}
-                                {% if loop.index0 % 3 == 0 %}
-                                    <li>
-                                        <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=project_class.id) }}">
-                                            <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}
-                                        </a>
-                                    </li>
-                                {% endif %}
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    <div class="col-4">
-                        <ul>
-                            {% for project_class in pclasses %}
-                                {% if loop.index0 % 3 == 1 %}
-                                    <li>
-                                        <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=project_class.id) }}">
-                                            <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}
-                                        </a>
-                                    </li>
-                                {% endif %}
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    <div class="col-4">
-                        <ul>
-                            {% for project_class in pclasses %}
-                                {% if loop.index0 % 3 == 2 %}
-                                    <li>
-                                        <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=project_class.id) }}">
-                                            <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}
-                                        </a>
-                                    </li>
-                                {% endif %}
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
+                {% call(project_class) megamenu_columns("col-4", 3, pclasses) %}
+                    <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=project_class.id) }}">
+                        <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}
+                    </a>
+                {% endcall %}
                 {% if is_admin or is_root %}
                     <div class="mt-4 mb-2"><strong>Administrative functions</strong></div>
                     <a class="text-decoration-none link-dark" href="{{ url_for('convenor.show_unofferable', id=0) }}">

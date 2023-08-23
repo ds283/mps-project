@@ -374,11 +374,11 @@ p.copyright {
 }
 
 @media all and (min-width: 992px) {
-    .navbar .megamenu {
+    .nav .megamenu {
         position: static;
     }
 
-    .navbar .megamenu-body {
+    .nav .megamenu-body {
         width: 100%;
         margin-top: 0;
         border-top-left-radius: 0;

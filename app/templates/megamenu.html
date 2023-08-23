@@ -1,0 +1,15 @@
+{% macro megamenu_columns(col_class, repeat_number, item_list) %}
+    <div class="row">
+        {% for n in range(repeat_number) %}
+            <div class="{{ col_class }}">
+                <ul>
+                    {% for item in item_list %}
+                        {% if loop.index0 % repeat_number == n %}
+                            <li>{{ caller(item) }}</li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endfor %}
+    </div>
+{% endmacro %}

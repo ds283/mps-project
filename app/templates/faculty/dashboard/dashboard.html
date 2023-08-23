@@ -10,6 +10,8 @@
 
 {%- set is_user_approver = current_user.has_role('user_approver') -%}
 {%- set is_project_approver = current_user.has_role('project_approver') -%}
+{%- set num_enrollments = 0 -%}
+{%- if enrollments -%}{%- set num_enrollments = enrollments|length -%}{%- endif -%}
 
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
@@ -43,28 +45,35 @@
                 </a>
             </li>
         {% endif %}
-        {% if enrollments %}
-            {% for item in enrollments %}
-                {% set config = item['config'] %}
-                {% set num_assignments = config.number_supervisor_records(current_user.id) %}
-                {% set pane_id = config.id|string %}
-                <li class="nav-item endif %}">
-                    <a class="nav-link {% if pane == pane_id %}active{% endif %}" href="{{ url_for('faculty.dashboard', pane=config.id) }}">
-                        {% set selector_state = config.selector_lifecycle %}
-                        {% set submitter_state = config.submitter_lifecycle %}
-                        {% set nproj = current_user.faculty_data.number_projects_offered(config.project_class) %}
-                        {% if selector_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and config.is_confirmation_required(current_user.faculty_data)
-                           or submitter_state == config.SUBMITTER_LIFECYCLE_MARKING_ACTIVITY
-                           or (nproj == 0 and config.uses_supervisor) %}
-                            <i class="fas fa-exclamation-triangle"></i>
-                        {% endif %}
-                        {{ config.name }}
-                        {% if num_assignments %}
-                            <span class="badge rounded-pill {% if pane == pane_id %}bg-light text-dark{% else %}bg-secondary{% endif %}">{{ num_assignments }}</span>
-                        {% endif %}
-                    </a>
-                </li>
-            {% endfor %}
+        {% if enrollments and num_enrollments > 0 %}
+            {%- set is_active = pane != 'system' and pane != 'approve' -%}
+            <li class="nav-item dropdown megamenu">
+                <a class="nav-link {% if is_active %}active{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
+                    Project types
+                </a>
+                <div class="dropdown-menu megamenu-body" data-bs-theme="dark" role="menu">
+                    <div class="container">
+                        {% call(item) megamenu_columns("col-4", 3, enrollments) %}
+                            {% set config = item['config'] %}
+                            {% set num_assignments = config.number_supervisor_records(current_user.id) %}
+                            {% set selector_state = config.selector_lifecycle %}
+                            {% set submitter_state = config.submitter_lifecycle %}
+                            {% set nproj = current_user.faculty_data.number_projects_offered(config.project_class) %}
+                            {% if selector_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and config.is_confirmation_required(current_user.faculty_data)
+                               or submitter_state == config.SUBMITTER_LIFECYCLE_MARKING_ACTIVITY
+                               or (nproj == 0 and config.uses_supervisor) %}
+                                <i class="fas fa-exclamation-triangle text-danger"></i>
+                            {% endif %}
+                            <a class="text-decoration-none link-dark" href="{{ url_for('faculty.dashboard', pane=config.id) }}">
+                                {{ config.name }}
+                            </a>
+                            {% if num_assignments %}
+                                <span class="badge rounded-pill text-dark">{{ num_assignments }}</span>
+                            {% endif %}
+                        {% endcall %}
+                    </div>
+                </div>
+            </li>
         {% endif %}
     </ul>
 {% endblock %}

@@ -1967,7 +1967,7 @@ class User(db.Model, UserMixin):
         Get available project classes
         :return:
         """
-        return ProjectClass.query.filter_by(active=True)
+        return ProjectClass.query.filter_by(active=True).order_by(ProjectClass.name)
 
 
     # build a name for this user
@@ -3119,7 +3119,8 @@ class FacultyData(db.Model, EditingMetadataMixin):
         Return list of projects for which this faculty member is a convenor
         :return:
         """
-        pcls = self.convenor_for.all() + self.coconvenor_for.all()
+        pcls = self.convenor_for.order_by(ProjectClass.name).all() \
+            + self.coconvenor_for.order_by(ProjectClass.name).all()
         pcl_set = set(pcls)
         return pcl_set
 

@@ -37,7 +37,7 @@ class AmazonS3CloudStorageDriver:
         # we need to use an S3 Client rather than an S3 Resource, because a Resource provides
         # no methods to retrieve specific byte ranges, only entire objects.
         # See: https://github.com/boto/boto3/issues/3339, https://github.com/boto/s3transfer/pull/260
-        self._storage: BaseClient = self._session.client('s3')
+        self._storage: BaseClient = self._session.client('s3', endpoint_url=data.get('endpoint_url', None))
 
         self._bucket_name: str = uri.netloc
 
@@ -59,8 +59,8 @@ class AmazonS3CloudStorageDriver:
     def get_range(self, key: Path, start: int, length: int) -> bytes:
         # see get() for the difference between download_fileobj() and get_object()
         response = self._storage.get_object(self._bucket_name, Key=str(key),
-                                            Range="bytes-{start}-{end}".format(start=start, end=start+length-1))
-        return BytesIO(response['Body'].read())
+                                            Range="bytes {start}-{end}".format(start=start, end=start+length-1))
+        return BytesIO(response['Body'].read()).getvalue()
 
 
     def put(self, key: Path, data: bytes, mimetype: str = None) -> None:
@@ -91,7 +91,7 @@ class AmazonS3CloudStorageDriver:
             contents = response['Contents']
             data.update({str(obj['Key']): self.head(obj['Key']) for obj in contents})
 
-            is_truncated = response['isTruncated']
+            is_truncated = response['IsTruncated']
             if not is_truncated:
                 break
 

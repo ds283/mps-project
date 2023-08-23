@@ -1429,8 +1429,10 @@ def dashboard():
               'error')
 
     # build list of current configuration records for all enrolled project classes
-    enrollments = []
-    valid_panes = []
+    enrolments = []
+    enrolment_panes = []
+    enrolment_labels = {}
+
     for record in fd.ordered_enrollments:
         pclass: ProjectClass = record.pclass
         config: ProjectClassConfig = pclass.most_recent_config
@@ -1467,8 +1469,9 @@ def dashboard():
                 # get live projects belonging to both this config item and the active user
                 live_projects = config.live_projects.filter_by(owner_id=current_user.id)
 
-                enrollments.append({'config': config, 'projects': live_projects, 'record': record})
-                valid_panes.append(str(config.id))
+                enrolments.append({'config': config, 'projects': live_projects, 'record': record})
+                enrolment_panes.append(str(config.id))
+                enrolment_labels[str(config.id)] = config.name
 
     # build list of system messages to consider displaying
     messages = []
@@ -1492,29 +1495,30 @@ def dashboard():
     if pane is None:
         if current_user.has_role('root'):
             pane = 'system'
-        elif len(enrollments) > 0:
-            c = enrollments[0]['config']
+        elif len(enrolments) > 0:
+            c = enrolments[0]['config']
             pane = c.id
 
+    num_enrolment_panes = len(enrolment_panes)
     if pane == 'system':
         if not current_user.has_role('root'):
-            if len(valid_panes) > 0:
-                pane = valid_panes[0]
+            if num_enrolment_panes > 0:
+                pane = enrolment_panes[0]
             else:
                 pane = None
 
     elif pane == 'approve':
         if not (current_user.has_role('user_approver') or current_user.has_role('project_approver')
                 or current_user.has_role('admin') or current_user.has_role('root')):
-            if len(valid_panes) > 0:
-                pane = valid_panes[0]
+            if num_enrolment_panes > 0:
+                pane = enrolment_panes[0]
             else:
                 pane = None
 
     else:
-        if pane not in valid_panes:
-            if len(valid_panes) > 0:
-                pane = valid_panes[0]
+        if pane not in enrolment_panes:
+            if num_enrolment_panes > 0:
+                pane = enrolment_panes[0]
             else:
                 pane = None
 
@@ -1534,10 +1538,12 @@ def dashboard():
         root_dash_data = None
 
     approvals_data = get_approval_queue_data()
+    num_enrolments = len(enrolments)
 
-    return render_template('faculty/dashboard/dashboard.html', enrollments=enrollments, messages=messages,
+    return render_template('faculty/dashboard/dashboard.html', enrolments=enrolments,
+                           num_enrolments=num_enrolments, messages=messages,
                            root_dash_data=root_dash_data, approvals_data=approvals_data, pane=pane,
-                           today=date.today())
+                           pane_label=enrolment_labels.get(pane, None), today=date.today())
 
 
 @faculty.route('/confirm_pclass/<int:id>')

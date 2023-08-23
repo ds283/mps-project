@@ -373,6 +373,26 @@ p.copyright {
     color: rgba(var(--bs-dark-rgb))!important;
 }
 
+@media all and (min-width: 992px) {
+    .navbar .megamenu {
+        position: static;
+    }
+
+    .navbar .megamenu-body {
+        width: 100%;
+        margin-top: 0;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+}
+
+@media (max-width: 991px) {
+    .navbar.fixed-top .navbar-collapse, .navbar.sticky-top .navbar-collapse {
+        overflow-y: auto;
+        max-height: 90vh;
+        margin-top: 10px;
+    }
+}
 
 /*!* disable default DataTable processing indicator; needed when using bootstrap_spinner() *!*/
 /*div.dataTables_processing div:last-child div {*/

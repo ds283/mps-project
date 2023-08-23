@@ -1,7 +1,7 @@
-{% extends "bootstrap/base.html" %}
-{% from "macros.html" import flashed_messages %}
+{%- extends "bootstrap/base.html" -%}
+{%-from "macros.html" import flashed_messages -%}
 
-{% set real_user = get_previous_login() %}
+{%- set real_user = get_previous_login() -%}
 
 {%- set is_faculty = current_user.has_role('faculty') -%}
 {%- set is_office = current_user.has_role('office') -%}
@@ -15,14 +15,14 @@
 {%- set is_manage_users = current_user.has_role('manage_users') %}
 {%- set is_emailer = current_user.has_role('email') %}
 
-{% set base_context_data = get_base_context() %}
-{% set matching_ready = base_context_data['matching_ready'] %}
-{% set has_assessments = base_context_data['has_assessments'] %}
+{%- set base_context_data = get_base_context() -%}
+{%- set matching_ready = base_context_data['matching_ready'] -%}
+{%- set has_assessments = base_context_data['has_assessments'] -%}
 
-{% set live_platform = get_live_platform() %}
+{%- set live_platform = get_live_platform() -%}
 
 
-{% block scripts %}
+{%- block scripts -%}
     {{ super() }}
     <script src="https://kit.fontawesome.com/a95036619a.js" crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
@@ -271,24 +271,61 @@
 {% endblock %}
 
 {% macro convenor_menu(pclasses) %}
-    <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
+    <li class="nav-item dropdown megamenu">
+        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
             Convenor
         </a>
-
-        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-            <div class="dropdown-header">Convenorships</div>
-            {% for project_class in pclasses %}
-                <a class="dropdown-item d-flex gap-2"href="{{ url_for('convenor.status', id=project_class.id) }}">
-                    <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}...
-                </a>
-            {% endfor %}
-            {% if current_user.has_role('admin') or current_user.has_role('root') %}
-                <div role="separator" class="dropdown-divider"></div>
-                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.show_unofferable', id=0) }}">
-                    <i class="fas fa-exclamation-circle fa-fw"></i> Unofferable projects...
-                </a>
-            {% endif %}
+        <div class="dropdown-menu megamenu-body" data-bs-theme="dark" role="menu">
+            <div class="container">
+                <div class="mb-2"><strong>Convenor roles</strong></div>
+                <div class="row">
+                    <div class="col-4">
+                        <ul>
+                            {% for project_class in pclasses %}
+                                {% if loop.index0 % 3 == 0 %}
+                                    <li>
+                                        <a class="text-decoration-none" href="{{ url_for('convenor.status', id=project_class.id) }}">
+                                            <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="col-4">
+                        <ul>
+                            {% for project_class in pclasses %}
+                                {% if loop.index0 % 3 == 1 %}
+                                    <li>
+                                        <a class="text-decoration-none" href="{{ url_for('convenor.status', id=project_class.id) }}">
+                                            <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="col-4">
+                        <ul>
+                            {% for project_class in pclasses %}
+                                {% if loop.index0 % 3 == 2 %}
+                                    <li>
+                                        <a class="text-decoration-none" href="{{ url_for('convenor.status', id=project_class.id) }}">
+                                            <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% if is_admin or is_root %}
+                    <div class="mt-4 mb-2"><strong>Administrative functions</strong></div>
+                    <a class="text-decoration-none" href="{{ url_for('convenor.show_unofferable', id=0) }}">
+                        <i class="fas fa-exclamation-circle fa-fw"></i> Show unofferable projects
+                    </a>
+                {% endif %}
+            </div>
         </div>
     </li>
 {% endmacro %}
@@ -311,14 +348,14 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
 
-            <!-- Collect nav links and other content into a menu for mobile devices -->
+            {# Collect nav links and other content into a menu for mobile devices #}
             <div class="collapse navbar-collapse" id="navbarCollapse">
                 <div class="navbar-nav ms-auto mb-2 mb-lg-0">
 
-                    <!-- add faculty version of 'my projects' if user is a faculty member -->
+                    {# add faculty version of 'my projects' if user is a faculty member #}
                     {% if is_faculty %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
+                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
                                 My projects
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
@@ -330,20 +367,18 @@
                                 </a>
                                 <div role="separator" class="dropdown-divider"></div>
                                 <div class="dropdown-header">Browse history</div>
-                                <a class="dropdown-item d-flex gap-2"href="{{ url_for('faculty.past_projects') }}">
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.past_projects') }}">
                                     <i class="fas fa-archive fa-fw"></i> Offered projects...
                                 </a>
-                                <a class="dropdown-item d-flex gap-2"href="#">
+                                <a class="dropdown-item d-flex gap-2" href="#">
                                     <i class="fas fa-archive fa-fw"></i> Students...
                                 </a>
                             </div>
                         </li>
-                    {% endif %}
-
-                    <!-- add student version of 'my projects' if user is a student -->
-                    {% if is_student %}
+                    {# add student version of 'my projects' if user is a student #}
+                    {% elif is_student %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
+                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
                                 My projects
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
@@ -362,7 +397,7 @@
 
                     {% if is_reports %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
+                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
                                 Reports
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
@@ -382,17 +417,17 @@
                         </li>
                     {% endif %}
 
-                    <!-- add convenor menu if user is a convenor, or an admin user -->
+                    {# add convenor menu if user is a convenor, or an admin user #}
                     {% if is_admin or is_root %}
                         {{ convenor_menu(current_user.all_project_classes.all()) }}
                     {% elif is_convenor %}
                         {{ convenor_menu(current_user.faculty_data.convenor_list) }}
                     {% endif %}
 
-                    <!-- add admin menu if user is an administrator or system administrator, or a convenor -->
+                    {# add admin menu if user is an administrator or system administrator, or a convenor #}
                     {% if is_admin or is_root or is_edit_tags or is_manage_users or is_convenor %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
+                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
                                 Admin
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
@@ -447,10 +482,10 @@
                         </li>
                     {% endif %}
 
-                    <!-- add site menu if user is root -->
+                    {# add site menu if user is root #}
                     {% if is_root or is_view_email %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
+                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
                                 Site management
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
@@ -509,17 +544,17 @@
                         </li>
                     {% endif %}
 
-                    <!-- add user account menu if user is logged in -->
+                    {# add user account menu if user is logged in #}
                     {% if current_user.is_authenticated %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">
+                            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
                                 <i class="fas fa-user-circle fa-lg"></i>
                                 {{ current_user.username }}
-                                {% if current_user.has_role('office') %}
+                                {% if is_office %}
                                     (School Office)
-                                {% elif current_user.has_role('faculty') %}
+                                {% elif is_faculty %}
                                     (Faculty)
-                                {% elif current_user.has_role('student') %}
+                                {% elif is_student %}
                                     (Student)
                                 {% endif %}
                             </a>
@@ -581,9 +616,9 @@
             </div>
         </div>
     </nav>
-{% endblock %}
+{%- endblock -%}
 
-{% block content %}
+{%- block content -%}
     <div class="container-fluid">
         <br/>
         {# Navigation pills go in the pillblock, if needed (eg. see convenor dashboard, backups dashboard #}
@@ -640,4 +675,4 @@
             </div>
         </div>
     </nav>
-{% endblock %}
+{%- endblock -%}

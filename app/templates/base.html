@@ -276,19 +276,33 @@
         <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
             Convenor
         </a>
-        <div class="dropdown-menu megamenu-body" data-bs-theme="dark" role="menu">
-            <div class="container">
-                <div class="mb-2"><strong>Convenor roles</strong></div>
-                {% call(project_class) megamenu_columns("col-4", 3, pclasses) %}
-                    <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=project_class.id) }}">
-                        <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}
-                    </a>
-                {% endcall %}
+        <div class="dropdown-menu bg-secondary megamenu-body" data-bs-theme="dark" role="menu">
+            <div class="container mt-4 mb-4">
+                <div class="card card-body bg-light convenor-projects-megamenu">
+                    <h4 class="mb-2">Convenor roles</h4>
+                    {% call(project_class) megamenu_columns("col-4", 3, pclasses) %}
+                        <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=project_class.id) }}">
+                            {{ project_class.name }}
+                        </a>
+                    {% endcall %}
+                </div>
                 {% if is_admin or is_root %}
-                    <div class="mt-4 mb-2"><strong>Administrative functions</strong></div>
-                    <a class="text-decoration-none link-dark" href="{{ url_for('convenor.show_unofferable', id=0) }}">
-                        <i class="fas fa-exclamation-circle fa-fw"></i> Show unofferable projects
-                    </a>
+                    <div class="card card-body mt-4 bg-light convenor-admin-megamenu">
+                        <h4 class="mb-2">Administrative functions</h4>
+                        <div class="row">
+                            <div class="col-4">
+                                <ul>
+                                    <li>
+                                        <a class="text-decoration-none link-dark" href="{{ url_for('convenor.show_unofferable', id=0) }}">
+                                            Show unofferable projects
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-4"></div>
+                            <div class="col-4"></div>
+                        </div>
+                    </div>
                 {% endif %}
             </div>
         </div>

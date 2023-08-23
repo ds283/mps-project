@@ -394,6 +394,35 @@ p.copyright {
     }
 }
 
+.megamenu-body ul li {
+    list-style-type: none;
+}
+
+.megamenu-body ul li:not(:last-of-type) {
+    padding-bottom: 0.5rem;
+}
+
+.convenor-projects-megamenu ul li:before {
+    font-family: 'FontAwesome';
+    content: '\f0b1';
+    margin:0 5px 0 -15px;
+    color: #2960B6FF;
+}
+
+.convenor-admin-megamenu ul li:before {
+    font-family: 'FontAwesome';
+    content: '\f054';
+    margin:0 5px 0 -15px;
+    color: #555555FF;
+}
+
+.faculty-megamenu ul li:before {
+    font-family: 'FontAwesome';
+    content: '\f054';
+    margin:0 5px 0 -15px;
+    color: #555555FF;
+}
+
 /*!* disable default DataTable processing indicator; needed when using bootstrap_spinner() *!*/
 /*div.dataTables_processing div:last-child div {*/
 /*  display: none;*/

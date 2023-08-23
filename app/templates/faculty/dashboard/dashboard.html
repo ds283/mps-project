@@ -6,7 +6,9 @@
 {% from "admin/admin_dashboard/root_functions.html" import root_functions, root_messages %}
 {% from "user_approver/dashboard_panel.html" import user_approver_panel %}
 {% from "project_approver/dashboard_panel.html" import project_approver_panel %}
+
 {% from "macros.html" import message_card %}
+{% from "megamenu.html" import megamenu_columns %}
 
 {%- set is_user_approver = current_user.has_role('user_approver') -%}
 {%- set is_project_approver = current_user.has_role('project_approver') -%}
@@ -55,26 +57,52 @@
                         My enrolments
                     {%- endif -%}
                 </a>
-                <div class="dropdown-menu megamenu-body" data-bs-theme="dark" role="menu">
+                <div class="dropdown-menu bg-secondary megamenu-body" data-bs-theme="dark" role="menu">
                     <div class="container mt-4 mb-4">
-                        {% call(item) megamenu_columns("col-4", 3, enrolments) %}
-                            {% set config = item['config'] %}
-                            {% set num_assignments = config.number_supervisor_records(current_user.id) %}
-                            {% set selector_state = config.selector_lifecycle %}
-                            {% set submitter_state = config.submitter_lifecycle %}
-                            {% set nproj = current_user.faculty_data.number_projects_offered(config.project_class) %}
-                            {% if selector_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and config.is_confirmation_required(current_user.faculty_data)
-                               or submitter_state == config.SUBMITTER_LIFECYCLE_MARKING_ACTIVITY
-                               or (nproj == 0 and config.uses_supervisor) %}
-                                <i class="fas fa-exclamation-triangle text-danger"></i>
-                            {% endif %}
-                            <a class="text-decoration-none link-dark" href="{{ url_for('faculty.dashboard', pane=config.id) }}">
-                                {{ config.name }}
-                            </a>
-                            {% if num_assignments %}
-                                <span class="badge rounded-pill text-dark">{{ num_assignments }}</span>
-                            {% endif %}
-                        {% endcall %}
+                        <div class="card card-body bg-light faculty-megamenu">
+                            {% call(item) megamenu_columns("col-4", 3, enrolments) %}
+                                {%- set config = item['config'] -%}
+                                {%- set num_assignments = config.number_supervisor_records(current_user.id) -%}
+                                {%- set selector_state = config.selector_lifecycle -%}
+                                {%- set submitter_state = config.submitter_lifecycle -%}
+                                {%- set nproj = current_user.faculty_data.number_projects_offered(config.project_class) -%}
+                                {%- set waiting_confirmation = selector_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and config.is_confirmation_required(current_user.faculty_data) -%}
+                                {%- set marking_underway = submitter_state == config.SUBMITTER_LIFECYCLE_MARKING_ACTIVITY -%}
+                                {%- set no_projects = nproj is defined and nproj == 0 and config.uses_supervisor -%}
+                                {%- set alert_marker = waiting_confirmation or marking_underway or no_projects -%}
+                                {% if alert_marker %}
+                                    <i class="fas fa-exclamation-triangle text-danger"></i>
+                                {% endif %}
+                                <a class="text-decoration-none link-dark" href="{{ url_for('faculty.dashboard', pane=config.id) }}">
+                                    <strong>{{ config.name }}</strong>
+                                </a>
+                                {% if marking_underway %}
+                                    <div class="small text-success">Marking and feedback are underway</div>
+                                {% endif %}
+                                {% if no_projects %}
+                                    <div><span class="small text-danger">No projects attached</span></div>
+                                {% endif %}
+                                {% set details = [] %}
+                                {% if num_assignments|default(0) %}
+                                    {% set pl = '' if num_assignments == 1 else 's' %}
+                                    {% set _ = details.append(num_assignments|string + ' current student' +  pl) %}
+                                {% endif %}
+                                {% if nproj is defined and config.uses_supervisor and nproj > 0 %}
+                                    {% set pl = '' if nproj == 1 else 's' %}
+                                    {% set _ = details.append(nproj|string + ' project' + pl + ' attached') %}
+                                {% endif %}
+                                {% set num_details = details|length %}
+                                {% if num_details > 0 %}
+                                    <div>
+                                        <span class="small text-muted">
+                                            {%- for item in details %}
+                                                {{ item }}{%- if loop.index < num_details -%},{%- endif %}
+                                            {% endfor -%}
+                                        </span>
+                                    </div>
+                                {% endif %}
+                            {% endcall %}
+                        </div>
                     </div>
                 </div>
             </li>

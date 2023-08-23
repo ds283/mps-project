@@ -284,7 +284,7 @@
                             {% for project_class in pclasses %}
                                 {% if loop.index0 % 3 == 0 %}
                                     <li>
-                                        <a class="text-decoration-none" href="{{ url_for('convenor.status', id=project_class.id) }}">
+                                        <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=project_class.id) }}">
                                             <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}
                                         </a>
                                     </li>
@@ -297,7 +297,7 @@
                             {% for project_class in pclasses %}
                                 {% if loop.index0 % 3 == 1 %}
                                     <li>
-                                        <a class="text-decoration-none" href="{{ url_for('convenor.status', id=project_class.id) }}">
+                                        <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=project_class.id) }}">
                                             <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}
                                         </a>
                                     </li>
@@ -310,7 +310,7 @@
                             {% for project_class in pclasses %}
                                 {% if loop.index0 % 3 == 2 %}
                                     <li>
-                                        <a class="text-decoration-none" href="{{ url_for('convenor.status', id=project_class.id) }}">
+                                        <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=project_class.id) }}">
                                             <i class="fas fa-briefcase fa-fw"></i> {{ project_class.name }}
                                         </a>
                                     </li>
@@ -321,7 +321,7 @@
                 </div>
                 {% if is_admin or is_root %}
                     <div class="mt-4 mb-2"><strong>Administrative functions</strong></div>
-                    <a class="text-decoration-none" href="{{ url_for('convenor.show_unofferable', id=0) }}">
+                    <a class="text-decoration-none link-dark" href="{{ url_for('convenor.show_unofferable', id=0) }}">
                         <i class="fas fa-exclamation-circle fa-fw"></i> Show unofferable projects
                     </a>
                 {% endif %}

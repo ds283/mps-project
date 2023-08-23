@@ -16,10 +16,11 @@ from urllib.parse import urlsplit, SplitResult
 from .meta import ObjectMeta
 from .drivers.local import LocalFileSystemDriver
 from .drivers.google import GoogleCloudStorageDriver
+from .drivers.amazons3 import AmazonS3CloudStorageDriver
 
 _drivers = {'file': LocalFileSystemDriver,
-            'gs': GoogleCloudStorageDriver}
-
+            'gs': GoogleCloudStorageDriver,
+            's3': AmazonS3CloudStorageDriver}
 
 
 PathLike = Union[str, List[str], Path]

@@ -73,14 +73,7 @@ class GoogleCloudStorageDriver:
         else:
             blobs = self._bucket.list_blobs()
 
-        data = {}
-
-        for blob in blobs:
-            blob: Blob
-            key = blob.name
-            meta: ObjectMeta = self.head(key)
-            data[str(key)] = meta
-
+        data = {str(blob.name): self.head(blob.name) for blob in blobs}
         return data
 
 

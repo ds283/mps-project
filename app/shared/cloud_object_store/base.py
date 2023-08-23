@@ -36,7 +36,7 @@ def _as_path(raw: PathLike) -> Path:
         return Path(DELIMITER.join(raw))
     if isinstance(raw, Path):
         return raw
-    raise ValueError(f"Cannot convert type '{type(raw)}' to type Path.")
+    raise ValueError(f"Cannot convert type {type(raw)} to type Path.")
 
 
 def _as_bytes(raw: BytesLike) -> bytes:
@@ -44,7 +44,7 @@ def _as_bytes(raw: BytesLike) -> bytes:
         return raw
     if isinstance(raw, BytesIO):
         return raw.read()
-    raise ValueError(f"Cannot convert type '{type(raw)}' to type bytes.")
+    raise ValueError(f"Cannot convert type {type(raw)} to type bytes.")
 
 
 class Driver:

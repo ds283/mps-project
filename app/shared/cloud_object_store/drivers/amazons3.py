@@ -37,7 +37,9 @@ class AmazonS3CloudStorageDriver:
         # we need to use an S3 Client rather than an S3 Resource, because a Resource provides
         # no methods to retrieve specific byte ranges, only entire objects.
         # See: https://github.com/boto/boto3/issues/3339, https://github.com/boto/s3transfer/pull/260
-        self._storage: BaseClient = self._session.client('s3', endpoint_url=data.get('endpoint_url', None))
+        self._storage: BaseClient = self._session.client('s3',
+                                                         endpoint_url=data.get('endpoint_url', None),
+                                                         region_name=data.get('region', None))
 
         self._bucket_name: str = uri.netloc
 
@@ -64,7 +66,7 @@ class AmazonS3CloudStorageDriver:
 
 
     def put(self, key: Path, data: bytes, mimetype: str = None) -> None:
-        self._storage.upload_fileobj(Fileobj=bytes, Bucket=self._bucket_name, Key=str(key),
+        self._storage.upload_fileobj(Fileobj=BytesIO(data), Bucket=self._bucket_name, Key=str(key),
                                      ExtraArgs={'ContentDisposition': mimetype})
 
 
@@ -86,8 +88,13 @@ class AmazonS3CloudStorageDriver:
         continuation_token = None
 
         while True:
-            response = self._storage.list_objects_v2(Bucket=self._bucket_name, Prefix=prefix_str,
-                                                     ContinuationToken=continuation_token)
+            extra_args = {}
+            if prefix_str is not None:
+                extra_args['Prefix'] = prefix_str
+            if continuation_token is not None:
+                extra_args['ContinuationToken'] = continuation_token
+
+            response = self._storage.list_objects_v2(Bucket=self._bucket_name, **extra_args)
             contents = response['Contents']
             data.update({str(obj['Key']): self.head(obj['Key']) for obj in contents})
 

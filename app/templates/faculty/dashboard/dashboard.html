@@ -73,7 +73,7 @@
                                 {% if alert_marker %}
                                     <i class="fas fa-exclamation-triangle text-danger"></i>
                                 {% endif %}
-                                <a class="text-decoration-none link-dark" href="{{ url_for('faculty.dashboard', pane=config.id) }}">
+                                <a class="text-decoration-none" href="{{ url_for('faculty.dashboard', pane=config.id) }}">
                                     <strong>{{ config.name }}</strong>
                                 </a>
                                 {% if marking_underway %}

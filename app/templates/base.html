@@ -281,7 +281,7 @@
                 <div class="card card-body bg-light convenor-projects-megamenu">
                     <h4 class="mb-2">Convenor roles</h4>
                     {% call(project_class) megamenu_columns("col-4", 3, pclasses) %}
-                        <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=project_class.id) }}">
+                        <a class="text-decoration-none" href="{{ url_for('convenor.status', id=project_class.id) }}">
                             {{ project_class.name }}
                         </a>
                     {% endcall %}
@@ -293,7 +293,7 @@
                             <div class="col-4">
                                 <ul>
                                     <li>
-                                        <a class="text-decoration-none link-dark" href="{{ url_for('convenor.show_unofferable', id=0) }}">
+                                        <a class="text-decoration-none" href="{{ url_for('convenor.show_unofferable', id=0) }}">
                                             Show unofferable projects
                                         </a>
                                     </li>

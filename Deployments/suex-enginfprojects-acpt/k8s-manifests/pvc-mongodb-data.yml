@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-mongodb-data
+  namespace: suex-enginfprojects-acpt
+  labels:
+    type: rbd-storagepool-cluster
+spec:
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: rbd-storagepool-cluster
+  accessModes:
+    - ReadWriteOnce
+  volumeName: pv-mongodb-data

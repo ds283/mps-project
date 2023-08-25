@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: suex-enginfprojects-acpt
+  labels:
+    app.kubernetes.io/name: mongodb
+spec:
+  selector:
+    app.kubernetes.io/name: mongodb
+  type: ClusterIP
+  ports:
+    - port: 27017

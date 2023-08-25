@@ -1,0 +1,155 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: default-worker
+  namespace: suex-enginfprojects-acpt
+  labels:
+    app.kubernetes.io/name: default-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: default-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: default-worker
+    spec:
+      containers:
+        - name: webapp
+          image: mpsproject/webapp:latest
+          imagePullPolicy: IfNotPresent
+          command: ["./launch_celery.sh"]
+          resources:
+            limits:
+              cpu: "1"
+            requests:
+              cpu: "0.5"
+          envFrom:
+            - configMapRef:
+                name: configmap-environment
+          env:
+            - name: MONGODB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: root_username
+            - name: MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: root_password
+            - name: DATABASE_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-credentials
+                  key: root_password
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-credentials
+                  key: username
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-credentials
+                  key: password
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-credentials
+                  key: database
+            - name: MAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mail-credentials
+                  key: username
+            - name: MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mail-credentials
+                  key: username
+            - name: MAIL_ADMIN_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  name: mail-admin
+                  key: default_email
+            - name: ROLLBAR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rollbar-credentials
+                  key: token
+            - name: ROLLBAR_ENV
+              valueFrom:
+                secretKeyRef:
+                  name: rollbar-credentials
+                  key: environment
+            - name: FLASK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: flask-secrets
+                  key: secret_key
+            - name: FLASK_SECURITY_PASSWORD_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: flask-secrets
+                  key: password_salt
+            - name: SQLALCHEMY_AES_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: flask-secrets
+                  key: sqlalchemy_key
+            - name: PROFILER_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: flask-secrets
+                  key: profiler_username
+            - name: PROFILER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: flask-secrets
+                  key: profiler_password
+            - name: OBJECT_STORAGE_ASSETS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: objectstore-assets-secrets
+                  key: access_key
+            - name: OBJECT_STORAGE_ASSETS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: objectstore-assets-secrets
+                  key: secret_key
+            - name: OBJECT_STORAGE_BACKUP_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: objectstore-backup-secrets
+                  key: access_key
+            - name: OBJECT_STORAGE_BACKUP_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: objectstore-backup-secrets
+                  key: secret_key
+            - name: WORKER_QUEUES
+              value: default,priority
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 1000
+          volumeMounts:
+            - name: local-config
+              mountPath: /mpsproject/app/instance/local.py
+              subPath: local.py
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: local-config
+          configMap:
+            name: configmap-local
+      restartPolicy: Always

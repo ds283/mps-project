@@ -1,0 +1,13 @@
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: default-worker
+  namespace: suex-enginfprojects-acpt
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: default-worker
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 50

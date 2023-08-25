@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb
+  namespace: suex-enginfprojects-acpt
+  labels:
+    app.kubernetes.io/name: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mariadb
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mariadb
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb:10.2
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: "0.2"
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-credentials
+                  key: database
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-credentials
+                  key: username
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-credentials
+                  key: password
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-credentials
+                  key: root_password
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: mount-mariadb-data
+            - mountPath: /etc/mysql
+              name: mount-mariadb-conf
+      volumes:
+        - name: mount-mariadb-data
+          persistentVolumeClaim:
+            claimName: pvc-mariadb-data
+        - name: mount-mariadb-conf
+          configMap:
+            name: configmap-mariadb
+            items:
+              - key: my.cnf
+                path: my.cnf
+      restartPolicy: Always

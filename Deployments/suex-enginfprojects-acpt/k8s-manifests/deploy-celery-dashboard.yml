@@ -127,6 +127,16 @@ spec:
                 secretKeyRef:
                   name: objectstore-backup-secrets
                   key: secret_key
+            - name: FLOWER_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: flower-credentials
+                  key: username
+            - name: FLOWER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: flower-credentials
+                  key: password
             - name: DATABASE_URL
               value: mysql+pymysql://$(DATABASE_USER):$(DATABASE_PASSWORD)@$(DATABASE_HOSTNAME)/$(DATABASE_NAME)
             - name: CELERY_RESULT_BACKEND

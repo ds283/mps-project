@@ -7,8 +7,12 @@ metadata:
     kubernetes.io/ingress.class: "haproxy"
 spec:
   ingressClassName: haproxy
+  tls:
+    - hosts:
+      - testing.enginfprojects.inf.susx.ac.uk
+      secretName: ingress-cert
   rules:
-    - host: localhost
+    - host: testing.enginfprojects.inf.susx.ac.uk
       http:
         paths:
           - path: /

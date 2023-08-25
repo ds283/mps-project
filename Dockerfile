@@ -25,6 +25,10 @@ COPY --chown=mpsproject:mpsproject migrations ./migrations/
 COPY --chown=mpsproject:mpsproject basic_database ./basic_database/
 COPY --chown=mpsproject:mpsproject mpsproject.py serve.py celery_node.py migrate.py boot.sh launch_celery.sh launch_beat.sh launch_flower.sh ./
 
+# need destination file for config file local.py to exist, otherwise Docker will create it as a folder
+USER mpsproject
+RUN touch ./app/instance/local.py
+
 USER mpsproject
 RUN chmod +x boot.sh && chmod +x launch_celery.sh && chmod +x launch_beat.sh && chmod +x launch_flower.sh
 

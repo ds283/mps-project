@@ -9,53 +9,45 @@
 #
 
 import os
-
-from flask import current_app, request, session, render_template, has_request_context
-from flask_migrate import Migrate
-from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm, MailUtil
-from flask_login.signals import user_logged_in
-from .thirdparty.flask_bootstrap5 import Bootstrap
-from .thirdparty.flask_sessionstore import Session
-from .thirdparty.flask_rollbar import Rollbar
-from flask_mailman import Mail, EmailMultiAlternatives
-from flask_assets import Environment
-from app.flask_bleach import Bleach
-from flaskext.markdown import Markdown
-from flask_debugtoolbar import DebugToolbarExtension
-# from flask_debug_api import DebugAPIExtension
-from flask import Flask
-from werkzeug.middleware.proxy_fix import ProxyFix
-from .cache import cache
-from .limiter import limiter
-from flask_sqlalchemy import get_debug_queries
-from flask_profiler import Profiler
-# from flask_qrcode import QRcode
-from flask_babel import Babel
-from flask_healthz import Healthz
-
-from .config import app_config, site_revision, site_copyright_dates
-from .build_data import git_tag
-from .database import db
-from .models import User, MessageOfTheDay, Notification
-from .task_queue import make_celery, register_task, background_task
-from .shared.utils import home_dashboard_url, get_global_context_data
-from .shared.precompute import precompute_at_login
-import app.tasks as tasks
-
-from sqlalchemy.exc import SQLAlchemyError
-
-import latex2markdown
+from datetime import datetime
 from urllib import parse
 
-from datetime import datetime
-
-from pymongo import MongoClient
+import latex2markdown
 import redis
-
-from werkzeug.middleware.profiler import ProfilerMiddleware
 from dozer import Dozer
+# from flask_debug_api import DebugAPIExtension
+from flask import Flask
+from flask import current_app, request, session, render_template, has_request_context
+from flask_assets import Environment
+# from flask_qrcode import QRcode
+from flask_babel import Babel
+from flask_debugtoolbar import DebugToolbarExtension
+from flask_healthz import Healthz
+from flask_login.signals import user_logged_in
+from flask_mailman import Mail, EmailMultiAlternatives
+from flask_migrate import Migrate
+from flask_profiler import Profiler
+from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm, MailUtil
+from flask_sqlalchemy import get_debug_queries
+from flaskext.markdown import Markdown
+from pymongo import MongoClient
+from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.middleware.profiler import ProfilerMiddleware
+from werkzeug.middleware.proxy_fix import ProxyFix
 
-from pathlib import Path
+from .flask_bleach import Bleach
+from .build_data import git_tag
+from .cache import cache
+from .instance.version import site_revision, site_copyright_dates
+from .database import db
+from .limiter import limiter
+from .models import User, MessageOfTheDay, Notification
+from .shared.precompute import precompute_at_login
+from .shared.utils import home_dashboard_url, get_global_context_data
+from .task_queue import make_celery, register_task, background_task
+from .thirdparty.flask_bootstrap5 import Bootstrap
+from .thirdparty.flask_rollbar import Rollbar
+from .thirdparty.flask_sessionstore import Session
 
 
 class PatchedLoginForm(LoginForm):
@@ -91,16 +83,33 @@ class PatchedMailUtil(MailUtil):
 def create_app():
     # get current configuration, or default to 'production' for safety
     config_name = os.environ.get('FLASK_ENV') or 'production'
-    config_obj = app_config[config_name]
 
     # load configuration files from 'instance' folder
-    instance_folder = os.environ.get('INSTANCE_FOLDER') or '/instance'
+    instance_folder = os.environ.get('INSTANCE_FOLDER')
     app = Flask(__name__, instance_relative_config=True, instance_path=str(instance_folder))
 
-    app.config.from_object(app_config[config_name])
-    app.config.from_pyfile('secrets.py')
-    app.config.from_pyfile('mail.py')
+    app.config.from_pyfile('flask.py')
+    if config_name == 'production':
+        app.config.from_pyfile('flask_prod.py')
+    elif config_name == 'development':
+        app.config.from_pyfile('flask_dev.py')
+
+    app.config.from_pyfile('locations.py')
+    app.config.from_pyfile('celery.py')
+    app.config.from_pyfile('security.py')
+    app.config.from_pyfile('sqlalchemy.py')
+    app.config.from_pyfile('sessionstore.py')
+    app.config.from_pyfile('caching.py')
+    app.config.from_pyfile('logging.py')
+    app.config.from_pyfile('healthz.py')
+    app.config.from_pyfile('bleach.py')
     app.config.from_pyfile('rollbar.py')
+    app.config.from_pyfile('ratelimit.py')
+    app.config.from_pyfile('database.py')
+    app.config.from_pyfile('endpoint_profiler.py')
+    app.config.from_pyfile('defaults.py')
+    app.config.from_pyfile('mail.py')
+
     app.config.from_pyfile('local.py')
 
     # create a long-lived Redis connection
@@ -182,6 +191,8 @@ def create_app():
     # celery application instance to a collection of register_*() functions, which use an @celery decorator
     # to register callables. Then we write the callable into the app, in the 'tasks' dictionary
     app.tasks = {}
+
+    import app.tasks as tasks
     tasks.register_send_log_email(celery, mail)
     tasks.register_utility_tasks(celery)
     tasks.register_prune_email(celery)

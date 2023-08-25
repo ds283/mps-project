@@ -10,20 +10,6 @@ data:
     value: mongodb
   - name: DATABASE_HOSTNAME
     value: mariadb
-  - name: DATABASE_URL
-    value: mysql+pymysql://$(DATABASE_USER):$(DATABASE_PASSWORD)@$(DATABASE_HOSTNAME)/$(DATABASE_NAME)
-  - name: CELERY_RESULT_BACKEND
-    value: redis://$(REDIS_HOSTNAME):6379
-  - name: CELERY_BROKER_URL
-    value: redis://$(REDIS_HOSTNAME):6379
-  - name: CACHE_REDIS_URL
-    value: redis://$(REDIS_HOSTNAME):6379
-  - name: RATELIMIT_REDIS_URI
-    value: redis://$(REDIS_HOSTNAME):6379
-  - name: SESSION_MONGO_URL
-    value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
-  - name: PROFILER_MONGO_URL
-    value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
   - name: INSTANCE_FOLDER
     value: /mpsproject/app/instance
   - name: SCRATCH_FOLDER

@@ -24,7 +24,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: $${{secrets.REGISTRY_SERVER}/${{ secrets.REGISTRY_NAMESPACE }}/${{ env.image_name }}
+          images: ${{ secrets.REGISTRY_SERVER }}/${{ secrets.REGISTRY_NAMESPACE }}/${{ env.image_name }}
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2

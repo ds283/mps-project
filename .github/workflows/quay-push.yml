@@ -7,6 +7,7 @@ on:
       - '*'
     paths:
       - version.json
+  workflow_dispatch:
 jobs:
   build:
     env:
@@ -31,11 +32,11 @@ jobs:
           fi
           ( IFS=$','; echo "${TAGS[*]}" )
       - name: Build and publish image to Quay
-        uses: docker/build-push-action@v1
+        uses: docker/build-push-action@v6
         with:
           path: ${{ env.context }}
           registry: ${{ secrets.REGISTRY_SERVER }}
-          repository: ${{ secrets.REGISTRY_NAMESPACE }}/${{ env.image_name }}
+          image: ${{ secrets.REGISTRY_NAMESPACE }}/${{ env.image_name }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_TOKEN }}
           tags: "${{ steps.image_tags.outputs.IMAGE_TAGS }}"

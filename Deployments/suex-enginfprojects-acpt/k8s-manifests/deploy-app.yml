@@ -16,9 +16,9 @@ spec:
         app.kubernetes.io/name: webapp
     spec:
       containers:
-        - name: webapp
-          image: mpsproject/webapp:latest
-          imagePullPolicy: IfNotPresent
+        - name: mpsproject
+          image: quay.io/ds283/mpsproject:latest
+          imagePullPolicy: Always
           resources:
             limits:
               cpu: "1"

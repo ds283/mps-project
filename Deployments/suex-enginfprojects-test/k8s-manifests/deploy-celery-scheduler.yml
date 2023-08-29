@@ -22,7 +22,8 @@ spec:
           command: ["./launch_beat.sh"]
           resources:
             requests:
-              cpu: "0.1"
+              cpu: 100m
+              memory: 256Mi
           envFrom:
             - configMapRef:
                 name: enginfprojects-environment

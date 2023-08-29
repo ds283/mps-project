@@ -13,6 +13,8 @@ spec:
       app.kubernetes.io/name: enginfprojects-mariadb
   template:
     metadata:
+      annotations:
+        k8up.io/backupcommand: mysqldump -uroot -pfixme --all-databases
       labels:
         app.kubernetes.io/name: enginfprojects-mariadb
     spec:
@@ -22,7 +24,8 @@ spec:
           imagePullPolicy: Always
           resources:
             requests:
-              cpu: "0.2"
+              cpu: 200m
+              memory: 512Mi
           ports:
             - containerPort: 3306
           env:

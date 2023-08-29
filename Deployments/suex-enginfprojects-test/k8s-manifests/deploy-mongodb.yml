@@ -18,11 +18,12 @@ spec:
     spec:
       containers:
         - name: mongodb
-          image: mongo:4.4-bionic
+          image: dockerhub.vshn.net/library/mongo:4.4-bionic
           imagePullPolicy: Always
           resources:
             requests:
-              cpu: "0.2"
+              cpu: 200m
+              memory: 512Mi
           ports:
             - containerPort: 27017
           env:

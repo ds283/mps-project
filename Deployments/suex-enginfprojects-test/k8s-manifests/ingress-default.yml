@@ -4,9 +4,9 @@ metadata:
   name: enginfprojects-ingress-default
   namespace: suex-enginfprojects-test
   annotations:
-    kubernetes.io/ingress.class: "haproxy"
+    kubernetes.io/tls-acme: "true"
 spec:
-  ingressClassName: haproxy
+  ingressClassName: openshift-default
   tls:
     - hosts:
       - test.enginfprojects.inf.susx.ac.uk

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: enginfprojects-mail-admin
+  namespace: suex-enginfprojects-test
+data:
+  default_email: "D.Seery@sussex.ac.uk"

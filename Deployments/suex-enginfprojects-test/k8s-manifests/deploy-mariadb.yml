@@ -29,22 +29,22 @@ spec:
             - name: MYSQL_DATABASE
               valueFrom:
                 secretKeyRef:
-                  name: mariadb-credentials
+                  name: enginfprojects-mariadb-credentials
                   key: database
             - name: MYSQL_USER
               valueFrom:
                 secretKeyRef:
-                  name: mariadb-credentials
+                  name: enginfprojects-mariadb-credentials
                   key: username
             - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: mariadb-credentials
+                  name: enginfprojects-mariadb-credentials
                   key: password
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: mariadb-credentials
+                  name: enginfprojects-mariadb-credentials
                   key: root_password
           volumeMounts:
             - mountPath: /var/lib/mysql

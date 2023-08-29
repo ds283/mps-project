@@ -153,7 +153,6 @@ spec:
                 - ALL
             readOnlyRootFilesystem: false
             runAsNonRoot: true
-            runAsUser: 1000
           volumeMounts:
             - name: local-config
               mountPath: /mpsproject/app/instance/local.py

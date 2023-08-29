@@ -69,7 +69,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: mail-credentials
-                  key: username
+                  key: password
             - name: MAIL_ADMIN_EMAIL
               valueFrom:
                 configMapKeyRef:

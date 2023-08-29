@@ -36,7 +36,6 @@ from werkzeug.middleware.profiler import ProfilerMiddleware
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .flask_bleach import Bleach
-from .build_data import git_tag
 from .cache import cache
 from .instance.version import site_revision, site_copyright_dates
 from .database import db
@@ -301,7 +300,6 @@ def create_app():
         return {'get_previous_login': _get_previous_login,
                 'website_revision': site_revision,
                 'website_copyright_dates': site_copyright_dates,
-                'build_version': git_tag,
                 'home_dashboard_url': home_dashboard_url(),
                 'get_base_context': get_global_context_data,
                 'get_live_platform': _get_live_platform}

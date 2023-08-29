@@ -5,12 +5,12 @@ RUN apt-get update && apt-get install -qq -y build-essential gcc gfortran mariad
 # uid = 500 needed for deployment on Amazon, where ecs-user has uid 500
 RUN adduser --disabled-password --shell /bin/bash --gecos '' --uid 1000 mpsproject
 
-RUN mkdir -p /scratch && chown mpsproject:mpsproject /scratch
-RUN mkdir -p /mpsproject && chown mpsproject:mpsproject /mpsproject
+RUN mkdir -p /scratch && chown mpsproject:0 /scratch
+RUN mkdir -p /mpsproject && chown mpsproject:0 /mpsproject
 WORKDIR /mpsproject
 
 # install Python dependencies
-COPY --chown=mpsproject:mpsproject requirements.txt ./
+COPY --chown=mpsproject:0 requirements.txt ./
 
 ENV VIRTUAL_ENV=/mpsproject/venv
 USER mpsproject
@@ -20,10 +20,10 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 USER mpsproject
 RUN pip3 install -U pip setuptools wheel && pip3 install -U -r requirements.txt
 
-COPY --chown=mpsproject:mpsproject app ./app/
-COPY --chown=mpsproject:mpsproject migrations ./migrations/
-COPY --chown=mpsproject:mpsproject basic_database ./basic_database/
-COPY --chown=mpsproject:mpsproject mpsproject.py serve.py celery_node.py migrate.py boot.sh launch_celery.sh launch_beat.sh launch_flower.sh ./
+COPY --chown=mpsproject:0 app ./app/
+COPY --chown=mpsproject:0 migrations ./migrations/
+COPY --chown=mpsproject:0 basic_database ./basic_database/
+COPY --chown=mpsproject:0 mpsproject.py serve.py celery_node.py migrate.py boot.sh launch_celery.sh launch_beat.sh launch_flower.sh ./
 
 # need destination file for config file local.py to exist, otherwise Docker will create it as a folder
 USER mpsproject

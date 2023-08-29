@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: enginfprojects-celery-dashboard
+  namespace: suex-enginfprojects-test
+  labels:
+    app.kubernetes.io/name: enginfprojects-celery-dashboard
+spec:
+  selector:
+    app.kubernetes.io/name: enginfprojects-celery-dashboard
+  type: ClusterIP
+  ports:
+    - port: 5000

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: enginfprojects-environment
+  namespace: suex-enginfprojects-test
+data:
+  REDIS_HOSTNAME: "enginfprojects-redis-master"
+  MONGODB_HOSTNAME: "enginfprojects-mongodb-master"
+  DATABASE_HOSTNAME: "enginfprojects-mariadb"
+  INSTANCE_FOLDER: "/mpsproject/app/instance"
+  SCRATCH_FOLDER: "/scratch"
+  OBJECT_STORAGE_ASSETS_URI: "s3://enginfprojects-assets-test"
+  OBJECT_STORAGE_BACKUP_URI: "s3://enginfprojects-backup-test"
+  OBJECT_STORAGE_ENDPOINT_URL: "https://sos-ch-gva-2.exo.io"
+  OBJECT_STORAGE_REGION: "ch-gva-2"
+  MAIL_SERVER: "email-smtp.eu-west-1.amazonaws.com"
+  MAIL_PORT: "587"
+  MAIL_USE_TLS: "true"
+  SERVER_NAME: "test.enginfprojects.inf.susx.ac.uk"

@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pvc-mariadb-data
-  namespace: suex-enginfprojects-acpt
+  name: enginfprojects-pvc-mariadb-data
+  namespace: suex-enginfprojects-test
   labels:
     type: rbd-storagepool-cluster
 spec:
@@ -12,4 +12,3 @@ spec:
   storageClassName: rbd-storagepool-cluster
   accessModes:
     - ReadWriteOnce
-  volumeName: pv-mariadb-data

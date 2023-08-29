@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: enginfprojects-mongodb-master
+  namespace: suex-enginfprojects-test
+  labels:
+    app.kubernetes.io/name: enginfprojects-mongodb-master
+spec:
+  selector:
+    app.kubernetes.io/name: enginfprojects-mongodb-master
+  type: ClusterIP
+  ports:
+    - port: 27017

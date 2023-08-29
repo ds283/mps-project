@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enginfprojects-redis-master
+  namespace: suex-enginfprojects-test
+  labels:
+    app.kubernetes.io/name: enginfprojects-redis-master
+    app.kubernetes.io/component: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: enginfprojects-redis-master
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: enginfprojects-redis-master
+    spec:
+      containers:
+        - name: redis
+          image: redis:6.2.6
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 6379
+      restartPolicy: Always

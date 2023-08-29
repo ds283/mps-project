@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: enginfprojects-local
-  namespace: suex-enginfprojects-acpt
+  namespace: suex-enginfprojects-test
 data:
   local.py: |
     import os

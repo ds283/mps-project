@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: mariadb
-          image: mariadb:10.2
+          image: dockerhub.vshn.net/library/mariadb:10.2
           imagePullPolicy: Always
           resources:
             requests:

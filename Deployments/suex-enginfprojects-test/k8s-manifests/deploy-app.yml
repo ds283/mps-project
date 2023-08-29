@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: enginfprojects
     app.kubernetes.io/component: wsgi-app
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: enginfprojects
@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: mpsproject
-          image: quay.io/ds283/mpsproject:2023.2.1
+          image: quay.io/ds283/mpsproject:2023.2.2
           imagePullPolicy: Always
           resources:
             limits:
@@ -146,6 +146,8 @@ spec:
               value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
             - name: PROFILER_MONGO_URL
               value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
+            - name: MPSPROJECT_POPULATE_DATABASE
+              value: '1'
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

@@ -40,7 +40,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: enginfprojects-mongodb-credentials
-                  key: database
+                  key: init_database
           volumeMounts:
             - mountPath: /data/models
               name: mount-mongodb-data

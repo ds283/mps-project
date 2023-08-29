@@ -10,4 +10,8 @@ spec:
     name: default-worker
   minReplicas: 1
   maxReplicas: 4
-  targetCPUUtilizationPercentage: 50
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 50

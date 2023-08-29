@@ -4,7 +4,7 @@ metadata:
   name: enginfprojects-mariadb
   namespace: suex-enginfprojects-test
   labels:
-    app.kubernetes.io/name: enginfproects-mariadb
+    app.kubernetes.io/name: enginfprojects-mariadb
     app.kubernetes.io/component: database
 spec:
   replicas: 1

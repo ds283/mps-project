@@ -23,10 +23,10 @@ spec:
           command: ["./launch_celery.sh"]
           resources:
             limits:
-              memory: 384Mi
+              memory: 1.2Gi
             requests:
               cpu: 200m
-              memory: 512Mi
+              memory: 768Mi
           envFrom:
             - configMapRef:
                 name: configmap-environment

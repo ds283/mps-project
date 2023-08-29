@@ -40,7 +40,7 @@ spec:
                   name: mongodb-credentials
                   key: database
           volumeMounts:
-            - mountPath: /data/models
+            - mountPath: /data/db
               name: mount-mongodb-data
       volumes:
         - name: mount-mongodb-data

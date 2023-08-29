@@ -9,10 +9,10 @@ spec:
   ingressClassName: haproxy
   tls:
     - hosts:
-      - testing.enginfprojects.inf.susx.ac.uk
+      - acceptance.enginfprojects.inf.susx.ac.uk
       secretName: ingress-cert
   rules:
-    - host: testing.enginfprojects.inf.susx.ac.uk
+    - host: acceptance.enginfprojects.inf.susx.ac.uk
       http:
         paths:
           - path: /

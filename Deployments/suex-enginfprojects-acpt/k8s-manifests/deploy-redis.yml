@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: redis
+  name: enginfprojects-redis-master
   namespace: suex-enginfprojects-acpt
   labels:
     app.kubernetes.io/name: database

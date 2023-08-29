@@ -1,13 +1,13 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: default-worker
+  name: enginfprojects-default-worker
   namespace: suex-enginfprojects-acpt
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: default-worker
+    name: enginfprojects-default-worker
   minReplicas: 1
   maxReplicas: 4
   metrics:

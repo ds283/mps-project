@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: configmap-environment
+  name: enginfprojects-environment
   namespace: suex-enginfprojects-acpt
 data:
   REDIS_HOSTNAME: "redis"
@@ -16,4 +16,4 @@ data:
   MAIL_SERVER: "email-smtp.eu-west-1.amazonaws.com"
   MAIL_PORT: "587"
   MAIL_USE_TLS: "true"
-  SERVER_NAME: "testing.enginfprojects.inf.susx.ac.uk"
+  SERVER_NAME: "acceptance.enginfprojects.inf.susx.ac.uk"

@@ -165,5 +165,5 @@ spec:
       volumes:
         - name: local-config
           configMap:
-            name: configmap-local
+            name: enginfprojects-local
       restartPolicy: Always

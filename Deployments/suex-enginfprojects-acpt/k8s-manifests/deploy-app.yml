@@ -28,7 +28,7 @@ spec:
             - containerPort: 5000
           envFrom:
             - configMapRef:
-                name: configmap-environment
+                name: enginfprojects-environment
           env:
             - name: MONGODB_USER
               valueFrom:
@@ -176,5 +176,5 @@ spec:
       volumes:
         - name: local-config
           configMap:
-            name: configmap-local
+            name: enginfprojects-local
       restartPolicy: Always

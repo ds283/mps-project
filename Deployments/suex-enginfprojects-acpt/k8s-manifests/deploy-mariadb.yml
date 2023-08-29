@@ -56,7 +56,7 @@ spec:
             claimName: pvc-mariadb-data
         - name: mount-mariadb-conf
           configMap:
-            name: configmap-mariadb
+            name: enginfprojects-mariadb
             items:
               - key: my.cnf
                 path: my.cnf

@@ -20,6 +20,10 @@ spec:
         - name: redis
           image: dockerhub.vshn.net/library/redis:6.2.6
           imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 200m
+              memory: 128Mi
           ports:
             - containerPort: 6379
           volumeMounts:

@@ -9,6 +9,8 @@ data:
 
     from app.shared.cloud_object_store import ObjectStore
 
+    APP_NAME = 'enginfprojects'
+
     PREFERRED_URL_SCHEME = 'https'
 
     BACKUP_IS_LIVE = True
@@ -37,3 +39,9 @@ data:
 
     OBJECT_STORAGE_BACKUP_URI = os.environ.get("OBJECT_STORAGE_BACKUP_URI")
     OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, _backup_storage_options)
+
+    BRANDING_LABEL = 'EngInf projects portal'
+    BRANDING_LOGIN_LANDING_STRING = 'Welcome to the Engineering & Informatics projects portal'
+    BRANDING_PUBLIC_LANDING_STRING = 'Welcome to the Engineering & Informatics public projects list'
+    
+    ENABLE_PUBLIC_BROWSER = False

@@ -5,7 +5,7 @@ metadata:
 spec:
   backend:
     s3:
-      endpoint: https://sos-ch-gva-2.exo.io
+      endpoint: https://sos-ch-dk-2.exo.io
       bucket: enginfprojects-k8up-backup-test
       accessKeyIDSecretRef:
         name: enginfprojects-k8up-backup-test-credentials

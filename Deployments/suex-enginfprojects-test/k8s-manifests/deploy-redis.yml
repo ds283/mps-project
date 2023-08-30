@@ -31,11 +31,4 @@ spec:
               memory: 128Mi
           ports:
             - containerPort: 6379
-          volumeMounts:
-            - mountPath: /data
-              name: mount-redis-data
-      volumes:
-        - name: mount-redis-data
-          persistentVolumeClaim:
-            claimName: enginfprojects-pvc-redis-data
       restartPolicy: Always

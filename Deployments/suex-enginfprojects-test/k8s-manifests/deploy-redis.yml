@@ -18,6 +18,11 @@ spec:
     spec:
       containers:
         - name: redis
+          args:
+            - --save
+            - ""
+            - --appendonly
+            - "no"
           image: dockerhub.vshn.net/library/redis:6.2.6
           imagePullPolicy: Always
           resources:

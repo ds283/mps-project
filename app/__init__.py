@@ -79,14 +79,7 @@ class PatchedMailUtil(MailUtil):
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
 
-def create_app():
-    # get current configuration, or default to 'production' for safety
-    config_name = os.environ.get('FLASK_ENV') or 'production'
-
-    # load configuration files from 'instance' folder
-    instance_folder = os.environ.get('INSTANCE_FOLDER')
-    app = Flask(__name__, instance_relative_config=True, instance_path=str(instance_folder))
-
+def read_configuration(app: Flask, config_name: str):
     app.config.from_pyfile('flask.py')
     if config_name == 'production':
         app.config.from_pyfile('flask_prod.py')
@@ -111,10 +104,43 @@ def create_app():
 
     app.config.from_pyfile('local.py')
 
+
+def configure_logging(app: Flask):
+    from logging import INFO, Formatter, basicConfig
+    from logging.handlers import RotatingFileHandler
+
+    basicConfig(level=INFO)
+
+    log_file = app.config.get('LOG_FILE')
+    if log_file is not None:
+        file_handler = RotatingFileHandler(app.config['LOG_FILE'], 'a', 1 * 1024 * 1024, 10)
+        file_handler.setFormatter(Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
+        app.logger.setLevel(INFO)
+        file_handler.setLevel(INFO)
+        app.logger.addHandler(file_handler)
+
+
+def create_app():
+    # get current configuration, or default to 'production' for safety
+    config_name = os.environ.get('FLASK_ENV') or 'production'
+
+    # load configuration files from 'instance' folder
+    instance_folder = os.environ.get('INSTANCE_FOLDER')
+    app = Flask(__name__, instance_relative_config=True, instance_path=str(instance_folder))
+
+    read_configuration(app, config_name)
+    configure_logging(app)
+
+    app_name = app.config.get('APP_NAME', 'mpsprojects')
+    app.logger.info(f'{app_name} projects management web app starting (version {site_revision})...')
+    app.logger.info(f'Copyright University of Sussex {site_copyright_dates}')
+
     # create a long-lived Redis connection
+    app.logger.info('-- creating redis session')
     app.config['REDIS_SESSION'] = redis.Redis.from_url(url=app.config['CACHE_REDIS_URL'])
 
     # create long-lived Mongo connection for Flask-Sessionstore
+    app.logger.info('-- creating MongoDB session')
     app.config['SESSION_MONGODB'] = MongoClient(host=app.config['SESSION_MONGO_URL'])
 
     # we have two proxies -- we're behind both waitress and nginx
@@ -123,8 +149,10 @@ def create_app():
     if app.config.get('PROFILE_MEMORY', False):
         app.wsgi_app = Dozer(app.wsgi_app)
 
+    app.logger.info('-- intitializing SQLAlchemy ORM')
     db.init_app(app)
 
+    app.logger.info('-- configuring application and Flask extensions')
     migrate = Migrate(app, db)
     bootstrap = Bootstrap(app)
     mail = Mail(app)
@@ -142,34 +170,21 @@ def create_app():
     # set up CSS and javascript assets
     env = Environment(app)
 
-    if not app.debug:
-        from logging import INFO, Formatter, basicConfig
-        from logging.handlers import RotatingFileHandler
-
-        basicConfig(level=INFO)
-
-        log_file = app.config.get('LOG_FILE')
-        if log_file is not None:
-            file_handler = RotatingFileHandler(app.config['LOG_FILE'], 'a', 1 * 1024 * 1024, 10)
-            file_handler.setFormatter(Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
-            app.logger.setLevel(INFO)
-            file_handler.setLevel(INFO)
-            app.logger.addHandler(file_handler)
-
-    app.logger.info('MPS Project Manager starting')
-
     # use Werkzeug built-in profiler if profile-to-disk is enabled
     if app.config.get('PROFILE_TO_DISK', False):
+        app.logger.info('-- configuring Werkzeug profiling')
         app.config['PROFILE'] = True
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=app.config.get('PROFILE_DIRECTORY'))
 
         app.logger.info('Profiling to disk enabled')
 
     # configure Flask-Security, which needs access to the database models for User and Role
+    app.logger.info('-- importing ORM models')
     from app import models
 
     user_datastore = SQLAlchemyUserDatastore(db, models.User, models.Role)
 
+    app.logger.info('-- patching Flask-Security-Too assets')
     # patch Flask-Security's login form to include some descriptive text on the email field
     security = Security(app, user_datastore, login_form=PatchedLoginForm, mail_util_cls=PatchedMailUtil)
     if config_name == 'production':
@@ -182,6 +197,7 @@ def create_app():
 
 
     # set up celery and store in extensions dictionary
+    app.logger.info('-- initializing Celery and queues')
     celery = make_celery(app)
     app.extensions['celery'] = celery
 
@@ -288,21 +304,33 @@ def create_app():
         if not has_request_context():
             return None
 
-        return current_app.config.get('EMAIL_IS_LIVE', False)
+        return
+
+    static_ctx = {'website_revision': site_revision,
+                  'website_copyright_dates': site_copyright_dates,
+                  'branding_label': app.config.get('BRANDING_LABEL', 'Not configured'),
+                  'branding_login_landing_string': app.config.get('BRANDING_LOGIN_LANDING_STRING', 'Not configured'),
+                  'branding_public_landing_string': app.config.get('BRANDING_PUBLIC_LANDING_STRING', 'Not configured'),
+                  'email_is_live': app.config.get('EMAIL_IS_LIVE', False),
+                  'backup_is_live': app.config.get('BACKUP_IS_LIVE', False),
+                  'video_explainer_panopto_server': app.config.get('VIDEO_EXPLAINER_PANOPTO_SERVER', None),
+                  'video_explainer_panopto_session': app.config.get('VIDEO_EXPLAINER_PANOPTO_SESSION', None)}
+
+    if static_ctx['video_explainer_panopto_server'] is not None \
+            and static_ctx['video_explainer_panopto_session'] is not None:
+        static_ctx['enable_video_explainer'] = True
+    else:
+        static_ctx['enable_video_explainer'] = False
 
 
-    # collect all global context functions together in an attempt to avoid function call overhead
     @app.context_processor
     def global_context():
         if not has_request_context():
             return {}
 
-        return {'get_previous_login': _get_previous_login,
-                'website_revision': site_revision,
-                'website_copyright_dates': site_copyright_dates,
-                'home_dashboard_url': home_dashboard_url(),
-                'get_base_context': get_global_context_data,
-                'get_live_platform': _get_live_platform}
+        return static_ctx | {'get_previous_login': _get_previous_login,
+                             'home_dashboard_url': home_dashboard_url(),
+                             'get_base_context': get_global_context_data}
 
 
     @app.errorhandler(404)
@@ -369,6 +397,8 @@ def create_app():
 
     # IMPORT BLUEPRINTS
 
+    app.logger.info('-- importing Flask routes')
+
     from .home import home as home_blueprint
     app.register_blueprint(home_blueprint, url_prefix='/')
 
@@ -411,8 +441,9 @@ def create_app():
     from .projecthub import projecthub as projecthub_blueprint
     app.register_blueprint(projecthub_blueprint, url_prefix='/projecthub')
 
-    from .public_browser import public_browser as public_browser_blueprint
-    app.register_blueprint(public_browser_blueprint, url_prefix='/public')
+    if app.config.get('ENABLE_PUBLIC_BROWSER', False):
+        from .public_browser import public_browser as public_browser_blueprint
+        app.register_blueprint(public_browser_blueprint, url_prefix='/public')
 
     # add Flask-profiler and rate limiter in production mode
     if config_name == 'production':
@@ -431,5 +462,7 @@ def create_app():
         # panels.append('flask_debug_api.BrowseAPIPanel')
         # panels.append('flask_debugtoolbar_lineprofilerpanel.panels.LineProfilerPanel')
         # app.config['DEBUG_TB_PANELS'] = panels
+
+    app.logger.info('** Initialization complete')
 
     return app

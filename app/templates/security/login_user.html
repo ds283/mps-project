@@ -6,49 +6,51 @@
 {% block scripts %}
     {{ super() }}
 
-    <script>
-        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }}
+    {% if enable_video_explainer %}
+        <script>
+            $SCRIPT_ROOT = {{ request.script_root|tojson|safe }}
 
-        var tag = document.createElement('script');
+            var tag = document.createElement('script');
 
-        tag.src = "https://developers.panopto.com/scripts/embedapi.min.js"
-        var firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+            tag.src = "https://developers.panopto.com/scripts/embedapi.min.js"
+            var firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-        var embedApi;
+            var embedApi;
 
-        function onPanoptoEmbedApiReady() {
-            embedApi = new EmbedApi("player", {
-                width: "750",
-                height: "422",
-                serverName: "sussex.cloud.panopto.eu",
-                sessionId: "c2274660-a8f0-4f71-ba13-acd101735f7b",
-                events: {
-                    "onlframeReady": onPanoptolframeReady,
-                    "onReady": onPanoptoVideoReady,
-                    "onStateChange": onPanoptoStateUpdate
-                }
+            function onPanoptoEmbedApiReady() {
+                embedApi = new EmbedApi("player", {
+                    width: "750",
+                    height: "422",
+                    serverName: "{{ video_explainer_panopto_server }}",
+                    sessionId: "{{ video_explainer_panopto_session }}",
+                    events: {
+                        "onlframeReady": onPanoptolframeReady,
+                        "onReady": onPanoptoVideoReady,
+                        "onStateChange": onPanoptoStateUpdate
+                    }
+                });
+            };
+
+            function onPanoptolframeReady() {
+                embedApi.loadVideo();
+            }
+
+            function onPanoptoVideoReady() {
+            }
+
+            function onPanoptoStateUpdate() {
+            }
+
+            $(document).ready(function () {
+                $('#PanoptoModal').modal({
+                    show: false
+                }).on('hidden.bs.modal', function() {
+                    embedApi.pauseVideo();
+                });
             });
-        };
-
-        function onPanoptolframeReady() {
-            embedApi.loadVideo();
-        }
-
-        function onPanoptoVideoReady() {
-        }
-
-        function onPanoptoStateUpdate() {
-        }
-
-        $(document).ready(function () {
-            $('#PanoptoModal').modal({
-                show: false
-            }).on('hidden.bs.modal', function() {
-                embedApi.pauseVideo();
-            });
-        });
-    </script>
+        </script>
+    {% endif %}
 {% endblock %}
 
 {% block title %}
@@ -69,7 +71,7 @@
 
 {% block header %}
     <div class="d-flex justify-content-center">
-        <div class="login-box-title text-dark text-center">Welcome to the MPS projects portal</div>
+        <div class="login-box-title text-dark text-center">{{ branding_login_landing_string }}</div>
     </div>
 {% endblock %}
 
@@ -83,29 +85,33 @@
         {{ show_floating_field(login_user_form.password, 'Password', show_label=false, placeholder='Password') }}
         <div class="mt-2 d-flex justify-content-between w-100">
             <div>
-                <button type="button" class="btn btn-outline-primary video-btn" data-bs-toggle="modal" data-bs-target="#PanoptoModal">Show video explainer</button>
+                {%- if enable_video_explainer -%}
+                    <button type="button" class="btn btn-outline-primary video-btn" data-bs-toggle="modal" data-bs-target="#PanoptoModal">Show video explainer</button>
+                {%- endif -%}
             </div>
             <div>
                 {{ wtf.render_field(login_user_form.submit, button_map={'submit': 'primary'}) }}
             </div>
         </div>
     </form>
-    <div class="modal fade" id="PanoptoModal" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered mw-100 w-75" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                </div>
-                <div class="modal-body">
-                    <div class="embed-responsive embed-responsive-16by9">
-                        <div id="player"></div>
+    {% if enable_video_explainer %}
+        <div class="modal fade" id="PanoptoModal" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered mw-100 w-75" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <div class="modal-body">
+                        <div class="embed-responsive embed-responsive-16by9">
+                            <div id="player"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    {% endif %}
 {% endblock %}
 
 {% block footer %}

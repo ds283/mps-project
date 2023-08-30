@@ -67,6 +67,28 @@ _name = \
 """
 
 
+# language=jinja2
+_owner = \
+"""
+{% if owner is not none %}
+    <a class="text-decoration-none" href="mailto:{e}">{{ owner.name }}</a>
+{% else %}
+    <span class="badge bg-secondary">Nobody</span>
+{% endif %}
+"""
+
+
+# language=jinja2
+_timestamp = \
+"""
+{% if time is not none %}
+    {{ time.strftime("%a %d %b %Y %H:%M:%S") }}
+{% else %}
+    <span class="badge bg-secondary">None</span>
+{% endif %}
+"""
+
+
 def _format_schedule(task):
 
     if task.interval is not None:
@@ -86,21 +108,19 @@ def _format_schedule(task):
 def scheduled_task_data(tasks):
     data = [{'name': render_template_string(_name, t=t),
              'schedule': _format_schedule(t),
-             'owner': '<a class="text-decoration-none" href="mailto:{e}">{name}</a>'.format(e=t.owner.email,
-                                                               name=t.owner.name) if t.owner is not None
-                else '<span class="badge bg-secondary">Nobody</span>',
+             'owner': render_template_string(_owner, owner=t.owner),
              'active': render_template_string(_active, t=t),
              'last_run': {
-                 'display': t.last_run_at.strftime("%a %d %b %Y %H:%M:%S"),
-                 'timestamp': t.last_run_at.timestamp()
+                 'display': render_template_string(_timestamp, time=t.last_run_at),
+                 'timestamp': t.last_run_at.timestamp() if t.last_run_at is not None else None
              },
              'total_runs': t.total_run_count,
              'last_change': {
-                 'display': t.date_changed.strftime("%a %d %b %Y %H:%M:%S"),
-                 'timestamp': t.date_changed.timestamp()
+                 'display': render_template_string(_timestamp, time=t.date_changed),
+                 'timestamp': t.date_changed.timestamp() if t.date_changed is not None else None
              },
              'expires': {
-                 'display': t.expires.strftime("%a %d %b %Y %H:%M:%S"),
+                 'display': render_template_string(_timestamp, time=t.expires),
                  'timestamp': t.expires.timestamp()
              } if t.expires is not None else {
                  'display': '<span class="badge bg-secondary">No expiry</span>',

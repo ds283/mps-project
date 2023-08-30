@@ -14,7 +14,8 @@ spec:
   template:
     metadata:
       annotations:
-        k8up.io/backupcommand: mysqldump -uroot -pfixme --all-databases
+        k8up.io/backupcommand: sh -c 'mysqldump -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE --clean'
+        k8up.io/file-extension: .sql
       labels:
         app.kubernetes.io/name: enginfprojects-mariadb
     spec:

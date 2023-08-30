@@ -1505,7 +1505,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 projects = lp_group_dict.get(config_id, None)
 
                 if k in fac_limits and projects is not None:
-                    prob += sum(S[(k, j)] * CATS_supervisor[j] for j in projects) <= fac_limits[i], \
+                    prob += sum(S[(k, j)] * CATS_supervisor[j] for j in projects) <= fac_limits[k], \
                             '_C{first}{last}_supv_CATS_config_{cfg}'.format(first=user.first_name, last=user.last_name,
                                                                             cfg=config_id)
 

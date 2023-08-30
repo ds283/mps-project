@@ -12,6 +12,8 @@ import os
 
 from app.shared.cloud_object_store import ObjectStore
 
+APP_NAME = 'mpsprojects'
+
 PREFERRED_URL_SCHEME = 'https'
 
 BACKUP_IS_LIVE = True
@@ -25,3 +27,9 @@ OBJECT_STORAGE_ASSETS = ObjectStore(OBJECT_STORAGE_ASSETS_URI, _storage_options)
 
 OBJECT_STORAGE_BACKUP_URI = os.environ.get("OBJECT_STORAGE_BACKUP_URI")
 OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, _storage_options)
+
+BRANDING_LABEL = 'MPS projects portal'
+BRANDING_LOGIN_LANDING_STRING = 'Welcome to the MPS projects portal'
+BRANDING_PUBLIC_LANDING_STRING = 'Welcome to the MPS public projects list'
+
+ENABLE_PUBLIC_BROWSER = True

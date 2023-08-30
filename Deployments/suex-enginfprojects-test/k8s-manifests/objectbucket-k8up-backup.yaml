@@ -1,0 +1,11 @@
+apiVersion: appcat.vshn.io/v1
+kind: ObjectBucket
+metadata:
+  name: enginfprojects-k8up-backup-test
+  namespace: suex-enginfprojects-test
+spec:
+  parameters:
+    bucketName: enginfprojects-k8up-backup-test
+    region: ch-dk-2
+  writeConnectionSecretToRef:
+    name: enginfprojects-k8up-backup-test-credentials

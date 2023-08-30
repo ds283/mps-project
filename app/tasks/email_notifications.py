@@ -497,10 +497,15 @@ def register_email_notification_tasks(celery):
             raise RuntimeError('dispatch_faculty_summary_email called for {name} with no work '
                                'done'.format(name=user.name))
 
+        branding_label = current_app.config.get('BRANDING_LABEL')
+        if branding_label is not None:
+            subject = f'{branding_label}: summary of notifications and events'
+        else:
+            subject = 'Projects web portal: summary of notifications and events'
+
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
                                      reply_to=[current_app.config['MAIL_REPLY_TO']],
-                                     to=[user.email],
-                                     subject='MPS projects: summary of notifications and events')
+                                     to=[user.email], subject=subject)
 
         msg.body = render_template('email/notifications/faculty/rollup.txt', user=user,
                                    notifications=notifications, outstanding=outstanding_crqs)
@@ -1011,10 +1016,15 @@ def register_email_notification_tasks(celery):
             raise RuntimeError('dispatch_faculty_summary_email called for {name} with no work '
                                'done'.format(name=user.name))
 
+        branding_label = current_app.config.get('BRANDING_LABEL')
+        if branding_label is not None:
+            subject = f'{branding_label}: summary of notifications and events'
+        else:
+            subject = 'Projects web portal: summary of notifications and events'
+
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
                                      reply_to=[current_app.config['MAIL_REPLY_TO']],
-                                     to=[user.email],
-                                     subject='MPS projects: summary of notifications and events')
+                                     to=[user.email], subject=subject)
 
         msg.body = render_template('email/notifications/faculty/rollup.txt', user=user,
                                    notifications=notifications, outstanding=outstanding_crqs)
@@ -1145,10 +1155,15 @@ def register_email_notification_tasks(celery):
             raise RuntimeError('dispatch_student_summary_email called for {name} with no work '
                                'done'.format(name=user.name))
 
+        branding_label = current_app.config.get('BRANDING_LABEL')
+        if branding_label is not None:
+            subject = f'{branding_label}: summary of notifications and events'
+        else:
+            subject = 'Projects web portal: summary of notifications and events'
+
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
                                      reply_to=[current_app.config['MAIL_REPLY_TO']],
-                                     to=[user.email],
-                                     subject='MPS projects: summary of notifications and events')
+                                     to=[user.email], subject=subject)
 
         msg.body = render_template('email/notifications/student/rollup.txt', user=user,
                                    notifications=notifications, outstanding=outstanding_crqs)
@@ -1284,10 +1299,15 @@ def register_email_notification_tasks(celery):
             raise RuntimeError('dispatch_student_summary_email called for {name} with no work '
                                'done'.format(name=user.name))
 
+        branding_label = current_app.config.get('BRANDING_LABEL')
+        if branding_label is not None:
+            subject = f'{branding_label}: summary of notifications and events'
+        else:
+            subject = 'Projects web portal: summary of notifications and events'
+
         msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
                                      reply_to=[current_app.config['MAIL_REPLY_TO']],
-                                     to=[user.email],
-                                     subject='MPS projects: summary of notifications and events')
+                                     to=[user.email], subject=subject)
 
         msg.body = render_template('email/notifications/student/rollup.txt', user=user,
                                    notifications=notifications, outstanding=outstanding_crqs)

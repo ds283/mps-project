@@ -1,0 +1,29 @@
+apiVersion: k8up.io/v1
+kind: Schedule
+metadata:
+  name: schedule
+spec:
+  backend:
+    s3:
+      endpoint: https://sos-ch-gva-2.exo.io
+      bucket: enginfprojects-k8up-backup-test
+      accessKeyIDSecretRef:
+        name: enginfprojects-k8up-backup-test-credentials
+        key: AWS_ACCESS_KEY_ID
+      secretAccessKeySecretRef:
+        name: enginfprojects-k8up-backup-test-credentials
+        key: AWS_SECRET_ACCESS_KEY
+    repoPasswordSecretRef:
+      name: enginfprojects-k8up-backup-repository-test
+      key: password
+  backup:
+    schedule: "@hourly-random"
+    failedJobsHistoryLimit: 2
+    successfulJobsHistoryLimit: 2
+  check:
+    schedule: "@hourly-random"
+  prune:
+    schedule: "@hourly-random"
+    retention:
+      keepLast: 28
+      keepDaily: 35

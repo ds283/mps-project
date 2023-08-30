@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: mpsproject
-          image: quay.io/ds283/mpsproject:2023.2.3
+          image: quay.io/ds283/mpsproject:2023.2.4
           imagePullPolicy: Always
           command: ["./launch_celery.sh"]
           resources:

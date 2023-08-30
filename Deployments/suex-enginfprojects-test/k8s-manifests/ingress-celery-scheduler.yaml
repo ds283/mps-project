@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: enginfprojects-ingress-celery-dashboard
+  namespace: suex-enginfprojects-test
+  annotations:
+spec:
+  ingressClassName: openshift-default
+  tls:
+    - hosts:
+      - test.enginfprojects.inf.susx.ac.uk
+      secretName: ingress-cert
+  rules:
+    - host: test.enginfprojects.inf.susx.ac.uk
+      http:
+        paths:
+          - path: /flower
+            pathType: Prefix
+            backend:
+              service:
+                name: enginfprojects-celery-dashboard
+                port:
+                  number: 5000

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: enginfprojects-pvc-mongodb-data
+  namespace: suex-enginfprojects-test
+  labels:
+    type: rbd-storagepool-cluster
+spec:
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: rbd-storagepool-cluster
+  accessModes:
+    - ReadWriteOnce

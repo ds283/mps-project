@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enginfprojects-mariadb
+  namespace: suex-enginfprojects-test
+  labels:
+    app.kubernetes.io/name: enginfprojects-mariadb
+    app.kubernetes.io/component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: enginfprojects-mariadb
+  template:
+    metadata:
+      annotations:
+        k8up.io/backupcommand: mysqldump -uroot -pfixme --all-databases
+      labels:
+        app.kubernetes.io/name: enginfprojects-mariadb
+    spec:
+      containers:
+        - name: mariadb
+          image: dockerhub.vshn.net/library/mariadb:10.2
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mariadb-credentials
+                  key: database
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mariadb-credentials
+                  key: username
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mariadb-credentials
+                  key: password
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mariadb-credentials
+                  key: root_password
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: mount-mariadb-data
+            - mountPath: /etc/mysql
+              name: mount-mariadb-conf
+      volumes:
+        - name: mount-mariadb-data
+          persistentVolumeClaim:
+            claimName: enginfprojects-pvc-mariadb-data
+        - name: mount-mariadb-conf
+          configMap:
+            name: enginfprojects-mariadb
+            items:
+              - key: my.cnf
+                path: my.cnf
+      restartPolicy: Always

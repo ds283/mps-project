@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enginfprojects-mongodb-master
+  namespace: suex-enginfprojects-test
+  labels:
+    app.kubernetes.io/name: enginfprojects-mongodb-master
+    app.kubernetes.io/component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: enginfprojects-mongodb-master
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: enginfprojects-mongodb-master
+    spec:
+      containers:
+        - name: mongodb
+          image: dockerhub.vshn.net/library/mongo:4.4-bionic
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 200m
+              memory: 384Mi
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mongodb-credentials
+                  key: root_username
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mongodb-credentials
+                  key: root_password
+            - name: MONGO_INITDB_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mongodb-credentials
+                  key: init_database
+          volumeMounts:
+            - mountPath: /data/db
+              name: mount-mongodb-data
+      volumes:
+        - name: mount-mongodb-data
+          persistentVolumeClaim:
+            claimName: enginfprojects-pvc-mongodb-data
+      restartPolicy: Always

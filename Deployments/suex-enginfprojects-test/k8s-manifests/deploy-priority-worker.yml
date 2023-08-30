@@ -1,0 +1,172 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enginfprojects-priority-worker
+  namespace: suex-enginfprojects-test
+  labels:
+    app.kubernetes.io/name: enginfprojects-priority-worker
+    app.kubernetes.io/component: async-queue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: enginfprojects-priority-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: enginfprojects-priority-worker
+    spec:
+      containers:
+        - name: mpsproject
+          image: quay.io/ds283/mpsproject:2023.2.5
+          imagePullPolicy: Always
+          command: ["./launch_celery.sh"]
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              cpu: 200m
+              memory: 768Mi
+          envFrom:
+            - configMapRef:
+                name: enginfprojects-environment
+            - configMapRef:
+                name: enginfprojects-servername
+          env:
+            - name: MONGODB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mongodb-credentials
+                  key: root_username
+            - name: MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mongodb-credentials
+                  key: root_password
+            - name: DATABASE_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mariadb-credentials
+                  key: root_password
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mariadb-credentials
+                  key: username
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mariadb-credentials
+                  key: password
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mariadb-credentials
+                  key: database
+            - name: MAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mail-credentials
+                  key: username
+            - name: MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-mail-credentials
+                  key: password
+            - name: MAIL_ADMIN_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  name: enginfprojects-mail-admin
+                  key: default_email
+            - name: ROLLBAR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-rollbar-credentials
+                  key: token
+            - name: ROLLBAR_ENV
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-rollbar-credentials
+                  key: environment
+            - name: FLASK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-flask-secrets
+                  key: secret_key
+            - name: FLASK_SECURITY_PASSWORD_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-flask-secrets
+                  key: password_salt
+            - name: SQLALCHEMY_AES_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-flask-secrets
+                  key: sqlalchemy_key
+            - name: PROFILER_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-flask-secrets
+                  key: profiler_username
+            - name: PROFILER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-flask-secrets
+                  key: profiler_password
+            - name: OBJECT_STORAGE_ASSETS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-assets-test-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: OBJECT_STORAGE_ASSETS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-assets-test-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: OBJECT_STORAGE_BACKUP_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-backup-test-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: OBJECT_STORAGE_BACKUP_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-backup-test-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: WORKER_QUEUES
+              value: priority
+            - name: DATABASE_URL
+              value: mysql+pymysql://$(DATABASE_USER):$(DATABASE_PASSWORD)@$(DATABASE_HOSTNAME)/$(DATABASE_NAME)
+            - name: CELERY_RESULT_BACKEND
+              value: redis://$(REDIS_HOSTNAME):6379
+            - name: CELERY_BROKER_URL
+              value: redis://$(REDIS_HOSTNAME):6379
+            - name: CACHE_REDIS_URL
+              value: redis://$(REDIS_HOSTNAME):6379
+            - name: RATELIMIT_REDIS_URI
+              value: redis://$(REDIS_HOSTNAME):6379
+            - name: SESSION_MONGO_URL
+              value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
+            - name: PROFILER_MONGO_URL
+              value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+          volumeMounts:
+            - name: local-config
+              mountPath: /mpsproject/app/instance/local.py
+              subPath: local.py
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: local-config
+          configMap:
+            name: enginfprojects-local
+      restartPolicy: Always

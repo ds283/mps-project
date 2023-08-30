@@ -23,7 +23,7 @@ spec:
           command: ["./launch_celery.sh"]
           resources:
             limits:
-              memory: 1.2Gi
+              memory: 2Gi
             requests:
               cpu: 200m
               memory: 768Mi

@@ -12095,10 +12095,12 @@ def _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id):
     for item in obj.get_supervisor_records(fac_id).all():
         item: MatchingRecord
         proj: LiveProject = item.project
+        selector: SelectingStudent = item.selector
 
-        c = proj.CATS_supervision
-        if c is not None:
-            CATS += c
+        if pclass_id is None or selector.config.pclass_id == pclass_id:
+            c = proj.CATS_supervision
+            if c is not None:
+                CATS += c
 
     return CATS
 
@@ -12113,10 +12115,12 @@ def _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id):
     for item in obj.get_marker_records(fac_id).all():
         item: MatchingRecord
         proj: LiveProject = item.project
+        selector: SelectingStudent = item.selector
 
-        c = proj.CATS_marking
-        if c is not None:
-            CATS += c
+        if pclass_id is None or selector.config.pclass_id == pclass_id:
+            c = proj.CATS_marking
+            if c is not None:
+                CATS += c
 
     return CATS
 
@@ -12131,10 +12135,12 @@ def _MatchingAttempt_get_faculty_mod_CATS(id, fac_id, pclass_id):
     for item in obj.get_moderator_records(fac_id).all():
         item: MatchingRecord
         proj: LiveProject = item.project
+        selector: SelectingStudent = item.selector
 
-        c = proj.CATS_moderation
-        if c is not None:
-            CATS += c
+        if pclass_id is None or selector.config.pclass_id == pclass_id:
+            c = proj.CATS_moderation
+            if c is not None:
+                CATS += c
 
     return CATS
 
@@ -12200,7 +12206,7 @@ def _MatchingAttempt_number_project_assignments(id, project_id):
 
 @cache.memoize()
 def _MatchingAttempt_is_valid(id):
-    obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
+    obj: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
     # there are several steps:
     #   1. Validate that each MatchingRecord is valid (marker is not supervisor,
@@ -12244,7 +12250,7 @@ def _MatchingAttempt_is_valid(id):
             if len(record_errors) > 0:
                 student_issues = True
 
-    # 2. EACH PARTICIPATING FACULTY MEMBERSHOULD NOT BE OVERASSIGNED, EITHER AS MARKER OR SUPERVISOR
+    # 2. EACH PARTICIPATING FACULTY MEMBER SHOULD NOT BE OVERASSIGNED, EITHER AS MARKER OR SUPERVISOR
     for fac in obj.faculty:
         data = obj.is_supervisor_overassigned(fac, include_matches=True)
         if data['flag']:
@@ -12258,19 +12264,22 @@ def _MatchingAttempt_is_valid(id):
 
         # 4. FOR EACH INCLUDED PROJECT CLASS, FACULTY ASSIGNMENTS SHOULD RESPECT ANY CUSTOM CATS LIMITS
         for config in obj.config_members:
-            rec = fac.get_enrollment_record(config.pclass_id)
+            config: ProjectClassConfig
+            rec: EnrollmentRecord = fac.get_enrollment_record(config.pclass_id)
 
             if rec is not None:
                 sup, mark, mod = obj.get_faculty_CATS(fac, pclass_id=config.pclass_id)
 
                 if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
-                    errors[('custom_sup', fac.id)] = 'Assignment to {name} violates their custom supervising CATS ' \
-                                                       'limit {n}'.format(name=fac.user.name, n=rec.CATS_supervision)
+                    errors[('custom_sup', fac.id)] = \
+                        '{pclass} assignment to {name} violates their custom supervising CATS limit' \
+                        ' = {n}'.format(pclass=config.name, name=fac.user.name, n=rec.CATS_supervision)
                     faculty_issues = True
 
                 if rec.CATS_marking is not None and mark > rec.CATS_marking:
-                    errors[('custom_mark', fac.id)] = 'Assignment to {name} violates their custom marking CATS ' \
-                                                        'limit {n}'.format(name=fac.user.name, n=rec.CATS_marking)
+                    errors[('custom_mark', fac.id)] = \
+                        '{pclass} assignment to {name} violates their custom marking CATS limit' \
+                        ' = {n}'.format(pclass=config.name, name=fac.user.name, n=rec.CATS_marking)
                     faculty_issues = True
 
                 # UPDATE MODERATE CATS

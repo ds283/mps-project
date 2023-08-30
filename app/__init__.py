@@ -300,12 +300,7 @@ def create_app():
         return real_user
 
 
-    def _get_live_platform():
-        if not has_request_context():
-            return None
-
-        return
-
+    # data that does not change from request to request can be evaluated, cached, and re-used
     static_ctx = {'website_revision': site_revision,
                   'website_copyright_dates': site_copyright_dates,
                   'branding_label': app.config.get('BRANDING_LABEL', 'Not configured'),
@@ -328,9 +323,44 @@ def create_app():
         if not has_request_context():
             return {}
 
-        return static_ctx | {'get_previous_login': _get_previous_login,
+        roles = set(role.name for role in current_user.roles)
+        if isinstance(current_user, User):
+            mask_roles = set(role.name for role in current_user.mask_roles)
+            visible_roles = roles.difference(mask_roles)
+        else:
+            visible_roles = roles
+
+        is_faculty = 'faculty' in visible_roles
+        is_office = 'office' in visible_roles
+        is_student = 'student' in visible_roles
+        is_reports = 'reports' in visible_roles
+
+        is_root = 'root' in visible_roles
+        is_admin = 'admin' in visible_roles
+        is_edit_tags = 'edit_tags' in visible_roles
+        is_view_email = 'view_email' in visible_roles
+        is_manage_users = 'manage_users' in visible_roles
+        is_emailer = 'email' in visible_roles
+
+        base_context_data = get_global_context_data()
+        matching_ready = base_context_data['matching_ready']
+        has_assessments = base_context_data['has_assessments']
+
+        return static_ctx | {'real_user': _get_previous_login(),
                              'home_dashboard_url': home_dashboard_url(),
-                             'get_base_context': get_global_context_data}
+                             'is_faculty': is_faculty,
+                             'is_office': is_office,
+                             'is_student': is_student,
+                             'is_reports': is_reports,
+                             'is_convenor': is_faculty and current_user.faculty_data is not None and current_user.faculty_data.is_convenor,
+                             'is_root': is_root,
+                             'is_admin': is_admin,
+                             'is_edit_tags': is_edit_tags,
+                             'is_view_email': is_view_email,
+                             'is_manage_users': is_manage_users,
+                             'is_emailer': is_emailer,
+                             'matching_ready': matching_ready,
+                             'has_assessments': has_assessments}
 
 
     @app.errorhandler(404)

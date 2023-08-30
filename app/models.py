@@ -1944,7 +1944,7 @@ class User(db.Model, UserMixin):
             else:
                 raise RuntimeError('Unknown role type passed to has_role()')
 
-            if get_count(self.mask_roles.filter_by(name=role_name)) > 0:
+            if self.mask_roles.filter_by(name=role_name).first() is not None:
                 return False
 
         return super().has_role(role)

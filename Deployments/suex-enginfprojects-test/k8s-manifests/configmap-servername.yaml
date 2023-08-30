@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: enginfprojects-servername
+  namespace: suex-enginfprojects-test
+data:
+  SERVER_NAME: "test.enginfprojects.inf.susx.ac.uk"

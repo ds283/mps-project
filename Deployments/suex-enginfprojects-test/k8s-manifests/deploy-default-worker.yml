@@ -29,7 +29,9 @@ spec:
               memory: 768Mi
           envFrom:
             - configMapRef:
-                name: configmap-environment
+                name: enginfprojects-environment
+            - configMapRef:
+                name: enginfprojects-servername
           env:
             - name: MONGODB_USER
               valueFrom:

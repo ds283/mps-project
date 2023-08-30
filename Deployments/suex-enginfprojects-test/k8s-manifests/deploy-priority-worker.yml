@@ -30,6 +30,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: enginfprojects-environment
+            - configMapRef:
+                name: enginfprojects-servername
           env:
             - name: MONGODB_USER
               valueFrom:

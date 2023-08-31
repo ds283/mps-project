@@ -209,7 +209,10 @@ class UploadBatchCreateForm(Form):
     ignore_Y0 = BooleanField('Ignore Y0 students', default=True,
                              description="Select if Y0 students should not be imported")
 
-    current_year = IntegerField('Enter the academic year for which the imported data is valid.',
+    current_year = IntegerField('Please specify the academic year that should be used to interpret '
+                                'imported year-of-course values',
+                                description='For academic year N/N+1, please enter N. This is needed to correctly '
+                                            'compute student cohort information from the imported year-of-course data.',
                                 validators=[InputRequired('An reference academic year is required')])
 
     submit = SubmitField('Upload user list')

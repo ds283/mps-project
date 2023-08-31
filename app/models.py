@@ -13443,13 +13443,13 @@ class MatchingRecord(db.Model):
     # assigned personnel
     roles = db.relationship('MatchingRole', secondary=matching_role_list, lazy='dynamic',
                             single_parent=True, cascade='all, delete, delete-orphan',
-                            backref=db.backref('role_for', lazy='dynamic', uselist=False))
+                            backref=db.backref('role_for', lazy='dynamic'))
 
     # keep copy of originally assigned personnel (to support later reversion, if desired; note these are
     # *separate* instances of MatchingRole, not the same instance that is pointed to by two association tables)
     original_roles = db.relationship('MatchingRole', secondary=matching_role_list_original, lazy='dynamic',
                                      single_parent=True, cascade='all, delete, delete-orphan',
-                                     backref=db.backref('original_role_for', lazy='dynamic', uselist=False))
+                                     backref=db.backref('original_role_for', lazy='dynamic'))
 
 
     # TODO: Remove these fields

@@ -549,9 +549,12 @@ def _guess_year_data(current_line, cohort: int, year_of_course: int, current_yea
                   'estimated={es}, imported={im}, diff={df}'.format(cy=current_year, ch=cohort, fs=fyear_shift,
                                                                     es=estimated_year_of_course, im=year_of_course,
                                                                     df=difference))
-            raise SkipRow(current_line, reason=f"student's estimated year of course "
-                                               f"Y{estimated_year_of_course} was earlier "
-                                               f"than the imported value = Y{year_of_course}")
+            reason = f"student's estimated year of course Y{estimated_year_of_course} was earlier than the " \
+                     f"imported value = Y{year_of_course}"
+            if programme.year_out:
+                reason += f" (note: this student belongs to programme '{programme.full_name}' which has a year out " \
+                          f"in Y{programme.year_out_value})"
+            raise SkipRow(current_line, reason=reason)
 
     if difference >= 1 and fyear_shift == 0 and fyear_hint:
         difference = difference - 1

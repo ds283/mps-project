@@ -1276,6 +1276,7 @@ class NotificationTypesMixin:
     USER_MESSAGE = 2
     SHOW_HIDE_REQUEST = 100
     REPLACE_TEXT_REQUEST = 101
+    RELOAD_PAGE_REQUEST = 102
 
 
 class PuLPStatusMixin:
@@ -2084,6 +2085,26 @@ class User(db.Model, UserMixin):
                             uuid=str(uuid4()),
                             payload={'html_id': html_id, 'text': new_text},
                             remove_on_pageload=False)
+        db.session.add(data)
+
+        if autocommit:
+            db.session.commit()
+
+
+    def send_reload_request(self, autocommit=False):
+        """
+        Send an instruction to the user's web browser to reload the page
+        :param html_id:
+        :param new_text:
+        :param autocommit:
+        :return:
+        """
+
+        data = Notification(user_id=self.id,
+                            type=Notification.RELOAD_PAGE_REQUEST,
+                            uuid=str(uuid4()),
+                            payload={},
+                            remove_on_pageload=True)
         db.session.add(data)
 
         if autocommit:

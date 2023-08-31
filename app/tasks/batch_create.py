@@ -754,6 +754,19 @@ def register_batch_create_tasks(celery):
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 90, "Finalizing import...", autocommit=False)
 
+        record.total_lines = current_line
+        record.interpreted_lines = interpreted_lines
+        record.celery_finished = True
+        record.success = (interpreted_lines <= current_line)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        user.send_reload_request(autocommit=True)
+
         if len(ignored_lines) > 0:
             yearNone = []
             year0 = []
@@ -790,20 +803,14 @@ def register_batch_create_tasks(celery):
 
             user.post_message(render_template_string(template, yearNone=yearNone, year1=year1, year2=year2,
                                                      year3=year3, year4=year4, yearN=yearN),
-                              'warning', autocommit=False)
+                              'warning', autocommit=True)
 
         elif current_line == interpreted_lines:
             user.post_message('Successfully imported batch list "{name}"'.format(name=record.name), 'success',
-                              autocommit=False)
+                              autocommit=True)
         else:
             user.post_message('Batch list "{name}" was not correctly imported due to errors'.format(name=record.name),
-                              'error', autocommit=False)
-
-        record.total_lines = current_line
-        record.interpreted_lines = interpreted_lines
-        record.celery_finished = True
-        record.success = (interpreted_lines <= current_line)
-        db.session.commit()
+                              'error', autocommit=True)
 
 
     @celery.task(bind=True, default_retry_delay=30)

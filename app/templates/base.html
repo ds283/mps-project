@@ -179,6 +179,10 @@
                                 case 101:   // REPLACE_TEXT_REQUEST
                                     replace_text(notifications[i]);
                                     break;
+
+                                case 102:   // RELOAD_PAGE_REQUEST
+                                    location.reload();
+                                    break;
                             }
 
                             // set 'last seen' timestamp to be the timestamp of this message
@@ -193,7 +197,7 @@
                         let tasks_expanded = task_area.attr("aria-expanded");
                         let messages_expanded = message_area.attr("aria-expanded");
 
-                        // if first pass, show or hide task area based on whether or not tasks are visible
+                        // if first pass, show or hide task area based on whether (or not) tasks are visible
                         // and the user's previous explicit actions
                         if (first_pass && !closure_preference && created_tasks > 0) {
                             task_area.addClass('show');

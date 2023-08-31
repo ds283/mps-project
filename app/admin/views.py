@@ -5406,7 +5406,7 @@ def match_student_view_ajax(id):
 @admin.route('/match_faculty_view_ajax/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def match_faculty_view_ajax(id):
-    record = MatchingAttempt.query.get_or_404(id)
+    record: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
         return jsonify({})
@@ -5447,7 +5447,11 @@ def delete_match_record(record_id):
 
     try:
         # remove all matching records associated with this selector
-        db.session.query(MatchingRecord).filter_by(matching_id=attempt.id, selector_id=record.selector_id).delete()
+        records = db.session.query(MatchingRecord).filter_by(matching_id=attempt.id, selector_id=record.selector_id)
+        for record in records:
+            records: MatchingRecord
+            db.session.delete(record)
+
         db.session.commit()
 
     except SQLAlchemyError as e:

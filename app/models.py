@@ -10468,6 +10468,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     feedback_push_timestamp = db.Column(db.DateTime())
 
 
+    # TODO: Remove these fields
+
     # OLD FIELDS, TO BE REMOVED
 
     # assigned marker
@@ -13428,18 +13430,29 @@ class MatchingRecord(db.Model):
 
     # PERSONNEL
 
+    # for submissions, the relationship between SubmissionRole and SubmissionRecord is handled by placing
+    # the SubmissionRecord foreign key on SubmissionRole. This is the natural way to do it, and it would be
+    # easier to do it this way here.
+
+    # Here, we have two association tables that map MatchingRole instances to here (MatchingRecord).
+    # The point is that we want some MatchingRole instances to record the 'original' assignment
+    # (accessible via the 'original_roles' data member), and other instances to record the 'current' assignment
+    # (accessible via the 'roles' data member), and this can't be done by configuring the relationship on the
+    # MatchingRole table.
+
     # assigned personnel
     roles = db.relationship('MatchingRole', secondary=matching_role_list, lazy='dynamic',
-                            single_parent=True,
-                            cascade='all, delete, delete-orphan',
-                            backref=db.backref('role_for', lazy='dynamic'))
+                            single_parent=True, cascade='all, delete, delete-orphan',
+                            backref=db.backref('role_for', lazy='dynamic', uselist=False))
 
-    # keep copy of originally assigned personnel (to support later reversion)
+    # keep copy of originally assigned personnel (to support later reversion, if desired; note these are
+    # *separate* instances of MatchingRole, not the same instance that is pointed to by two association tables)
     original_roles = db.relationship('MatchingRole', secondary=matching_role_list_original, lazy='dynamic',
-                                     single_parent=True,
-                                     cascade='all, delete, delete-orphan',
-                                     backref=db.backref('original_role_for', lazy='dynamic'))
+                                     single_parent=True, cascade='all, delete, delete-orphan',
+                                     backref=db.backref('original_role_for', lazy='dynamic', uselist=False))
 
+
+    # TODO: Remove these fields
 
     # OLD FIELDS, TO BE REMOVED
 

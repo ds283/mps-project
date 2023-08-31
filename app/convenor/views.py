@@ -11,7 +11,7 @@
 
 from datetime import date, datetime, timedelta
 from functools import partial
-from typing import List
+from typing import List, Tuple
 from uuid import uuid4
 
 import parse
@@ -613,35 +613,35 @@ def faculty_ajax(id):
 
 
 def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClassConfig, state_filter: str):
-    def search_name(row):
+    def search_name(row: Tuple[User, FacultyData]):
         u, fd = row
         u: User
         fd: FacultyData
 
         return u.name
 
-    def sort_name(row):
+    def sort_name(row: Tuple[User, FacultyData]):
         u, fd = row
         u: User
         fd: FacultyData
 
         return [u.last_name, u.first_name]
 
-    def search_email(row):
+    def search_email(row: Tuple[User, FacultyData]):
         u, fd = row
         u: User
         fd: FacultyData
 
         return u.email
 
-    def sort_email(row):
+    def sort_email(row: Tuple[User, FacultyData]):
         u, fd = row
         u: User
         fd: FacultyData
 
         return u.email
 
-    def sort_enrolled(row):
+    def sort_enrolled(row: Tuple[User, FacultyData]):
         u, fd = row
         u: User
         fd: FacultyData
@@ -660,14 +660,14 @@ def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClass
 
         return count
 
-    def sort_golive(row):
+    def sort_golive(row: Tuple[User, FacultyData]):
         u, fd = row
         u: User
         fd: FacultyData
 
         return config.require_confirm and config.requests_issued and config.is_confirmation_required(fd)
 
-    def sort_projects(row):
+    def sort_projects(row: Tuple[User, FacultyData]):
         u, fd = row
         u: User
         fd: FacultyData

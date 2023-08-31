@@ -2,7 +2,7 @@
 
 {% if filter is none %}{% set filter = 'all' %}{% endif %}
 
-{% from "datatables.html" import import_datatables %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
 
 {% block scripts %}
     {{ super() }}
@@ -15,21 +15,33 @@
             $('#batch-data').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/manage_users/view_batch_data_ajax/{{ batch_id }}?filter={{ filter }}', dataSrc: '' },
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: { url: $SCRIPT_ROOT + '/manage_users/view_batch_data_ajax/{{ batch_id }}?filter={{ filter }}',
+                        type: "POST",
+                        data: function (args) { return { "args": JSON.stringify(args) }; }},
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'}); },
                 columns: [
                     { data: 'name',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue'
-                    } },
-                    { data: 'user' },
-                    { data: 'email' },
-                    { data: 'cohort' },
-                    { data: 'programme' },
-                    { data: 'menu' }
+                      searchable: true,
+                      orderable: true },
+                    { data: 'user',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'email',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'cohort',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'programme',
+                      searchable: true,
+                      orderable: true },
+                    { data: 'menu',
+                      searchable: false,
+                      orderable: false }
                 ],
-                deferRender: true
+                order: [[0, 'asc']]
             });
         });
     </script>
@@ -77,7 +89,7 @@
                 <tr>
                     <th width="25%"> Name</th>
                     <th width="10%"> userid</th>
-                    <th width="10%"> e-mail</th>
+                    <th width="10%"> Email</th>
                     <th width="15%"> Cohort</th>
                     <th width="25%"> Programme</th>
                     <th width="15%"> Actions</th>

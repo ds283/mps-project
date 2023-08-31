@@ -43,7 +43,7 @@ from ..shared.sqlalchemy import func
 from ..shared.utils import get_current_year, get_main_config, home_dashboard_url, redirect_url
 from ..shared.validators import validate_is_convenor
 from ..task_queue import register_task, progress_update
-from ..tools import ServerSideSQLHandler
+from ..tools import ServerSideSQLHandler, ServerSideInMemoryHandler
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -723,7 +723,7 @@ def terminate_batch(batch_id):
     :param batch_id:
     :return:
     """
-    record = StudentBatch.query.get_or_404(batch_id)
+    record: StudentBatch = StudentBatch.query.get_or_404(batch_id)
 
     if record.celery_finished:
         flash('Can not terminate batch read-in for "{name}" because it has finished'.format(name=record.name),
@@ -747,7 +747,7 @@ def terminate_batch(batch_id):
 @manage_users.route('/perform_terminate_batch/<int:batch_id>')
 @roles_accepted('manage_users', 'root')
 def perform_terminate_batch(batch_id):
-    record = StudentBatch.query.get_or_404(batch_id)
+    record: StudentBatch = StudentBatch.query.get_or_404(batch_id)
 
     url = request.args.get('url', None)
     if url is None:
@@ -788,7 +788,7 @@ def delete_batch(batch_id):
     :param batch_id:
     :return:
     """
-    record = StudentBatch.query.get_or_404(batch_id)
+    record: StudentBatch = StudentBatch.query.get_or_404(batch_id)
 
     if not record.celery_finished:
         flash('Can not delete batch creation task for "{name}" because it has not yet '
@@ -812,7 +812,7 @@ def delete_batch(batch_id):
 @manage_users.route('/perform_delete_batch/<int:batch_id>')
 @roles_accepted('manage_users', 'root')
 def perform_delete_batch(batch_id):
-    record = StudentBatch.query.get_or_404(batch_id)
+    record: StudentBatch = StudentBatch.query.get_or_404(batch_id)
 
     url = request.args.get('url', None)
     if url is None:
@@ -842,7 +842,7 @@ def perform_delete_batch(batch_id):
 @manage_users.route('/view_batch_data/<int:batch_id>')
 @roles_accepted('manage_users', 'root')
 def view_batch_data(batch_id):
-    record = StudentBatch.query.get_or_404(batch_id)
+    record: StudentBatch = StudentBatch.query.get_or_404(batch_id)
 
     filter = request.args.get('filter')
 
@@ -859,26 +859,82 @@ def view_batch_data(batch_id):
                            filter=filter)
 
 
-@manage_users.route('/view_batch_data_ajax/<int:batch_id>')
+@manage_users.route('/view_batch_data_ajax/<int:batch_id>', methods=['POST'])
 @roles_accepted('manage_users', 'root')
 def view_batch_data_ajax(batch_id):
-    record = StudentBatch.query.get_or_404(batch_id)
+    record: StudentBatch = StudentBatch.query.get_or_404(batch_id)
 
     filter = request.args.get('filter')
 
-    items = db.session.query(StudentBatchItem).filter_by(parent_id=record.id).all()
+    base_query = db.session.query(StudentBatchItem).filter_by(parent_id=record.id)
 
-    if filter == 'new':
-        items = [x.id for x in items if x.existing_record is None]
-    elif filter == 'modified':
-        items = [x.id for x in items if len(x.warnings) > 0 and x.existing_record is not None]
-    elif filter == 'both':
-        items = [x.id for x in items if (len(x.warnings) > 0 and x.existing_record is not None)
-                 or x.existing_record is None]
-    else:
-        items = [x.id for x in items]
+    def search_name(row: StudentBatchItem):
+        return row.first_name + ' ' + row.last_name
 
-    return ajax.users.build_view_batch_data(items)
+    def sort_name(row: StudentBatchItem):
+        return [row.last_name, row.first_name]
+
+    def search_user(row: StudentBatchItem):
+        return row.user_id
+
+    def sort_user(row: StudentBatchItem):
+        return row.user_id
+
+    def search_email(row: StudentBatchItem):
+        return row.email
+
+    def sort_email(row: StudentBatchItem):
+        return row.email
+
+    def search_cohort(row: StudentBatchItem):
+        return str(row.cohort)
+
+    def sort_cohort(row: StudentBatchItem):
+        return row.cohort
+
+    def search_programme(row: StudentBatchItem):
+        prog: DegreeProgramme = row.programme
+        return prog.name
+
+    def sort_programme(row: StudentBatchItem):
+        prog: DegreeProgramme = row.programme
+        return prog.name
+
+    name = {'search': search_name,
+            'order': sort_name}
+    user = {'search': search_user,
+            'order': sort_user}
+    email = {'search': search_email,
+             'order': sort_email}
+    cohort = {'search': search_cohort,
+              'order': sort_cohort}
+    programme = {'search': search_programme,
+                 'order': sort_programme}
+
+    columns = {'name': name,
+               'user': user,
+               'email': email,
+               'cohort': cohort,
+               'programme': programme}
+
+    def _filter(filter: str, row: StudentBatchItem):
+        if filter == 'new':
+            return row.existing_record is None
+
+        if filter == 'modified':
+            return row.existing_record is not None and len(row.warnings) > 0
+
+        if filter == 'both':
+            if row.existing_record is None:
+                return True
+
+            return row.warnings > 0
+
+        return True
+
+    with ServerSideInMemoryHandler(request, base_query, columns,
+                                   row_filter=partial(_filter, filter)) as handler:
+        return handler.build_payload(ajax.users.build_view_batch_data)
 
 
 @manage_users.route('/edit_batch_item/<int:item_id>', methods=['GET', 'POST'])

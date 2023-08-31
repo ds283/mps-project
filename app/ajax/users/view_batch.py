@@ -7,6 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from typing import List
 
 from flask import render_template_string, jsonify
 
@@ -118,13 +119,12 @@ _menu = \
 def _element(item_id):
     item = db.session.query(StudentBatchItem).filter_by(id=item_id).one()
 
-    return {'name': {'display': render_template_string(_name, item=item),
-                     'sortvalue': item.last_name + item.first_name},
-             'user': item.user_id,
-             'email': item.email,
-             'cohort': render_template_string(_cohort, item=item),
-             'programme': render_template_string(_programme, p=item.programme),
-             'menu': render_template_string(_menu, item=item)}
+    return {'name': render_template_string(_name, item=item),
+            'user': item.user_id,
+            'email': item.email,
+            'cohort': render_template_string(_cohort, item=item),
+            'programme': render_template_string(_programme, p=item.programme),
+            'menu': render_template_string(_menu, item=item)}
 
 
 def _delete_StudentBatchItem_cache(item_id):
@@ -171,7 +171,7 @@ def _StudentData_update_handler(mapping, connection, target):
             _delete_StudentBatchItem_cache(rec.id)
 
 
-def build_view_batch_data(items):
-    data = [_element(i) for i in items]
+def build_view_batch_data(items: List[StudentBatchItem]):
+    data = [_element(item.id) for item in items]
 
-    return jsonify(data)
+    return data

@@ -2103,7 +2103,7 @@ class User(db.Model, UserMixin):
         data = Notification(user_id=self.id,
                             type=Notification.RELOAD_PAGE_REQUEST,
                             uuid=str(uuid4()),
-                            payload={},
+                            payload=None,
                             remove_on_pageload=True)
         db.session.add(data)
 

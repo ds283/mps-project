@@ -158,14 +158,13 @@ _info = \
     {% endif %}
 </div>
 <div class="mt-1">
-    Created by
-    <a class="text-decoration-none" href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
-    on
-    {% if m.creation_timestamp is not none %}
-        {{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-    {% else %}
-        <span class="badge bg-secondary">Unknown</span>
-    {% endif %}
+    <div class="mt-1 text-muted">
+        Created by  <i class="fas fa-user-circle"></i>
+        <a class="text-decoration-none" href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
+        {% if m.creation_timestamp is not none %}
+            {{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+        {% endif %}
+    </div>
 </div>
 {% if m.last_edited_by is not none %}
     <div class="mt-1 text-muted">

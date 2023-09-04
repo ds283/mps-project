@@ -9,7 +9,7 @@
 #
 
 from datetime import datetime, timedelta
-from typing import List, Iterable, Dict, Mapping
+from typing import List, Iterable, Dict, Mapping, Union
 
 from celery import group
 from celery.exceptions import Ignore
@@ -355,7 +355,7 @@ def register_maintenance_tasks(celery):
         try:
             # only filter out records that have a finite lifetime set
             records: List[AssetType] = \
-                db.session.query(GeneratedAsset).filter(AssetType.expiry != None).all()
+                db.session.query(AssetType).filter(AssetType.expiry != None).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -381,9 +381,9 @@ def register_maintenance_tasks(celery):
         temporary_records = _collect_expirable_assets(self, TemporaryAsset)
         submitted_records = _collect_expirable_assets(self, SubmittedAsset)
 
-        tasks = [asset_check_expiry.s(r.id, GeneratedAsset, "OBJECT_STORAGE_ASSETS") for r in generated_records] \
-                + [asset_check_expiry.s(r.id, TemporaryAsset, "OBJECT_STORAGE_ASSETS") for r in temporary_records] \
-                + [asset_check_expiry.s(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in submitted_records]
+        tasks = [asset_test_expiry.s(r.id, GeneratedAsset, "OBJECT_STORAGE_ASSETS") for r in generated_records] \
+            + [asset_test_expiry.s(r.id, TemporaryAsset, "OBJECT_STORAGE_ASSETS") for r in temporary_records] \
+            + [asset_test_expiry.s(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in submitted_records]
 
         raise self.replace(group(*tasks))
 
@@ -400,24 +400,28 @@ def register_maintenance_tasks(celery):
         temporary_records = _collect_all_assets(self, TemporaryAsset)
         submitted_records = _collect_all_assets(self, SubmittedAsset)
 
-        tasks = [asset_check_lost.s(r.id, GeneratedAsset, "OBJECT_STORAGE_ASSETS") for r in generated_records] \
-                + [asset_check_lost.s(r.id, TemporaryAsset, "OBJECT_STORAGE_ASSETS") for r in temporary_records] \
-                + [asset_check_lost.s(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in submitted_records]
+        tasks = [asset_test_lost.s(r.id, GeneratedAsset, "OBJECT_STORAGE_ASSETS") for r in generated_records] \
+            + [asset_test_lost.s(r.id, TemporaryAsset, "OBJECT_STORAGE_ASSETS") for r in temporary_records] \
+            + [asset_test_lost.s(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in submitted_records]
 
-        raise self.replace(group(*tasks) | process_lost_assets.s(notify_email))
+        raise self.replace(group(*tasks) |
+                           issue_asset_report.s('email/maintenance/lost_assets.txt',
+                                                '[{app_name}] Lost asset report at {time}', notify_email))
 
 
     @celery.task(bind=True, default_retry_delay=30)
     def asset_check_attached(self, notify_email):
         submitted_records = _collect_all_assets(self, SubmittedAsset)
 
-        tasks = [asset_check_attached.si(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in submitted_records]
+        tasks = [asset_test_attached.si(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in submitted_records]
 
-        raise self.replace(group(*tasks) | process_unattached_assets.s(notify_email))
+        raise self.replace(group(*tasks) |
+                           issue_asset_report.s('email/maintenance/unattached_assets.txt',
+                                                '[{app_name}] Unattached asset report at {time}', notify_email))
 
 
     @celery.task(bind=True, default_retry_delay=30, serializer='pickle')
-    def asset_check_expiry(self, id, RecordType, storage_key: str):
+    def asset_test_expiry(self, id, RecordType, storage_key: str):
         try:
             record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
         except SQLAlchemyError as e:
@@ -447,7 +451,7 @@ def register_maintenance_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30, serializer='pickle')
-    def asset_check_lost(self, id, RecordType, storage_key: str):
+    def asset_test_lost(self, id, RecordType, storage_key: str):
         try:
             record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
         except SQLAlchemyError as e:
@@ -471,62 +475,8 @@ def register_maintenance_tasks(celery):
                 'name': asset_name}
 
 
-    @celery.task(bind=True, default_retry_delay=30)
-    def process_lost_assets(self, lost_assets, notify_email):
-        now = datetime.now()
-
-        app_name = current_app.config.get('APP_NAME', 'mpsprojects')
-
-        to_list = notify_email if isinstance(notify_email, Iterable) else [notify_email]
-
-        stripped_assets = [x for x in lost_assets if isinstance(x, Mapping)]
-        if len(stripped_assets) == 0:
-            raise Ignore()
-
-        msg = EmailMessage(subject='[{appname}] Lost assets report at '
-                                   '{time}'.format(appname=app_name, time=now.strftime("%a %d %b %Y %H:%M:%S")),
-                           from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                           reply_to=[current_app.config['MAIL_REPLY_TO']],
-                           to=to_list)
-        msg.body = render_template('email/maintenance/lost_assets.txt', assets=stripped_assets)
-
-        task_id = register_task(msg.subject, description='Send lost assets report to {r}'.format(r=', '.join(to_list)))
-
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
-
-        self.update_state(state='SUCCESS')
-
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def process_unattached_assets(self, lost_assets, notify_email):
-        now = datetime.now()
-
-        app_name = current_app.config.get('APP_NAME', 'mpsprojects')
-
-        to_list = notify_email if isinstance(notify_email, Iterable) else [notify_email]
-
-        stripped_assets = [x for x in lost_assets if isinstance(x, Mapping)]
-        if len(stripped_assets) == 0:
-            raise Ignore()
-
-        msg = EmailMessage(subject='[{appname}] Lost assets report at '
-                                   '{time}'.format(appname=app_name, time=now.strftime("%a %d %b %Y %H:%M:%S")),
-                           from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                           reply_to=[current_app.config['MAIL_REPLY_TO']],
-                           to=to_list)
-        msg.body = render_template('email/maintenance/unattached_assets.txt', assets=stripped_assets)
-
-        task_id = register_task(msg.subject, description='Send unattached assets report to {r}'.format(r=', '.join(to_list)))
-
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
-
-        self.update_state(state='SUCCESS')
-
-
     @celery.task(bind=True, default_retry_delay=30, serializer='pickle')
-    def asset_check_attached(self, id, RecordType):
+    def asset_test_attached(self, id, RecordType):
         try:
             record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
         except SQLAlchemyError as e:
@@ -549,6 +499,33 @@ def register_maintenance_tasks(celery):
         return {'type': f'{type(RecordType)}',
                 'id': record.id,
                 'name': asset_name}
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def issue_asset_report(self, lost_assets, template: str, subject: str, notify_email: Union[str, List[str]]):
+        now = datetime.now()
+        now_human = now.strftime("%a %d %b %Y %H:%M:%S")
+
+        app_name = current_app.config.get('APP_NAME', 'mpsprojects')
+
+        to_list = notify_email if isinstance(notify_email, Iterable) else [notify_email]
+
+        stripped_assets = [x for x in lost_assets if isinstance(x, Mapping)]
+        if len(stripped_assets) == 0:
+            raise Ignore()
+
+        msg = EmailMessage(subject=subject.format(app_name=app_name, time=now_human),
+                           from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                           reply_to=[current_app.config['MAIL_REPLY_TO']],
+                           to=to_list)
+        msg.body = render_template(template, assets=stripped_assets, date=now)
+
+        task_id = register_task(msg.subject, description='Send assets report to {r}'.format(r=', '.join(to_list)))
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+        self.update_state(state='SUCCESS')
 
 
     def submission_record_maintenance(self):

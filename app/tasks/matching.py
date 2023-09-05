@@ -2106,7 +2106,7 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
     base: MatchingAttempt = record.base
 
     if record.base is None:
-        print(f'-- no base in use for this match (record.base_id = {record.base_id})'
+        print(f'-- no base in use for this match (record.base_id = {record.base_id})')
         return base_X, base_Y, base_S, has_base_match
 
     for record in base.records:

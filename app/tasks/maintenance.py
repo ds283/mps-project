@@ -434,7 +434,10 @@ def register_maintenance_tasks(celery):
         if record.expiry >= datetime.now():
             return
 
-        asset_name = record.target_name if record.target_name is not None else record.unique_name
+        if hasattr(record, 'target_name'):
+            asset_name = record.target_name if record.target_name is not None else record.unique_name
+        else:
+            asset_name = record.unique_name
 
         storage = AssetCloudAdapter(record, current_app.config.get(storage_key))
         storage.delete()

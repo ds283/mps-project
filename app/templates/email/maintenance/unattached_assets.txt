@@ -1,0 +1,12 @@
+Unattached assets report for {{ date }}
+
+This refers specifically to submitted (or uploaded) assets. Specifically,
+"unattached" here means that an asset record is present in the database,
+but it is not linked to a submission record or period configuration.
+
+{% for asset in assets -%}
+{%- set type = asset['type'] -%}
+{%- set id = asset['id'] -%}
+{%- set name = asset['name'] -%}
+{{ loop.index }} {{ type }} #{{ id }}. {{ name }}
+{% endfor %}

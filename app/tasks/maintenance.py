@@ -9,13 +9,16 @@
 #
 
 from datetime import datetime, timedelta
+from typing import List, Iterable, Dict, Mapping, Union
 
 from celery import group
 from celery.exceptions import Ignore
-from flask import current_app
+from flask import current_app, render_template
+from flask_mailman import EmailMessage
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
+from .. import register_task
 from ..database import db
 from ..models import User, Project, LiveProject, AssessorAttendanceData, SubmitterAttendanceData, \
     PresentationAssessment, GeneratedAsset, TemporaryAsset, ScheduleEnumeration, ProjectDescription, \
@@ -348,70 +351,77 @@ def register_maintenance_tasks(celery):
         self.update_state(state='SUCCESS')
 
 
+    def _collect_expirable_assets(self, AssetType):
+        try:
+            # only filter out records that have a finite lifetime set
+            records: List[AssetType] = \
+                db.session.query(AssetType).filter(AssetType.expiry != None).all()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        return records
+
+
+    def _collect_all_assets(self, AssetType):
+        try:
+            # only filter out records that have a finite lifetime set
+            records: List[AssetType] = \
+                db.session.query(AssetType).all()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        return records
+
+
     @celery.task(bind=True, default_retry_delay=30)
     def asset_garbage_collection(self):
-        collect_generated_garbage(self)
-        collect_uploaded_garbage(self)
-        collect_submitted_garbage(self)
+        generated_records = _collect_expirable_assets(self, GeneratedAsset)
+        temporary_records = _collect_expirable_assets(self, TemporaryAsset)
+        submitted_records = _collect_expirable_assets(self, SubmittedAsset)
+
+        tasks = [asset_test_expiry.s(r.id, GeneratedAsset, "OBJECT_STORAGE_ASSETS") for r in generated_records] \
+            + [asset_test_expiry.s(r.id, TemporaryAsset, "OBJECT_STORAGE_ASSETS") for r in temporary_records] \
+            + [asset_test_expiry.s(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in submitted_records]
+
+        raise self.replace(group(*tasks))
 
 
-    def collect_generated_garbage(self):
-        try:
-            # only filter out records that have a finite lifetime set
-            records = db.session.query(GeneratedAsset).filter(GeneratedAsset.expiry != None).all()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
+    @celery.task(bind=True, default_retry_delay=30)
+    def asset_check_lost(self, notify_email):
+        # previously we checked for lost assets at the same time as garbage collection, but in the context of
+        # a cloud object store this generates a huge number of API calls for which we are billed! e.g., on
+        # Google Cloud Storate this was the number of API calls was the single biggest contributor to the
+        # storage bill in August 2023. We need to generate many fewer API calls by using them more intelligently.
+        # At a minimum, this means that checking for lost assets should be done in a separate job that can be
+        # scheduled much more infrequently.
+        generated_records = _collect_all_assets(self, GeneratedAsset)
+        temporary_records = _collect_all_assets(self, TemporaryAsset)
+        submitted_records = _collect_all_assets(self, SubmittedAsset)
 
-        expiry = group(asset_check_expiry.si(r.id, GeneratedAsset, "OBJECT_STORAGE_ASSETS") for r in records)
-        expiry.apply_async()
+        tasks = [asset_test_lost.s(r.id, GeneratedAsset, "OBJECT_STORAGE_ASSETS") for r in generated_records] \
+            + [asset_test_lost.s(r.id, TemporaryAsset, "OBJECT_STORAGE_ASSETS") for r in temporary_records] \
+            + [asset_test_lost.s(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in submitted_records]
 
-        orphan = group(asset_check_orphan.si(r.id, GeneratedAsset, "OBJECT_STORAGE_ASSETS") for r in records)
-        orphan.apply_async()
-
-
-    def collect_uploaded_garbage(self):
-        try:
-            # only filter out records that have a finite lifetime set
-            records = db.session.query(TemporaryAsset).filter(TemporaryAsset.expiry != None).all()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        expiry = group(asset_check_expiry.si(r.id, TemporaryAsset, "OBJECT_STORAGE_ASSETS") for r in records)
-        expiry.apply_async()
-
-        orphan = group(asset_check_orphan.si(r.id, TemporaryAsset, "OBJECT_STORAGE_ASSETS") for r in records)
-        orphan.apply_async()
+        raise self.replace(group(*tasks) |
+                           issue_asset_report.s('email/maintenance/lost_assets.txt',
+                                                '[{app_name}] Lost asset report at {time}', notify_email))
 
 
-    def collect_submitted_garbage(self):
-        try:
-            # only filter out records that have a finite lifetime set
-            records = db.session.query(SubmittedAsset).filter(SubmittedAsset.expiry != None).all()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
+    @celery.task(bind=True, default_retry_delay=30)
+    def asset_check_unattached(self, notify_email):
+        submitted_records = _collect_all_assets(self, SubmittedAsset)
 
-        expiry = group(asset_check_expiry.si(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in records)
-        expiry.apply_async()
+        tasks = [asset_test_attached.si(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in submitted_records]
 
-        orphan = group(asset_check_orphan.si(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in records)
-        orphan.apply_async()
-
-        try:
-            # this time check all records that have no lifetime, to ensure they are attached
-            records = db.session.query(SubmittedAsset).filter(SubmittedAsset.expiry == None).all()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        unattached = group(asset_check_attached.si(r.id, SubmittedAsset) for r in records)
-        unattached.apply_async()
+        raise self.replace(group(*tasks) |
+                           issue_asset_report.s('email/maintenance/unattached_assets.txt',
+                                                '[{app_name}] Unattached asset report at {time}', notify_email))
 
 
     @celery.task(bind=True, default_retry_delay=30, serializer='pickle')
-    def asset_check_expiry(self, id, RecordType, storage_key: str):
+    def asset_test_expiry(self, id, RecordType, storage_key: str):
         try:
             record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
         except SQLAlchemyError as e:
@@ -419,26 +429,29 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore()
+            return
 
-        if record.expiry < datetime.now():
-            asset_name = record.target_name if record.target_name is not None else record.unique_name
+        if record.expiry >= datetime.now():
+            return
 
-            storage = AssetCloudAdapter(record, current_app.config.get(storage_key))
-            storage.delete()
+        asset_name = record.target_name if record.target_name is not None else record.unique_name
 
-            try:
-                db.session.delete(record)
-                db.session.commit()
-            except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
+        storage = AssetCloudAdapter(record, current_app.config.get(storage_key))
+        storage.delete()
 
-            print('** Garbage collection removed expired file "{file}"'.format(file=asset_name))
+        try:
+            db.session.delete(record)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        print(f'** Garbage collection removed expired {RecordType.get_type()} object "{asset_name}" (id={record.id})')
+        return asset_name
 
 
     @celery.task(bind=True, default_retry_delay=30, serializer='pickle')
-    def asset_check_orphan(self, id, RecordType, storage_key: str):
+    def asset_test_lost(self, id, RecordType, storage_key: str):
         try:
             record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
         except SQLAlchemyError as e:
@@ -446,26 +459,25 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore()
+            return
 
         storage = AssetCloudAdapter(record, current_app.config.get(storage_key))
 
-        # check if asset exists in the object store; if not, remove the database record
-        if not storage.exists():
-            asset_name = record.target_name if record.target_name is not None else record.unique_name
+        # check if asset exists in the object store
+        if storage.exists():
+            return
 
-            try:
-                db.session.delete(record)
-                db.session.commit()
-            except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
+        asset_name = record.target_name if record.target_name is not None else record.unique_name
+        asset_type = RecordType.get_type()
 
-            print('** Garbage collection removed orphaned asset record for "{file}"'.format(file=asset_name))
+        print(f'** Detected lost {asset_type} object "{asset_name}" (id={record.id})')
+        return {'type': f'{asset_type}',
+                'id': record.id,
+                'name': asset_name}
 
 
     @celery.task(bind=True, default_retry_delay=30, serializer='pickle')
-    def asset_check_attached(self, id, RecordType):
+    def asset_test_attached(self, id, RecordType, storage_key: str):
         try:
             record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
         except SQLAlchemyError as e:
@@ -476,16 +488,47 @@ def register_maintenance_tasks(celery):
             raise Ignore()
 
         # check if attached
-        if record.submission_attachment is None and record.period_attachment is None \
-                and get_count(db.session.query(SubmissionRecord).filter_by(report_id=id)) == 0:
-            print('** Garbage collection detected unattached SubmittedAsset record, id = {id}'.format(id=record.id))
+        attached = record.submission_attachment is not None \
+                   or record.period_attachment is not None \
+                   or get_count(db.session.query(SubmissionRecord).filter_by(report_id=id)) > 0
+        if attached:
+            return None
 
-            try:
-                record.expiry = datetime.now() + timedelta(days=30)
-                db.session.commit()
-            except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
+        asset_name = record.target_name if record.target_name is not None else record.unique_name
+        asset_type = RecordType.get_type()
+
+        print(f'** Detected unattached {asset_type} object "{asset_name}" (id={record.id})')
+        return {'type': f'{asset_type}',
+                'id': record.id,
+                'name': asset_name}
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def issue_asset_report(self, lost_assets, template: str, subject: str, notify_email: Union[str, List[str]]):
+        now = datetime.now()
+        now_human = now.strftime("%a %d %b %Y %H:%M:%S")
+
+        app_name = current_app.config.get('APP_NAME', 'mpsprojects')
+
+        to_list = notify_email if isinstance(notify_email, Iterable) and not isinstance(notify_email, str) \
+            else [notify_email]
+
+        stripped_assets = [x for x in lost_assets if isinstance(x, Mapping)]
+        if len(stripped_assets) == 0:
+            raise Ignore()
+
+        msg = EmailMessage(subject=subject.format(app_name=app_name, time=now_human),
+                           from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                           reply_to=[current_app.config['MAIL_REPLY_TO']],
+                           to=to_list)
+        msg.body = render_template(template, assets=stripped_assets, date=now)
+
+        task_id = register_task(msg.subject, description='Send assets report to {r}'.format(r=', '.join(to_list)))
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+        self.update_state(state='SUCCESS')
 
 
     def submission_record_maintenance(self):

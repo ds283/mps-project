@@ -73,7 +73,9 @@ class Driver:
 
 class ObjectStore:
 
-    def __init__(self, uri: PathLike, data: Dict=None):
+    def __init__(self, uri: PathLike, database_key: int, data: Dict=None):
+        self._database_key = database_key
+
         uri_elements: SplitResult = urlsplit(uri)
 
         scheme = uri_elements.scheme
@@ -83,30 +85,27 @@ class ObjectStore:
         driver_type: Driver = _drivers[scheme]
         self._driver = driver_type(uri_elements, data)
 
+    @property
+    def database_key(self) -> int:
+        return self._database_key
 
     def get(self, key: PathLike) -> bytes:
         return self._driver.get(_as_path(key))
 
-
     def get_range(self, key: PathLike, start: int, length: int) -> bytes:
         return self._driver.get_range(_as_path(key), start=start, length=length)
-
 
     def put(self, key: PathLike, data: BytesLike, mimetype: Optional[str] = None) -> None:
         return self._driver.put(_as_path(key), _as_bytes(data), mimetype)
 
-
     def delete(self, key: PathLike) -> None:
         return self._driver.delete(_as_path(key))
-
 
     def copy(self, src: PathLike, dst: PathLike) -> None:
         return self._driver.copy(_as_path(src), _as_path(dst))
 
-
     def list(self, prefix: Optional[PathLike] = None) -> Dict[str, ObjectMeta]:
         return self._driver.list(prefix=prefix)
-
 
     def head(self, key: PathLike) -> ObjectMeta:
         return self._driver.head(_as_path(key))

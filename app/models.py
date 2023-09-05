@@ -38,6 +38,8 @@ from .shared.colours import get_text_colour
 from .shared.formatters import format_size, format_time, format_readable_time
 from .shared.sqlalchemy import get_count
 
+import app.shared.cloud_object_store.bucket_types as buckets
+
 # length of database string for typical fields, if used
 DEFAULT_STRING_LENGTH = 255
 
@@ -837,7 +839,6 @@ class AssetDownloadDataMixin():
     # target filename
     target_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
-
 def AssetMixinFactory(acl_name, acr_name):
 
     class AssetMixin():
@@ -850,6 +851,18 @@ def AssetMixinFactory(acl_name, acr_name):
 
         # filesize
         filesize = db.Column(db.Integer())
+
+        # has this asset been marked as lost by a maintenance task?
+        lost = db.Column(db.Boolean(), nullable=False, default=False)
+
+        # has this asset been marked as unattached by a maintenance task?
+        unattached = db.Column(db.Boolean(), nullable=False, default=False)
+
+        # bucket associated with this asset
+        bucket = db.Column(db.Integer(), nullable=False, default=buckets.ASSETS_BUCKET)
+
+        # optional comment
+        comment = db.Column(db.Text())
 
 
         # access control list: which users are authorized to view or download this file?
@@ -16343,6 +16356,10 @@ class GeneratedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
                               backref=db.backref('generated_assets', lazy='dynamic'))
 
 
+    @classmethod
+    def get_type(cls):
+        return 'GeneratedAsset'
+
     @property
     def number_downloads(self):
         # 'downloads' data member provided by back reference from GeneratedAssetDownloadRecord
@@ -16363,6 +16380,10 @@ class TemporaryAsset(db.Model, AssetExpiryMixin, AssetMixinFactory(temporary_acl
 
     # primary key id
     id = db.Column(db.Integer(), primary_key=True)
+
+    @classmethod
+    def get_type(cls):
+        return 'TemporaryAsset'
 
 
 class SubmittedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
@@ -16387,6 +16408,10 @@ class SubmittedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
     license = db.relationship('AssetLicense', foreign_keys=[license_id], uselist=False,
                               backref=db.backref('submitted_assets', lazy='dynamic'))
 
+
+    @classmethod
+    def get_type(cls):
+        return 'SubmittedAsset'
 
     @property
     def number_downloads(self):

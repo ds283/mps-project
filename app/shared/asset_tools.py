@@ -195,7 +195,7 @@ class AssetUploadManager:
     """
     def __init__(self, asset, bytes, storage: ObjectStore, key=None, length=None, mimetype=None,
                  key_attr: str='unique_name', size_attr: str='filesize',
-                 mimetype_attr: str='mimetype'):
+                 mimetype_attr: str='mimetype', comment: str=None):
         self._asset = asset
 
         if key is None:
@@ -232,6 +232,12 @@ class AssetUploadManager:
                 print('AssetUploadManager: user-supplied filesize ({user}) does not match ObjectMeta size reported from '
                       'backend ({cloud})'.format(user=self._asset.filesize, cloud=meta.size))
                 setattr(self._asset, self._size_attr, meta.size)
+
+        setattr(self._asset, 'lost', False)
+        setattr(self._asset, 'unattached', False)
+
+        setattr(self._asset, 'bucket', storage.database_key)
+        setattr(self._asset, 'comment', comment)
 
 
     def __enter__(self):

@@ -263,13 +263,16 @@ def register_backup_tasks(celery):
         sorted_result = sorted(thinning_result, key=functools.cmp_to_key(sort_comparator))
 
         timestamp = parser.parse(timestamp_str)
+        timestamp_human = timestamp.strftime("%a %d %b %Y %H:%M:%S")
 
-        msg = EmailMessage(subject='[mpsprojects] Backup thinning report at '
-                                   '{time}'.format(time=timestamp.strftime("%a %d %b %Y %H:%M:%S")),
+        app_name = current_app.config.get('APP_NAME', 'mpsprojects')
+
+        msg = EmailMessage(subject=f'[{app_name}] Backup thinning report at {timestamp_human}',
                            from_email=current_app.config['MAIL_DEFAULT_SENDER'],
                            reply_to=[current_app.config['MAIL_REPLY_TO']],
                            to=[email])
-        msg.body = render_template('email/backups/report_thinning.txt', result=sorted_result)
+        msg.body = render_template('email/backups/report_thinning.txt', result=sorted_result,
+                                   date=timestamp_human)
 
         task_id = register_task(msg.subject, description='Send backup thinning report to '
                                                          '{r}'.format(r=', '.join(msg.to)))

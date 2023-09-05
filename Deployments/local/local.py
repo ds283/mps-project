@@ -11,6 +11,7 @@
 import os
 
 from app.shared.cloud_object_store import ObjectStore
+import app.shared.cloud_object_store.bucket_types as buckets
 
 APP_NAME = 'mpsprojects'
 
@@ -18,10 +19,10 @@ OBJECT_STORAGE_SERVICE_ACCOUNT_FILE = os.environ.get('OBJECT_STORAGE_SERVICE_ACC
 _storage_options = {'google_service_account': OBJECT_STORAGE_SERVICE_ACCOUNT_FILE}
 
 OBJECT_STORAGE_ASSETS_URI = os.environ.get("OBJECT_STORAGE_ASSETS_URI") or 'file:///assets'
-OBJECT_STORAGE_ASSETS = ObjectStore(OBJECT_STORAGE_ASSETS_URI, _storage_options)
+OBJECT_STORAGE_ASSETS = ObjectStore(OBJECT_STORAGE_ASSETS_URI, buckets.ASSETS_BUCKET, _storage_options)
 
 OBJECT_STORAGE_BACKUP_URI = os.environ.get("OBJECT_STORAGE_BACKUP_URI") or 'file:///backup'
-OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, _storage_options)
+OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, buckets.BACKUP_BUCKET, _storage_options)
 
 BRANDING_LABEL = 'MPS projects portal'
 BRANDING_LOGIN_LANDING_STRING = 'Welcome to the MPS projects portal'

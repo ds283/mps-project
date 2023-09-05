@@ -10,7 +10,7 @@
 
 import csv
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from functools import total_ordering
 
 from celery import group
@@ -911,7 +911,7 @@ def register_batch_create_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def garbage_collection(self):
         try:
-            records: StudentBatch = db.session.query(StudentBatch).filter_by(celery_finished=True).all()
+            records: List[StudentBatch] = db.session.query(StudentBatch).filter_by(celery_finished=True).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -923,7 +923,7 @@ def register_batch_create_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def check_expiry(self, record_id):
         try:
-            record = db.session.query(StudentBatch).filter_by(id=record_id).first()
+            record: StudentBatch = db.session.query(StudentBatch).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

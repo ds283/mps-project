@@ -1,0 +1,11 @@
+Lost assets report for {{ date }}
+
+"Lost" here means that an asset record is present in the database, but the
+correponding object cannot be found in the object store.
+
+{% for asset in assets -%}
+{%- set type = asset['type'] -%}
+{%- set id = asset['id'] -%}
+{%- set name = asset['name'] -%}
+{{ loop.index }} {{ type }} #{{ id }}. {{ name }}
+{% endfor %}

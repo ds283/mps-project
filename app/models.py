@@ -837,10 +837,9 @@ class AssetDownloadDataMixin():
     # target filename
     target_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
-
 def AssetMixinFactory(acl_name, acr_name):
 
-    class AssetMixin():
+    class AssetMixin(AssetBucketsMixin):
         # timestamp
         timestamp = db.Column(db.DateTime(), index=True)
 
@@ -850,6 +849,18 @@ def AssetMixinFactory(acl_name, acr_name):
 
         # filesize
         filesize = db.Column(db.Integer())
+
+        # has this asset been marked as lost by a maintenance task?
+        lost = db.Column(db.Boolean(), nullable=False, default=False)
+
+        # has this asset been marked as unattached by a maintenance task?
+        unattached = db.Column(db.Boolean(), nullable=False, default=False)
+
+        # bucket associated with this asset
+        bucket = db.Column(db.Integer(), nullable=False, default=AssetBucketsMixin.ASSETS_BUCKET)
+
+        # optional comment
+        comment = db.Column(db.Text())
 
 
         # access control list: which users are authorized to view or download this file?
@@ -1406,6 +1417,13 @@ class AssessorPoolChoicesMixin:
                         (ALL_IN_POOL, 'For every talk, each assessor should belong to its assessor pool'),
                         (ALL_IN_RESEARCH_GROUP, 'For every talk, each assessor should belong to its assessor pool or '
                                                 'affiliation/research group')]
+
+
+class AssetBucketsMixin:
+    ASSETS_BUCKET = 0
+    GENERATED_BUCKET = 1
+    TEMPORARY_BUCKET = 2
+    BACKUP_BUCKET = 3
 
 
 # roll our own get_main_config() and get_current_year(), which we cannot import because it creates a dependency cycle

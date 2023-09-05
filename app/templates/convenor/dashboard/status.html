@@ -242,13 +242,13 @@
                                     {% set tk_pclass = tk_config.project_class %}
                                     {% set tk_status_class = none %}
                                     {% if tk.dropped %}
-                                        {% set tk_status_class = 'table-info' %}
+                                        {% set tk_status_class = 'table-light' %}
                                     {% elif tk.complete %}
                                         {% set tk_status_class = 'table-success' %}
                                     {% elif tk.is_overdue %}
                                         {% set tk_status_class = 'table-danger' %}
                                     {% elif tk.is_available %}
-                                        {% set tk_status_class = 'table-info' %}
+                                        {% set tk_status_class = 'table-light' %}
                                     {% endif %}
                                     <tr {% if tk_status_class is not none %}class="{{ tk_status_class }}"{% endif %}>
                                         <td>

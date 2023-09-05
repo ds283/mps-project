@@ -138,6 +138,10 @@ def remove_backup(id):
         db.session.rollback()
         return False, 'could not delete database entry for this backup'
 
-    storage.delete()
+    try:
+        storage.delete()
+    except FileNotFoundError:
+        # if cloud object does not exist, no harm done in this instance
+        pass
 
     return True, None

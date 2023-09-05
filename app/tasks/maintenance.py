@@ -440,7 +440,11 @@ def register_maintenance_tasks(celery):
             asset_name = record.unique_name
 
         storage = AssetCloudAdapter(record, current_app.config.get(storage_key))
-        storage.delete()
+        try:
+            storage.delete()
+        except FileNotFoundError:
+            # silently ignore if cloud object cannot be found
+            pass
 
         try:
             db.session.delete(record)

@@ -539,7 +539,11 @@ def register_canvas_tasks(celery):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            adapter.delete()
+            try:
+                adapter.delete()
+            except FileNotFoundError:
+                # silently ignore if cloud object cannot be found
+                pass
             raise Ignore()
 
         return {'asset_id': asset.id,

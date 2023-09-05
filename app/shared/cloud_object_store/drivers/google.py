@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Dict
 from urllib.parse import SplitResult
 
+from google.cloud.exceptions import NotFound
 from google.cloud.storage import Client, Bucket, Blob
 from google.oauth2 import service_account
 
@@ -42,14 +43,20 @@ class GoogleCloudStorageDriver:
 
 
     def get(self, key: Path) -> bytes:
-        blob: Blob = self._bucket.get_blob(str(key))
-        return blob.download_as_bytes()
+        try:
+            blob: Blob = self._bucket.get_blob(str(key))
+            return blob.download_as_bytes()
+        except NotFound as e:
+            raise FileNotFoundError(str(e))
 
 
     def get_range(self, key: Path, start: int, length: int) -> bytes:
-        blob: Blob = self._bucket.get_blob(str(key))
-        # start is first byte returned, end is last byte returned (so need the -1)
-        return blob.download_as_bytes(start=start, end=start+length-1)
+        try:
+            blob: Blob = self._bucket.get_blob(str(key))
+            # start is first byte returned, end is last byte returned (so need the -1)
+            return blob.download_as_bytes(start=start, end=start+length-1)
+        except NotFound as e:
+            raise FileNotFoundError(str(e))
 
 
     def put(self, key: Path, data: bytes, mimetype: str = None) -> None:
@@ -58,13 +65,19 @@ class GoogleCloudStorageDriver:
 
 
     def delete(self, key: Path) -> None:
-        blob: Blob = self._bucket.get_blob(str(key))
-        blob.delete()
+        try:
+            blob: Blob = self._bucket.get_blob(str(key))
+            blob.delete()
+        except NotFound as e:
+            raise FileNotFoundError(str(e))
 
 
     def copy(self, src: Path, dst: Path) -> None:
-        blob: Blob = self._bucket.get_blob(str(src))
-        self._bucket.copy_blob(blob, destination_bucket=self._bucket, new_name=str(dst))
+        try:
+            blob: Blob = self._bucket.get_blob(str(src))
+            self._bucket.copy_blob(blob, destination_bucket=self._bucket, new_name=str(dst))
+        except NotFound as e:
+            raise FileNotFoundError(str(e))
 
 
     def list(self, prefix: Path = None):
@@ -78,7 +91,10 @@ class GoogleCloudStorageDriver:
 
 
     def head(self, key: Path) -> ObjectMeta:
-        blob: Blob = self._bucket.get_blob(str(key))
+        try:
+            blob: Blob = self._bucket.get_blob(str(key))
+        except NotFound as e:
+            raise FileNotFoundError(str(e))
 
         data: ObjectMeta = ObjectMeta()
         data.location = blob.name

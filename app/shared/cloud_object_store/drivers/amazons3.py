@@ -15,6 +15,7 @@ from urllib.parse import SplitResult
 
 import boto3
 from botocore.client import BaseClient
+from botocore.exceptions import ClientError
 
 from ..meta import ObjectMeta
 
@@ -53,15 +54,21 @@ class AmazonS3CloudStorageDriver:
         # options.
         # Meanwhile, get_object() is a lower level API call that retrieves the object directly. It may be
         # slower for large files, but there are more configuration options
-        self._storage.download_fileobj(Bucket=self._bucket_name, Key=str(key), Fileobj=outstream)
+        try:
+            self._storage.download_fileobj(Bucket=self._bucket_name, Key=str(key), Fileobj=outstream)
+        except ClientError as e:
+            raise FileNotFoundError(str(e))
 
         return outstream.getvalue()
 
 
     def get_range(self, key: Path, start: int, length: int) -> bytes:
         # see get() for the difference between download_fileobj() and get_object()
-        response = self._storage.get_object(self._bucket_name, Key=str(key),
-                                            Range="bytes {start}-{end}".format(start=start, end=start+length-1))
+        try:
+            response = self._storage.get_object(self._bucket_name, Key=str(key),
+                                                Range="bytes {start}-{end}".format(start=start, end=start+length-1))
+        except ClientError as e:
+            raise FileNotFoundError(str(e))
         return BytesIO(response['Body'].read()).getvalue()
 
 
@@ -71,11 +78,17 @@ class AmazonS3CloudStorageDriver:
 
 
     def delete(self, key: Path) -> None:
-        self._storage.delete_object(Bucket=self._bucket_name, Key=str(key))
+        try:
+            self._storage.delete_object(Bucket=self._bucket_name, Key=str(key))
+        except ClientError as e:
+            raise FileNotFoundError(str(e))
 
 
     def copy(self, src: Path, dst: Path) -> None:
-        self._storage.copy_object(Bucket=self._bucket_name, Key=str(dst), CopySource=str(src))
+        try:
+            self._storage.copy_object(Bucket=self._bucket_name, Key=str(dst), CopySource=str(src))
+        except ClientError as e:
+            raise FileNotFoundError(str(e))
 
 
     def list(self, prefix: Path = None):
@@ -109,7 +122,10 @@ class AmazonS3CloudStorageDriver:
 
     def head(self, key: Path) -> ObjectMeta:
         key_str = str(key)
-        response = self._storage.head_object(Bucket=self._bucket_name, Key=key_str)
+        try:
+            response = self._storage.head_object(Bucket=self._bucket_name, Key=key_str)
+        except ClientError as e:
+            raise FileNotFoundError(str(e))
 
         data: ObjectMeta = ObjectMeta()
         data.location = key_str

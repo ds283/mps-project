@@ -16343,6 +16343,10 @@ class GeneratedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
                               backref=db.backref('generated_assets', lazy='dynamic'))
 
 
+    @classmethod
+    def get_type(cls):
+        return 'GeneratedAsset'
+
     @property
     def number_downloads(self):
         # 'downloads' data member provided by back reference from GeneratedAssetDownloadRecord
@@ -16363,6 +16367,10 @@ class TemporaryAsset(db.Model, AssetExpiryMixin, AssetMixinFactory(temporary_acl
 
     # primary key id
     id = db.Column(db.Integer(), primary_key=True)
+
+    @classmethod
+    def get_type(cls):
+        return 'TemporaryAsset'
 
 
 class SubmittedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
@@ -16387,6 +16395,10 @@ class SubmittedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
     license = db.relationship('AssetLicense', foreign_keys=[license_id], uselist=False,
                               backref=db.backref('submitted_assets', lazy='dynamic'))
 
+
+    @classmethod
+    def get_type(cls):
+        return 'SubmittedAsset'
 
     @property
     def number_downloads(self):

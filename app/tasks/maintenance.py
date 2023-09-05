@@ -367,7 +367,7 @@ def register_maintenance_tasks(celery):
         try:
             # only filter out records that have a finite lifetime set
             records: List[AssetType] = \
-                db.session.query(GeneratedAsset).all()
+                db.session.query(AssetType).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -410,7 +410,7 @@ def register_maintenance_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def asset_check_attached(self, notify_email):
+    def asset_check_unattached(self, notify_email):
         submitted_records = _collect_all_assets(self, SubmittedAsset)
 
         tasks = [asset_test_attached.si(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in submitted_records]
@@ -429,10 +429,10 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore()
+            return
 
         if record.expiry >= datetime.now():
-            return None
+            return
 
         asset_name = record.target_name if record.target_name is not None else record.unique_name
 
@@ -446,7 +446,7 @@ def register_maintenance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        print(f'** Garbage collection removed expired {type(RecordType)} object "{asset_name}" (id={record.id})')
+        print(f'** Garbage collection removed expired {RecordType.get_type()} object "{asset_name}" (id={record.id})')
         return asset_name
 
 
@@ -459,24 +459,25 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore()
+            return
 
         storage = AssetCloudAdapter(record, current_app.config.get(storage_key))
 
         # check if asset exists in the object store
         if storage.exists():
-            return None
+            return
 
         asset_name = record.target_name if record.target_name is not None else record.unique_name
+        asset_type = RecordType.get_type()
 
-        print(f'** Detected lost {type(RecordType)} object "{asset_name}" (id={record.id})')
-        return {'type': f'{type(RecordType)}',
+        print(f'** Detected lost {asset_type} object "{asset_name}" (id={record.id})')
+        return {'type': f'{asset_type}',
                 'id': record.id,
                 'name': asset_name}
 
 
     @celery.task(bind=True, default_retry_delay=30, serializer='pickle')
-    def asset_test_attached(self, id, RecordType):
+    def asset_test_attached(self, id, RecordType, storage_key: str):
         try:
             record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
         except SQLAlchemyError as e:
@@ -494,9 +495,10 @@ def register_maintenance_tasks(celery):
             return None
 
         asset_name = record.target_name if record.target_name is not None else record.unique_name
+        asset_type = RecordType.get_type()
 
-        print(f'** Detected unattached {type(RecordType)} object "{asset_name}" (id={record.id})')
-        return {'type': f'{type(RecordType)}',
+        print(f'** Detected unattached {asset_type} object "{asset_name}" (id={record.id})')
+        return {'type': f'{asset_type}',
                 'id': record.id,
                 'name': asset_name}
 
@@ -508,7 +510,8 @@ def register_maintenance_tasks(celery):
 
         app_name = current_app.config.get('APP_NAME', 'mpsprojects')
 
-        to_list = notify_email if isinstance(notify_email, Iterable) else [notify_email]
+        to_list = notify_email if isinstance(notify_email, Iterable) and not isinstance(notify_email, str) \
+            else [notify_email]
 
         stripped_assets = [x for x in lost_assets if isinstance(x, Mapping)]
         if len(stripped_assets) == 0:

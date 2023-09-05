@@ -2113,8 +2113,9 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
         record: MatchingRecord
 
         if record.selector_id not in sel_to_number:
-            raise RuntimeError(f'Missing SelectingStudent when reconstructing X map '
-                               f'(SelectingStudent.id = {record.selector_id})')
+            # this does not have to be an error; we just take it to indicate that no base match exists
+            print(f'Missing SelectingStudent when reconstructing X map (SelectingStudent.id = {record.selector_id})')
+            continue
 
         # get our selector number for the allocated selector
         sel_number = sel_to_number[record.selector_id]
@@ -2123,7 +2124,11 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
         sel_user: User = selector.student.user
 
         if record.project_id not in lp_to_number:
-            raise RuntimeError(f'Missing LiveProject when reconstructing X map (LiveProject.id = {record.project_id})')
+            # this does not have to be an error; we just take it to indicate that no base match exists
+            # (e.g. this can happen if a supervisor has been marked as on sabbatical since the original match
+            # was done; then their LiveProject instances don't get enumerated)
+            print(f'Missing LiveProject when reconstructing X map (LiveProject.id = {record.project_id})')
+            continue
 
         # get our project number for the allocated project
         proj_number = lp_to_number[record.project_id]
@@ -2139,7 +2144,9 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
 
             if role.role == MatchingRole.ROLE_SUPERVISOR:
                 if role.user_id not in sup_to_number:
-                    raise RuntimeError(f'Missing supervisor when reconstructing S map (User.id = {role.user_id})')
+                    print(f'Missing supervisor when reconstructing S map (User.id = {role.user_id})')
+                    continue
+
                 supv_number = sup_to_number[role.user_id]
 
                 key = (supv_number, proj_number)
@@ -2154,7 +2161,9 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
 
             elif role.role == MatchingRole.ROLE_MARKER:
                 if role.user_id not in mark_to_number:
-                    raise RuntimeError(f'Missing marker when reconstructing Y map (User.id = {role.user_id})')
+                    print(f'Missing marker when reconstructing Y map (User.id = {role.user_id})')
+                    continue
+
                 mark_number = mark_to_number[role.user_id]
 
                 key = (mark_number, proj_number, sel_number)

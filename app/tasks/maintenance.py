@@ -438,6 +438,7 @@ def register_maintenance_tasks(celery):
             asset_name = record.target_name if record.target_name is not None else record.unique_name
         else:
             asset_name = record.unique_name
+        asset_type = RecordType.get_type()
 
         storage = AssetCloudAdapter(record, current_app.config.get(storage_key))
         try:
@@ -453,7 +454,7 @@ def register_maintenance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        print(f'** Garbage collection removed expired {RecordType.get_type()} object "{asset_name}" (id={record.id})')
+        print(f'** Garbage collection removed expired {asset_type} object "{asset_name}" (id={record.id})')
         return asset_name
 
 
@@ -474,7 +475,10 @@ def register_maintenance_tasks(celery):
         if storage.exists():
             return
 
-        asset_name = record.target_name if record.target_name is not None else record.unique_name
+        if hasattr(record, 'target_name'):
+            asset_name = record.target_name if record.target_name is not None else record.unique_name
+        else:
+            asset_name = record.unique_name
         asset_type = RecordType.get_type()
 
         print(f'** Detected lost {asset_type} object "{asset_name}" (id={record.id})')

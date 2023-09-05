@@ -38,6 +38,8 @@ from .shared.colours import get_text_colour
 from .shared.formatters import format_size, format_time, format_readable_time
 from .shared.sqlalchemy import get_count
 
+import app.shared.cloud_object_store.bucket_types as buckets
+
 # length of database string for typical fields, if used
 DEFAULT_STRING_LENGTH = 255
 
@@ -839,7 +841,7 @@ class AssetDownloadDataMixin():
 
 def AssetMixinFactory(acl_name, acr_name):
 
-    class AssetMixin(AssetBucketsMixin):
+    class AssetMixin():
         # timestamp
         timestamp = db.Column(db.DateTime(), index=True)
 
@@ -857,7 +859,7 @@ def AssetMixinFactory(acl_name, acr_name):
         unattached = db.Column(db.Boolean(), nullable=False, default=False)
 
         # bucket associated with this asset
-        bucket = db.Column(db.Integer(), nullable=False, default=AssetBucketsMixin.ASSETS_BUCKET)
+        bucket = db.Column(db.Integer(), nullable=False, default=buckets.ASSETS_BUCKET)
 
         # optional comment
         comment = db.Column(db.Text())
@@ -1417,13 +1419,6 @@ class AssessorPoolChoicesMixin:
                         (ALL_IN_POOL, 'For every talk, each assessor should belong to its assessor pool'),
                         (ALL_IN_RESEARCH_GROUP, 'For every talk, each assessor should belong to its assessor pool or '
                                                 'affiliation/research group')]
-
-
-class AssetBucketsMixin:
-    ASSETS_BUCKET = 0
-    GENERATED_BUCKET = 1
-    TEMPORARY_BUCKET = 2
-    BACKUP_BUCKET = 3
 
 
 # roll our own get_main_config() and get_current_year(), which we cannot import because it creates a dependency cycle

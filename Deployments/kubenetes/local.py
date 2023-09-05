@@ -11,6 +11,7 @@
 import os
 
 from app.shared.cloud_object_store import ObjectStore
+import app.shared.cloud_object_store.bucket_types as buckets
 
 PREFERRED_URL_SCHEME = 'https'
 
@@ -21,7 +22,7 @@ OBJECT_STORAGE_SERVICE_ACCOUNT_FILE = os.environ.get('OBJECT_STORAGE_SERVICE_ACC
 _storage_options = {'google_service_account': OBJECT_STORAGE_SERVICE_ACCOUNT_FILE}
 
 OBJECT_STORAGE_ASSETS_URI = os.environ.get("OBJECT_STORAGE_ASSETS_URI")
-OBJECT_STORAGE_ASSETS = ObjectStore(OBJECT_STORAGE_ASSETS_URI, _storage_options)
+OBJECT_STORAGE_ASSETS = ObjectStore(OBJECT_STORAGE_ASSETS_URI, buckets.ASSET_BUCKET, _storage_options)
 
 OBJECT_STORAGE_BACKUP_URI = os.environ.get("OBJECT_STORAGE_BACKUP_URI")
-OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, _storage_options)
+OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, buckets.BACKUP_BUCKET, _storage_options)

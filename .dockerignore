@@ -21,3 +21,7 @@ worker-output
 sonar-project.properties
 test_pdf.py
 Deployments
+build.sh
+restart.sh
+migrate.sh
+PyMuPDF-setup.py

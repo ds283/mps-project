@@ -930,7 +930,7 @@ def view_batch_data_ajax(batch_id):
             if row.existing_record is None:
                 return True
 
-            return row.warnings > 0
+            return len(row.warnings) > 0
 
         return True
 

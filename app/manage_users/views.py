@@ -19,7 +19,7 @@ from flask_security import current_user, roles_required, roles_accepted
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 from flask_security.utils import config_value, get_message, do_flash, send_mail
-from sqlalchemy import or_
+from sqlalchemy import or_, literal
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import cast
 from sqlalchemy.types import String
@@ -961,17 +961,28 @@ def edit_batch_item(item_id):
         record.repeated_years = form.repeated_years.data
         record.intermitting = form.intermitting.data
 
-        existing_record = db.session.query(User) \
-            .join(StudentData, StudentData.id == User.id) \
-            .filter(or_(func.lower(User.email) == func.lower(record.email),
-                        func.lower(User.username) == func.lower(record.user_id),
-                        StudentData.exam_number == record.exam_number,
-                        StudentData.registration_number == record.registration_number)).first()
+        if record.existing_record is None:
+            condition_list = literal(False)
 
-        record.existing_id = existing_record.id if existing_record is not None else None
+            if record.email is not None:
+                condition_list |= func.lower(User.email) == func.lower(record.email)
 
-        if existing_record.email.lower() != record.email.lower():
-            record.dont_convert = True
+            if record.user_id is not None:
+                condition_list |= func.lower(User.username) == func.lower(record.user_id)
+
+            if record.exam_number is not None:
+                condition_list |= StudentData.exam_number == record.exam_number
+
+            if record.registration_number is not None:
+                condition_list |= StudentData.registration_number == record.registration_number
+
+            existing_record = db.session.query(User) \
+                .join(StudentData, StudentData.id == User.id).filter(condition_list).first()
+
+            record.existing_id = existing_record.id if existing_record is not None else None
+
+            if existing_record.email.lower() != record.email.lower():
+                record.dont_convert = True
 
         db.session.commit()
 

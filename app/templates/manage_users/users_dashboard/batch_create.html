@@ -78,7 +78,7 @@
                                             by <i class="fas fa-user-circle"></i>
                                             <a class="text-decoration-none" href="mailto:{{ batch.owner.email }}">{{ batch.owner.name }}</a>
                                         {% endif %}
-                                        at {{ batch.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                                        on {{ batch.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
                                     </div>
                                 {% endif %}
                                 {% if batch.success %}

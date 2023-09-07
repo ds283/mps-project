@@ -211,8 +211,9 @@ class UploadBatchCreateForm(Form):
 
     current_year = IntegerField('Please specify the academic year that should be used to interpret '
                                 'imported year-of-course values',
-                                description='For academic year N/N+1, please enter N. This is needed to correctly '
-                                            'compute student cohort information from the imported year-of-course data.',
+                                description='For academic year N/N+1, please enter N. For example, for 2023/24 please '
+                                            'enter 2023. This information is needed to correctly '
+                                            'compute student cohorts from the imported year-of-course data.',
                                 validators=[InputRequired('An reference academic year is required')])
 
     submit = SubmitField('Upload user list')

@@ -61,8 +61,8 @@
                                     {% endif %}
                                     {% if batch.report and batch.report|length > 0 %}
                                         <div class="text-muted mt-1">
-                                            <span tabindex="1" data-bs-toggle="popover" title="Import report" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ batch.report }}">
-                                                Import report <i class="ms-1 fas fa-chevron-right"></i>
+                                            <span tabindex="1" data-bs-toggle="popover" title="Processing report" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ batch.report }}">
+                                                Processing report <i class="ms-1 fas fa-chevron-right"></i>
                                             </span>
                                         </div>
                                     {% endif %}
@@ -93,7 +93,9 @@
                                 {% endif %}
                                 <div class="mt-1 text-muted small">
                                     <ul>
-                                        <li><strong>{{ batch.number_items }} items processed</strong></li>
+                                        {% if batch.celery_finished %}
+                                            <li><strong>{{ batch.number_items }} items processed {% if not batch.converted %}but not yet imported{% endif %}</strong></li>
+                                        {% endif %}
                                         <li>Reference academic year {{ batch.academic_year }}</li>
                                         {% if batch.trust_cohort %}
                                             <li>Importing cohort data</li>

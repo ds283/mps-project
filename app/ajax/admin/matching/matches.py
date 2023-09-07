@@ -159,7 +159,7 @@ _info = \
 </div>
 <div class="mt-1">
     <div class="mt-1 text-muted">
-        Created by  <i class="fas fa-user-circle"></i>
+        Created by <i class="fas fa-user-circle"></i>
         <a class="text-decoration-none" href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
         {% if m.creation_timestamp is not none %}
             {{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}

@@ -4059,6 +4059,11 @@ class StudentBatch(db.Model):
     # original filename
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
 
+    # importing user
+    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    owner = db.relationship('User', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('student_batch_imports', lazy='dynamic'))
+
     # celery task UUID
     celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
@@ -4091,6 +4096,9 @@ class StudentBatch(db.Model):
 
     # what was the reference academic year (the one used to calculate all student years)
     academic_year = db.Column(db.Integer())
+
+    # cached import report
+    report = db.Column(db.Text())
 
 
     @property

@@ -662,6 +662,7 @@ def batch_create_users():
                 uuid = register_task(tk_name, owner=current_user, description=tk_description)
 
                 record = StudentBatch(name=batch_file.filename,
+                                      owner_id=current_user.id,
                                       celery_id=uuid,
                                       celery_finished=False,
                                       success=False,
@@ -672,7 +673,8 @@ def batch_create_users():
                                       trust_cohort=trust_cohort,
                                       trust_registration=trust_registration,
                                       ignore_Y0=ignore_Y0,
-                                      academic_year=current_year)
+                                      academic_year=current_year,
+                                      report=None)
 
                 try:
                     db.session.add(asset)
@@ -692,7 +694,7 @@ def batch_create_users():
 
                 batch_task = celery.tasks['app.tasks.batch_create.students']
 
-                work = batch_task.si(record.id, asset.id, current_user.id, record.academic_year)
+                work = batch_task.si(record.id, asset.id, record.academic_year)
 
                 seq = chain(init.si(uuid, tk_name), work,
                             final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))

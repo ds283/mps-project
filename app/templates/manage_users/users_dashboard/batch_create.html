@@ -43,21 +43,28 @@
                             {{ batch.name }}
                         {% endif %}
                     </div>
-                    <div class="row vertical-top" style="margin-bottom: 10px;">
+                    <div class="row vertical-top mb-3">
                         <div class="col-4">
                             <div>
                                 {% if not batch.celery_finished %}
                                     <span class="badge bg-info">In progress</span>
                                 {% else %}
                                     {% if batch.success %}
-                                        <span class="badge bg-success"><i class="fas fa-check"></i> Read succeeded</span>
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Processed</span>
                                     {% else %}
-                                        <span class="badge bg-danger"><i class="fas fa-times"></i> Read failed</span>
+                                        <span class="badge bg-danger"><i class="fas fa-times"></i> Failed</span>
                                     {% endif %}
                                     {% if batch.converted %}
                                         <span class="badge bg-success"><i class="fas fa-check"></i> Converted</span>
                                     {% else %}
                                         <span class="badge bg-secondary">Not converted</span>
+                                    {% endif %}
+                                    {% if batch.report and batch.report|length > 0 %}
+                                        <div class="text-muted mt-1">
+                                            <span tabindex="1" data-bs-toggle="popover" title="Import report" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ batch.report }}">
+                                                Import report <i class="ms-1 fas fa-chevron-right"></i>
+                                            </span>
+                                        </div>
                                     {% endif %}
                                 {% endif %}
                             </div>
@@ -65,64 +72,75 @@
                         <div class="col-4">
                             <div>
                                 {% if batch.timestamp %}
-                                    <span class="badge bg-primary">Timestamp {{ batch.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                    <div class="text-muted small">
+                                        Imported
+                                        {% if batch.owner %}
+                                            by <i class="fas fa-user-circle"></i>
+                                            <a class="text-decoration-none" href="mailto:{{ batch.owner.email }}">{{ batch.owner.name }}</a>
+                                        {% endif %}
+                                        at {{ batch.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                                    </div>
                                 {% endif %}
                                 {% if batch.success %}
-                                    <span class="badge bg-primary">Total lines: {{ batch.total_lines }}</span>
-                                    {% if batch.interpreted_lines < batch.total_lines %}
-                                        <span class="badge bg-warning text-dark">Ignored lines: {{ batch.total_lines - batch.interpreted_lines }}</span>
-                                    {% else %}
-                                        <span class="badge bg-success"><i class="fas fa-check"></i> All lines processed</span>
-                                    {% endif %}
+                                    <div class="text-muted small mt-1">
+                                        Total lines: {{ batch.total_lines }} |
+                                        {% if batch.interpreted_lines < batch.total_lines %}
+                                            Ignored lines: {{ batch.total_lines - batch.interpreted_lines }}
+                                        {% else %}
+                                            All lines processed
+                                        {% endif %}
+                                    </div>
                                 {% endif %}
-                                <span class="badge bg-info">{{ batch.number_items }} items</span>
-                            </div>
-                            <div>
-                                <span class="badge bg-info">Reference academic year {{ batch.academic_year }}</span>
-                                {% if batch.trust_cohort %}
-                                    <span class="badge bg-success"><i class="fas fa-check"></i> Cohort data</span>
-                                {% else %}
-                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> Cohort data</span>
-                                {% endif %}
-                                {% if batch.trust_registration %}
-                                    <span class="badge bg-success"><i class="fas fa-check"></i> Registration numbers</span>
-                                {% else %}
-                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> Registration numbers</span>
-                                {% endif %}
-                                {% if batch.ignore_Y0 %}
-                                    <span class="badge bg-info"><i class="fas fa-times"></i> Y0 students</span>
-                                {% endif %}
+                                <div class="mt-1 text-muted small">
+                                    <ul>
+                                        <li><strong>{{ batch.number_items }} items processed</strong></li>
+                                        <li>Reference academic year {{ batch.academic_year }}</li>
+                                        {% if batch.trust_cohort %}
+                                            <li>Importing cohort data</li>
+                                        {% else %}
+                                            <li>Not importing cohort data</li>
+                                        {% endif %}
+                                        {% if batch.trust_registration %}
+                                            <li>Importing registration numbers</li>
+                                        {% else %}
+                                            <li>Not importing registration numbers</li>
+                                        {% endif %}
+                                        {% if batch.ignore_Y0 %}
+                                            <li>Y0 students are ignored</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                         <div class="col-4">
-                            <div class="float-end">
+                            <div class="d-flex align-content-start justify-content-end gap-2">
                                 {% if not batch.celery_finished %}
-                                    <a href="{{ url_for('manage_users.terminate_batch', batch_id=batch.id) }}" class="btn btn-sm btn-danger btn-table-block">
+                                    <a href="{{ url_for('manage_users.terminate_batch', batch_id=batch.id) }}" class="btn btn-sm btn-danger">
                                         Terminate
                                     </a>
                                 {% else %}
                                     {% if batch.converted %}
-                                        <a class="disabled btn btn-sm btn-success btn-table-block">
+                                        <a class="disabled btn btn-sm btn-outline-success">
                                             Workflow complete
                                         </a>
-                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-warning btn-table-block">
+                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-warning">
                                             Delete
                                         </a>
                                     {% elif batch.success %}
-                                        <a href="{{ url_for('manage_users.view_batch_data', batch_id=batch.id) }}" class="btn btn-sm btn-secondary btn-table-block">
+                                        <a href="{{ url_for('manage_users.view_batch_data', batch_id=batch.id) }}" class="btn btn-sm btn-outline-secondary">
                                             View records
                                         </a>
-                                        <a href="{{ url_for('manage_users.import_batch', batch_id=batch.id) }}" class="btn btn-sm btn-primary btn-table-block">
+                                        <a href="{{ url_for('manage_users.import_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-primary">
                                             Import
                                         </a>
-                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-danger btn-table-block">
+                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger">
                                             Delete
                                         </a>
                                     {% else %}
                                         <a class="disabled btn btn-sm btn-danger">
                                             Not usable
                                         </a>
-                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-warning btn-table-block">
+                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-warning">
                                             Delete
                                         </a>
                                     {% endif %}

@@ -37,11 +37,19 @@ OUTCOME_ERROR = 5
 BATCH_IMPORT_LIFETIME_SECONDS = 24*60*60
 
 # language=jinja2
-template = \
+_batch_import_report_header = \
 """
-<div class="mb-1"><strong>Some student entries did not import correctly.</strong></div>
-<div class="mb-2">Please review these entries and re-import the batch list if needed, after making any necessary changes.</div>
-<div class="small">
+<div><strong>Some student entries did not import correctly.</strong></div>
+<div class="mt-2">Please review these entries and re-import the batch list if needed,
+after making any necessary changes.</div>
+<div class="mt-1">This report is saved with the batch record, so you may refresh the page
+without losing access to it.</div>
+"""
+
+# language=jinja2
+_batch_import_report_body = \
+"""
+<div class="mt-2 small">
     <ul>
         {% if yearNone|length > 0 %}
             <li>
@@ -115,6 +123,22 @@ template = \
         {% endif %}
     </ul>
 </div>
+"""
+
+# language=jinja2
+_batch_import_success = \
+"""
+<div><strong>Successfully imported batch list {{ name }}.</strong></div>
+<div class="mt-2">This page does not auto-update.
+Please click <a href="#" onclick="location.reload()">here</a> to refresh the page.</div>
+"""
+
+# language=jinja2
+_batch_import_fail = \
+"""
+<div><strong>Batch list {{ name }} was not correctly imported because of errors.</strong></div>
+<div class="mt-2">This page does not auto-update.
+Please click <a href="#" onclick="location.reload()">here</a> to refresh the page.</div>
 """
 
 @total_ordering
@@ -592,16 +616,15 @@ def _match_existing_student(current_line, username, email) -> (bool, StudentData
 def register_batch_create_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
-    def students(self, record_id, asset_id, current_user_id, current_year):
+    def students(self, record_id, asset_id, current_year):
         try:
             record: StudentBatch = db.session.query(StudentBatch).filter_by(id=record_id).first()
             asset: TemporaryAsset = db.session.query(TemporaryAsset).filter_by(id=asset_id).first()
-            user: User = db.session.query(User).filter_by(id=current_user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if record is None or asset is None or user is None:
+        if record is None or asset is None:
             self.update_state(state='FAILURE', meta={'msg': 'Could not load database records'})
 
             record.celery_finished = True
@@ -762,10 +785,9 @@ def register_batch_create_tasks(celery):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
+            db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
-
-        user.send_reload_request(autocommit=True)
 
         if len(ignored_lines) > 0:
             yearNone = []
@@ -801,16 +823,29 @@ def register_batch_create_tasks(celery):
             year4.sort()
             yearN.sort()
 
-            user.post_message(render_template_string(template, yearNone=yearNone, year1=year1, year2=year2,
-                                                     year3=year3, year4=year4, yearN=yearN),
-                              'warning', autocommit=True)
+            message_string = render_template_string(_batch_import_success, name=record.name)
+            record.owner.post_message(message_string, 'info', autocommit=False)
+
+            report_string = _batch_import_report_header + \
+                            render_template_string(_batch_import_report_body, yearNone=yearNone, year1=year1,
+                                                   year2=year2,
+                                                   year3=year3, year4=year4, yearN=yearN)
+            record.owner.post_message(report_string, 'warning', autocommit=True)
+
+            record.report = report_string
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                # report the exception but otherwise allow it to pass silently
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         elif current_line == interpreted_lines:
-            user.post_message('Successfully imported batch list "{name}"'.format(name=record.name), 'success',
-                              autocommit=True)
+            message_string = render_template_string(_batch_import_success, name=record.name)
+            record.owner.post_message(message_string, 'success', autocommit=True)
         else:
-            user.post_message('Batch list "{name}" was not correctly imported due to errors'.format(name=record.name),
-                              'error', autocommit=True)
+            message_string = render_template_string(_batch_import_fail, name=record.name)
+            record.owner.post_message(message_string, 'error', autocommit=True)
 
 
     @celery.task(bind=True, default_retry_delay=30)

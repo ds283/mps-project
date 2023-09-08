@@ -56,7 +56,7 @@ _full_enrollments = \
             {% if swatch_colour is not none %}
                 <div class="me-1" style="width: 1rem; height: 1rem; {{ swatch_colour|safe }}"></div>
             {% endif %}
-            {{ record.pclass.name }}
+            <span>{{ record.pclass.name }}</span>
         </div>
         <div class="d-flex flex-row justify-content-start align-items-center gap-2">
             {% if config.uses_supervisor %}

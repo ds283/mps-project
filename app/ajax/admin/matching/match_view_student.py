@@ -23,7 +23,7 @@ _student = \
         Conversion of this student is disabled.
     </div>
     <div>
-        <a class="btn btn-sm btn-danger" href="{{ url_for('admin.delete_match_record', record_id=record_id) }}">
+        <a class="btn btn-xs btn-outline-danger" href="{{ url_for('admin.delete_match_record', record_id=record_id) }}">
             Delete
         </a>
     </div>
@@ -35,13 +35,17 @@ _student = \
 _pclass = \
 """
 {% set config = sel.config %}
-{% set pclass = config.project_class %}
-{% set style = pclass.make_CSS_style() %}
-<a class="badge text-decoration-none text-nohover-light {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block"
-   {% if style %}style="{{ style }}"{% endif %}
-   href="mailto:{{ config.convenor_email }}">
-    {{ pclass.abbreviation }} ({{ config.convenor_name }})
-</a>
+{% set swatch_colour = config.project_class.make_CSS_style() %}
+<div class="d-flex flex-row justify-content-start align-items-center gap-2">
+    {% if swatch_colour is not none %}
+        <div class="me-1" style="width: 0.8rem; height: 0.8rem; {{ swatch_colour|safe }}"></div>
+    {% endif %}
+    <span class="small">{{ config.name }}</span>
+</div>
+<div class="d-flex flex-row justify-content-start align-items-center gap-2 small">
+    <i class="fa fa-user-circle"></i>
+    <a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a>
+</div>
 """
 
 
@@ -83,13 +87,13 @@ _project = \
             </a>
             {% if adjustable %}
                 {% set list = r.selector.ordered_selections %}
-                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                    <div class="dropdown-header">Submitted choices</div>
+                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
+                    <div class="dropdown-header small">Quick reassignment</div>
                     {% for item in list %}
                         {% set disabled = false %}
                         {% set project = item.liveproject %}
                         {% if item.liveproject_id == r.project_id or not item.is_selectable %}{% set disabled = true %}{% endif %}
-                        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
+                        <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
                            #{{ item.rank }}: {{ item.format_project()|safe }}
                            {% if project.generic or project.owner is none %}
                               (generic)
@@ -102,7 +106,7 @@ _project = \
                         </a>
                     {% endfor %}
                     <div role="separator" class="dropdown-divider"></div>
-                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.reassign_supervisor_roles', rec_id=r.id, url=url_for('admin.match_student_view', id=r.matching_id)) }}">
+                    <a class="dropdown-item d-flex gap-2 small" href="{{ url_for('admin.reassign_supervisor_roles', rec_id=r.id, url=url_for('admin.match_student_view', id=r.matching_id)) }}">
                         Edit supervisor roles...
                     </a>                
                 </div>

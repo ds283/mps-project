@@ -1327,7 +1327,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
 
     with Timer() as mark_timer:
 
-        # Markers can only be assigned projects to which they are in the assessor pool
+        # Markers can only be assigned projects for which they are in the assessor pool
         for i in range(number_mark):
             mark: FacultyData = mark_dict[i]
             user: User = mark.user

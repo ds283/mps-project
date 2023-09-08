@@ -1230,12 +1230,12 @@ class SelectHintTypesMixin:
     SELECTION_HINT_DISCOURAGE_STRONG = 6
 
     _icons = {SELECTION_HINT_NEUTRAL: '',
-              SELECTION_HINT_REQUIRE: '<i class="fas fa-check fa-fw"></i>',
-              SELECTION_HINT_FORBID: '<i class="fas fa-times fa-fw"></i>',
+              SELECTION_HINT_REQUIRE: '<i class="fas fa-check-circle fa-fw"></i>',
+              SELECTION_HINT_FORBID: '<i class="fas fa-times-circle fa-fw"></i>',
               SELECTION_HINT_ENCOURAGE: '<i class="fas fa-plus fa-fw"></i>',
               SELECTION_HINT_DISCOURAGE: '<i class="fas fa-minus fa-fw"></i>',
-              SELECTION_HINT_ENCOURAGE_STRONG: '<i class="fas fa-plus fa-fw"></i> <i class="fas fa-plus fa-fw"></i>',
-              SELECTION_HINT_DISCOURAGE_STRONG: '<i class="fas fa-minus fa-fw"></i> <i class="fas fa-minus fa-fw"></i>'}
+              SELECTION_HINT_ENCOURAGE_STRONG: '<i class="fas fa-plus-circle fa-fw"></i>',
+              SELECTION_HINT_DISCOURAGE_STRONG: '<i class="fas fa-minus-circle fa-fw"></i>'}
 
     _menu_items = {SELECTION_HINT_NEUTRAL: 'Neutral',
                    SELECTION_HINT_REQUIRE: 'Require',
@@ -11638,6 +11638,9 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
         if len(tag) > 0:
             tag += ' '
 
+        if self.hint == self.SELECTION_HINT_FORBID:
+            return tag + '<s>' + self.liveproject.name + '</s>'
+
         return tag + self.liveproject.name
 
 
@@ -11700,6 +11703,11 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
 
         # note database has to be committed separately
         self.hint = hint
+
+
+    @property
+    def has_hint(self):
+        return self.hint != self.SELECTION_HINT_NEUTRAL
 
 
 @listens_for(SelectionRecord, 'before_update')

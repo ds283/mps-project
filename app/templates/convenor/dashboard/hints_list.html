@@ -34,10 +34,10 @@
                                 <div class="col-2">
                                     <span class="badge bg-success rank-hint-button">#{{ item.rank }}</span>
                                     <div class="rank-hint-button">
-                                        <a class="badge text-decoration-none text-nohover-dark bg-info dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                        <button class="btn btn-xs {% if item.has_hint %}btn-danger{% else %}btn-outline-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                             Hint
-                                        </a>
-                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
                                             {% set menu_items = item.menu_order %}
                                             {% for mi in menu_items %}
                                                 {% if mi is string %}
@@ -45,7 +45,7 @@
                                                     <div class="dropdown-header">{{ mi }}</div>
                                                 {% elif mi is number %}
                                                     {% set disabled = (mi == item.hint) %}
-                                                    <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                                                    <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
                                                         {{ item.menu_item(mi)|safe }}
                                                     </a>
                                                 {% endif %}
@@ -80,7 +80,9 @@
                         {% else %}
                             <div class="row vertical-top hints-table">
                                 <div class="col-12">
-                                    <div style="text-align: center; padding-top: 4px; padding-bottom: 4px; background-color: #e9ecef;">Nothing to display</div>
+                                    <div class="d-flex flex-row justify-content-center align-content-start pt-3 pb-2">
+                                        <div style="background-color: #e9ecef;">Nothing to display</div>
+                                    </div>
                                 </div>
                             </div>
                         {% endfor %}

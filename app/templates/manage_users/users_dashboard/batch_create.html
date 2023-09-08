@@ -29,7 +29,10 @@
                         <hr class="intro-divider">
                         {{ wtf.render_field(form.trust_cohort) }}
                         {{ wtf.render_field(form.trust_registration) }}
-                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+
+                        <div class="mt-3">
+                            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                        </div>
                     </form>
                 </div>
             </div>

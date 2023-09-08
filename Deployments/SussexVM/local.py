@@ -29,7 +29,7 @@ OBJECT_STORAGE_ASSETS = ObjectStore(OBJECT_STORAGE_ASSETS_URI, buckets.ASSETS_BU
 OBJECT_STORAGE_BACKUP_URI = os.environ.get("OBJECT_STORAGE_BACKUP_URI")
 OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, buckets.BACKUP_BUCKET, _storage_options)
 
-BRANDING_LABEL = 'MPS projects portal'
+BRANDING_LABEL = 'MPS projects management'
 BRANDING_LOGIN_LANDING_STRING = 'Welcome to the MPS projects portal'
 BRANDING_PUBLIC_LANDING_STRING = 'Welcome to the MPS public projects list'
 

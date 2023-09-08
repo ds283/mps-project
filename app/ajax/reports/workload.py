@@ -83,14 +83,14 @@ _full_enrollments = \
                         <span class="text-muted small">
                             S: sabbatical
                             {% if record.supervisor_comment is not none and record.supervisor_comment|length > 0 %}
-                                <i class="fas fa-info-circle" tabindex="0" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.supervisor_comment }}</div>{% if record.supervisor_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.supervisor_reenroll }}</div>{% endif %}"></i>
+                                <i class="fas fa-chevron-right" tabindex="0" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.supervisor_comment }}</div>{% if record.supervisor_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.supervisor_reenroll }}</div>{% endif %}"></i>
                             {% endif %}
                         </span>
                     {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
                         <span class="text-muted small">
                             S: exempt
                             {% if record.supervisor_comment is not none and record.supervisor_comment|length > 0 %}
-                                <i class="fas fa-info-circle" tabindex="0" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.supervisor_comment }}</div>{% if record.supervisor_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.supervisor_reenroll }}</div>{% endif %}"></i>
+                                <i class="fas fa-chevron-right" tabindex="0" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.supervisor_comment }}</div>{% if record.supervisor_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.supervisor_reenroll }}</div>{% endif %}"></i>
                             {% endif %}
                         </span>
                     {% else %}
@@ -108,14 +108,14 @@ _full_enrollments = \
                         <span class="text-muted small">
                             Ma: sabbatical
                             {% if record.marker_comment is not none and record.marker_comment|length > 0 %}
-                                <i class="fas fa-info-circle" tabindex="1" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.marker_comment }}</div>{% if record.marker_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.marker_reenroll }}</div>{% endif %}"></i>
+                                <i class="fas fa-chevron-right" tabindex="1" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.marker_comment }}</div>{% if record.marker_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.marker_reenroll }}</div>{% endif %}"></i>
                             {% endif %}
                         </span>
                     {% elif record.marker_state == record.MARKER_EXEMPT %}
                         <span class="text-muted small">
                             Ma: exempt
                             {% if record.marker_comment is not none and record.marker_comment|length > 0 %}
-                                    <i class="fas fa-info-circle" tabindex="1" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.marker_comment }}</div>{% if record.marker_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.marker_reenroll }}</div>{% endif %}"></i>
+                                    <i class="fas fa-chevron-right" tabindex="1" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.marker_comment }}</div>{% if record.marker_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.marker_reenroll }}</div>{% endif %}"></i>
                             {% endif %}
                         </span>
                     {% else %}
@@ -133,14 +133,14 @@ _full_enrollments = \
                         <span class="text-muted small">
                             Mo: sabbatical
                             {% if record.moderator_comment is not none and record.moderator_comment|length > 0 %}
-                                <i class="fas fa-info-circle" tabindex="2" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.moderator_comment }}</div>{% if record.moderator_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.moderator_reenroll }}</div>{% endif %}"></i>
+                                <i class="fas fa-chevron-right" tabindex="2" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.moderator_comment }}</div>{% if record.moderator_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.moderator_reenroll }}</div>{% endif %}"></i>
                             {% endif %}
                         </span>
                     {% elif record.moderator_state == record.MARKER_EXEMPT %}
                         <span class="text-muted small">
                             Mo: exempt
                             {% if record.moderator_comment is not none and record.moderator_comment|length > 0 %}
-                                    <i class="fas fa-info-circle" tabindex="2" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.moderator_comment }}</div>{% if record.moderator_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.moderator_reenroll }}</div>{% endif %}"></i>
+                                    <i class="fas fa-chevron-right" tabindex="2" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.moderator_comment }}</div>{% if record.moderator_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.moderator_reenroll }}</div>{% endif %}"></i>
                             {% endif %}
                         </span>
                     {% else %}
@@ -158,14 +158,14 @@ _full_enrollments = \
                         <span class="text-muted small">
                             P: sabbatical
                             {% if record.presentations_comment is not none and record.presentations_comment|length > 0 %}
-                                <i class="fas fa-info-circle" tabindex="3" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.presentations_comment }}</div>{% if record.presentations_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.presentations_reenroll }}</div>{% endif %}"></i>
+                                <i class="fas fa-chevron-right" tabindex="3" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.presentations_comment }}</div>{% if record.presentations_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.presentations_reenroll }}</div>{% endif %}"></i>
                             {% endif %}
                         </span>
                     {% elif record.presentations_state == record.MARKER_EXEMPT %}
                         <span class="text-muted small">
                             P: exempt
                             {% if record.presentations_comment is not none and record.presentations_comment|length > 0 %}
-                                    <i class="fas fa-info-circle" tabindex="3" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.presentations_comment }}</div>{% if record.presentations_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.presentations_reenroll }}</div>{% endif %}"></i>
+                                    <i class="fas fa-chevron-right" tabindex="3" data-bs-toggle="popover" title="Details" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<div>{{ record.presentations_comment }}</div>{% if record.presentations_reenroll is not none %}<hr><div class='mt-1'>Re-enrol in {{ record.presentations_reenroll }}</div>{% endif %}"></i>
                             {% endif %}
                         </span>
                     {% else %}
@@ -212,7 +212,7 @@ _simple_enrollments = \
                                 {% else %}
                                     {{ offered }} projects
                                 {% endif %}
-                                <i class="fas fa-info-circle" tabindex="0" data-bs-toggle="popover" title="Projects offered" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ projects_list(projects) }}"></i>
+                                <i class="fas fa-chevron-right" tabindex="0" data-bs-toggle="popover" title="Projects offered" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ projects_list(projects) }}"></i>
                             </span>
                         {% endif %}
                     </div>
@@ -307,7 +307,7 @@ _full_allocation = \
                     {% endif %}
                     <span class="small">{{ record.pclass.abbreviation }}</span>
                     <span class="small text-success"><strong>{{ num }}</strong> &rightarrow; {{ CATS }} CATS</span>
-                    <i class="small text-muted fas fa-info-circle" tabindex="{{ tabindex }}" data-bs-toggle="popover" title="{{ title }}" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ assigned_list(assigned)|safe }}"></i>
+                    <i class="small text-muted fas fa-chevron-right" tabindex="{{ tabindex }}" data-bs-toggle="popover" title="{{ title }}" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ assigned_list(assigned)|safe }}"></i>
                 </div>
             {% endif %}
         {% endif %}

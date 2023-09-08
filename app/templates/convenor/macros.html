@@ -148,10 +148,10 @@
                         {% endif %}
                         {% if show_hint %}
                             <div class="rank-hint-button">
-                                <a class="badge text-decoration-none text-nohover-dark bg-info dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                <button class="btn btn-xs {% if item.has_hint %}btn-danger{% else %}btn-outline-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                     Hint
-                                </a>
-                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
                                     {% set menu_items = item.menu_order %}
                                     {% for mi in menu_items %}
                                         {% if mi is string %}
@@ -159,7 +159,7 @@
                                             <div class="dropdown-header">{{ mi }}</div>
                                         {% elif mi is number %}
                                             {% set disabled = (mi == item.hint) %}
-                                            <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"
+                                            <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}"
                                                {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
                                                 {{ item.menu_item(mi)|safe }}
                                             </a>
@@ -174,8 +174,8 @@
                         {{ item.owner.submission_IP }}
                     </div>
                     <div class="col-2">
-                        <div class="float-end">
-                            <a href="#" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>
+                        <div class="d-flex flex-row justify-content-end align-content-start gap-2">
+                            <a href="#" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Delete</a>
                         </div>
                     </div>
                 </div>
@@ -206,10 +206,10 @@
                         {% endif %}
                         {% if show_hint %}
                             <div class="rank-hint-button">
-                                <a class="badge text-decoration-none text-nohover-dark bg-info dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                <button class="btn btn-xs {% if item.has_hint %}btn-danger{% else %}btn-outline-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                                     Hint
-                                </a>
-                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
                                     {% set menu_items = item.menu_order %}
                                     {% for mi in menu_items %}
                                         {% if mi is string %}
@@ -217,7 +217,7 @@
                                             <div class="dropdown-header">{{ mi }}</div>
                                         {% elif mi is number %}
                                             {% set disabled = (mi == item.hint) %}
-                                            <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"
+                                            <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}"
                                                {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
                                                 {{ item.menu_item(mi)|safe }}
                                             </a>
@@ -263,8 +263,8 @@
                     </div>
                     <div class="col-2">
                         {% if show_delete %}
-                            <div class="float-end">
-                                <a {% if can_delete %}href="{{ url_for('convenor.delete_student_choice', sid=sel.id, cid=item.id) }}"{% endif %} class="btn btn-sm btn-danger {% if not can_delete %}disabled{% endif %}"><i class="fas fa-trash"></i> Delete</a>
+                            <div class="d-flex flex-row justify-content-end align-content-start gap-2">
+                                <a {% if can_delete %}href="{{ url_for('convenor.delete_student_choice', sid=sel.id, cid=item.id) }}"{% endif %} class="btn btn-sm btn-outline-danger {% if not can_delete %}disabled{% endif %}"><i class="fas fa-trash"></i> Delete</a>
                             </div>
                         {% endif %}
                     </div>

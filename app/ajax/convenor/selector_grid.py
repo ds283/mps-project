@@ -47,7 +47,7 @@ _selections = \
                         (generic)
                     {% endif %}
                 </a>
-                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
                     {% set menu_items = item.menu_order %}
                     {% for mi in menu_items %}
                         {% if mi is string %}
@@ -55,7 +55,7 @@ _selections = \
                             <div class="dropdown-header">{{ mi }}</div>
                         {% elif mi is number %}
                             {% set disabled = (mi == item.hint) %}
-                            <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                            <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
                                 {{ item.menu_item(mi)|safe }}
                             </a>
                         {% endif %}

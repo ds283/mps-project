@@ -4,7 +4,7 @@
 {% if type_filter is none %}{% set type_filter = 'all' %}{% endif %}
 {% if hint_filter is none %}{% set hint_filter = 'all' %}{% endif %}
 
-{% from "datatables.html" import import_datatables %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
 
 {% block scripts %}
     {{ super() }}
@@ -15,35 +15,38 @@
 
         $(document).ready(function () {
             $('#match_student').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/admin/match_student_view_ajax/{{ record.id }}?pclass_filter={{ pclass_filter }}&type_filter={{ type_filter }}&hint_filter={{ hint_filter }}', dataSrc: '' },
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: { url: $SCRIPT_ROOT + '/admin/match_student_view_ajax/{{ record.id }}?pclass_filter={{ pclass_filter }}&type_filter={{ type_filter }}&hint_filter={{ hint_filter }}',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'}); },
                 columns: [
                     { data: 'student',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'
-                    } },
-                    { data: 'pclass' },
-                    { data: 'details' },
-                    { data: 'project' },
-                    { data: 'marker' },
+                      orderable: true,
+                      searchable: true },
+                    { data: 'pclass',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'details',
+                      orderable: false,
+                      searchable: false },
+                    { data: 'project',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'marker',
+                      orderable: false,
+                      searchable: false },
                     { data: 'rank',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'
-                    } },
+                      orderable: true,
+                      searchable: false },
                     { data: 'scores',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'
-                    } }
+                      orderable: true,
+                      searchable: false }
                 ],
-                deferRender: true
+                order: [[0, 'asc']]
             });
         });
     </script>

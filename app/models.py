@@ -12630,6 +12630,12 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         self._warnings = {}
 
 
+    def selector_list_query(self):
+        return db.session.query(SelectingStudent) \
+            .join(MatchingRecord, and_(MatchingRecord.matching_id == self.id,
+                                       MatchingRecord.selector_id == SelectingStudent.id)) \
+            .distinct()
+
     def _build_selector_list(self):
         if self._selector_list is not None:
             return

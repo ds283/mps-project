@@ -207,7 +207,7 @@ def _slow_map_row(row, data):
 
 def _fast_map_row(row):
     """
-    Row mapper for when we don't need to do anything expensive
+    Row mapper for when we don't need to do anything expensive; we avoid populating the column information
     :param row:
     :param data:
     :return:
@@ -229,14 +229,15 @@ def _filter_row(row, search_value):
             if isinstance(value, str):
                 if search_value in value.lower():
                     return True
-                return False
+                continue
 
             elif isinstance(value, Iterable):
+                print(f'search_value={search_value}, values={value}')
                 if any(search_value in x.lower() for x in value):
                     return True
-                return False
+                continue
 
-            return False
+            print(f'!! Unexpected search values={value}')
 
     return False
 

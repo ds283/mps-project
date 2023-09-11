@@ -249,29 +249,17 @@ _scores = \
 
 
 def student_view_data(selector_data):
-    # selector_data is a list of ((lists of) MatchingRecord, delta-value) pairs
+    # selector_data is a list of ((lists of) MatchingRecord, delta-value, score-value) triples
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    def score_data(r):
-        total = sum([rec.current_score for rec in r])
-
-        return {'display': render_template_string(_scores, recs=r, total_score=total),
-                'sortvalue': total}
-
-    data = [{'student': {
-                'display': render_template_string(_student, sel=r[0].selector, record_id=r[0].id,
+    data = [{'student': render_template_string(_student, sel=r[0].selector, record_id=r[0].id,
                                                   valid=all([not rc.has_issues for rc in r])),
-                'sortvalue': r[0].selector.student.user.last_name + r[0].selector.student.user.first_name
-             },
              'pclass': render_template_string(_pclass, sel=r[0].selector),
              'details': render_template_string(_cohort, sel=r[0].selector, simple_label=simple_label),
              'project': render_template_string(_project, recs=r),
              'marker': render_template_string(_marker, recs=r),
-             'rank': {
-                'display': render_template_string(_rank, recs=r, delta=d),
-                'sortvalue': d
-             },
-             'scores': score_data(r)} for r, d in selector_data]
+             'rank': render_template_string(_rank, recs=r, delta=delta),
+             'scores': render_template_string(_scores, recs=r, total_score=score)} for r, delta, score in selector_data]
 
-    return jsonify(data)
+    return data

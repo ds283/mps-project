@@ -13,8 +13,9 @@ import re
 from collections import deque
 from datetime import date, datetime, timedelta
 from functools import partial
+from itertools import chain as itertools_chain
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
 from urllib.parse import urlsplit
 
 from bokeh.embed import components
@@ -26,7 +27,7 @@ from flask import current_app, render_template, redirect, url_for, flash, reques
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 from math import pi
 from numpy import histogram
-from sqlalchemy import or_, update
+from sqlalchemy import or_, update, and_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import cast
 from sqlalchemy.sql import func
@@ -86,7 +87,7 @@ from ..shared.utils import get_current_year, home_dashboard, get_matching_dashbo
 from ..shared.validators import validate_is_admin_or_convenor, validate_match_inspector, \
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..task_queue import register_task, progress_update
-from ..tools import ServerSideSQLHandler
+from ..tools import ServerSideSQLHandler, ServerSideInMemoryHandler
 
 
 @admin.route('/global_config', methods=['GET', 'POST'])
@@ -5190,7 +5191,6 @@ def match_student_view(id):
     if hint_filter is not None:
         session['admin_match_hint_filter'] = hint_filter
 
-
     pclasses = record.available_pclasses
 
     return render_template('admin/match_inspector/student.html', pane='student', record=record,
@@ -5346,7 +5346,7 @@ def match_dists_view(id):
                            text=text, url=url)
 
 
-@admin.route('/match_student_view_ajax/<int:id>')
+@admin.route('/match_student_view_ajax/<int:id>', methods=['POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def match_student_view_ajax(id):
     record: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
@@ -5363,44 +5363,128 @@ def match_student_view_ajax(id):
     type_filter = request.args.get('type_filter', default=None)
     hint_filter = request.args.get('hint_filter', default=None)
 
-    data_set = zip(record.selectors, record.selector_deltas)
+    base_query = record.selector_list_query()
+
+    def search_name(row: SelectingStudent):
+        user: User = row.student.user
+        return user.name
+
+    def sort_name(row: SelectingStudent):
+        user: User = row.student.user
+        return [user.last_name, user.first_name]
+
+    def search_pclass(row: SelectingStudent):
+        config: ProjectClassConfig = row.config
+        return config.name
+
+    def sort_pclass(row: SelectingStudent):
+        config: ProjectClassConfig = row.config
+        return config.name
+
+    def search_projects(row: SelectingStudent):
+        records: List[MatchingRecord] = row.matching_records \
+            .filter(MatchingRecord.matching_id == record.id).all()
+
+        def _get_data(rec: MatchingRecord):
+            yield rec.project.name if rec.project is not None else ''
+            for item in rec.roles:
+                item: MatchingRole
+                yield item.user.name if item.user is not None else ''
+
+        return list(itertools_chain.from_iterable(_get_data(rec) for rec in records))
+
+    def sort_projects(row: SelectingStudent):
+        records: List[MatchingRecord] = row.matching_records \
+            .filter(MatchingRecord.matching_id == record.id) \
+            .order_by(MatchingRecord.submission_period).all()
+
+        return (rec.project.name if rec.project is not None else '' for rec in records)
+
+    def sort_rank(row: SelectingStudent):
+        records: List[MatchingRecord] = row.matching_records \
+            .filter(MatchingRecord.matching_id == record.id).all()
+
+        return sum(rec.rank for rec in records)
+
+    def sort_score(row: SelectingStudent):
+        records: List[MatchingRecord] = row.matching_records \
+            .filter(MatchingRecord.matching_id == record.id).all()
+
+        return sum(rec.current_score for rec in records)
+
+    student = {'search': search_name,
+               'order': sort_name}
+    pclass = {'search': search_pclass,
+              'order': sort_pclass}
+    projects = {'search': search_projects,
+                'order': sort_projects}
+    rank = {'order': sort_rank}
+    score = {'order': sort_score}
+    columns = {'student': student,
+               'pclass': pclass,
+               'projects': projects,
+               'rank': rank,
+               'scores': score}
 
     filter_list = []
 
     if flag:
-        def filt(pclass_value, rs: Tuple[List[MatchingRecord], int]):
-            return any(r.selector.config.pclass_id == pclass_value for r in rs[0])
+        def filt(pclass_value, rs: List[MatchingRecord]):
+            return any(r.selector.config.pclass_id == pclass_value for r in rs)
 
         filter_list.append(partial(filt, pclass_value))
 
     if type_filter == 'ordinary':
-        def filt(rs: Tuple[List[MatchingRecord], int]):
-            return any(not r.project.generic for r in rs[0])
+        def filt(rs: List[MatchingRecord]):
+            return any(not r.project.generic for r in rs)
 
         filter_list.append(filt)
 
     elif type_filter == 'generic':
-        def filt(rs: Tuple[List[MatchingRecord], int]):
-            return any(r.project.generic for r in rs[0])
+        def filt(rs: List[MatchingRecord]):
+            return any(r.project.generic for r in rs)
 
         filter_list.append(filt)
 
     if hint_filter == 'satisfied':
-        def filt(rs: Tuple[List[MatchingRecord], int]):
-            return any(len(r.hint_status[0]) > 0 for r in rs[0])
+        def filt(rs: List[MatchingRecord]):
+            return any(len(r.hint_status[0]) > 0 for r in rs)
 
         filter_list.append(filt)
 
     elif hint_filter == 'violated':
-        def filt(rs: Tuple[List[MatchingRecord], int]):
-            return any(len(r.hint_status[1]) > 0 for r in rs[0])
+        def filt(rs: List[MatchingRecord]):
+            return any(len(r.hint_status[1]) > 0 for r in rs)
 
         filter_list.append(filt)
 
-    if len(filter_list) > 0:
-        data_set = [x for x in data_set if all(f(x) for f in filter_list)]
+    def row_filter(row: SelectingStudent):
+        records: List[MatchingRecord] = row.matching_records \
+            .filter(MatchingRecord.matching_id == record.id).all()
 
-    return ajax.admin.student_view_data(data_set)
+        return all(f(records) for f in filter_list)
+
+    with ServerSideInMemoryHandler(request, base_query, columns,
+                                   row_filter=row_filter if len(filter_list) > 0 else None) as handler:
+        def row_formatter(selectors: List[SelectingStudent]):
+
+            def _internal_format(ss: List[SelectingStudent]):
+                for s in ss:
+                    records: List[MatchingRecord] = s.matching_records \
+                        .filter(MatchingRecord.matching_id == record.id) \
+                        .order_by(MatchingRecord.submission_period).all()
+
+                    deltas = [r.delta for r in records]
+                    delta = sum(deltas) if None not in deltas else None
+
+                    scores = [r.current_score for r in records]
+                    score = sum(scores)
+
+                    yield (records, delta, score)
+
+            return ajax.admin.student_view_data(_internal_format(selectors))
+
+        return handler.build_payload(row_formatter)
 
 
 @admin.route('/match_faculty_view_ajax/<int:id>')

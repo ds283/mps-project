@@ -18,7 +18,7 @@ import pulp
 import pulp.apis as pulp_apis
 from celery import group, chain
 from celery.exceptions import Ignore
-from flask import current_app, render_template
+from flask import current_app, render_template, render_template_string
 from flask_mailman import EmailMultiAlternatives
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
@@ -41,6 +41,31 @@ FALLBACK_DEFAULT_MODERATOR_CATS = 3
 # should be a large enough number that capacity for a project is effectively unbounded
 UNBOUNDED_SUPERVISING_CAPACITY = 100
 UNBOUNDED_MARKING_CAPACITY = 100
+
+
+_match_success = \
+"""
+<div><strong>Matching task {{ name }} has completed successfully.</strong></div>
+<div class="mt-2">This page does not auto-update.
+Please click <a href="{{ url_for('admin.manage_matching') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the matching list.</div>
+"""
+
+
+_match_failure = \
+"""
+<div><strong>Matching task {{ name }} did not complete successfully.</strong></div>
+<div class="mt-2">This page does not auto-update.
+Please click <a href="{{ url_for('admin.manage_matching') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the matching list.</div>
+"""
+
+
+_match_offline_ready = \
+"""
+<div><strong>The files necessary to perform offline matching for task {{ name }} have now been generated.</strong></div>
+<div class="mt-2">These files have been emailed to you, but you can also download them from the matching list.</div>
+<div class="mt-2">This page does not auto-update.
+Please click <a href="{{ url_for('admin.manage_matching') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the matching list.</div>
+"""
 
 
 def _find_mean_project_CATS(configs):
@@ -2511,7 +2536,7 @@ def register_matching_tasks(celery):
                           meta={'msg': 'Looking up MatchingAttempt record for id={id}'.format(id=id)})
 
         try:
-            record = db.session.query(MatchingAttempt).filter_by(id=id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -2547,9 +2572,19 @@ def register_matching_tasks(celery):
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
-        return _execute_live(self, record, prob, X, Y, S, W, R, create_time, number_sel, number_to_sel, number_lp,
-                             number_to_lp, number_sup, number_to_sup, number_mark, number_to_mark, sel_dict, lp_dict,
-                             sup_dict, mark_dict, multiplicity, mean_CATS_per_project)
+        score = _execute_live(self, record, prob, X, Y, S, W, R, create_time, number_sel, number_to_sel, number_lp,
+                              number_to_lp, number_sup, number_to_sup, number_mark, number_to_mark, sel_dict, lp_dict,
+                              sup_dict, mark_dict, multiplicity, mean_CATS_per_project)
+
+        if record.created_by is not None:
+            if record.is_valid:
+                msg = render_template_string(_match_success, name=record.name)
+                record.created_by.post_message(msg, 'success', autocommit=True)
+            else:
+                msg = render_template_string(_match_failure, name=record.name)
+                record.created_by.post_message(msg, 'error', autocommit=True)
+
+        return score
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -2558,8 +2593,8 @@ def register_matching_tasks(celery):
                           meta={'msg': 'Looking up MatchingAttempt record for id={id}'.format(id=matching_id)})
 
         try:
-            user = db.session.query(User).filter_by(id=user_id).first()
-            record = db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
+            user: User = db.session.query(User).filter_by(id=user_id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -2621,8 +2656,9 @@ def register_matching_tasks(celery):
 
         progress_update(record.celery_id, TaskRecord.SUCCESS, 100,
                         'File generation for offline project matching now complete', autocommit=True)
-        user.post_message('The files necessary to perform offline matching have been emailed to you.',
-                          'info', autocommit=True)
+
+        msg = render_template_string(_match_offline_ready, name=record.name)
+        user.post_message(msg, 'info', autocommit=True)
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -2631,9 +2667,9 @@ def register_matching_tasks(celery):
                           meta={'msg': 'Looking up TemporaryAsset record for id={id}'.format(id=asset_id)})
 
         try:
-            user = db.session.query(User).filter_by(id=user_id).first()
-            asset = db.session.query(TemporaryAsset).filter_by(id=asset_id).first()
-            record = db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
+            user: User = db.session.query(User).filter_by(id=user_id).first()
+            asset: TemporaryAsset = db.session.query(TemporaryAsset).filter_by(id=asset_id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -2686,7 +2722,15 @@ def register_matching_tasks(celery):
                                           number_to_sup, number_mark, number_to_mark, sel_dict, lp_dict, sup_dict,
                                           mark_dict, multiplicity, mean_CATS_per_project)
 
-        return soln
+            if record.created_by is not None:
+                if record.is_valid:
+                    msg = render_template_string(_match_success, name=record.name)
+                    record.created_by.post_message(msg, 'success', autocommit=True)
+                else:
+                    msg = render_template_string(_match_failure, name=record.name)
+                    record.created_by.post_message(msg, 'error', autocommit=True)
+
+            return soln
 
 
     @celery.task(bind=True, default_retry_delay=30)

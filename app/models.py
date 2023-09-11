@@ -3216,7 +3216,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             return {'label': 'Assessor for 0',
                     'type': 'secondary'}
 
-        return {'label': f'Assessor for {n}',
+        return {'label': f'Assessor for {num}',
                 'type': 'info'}
 
 

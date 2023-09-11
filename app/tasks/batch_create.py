@@ -130,7 +130,7 @@ _batch_import_success = \
 """
 <div><strong>Successfully imported batch list {{ name }}.</strong></div>
 <div class="mt-2">This page does not auto-update.
-Please click <a href="#" onclick="location.reload()">here</a> to refresh the page.</div>
+Please click <a href="{{ url_for('manage_users.batch_create_users') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the batch import details.</div>
 """
 
 # language=jinja2
@@ -138,7 +138,7 @@ _batch_import_fail = \
 """
 <div><strong>Batch list {{ name }} was not correctly imported because of errors.</strong></div>
 <div class="mt-2">This page does not auto-update.
-Please click <a href="#" onclick="location.reload()">here</a> to refresh the page.</div>
+Please click <a href="{{ url_for('manage_users.batch_create_users') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the batch import details.</div>
 """
 
 @total_ordering

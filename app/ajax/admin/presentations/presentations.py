@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
 _name = \
@@ -63,7 +62,7 @@ _periods = \
 """
 {% for period in a.submission_periods %}
     <div style="display: inline-block;">
-        {{ period.label|safe }}
+        {{ simple_label(eriod.label) }}
         {% set num = period.number_projects %}
         {% set pl = 's' %}
         {% if num == 1 %}{% set pl = '' %}{% endif %}
@@ -92,13 +91,13 @@ _sessions = \
 {% for session in sessions %}
     {% if a.requested_availability %}
         <div style="display: inline-block;">
-            {{ session.label|safe }}
+            {{ simple_label(session.label) }}
             {% set available = session.number_available_faculty %}
             {% set ifneeded = session.number_ifneeded_faculty %}
             <span class="badge bg-info">{{ available }}{% if ifneeded > 0 %}(+{{ ifneeded }}){% endif %} available</span>
         </div>
     {% else %}
-        {{ session.label|safe }}
+        {{ simple_label(session.label) }}
     {% endif %}
 {% endfor %}
 {% if a.has_issues %}
@@ -194,9 +193,11 @@ _menu = \
 
 
 def presentation_assessments_data(assessments):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     data = [{'name': render_template_string(_name, a=a),
-             'periods': render_template_string(_periods, a=a),
-             'sessions': render_template_string(_sessions, a=a),
+             'periods': render_template_string(_periods, a=a, simple_label=simple_label),
+             'sessions': render_template_string(_sessions, a=a,simple_label=simple_label),
              'menu': render_template_string(_menu, a=a)} for a in assessments]
 
     return jsonify(data)

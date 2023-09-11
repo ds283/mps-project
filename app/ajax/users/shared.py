@@ -46,7 +46,7 @@ name = \
         <div>
             {% if f.is_convenor %}
                 {% for item in f.convenor_list %}
-                    {{ item.make_label('Convenor ' + item.abbreviation)|safe }}
+                    {{ simple_label(item.make_label(item.abbreviation), prefix='Convenor') }}
                 {% endfor %}
             {% endif %}
         </div>
@@ -149,4 +149,28 @@ menu = \
         {% endif %}
     </div>
 </div>
+"""
+
+# language=jinja2
+active = \
+"""
+{{ simple_label(u.active_label) }}
+"""
+
+# language=jinja2
+cohort = \
+"""
+{{ simple_label(s.cohort_label) }}
+"""
+
+# language=jinja2
+programme = \
+"""
+{{ simple_label(s.programme.label) }}
+"""
+
+# language=jinja2
+academic_year = \
+"""
+{{ simple_label(s.academic_year_label(show_details=True)) }}
 """

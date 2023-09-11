@@ -9,7 +9,7 @@
 #
 from typing import List
 
-from flask import render_template_string, jsonify
+from flask import render_template_string, jsonify, get_template_attribute
 
 from ...database import db
 from ...models import StudentBatchItem, StudentBatch, User, StudentData
@@ -63,7 +63,7 @@ _name = \
 _programme = \
 """
 {% if p is not none %}
-    {{ p.make_label()|safe }}
+    {{ simple_label(p.make_label()) }}
 {% else %}
     <span class="badge bg-danger">Unknown</span>
 {% endif %}
@@ -75,7 +75,7 @@ _cohort = \
 """
 <div>
     {{ item.cohort }}
-    {{ item.academic_year_label()|safe }}
+    {{ simple_label(item.academic_year_label()) }}
 </div>
 {% if item.foundation_year %}
     <span class="badge bg-info">Foundation year</span>
@@ -119,11 +119,13 @@ _menu = \
 def _element(item_id):
     item = db.session.query(StudentBatchItem).filter_by(id=item_id).one()
 
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     return {'name': render_template_string(_name, item=item),
             'user': item.user_id,
             'email': item.email,
-            'cohort': render_template_string(_cohort, item=item),
-            'programme': render_template_string(_programme, p=item.programme),
+            'cohort': render_template_string(_cohort, item=item, simple_label=simple_label),
+            'programme': render_template_string(_programme, p=item.programme, simple_label=simple_label),
             'menu': render_template_string(_menu, item=item)}
 
 

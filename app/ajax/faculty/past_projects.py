@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, url_for
-
+from flask import render_template_string, jsonify, url_for, get_template_attribute
 
 # language=jinja2
 _project_menu = \
@@ -54,15 +53,11 @@ _affiliation = \
 """
 {% set ns = namespace(affiliation=false) %}
 {% if project.group %}
-    {{ project.group.make_label()|safe }}
+    {{ simple_label(project.group.make_label()) }}
     {% set ns.affiliation = true %}
 {% endif %}
 {% for tag in project.forced_group_tags %}
-    {% if tag.name|length > 15 %}
-        {{ tag.make_label(tag.name[0:15]+'...')|safe }}
-    {% else %}
-        {{ tag.make_label()|safe }}
-    {% endif %}
+    {{ simple_label(tag.make_label(truncate(tag.name))) }}
     {% set ns.affiliation = true %}
 {% endfor %}
 {% if not ns.affiliation %}
@@ -85,10 +80,13 @@ _metadata = \
 
 
 def pastproject_data(projects):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+    truncate = get_template_attribute("macros.html", "truncate")
+
     data = [{'year': '{c}'.format(c=p.config.year),
              'name': render_template_string(_name, p=p),
              'pclass': render_template_string(_pclass, config=p.config),
-             'group': render_template_string(_affiliation, project=p),
+             'group': render_template_string(_affiliation, project=p, simple_label=simple_label, truncate=truncate),
              'metadata': render_template_string(_metadata, p=p),
              'students': 'Not yet implemented',
              'menu': render_template_string(_project_menu, project=p)} for p in projects]

@@ -8,10 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string
+from flask import render_template_string, get_template_attribute
 from sqlalchemy.event import listens_for
 
-from .shared import menu, name
+from .shared import menu, name, active
 from ...cache import cache
 from ...database import db
 from ...models import User, Role
@@ -22,7 +22,7 @@ from ...shared.utils import detuple
 _roles = \
 """
 {% for r in user.roles %}
-    {{ r.make_label()|safe }}
+    {{ simple_label(r.make_label()) }}
 {% else %}
     <span class="badge bg-secondary">None</span>
 {% endfor %}
@@ -69,14 +69,16 @@ def _element(user_id, current_user_id):
     u = db.session.query(User).filter_by(id=user_id).one()
     cu = db.session.query(User).filter_by(id=current_user_id).one()
 
-    return {'name': render_template_string(name, u=u),
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
+    return {'name': render_template_string(name, u=u, simple_label=simple_label),
              'user': u.username,
              'email': '<a class="text-decoration-none" href="mailto:{m}">{m}</a>'.format(m=u.email),
              'confirm': u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if u.confirmed_at is not None \
                         else '<span class="badge bg-warning text-dark">Not confirmed</span>',
-             'active': u.active_label,
+             'active': render_template_string(active, u=u, simple_label=simple_label),
              'details': render_template_string(_status, u=u),
-             'role': render_template_string(_roles, user=u),
+             'role': render_template_string(_roles, user=u, simple_label=simple_label),
              'menu': render_template_string(menu, user=u, cuser=cu, pane='accounts')}
 
 

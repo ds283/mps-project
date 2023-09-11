@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string
+from flask import render_template_string, get_template_attribute
 
 # language=jinja2
 _types_menu = \
@@ -47,12 +47,24 @@ _status = \
 """
 
 
+# language=jinja2
+_colour = \
+"""
+{% if l.colour %}
+    {{ simple_label(l.make_label(l.colour)) }}
+{% else %}
+    <span class="badge bg-secondary">None</span>
+{% endif %}
+"""
+
+
 def FHEQ_levels_data(levels):
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
     data = [{'name': l.name,
              'short_name': l.short_name,
              'numeric_level': '{n}'.format(n=l.numeric_level),
-             'colour': l.make_label(l.colour),
+             'colour': render_template_string(_colour, l=l, simple_label=simple_label),
              'status': render_template_string(_status, l=l),
              'menu': render_template_string(_types_menu, l=l)} for l in levels]
 

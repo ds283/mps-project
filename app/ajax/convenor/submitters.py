@@ -15,9 +15,9 @@ from ...models import ProjectClassConfig
 # language=jinja2
 _cohort = \
 """
-{{ sub.student.programme.short_label|safe }}
-{{ sub.student.cohort_label|safe }}
-{{ sub.academic_year_label(show_details=True)|safe }}
+{{ simple_label(sub.student.programme.short_label) }}
+{{ simple_label(sub.student.cohort_label) }}
+{{ simple_label(sub.academic_year_label(show_details=True)) }}
 """
 
 
@@ -368,6 +368,7 @@ def submitters_data(students, config, show_name, show_number, sort_number):
 
     error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
     error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
     data = [{'name': {
                 'display': render_template_string(_name, sub=s, show_name=show_name, show_number=show_number,
@@ -375,7 +376,7 @@ def submitters_data(students, config, show_name, show_number, sort_number):
                 'sortvalue': s.student.exam_number if sort_number else s.student.user.last_name + s.student.user.first_name
              },
              'cohort': {
-                 'display': render_template_string(_cohort, sub=s),
+                 'display': render_template_string(_cohort, sub=s, simple_label=simple_label),
                  'value': s.student.cohort
              },
              'periods': render_template_string(_periods, sub=s, config=config, error_block_popover=error_block_popover),

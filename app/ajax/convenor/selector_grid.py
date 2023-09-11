@@ -8,14 +8,13 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
 _cohort = \
 """
-{{ sel.student.cohort_label|safe }}
-{{ sel.academic_year_label(show_details=True)|safe }}
+{{ simple_label(sel.student.cohort_label) }}
+{{ simple_label(sel.academic_year_label(show_details=True)) }}
 """
 
 # language=jinja2
@@ -102,8 +101,15 @@ _name = \
 </div>
 """
 
+# language=jinja2
+_programme = \
+"""
+{{ simple_label(s.programme.label) }}
+"""
+
 
 def selector_grid_data(students, config):
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
     def sel_count(sel):
         if not sel.has_submitted:
@@ -122,9 +128,9 @@ def selector_grid_data(students, config):
                 'display': render_template_string(_name, sel=s),
                 'sortstring': s.student.user.last_name + s.student.user.first_name
              },
-             'programme': s.student.programme.label,
+             'programme': render_template_string(_programme, s=s, simple_label=simple_label),
              'cohort': {
-                 'display': render_template_string(_cohort, sel=s),
+                 'display': render_template_string(_cohort, sel=s, simple_label=simple_label),
                  'value': s.student.cohort
              },
              'selections': {

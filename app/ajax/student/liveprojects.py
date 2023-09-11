@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, url_for
+from flask import render_template_string, url_for, get_template_attribute
 from sqlalchemy.event import listens_for
 
 from ...cache import cache
@@ -151,7 +151,7 @@ _project_prefer = \
 """
 {% for programme in project.programmes %}
     {% if programme.active %}
-        {{ programme.label|safe }}
+        {{ simple_label(programme.label) }}
     {% endif %}
 {% endfor %}
 """
@@ -162,7 +162,7 @@ _project_skills = \
 {% for skill in skills %}
     {% if skill.is_active %}
         {% if skill.group is none %}
-            {{ skill.make_label()|safe }}
+            {{ simple_label(skill.make_label()) }}
         {% else %}
             {% if sel %}
                 {% set href = url_for('student.add_skill_filter', id=sel.id, skill_id=skill.id) %}
@@ -187,7 +187,7 @@ _project_group = \
     {% set ns.affiliation = true %}
 {% endif %}
 {% for tag in project.forced_group_tags %}
-    {{ tag.make_label()|safe }}
+    {{ simple_label(tag.make_label()) }}
     {% set ns.affiliation = true %}
 {% endfor %}
 {% if not ns.affiliation %}
@@ -225,14 +225,16 @@ def _selector_element(sel_id, project_id, is_live):
 
     config: ProjectClassConfig = p.config
 
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     base = {'name': '<a class="text-decoration-none" '
                     'href="{url}">{name}</a>'.format(name=p.name,
                                                      url=url_for('student.selector_view_project', sid=sel.id,
                                                                  pid=p.id)),
             'supervisor': render_template_string(_owner, project=p),
-            'group': render_template_string(_project_group, sel=sel, project=p, config=config),
-            'skills': render_template_string(_project_skills, sel=sel, skills=p.ordered_skills),
-            'prefer': render_template_string(_project_prefer, project=p),
+            'group': render_template_string(_project_group, sel=sel, project=p, config=config, simple_label=simple_label),
+            'skills': render_template_string(_project_skills, sel=sel, skills=p.ordered_skills, simple_label=simple_label),
+            'prefer': render_template_string(_project_prefer, project=p, simple_label=simple_label),
             'menu': render_template_string(_selector_menu, sel=sel, project=p, is_live=is_live, config=config)}
 
     if is_live:
@@ -250,11 +252,13 @@ def _submitter_element(sub_id, project_id):
 
     config: ProjectClassConfig = p.config
 
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     return {'name': '<a class="text-decoration-none" href="{url}">{name}</a>' \
                 .format(name=p.name, url=url_for('student.submitter_view_project', sid=sub_id, pid=p.id)),
             'supervisor': render_template_string(_owner, project=p),
-            'group': render_template_string(_project_group, sel=None, project=p, config=config),
-            'skills': render_template_string(_project_skills, sel=None, skills=p.ordered_skills),
+            'group': render_template_string(_project_group, sel=None, project=p, config=config, simple_label=simple_label),
+            'skills': render_template_string(_project_skills, sel=None, skills=p.ordered_skills, simple_label=simple_label),
             'prefer': render_template_string(_project_prefer, project=p),
             'menu': render_template_string(_submitter_menu, sub_id=sub_id, project=p)}
 

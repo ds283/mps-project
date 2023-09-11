@@ -9,7 +9,7 @@
 #
 from typing import List
 
-from flask import render_template_string
+from flask import render_template_string, get_template_attribute
 
 from ...models import Project
 
@@ -34,11 +34,11 @@ _group = \
 """
 {% set ns = namespace(affiliation=false) %}
 {% if project.group %}
-    {{ project.group.make_label()|safe }}
+    {{ simple_label(project.group.make_label()) }}
     {% set ns.affiliation = true %}
 {% endif %}
 {% for tag in project.forced_group_tags %}
-    {{ tag.make_label()|safe }}
+    {{ simple_label(tag.make_label()) }}
     {% set ns.affiliation = true %}
 {% endfor %}
 {% if not ns.affiliation %}
@@ -52,7 +52,7 @@ _skills = \
 {% for skill in skills %}
     {% if skill.is_active %}
         {% if skill.group is none %}
-            {{ skill.make_label()|safe }}
+            {{ simple_label(skill.make_label()) }}
         {% else %}
             <a class="badge bg-secondary text-decoration-none" style="{{ skill.group.make_CSS_style() }}">{%- if skill.group.add_group -%}{{ skill.group.name }}:{% endif %} {{ skill.name }}</a>
         {% endif %}
@@ -61,10 +61,12 @@ _skills = \
 """
 
 def _project_list_data(pclass_id: int, p: Project):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     return {'name': render_template_string(_name, pclass_id=pclass_id, project=p),
             'supervisor': render_template_string(_owner, project=p),
-            'group': render_template_string(_group, project=p),
-            'skills': render_template_string(_skills, skills=p.ordered_skills)}
+            'group': render_template_string(_group, project=p, simple_label=simple_label),
+            'skills': render_template_string(_skills, skills=p.ordered_skills, simple_label=simple_label)}
 
 
 def public_browser_project_list(pclass_id: int, projects: List[Project]):

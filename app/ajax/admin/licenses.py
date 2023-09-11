@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
 _name = \
@@ -18,7 +17,7 @@ _name = \
     <strong>{{ l.name }}</strong>
 </div>
 <div>
-    {{ l.make_label(popover=false)|safe }}
+    {{ simple_label(l.make_label(popover=false)) }}
     {% if l.version and l.version|length > 0 %}
         <span class="badge bg-info">{{ l.version }}</span>
     {% endif %}
@@ -99,7 +98,9 @@ _menu = \
 
 
 def licenses_data(licenses):
-    data = [{'name': render_template_string(_name, l=l),
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
+    data = [{'name': render_template_string(_name, l=l, simple_label=simple_label),
              'active': render_template_string(_active, l=l),
              'description': l.description,
              'properties': render_template_string(_properties, l=l),

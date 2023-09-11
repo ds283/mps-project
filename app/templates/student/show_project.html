@@ -3,6 +3,7 @@
 {% import "bootstrap/form.html" as wtf %}
 
 {% from "macros.html" import on_click_selector_field %}
+{% from "labels.html" import simple_label %}
 {% from "icon_block.html" import icon_block %}
 {% from "mathjax.html" import import_mathjax %}
 
@@ -39,7 +40,7 @@
                                 <div>
                                     <ul class="list-inline">
                                         {% for pcl in desc.project_classes %}
-                                            <li>{{ pcl.make_label()|safe }}</li>
+                                            <li>{{ simple_label(pcl.make_label()) }}</li>
                                         {% endfor %}
                                     </ul>
                                 </div>
@@ -225,12 +226,9 @@
                                         <div class="row sm-gap-below vertical-top">
                                             <div class="col-3">Popularity</div>
                                             <div class="col-9">
-                                                {% set lab = project.format_popularity_label(['project-label']) %}
-                                                {% if lab is not none %}{{ lab|safe }}{% endif %}
-                                                {% set lab = project.format_bookmarks_label(['project-label']) %}
-                                                {% if lab is not none %}{{ lab|safe }}{% endif %}
-                                                {% set lab = project.format_selections_label(['project-label']) %}
-                                                {% if lab is not none %}{{ lab|safe }}{% endif %}
+                                                {{ simple_label(project.format_popularity_label(), user_classes='project label') }}
+                                                {{ simple_label(project.format_bookmarks_label(), user_classes='project label') }}
+                                                {{ simple_label(project.format_selections_label(), user_classes='project label') }}
                                             </div>
                                         </div>
                                     {% endif %}
@@ -241,7 +239,7 @@
                                             <div class="col-9">
                                                 {% for tag in project.ordered_tags %}
                                                     {% if tag.is_active %}
-                                                        {{ tag.make_label(user_classes="project-label")|safe }}
+                                                        {{ simple_label(tag.make_label(), user_classes="project-label") }}
                                                     {% endif %}
                                                 {% endfor %}
                                             </div>
@@ -254,7 +252,7 @@
                                             <div class="col-9">
                                                 {% for skill in project.ordered_skills %}
                                                     {% if skill.is_active %}
-                                                        {{ skill.make_label(user_classes="project-label")|safe }}
+                                                        {{ simple_label(skill.make_label(), user_classes="project-label") }}
                                                     {% endif %}
                                                 {% endfor %}
                                             </div>
@@ -267,7 +265,7 @@
                                             <div class="col-9">
                                                 {% for programme in project.ordered_programmes %}
                                                     {% if programme.active %}
-                                                        {{ programme.make_label(user_classes="project-label")|safe }}
+                                                        {{ simple_label(programme.make_label(), user_classes="project-label") }}
                                                     {% endif %}
                                                 {% endfor %}
                                             </div>
@@ -282,7 +280,7 @@
                                                 <div class="col-9">
                                                     {% for module in modules %}
                                                         {% if module.active %}
-                                                            {{ module.make_label(user_classes="project-label")|safe }}
+                                                            {{ simple_label(module.make_label(), user_classes="project-label") }}
                                                         {% endif %}
                                                     {% endfor %}
                                                     {% if sel and desc %}

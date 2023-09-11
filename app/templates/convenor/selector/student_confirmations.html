@@ -1,5 +1,8 @@
 {% extends "base_app.html" %}
 
+{% from "labels.html" import simple_label %}
+{% from "macros.html" import truncate %}
+
 {% block title %}
     Project confirmations for {{ sel.student.user.name }}
 {% endblock %}
@@ -54,15 +57,11 @@
                                 <div class="col-3">
                                     {% set ns = namespace(affiliation=false) %}
                                     {% if project.group %}
-                                        {{ project.group.make_label()|safe }}
+                                        {{ simple_label(project.group.make_label()) }}
                                         {% set ns.affiliation = true %}
                                     {% endif %}
                                     {% for tag in project.forced_group_tags %}
-                                        {% if tag.name|length > 15 %}
-                                            {{ tag.make_label(tag.name[0:15]+'...')|safe }}
-                                        {% else %}
-                                            {{ tag.make_label()|safe }}
-                                        {% endif %}
+                                        {{ simple_label(tag.make_label(truncate(tag.name))) }}
                                         {% set ns.affiliation = true %}
                                     {% endfor %}
                                     {% if not ns.affiliation %}
@@ -144,15 +143,11 @@
                                 <div class="col-3">
                                     {% set ns = namespace(affiliation=false) %}
                                     {% if project.group %}
-                                        {{ project.group.make_label()|safe }}
+                                        {{ simple_label(project.group.make_label()) }}
                                         {% set ns.affiliation = true %}
                                     {% endif %}
                                     {% for tag in project.forced_group_tags %}
-                                        {% if tag.name|length > 15 %}
-                                            {{ tag.make_label(tag.name[0:15]+'...')|safe }}
-                                        {% else %}
-                                            {{ tag.make_label()|safe }}
-                                        {% endif %}
+                                        {{ simple_label(tag.make_label(truncate(tag.name))) }}
                                         {% set ns.affiliation = true %}
                                     {% endfor %}
                                     {% if not ns.affiliation %}

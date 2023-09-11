@@ -1,4 +1,5 @@
 {% from "icon_block.html" import icon_block %}
+{% from "labels.html" import simple_label %}
 
 {% macro capacity_card(data, sel_count) %}
     {% set groups = data['data'] %}
@@ -66,7 +67,7 @@
                 {% set capacity = group_data['capacity'] %}
                 {% set bounded = group_data['capacity_bounded'] %}
                 <div class="row vertical-align capacity-table">
-                    <div class="col-4">{{ label|safe }}</div>
+                    <div class="col-4">{{ simple_label(label) }}</div>
                     <div class="col-2">
                         {% if proj_count > 0 %}
                             {{ proj_count }}

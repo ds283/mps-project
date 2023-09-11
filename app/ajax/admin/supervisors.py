@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string
-
+from flask import render_template_string, get_template_attribute
 
 # language=jinja2
 _supervisors_menu = \
@@ -51,21 +50,22 @@ _active = \
 # language=jinja2
 _colour = \
 """
-{{ r.make_label(r.colour)|safe }}
+{{ simple_label(r.make_label(r.colour)) }}
 """
 
 
 # language=jinja2
 _name = \
 """
-{{ r.name }} {{ r.make_label()|safe }}
+{{ r.name }} {{ simple_label(r.make_label()) }}
 """
 
 
 def supervisors_data(roles):
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'role': render_template_string(_name, r=r),
-             'colour': render_template_string(_colour, r=r),
+    data = [{'role': render_template_string(_name, r=r, simple_label=simple_label),
+             'colour': render_template_string(_colour, r=r, simple_label=simple_label),
              'active': render_template_string(_active, r=r),
              'menu': render_template_string(_supervisors_menu, role=r)} for r in roles]
 

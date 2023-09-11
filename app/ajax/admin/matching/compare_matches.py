@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, render_template_string
+from flask import jsonify, render_template_string, get_template_attribute
 
 from ....database import db
 from ....models import MatchingRecord
@@ -23,9 +23,9 @@ _student = \
 # language=jinja2
 _cohort = \
 """
-{{ sel.student.programme.short_label|safe }}
-{{ sel.academic_year_label(show_details=True)|safe }}
-{{ sel.student.cohort_label|safe }}
+{{ simple_label(sel.student.programme.short_label) }}
+{{ simple_label(sel.academic_year_label(show_details=True)) }}
+{{ simple_label(sel.student.cohort_label) }}
 """
 
 
@@ -78,12 +78,13 @@ _menu = \
 
 
 def compare_match_data(records):
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
     data = [{'student': {
                 'display': render_template_string(_student, sel=l.selector),
                 'sortvalue': l.selector.student.user.last_name + l.selector.student.user.first_name
              },
-             'cohort': render_template_string(_cohort, sel=l.selector),
+             'cohort': render_template_string(_cohort, sel=l.selector, simple_label=simple_label),
              'record1': render_template_string(_records, r=l, c=r),
              'delta1': {'display': render_template_string(_delta, r=l),
                         'sortvalue': l.delta},

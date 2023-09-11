@@ -1,3 +1,5 @@
+{% from "labels.html" import simple_label %}
+
 {% macro ranked_selection(sel, list) %}
     <div class="container-fluid">
         <div class="row vertical-top final-selection-table">
@@ -21,11 +23,11 @@
                     <div class="col-3">
                         {% set ns = namespace(affiliation=false) %}
                         {% if project.group %}
-                            {{ project.group.make_label()|safe }}
+                            {{ simple_label(project.group.make_label()) }}
                             {% set ns.affiliation = true %}
                         {% endif %}
                         {% for tag in project.forced_group_tags %}
-                            {{ tag.make_label()|safe }}
+                            {{ simple_label(tag.make_label()) }}
                             {% set ns.affiliation = true %}
                         {% endfor %}
                         {% if not ns.affiliation %}

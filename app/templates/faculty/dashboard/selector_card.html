@@ -1,5 +1,7 @@
 {% from "faculty/macros.html" import project_metadata, project_rank_data, project_selection_data %}
 {% from "icon_block.html" import icon_block %}
+{% from "labels.html" import simple_label %}
+{% from "macros.html" import truncate %}
 
 {% macro selector_card(data, sel_state, current_user, home_dashboard_url) %}
     {% set config = data['config'] %}
@@ -183,15 +185,11 @@
                                 <a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=project.id, url=url_for('faculty.dashboard', id=pclass.id), text='dashboard', pclass=pclass.id) }}">{{ project.name }}</a>
                                 {% set ns = namespace(affiliation=false) %}
                                 {% if project.group %}
-                                    {{ project.group.make_label(user_classes='ms-1')|safe }}
+                                    {{ simple_label(project.group.make_label(), user_classes='ms-1') }}
                                     {% set ns.affiliation = true %}
                                 {% endif %}
                                 {% for tag in project.forced_group_tags %}
-                                    {% if tag.name|length > 15 %}
-                                        {{ tag.make_label(tag.name[0:15]+'...', user_classes='ms-1')|safe }}
-                                    {% else %}
-                                        {{ tag.make_label(user_classes='ms-1')|safe }}
-                                    {% endif %}
+                                    {{ simple_label(tag.make_label(truncate(tag.name)), user_classes='ms-1') }}
                                     {% set ns.affiliation = true %}
                                 {% endfor %}
                                 {% if not ns.affiliation %}

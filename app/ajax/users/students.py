@@ -8,10 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string
+from flask import render_template_string, get_template_attribute
 from sqlalchemy.event import listens_for
 
-from .shared import menu, name
+from .shared import menu, name, active, cohort, programme, academic_year
 from ...cache import cache
 from ...database import db
 from ...models import User, StudentData
@@ -24,11 +24,13 @@ def _element(user_id, current_user_id):
     u = db.session.query(User).filter_by(id=user_id).one()
     cu = db.session.query(User).filter_by(id=current_user_id).one()
 
-    return {'name': render_template_string(name, u=u),
-             'active': u.active_label,
-             'programme': s.programme.label,
-             'cohort': s.cohort_label,
-             'acadyear': s.academic_year_label(show_details=True),
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
+    return {'name': render_template_string(name, u=u, simple_label=simple_label),
+             'active': render_template_string(active, u=u, simple_label=simple_label),
+             'programme': render_template_string(programme, s=s, simple_label=simple_label),
+             'cohort': render_template_string(cohort, s=s, simple_label=simple_label),
+             'acadyear': render_template_string(academic_year, s=s, simple_label=simple_label),
              'menu': render_template_string(menu, user=u, cuser=cu, pane='students')}
 
 

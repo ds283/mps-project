@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string
-
+from flask import render_template_string, get_template_attribute
 
 # language=jinja2
 _code = \
@@ -63,15 +62,17 @@ _menu = \
 # language=jinja2
 _level = \
 """
-{{ m.level_label|safe }}
-{{ m.semester_label|safe }}
+{{ simple_label(m.level_label) }}
+{{ simple_label(m.semester_label) }}
 """
 
 
 def modules_data(modules):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     data = [{'code': render_template_string(_code, m=m),
              'name': m.name,
-             'level': render_template_string(_level, m=m),
+             'level': render_template_string(_level, m=m, simple_label=simple_label),
              'status': render_template_string(_status, m=m),
              'menu': render_template_string(_menu, m=m)} for m in modules]
 

@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, render_template_string
-
+from flask import jsonify, render_template_string, get_template_attribute
 
 # language=jinja2
 _projects = \
@@ -35,7 +34,7 @@ _projects = \
                 {% endif %}
                 {% set enrollment = f.get_enrollment_record(pclass.id) %}
                 {% if enrollment %}
-                    {{ enrollment.supervisor_label|safe }}
+                    {{ simple_label(enrollment.supervisor_label) }}
                 {% endif %}
             {% else %}
                 <span class="badge bg-danger">Not available</span>
@@ -114,19 +113,21 @@ _name = \
     {% endif %}
 </div>
 <div class="mt-1">
-    {{ f.projects_offered_label(pclass)|safe }}
-    {{ f.projects_unofferable_label|safe }}
+    {{ simple_label(f.projects_offered_label(pclass)) }}
+    {{ simple_label(f.projects_unofferable_label) }}
 </div>
 """
 
 
 def outstanding_confirm_data(config, url=None, text=None):
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': {'display': render_template_string(_name, u=f.user, f=f, config=config, pclass=config.project_class),
+    data = [{'name': {'display': render_template_string(_name, u=f.user, f=f, config=config,
+                                                        pclass=config.project_class, simple_label=simple_label),
                       'sortstring': f.user.last_name + f.user.first_name},
              'email': '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=f.user.email),
              'projects': render_template_string(_projects, f=f, config=config, pclass=config.project_class,
-                                                url=url, text=text),
+                                                url=url, text=text, simple_label=simple_label),
              'menu': render_template_string(_menu, config=config, f=f)} for f in config.faculty_waiting_confirmation]
 
     return jsonify(data)

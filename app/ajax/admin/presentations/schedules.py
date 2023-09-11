@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
 _status = \
@@ -328,7 +327,7 @@ _periods = \
 <p></p>
 {% for period in a.submission_periods %}
     <div style="display: inline-block;">
-        {{ period.label|safe }}
+        {{ simple_label(period.label) }}
         {% set num = period.number_projects %}
         {% set pl = 's' %}
         {% if num == 1 %}{% set pl = '' %}{% endif %}
@@ -356,6 +355,7 @@ def assessment_schedules_data(schedules, text, url):
     :param schedules:
     :return:
     """
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
     data = [{'name': render_template_string(_name, s=s, text=text, url=url),
              'status': render_template_string(_status, s=s),
@@ -365,7 +365,7 @@ def assessment_schedules_data(schedules, text, url):
              },
              'timestamp': render_template_string(_timestamp, s=s),
              'info': render_template_string(_info, s=s),
-             'periods': render_template_string(_periods, a=s.owner),
+             'periods': render_template_string(_periods, a=s.owner, simple_label=simple_label),
              'menu': render_template_string(_menu, s=s, text=text, url=url)} for s in schedules]
 
     return jsonify(data)

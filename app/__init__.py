@@ -287,6 +287,16 @@ def create_app():
         return bleach.clean(s)
 
 
+    @app.template_filter('wrap_list')
+    def wrap_list(s, prefix: str='', suffix: str=''):
+        if prefix is None:
+            prefix = ''
+        if suffix is None:
+            suffix = ''
+
+        return [f'{prefix}{item}{suffix}' for item in s]
+
+
     def _get_previous_login():
         if not has_request_context():
             return None

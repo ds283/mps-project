@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, current_app
+from flask import render_template_string, jsonify, current_app, get_template_attribute
 
 from ...database import db
 from ...models import StudentData
@@ -41,9 +41,19 @@ _rejected = \
 """
 
 
+# language=jinja2
+_academic_year = \
+"""
+{{ simple_label(r.academic_year_label(show_details=True)) }}
+"""
+
+
+
 @cache.memoize()
 def _element(record_id):
     r: StudentData = db.session.query(StudentData).filter_by(id=record_id).one()
+
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
     return {'name': {'display': r.user.name,
                       'sortstring': r.user.last_name + r.user.first_name},
@@ -51,7 +61,7 @@ def _element(record_id):
              'exam_number': r.exam_number,
              'registration_number': r.registration_number,
              'programme': r.programme.full_name,
-             'year': r.academic_year_label(show_details=True),
+             'year': render_template_string(_academic_year, r=r, simple_label=simple_label),
              'rejected_by': render_template_string(_rejected, s=r),
              'menu': render_template_string(_actions, s=r, url='REPURL', text='REPTEXT')}
 

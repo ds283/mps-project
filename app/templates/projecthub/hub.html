@@ -1,5 +1,7 @@
 {% extends "base_app.html" %}
 
+{% from "labels.html" import simple_label %}
+
 {% from "bokeh.html" import import_bokeh %}
 {% from "gridstack.html" import import_gridstack %}
 {% from "datatables.html" import import_datatables, bootstrap_spinner %}
@@ -145,7 +147,7 @@
                     <div class="col-4">
                         <div class="d-flex flex-column align-items-end">
                             <div>
-                                {{ pclass.make_label()|safe }}
+                                {{ simple_label(pclass.make_label()) }}
                             </div>
                             {% if period.hand_in_date %}
                                 <small class="text-muted text-right">

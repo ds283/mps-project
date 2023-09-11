@@ -25,7 +25,7 @@ _owner = \
 """
 {% if not project.generic and project.owner is not none %}
     <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
-    {% if project.group %}{{ project.group.make_label()|safe }}{% endif %}
+    {% if project.group %}{{ simple_label(project.group.make_label()) }}{% endif %}
 {% else %}
     <span class="badge bg-info">Generic</span>
 {% endif %}
@@ -45,9 +45,11 @@ _actions = \
 
 
 def add_student_bookmark(projects, sel):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     data = [{'project': render_template_string(_project, sel=sel, proj=project),
              'owner': {
-                 'display': render_template_string(_owner, project=project),
+                 'display': render_template_string(_owner, project=project, simple_label=simple_label),
                  'sortvalue': project.owner.user.last_name + project.owner.user.first_name if not project.generic and project.owner is not None else 'Generic'
              },
              'actions': render_template_string(_actions, sel=sel, project=project)} for project in projects]

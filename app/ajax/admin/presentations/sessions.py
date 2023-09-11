@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
+from flask import render_template_string, jsonify, get_template_attribute
 
 import calendar
 
@@ -59,7 +59,7 @@ _date = \
 _rooms = \
 """
 {% for room in s.ordered_rooms %}
-    {{ room.label|safe }}
+    {{ simple_label(room.label) }}
 {% else %}
     <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> No rooms attached</span>
 {% endfor %}
@@ -136,11 +136,12 @@ _availability = \
 
 
 def assessment_sessions_data(sessions):
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
     data = [{'date': {'display': render_template_string(_date, s=s),
                       'timestamp': calendar.timegm(s.date.timetuple())},
              'session': s.session_type_label,
-             'rooms': render_template_string(_rooms, s=s),
+             'rooms': render_template_string(_rooms, s=s, simple_label=simple_label),
              'availability': render_template_string(_availability, s=s),
              'menu': render_template_string(_menu, s=s)} for s in sessions]
 

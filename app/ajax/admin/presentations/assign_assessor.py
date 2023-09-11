@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
 _name = \
@@ -53,9 +52,8 @@ _sessions = \
 {% for slot in slots %}
     <div class="row vertical-top" style="margin-bottom: 3px;">
         <div class="col-3">
-            {% set style = slot.session.get_label_type() %}
             <div class="dropdown schedule-assign-button" style="display: inline-block;">
-                <a class="badge text-decoration-none text-nohover-light {% if style is not none %}{{ style }}{% else %}bg-secondary{% endif %}" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                <a class="badge text-decoration-none text-nohover-light bg-secondary" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                     {{ slot.session.short_date_as_string }} {{ slot.session.session_type_string }}
                 </a>
                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
@@ -64,7 +62,7 @@ _sessions = \
                     </a>
                 </div>
             </div>
-            {{ slot.room.label|safe }}
+            {{ simple_label(slot.room.label) }}
             {% if slot.has_issues %}
                 {% set errors = slot.errors %}
                 {% set warnings = slot.warnings %}
@@ -143,9 +141,12 @@ _menu = \
 
 
 def assign_assessor_data(assessors, slot, url=None, text=None):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     data = [{'name': {'display': render_template_string(_name, a=a, slot=slot),
                       'sortstring': a.faculty.user.last_name + a.faculty.user.first_name},
-             'sessions': {'display': render_template_string(_sessions, a=a, slots=slots, url=url, text=text),
+             'sessions': {'display': render_template_string(_sessions, a=a, slots=slots, url=url, text=text,
+                                                            simple_label=simple_label),
                           'sortvalue': len(slots)},
              'menu': render_template_string(_menu, a=a, slot=slot)} for a, slots in assessors]
 

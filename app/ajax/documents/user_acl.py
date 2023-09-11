@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
 _name = \
@@ -23,7 +22,7 @@ _role = \
 """
 {% for role in role_list %}
     {% if u.has_role(role) %}
-        {{ role.make_label()|safe }}
+        {{ simple_label(role.make_label()) }}
     {% endif %}
 {% endfor %}
 """
@@ -40,7 +39,7 @@ _access = \
     {% set eligible_roles = asset.get_eligible_roles(user) %}
     <span class="badge bg-primary"><i class="fas fa-check"></i> Has role-based access</span>
     {% for role in eligible_roles %}
-        {{ role.make_label()|safe }}
+        {{ simple_label(role.make_label()) }}
     {% endfor %}
 {% else %}
     <span class="badge bg-danger"><i class="fas fa-times"></i> No access</span>
@@ -69,9 +68,11 @@ _actions = \
 
 
 def acl_user(user_list, role_list, asset, attachment, type):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     data = [{'name': {'display': render_template_string(_name, u=u),
                       'sortstring': u.last_name + u.first_name},
-             'roles': render_template_string(_role, u=u, role_list=role_list),
+             'roles': render_template_string(_role, u=u, role_list=role_list, simple_label=simple_label),
              'access': render_template_string(_access, user=u, asset=asset),
              'actions': render_template_string(_actions, user=u, asset=asset, attachment=attachment, type=type)}
             for u in user_list]

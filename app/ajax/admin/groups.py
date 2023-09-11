@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string
+from flask import render_template_string, get_template_attribute
 
 # language=jinja2
 _groups_menu = \
@@ -45,15 +45,35 @@ _active = \
 {% endif %}
 """
 
+# language=jinja2
+_colour = \
+"""
+{% if g.colour %}
+    {{ simple_label(g.make_label(g.colour)) }}
+{% else %}
+    <span class="badge bg-secondary">None</span>
+{% endif %}
+"""
+
+# language=jinja2
+_website = \
+"""
+{% if g.website %}
+    <a class="text-decoration-none small" href="{{ g.website }}">{{ g.website }}</a>
+{% else %}
+    <span class="badge bg-secondary">None</span>
+{% endif %}
+"""
+
 
 def groups_data(groups):
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
     data = [{'abbrv': g.abbreviation,
              'active': render_template_string(_active, g=g),
              'name': g.name,
-             'colour': '<span class="badge bg-secondary">None</span>' if g.colour is None else g.make_label(g.colour),
-             'website': '<a class="text-decoration-none" href="{web}">{web}</a>'.format(web=g.website) if g.website is not None
-                 else '<span class="badge bg-secondary">None</span>',
+             'colour': render_template_string(_colour, g=g, simple_label=simple_label),
+             'website': render_template_string(_website, g=g),
              'menu': render_template_string(_groups_menu, group=g)} for g in groups]
 
     return data

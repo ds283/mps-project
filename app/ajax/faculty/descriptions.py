@@ -40,7 +40,7 @@ _pclasses = \
 _team = \
 """
 {% for sup in d.team %}
-    {{ sup.make_label(sup.name)|safe }}
+    {{ simple_label(sup.make_label(sup.name)) }}
 {% else %}
     <span class="badge bg-danger">No staff selected</span>
 {% endfor %}
@@ -63,12 +63,14 @@ def descriptions_data(descs, label, menu, pclass_id=None, create=None, config=No
     error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
     error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
 
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     data = [{'label': render_template_string(label, d=d, desc_pclass_id=_get_pclass(d),
                                              pclass_id=pclass_id, create=create, config=config,
                                              desc_validator=desc_validator, error_block_inline=error_block_inline,
                                              error_block_popover=error_block_popover),
              'pclasses': render_template_string(_pclasses, d=d),
-             'team': render_template_string(_team, d=d),
+             'team': render_template_string(_team, d=d, simple_label=simple_label),
              'capacity': d.capacity,
              'menu': render_template_string(menu, d=d, pclass_id=pclass_id, create=create,
                                             desc_validator=desc_validator)} for d in descs]

@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
+from flask import render_template_string, jsonify, get_template_attribute
 from sqlalchemy.event import listens_for
 
 from ...cache import cache
@@ -33,7 +33,7 @@ _name = \
 _groups = \
 """
 {% for g in f.affiliations %}
-    {{ g.make_label()|safe }}
+    {{ simple_label(g.make_label()) }}
 {% else %}
     <span class="badge bg-secondary">None</span>
 {% endfor %}
@@ -476,9 +476,11 @@ def _element_base(faculty_id, enrolment_template, allocation_template, workload_
     # TODO: presentation ScheduleSlot allocation isn't currently attached to the "allocation" entry -
     #  these should be shown, just as for supervising/marking/moderating allocation
 
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     return {'name': {'display': render_template_string(_name, f=f),
                      'sortstring': f.user.last_name + f.user.first_name},
-            'groups': render_template_string(_groups, f=f),
+            'groups': render_template_string(_groups, f=f, simple_label=simple_label),
             'enrollments': {'display': render_template_string(enrolment_template, f=f, enrolments=enrolments,
                                                               configs=configs),
                             'sortvalue': get_count(f.enrollments)},

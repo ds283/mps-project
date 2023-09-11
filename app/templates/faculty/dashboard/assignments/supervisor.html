@@ -1,3 +1,4 @@
+{% from "labels.html" import simple_label %}
 {% from "faculty/dashboard/assignments/status.html" import no_assignment %}
 
 {% macro supervisor_assignments(period, current_user, is_sabbatical, is_exempt, reenroll_date) %}
@@ -41,10 +42,10 @@
                             {% endif %}
                             <a class="text-decoration-none" href="mailto:{{ rec.owner.student.user.email }}">{{ rec.student_identifier|safe }}</a>
                             <div class="pt-2">
-                                {{ rec.owner.student.cohort_label|safe }}
-                                {{ rec.owner.student.programme.short_label|safe }}
+                                {{ simple_label(rec.owner.student.cohort_label) }}
+                                {{ simple_label(rec.owner.student.programme.short_label) }}
                                 {% if not rec.owner.published %}
-                                    <span class="badge bg-warning text-dark">Not published</span>
+                                    <span class="badge bg-warning tex t-dark">Not published</span>
                                 {% endif %}
                             </div>
                             {% if rec.owner.student.has_previous_submissions %}

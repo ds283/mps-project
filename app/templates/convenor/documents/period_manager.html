@@ -1,6 +1,7 @@
 {% extends "base_app.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
+{% from "labels.html" import simple_label %}
 
 {% block scripts %}
     {{ super() }}
@@ -88,7 +89,7 @@
         </td>
         <td>
             {% if asset.license %}
-                {{ asset.license.make_label()|safe }}
+                {{ simple_label(asset.license.make_label()) }}
                 <span class="badge bg-info">{{ asset.license.version }}</span>
             {% else %}
                 <strong>Unset</strong>

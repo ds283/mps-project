@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
 _name = \
@@ -37,8 +36,7 @@ _sessions = \
 {% for slot in slots %}
     <div style="display: inline-block; margin-bottom:2px; margin-right:2px;">
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
-            {% set style = slot.session.get_label_type() %}
-            <a class="badge text-decoration-none text-nohover-light {% if style is not none %}{{ style }}{% else %}bg-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+            <a class="badge text-decoration-none text-nohover-light bg-secondary dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                 {{ slot.session.short_date_as_string }} {{ slot.session.session_type_string }}
             </a>
             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
@@ -47,7 +45,7 @@ _sessions = \
                 </a>
             </div>
         </div>
-        {{ slot.room.label|safe }}
+        {{ simple_label(slot.room.label) }}
         {% if slot.has_issues %}
             <i class="fas fa-exclamation-triangle text-danger"></i>
         {% endif %}
@@ -86,9 +84,12 @@ _availability = \
 
 
 def schedule_view_faculty(assessors, record, url=None, text=None):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     data = [{'name': {'display': render_template_string(_name, a=a),
                       'sortstring': a.faculty.user.last_name + a.faculty.user.first_name},
-             'sessions': {'display': render_template_string(_sessions, a=a, slots=slots, rec=record, back_url=url, back_text=text),
+             'sessions': {'display': render_template_string(_sessions, a=a, slots=slots, rec=record,
+                                                            back_url=url, back_text=text, simple_label=simple_label),
                           'sortvalue': len(slots)},
              'availability': render_template_string(_availability, a=a)} for a, slots in assessors]
 

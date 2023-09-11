@@ -8,13 +8,12 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
 _name = \
 """
-{{ s.session.label|safe }}
+{{ simple_label(s.session.label) }}
 {% if s.has_issues %}
     <i class="fas fa-exclamation-triangle text-danger"></i>
 {% endif %}
@@ -134,7 +133,9 @@ _menu = \
 
 
 def assign_submitter_data(slots, old_slot, talk, url=None, text=None):
-    data = [{'session': {'display': render_template_string(_name, s=s),
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
+    data = [{'session': {'display': render_template_string(_name, s=s, simple_label=simple_label),
                          'sortvalue': s.session.date.isoformat()},
              'room': s.room.label,
              'assessors': render_template_string(_assessors, s=s, t=talk, url=url, text=text),

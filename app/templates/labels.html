@@ -1,0 +1,39 @@
+{% macro simple_label_impl(label_data, user_classes=none, popover_text=none, prefix=none, suffix=none) %}
+    {% if label_data is mapping %}
+        {%- set label = label_data['label'] if 'label' in label_data else none %}
+        {%- set style = label_data['style'] if 'style' in label_data else none %}
+        {%- set type = label_data['type'] if 'type' in label_data else none %}
+        {%- set popover_str = label_data['popover'] if 'popover' in label_data else popover_text %}
+        {%- set prefix = label_data['prefix'] if 'prefix' in label_data else prefix %}
+        {%- set suffix = label_data['suffix'] if 'suffix' in label_data else suffix %}
+        {%- if popover_str is iterable and popover_str is not string %}
+            {%- set popover_str = popover_str|wrap_list('<div>', '</div>')|join -%}
+        {%- endif -%}
+        {% if type is not none %}
+            <span class="badge bg-{{ type }} {% if user_classes is not none %}{{ user_classes }}{% endif %}"
+                {%- if popover_text is not none %} data-bs-toggle="tooltip" data-bs-html="true" title="{{ popover_text }}"{% endif %}>
+                {%- if prefix -%}{{ prefix }} {% endif -%}{{ label }}{%- if suffix %} {{ suffix }}{%- endif -%}
+            </span>
+        {% else %}
+            <span class="badge bg-secondary {% if user_classes is not none %}{{ user_classes }}{% endif %}"
+                {%- if style is not none %} style="{{ style }}"{% endif %}
+                {%- if popover_text is not none %} data-bs-toggle="tooltip" title="{{ popover_text }}"{% endif %}>
+                {%- if prefix -%}{{ prefix }} {% endif -%}{{ label }}{%- if suffix %} {{ suffix }}{%- endif -%}
+            </span>
+        {% endif %}
+    {% elif label_data is none %}
+        <span class="badge bg-danger">UI error</span>
+    {% else %}
+        <span class="badge bg-danger">UI error</span>
+    {% endif %}
+{% endmacro %}
+
+{% macro simple_label(label_data, user_classes=none, popover_text=none, prefix=none, suffix=none) %}
+    {%- if label_data is iterable and label_data is not string and label_data is not mapping -%}
+        {%- for label in label_data -%}
+            {{ simple_label_impl(label, user_classes=user_classes, prefix=prefix, suffix=suffix) }}
+        {%- endfor -%}
+    {%- else -%}
+        {{ simple_label_impl(label_data, user_classes=user_classes, popover_text=popover_text, prefix=prefix, suffix=suffix) }}
+    {%- endif -%}
+{% endmacro %}

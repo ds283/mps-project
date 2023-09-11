@@ -11,7 +11,7 @@
 
 from typing import List
 
-from flask import render_template_string
+from flask import render_template_string, get_template_attribute
 from flask_security import current_user
 
 from ...models import EnrollmentRecord
@@ -83,11 +83,20 @@ _menu = \
 """
 
 
+# language=jinja2
+_pclass = \
+"""
+{{ simple_label(e.pclass.make_label() }}
+"""
+
+
 def sabbaticals(enrolments: List[EnrollmentRecord]):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     is_admin = current_user.has_role('admin') or current_user.has_role('root') or current_user.has_role('manage_users')
 
     data = [{'name': render_template_string(_name, fac=e.owner),
-             'pclass': e.pclass.make_label(),
+             'pclass': render_template_string(_pclass, e=e, simple_label=simple_label),
              'exemptions': render_template_string(_exemptions, rec=e),
              'menu': render_template_string(_menu, rec=e, is_admin=is_admin)} for e in enrolments]
 

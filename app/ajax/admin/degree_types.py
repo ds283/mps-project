@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string
+from flask import render_template_string, get_template_attribute
 
 # language=jinja2
 _types_menu = \
@@ -50,7 +50,7 @@ _active = \
 # language=jinja2
 _name = \
 """
-{{ t.name }} {{ t.make_label()|safe }}
+{{ t.name }} {{ simple_label(t.make_label()) }}
 """
 
 
@@ -62,13 +62,21 @@ _duration = \
 """
 
 
-def degree_types_data(types):
+# language=jinja2
+_colour = \
+"""
+{{ simple_label(t.make_label(t.colour)) }}
+"""
 
-    data = [{'name': render_template_string(_name, t=t),
+
+def degree_types_data(types):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
+    data = [{'name': render_template_string(_name, t=t, simple_label=simple_label),
              'level': t._level_text(t.level),
              'duration': render_template_string(_duration, t=t),
              'active': render_template_string(_active, t=t),
-             'colour': t.make_label(t.colour),
+             'colour': render_template_string(_colour, t=t, simple_label=simple_label),
              'menu': render_template_string(_types_menu, type=t)} for t in types]
 
     return data

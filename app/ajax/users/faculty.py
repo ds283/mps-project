@@ -8,10 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string
+from flask import render_template_string, get_template_attribute
 from sqlalchemy.event import listens_for
 
-from .shared import menu, name
+from .shared import menu, name, active
 from ...cache import cache
 from ...database import db
 from ...models import User, FacultyData, EnrollmentRecord
@@ -22,7 +22,7 @@ from ...shared.utils import detuple
 _affiliation = \
 """
 {% for group in f.affiliations %}
-    {{ group.make_label(group.name)|safe }}
+    {{ simple_label(group.make_label(group.name)) }}
 {% endfor %}
 """
 
@@ -32,7 +32,7 @@ _enrolled = \
 """
 {% for record in f.enrollments %}
     {% set pclass = record.pclass %}
-    {{ pclass.make_label()|safe }}
+    {{ simple_label(pclass.make_label()) }}
 {% endfor %}
 """
 
@@ -80,12 +80,14 @@ def _element(user_id, current_user_id):
     u = db.session.query(User).filter_by(id=user_id).one()
     cu = db.session.query(User).filter_by(id=current_user_id).one()
 
-    return {'name': render_template_string(name, u=u, f=f),
-            'active': u.active_label,
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
+    return {'name': render_template_string(name, u=u, f=f, simple_label=simple_label),
+            'active': render_template_string(active, u=u, simple_label=simple_label),
             'office': f.office,
             'settings': render_template_string(_settings, f=f),
-            'affiliation': render_template_string(_affiliation, f=f),
-            'enrolled': render_template_string(_enrolled, f=f),
+            'affiliation': render_template_string(_affiliation, f=f, simple_label=simple_label),
+            'enrolled': render_template_string(_enrolled, f=f, simple_label=simple_label),
             'menu': render_template_string(menu, user=u, cuser=cu, pane='faculty')}
 
 

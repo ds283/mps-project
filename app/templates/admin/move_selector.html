@@ -1,5 +1,7 @@
 {% extends "base_app.html" %}
 
+{% from "labels.html" import simple_label %}
+
 {% block title %}
     Move selection record
 {% endblock %}
@@ -20,7 +22,7 @@
                 </div>
                 <div class="card-body">
                     <div class="container-fluid">
-                        <div class="mb-4">Current selection is for <strong>{{ sel.config.project_class.make_label()|safe }}</strong></div>
+                        <div class="mb-4">Current selection is for <strong>{{ simple_label(sel.config.project_class.make_label()) }}</strong></div>
                         <table class="table table-striped">
                             <thead>
                                 <tr>

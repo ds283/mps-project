@@ -2,6 +2,7 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import on_click_selector_field %}
+{% from "labels.html" import simple_label %}
 
 {% block styles %}
     {{ super() }}
@@ -58,7 +59,7 @@
                                 </div>
                                 <div class="col-5">
                                     <div class="float-end">
-                                        {{ slot.pclass.make_label()|safe }}
+                                        {{ simple_label(slot.pclass.make_label()) }}
                                     </div>
                                 </div>
                             </div>

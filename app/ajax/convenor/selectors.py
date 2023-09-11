@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
+from flask import render_template_string, jsonify, get_template_attribute
 from flask_security import current_user
 
 
@@ -131,9 +131,9 @@ _menu = \
 # language=jinja2
 _cohort = \
 """
-{{ sel.student.programme.label|safe }}
-{{ sel.student.cohort_label|safe }}
-{{ sel.academic_year_label(show_details=True)|safe }}
+{{ simple_label(sel.student.programme.label) }}
+{{ simple_label(sel.student.cohort_label) }}
+{{ simple_label(sel.academic_year_label(show_details=True)) }}
 """
 
 # language=jinja2
@@ -272,12 +272,14 @@ def selectors_data(students, config):
 
     is_admin = current_user.has_role('admin') or current_user.has_role('root')
 
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     data = [{'name': {
                 'display': render_template_string(_name, sel=s),
                 'sortstring': s.student.user.last_name + s.student.user.first_name
              },
              'cohort': {
-                 'display': render_template_string(_cohort, sel=s),
+                 'display': render_template_string(_cohort, sel=s, simple_label=simple_label),
                  'value': s.student.cohort
              },
              'bookmarks': {

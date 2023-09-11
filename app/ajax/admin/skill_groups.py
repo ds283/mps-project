@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string
-
+from flask import render_template_string, get_template_attribute
 
 # language=jinja2
 _menu = \
@@ -58,9 +57,22 @@ _include_name = \
 """
 
 
+# language=jinja2
+_colour = \
+"""
+{% if g.colour %}
+    {{ simple_label(g.make_label(g.colour)) }}
+{% else %}
+    <span class="badge bg-secondary">None</span>
+{% endif %}
+"""
+
+
 def skill_groups_data(groups):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     data = [{'name': g.name,
-             'colour': g.make_label(g.colour),
+             'colour': render_template_string(_colour, g=g, simple_label=simple_label),
              'active': render_template_string(_active, g=g),
              'include': render_template_string(_include_name, g=g),
              'menu': render_template_string(_menu, group=g)} for g in groups]

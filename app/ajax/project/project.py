@@ -135,7 +135,7 @@ _project_prefer = \
 """
 {% for programme in project.ordered_programmes %}
     {% if programme.active %}
-        {{ programme.short_label|safe }}
+        {{ simple_label(programme.short_label) }}
     {% endif %}
 {% endfor %}
 """
@@ -146,7 +146,7 @@ _project_skills = \
 """
 {% for skill in skills %}
     {% if skill.is_active %}
-      {{ skill.short_label|safe }}
+      {{ simple_label(skill.short_label) }}
     {% endif %}
 {% endfor %}
 """
@@ -157,15 +157,11 @@ _affiliation = \
 """
 {% set ns = namespace(affiliation=false) %}
 {% if project.group %}
-    {{ project.group.make_label()|safe }}
+    {{ simple_label(project.group.make_label()) }}
     {% set ns.affiliation = true %}
 {% endif %}
 {% for tag in project.forced_group_tags %}
-    {% if tag.name|length > 15 %}
-        {{ tag.make_label(tag.name[0:15]+'...')|safe }}
-    {% else %}
-        {{ tag.make_label()|safe }}
-    {% endif %}
+    {{ simple_label(tag.make_label(truncate(tag.name[0:15]))) }}
     {% set ns.affiliation = true %}
 {% endfor %}
 {% if not ns.affiliation %}
@@ -395,14 +391,17 @@ def _element(project_id, desc_id, menu_template, in_selector, in_submitter, sele
 
     menu_string = _menus[menu_template]
 
+    simple_label = get_template_attribute("labels.html", "simple_label")
+    truncate = get_template_attribute("macros.html", "truncate")
+
     return {'name': render_template_string(_project_name, project=p, desc=d, text='REPTEXT', url='REPURL'),
              'owner': render_template_string(_owner, project=p),
              'status': render_template_string(_project_status, project=p),
              'pclasses': render_template_string(_project_pclasses, project=p),
              'meeting': render_template_string(_project_meetingreqd, project=p),
-             'group': render_template_string(_affiliation, project=p),
-             'prefer': render_template_string(_project_prefer, project=p),
-             'skills': render_template_string(_project_skills, skills=p.ordered_skills),
+             'group': render_template_string(_affiliation, project=p, simple_label=simple_label, truncate=truncate),
+             'prefer': render_template_string(_project_prefer, project=p, simple_label=simple_label),
+             'skills': render_template_string(_project_skills, skills=p.ordered_skills, simple_label=simple_label),
              'menu': render_template_string(menu_string, project=p, desc=d,
                                             config_id=_config_proxy, pclass_id=_pclass_proxy,
                                             in_selector=in_selector, in_submitter=in_submitter,

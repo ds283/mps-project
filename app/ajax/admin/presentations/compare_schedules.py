@@ -8,16 +8,15 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, render_template_string
-
+from flask import jsonify, render_template_string, get_template_attribute
 
 # language=jinja2
 _source = \
 """
 {% macro slot_id(slot) %}
-    {{ slot.session.label|safe }}
-    {{ slot.room.label|safe }} 
-    {{ slot.pclass.make_label()|safe }}
+    {{ simple_label(slot.session.label) }}
+    {{ simple_label(slot.room.label) }} 
+    {{ simple_label(slot.pclass.make_label()) }}
 {% endmacro %}
 {% macro show_changes(s, t) %}
     {% for assessor in s.assessors: %}
@@ -66,9 +65,9 @@ _source = \
 _target = \
 """
 {% macro slot_id(slot) %}
-    {{ slot.session.label|safe }}
-    {{ slot.room.label|safe }}
-    {{ slot.pclass.make_label()|safe }}
+    {{ simple_label(slot.session.label) }}
+    {{ simple_label(slot.room.label) }}
+    {{ simple_label(slot.pclass.make_label()) }}
 {% endmacro %}
 {% macro show_changes(s, t) %}
     {% for assessor in t.assessors: %}
@@ -133,9 +132,11 @@ _menu = \
 
 
 def compare_schedule_data(pairs, source_id, target_id):
-    data = [{'source': {'display': render_template_string(_source, op=op, s=s, t=t),
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
+    data = [{'source': {'display': render_template_string(_source, op=op, s=s, t=t, simple_label=simple_label),
                         'sortvalue': op},
-             'target': {'display': render_template_string(_target, op=op, s=s, t=t),
+             'target': {'display': render_template_string(_target, op=op, s=s, t=t, simple_label=simple_label),
                         'sortvalue': op},
              'menu': render_template_string(_menu, op=op, s=s, t=t, sid=source_id, tid=target_id)} for op, s, t in pairs]
 

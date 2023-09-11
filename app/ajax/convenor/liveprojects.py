@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, url_for
+from flask import render_template_string, jsonify, url_for, get_template_attribute
 
 from ...models import ProjectClassConfig
 
@@ -45,15 +45,11 @@ _affiliation = \
 """
 {% set ns = namespace(affiliation=false) %}
 {% if project.group %}
-    {{ project.group.make_label()|safe }}
+    {{ simple_label(project.group.make_label()) }}
     {% set ns.affiliation = true %}
 {% endif %}
 {% for tag in project.forced_group_tags %}
-    {% if tag.name|length > 15 %}
-        {{ tag.make_label(tag.name[0:15]+'...')|safe }}
-    {% else %}
-        {{ tag.make_label()|safe }}
-    {% endif %}
+    {{ simple_label(tag.make_label(truncate(tag.name))) }}
     {% set ns.affiliation = true %}
 {% endfor %}
 {% if not ns.affiliation %}
@@ -248,9 +244,12 @@ def liveprojects_data(projects, config: ProjectClassConfig, url=None, text=None)
     lifecycle = config.selector_lifecycle
     require_live = (lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN)
 
+    simple_label = get_template_attribute("labels.html", "simple_label")
+    truncate = get_template_attribute("macros.html", "truncate")
+
     data = [{'name': render_template_string(_name, project=p, config=config),
              'owner': render_template_string(_owner, project=p),
-             'group': render_template_string(_affiliation, project=p),
+             'group': render_template_string(_affiliation, project=p, simple_label=simple_label, truncate=truncate),
              'bookmarks': render_template_string(_bookmarks, project=p),
              'selections': render_template_string(_selections, project=p),
              'confirmations': render_template_string(_confirmations, project=p),

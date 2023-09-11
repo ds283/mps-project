@@ -77,9 +77,9 @@ _golive = \
 # language=jinja2
 _projects = \
 """
-{{ d.projects_offered_label(pclass)|safe }}
-{{ d.projects_unofferable_label|safe }}
-{{ d.assessor_label|safe }}
+{{ simple_label(d.projects_offered_label(pclass)) }}
+{{ simple_label(d.projects_unofferable_label) }}
+{{ simple_label(d.assessor_label) }}
 """
 
 # language=jinja2

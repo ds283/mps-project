@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, render_template_string
-
+from flask import jsonify, render_template_string, get_template_attribute
 
 # language=jinja2
 _status = \
@@ -376,7 +375,7 @@ _name = \
 <p></p>
 {% for config in m.config_members %}
     {% set pclass = config.project_class %}
-    {{ pclass.make_label(pclass.abbreviation)|safe }}
+    {{ simple_label(pclass.make_label(pclass.abbreviation)) }}
 {% endfor %}
 {% set has_extra_matches = m.include_matches.first() is not none or m.base is not none %}
 {% if has_extra_matches %}
@@ -414,10 +413,12 @@ def matches_data(matches, config=None, text=None, url=None, is_root=False):
     :param matches:
     :return:
     """
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     number = len(matches)
     allow_compare = number > 1
 
-    data = [{'name': render_template_string(_name, m=m, text=text, url=url),
+    data = [{'name': render_template_string(_name, m=m, text=text, url=url, simple_label=simple_label),
              'status': render_template_string(_status, m=m),
              'score': {
                  'display': render_template_string(_score, m=m),

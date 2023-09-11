@@ -1,6 +1,7 @@
 {% extends "bootstrap/base.html" %}
 
 {% from "icon_block.html" import icon_block %}
+{% from "labels.html" import simple_label %}
 
 {% block styles %}
     {{ super() }}
@@ -101,7 +102,7 @@
                                             <div class="col-9">
                                                 {% for tag in project.ordered_tags %}
                                                     {% if tag.is_active %}
-                                                        {{ tag.make_label(user_classes="project-label")|safe }}
+                                                        {{ simple_label(tag.make_label(), user_classes="project-label") }}
                                                     {% endif %}
                                                 {% endfor %}
                                             </div>
@@ -114,7 +115,7 @@
                                             <div class="col-9">
                                                 {% for skill in project.ordered_skills %}
                                                     {% if skill.is_active %}
-                                                        {{ skill.make_label(user_classes="project-label")|safe }}
+                                                        {{ simple_label(skill.make_label(), user_classes="project-label") }}
                                                     {% endif %}
                                                 {% endfor %}
                                             </div>
@@ -127,7 +128,7 @@
                                             <div class="col-9">
                                                 {% for programme in project.ordered_programmes %}
                                                     {% if programme.active %}
-                                                        {{ programme.make_label(user_classes="project-label")|safe }}
+                                                        {{ simple_label(programme.make_label(), user_classes="project-label") }}
                                                     {% endif %}
                                                 {% endfor %}
                                             </div>
@@ -142,7 +143,7 @@
                                                 <div class="col-9">
                                                     {% for module in modules %}
                                                         {% if module.active %}
-                                                            {{ module.make_label(user_classes="project-label")|safe }}
+                                                            {{ simple_label(module.make_label(), user_classes="project-label") }}
                                                         {% endif %}
                                                     {% endfor %}
                                                 </div>

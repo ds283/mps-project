@@ -2,6 +2,8 @@
 
 {% import "bootstrap/form.html" as wtf %}
 
+{% from "labels.html" import simple_label %}
+
 {% from "student/dashboard/selection_card.html" import selection_card with context %}
 {% from "student/dashboard/submission_card.html" import submission_card with context %}
 {% from "macros.html" import message_card %}
@@ -200,9 +202,9 @@
     <div class="d-flex flex-row justify-content-between align-items-start mt-2">
         {% if sdata %}
             <div class="d-flex flex-row justify-content-start gap-2">
-                {{ sdata.student.cohort_label|safe }}
-                {{ sdata.student.programme.label|safe }}
-                {{ sdata.academic_year_label(show_details=False)|safe }}
+                {{ simple_label(sdata.student.cohort_label) }}
+                {{ simple_label(sdata.student.programme.label) }}
+                {{ simple_label(sdata.academic_year_label(show_details=False)) }}
             </div>
         {% endif %}
         {% if sdata and sdata.live_deadline is defined %}

@@ -1,6 +1,8 @@
+{% from "labels.html" import simple_label %}
+
 {% macro project_metadata(project) %}
     {% if project is not none %}
-        {{ project.views_label()|safe }}
+        {{ simple_label(project.views_label()) }}
         {% if project.last_view %}
             <span class="badge bg-secondary">last view {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</span>
         {% endif %}
@@ -11,8 +13,8 @@
 
 {% macro project_selection_data(project) %}
     {% if project is not none %}
-        {{ project.selections_label(popover=True)|safe }}
-        {{ project.bookmarks_label(popover=True)|safe }}
+        {{ simple_label(project.selections_label(popover=True)) }}
+        {{ simple_label(project.bookmarks_label(popover=True)) }}
     {% else %}
         <span class="badge bg-danger">Missing project data</span>
     {% endif %}

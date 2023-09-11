@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
 _menu = \
@@ -48,10 +47,18 @@ _active = \
 """
 
 
+# language=jinja2
+_colour = \
+"""
+{{ simple_label(b.make_label(b.colour)) }}
+"""
+
+
 def buildings_data(buildings):
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
     data = [{'name': b.name,
-             'colour': b.make_label(b.colour),
+             'colour': render_template_string(_colour, b=b, simple_label=simple_label),
              'active': render_template_string(_active, b=b),
              'menu': render_template_string(_menu, b=b)} for b in buildings]
 

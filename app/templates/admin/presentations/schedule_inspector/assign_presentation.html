@@ -2,6 +2,7 @@
 
 {% from "datatables.html" import import_datatables %}
 {% from "error_block.html" import error_block_inline, error_block_popover %}
+{% from "labels.html" import simple_label %}
 
 {% block scripts %}
     {{ super() }}
@@ -84,7 +85,7 @@
                                 {% if slot.has_issues %}
                                     <i class="fas fa-exclamation-triangle text-danger"></i>
                                 {% endif %}
-                                {{ talk.project.config.project_class.make_label()|safe }}
+                                {{ simple_label(talk.project.config.project_class.make_label()) }}
                             </p>
                             {% if slot.has_issues %}
                                 {% set errors = slot.errors %}

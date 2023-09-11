@@ -8,14 +8,13 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
 _programmes = \
 """
 {% for programme in pcl.programmes %}
-    {{ programme.short_label|safe }}
+    {{ simple_label(programme.short_label) }}
 {% endfor %}
 """
 
@@ -80,7 +79,7 @@ _menu = \
 _options = \
 """
 {% if p.colour and p.colour is not none %}
-  {{ p.make_label(p.colour)|safe }}
+  {{ simple_label(p.make_label(p.colour)) }}
 {% else %}
   <span class="badge bg-secondary">No colour</span>'
 {% endif %}
@@ -234,7 +233,7 @@ _timing = \
 # language=jinja2
 _name = \
 """
-{{ p.name }} {{ p.make_label(p.abbreviation)|safe }}
+{{ p.name }} {{ simple_label(p.make_label(p.abbreviation)) }}
 <span class="badge {% if p.student_level >= p.LEVEL_UG and p.student_level <= p.LEVEL_PGR %}bg-secondary{% else %}bg-danger{% endif %}">
     {{ p._level_text(p.student_level) }}
 </span>
@@ -259,14 +258,16 @@ _name = \
 
 
 def pclasses_data(pclasses):
-    data = [{'name': render_template_string(_name, p=p),
-             'options': render_template_string(_options, p=p),
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
+    data = [{'name': render_template_string(_name, p=p, simple_label=simple_label),
+             'options': render_template_string(_options, p=p, simple_label=simple_label),
              'timing': render_template_string(_timing, p=p),
              'cats': render_template_string(_workload, p=p),
              'submissions': render_template_string(_submissions, p=p),
              'popularity': render_template_string(_popularity, p=p),
              'personnel': render_template_string(_personnel, p=p),
-             'programmes': render_template_string(_programmes, pcl=p),
+             'programmes': render_template_string(_programmes, pcl=p, simple_label=simple_label),
              'menu': render_template_string(_menu, pcl=p)} for p in pclasses]
 
     return jsonify(data)

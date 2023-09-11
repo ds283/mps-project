@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, render_template_string
+from flask import jsonify, render_template_string, get_template_attribute
 
 
 # language=jinja2
@@ -52,9 +52,9 @@ _pclass = \
 # language=jinja2
 _cohort = \
 """
-{{ sel.student.programme.short_label|safe }}
-{{ sel.academic_year_label(show_details=True)|safe }}
-{{ sel.student.cohort_label|safe }}
+{{ simple_label(sel.student.programme.short_label) }}
+{{ simple_label(sel.academic_year_label(show_details=True)) }}
+{{ simple_label(sel.student.cohort_label) }}
 """
 
 
@@ -251,6 +251,8 @@ _scores = \
 def student_view_data(selector_data):
     # selector_data is a list of ((lists of) MatchingRecord, delta-value) pairs
 
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     def score_data(r):
         total = sum([rec.current_score for rec in r])
 
@@ -263,7 +265,7 @@ def student_view_data(selector_data):
                 'sortvalue': r[0].selector.student.user.last_name + r[0].selector.student.user.first_name
              },
              'pclass': render_template_string(_pclass, sel=r[0].selector),
-             'details': render_template_string(_cohort, sel=r[0].selector),
+             'details': render_template_string(_cohort, sel=r[0].selector, simple_label=simple_label),
              'project': render_template_string(_project, recs=r),
              'marker': render_template_string(_marker, recs=r),
              'rank': {

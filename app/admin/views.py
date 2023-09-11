@@ -5322,15 +5322,24 @@ def match_dists_view(id):
 
     CATS_script, CATS_div = components(CATS_plot)
 
-    delta_data_set = zip(record.selectors, record.selector_deltas)
-    if flag:
-        delta_data_set = [x for x in delta_data_set if (x[0])[0].selector.config.pclass_id == pclass_value]
+    selectors = record.selector_list_query().all()
+    def _get_deltas(s: SelectingStudent):
+        if flag:
+            if s.config.pclass_id != pclass_value:
+                return None
 
-    deltas = [x[1] for x in delta_data_set if x[1] is not None]
+        records: List[MatchingRecord] = s.matching_records \
+            .filter(MatchingRecord.matching_id == record.id).all()
+
+        deltas = [r.delta for r in records]
+        return sum(deltas) if None not in deltas else None
+
+    delta_set = [_get_deltas(s) for s in selectors]
+    delta_set = [x for x in delta_set if x is not None]
 
     delta_plot = figure(title='Delta distribution',
                        x_axis_label='Total delta', width=800, height=300)
-    delta_hist, delta_edges = histogram(deltas, bins='auto')
+    delta_hist, delta_edges = histogram(delta_set, bins='auto')
     delta_plot.quad(top=delta_hist, bottom=0, left=delta_edges[:-1], right=delta_edges[1:],
                    fill_color="#036564", line_color="#033649")
     delta_plot.sizing_mode = 'scale_width'

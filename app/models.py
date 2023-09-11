@@ -12619,7 +12619,6 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
     @orm.reconstructor
     def _reconstruct(self):
-        self._selector_list = None
         self._faculty_list = None
         self._CATS_list = None
 
@@ -12635,22 +12634,6 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             .join(MatchingRecord, and_(MatchingRecord.matching_id == self.id,
                                        MatchingRecord.selector_id == SelectingStudent.id)) \
             .distinct()
-
-    def _build_selector_list(self):
-        if self._selector_list is not None:
-            return
-
-        self._selector_list = {}
-
-        for item in self.records.order_by(MatchingRecord.submission_period.asc()).all():
-            item: MatchingRecord
-
-            # if we haven't seen this selector ID before, start a new list containing this record.
-            # Otherwise, attach current record to the end of the existing list.
-            if item.selector_id not in self._selector_list:
-                self._selector_list[item.selector_id] = [item]
-            else:
-                self._selector_list[item.selector_id].append(item)
 
 
     def _build_faculty_list(self):
@@ -12697,12 +12680,6 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
 
     @property
-    def selectors(self):
-        self._build_selector_list()
-        return self._selector_list.values()
-
-
-    @property
     def faculty(self):
         self._build_faculty_list()
         return self._faculty_list.values()
@@ -12719,41 +12696,36 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
 
     @property
-    def selector_deltas(self):
-        self._build_selector_list()
-
-        d = lambda recs: [y.delta for y in recs]
-        delta_set = [d(x) for x in self.selectors]
-
-        fsum = lambda deltas: sum(deltas) if None not in deltas else None
-        sum_delta_set = [fsum(d) for d in delta_set]
-
-        # return list of summed delta in the same order as the list returned from .selectors()
-        return sum_delta_set
-
-
-    @property
     def faculty_CATS(self):
         self._build_CATS_list()
         return self._CATS_list
 
 
+    def _get_delta_set(self):
+        selectors = self.selector_list_query().all()
+
+        def _get_deltas(s: SelectingStudent):
+            records: List[MatchingRecord] = s.matching_records \
+                .filter(MatchingRecord.matching_id == self.id).all()
+
+            deltas = [r.delta for r in records]
+            return sum(deltas) if None not in deltas else None
+
+        delta_set = [_get_deltas(s) for s in selectors]
+
+        return [x for x in delta_set if x is not None]
+
+
     @property
     def delta_max(self):
-        filtered_deltas = [x for x in self.selector_deltas if x is not None]
-        if len(filtered_deltas) == 0:
-            return None
-
-        return max(filtered_deltas)
+        delta_set = self._get_delta_set()
+        return max(delta_set)
 
 
     @property
     def delta_min(self):
-        filtered_deltas = [x for x in self.selector_deltas if x is not None]
-        if len(filtered_deltas) == 0:
-            return None
-
-        return min(filtered_deltas)
+        delta_set = self._get_delta_set()
+        return min(delta_set)
 
 
     @property

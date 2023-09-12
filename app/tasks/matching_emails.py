@@ -223,10 +223,6 @@ def register_matching_email_tasks(celery):
         user: User = fac.user
         matches: List[MatchingRecord] = record.get_supervisor_records(fac.id).all()
 
-        # temporarily disable emails to faculty that are not used as part of the matching
-        if len(matches) == 0:
-            return 0
-
         binned_matches = {}
         convenors = set()
         for match in matches:
@@ -243,7 +239,7 @@ def register_matching_email_tasks(celery):
                                      to=[user.email])
 
         if is_draft:
-            msg.subject ='Notification: Provisional MPhys FYP allocation for ' \
+            msg.subject ='Notification: Provisional FYP allocation for ' \
                          '{yra}-{yrb}'.format(yra=record.submit_year_a, yrb=record.submit_year_b)
 
             # check whether we are notifying of an assignment, or that a faculty member is not needed for an
@@ -266,7 +262,7 @@ def register_matching_email_tasks(celery):
                 msg.attach_alternative(html, "text/html")
 
         else:
-            msg.subject ='Notification: Final MPhys FYP allocation for ' \
+            msg.subject ='Notification: Final FYP allocation for ' \
                          '{yra}-{yrb}'.format(yra=record.submit_year_a, yrb=record.submit_year_b)
 
             # check whether we are notifying of an assignment, or that a faculty member is not needed for an

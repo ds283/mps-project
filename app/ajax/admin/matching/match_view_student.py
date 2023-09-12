@@ -8,23 +8,106 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, render_template_string, get_template_attribute
+from flask import render_template_string, get_template_attribute
 
 
 # language=jinja2
 _student = \
 """
-<a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
-{% if not valid %}
-    <i class="fas fa-exclamation-triangle text-danger"></i>
-{% endif %}
+{% set config = sel.config %}
+<div>
+    <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
+    {% if not valid %}
+        <i class="fas fa-exclamation-triangle text-danger"></i>
+    {% endif %}
+</div>
+<a class="text-muted text-decoration-none small" role="button" data-bs-toggle="offcanvas" href="#edit_{{ sel.id }}" aria-controls="edit_{{ sel.id }}">Show details <i class="fas fa-chevron-right"></i></a>
+<div class="offcanvas offcanvas-start text-bg-light" tabindex="-1" id="edit_{{ sel.id }}" aria-labelledby="editLabel_{{ sel.id }}">
+    <div class="offcanvas-header">
+        <h5 class="offcanas-title" id="editLabel_{{ sel.id }}">
+            <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
+        </h5>
+    </div>
+    <div class="offcanvas-body">
+        {% if not sel.convert_to_submitter %}
+            <div class="text-danger">
+                Conversion of this student is disabled.
+                <a class="text-decoration-none" href="{{ url_for('admin.delete_match_record', attempt_id=attempt_id, selector_id=sel.id) }}">
+                    Delete...
+                </a>
+            </div>
+        {% endif %}
+        {% set swatch_colour = config.project_class.make_CSS_style() %}
+        <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+            {{ medium_swatch(swatch_colour) }}
+            <span class="text-secondary">{{ config.name }}</span>
+            <span>
+                <i class="fa fa-user-circle me-1"></i>
+                <a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a>
+            </span>
+        </div>
+        {% if sel.has_submission_list %}
+            <div class="mt-3 card border-primary">
+                <div class="card-header">
+                    <strong>Ranked selection</strong>
+                </div>
+                {% set list = sel.ordered_selections %}
+                <div class="card-body">
+                    <div class="row small">
+                        <div class="col-1"><strong>Rank</strong></div>
+                        <div class="col-6"><strong>Project</strong></div>
+                        <div class="col-4"><strong>Owner</strong></div>
+                        <div class="col-1"><strong>Actions</strong></div>
+                    </div>
+                    <hr>
+                    {% for item in list %}
+                        {% set project = item.liveproject %}
+                        <div class="row small">
+                            <div class="col-1"><strong>#{{ item.rank}}</strong></div>
+                            <div class="col-6"><a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text='student match inspector', url=url_for('admin.match_student_view', id=attempt_id, text=text, url=url)) }}">{{ item.format_project()|safe }}</a></div>
+                            <div class="col-4">
+                                {% if project.generic or project.owner is none %}
+                                    generic
+                                {% else %}
+                                    <i class="fa fa-user-circle me-1"></i>
+                                    <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
+                                {% endif %}
+                            </div>
+                            <div class="col-1">
+                                <button class="btn btn-xs {% if item.has_hint %}btn-danger{% else %}btn-outline-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                    Hint
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
+                                    {% set menu_items = item.menu_order %}
+                                    {% for mi in menu_items %}
+                                        {% if mi is string %}
+                                            <div role="separator" class="dropdown-divider"></div>
+                                            <div class="dropdown-header">{{ mi }}</div>
+                                        {% elif mi is number %}
+                                            {% set disabled = (mi == item.hint) %}
+                                            <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}"
+                                               {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                                                {{ item.menu_item(mi)|safe }}
+                                            </a>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    <div class="mt-3">
+                        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('convenor.selector_choices', id=sel.id, text='student match inspector', url=url_for('admin.match_student_view', id=attempt_id, text=text, url=url)) }}">Edit selection...</a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
 {% if not sel.convert_to_submitter %}
     <div class="text-danger small">
         Conversion of this student is disabled.
-    </div>
-    <div>
-        <a class="btn btn-xs btn-outline-danger" href="{{ url_for('admin.delete_match_record', record_id=record_id) }}">
-            Delete
+        <a class="text-decoration-none" href="{{ url_for('admin.delete_match_record', attempt_id=attempt_id, selector_id=sel.id) }}">
+            Delete...
         </a>
     </div>
 {% endif %}
@@ -37,9 +120,7 @@ _pclass = \
 {% set config = sel.config %}
 {% set swatch_colour = config.project_class.make_CSS_style() %}
 <div class="d-flex flex-row justify-content-start align-items-center gap-2">
-    {% if swatch_colour is not none %}
-        <div class="me-1" style="width: 0.8rem; height: 0.8rem; {{ swatch_colour|safe }}"></div>
-    {% endif %}
+    {{ small_swatch(swatch_colour) }}
     <span class="small">{{ config.name }}</span>
 </div>
 <div class="d-flex flex-row justify-content-start align-items-center gap-2 small">
@@ -50,11 +131,15 @@ _pclass = \
 
 
 # language=jinja2
-_cohort = \
+_details = \
 """
-{{ simple_label(sel.student.programme.short_label) }}
-{{ simple_label(sel.academic_year_label(show_details=True)) }}
-{{ simple_label(sel.student.cohort_label) }}
+<div class="text-primary small">
+    {{ unformatted_label(sel.student.programme.short_label, tag='div') }}
+</div>
+<div class="mt-1 text-muted small">
+    {{- unformatted_label(sel.academic_year_label(show_details=True)) -}} |
+    {{ unformatted_label(sel.student.cohort_label) -}}
+</div>
 """
 
 
@@ -248,15 +333,18 @@ _scores = \
 """
 
 
-def student_view_data(selector_data):
+def student_view_data(selector_data, attempt_id, text=None, url=None):
     # selector_data is a list of ((lists of) MatchingRecord, delta-value, score-value) triples
 
-    simple_label = get_template_attribute("labels.html", "simple_label")
+    small_swatch = get_template_attribute("swatch.html", "small_swatch")
+    medium_swatch = get_template_attribute("swatch.html", "medium_swatch")
+    unformatted_label = get_template_attribute("labels.html", "unformatted_label")
 
-    data = [{'student': render_template_string(_student, sel=r[0].selector, record_id=r[0].id,
-                                                  valid=all([not rc.has_issues for rc in r])),
-             'pclass': render_template_string(_pclass, sel=r[0].selector),
-             'details': render_template_string(_cohort, sel=r[0].selector, simple_label=simple_label),
+    data = [{'student': render_template_string(_student, sel=r[0].selector, attempt_id=attempt_id,
+                                               valid=all([not rc.has_issues for rc in r]), text=text, url=url,
+                                               small_swatch=small_swatch, medium_swatch=medium_swatch),
+             'pclass': render_template_string(_pclass, sel=r[0].selector, small_swatch=small_swatch),
+             'details': render_template_string(_details, sel=r[0].selector, unformatted_label=unformatted_label),
              'project': render_template_string(_project, recs=r),
              'marker': render_template_string(_marker, recs=r),
              'rank': render_template_string(_rank, recs=r, delta=delta),

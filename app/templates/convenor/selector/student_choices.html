@@ -103,11 +103,11 @@
                 </div>
             </div>
 
-            <div>
-                <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.pclass_id) }}">
-                    <i class="fas fa-backward"></i> Return to dashboard
-                </a>
-            </div>
+            {% if text and url %}
+                <div>
+                    <a class="text-decoration-none" href="{{ url }}"><i class="fas fa-backward"></i> Return to {{ text }}</a>
+                </div>
+            {% endif %}
         </div>
         <div class="col-1"></div>
     </div>

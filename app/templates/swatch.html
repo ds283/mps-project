@@ -1,0 +1,11 @@
+{% macro medium_swatch(swatch_colour) %}
+    {% if swatch_colour is not none %}
+        <div class="me-1" style="width: 1rem; height: 1rem; {{ swatch_colour|safe }}"></div>
+    {% endif %}
+{% endmacro %}
+
+{% macro small_swatch(swatch_colour) %}
+    {% if swatch_colour is not none %}
+        <div class="me-1" style="width: 0.8rem; height: 0.8rem; {{ swatch_colour|safe }}"></div>
+    {% endif %}
+{% endmacro %}

@@ -200,9 +200,6 @@
                     <div {% if show_hint %}class="col-2"{% else %}class="col-1"{% endif %}>
                         {% if not sel.retired %}<i class="fas fa-bars drag-handle"></i>{% endif %}
                         <span id="ranking" class="badge bg-success rank-hint-button">#{{ item.rank }}</span>
-                        {% if item.converted_from_bookmark %}
-                            <span class="badge bg-warning text-dark rank-hint-button">Bookmark</span>
-                        {% endif %}
                         {% if show_hint %}
                             <div class="rank-hint-button">
                                 <button class="btn btn-xs {% if item.has_hint %}btn-danger{% else %}btn-outline-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
@@ -230,6 +227,9 @@
                         <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
                             {{ item.format_project(show_hint=show_hint)|safe }}
                         </a>
+                        {% if item.converted_from_bookmark %}
+                            <span class="badge bg-warning text-dark rank-hint-button">Bookmark</span>
+                        {% endif %}
                     </div>
                     <div class="col-4">
                         {% if project.generic %}

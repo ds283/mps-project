@@ -53,9 +53,7 @@ _full_enrollments = \
     <div class="bg-light p-2 mb-2">
         <div class="d-flex flex-row justify-content-start align-items-center gap-2">
             {% set swatch_colour = record.pclass.make_CSS_style() %}
-            {% if swatch_colour is not none %}
-                <div class="me-1" style="width: 1rem; height: 1rem; {{ swatch_colour|safe }}"></div>
-            {% endif %}
+            {{ medium_swatch(swatch_colour) }}
             <span>{{ record.pclass.name }}</span>
         </div>
         <div class="d-flex flex-row justify-content-start align-items-center gap-2">
@@ -194,9 +192,7 @@ _simple_enrollments = \
     <div class="bg-light p-1 mb-1">
         <div class="d-flex flex-row justify-content-start align-items-center gap-1">
             {% set swatch_colour = record.pclass.make_CSS_style() %}
-            {% if swatch_colour is not none %}
-                <div class="me-1" style="width: 1rem; height: 1rem; {{ swatch_colour|safe }}"></div>
-            {% endif %}
+            {{ medium_swatch(swatch_colour) }}
             {{ record.pclass.name }}
             {% if config.uses_supervisor %}
                 {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
@@ -237,9 +233,7 @@ _full_workload = \
             {% set ns.count = ns.count+1 %}
             <div class="d-flex flex-row justify-content-start align-items-center gap-1">
                 {% set swatch_colour = record.pclass.make_CSS_style() %}
-                {% if swatch_colour is not none %}
-                    <div class="me-1" style="width: 0.8rem; height: 0.8rem; {{ swatch_colour|safe }}"></div>
-                {% endif %}
+                {{ small_swatch(swatch_colour) }}
                 <span class="small">{{ record.pclass.abbreviation }}</span>
                 <span class="text-success small">{{ CATS }} CATS</span>
             </div>
@@ -302,9 +296,7 @@ _full_allocation = \
             {% if num > 0 %}
                 <div class="d-flex flex-row justify-content-start align-items-center gap-2">
                     {% set swatch_colour = record.pclass.make_CSS_style() %}
-                    {% if swatch_colour is not none %}
-                        <div class="me-1" style="width: 1rem; height: 1rem; {{ swatch_colour|safe }}"></div>
-                    {% endif %}
+                    {{ medium_swatch(swatch_colour) }}
                     <span class="small">{{ record.pclass.abbreviation }}</span>
                     <span class="small text-success"><strong>{{ num }}</strong> &rightarrow; {{ CATS }} CATS</span>
                     <i class="small text-muted fas fa-chevron-right" tabindex="{{ tabindex }}" data-bs-toggle="popover" title="{{ title }}" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ assigned_list(assigned)|safe }}"></i>
@@ -324,9 +316,7 @@ _full_allocation = \
             {% if num > 0 %}
                 <div class="d-flex flex-row justify-content-start align-items-center gap-2">
                     {% set swatch_colour = record.pclass.make_CSS_style() %}
-                    {% if swatch_colour is not none %}
-                        <div class="me-1" style="width: 1rem; height: 1rem; {{ swatch_colour|safe }}"></div>
-                    {% endif %}
+                    {{ medium_swatch(swatch_colour) }}
                     <span class="small">{{ record.pclass.abbreviation }}</span>
                     <span class="small text-success"><strong>{{ num }}</strong> &rightarrow; {{ CATS }} CATS</span>
                 </div>
@@ -477,12 +467,15 @@ def _element_base(faculty_id, enrolment_template, allocation_template, workload_
     #  these should be shown, just as for supervising/marking/moderating allocation
 
     simple_label = get_template_attribute("labels.html", "simple_label")
+    small_swatch = get_template_attribute("swatch.html", "small_swatch")
+    medium_swatch = get_template_attribute("swatch.html", "medium_swatch")
 
     return {'name': {'display': render_template_string(_name, f=f),
                      'sortstring': f.user.last_name + f.user.first_name},
             'groups': render_template_string(_groups, f=f, simple_label=simple_label),
             'enrollments': {'display': render_template_string(enrolment_template, f=f, enrolments=enrolments,
-                                                              configs=configs),
+                                                              configs=configs, medium_swatch=medium_swatch,
+                                                              small_swatch=small_swatch),
                             'sortvalue': get_count(f.enrollments)},
             'allocation': {'display': render_template_string(allocation_template, f=f, enrolments=enrolments,
                                                              CATS_supervising=CATS_supervising,
@@ -500,12 +493,14 @@ def _element_base(faculty_id, enrolment_template, allocation_template, workload_
                                                              total_supervising=total_supervising,
                                                              total_marking=total_marking,
                                                              total_moderating=total_moderating,
-                                                             total_presentations=total_presentations),
+                                                             total_presentations=total_presentations,
+                                                             medium_swatch=medium_swatch, small_swatch=small_swatch),
                            'sortvalue': total_allocation},
             'availability': {'display': render_template_string(_availability, t=availability, u=unbounded),
                              'sortvalue': 999999 if unbounded else availability},
             'workload': {'display': render_template_string(workload_template, f=f, enrolments=enrolments,
-                                                           wkld=CATS_workload, tot=total_workload),
+                                                           wkld=CATS_workload, tot=total_workload,
+                                                           medium_swatch=medium_swatch, small_swatch=small_swatch),
                          'sortvalue': total_workload}}
 
 

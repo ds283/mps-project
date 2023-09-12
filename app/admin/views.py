@@ -5372,6 +5372,9 @@ def match_student_view_ajax(id):
     type_filter = request.args.get('type_filter', default=None)
     hint_filter = request.args.get('hint_filter', default=None)
 
+    url = request.args.get('url', default=None)
+    text = request.args.get('text', default=None)
+
     base_query = record.selector_list_query()
 
     def search_name(row: SelectingStudent):
@@ -5491,7 +5494,7 @@ def match_student_view_ajax(id):
 
                     yield (records, delta, score)
 
-            return ajax.admin.student_view_data(_internal_format(selectors))
+            return ajax.admin.student_view_data(_internal_format(selectors), record.id, url=url, text=text)
 
         return handler.build_payload(row_formatter)
 
@@ -5518,11 +5521,10 @@ def match_faculty_view_ajax(id):
                                         type_filter, hint_filter, show_includes == 'true')
 
 
-@admin.route('/delete_match_record/<int:record_id>')
+@admin.route('/delete_match_record/<int:attempt_id>/<int:selector_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def delete_match_record(record_id):
-    record: MatchingRecord = MatchingRecord.query.get_or_404(record_id)
-    attempt: MatchingAttempt = record.matching_attempt
+def delete_match_record(attempt_id, selector_id):
+    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(attempt_id)
 
     if not validate_match_inspector(attempt):
         return redirect(redirect_url())
@@ -5533,14 +5535,14 @@ def delete_match_record(record_id):
         return redirect(redirect_url())
 
     year = get_current_year()
-    if record.matching_attempt.year != year:
+    if attempt.year != year:
         flash('Match "{name}" can no longer be modified because '
-              'it belongs to a previous year'.format(name=record.name), 'info')
+              'it belongs to a previous year'.format(name=attempt.name), 'info')
         return redirect(redirect_url())
 
     try:
         # remove all matching records associated with this selector
-        records = db.session.query(MatchingRecord).filter_by(matching_id=attempt.id, selector_id=record.selector_id)
+        records = db.session.query(MatchingRecord).filter_by(matching_id=attempt.id, selector_id=selector_id)
         for record in records:
             records: MatchingRecord
             db.session.delete(record)

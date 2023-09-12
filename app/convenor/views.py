@@ -6034,6 +6034,13 @@ def selector_choices(id):
     if not validate_is_convenor(sel.config.project_class):
         return redirect(redirect_url())
 
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+
+    if text is None and url is None:
+        url = url_for('convenor.selectors', id=sel.config.pclass_id)
+        text = 'dashboard'
+
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash('It is not possible to view selector rankings before the corresponding project '
@@ -6046,7 +6053,7 @@ def selector_choices(id):
               'custom offer.'.format(name=sel.student.user.name), 'info')
         return redirect(redirect_url())
 
-    return render_template('convenor/selector/student_choices.html', sel=sel)
+    return render_template('convenor/selector/student_choices.html', sel=sel, text=text, url=url)
 
 
 @convenor.route('/project_choices/<int:id>')

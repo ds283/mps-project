@@ -422,6 +422,11 @@ p.copyright {
     color: #555555FF;
 }
 
+/* increase offcanvas height to 50% globally */
+.offcanvas{
+     width:66% !important;
+}
+
 /*!* disable default DataTable processing indicator; needed when using bootstrap_spinner() *!*/
 /*div.dataTables_processing div:last-child div {*/
 /*  display: none;*/

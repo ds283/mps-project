@@ -10620,12 +10620,12 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             if current_role.role == SubmissionRole.ROLE_SUPERVISOR \
                     or current_role.role == SubmissionRole.ROLE_EXTERNAL_EXAMINER \
                     or current_role.role == SubmissionRole.ROLE_EXAM_BOARD:
-                return self.owner.student.user.name
+                return {'label': self.owner.student.user.name}
 
         # root, admin, and office roles can always see student name; so can project convenor or co-convenors
         if current_user.has_role('root') or current_user.has_role('admin') or current_user.has_role('office') \
                 or self.pclass.is_convenor(current_user.id):
-            return self.owner.student.user.name
+            return {'label': self.owner.student.user.name}
 
         # by default, other users see only the exam number
         return self.owner.student.exam_number_label

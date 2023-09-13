@@ -1,4 +1,5 @@
 {% from "faculty/dashboard/assignments/status.html" import no_assignment %}
+{% from "labels.html" import unformatted_label %}
 
 {% macro presentation_assignments(period, faculty_id, is_sabbatical, is_exempt, reenroll_date) %}
     {% if period.has_deployed_schedule %}
@@ -35,7 +36,7 @@
                                     {% set uses_feedback = talk.uses_presentation_feedback %}
                                     <tr>
                                         <td>
-                                            <a class="text-decoration-none" href="mailto:{{ talk.owner.student.user.email }}">{{ talk.student_identifier|safe }}</a>
+                                            <a class="text-decoration-none" href="mailto:{{ talk.owner.student.user.email }}">{{ unformatted_label(talk.student_identifier) }}</a>
                                         </td>
                                         <td>
                                             <a class="text-decoration-none" href="mailto:{{ talk.project.owner.user.email }}">{{ talk.project.owner.user.name }}</a>

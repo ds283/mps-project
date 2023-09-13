@@ -1,4 +1,5 @@
 {% from "faculty/dashboard/assignments/status.html" import no_assignment %}
+{% from "labels.html" import unformatted_label %}
 
 {% macro marker_assignments(period, current_user, is_sabbatical, is_exempt, reenroll_date) %}
     {% set id = current_user.faculty_data.id %}
@@ -21,7 +22,7 @@
                     {% set uses_feedback = rec.uses_marker_feedback %}
                     <tr>
                         <td>
-                            {{ rec.student_identifier|safe }}
+                            {{ unformatted_label(rec.student_identifier) }}
                         </td>
                         <td>
                             {% set supv_roles = rec.supervisor_roles %}

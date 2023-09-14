@@ -93,7 +93,7 @@ _enrollments = \
 """
 {% set f = d.get_enrollment_record(pclass_id) %}
 {% if f is not none %}
-    {{ f.enrolled_labels|safe }}
+    {{ simple_label(f.enrolled_labels) }}
     <div>
         {% if f.CATS_supervision is not none %}
             <span class="badge bg-warning text-dark">S: {{ f.CATS_supervision }} CATS</span>
@@ -128,7 +128,7 @@ def faculty_data(pclass: ProjectClass, config: ProjectClassConfig, row_list: Lis
     data = [{'name': render_template_string(_name, u=u, d=d, pclass_id=pclass.id),
              'email': '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=u.email),
              'user': u.username,
-             'enrolled': render_template_string(_enrollments, d=d, pclass_id=pclass.id),
+             'enrolled': render_template_string(_enrollments, d=d, pclass_id=pclass.id, simple_label=simple_label),
              'projects': render_template_string(_projects, d=d, pclass=pclass, simple_label=simple_label),
              'golive': render_template_string(_golive, config=config, pclass=pclass, user=u, userdata=d),
              'menu': render_template_string(_faculty_menu, pclass=pclass, user=u, userdata=d)} for u, d in row_list]

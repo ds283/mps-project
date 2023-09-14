@@ -10,6 +10,8 @@
 
 from flask import render_template_string, get_template_attribute
 
+from app import db
+from app.models import SelectingStudent, StudentData, EmailLog, User
 
 # language=jinja2
 _student = \
@@ -48,9 +50,7 @@ _student = \
         </div>
         {% if sel.has_submission_list %}
             <div class="mt-3 card border-primary">
-                <div class="card-header">
-                    <strong>Ranked selection</strong>
-                </div>
+                <div class="card-header">Ranked selection</div>
                 {% set list = sel.ordered_selections %}
                 <div class="card-body">
                     <div class="row small">
@@ -98,6 +98,26 @@ _student = \
                     <div class="mt-3">
                         <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('convenor.selector_choices', id=sel.id, text='student match inspector', url=url_for('admin.match_student_view', id=attempt_id, text=text, url=url)) }}">Edit selection...</a>
                     </div>
+                </div>
+            </div>
+        {% endif %}
+        {% if emails and emails|length > 0 %}
+            <div class="mt-3 card border-secondary">
+                <div class="card-header">Recent emails</div>
+                <div class="card-body">
+                    <div class="row small">
+                        <div class="col-3"></strong>Date</strong></div>
+                        <div class="col-9"></strong>Subject</strong></div>
+                    </div>
+                    <hr>
+                    {% for item in emails %}
+                        <div class="row small">
+                            <div class="col-3">{{ item.send_date.strftime("%a %d %b %Y %H:%M:%S") }}</div>
+                            <div class="col-9">
+                                <a class="text-decoration-none" href="{{ url_for('admin.display_email', id=item.id, text='student match inspector', url=url_for('admin.match_student_view', id=attempt_id, text=text, url=url)) }}">{{ item.subject }}</a>
+                            </div>
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
         {% endif %}
@@ -340,7 +360,17 @@ def student_view_data(selector_data, attempt_id, text=None, url=None):
     medium_swatch = get_template_attribute("swatch.html", "medium_swatch")
     unformatted_label = get_template_attribute("labels.html", "unformatted_label")
 
+    def get_emails(s: SelectingStudent):
+        data: StudentData = s.student
+
+        emails = db.session.query(EmailLog).filter(EmailLog.recipients.any(User.id == data.id)) \
+            .order_by(EmailLog.send_date.desc()) \
+            .limit(7).all()
+
+        return emails
+
     data = [{'student': render_template_string(_student, sel=r[0].selector, attempt_id=attempt_id,
+                                               emails=get_emails(r[0].selector),
                                                valid=all([not rc.has_issues for rc in r]), text=text, url=url,
                                                small_swatch=small_swatch, medium_swatch=medium_swatch),
              'pclass': render_template_string(_pclass, sel=r[0].selector, small_swatch=small_swatch),

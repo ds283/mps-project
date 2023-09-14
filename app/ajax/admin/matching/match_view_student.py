@@ -106,8 +106,8 @@ _student = \
                 <div class="card-header">Recent emails</div>
                 <div class="card-body">
                     <div class="row small">
-                        <div class="col-3"></strong>Date</strong></div>
-                        <div class="col-9"></strong>Subject</strong></div>
+                        <div class="col-3"><strong>Date</strong></div>
+                        <div class="col-9"><strong>Subject</strong></div>
                     </div>
                     <hr>
                     {% for item in emails %}

@@ -9,7 +9,7 @@
 #
 from typing import List, Tuple
 
-from flask import render_template_string
+from flask import render_template_string, get_template_attribute
 
 from app.models import ProjectClass, ProjectClassConfig, User, FacultyData
 
@@ -123,11 +123,13 @@ _enrollments = \
 
 
 def faculty_data(pclass: ProjectClass, config: ProjectClassConfig, row_list: List[Tuple[User, FacultyData]]):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     data = [{'name': render_template_string(_name, u=u, d=d, pclass_id=pclass.id),
              'email': '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=u.email),
              'user': u.username,
              'enrolled': render_template_string(_enrollments, d=d, pclass_id=pclass.id),
-             'projects': render_template_string(_projects, d=d, pclass=pclass),
+             'projects': render_template_string(_projects, d=d, pclass=pclass, simple_label=simple_label),
              'golive': render_template_string(_golive, config=config, pclass=pclass, user=u, userdata=d),
              'menu': render_template_string(_faculty_menu, pclass=pclass, user=u, userdata=d)} for u, d in row_list]
 

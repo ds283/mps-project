@@ -16249,7 +16249,7 @@ class Module(db.Model, EditingMetadataMixin):
 
     @property
     def level_label(self):
-        return {'label': self.level.short_label}
+        return self.level.short_label
 
 
     @property

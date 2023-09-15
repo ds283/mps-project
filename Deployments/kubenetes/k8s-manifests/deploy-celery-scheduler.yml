@@ -37,12 +37,6 @@ spec:
               value: redis://$(REDIS_HOSTNAME):6379
             - name: RATELIMIT_REDIS_URI
               value: redis://$(REDIS_HOSTNAME):6379
-            # root password needed for backups; consider whether there is some alternative approach
-            - name: DATABASE_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: mariadb-credentials
-                  key: root_password
             - name: DATABASE_USER
               valueFrom:
                 secretKeyRef:

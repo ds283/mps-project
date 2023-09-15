@@ -9,6 +9,7 @@
 #
 
 import os
+from sys import stderr
 from datetime import datetime
 from urllib import parse
 
@@ -126,6 +127,7 @@ def create_app():
 
     # load configuration files from 'instance' folder
     instance_folder = os.environ.get('INSTANCE_FOLDER')
+    print(f'-- using instance folder "{instance_folder}"', file=stderr)
     app = Flask(__name__, instance_relative_config=True, instance_path=str(instance_folder))
 
     read_configuration(app, config_name)

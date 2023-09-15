@@ -43,11 +43,6 @@ spec:
                 secretKeyRef:
                   name: enginfprojects-mongodb-credentials
                   key: root_password
-            - name: DATABASE_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: enginfprojects-mariadb-credentials
-                  key: root_password
             - name: DATABASE_USER
               valueFrom:
                 secretKeyRef:

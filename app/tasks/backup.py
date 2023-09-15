@@ -63,14 +63,16 @@ def register_backup_tasks(celery):
 
             self.update_state(state='STARTED', meta={'msg': 'Performing mysqldump on main database'})
 
-            # get database details from configuraiton
-            root_password = current_app.config['DATABASE_ROOT_PASSWORD']
+            # get database details from configuration
+            user = current_app.config['DATABASE_USER']
+            password = current_app.config['DATABASE_PASSWORD']
+            database = current_app.config['DATABASE_NAME']
             db_hostname = current_app.config['DATABASE_HOSTNAME']
 
             # dump database to SQL document
             p = subprocess.Popen(
-                ["mysqldump", "-h", db_hostname, "-uroot", "-p{pwd}".format(pwd=root_password), "--opt", "--all-databases",
-                 "--skip-lock-tables", "-r", str(SQL_scratch_path)])
+                ["mysqldump", "-h", db_hostname, f"-u{user}", f"-p{password}", database, "--opt",
+                 "--skip-lock-tables", f"--result-file={str(SQL_scratch_path)}", ])
             stdout, stderr = p.communicate()
 
             if not path.exists(SQL_scratch_path) or not path.isfile(SQL_scratch_path):

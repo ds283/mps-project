@@ -6872,11 +6872,13 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
     def _generic_label(self, label, state, reenroll, comment, enrolled, sabbatical, exempt):
         data = {'label': label}
+
         if state == enrolled:
             data |= {'suffix': 'active',
                      'type': 'info'}
             return data
 
+        # comment popover is added only if status is not active
         if comment is not None:
             bleach = current_app.extensions['bleach']
             data['popover'] = bleach.clean(comment)
@@ -6889,6 +6891,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
         if state == exempt:
             data |= {'suffix': 'exempt',
                      'type': 'danger'}
+            return data
 
         data['type'] = 'danger'
         data['label'] = 'Unknown'
@@ -10620,12 +10623,12 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             if current_role.role == SubmissionRole.ROLE_SUPERVISOR \
                     or current_role.role == SubmissionRole.ROLE_EXTERNAL_EXAMINER \
                     or current_role.role == SubmissionRole.ROLE_EXAM_BOARD:
-                return self.owner.student.user.name
+                return {'label': self.owner.student.user.name}
 
         # root, admin, and office roles can always see student name; so can project convenor or co-convenors
         if current_user.has_role('root') or current_user.has_role('admin') or current_user.has_role('office') \
                 or self.pclass.is_convenor(current_user.id):
-            return self.owner.student.user.name
+            return {'label': self.owner.student.user.name}
 
         # by default, other users see only the exam number
         return self.owner.student.exam_number_label
@@ -16249,7 +16252,7 @@ class Module(db.Model, EditingMetadataMixin):
 
     @property
     def level_label(self):
-        return {'label': self.level.short_label}
+        return self.level.short_label
 
 
     @property

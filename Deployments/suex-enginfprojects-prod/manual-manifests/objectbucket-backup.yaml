@@ -1,0 +1,11 @@
+apiVersion: appcat.vshn.io/v1
+kind: ObjectBucket
+metadata:
+  name: enginfprojects-backup-prod
+  namespace: suex-enginfprojects-prod
+spec:
+  parameters:
+    bucketName: enginfprojects-backup-prod
+    region: ch-gva-2
+  writeConnectionSecretToRef:
+    name: enginfprojects-backup-prod-credentials

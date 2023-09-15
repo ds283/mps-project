@@ -2869,9 +2869,16 @@ def display_email(id):
     :param id:
     :return:
     """
-
     email = EmailLog.query.get_or_404(id)
-    return render_template('admin/display_email.html', email=email)
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    if text is None and url is None:
+        url = url_for('admin.email_log')
+        text = 'email log'
+
+    return render_template('admin/display_email.html', email=email, text=text, url=url)
 
 
 @admin.route('/delete_email/<int:id>')

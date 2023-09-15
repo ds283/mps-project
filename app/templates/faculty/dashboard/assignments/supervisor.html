@@ -1,5 +1,5 @@
-{% from "labels.html" import simple_label %}
 {% from "faculty/dashboard/assignments/status.html" import no_assignment %}
+{% from "labels.html" import simple_label, unformatted_label %}
 
 {% macro supervisor_assignments(period, current_user, is_sabbatical, is_exempt, reenroll_date) %}
     {% set id = current_user.faculty_data.id %}
@@ -40,7 +40,7 @@
                                     <i class="fa fa-unlink me-1" data-bs-toggle="tooltip" title="Information associated with this student for the linked Canvas site has not yet been synchronized"></i>
                                 {% endif %}
                             {% endif %}
-                            <a class="text-decoration-none" href="mailto:{{ rec.owner.student.user.email }}">{{ rec.student_identifier|safe }}</a>
+                            <a class="text-decoration-none" href="mailto:{{ rec.owner.student.user.email }}">{{ unformatted_label(rec.student_identifier) }}</a>
                             <div class="pt-2">
                                 {{ simple_label(rec.owner.student.cohort_label) }}
                                 {{ simple_label(rec.owner.student.programme.short_label) }}

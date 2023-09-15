@@ -1,6 +1,7 @@
 {% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
+{% from "labels.html" import unformatted_label %}
 
 {% block title %}
     Upload new attachment for {{ record.student_identifier|safe }}
@@ -12,7 +13,7 @@
         <div class="col-10">
             <div class="card border-primary mt-3 mb-3">
                 <div class="card-header bg-primary text-white">
-                    Upload new attachment for <i class="fas fa-user-circle"></i> <strong>{{ record.student_identifier|safe }}</strong> {{ record.period.display_name }}
+                    Upload new attachment for <i class="fas fa-user-circle"></i> <strong>{{ unformatted_label(record.student_identifier) }}</strong> {{ record.period.display_name }}
                 </div>
                 <div class="card-body">
                     <form action="{{ url_for('documents.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" method="POST" enctype="multipart/form-data" name="attachment_form">
@@ -43,7 +44,7 @@
 
             <div>
                 <a class="text-decoration-none" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url, text=text) }}">
-                    <i class="fas fa-backward"></i> Return to document manager for <i class="fas fa-user-circle"></i> {{ record.student_identifier|safe }}
+                    <i class="fas fa-backward"></i> Return to document manager for <i class="fas fa-user-circle"></i> {{ unformatted_label(record.student_identifier) }}
                 </a>
             </div>
         </div>

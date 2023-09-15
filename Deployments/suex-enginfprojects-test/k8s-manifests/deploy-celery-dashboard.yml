@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: mpsproject
-          image: quay.io/ds283/mpsproject:2023.2.7
+          image: quay.io/ds283/mpsproject:2023.2.9
           imagePullPolicy: Always
           command: ["./launch_flower.sh"]
           resources:
@@ -37,11 +37,6 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: enginfprojects-mongodb-credentials
-                  key: root_password
-            - name: DATABASE_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: enginfprojects-mariadb-credentials
                   key: root_password
             - name: DATABASE_USER
               valueFrom:

@@ -2,10 +2,10 @@
 
 {% from "macros.html" import on_click_selector_field %}
 {% from "icon_block.html" import icon_block %}
-{% from "labels.html" import simple_label %}
+{% from "labels.html" import simple_label, unformatted_label %}
 
 {% block title %}
-    Manage documents for {{ record.student_identifier|safe }}
+    Manage documents for {{ record.student_identifier['label']|safe }}
 {% endblock %}
 
 {% macro asset_line(asset, attachment, label=none, download_url=none, delete_url=none, edit_url=none, acl_url=none,
@@ -160,7 +160,7 @@
     {% endif %}
 
     <div class="card border-primary mt-3 mb-3">
-        <div class="card-header bg-primary text-white">Manage documents for <i class="fas fa-user-circle"></i> <strong>{{ record.student_identifier|safe }}</strong> {{ record.period.display_name }}</div>
+        <div class="card-header bg-primary text-white">Manage documents for <i class="fas fa-user-circle"></i> <strong>{{ unformatted_label(record.student_identifier) }}</strong> {{ record.period.display_name }}</div>
         <div class="card-body">
             {% if admin_rights %}
                 {% if period.closed %}

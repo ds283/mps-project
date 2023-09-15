@@ -8661,7 +8661,7 @@ def edit_feedback(id):
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
                            title='Edit feedback', unique_id='role-{id}'.format(id=id),
                            formtitle='Edit feedback for <i class="fas fa-user-circle"></i> '
-                                     '<strong>{name}</strong>'.format(name=record.student_identifier),
+                                     '<strong>{name}</strong>'.format(name=record.student_identifier['label']),
                            submit_url=url_for('convenor.edit_feedback', id=id, url=url),
                            period=period, record=role, dont_show_warnings=True)
 

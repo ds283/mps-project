@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from typing import Optional
 from urllib import parse
 
 from flask import render_template_string, current_app, url_for, get_template_attribute
@@ -17,7 +18,6 @@ from ...cache import cache
 from ...database import db
 from ...models import Project, EnrollmentRecord, ResearchGroup, SkillGroup, TransferableSkill, DegreeProgramme, \
     DegreeType, ProjectDescription, User, ProjectClassConfig
-
 
 # language=jinja2
 _project_name = \
@@ -385,7 +385,7 @@ def _name_labels(project_id):
 @cache.memoize()
 def _element(project_id, desc_id, menu_template, in_selector, in_submitter, select_in_previous_cycle):
     p: Project = db.session.query(Project).filter_by(id=project_id).one()
-    d: ProjectDescription = None
+    d: Optional[ProjectDescription] = None
     if desc_id is not None:
         d = db.session.query(ProjectDescription).filter_by(id=desc_id).one()
 
@@ -412,7 +412,7 @@ def _element(project_id, desc_id, menu_template, in_selector, in_submitter, sele
 def _process(project_id, config, current_user_id, menu_template, name_labels, text_enc, url_enc,
              show_approvals, show_errors, desc_id=None):
     p: Project = db.session.query(Project).filter_by(id=project_id).one()
-    d: ProjectDescription = None
+    d: Optional[ProjectDescription] = None
     if desc_id is not None:
         d = db.session.query(ProjectDescription).filter_by(id=desc_id).one()
 
@@ -594,7 +594,11 @@ def replace_enrollment_text(e, status):
     repenroll = ''
 
     if e is not None:
-        repenroll = e.supervisor_label
+        simple_label = get_template_attribute("labels.html", "simple_label")
+
+        label_data = e.supervisor_label
+        repenroll = render_template_string('{{ simple_label(data) }}', data=label_data,
+                                           simple_label=simple_label)
 
     status = status.replace('REPENROLLMENT', repenroll, 1)
     return status
@@ -604,6 +608,7 @@ def _invalidate_cache(project_id: int):
     for t in _menus:
         cache.delete_memoized(_element, project_id, t, True)
         cache.delete_memoized(_element, project_id, t, False)
+
     cache.delete_memoized(_name_labels, project_id)
 
 

@@ -10,43 +10,46 @@
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
+            <div class="top-return-link">
+                <a class="text-decoration-none" href="{{ url }}">
+                    <i class="fas fa-backward"></i> Return to {{ text }}
+                </a>
+            </div>
             <div class="card border-primary mt-3 mb-3">
                 <div class="card-header bg-primary text-white">{{ email.subject }}</div>
-                <div class="card-body email-display">
-                    <p>To:
-                        {% for user in email.recipients -%}
-                            {%- if loop.index > 1 -%}, {% endif -%}<strong>{{ user.name }}</strong> <a href="mailto::{{ user.email }}">&lt;{{ user.email }}&gt;</a>
-                        {%- else -%}
-                            <span class="badge bg-secondary">Nobody</span>
-                        {%- endfor %}
-                    </p>
-                    <p>Sent: <strong>{{ email.send_date.strftime("%a %d %b %Y %H:%M:%S") }}</strong></p>
-                    <p>Subject: <strong>{{ email.subject }}</strong></p>
-                    <hr class="intro-divider">
-                    <pre>{{ email.body }}</pre>
-                </div>
-                <div class="card-footer email-display">
-                    <h4>HTML content</h4>
-                    {{ email.html|safe }}
-                </div>
-            </div>
-        </div>
-        <div class="col-1"></div>
-    </div>
-    <div class="row">
-        <div class="col-1"></div>
-        <div class="col-10">
-            <div class="row vertical-align">
-                <div class="col-6">
-                    <a class="text-decoration-none" href="{{ url_for('admin.email_log') }}">
-                        <i class="fas fa-backward"></i> Return to email log
-                    </a>
-                </div>
-                <div class="col-6">
-                    <div class="float-end">
-                        <a href="{{ url_for('admin.delete_email', id=email.id) }}" class="btn btn-danger">Delete</a>
+                <div class="card-body">
+                    <div class="card card-body bg-light border-0 email-display">
+                        <p>To:
+                            {% for user in email.recipients -%}
+                                {%- if loop.index > 1 -%}, {% endif -%}<strong>{{ user.name }}</strong> <a href="mailto::{{ user.email }}">&lt;{{ user.email }}&gt;</a>
+                            {%- else -%}
+                                <span class="badge bg-secondary">Nobody</span>
+                            {%- endfor %}
+                        </p>
+                        <p>Sent: <strong>{{ email.send_date.strftime("%a %d %b %Y %H:%M:%S") }}</strong></p>
+                        <p>Subject: <strong>{{ email.subject }}</strong></p>
+                    </div>
+                    {% if email.body and email.body|length > 0 %}
+                        <div class="card card-body bg-light mt-2 border-0 email-display">
+                            <div class="mb-1"><strong>Plain text content</strong></div>
+                            <div><pre>{{ email.body }}</pre></div>
+                        </div>
+                    {% endif %}
+                    {% if email.html and email.html|length > 0 %}
+                        <div class="card card-body bg-light mt-2 border-0 email-display">
+                            <div class="mb-1"><strong>HTML content</strong></div>
+                            <div>{{ email.html|safe }}</div>
+                        </div>
+                    {% endif %}
+                    <div class="d-flex flex-row justify-content-end mt-2 align-content-start">
+                        <a href="{{ url_for('admin.delete_email', id=email.id) }}" class="btn btn-outline-danger">Delete</a>
                     </div>
                 </div>
+            </div>
+            <div>
+                <a class="text-decoration-none" href="{{ url }}">
+                    <i class="fas fa-backward"></i> Return to {{ text }}
+                </a>
             </div>
         </div>
         <div class="col-1"></div>

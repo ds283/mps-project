@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: mpsproject
-          image: quay.io/ds283/mpsproject:2023.2.7
+          image: quay.io/ds283/mpsproject:2023.2.9
           imagePullPolicy: Always
           command: ["./launch_flower.sh"]
           resources:
@@ -128,16 +128,6 @@ spec:
                 secretKeyRef:
                   name: enginfprojects-backup-test-credentials
                   key: AWS_SECRET_ACCESS_KEY
-            - name: FLOWER_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: enginfprojects-flower-credentials
-                  key: username
-            - name: FLOWER_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: enginfprojects-flower-credentials
-                  key: password
             - name: DATABASE_URL
               value: mysql+pymysql://$(DATABASE_USER):$(DATABASE_PASSWORD)@$(DATABASE_HOSTNAME)/$(DATABASE_NAME)
             - name: CELERY_RESULT_BACKEND
@@ -152,6 +142,25 @@ spec:
               value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
             - name: PROFILER_MONGO_URL
               value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
+            - name: FLOWER_AUTH_PROVIDER
+              value: "flower.views.auth.GithubLoginHandler"
+            - name: FLOWER_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-flower-credentials
+                  key: auth_emails
+            - name: FLOWER_OAUTH2_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-flower-credentials
+                  key: client_id
+            - name: FLOWER_OAUTH2_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-flower-credentials
+                  key: client_secret
+            - name: FLOWER_OAUTH2_REDIRECT
+              value: "https://test.enginfprojects.inf.susx.ac.uk/flower/login"
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

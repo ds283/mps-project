@@ -8,6 +8,7 @@ data:
     import os
 
     from app.shared.cloud_object_store import ObjectStore
+    import app.shared.cloud_object_store.bucket_types as buckets
 
     APP_NAME = 'enginfprojects'
 
@@ -35,13 +36,13 @@ data:
                                                        'secret_key': OBJECT_STORAGE_BACKUP_SECRET_KEY}
 
     OBJECT_STORAGE_ASSETS_URI = os.environ.get("OBJECT_STORAGE_ASSETS_URI")
-    OBJECT_STORAGE_ASSETS = ObjectStore(OBJECT_STORAGE_ASSETS_URI, _assets_storage_options)
+    OBJECT_STORAGE_ASSETS = ObjectStore(OBJECT_STORAGE_ASSETS_URI, buckets.ASSETS_BUCKET, _assets_storage_options)
 
     OBJECT_STORAGE_BACKUP_URI = os.environ.get("OBJECT_STORAGE_BACKUP_URI")
-    OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, _backup_storage_options)
+    OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, buckets.BACKUP_BUCKET, _backup_storage_options)
 
     BRANDING_LABEL = 'EngInf projects portal'
     BRANDING_LOGIN_LANDING_STRING = 'Welcome to the Engineering & Informatics projects portal'
     BRANDING_PUBLIC_LANDING_STRING = 'Welcome to the Engineering & Informatics public projects list'
-    
+
     ENABLE_PUBLIC_BROWSER = False

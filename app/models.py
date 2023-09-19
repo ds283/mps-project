@@ -6872,11 +6872,13 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
     def _generic_label(self, label, state, reenroll, comment, enrolled, sabbatical, exempt):
         data = {'label': label}
+
         if state == enrolled:
             data |= {'suffix': 'active',
                      'type': 'info'}
             return data
 
+        # comment popover is added only if status is not active
         if comment is not None:
             bleach = current_app.extensions['bleach']
             data['popover'] = bleach.clean(comment)
@@ -6889,6 +6891,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
         if state == exempt:
             data |= {'suffix': 'exempt',
                      'type': 'danger'}
+            return data
 
         data['type'] = 'danger'
         data['label'] = 'Unknown'
@@ -16249,7 +16252,7 @@ class Module(db.Model, EditingMetadataMixin):
 
     @property
     def level_label(self):
-        return {'label': self.level.short_label}
+        return self.level.short_label
 
 
     @property

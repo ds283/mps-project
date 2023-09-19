@@ -1526,8 +1526,9 @@ class AddFHEQLevelForm(Form, FHEQLevelMixin):
                                          Length(max=DEFAULT_STRING_LENGTH),
                                          globally_unique_FHEQ_short_name])
 
-    academic_year = IntegerField('Academic year', validators=[InputRequired(message='Please specify a year'),
-                                                              globally_unique_FHEQ_numeric_level])
+    numeric_level = IntegerField('Numerical level',
+                                 validators=[InputRequired(message='Please specify a numerical level'),
+                                             globally_unique_FHEQ_numeric_level])
 
     submit = SubmitField('Create new level')
 

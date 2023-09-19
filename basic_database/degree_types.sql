@@ -1,0 +1,1 @@
+INSERT INTO degree_types (id, name, active, creator_id, creation_timestamp, last_edit_id, last_edit_timestamp, abbreviation, colour, duration, level) VALUES (1, 'BSc (Hons)', 1, 1, '$$TIMESTAMP', null, null, 'BSc', '#D7EBBD', 3, 0);

@@ -88,7 +88,11 @@ with app.app_context():
         {'table': 'faculty_data',
          'script': 'basic_database/faculty_data.sql'},
         {'table': 'roles_users',
-         'script': 'basic_database/roles_users.sql'}
+         'script': 'basic_database/roles_users.sql'},
+        {'table': 'fheq_levels',
+         'script': 'basic_database/fheq_levels.sql'},
+        {'table': 'degree_types',
+         'script': 'basic_database/degree_types.sql'}
     ]
 
     for table in tables:

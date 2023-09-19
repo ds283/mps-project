@@ -1,0 +1,5 @@
+INSERT INTO fheq_levels (colour, id, name, active, creator_id, creation_timestamp, last_edit_id, last_edit_timestamp, short_name, numeric_level) VALUES ('#98F2BF', 1, 'FHEQ Level 3 (sub-degree)', 1, 1, '$$TIMESTAMP', null, null, 'FHEQ#3', 3);
+INSERT INTO fheq_levels (colour, id, name, active, creator_id, creation_timestamp, last_edit_id, last_edit_timestamp, short_name, numeric_level) VALUES ('#94A4F7', 2, 'FHEQ Level 4', 1, 1, '$$TIMESTAMP', null, null, 'FHEQ#4', 4);
+INSERT INTO fheq_levels (colour, id, name, active, creator_id, creation_timestamp, last_edit_id, last_edit_timestamp, short_name, numeric_level) VALUES ('#7C90FA', 3, 'FHEQ Level 5', 1, 1, '$$TIMESTAMP', null, null, 'FHEQ#5', 5);
+INSERT INTO fheq_levels (colour, id, name, active, creator_id, creation_timestamp, last_edit_id, last_edit_timestamp, short_name, numeric_level) VALUES ('#4D69FC', 4, 'FHEQ Level 6', 1, 1, '$$TIMESTAMP', null, null, 'FHEQ#6', 6);
+INSERT INTO fheq_levels (colour, id, name, active, creator_id, creation_timestamp, last_edit_id, last_edit_timestamp, short_name, numeric_level) VALUES ('#2A4BFC', 5, 'FHEQ Level 7 (Masters)', 1, 1, '$$TIMESTAMP', null, null, 'FHEQ#7', 7);

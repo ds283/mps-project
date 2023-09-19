@@ -4,13 +4,13 @@ metadata:
   name: enginfprojects-ingress-default
   namespace: suex-enginfprojects-test
   annotations:
-    kubernetes.io/tls-acme: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-production
 spec:
   ingressClassName: openshift-default
   tls:
     - hosts:
       - test.enginfprojects.inf.susx.ac.uk
-      secretName: ingress-cert
+      secretName: enginfprojects-ingress-tls
   rules:
     - host: test.enginfprojects.inf.susx.ac.uk
       http:

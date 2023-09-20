@@ -15,16 +15,31 @@ import app.shared.cloud_object_store.bucket_types as buckets
 
 APP_NAME = 'mpsprojects'
 
-OBJECT_STORAGE_SERVICE_ACCOUNT_FILE = os.environ.get('OBJECT_STORAGE_SERVICE_ACCOUNT_FILE') or None
-_storage_options = {'google_service_account': OBJECT_STORAGE_SERVICE_ACCOUNT_FILE}
+OBJECT_STORAGE_ENDPOINT_URL = os.environ.get("OBJECT_STORAGE_ENDPOINT_URL")
+OBJECT_STORAGE_REGION = os.environ.get("OBJECT_STORAGE_REGION")
 
-OBJECT_STORAGE_ASSETS_URI = os.environ.get("OBJECT_STORAGE_ASSETS_URI") or 'file:///assets'
-OBJECT_STORAGE_ASSETS = ObjectStore(OBJECT_STORAGE_ASSETS_URI, buckets.ASSETS_BUCKET, _storage_options)
+_base_storage_options = {'endpoint_url': OBJECT_STORAGE_ENDPOINT_URL,
+                         'region': OBJECT_STORAGE_REGION}
 
-OBJECT_STORAGE_BACKUP_URI = os.environ.get("OBJECT_STORAGE_BACKUP_URI") or 'file:///backup'
-OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, buckets.BACKUP_BUCKET, _storage_options)
+OBJECT_STORAGE_ASSETS_ACCESS_KEY = os.environ.get("OBJECT_STORAGE_ASSETS_ACCESS_KEY")
+OBJECT_STORAGE_ASSETS_SECRET_KEY = os.environ.get("OBJECT_STORAGE_ASSETS_SECRET_KEY")
 
-BRANDING_LABEL = 'MPS projects portal'
+_assets_storage_options = _base_storage_options | {'access_key': OBJECT_STORAGE_ASSETS_ACCESS_KEY,
+                                                   'secret_key': OBJECT_STORAGE_ASSETS_SECRET_KEY}
+
+OBJECT_STORAGE_BACKUP_ACCESS_KEY = os.environ.get("OBJECT_STORAGE_BACKUP_ACCESS_KEY")
+OBJECT_STORAGE_BACKUP_SECRET_KEY = os.environ.get("OBJECT_STORAGE_BACKUP_SECRET_KEY")
+
+_backup_storage_options = _base_storage_options | {'access_key': OBJECT_STORAGE_BACKUP_ACCESS_KEY,
+                                                   'secret_key': OBJECT_STORAGE_BACKUP_SECRET_KEY}
+
+OBJECT_STORAGE_ASSETS_URI = os.environ.get("OBJECT_STORAGE_ASSETS_URI")
+OBJECT_STORAGE_ASSETS = ObjectStore(OBJECT_STORAGE_ASSETS_URI, buckets.ASSETS_BUCKET, _assets_storage_options)
+
+OBJECT_STORAGE_BACKUP_URI = os.environ.get("OBJECT_STORAGE_BACKUP_URI")
+OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, buckets.BACKUP_BUCKET, _backup_storage_options)
+
+BRANDING_LABEL = 'MPS projects management'
 BRANDING_LOGIN_LANDING_STRING = 'Welcome to the MPS projects portal'
 BRANDING_PUBLIC_LANDING_STRING = 'Welcome to the MPS public projects list'
 

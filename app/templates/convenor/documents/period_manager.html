@@ -54,7 +54,7 @@
                 {% if asset.target_name %}
                     <strong>{{ asset.target_name }}</strong>
                 {% else %}
-                    <strong>{{ asset.filename }}</strong>
+                    <strong>{{ asset.unique_name }}</strong>
                 {% endif %}
             </div>
             {% if attachment and attachment.description and attachment.description|length > 0 %}

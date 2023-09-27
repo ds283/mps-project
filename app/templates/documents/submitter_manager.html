@@ -24,13 +24,13 @@
                     {% if asset.target_name %}
                         <strong><a class="text-decoration-none" href="{{ download_url }}">{{ asset.target_name }}</a></strong>
                     {% else %}
-                        <strong><a class="text-decoration-none" href="{{ download_url }}">{{ asset.filename }}</a></strong>
+                        <strong><a class="text-decoration-none" href="{{ download_url }}">{{ asset.unique_name }}</a></strong>
                     {% endif %}
                 {% else %}
                     {% if asset.target_name %}
                         <strong>{{ asset.target_name }}</strong>
                     {% else %}
-                        <strong>{{ asset.filename }}</strong>
+                        <strong>{{ asset.unique_name }}</strong>
                     {% endif %}
                 {% endif %}
             </div>

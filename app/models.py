@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 from os import path
 from time import time
-from typing import List, Set
+from typing import List, Set, Union
 from urllib.parse import urljoin
 from uuid import uuid4
 
@@ -11229,6 +11229,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
 
     def _check_access_control_users(self, asset, allow_student=False):
+        asset: Union[SubmittedAsset, GeneratedAsset]
         modified = False
 
         config: ProjectClassConfig = self.current_config
@@ -11277,9 +11278,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 continue
 
             # emit warning message to log
-            print('@@ Access control warning: Asset id={asset_id} (target={target}, file={file}) for '
+            print('@@ Access control warning: Asset id={asset_id} (target={target}, unique_name={uniq}) for '
                   'SubmissionRecord id={record_id} grants access to user {name} who is not the supervisor or '
-                  'marker'.format(asset_id=asset.id, target=asset.target_name, file=asset.filename,
+                  'marker'.format(asset_id=asset.id, target=asset.target_name, uniq=asset.unique_name,
                                   record_id=self.id, name=user.name))
 
         return modified

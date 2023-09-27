@@ -7,7 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-from typing import List
+from typing import List, Union
 
 from flask import current_app, render_template
 from flask_mailman import EmailMultiAlternatives, EmailMessage
@@ -336,7 +336,7 @@ def register_marking_tasks(celery):
             raise RuntimeError('_attach_documents() could not find asset in object store')
 
         # get size of file to be attached, in bytes
-        asset = storage.record()
+        asset: Union[SubmittedAsset, GeneratedAsset] = storage.record()
         asset_size = asset.filesize
 
         # if attachment is too large, generate a link instead
@@ -356,7 +356,7 @@ def register_marking_tasks(celery):
         else:
             attached_name = str(filename) if filename is not None else \
                 str(asset.target_name) if asset.target_name is not None else \
-                    str(asset.filename)
+                    str(asset.unique_name)
 
             msg.attach(filename=attached_name, mimetype=asset.mimetype, content=storage.get())
 

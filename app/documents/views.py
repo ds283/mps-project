@@ -513,7 +513,7 @@ def delete_submitter_attachment(aid):
     attachment: SubmissionAttachment = SubmissionAttachment.query.get_or_404(aid)
 
     # if asset is missing, nothing to do
-    asset = attachment.attachment
+    asset: SubmittedAsset = attachment.attachment
     if asset is None:
         flash('Could not delete attachment because of a database error. '
               'Please contact a system administrator.', 'info')
@@ -538,7 +538,7 @@ def delete_submitter_attachment(aid):
     title = 'Delete project attachment'
     action_url = url_for('documents.perform_delete_submitter_attachment', aid=aid, sid=record.id, url=url, text=text)
 
-    name = asset.target_name if asset.target_name is not None else asset.filename
+    name = asset.target_name if asset.target_name is not None else asset.unique_name
     message = '<p>Please confirm that you wish to remove the attachment <strong>{name}</strong> for ' \
               '<i class="fas fa-user-circle"></i> {student} {period}.</p>' \
               '<p>This action cannot be undone.</p>'.format(name=name, student=record.student_identifier['label'],

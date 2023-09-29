@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-enginfprojects-prod-script
+  namespace: suex-enginfprojects-prod
+data:
+  backup.sh: |
+    set -e
+
+    # Check if Source Secret is loaded
+    [[ -z "${ENDPOINT_URL}" ]] && echo "ENDPOINT_URL is not set!" && exit 1
+    [[ -z "${AWS_SECRET_ACCESS_KEY}" ]] && echo "AWS_SECRET_ACCESS_KEY is not set!" && exit 1
+    [[ -z "${AWS_ACCESS_KEY_ID}" ]] && echo "AWS_ACCESS_KEY_ID is not set!" && exit 1
+    [[ -z "${BUCKET_NAME}" ]] && echo "BUCKET_NAME is not set!" && exit 1
+
+    # Set the destination Bucket based on the day
+    DESTINATION_BUCKET="backup-${BUCKET_NAME}-$(date +%d)"
+    DESTINATION_SECRET="${DESTINATION_BUCKET}-credentials"
+    DESTINATION_URL=$(echo -n $(kubectl get secrets ${DESTINATION_SECRET} -o=jsonpath='{.data.ENDPOINT_URL}') | base64 -d)
+    DESTINATION_ACCESSKEY=$(echo -n $(kubectl get secrets ${DESTINATION_SECRET} -o=jsonpath='{.data.AWS_ACCESS_KEY_ID}') | base64 -d)
+    DESTINATION_SECRETKEY=$(echo -n $(kubectl get secrets ${DESTINATION_SECRET}  -o=jsonpath='{.data.AWS_SECRET_ACCESS_KEY}') | base64 -d)
+
+    # Configure Source and Destination Bucket for minio cli
+    mc --config-dir /tmp/ alias set source ${ENDPOINT_URL} ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY} --api S3v4
+    mc --config-dir /tmp/ alias set destination ${DESTINATION_URL} ${DESTINATION_ACCESSKEY} ${DESTINATION_SECRETKEY} --api S3v4
+
+    # check if source bucket exists
+    mc -q --config-dir /tmp/ ls source/${BUCKET_NAME} || ( echo "Bucket ${BUCKET_NAME} does not exists!" && exit 1)
+
+    # check if destination bucket exists
+    mc -q --config-dir /tmp/ ls destination/${DESTINATION_BUCKET} || ( echo "Bucket ${DESTINATION_BUCKET} does not exists!" && exit 1)
+
+    # Mirror source bucket into the destination bucket
+    echo "Mirror ${BUCKET_NAME} bucket to ${DESTINATION_BUCKET} bucket"
+    mc --config-dir /tmp/ mirror source/${BUCKET_NAME} destination/${DESTINATION_BUCKET} --overwrite --remove

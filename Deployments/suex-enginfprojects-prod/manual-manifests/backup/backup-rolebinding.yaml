@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: suex-enginfprojects-prod
+  name: backup-enginfprojects-prod
+subjects:
+- kind: ServiceAccount
+  name: backup-enginfprojects-prod
+roleRef:
+  kind: Role
+  name: backup-enginfprojects-prod
+  apiGroup: rbac.authorization.k8s.io

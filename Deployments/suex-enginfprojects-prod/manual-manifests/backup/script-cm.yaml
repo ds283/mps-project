@@ -14,7 +14,7 @@ data:
     [[ -z "${BUCKET_NAME}" ]] && echo "BUCKET_NAME is not set!" && exit 1
 
     # Set the destination Bucket based on the day
-    DESTINATION_BUCKET="backup-${BUCKET_NAME}-$(date +%d)"
+    DESTINATION_BUCKET="backup-${BUCKET_NAME}-$(date +%-d)"
     DESTINATION_SECRET="${DESTINATION_BUCKET}-credentials"
     DESTINATION_URL=$(echo -n $(kubectl get secrets ${DESTINATION_SECRET} -o=jsonpath='{.data.ENDPOINT_URL}') | base64 -d)
     DESTINATION_ACCESSKEY=$(echo -n $(kubectl get secrets ${DESTINATION_SECRET} -o=jsonpath='{.data.AWS_ACCESS_KEY_ID}') | base64 -d)

@@ -29,7 +29,7 @@ from flask_mailman import Mail, EmailMultiAlternatives
 from flask_migrate import Migrate
 from flask_profiler import Profiler
 from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm, MailUtil
-from flask_sqlalchemy import get_debug_queries
+from flask_sqlalchemy.record_queries import get_recorded_queries
 from flaskext.markdown import Markdown
 from pymongo import MongoClient
 from sqlalchemy.exc import SQLAlchemyError
@@ -396,7 +396,7 @@ def create_app():
         def after_request(response):
             timeout = app.config['DATABASE_QUERY_TIMEOUT']
 
-            for query in get_debug_queries():
+            for query in get_recorded_queries():
                 if query.duration >= timeout:
                     app.logger.warning("SLOW QUERY: %s\nParameters: %s\nDuration: %fs\nContext: %s\n" % (
                     query.statement, query.parameters, query.duration, query.context))

@@ -1,0 +1,41 @@
+name: "Save docker images"
+description: "Prepare, build and push docker images"
+inputs:
+  registry-server:
+    required: true
+    description: "The docker registry server for the docker image"
+  registry-namespace:
+    required: true
+    description: "The docker namespace (user) for the docker image"
+  image-name:
+    required: true
+    description: "The docker image name for the docker image"
+  input-docker-file:
+    required: true
+    description: "The docker file location within the repository"
+runs:
+  using: "composite"
+  steps:
+    - name: Extract Docker metadata
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ inputs.registry-server }}/${{ inputs.registry-namespace }}/${{ inputs.image-name }}
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Login to quay.io
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ inputs.registry-server }}
+        username: ${{ inputs.registry-namespace }}
+        password: ${{ inputs.image-name }}
+    - name: Build and push
+      uses: docker/build-push-action@v4
+      with:
+        push: ${{ github.event_name != 'pull_request' }}
+        platforms: linux/amd64,linux/arm64
+        file: ${{ inputs.input-docker-file }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}

@@ -1,4 +1,5 @@
 {% from "macros.html" import flashed_messages %}
+{% from "icon_block.html" import icon_block %}
 
 {% macro root_messages(data) %}
     {% set messages = data['messages'] %}
@@ -12,18 +13,49 @@
     {% set rollover_in_progress = data['rollover_in_progress'] %}
     {% set number_sessions = data['number_sessions'] %}
 
+    {% if rollover_ready and not rollover_in_progress %}
+        <div class="card mt-3 mb-3 border-danger">
+            <div class="card-header bg-danger text-white">Rollover academic year</div>
+            <div class="card-body">
+                <div class="row vertical-align">
+                    <div class="col-8">
+                        {% call icon_block("check-circle") %}
+                            <div><strong>One or more project classes are now ready to rollover to the next
+                                academic year.</strong></div>
+                            <div class="mt-1">You are now able to advance the current academic year.</div>
+                            <div class="mt-1">This does not have any immediate effect on any project class.
+                            After you have advanced the current year, module convenors will be offered the
+                            opportunity to roll over their own project class.</div>
+                            <div class="mt-1">No changes are made unless initiated by a module convenor.</div>
+                        {% endcall %}
+                    </div>
+                    <div class="col-4">
+                        <div class="float-end">
+                            <a href="{{ url_for('admin.confirm_global_rollover') }}" class="btn btn-sm btn-outline-danger">
+                                Rollover academic year
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
     {% if has_assessments %}
         <div class="card mt-3 mb-3 border-info">
             <div class="card-header bg-info">Presentation assessments</div>
             <div class="card-body">
                 <div class="row vertical-align">
                     <div class="col-8">
-                        Some active project classes use presentations.
+                        {% call icon_block("check-circle") %}
+                            <div><strong>Some active project classes use presentations.</strong></div>
+                            <div class="mt-1">You can manage global scheduling for these presentations.</div>
+                        {% endcall %}
                     </div>
                     <div class="col-4">
                         <div class="float-end">
                             <a href="{{ url_for('admin.manage_assessments') }}" class="btn btn-sm btn-outline-primary">
-                                Manage assessments
+                                Manage scheduling
                             </a>
                         </div>
                     </div>
@@ -38,7 +70,9 @@
             <div class="card-body">
                 <div class="row vertical-align">
                     <div class="col-8">
-                        Automatic matching can now be carried out for one or more project classes.
+                        {% call icon_block("check-circle") %}
+                            <div><strong>Automatic matching can now be carried out for one or more project classes.</strong></div>
+                        {% endcall %}
                     </div>
                     <div class="col-4">
                         <div class="float-end text-right">
@@ -49,26 +83,6 @@
                             {% endif %}
                             <a href="{{ url_for('admin.manage_matching') }}" class="btn btn-sm btn-outline-primary btn-table-block">
                                 Manage matching
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    {% endif %}
-
-    {% if rollover_ready and not rollover_in_progress %}
-        <div class="card mt-3 mb-3 border-danger">
-            <div class="card-header bg-danger text-white">Rollover academic year</div>
-            <div class="card-body">
-                <div class="row vertical-align">
-                    <div class="col-8">
-                        All projects are now in a rollover state.
-                    </div>
-                    <div class="col-4">
-                        <div class="float-end">
-                            <a href="{{ url_for('admin.confirm_global_rollover') }}" class="btn btn-sm btn-outline-danger">
-                                Rollover academic year
                             </a>
                         </div>
                     </div>

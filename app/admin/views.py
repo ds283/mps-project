@@ -2725,7 +2725,7 @@ def confirm_global_rollover():
     data = get_rollover_data()
 
     if not data['rollover_ready']:
-        flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
+        flash('Can not initiate a rollover of the academic year because no project classes are ready', 'info')
         return redirect(redirect_url())
 
     if data['rollover_in_progress']:
@@ -2761,7 +2761,7 @@ def perform_global_rollover():
     current_config = get_main_config()
 
     if not data['rollover_ready']:
-        flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
+        flash('Can not initiate a rollover of the academic year because no project classes are ready', 'info')
         return redirect(redirect_url())
 
     if data['rollover_in_progress']:

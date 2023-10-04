@@ -76,23 +76,31 @@ def get_rollover_data(configs=None, current_year=None):
     if current_year is None:
         current_year = get_current_year()
 
-    rollover_ready = True
+    rollover_ready = False
     rollover_in_progress = False
+    has_published_classes = False
 
-    # loop through all active project classes
+    # loop through all active project classes to test for rollover status
     for config in configs:
         if config.project_class.publish:
+            # unpublished classes do not prevent rollover
+            has_published_classes = True
 
             # if MainConfig year has already been advanced, then we shouldn't offer
             # matching or rollover options on the dashboard
             if config.year < current_year:
                 rollover_in_progress = True
+                rollover_ready = True
 
-            if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
-                rollover_ready = False
+            # we can initiate rollover if just one project class is ready
+            # this doesn't affect the other types
+            if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER and \
+                    config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+                rollover_ready = True
 
-            if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-                rollover_ready = False
+    # if no published classes at all, allow rollover
+    if not rollover_ready and not has_published_classes:
+        rollover_ready = True
 
     return {'rollover_ready': rollover_ready,
             'rollover_in_progress': rollover_in_progress}

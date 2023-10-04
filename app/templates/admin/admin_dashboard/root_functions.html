@@ -17,26 +17,20 @@
         <div class="card mt-3 mb-3 border-danger">
             <div class="card-header bg-danger text-white">Rollover academic year</div>
             <div class="card-body">
-                <div class="row vertical-align">
-                    <div class="col-8">
-                        {% call icon_block("check-circle") %}
-                            <div><strong>One or more project classes are now ready to rollover to the next
-                                academic year.</strong></div>
-                            <div class="mt-1">You are now able to advance the current academic year.</div>
-                            <div class="mt-1">This does not have any immediate effect on any project class.
-                            After you have advanced the current year, module convenors will be offered the
-                            opportunity to roll over their own project class.</div>
-                            <div class="mt-1">No changes are made unless initiated by a module convenor.</div>
-                        {% endcall %}
+                {% call icon_block("check-circle") %}
+                    <div><strong>One or more project classes are now ready to rollover to the next
+                        academic year.</strong></div>
+                    <div class="mt-1">You are now able to advance the current academic year.</div>
+                    <div class="mt-1">This does not have any immediate effect on any project class.
+                    After you have advanced the current year, module convenors will be offered the
+                    opportunity to roll over their own project class.</div>
+                    <div class="mt-1">No changes are made unless initiated by a module convenor.</div>
+                    <div class="mt-3">
+                        <a href="{{ url_for('admin.confirm_global_rollover') }}" class="btn btn-sm btn-outline-danger">
+                            Rollover academic year
+                        </a>
                     </div>
-                    <div class="col-4">
-                        <div class="float-end">
-                            <a href="{{ url_for('admin.confirm_global_rollover') }}" class="btn btn-sm btn-outline-danger">
-                                Rollover academic year
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                {% endcall %}
             </div>
         </div>
     {% endif %}
@@ -45,21 +39,15 @@
         <div class="card mt-3 mb-3 border-info">
             <div class="card-header bg-info">Presentation assessments</div>
             <div class="card-body">
-                <div class="row vertical-align">
-                    <div class="col-8">
-                        {% call icon_block("check-circle") %}
-                            <div><strong>Some active project classes use presentations.</strong></div>
-                            <div class="mt-1">You can manage global scheduling for these presentations.</div>
-                        {% endcall %}
+                {% call icon_block("check-circle") %}
+                    <div><strong>Some active project classes use presentations.</strong></div>
+                    <div class="mt-1">You can manage global scheduling for these presentations.</div>
+                    <div class="mt-3">
+                        <a href="{{ url_for('admin.manage_assessments') }}" class="btn btn-sm btn-outline-primary">
+                            Manage scheduling
+                        </a>
                     </div>
-                    <div class="col-4">
-                        <div class="float-end">
-                            <a href="{{ url_for('admin.manage_assessments') }}" class="btn btn-sm btn-outline-primary">
-                                Manage scheduling
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                {% endcall %}
             </div>
         </div>
     {% endif %}
@@ -68,25 +56,19 @@
         <div class="card mt-3 mb-3 border-info">
             <div class="card-header bg-info">Perform automatic matching</div>
             <div class="card-body">
-                <div class="row vertical-align">
-                    <div class="col-8">
-                        {% call icon_block("check-circle") %}
-                            <div><strong>Automatic matching can now be carried out for one or more project classes.</strong></div>
-                        {% endcall %}
-                    </div>
-                    <div class="col-4">
-                        <div class="float-end text-right">
-                            {% if not rollover_ready %}
-                                <a href="{{ url_for('admin.skip_matching') }}" class="btn btn-sm btn-outline-secondary btn-table-block">
-                                    Skip matching
-                                </a>
-                            {% endif %}
-                            <a href="{{ url_for('admin.manage_matching') }}" class="btn btn-sm btn-outline-primary btn-table-block">
-                                Manage matching
+                {% call icon_block("check-circle") %}
+                    <div><strong>Automatic matching can now be carried out for one or more project classes.</strong></div>
+                    <div class="d-flex flex-row justify-content-start align-items-start gap-2 mt-3">
+                        {% if not rollover_ready %}
+                            <a href="{{ url_for('admin.skip_matching') }}" class="btn btn-sm btn-outline-secondary btn-table-block">
+                                Skip matching
                             </a>
-                        </div>
+                        {% endif %}
+                        <a href="{{ url_for('admin.manage_matching') }}" class="btn btn-sm btn-outline-primary btn-table-block">
+                            Manage matching
+                        </a>
                     </div>
-                </div>
+                {% endcall %}
             </div>
         </div>
     {% endif %}
@@ -94,49 +76,38 @@
     <div class="card mt-3 mb-3 border-info">
         <div class="card-header">Manage website services</div>
         <div class="card-body">
-            <div class="container-fluid">
-                <div class="row vertical-top" style="height: 54px;">
-                    <div class="col-6">
-                        <div class="container-fluid">
-                            <div class="row vertical-top">
-                                <div class="col-9">
-                                    Clear contents of the Redis cache
-                                </div>
-                                <div class="col-3">
-                                    <div class="float-end">
-                                        <a href="{{ url_for('admin.clear_redis_cache') }}" class="btn btn-sm btn-outline-danger services-btn">Clear</a>
-                                    </div>
-                                </div>
-                            </div>
+            <div class="row">
+                <div class="col-6">
+                    <div class="d-flex flex-row justify-content-between align-items-center">
+                        <div>
+                            Clear contents of the Redis cache
                         </div>
-                     </div>
-                    <div class="col-6">
-                        <div class="container-fluid">
-                            <div class="row vertical-top">
-                                <div class="col-9">
-                                    Reset stored precompute time for all users
-                                </div>
-                                <div class="col-3">
-                                    <div class="float-end">
-                                        <a href="{{ url_for('admin.reset_precompute') }}" class="btn btn-sm btn-outline-danger services-btn">Reset</a>
-                                    </div>
-                                </div>
-                            </div>
+                        <div>
+                            <a href="{{ url_for('admin.clear_redis_cache') }}" class="btn btn-sm btn-outline-danger services-btn">Clear</a>
+                        </div>
+                    </div>
+                 </div>
+                <div class="col-6">
+                    <div class="d-flex flex-row justify-content-between align-items-center">
+                        <div>
+                            Reset stored precompute time for all users
+                        </div>
+                        <div>
+                            <a href="{{ url_for('admin.reset_precompute') }}" class="btn btn-sm btn-outline-danger services-btn">Reset</a>
                         </div>
                     </div>
                 </div>
-                <div class="row vertical-top" style="height: 54px;">
-                    <div class="col-6">
-                        <div class="container-fluid">
+            </div>
+            <div class="row">
+                <div class="col-6">
+                    <div class="d-flex flex-row justify-content-between align-items-center">
+                        <div>
                             {% set pl = 's' %}{% if number_sessions == 1 %}{% set pl = '' %}{% endif %}
                             {{ number_sessions }} session document{{ pl }} in MongoDB backend
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div class="container-fluid">
-                        </div>
-                    </div>
                 </div>
+                <div class="col-6"></div>
             </div>
         </div>
     </div>

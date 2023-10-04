@@ -2734,14 +2734,19 @@ def confirm_global_rollover():
 
     next_year = get_current_year() + 1
 
-    title = 'Global rollover to {yeara}&ndash;{yearb}'.format(yeara=next_year, yearb=next_year + 1)
+    title = 'Global rollover to {yeara}&ndash;{yearb}'.format(yeara=next_year, yearb=next_year+1)
     panel_title = 'Global rollover of academic year to {yeara}&ndash;{yearb}'.format(yeara=next_year,
-                                                                                     yearb=next_year + 1)
+                                                                                     yearb=next_year+1)
     action_url = url_for('admin.perform_global_rollover')
-    message = '<p>Please confirm that you wish to advance the global academic year to ' \
-              '{yeara}&ndash;{yearb}.</p>' \
-              '<p>This action cannot be undone.</p>'.format(yeara=next_year, yearb=next_year + 1)
-    submit_label = 'Rollover to {yr}'.format(yr=next_year)
+    message = '<p><strong>Please confirm that you wish to advance the global academic year to ' \
+              '{yeara}&ndash;{yearb}.</strong></p>' \
+              '<p class="mt-1">No project classes will be modified. Project class rollover must be initiated ' \
+              'by individual module convenors.</p>' \
+              '<p class="mt-1">After the current academic year has been incremented, any unused project matchings ' \
+              'from the previous cycle will be removed. Also, a routine database maintenance process will be ' \
+              'run.</p>' \
+              '<p class="mt-2">This action cannot be undone.</p>'.format(yeara=next_year, yearb=next_year + 1)
+    submit_label = 'Rollover to {yra}&ndash;{yrb}'.format(yra=next_year, yrb=next_year+1)
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
                            message=message, submit_label=submit_label)

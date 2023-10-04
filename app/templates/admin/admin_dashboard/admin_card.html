@@ -1,3 +1,71 @@
+{% from "swatch.html" import medium_swatch %}
+
+{% macro selector_lifecycle_checklist(state, config) %}
+<ul class='list-unstyled'>
+    <li>
+        {% if state > config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+            <i class='fas fa-check-circle fa-fw'></i>
+        {% else %}
+            <i class='fas fa-times-circle fa-fw'></i>
+        {% endif %}
+        Confirmation requests issued
+    </li>
+    <li>
+        {% if state > config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+            <i class='fas fa-check-circle fa-fw'></i>
+        {% else %}
+            <i class='fas fa-times-circle fa-fw'></i>
+        {% endif %}
+        Confirmations returned
+    </li>
+    <li>
+        {% if state > config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+            <i class='fas fa-check-circle fa-fw'></i>
+        {% else %}
+            <i class='fas fa-times-circle fa-fw'></i>
+        {% endif %}
+        Go Live
+    </li>
+    <li>
+        {% if state > config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+            <i class='fas fa-check-circle fa-fw'></i>
+        {% else %}
+            <i class='fas fa-times-circle fa-fw'></i>
+        {% endif %}
+        Student selections
+    </li>
+    <li>
+        {% if state > config.SELECTOR_LIFECYCLE_READY_MATCHING %}
+            <i class='fas fa-check-circle fa-fw'></i>
+        {% else %}
+            <i class='fas fa-times-circle fa-fw'></i>
+        {% endif %}
+        Perform matching
+    </li>
+</ul>
+{% endmacro %}
+
+{% macro submitter_lifecycle_checklist(state, config) %}
+<ul class='list-unstyled'>
+    <li>
+        {% if state > config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
+            <i class='fas fa-check-circle fa-fw'></i>
+        {% else %}
+            <i class='fas fa-times-circle fa-fw'></i>
+        {% endif %}
+        Project completed
+    </li>
+    <li>
+        {% if state > config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
+            <i class='fas fa-check-circle fa-fw'></i>
+        {% else %}
+            <i class='fas fa-times-circle fa-fw'></i>
+        {% endif %}
+        Feedback completed
+    </li>
+</ul>
+{% endmacro %}
+
 {% macro admin_dashboard_card(data) %}
     {% set config_list = data['config_list'] %}
     {% set current_year = data['current_year'] %}
@@ -8,38 +76,40 @@
         <div class="card-header bg-info">Status overview</div>
         <div class="card-body">
             <div class="row vertical-top root-dashboard-table">
-                <div class="col-3"><strong>Name</strong></div>
+                <div class="col-4"><strong>Name</strong></div>
                 <div class="col-2"><strong>Convenor</strong></div>
-                <div class="col-2"><strong>Academic year</strong></div>
-                <div class="col-5"><strong>Status</strong></div>
+                <div class="col-6"><strong>Status</strong></div>
             </div>
             {% for cdata in config_list %}
                 {% set config = cdata['config'] %}
                 {% set capacity = cdata['capacity'] %}
                 {% set bounded = cdata['is_bounded'] %}
+                {% set selector_lifecycle = config.selector_lifecycle %}
+                {% set submitter_lifecycle = config.submitter_lifecycle %}
+                {% set rollover_ready = selector_lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER and submitter_lifecycle == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
                 {% set pclass = config.project_class %}
                 <div class="row vertical-top root-dashboard-table">
-                    <div class="col-3">
-                        {% set style = pclass.make_CSS_style() %}
-                        <a href="{{ url_for('convenor.status', id=pclass.id) }}" {% if style %}class="badge text-decoration-none bg-secondary" style="{{ style }}"{% endif %}>
-                            {{ pclass.name }}
-                        </a>
+                    <div class="col-4">
+                        {% set swatch_colour = pclass.make_CSS_style() %}
+                        <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+                            {{ medium_swatch(swatch_colour) }}
+                            <a class="text-decoration-none" href="{{ url_for('convenor.status', id=pclass.id) }}">{{ pclass.name }}</a>
+                        </div>
+                        <div class="mt-1 small text-muted d-flex flex-row justify-content-start align-items-start gap-2">
+                            <strong>{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</strong>
+                            {% if rollover_ready %}
+                                <span class="text-danger">Rollover available</span>
+                            {% else %}
+                                <span tabindex="0" data-bs-toggle="popover" title="Lifecycle status" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ selector_lifecycle_checklist(selector_lifecycle, config) }}">Selector <i class="fas fa-chevron-circle-right"></i></span>
+                                <span tabindex="0" data-bs-toggle="popover" title="Lifecycle status" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ submitter_lifecycle_checklist(submitter_lifecycle, config) }}">Submitter <i class="fas fa-chevron-circle-right"></i></span>
+                            {% endif %}
+                        </div>
                     </div>
                     <div class="col-2"><a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a></div>
-                    <div class="col-2">
-                        {% if config.year == current_year %}
-                            <span class="badge bg-secondary">{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
-                            <span class="badge bg-success"><i class="fas fa-check"></i> Current</span>
-                        {% else %}
-                            <span class="badge bg-secondary">{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
-                            <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Not current</span>
-                        {% endif %}
-                    </div>
-                    <div class="col-5">
+                    <div class="col-6">
                         {% if config.year < current_year %}
                             <span class="badge bg-danger"><i class="fas fa-check"></i> Rollover available</span>
                         {% endif %}
-
                         {% set sel_state = config.selector_lifecycle %}
                         {% set sub_state = config.submitter_lifecycle %}
                         {% set published = pclass.publish %}

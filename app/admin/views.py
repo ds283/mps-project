@@ -61,7 +61,7 @@ from .forms import GlobalConfig, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
     PublicScheduleFormFactory, CompareScheduleFormFactory, \
     AddAssetLicenseForm, EditAssetLicenseForm, AddProjectTagGroupForm, EditProjectTagGroupForm, \
-    AddProjectTagForm, EditProjectTagForm, EditSupervisorRolesForm
+    AddProjectTagForm, EditProjectTagForm, EditSupervisorRolesForm, SelectMatchingYearFormFactory
 from ..cache import cache
 from ..database import db
 from ..limiter import limiter
@@ -4188,28 +4188,49 @@ def notifications_ajax():
     return jsonify(data)
 
 
-@admin.route('/manage_matching')
+@admin.route('/manage_matching', methods=['GET', 'POST'])
 @roles_required('root')
 def manage_matching():
     """
     Create the 'manage matching' dashboard view
     :return:
     """
+    current_year = get_current_year()
 
-    # check that all projects are ready to match
+    # check which year we are going to offer, and whether any project classes are ready to match
+    pre_allowed_years = db.session.query(MatchingAttempt.year).distinct().all()
+    allowed_years = {y for y, in pre_allowed_years}
+
     data = get_ready_to_match_data()
 
-    if not data['matching_ready']:
-        flash('Automated matching is not yet available because some project classes are not ready', 'error')
+    if data['matching_ready'] and not data['rollover_in_progress']:
+        allowed_years = allowed_years | current_year
+
+    if len(allowed_years) == 0:
+        if not data['matching_ready']:
+            flash('Automated matching is not yet available because some project classes are not ready', 'error')
+            return redirect(redirect_url())
+
+        if data['rollover_in_progress']:
+            flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
+            return redirect(redirect_url())
+
+        flash('Automated matching is not available because no years are currently eligible', category='info')
         return redirect(redirect_url())
 
-    if data['rollover_in_progress']:
-        flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
-        return redirect(redirect_url())
+    SelectMatchingYearForm = SelectMatchingYearFormFactory(allowed_years)
+    form = SelectMatchingYearForm(request.form)
 
-    info = get_matching_dashboard_data()
+    selected_year = max(allowed_years)
 
-    return render_template('admin/matching/manage.html', pane='manage', info=info)
+    # ensure form reflects currently chosen year
+    if hasattr(form, 'selector'):
+        form.selector.data = selected_year
+
+    info = get_matching_dashboard_data(selected_year)
+
+    return render_template('admin/matching/manage.html', pane='manage', info=info, form=form,
+                           year=selected_year)
 
 
 @admin.route('/skip_matching')
@@ -4242,15 +4263,22 @@ def matches_ajax():
     Create the 'manage matching' dashboard view
     :return:
     """
+    current_year = get_current_year()
 
-    # check that all projects are ready to match
+    # check which year we are going to offer, and whether any project classes are ready to match
+    pre_allowed_years = db.session.query(MatchingAttempt.year).distinct().all()
+    allowed_years = {y for y, in pre_allowed_years}
+
     data = get_ready_to_match_data()
 
-    if not data['matching_ready'] or data['rollover_in_progress']:
+    if data['matching_ready'] and not data['rollover_in_progress']:
+        allowed_years = allowed_years | current_year
+
+    if len(allowed_years) == 0:
         return jsonify({})
 
-    current_year = get_current_year()
-    matches = db.session.query(MatchingAttempt).filter_by(year=current_year).all()
+    selected_year = request.args.get('year', current_year)
+    matches = db.session.query(MatchingAttempt).filter_by(year=selected_year).all()
 
     return ajax.admin.matches_data(matches, text='matching dashboard', url=url_for('admin.manage_matching'),
                                    is_root=True)
@@ -4263,15 +4291,14 @@ def create_match():
     Create the 'create match' dashboard view
     :return:
     """
+    current_year = get_current_year()
+    selected_year = request.args.get('year', current_year)
+
+
     # check that all projects are ready to match
     data = get_ready_to_match_data()
-    current_year = get_current_year()
 
-    if not data['matching_ready']:
-        flash('Automated matching is not yet available because some project classes are not ready', 'info')
-        return redirect(redirect_url())
-
-    if data['rollover_in_progress']:
+    if selected_year == current_year and data['rollover_in_progress']:
         flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
         return redirect(redirect_url())
 

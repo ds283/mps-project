@@ -1572,3 +1572,12 @@ def CompareScheduleFormFactory(assessment_id, self_id, is_root):
         compare = SubmitField('Compare')
 
     return CompareScheduleForm
+
+
+def SelectMatchingYearFormFactory(allowed_years):
+
+    class SelectMatchingYearForm(Form):
+
+        selector = SelectField('Select year', choices=allowed_years, coerce=int)
+
+    return SelectMatchingYearForm

@@ -1039,10 +1039,8 @@ def get_capacity_data(pclass: ProjectClass):
             'capacity_bounded': capacity_bounded}
 
 
-def get_matching_dashboard_data():
-    year = get_current_year()
+def get_matching_dashboard_data(year):
     matches = get_count(db.session.query(MatchingAttempt).filter_by(year=year))
-
     return matches
 
 

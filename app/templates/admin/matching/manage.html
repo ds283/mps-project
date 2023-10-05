@@ -2,6 +2,8 @@
 
 {% from "datatables.html" import import_datatables %}
 
+{% from "macros.html" import on_click_selector_field %}
+
 {% block scripts %}
     {{ super() }}
     {{ import_datatables() }}
@@ -13,7 +15,7 @@
             $('#matches').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/admin/matches_ajax', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/admin/matches_ajax?year={{ year }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'}); },
                 columns: [
                     { data: 'name'},
@@ -38,6 +40,14 @@
 {% endblock %}
 
 {% block bodyblock %}
+    {% if form.selector is defined %}
+        <form action="{{ url_for('admin.manage_matching') }}" method="POST" name="selector_form">
+            {{ form.hidden_tag() }}
+            <span class="form-text"><strong>Select academic year</strong></span>
+            {{ on_click_selector_field(form.selector) }}
+        </form>
+    {% endif %}
+
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white">Automatic matching</div>
         <div class="card-body">

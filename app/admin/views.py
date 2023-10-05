@@ -4187,6 +4187,18 @@ def notifications_ajax():
     return jsonify(data)
 
 
+def _compute_allowed_matching_years(current_year):
+    # check which year we are going to offer, and whether any project classes are ready to match
+    pre_allowed_years = db.session.query(MatchingAttempt.year).distinct().all()
+    allowed_years = {y for y, in pre_allowed_years}
+
+    data = get_ready_to_match_data()
+    if data['matching_ready'] and not data['rollover_in_progress']:
+        allowed_years = allowed_years | {current_year}
+
+    return allowed_years, data
+
+
 @admin.route('/manage_matching', methods=['GET', 'POST'])
 @roles_required('root')
 def manage_matching():
@@ -4195,15 +4207,10 @@ def manage_matching():
     :return:
     """
     current_year = get_current_year()
+    requested_year_arg = request.args.get('year', None)
+    flag, requested_year = is_integer(requested_year_arg)
 
-    # check which year we are going to offer, and whether any project classes are ready to match
-    pre_allowed_years = db.session.query(MatchingAttempt.year).distinct().all()
-    allowed_years = {y for y, in pre_allowed_years}
-
-    data = get_ready_to_match_data()
-
-    if data['matching_ready'] and not data['rollover_in_progress']:
-        allowed_years = allowed_years | current_year
+    allowed_years, data = _compute_allowed_matching_years(current_year)
 
     if len(allowed_years) == 0:
         if not data['matching_ready']:
@@ -4220,9 +4227,14 @@ def manage_matching():
     SelectMatchingYearForm = SelectMatchingYearFormFactory(allowed_years)
     form = SelectMatchingYearForm(request.form)
 
-    selected_year = max(allowed_years)
+    if flag and requested_year is not None and requested_year in allowed_years:
+        selected_year = requested_year
+    elif hasattr(form, 'selector') and form.selector.data is not None \
+            and form.selector.data in allowed_years:
+        selected_year = form.selector.data
+    else:
+        selected_year = max(allowed_years)
 
-    # ensure form reflects currently chosen year
     if hasattr(form, 'selector'):
         form.selector.data = selected_year
 
@@ -4230,29 +4242,6 @@ def manage_matching():
 
     return render_template('admin/matching/manage.html', pane='manage', info=info, form=form,
                            year=selected_year)
-
-
-@admin.route('/skip_matching')
-@roles_required('root')
-def skip_matching():
-    """
-    Mark current set of ProjectClassConfig instances to skip automated matching
-    :return:
-    """
-    pcs = db.session.query(ProjectClass) \
-        .filter_by(active=True) \
-        .order_by(ProjectClass.name.asc()).all()
-
-    for pclass in pcs:
-        # get current configuration record for this project class
-        config = pclass.most_recent_config
-
-        if config is not None:
-            config.skip_matching = True
-
-    db.session.commit()
-
-    return redirect(redirect_url())
 
 
 @admin.route('/matches_ajax')
@@ -4264,23 +4253,49 @@ def matches_ajax():
     """
     current_year = get_current_year()
 
-    # check which year we are going to offer, and whether any project classes are ready to match
-    pre_allowed_years = db.session.query(MatchingAttempt.year).distinct().all()
-    allowed_years = {y for y, in pre_allowed_years}
-
-    data = get_ready_to_match_data()
-
-    if data['matching_ready'] and not data['rollover_in_progress']:
-        allowed_years = allowed_years | current_year
-
+    allowed_years, data = _compute_allowed_matching_years(current_year)
     if len(allowed_years) == 0:
         return jsonify({})
 
-    selected_year = request.args.get('year', current_year)
+    selected_year = request.args.get('year', None)
+    if selected_year is None:
+        return jsonify({})
+
     matches = db.session.query(MatchingAttempt).filter_by(year=selected_year).all()
 
-    return ajax.admin.matches_data(matches, text='matching dashboard', url=url_for('admin.manage_matching'),
-                                   is_root=True)
+    return ajax.admin.matches_data(matches, is_root=True, text='matching dashboard',
+                                   url=url_for('admin.manage_matching', year=selected_year))
+
+
+@admin.route('/skip_matching')
+@roles_required('root')
+def skip_matching():
+    """
+    Mark current set of ProjectClassConfig instances to skip automated matching
+    :return:
+    """
+    current_year = get_current_year()
+
+    pcs = db.session.query(ProjectClass) \
+        .filter_by(active=True) \
+        .order_by(ProjectClass.name.asc()).all()
+
+    for pclass in pcs:
+        # get current configuration record for this project class
+        config = pclass.most_recent_config
+
+        if config is not None and config.year == current_year:
+            config.skip_matching = True
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash('Can not skip matching due to a database error. Please contact a system administrator.',
+              'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
 
 
 @admin.route('/create_match', methods=['GET', 'POST'])
@@ -4293,7 +4308,6 @@ def create_match():
     current_year = get_current_year()
     selected_year = request.args.get('year', current_year)
 
-
     # check that all projects are ready to match
     data = get_ready_to_match_data()
 
@@ -4301,7 +4315,7 @@ def create_match():
         flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
         return redirect(redirect_url())
 
-    info = get_matching_dashboard_data()
+    info = get_matching_dashboard_data(selected_year)
 
     base_id = request.args.get('base_id', None)
 
@@ -4309,6 +4323,12 @@ def create_match():
     base_match = None
     if base_id is not None:
         base_match = MatchingAttempt.query.get_or_404(base_id)
+
+        if base_match.year != selected_year:
+            flash(f'Cannot use base match "{base_match.name}" because it belongs to a different '
+                  f'academic year (base match year = {base_match.year}, selected year = {selected_year}',
+                  'info')
+            return redirect(redirect_url())
 
     NewMatchForm = NewMatchFormFactory(current_year, base_id=base_id, base_match=base_match)
     form = NewMatchForm(request.form)
@@ -4342,7 +4362,7 @@ def create_match():
         base_bias_control = getattr(form, 'base_bias', None)
         force_base_control = getattr(form, 'force_base', None)
 
-        attempt = MatchingAttempt(year=current_year,
+        attempt = MatchingAttempt(year=selected_year,
                                   base_id=base_id,
                                   base_bias=base_bias_control.data if base_bias_control is not None else None,
                                   force_base=force_base_control.data if force_base_control is not None else None,
@@ -4565,6 +4585,7 @@ def perform_terminate_match(id):
 
         db.session.delete(record)
         db.session.commit()
+
     except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not terminate matching task "{name}" due to a database error. '

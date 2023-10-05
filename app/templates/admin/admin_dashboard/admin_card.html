@@ -96,7 +96,7 @@
                             <a class="text-decoration-none" href="{{ url_for('convenor.status', id=pclass.id) }}">{{ pclass.name }}</a>
                         </div>
                         <div class="mt-1 small text-muted d-flex flex-row justify-content-start align-items-start gap-2">
-                            <strong>{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</strong>
+                            <strong {% if rollover_ready %}class="text-danger"{% endif %}>{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</strong>
                             {% if rollover_ready %}
                                 <span class="text-danger">Rollover available</span>
                             {% else %}
@@ -107,9 +107,6 @@
                     </div>
                     <div class="col-2"><a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a></div>
                     <div class="col-6">
-                        {% if config.year < current_year %}
-                            <span class="badge bg-danger"><i class="fas fa-check"></i> Rollover available</span>
-                        {% endif %}
                         {% set sel_state = config.selector_lifecycle %}
                         {% set sub_state = config.submitter_lifecycle %}
                         {% set published = pclass.publish %}

@@ -2742,8 +2742,8 @@ def confirm_global_rollover():
               '{yeara}&ndash;{yearb}.</strong></p>' \
               '<p class="mt-1">No project classes will be modified. Project class rollover must be initiated ' \
               'by individual module convenors.</p>' \
-              '<p class="mt-1">After the current academic year has been incremented, any unused project matchings ' \
-              'from the previous cycle will be removed. Also, a routine database maintenance process will be ' \
+              '<p class="mt-1">After the current academic year has been incremented, ' \
+              'a routine database maintenance process will be ' \
               'run.</p>' \
               '<p class="mt-2">This action cannot be undone.</p>'.format(yeara=next_year, yearb=next_year + 1)
     submit_label = 'Rollover to {yra}&ndash;{yrb}'.format(yra=next_year, yrb=next_year+1)
@@ -2761,7 +2761,6 @@ def perform_global_rollover():
     for each project class at a time decided by its convenor or an administrator)
     :return:
     """
-
     data = get_rollover_data()
     current_config = get_main_config()
 
@@ -2777,7 +2776,7 @@ def perform_global_rollover():
     next_year = current_year + 1
 
     try:
-        # create new MainConfig instance for next year, rolling over most current settings
+        # insert new MainConfig instance for next year, rolling over most current settings
         new_year = MainConfig(year=next_year,
                               enable_canvas_sync=current_config.enable_canvas_sync,
                               canvas_url=current_config.canvas_url)
@@ -2789,28 +2788,28 @@ def perform_global_rollover():
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
-    tk_name = 'Perform global rollover to academic year {yra}-{yrb}'.format(yra=next_year, yrb=next_year+1)
-    tk_description = 'Perform global rollover'
-    uuid = register_task(tk_name, owner=current_user, description=tk_description)
+    else:
+        tk_name = 'Perform global rollover to academic year {yra}-{yrb}'.format(yra=next_year, yrb=next_year+1)
+        tk_description = 'Perform global rollover'
+        uuid = register_task(tk_name, owner=current_user, description=tk_description)
 
-    celery = current_app.extensions['celery']
+        celery = current_app.extensions['celery']
 
-    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
-    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
-    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+        init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+        final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+        error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
 
-    # remove unused match records that belonged to the previous academic year
-    prune_matches = celery.tasks['app.tasks.rollover.prune_matches']
+        # need to perform a maintenance cycle to update students' academic years
+        maintenance_cycle = celery.tasks['app.tasks.maintenance.maintenance']
 
-    # need to perform a maintenance cycle to update students academic years
-    maintenance_cycle = celery.tasks['app.tasks.maintenance.maintenance']
+        # TODO: pruning of matching attempts must now be scheduled elsewhere in the lifecycle --
+        #  this has still to be done
 
-    # schedule all parts of the rollover+maintenance cycle
-    seq = chain(init.si(uuid, tk_name),
-                prune_matches.si(uuid, current_year, current_user.id),
-                maintenance_cycle.si(),
-                final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
-    seq.apply_async(task_id=uuid)
+        # schedule all parts of the rollover+maintenance cycle
+        seq = chain(init.si(uuid, tk_name),
+                    maintenance_cycle.si(),
+                    final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
+        seq.apply_async(task_id=uuid)
 
     return home_dashboard()
 

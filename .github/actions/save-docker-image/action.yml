@@ -1,18 +1,21 @@
 name: "Save docker images"
-description: "Prepare, build and push docker images"
+description: "Prepare, build and push Docker images"
 inputs:
   registry-server:
     required: true
-    description: "The docker registry server for the docker image"
+    description: "The Docker registry server for the Docker image"
   registry-namespace:
     required: true
-    description: "The docker namespace (user) for the docker image"
+    description: "The docker namespace (user) for the Docker image"
+  registry-token:
+    required: true
+    description: "The login token for the Docker registry"
   image-name:
     required: true
-    description: "The docker image name for the docker image"
+    description: "The docker image name for the Docker image"
   input-docker-file:
     required: true
-    description: "The docker file location within the repository"
+    description: "The Docker file location within the repository"
 runs:
   using: "composite"
   steps:
@@ -30,7 +33,7 @@ runs:
       with:
         registry: ${{ inputs.registry-server }}
         username: ${{ inputs.registry-namespace }}
-        password: ${{ inputs.image-name }}
+        password: ${{ inputs.registry-token }}
     - name: Build and push
       uses: docker/build-push-action@v4
       with:

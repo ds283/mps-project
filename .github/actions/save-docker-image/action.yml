@@ -3,19 +3,22 @@ description: "Prepare, build and push Docker images"
 inputs:
   registry-server:
     required: true
-    description: "The Docker registry server for the Docker image"
+    description: "The destination registry server for the Docker image"
   registry-namespace:
     required: true
-    description: "The docker namespace (user) for the Docker image"
+    description: "The destination namespace for the Docker image"
+  registry-username:
+    required: true
+    description: "The login username for the Docker registry"
   registry-token:
     required: true
     description: "The login token for the Docker registry"
   image-name:
     required: true
-    description: "The docker image name for the Docker image"
+    description: "The Docker image name"
   input-docker-file:
     required: true
-    description: "The Docker file location within the repository"
+    description: "The Dockerfile location within the git repository"
 runs:
   using: "composite"
   steps:
@@ -32,7 +35,7 @@ runs:
       uses: docker/login-action@v2
       with:
         registry: ${{ inputs.registry-server }}
-        username: ${{ inputs.registry-namespace }}
+        username: ${{ inputs.registry-username }}
         password: ${{ inputs.registry-token }}
     - name: Build and push
       uses: docker/build-push-action@v4

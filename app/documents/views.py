@@ -64,7 +64,7 @@ def submitter_documents():
     if submitter is not None:
         if record is not None:
             if record.owner.id != submitter.id:
-                flash('Cannot display submitter documents for this combination of student and submission record, '
+                flash('Cannot show submitter documents for this combination of student and submission record, '
                       'because the specified submission record does not belong to the student', 'info')
                 return redirect(redirect_url())
 

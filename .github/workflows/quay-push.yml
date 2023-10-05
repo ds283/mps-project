@@ -23,7 +23,8 @@ jobs:
           registry-username: ${{ secrets.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           image-name: ${{ env.image_name }}
-          input-docker-file: "{context}/Dockerfile"
+          input-context: "."
+          input-docker-file: "./Dockerfile"
 
   build-cronjob:
     env:
@@ -40,4 +41,5 @@ jobs:
           registry-username: ${{ secrets.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           image-name: ${{ env.image_name }}
-          input-docker-file: "{context}/Deployments/suex-enginfprojects-prod/manual-manifests/backup/util/Dockerfile"
+          input-context: "{{defaultContext}}:Deployments/suex-enginfprojects-prod/manual-manifests/backup/util"
+          input-docker-file: "./Dockerfile"

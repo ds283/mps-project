@@ -16,9 +16,12 @@ inputs:
   image-name:
     required: true
     description: "The Docker image name"
+  input-context:
+    required: true
+    description: "GitHub action build context for the Dockerfile"
   input-docker-file:
     required: true
-    description: "The Dockerfile location within the git repository"
+    description: "The Dockerfile location relative to the specified context"
 runs:
   using: "composite"
   steps:
@@ -42,6 +45,7 @@ runs:
       with:
         push: ${{ github.event_name != 'pull_request' }}
         platforms: linux/amd64,linux/arm64
+        context: ${{ inputs.input-context }}
         file: ${{ inputs.input-docker-file }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}

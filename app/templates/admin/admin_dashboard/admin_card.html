@@ -143,7 +143,7 @@
                                             {% if sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
                                                 <div class="small text-success"><i class="fas fa-check-circle"></i> Ready to rollover</div>
                                             {% else %}
-                                                <div class="text-dark"><strong>{{ config.current_period.display_name|safe }}</strong></div>
+                                                <div class="text-primary"><strong>{{ config.current_period.display_name|safe }}</strong></div>
                                                 <div>
                                                     {% if sub_state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
                                                         <ul class="small list-unstyled text-secondary"><li><i class="fas fa-clock"></i> Project activity underway</li></ul>

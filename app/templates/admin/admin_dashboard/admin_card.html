@@ -75,7 +75,7 @@
     <div class="card mt-3 mb-3 border-info">
         <div class="card-header bg-info">Status overview</div>
         <div class="card-body">
-            <div class="row vertical-top">
+            <div class="row vertical-top mb-1">
                 <div class="col-4"><strong>Name</strong></div>
                 <div class="col-2"><strong>Convenor</strong></div>
                 <div class="col-6"><strong>Status</strong></div>
@@ -89,7 +89,7 @@
                 {% set rollover_ready = selector_lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER and submitter_lifecycle == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER and config.year < current_year %}
                 {% set pclass = config.project_class %}
                 {% set published = pclass.publish %}
-                <div class="row vertical-top admin-card-row">
+                <div class="row vertical-top mt-2">
                     <div class="col-4">
                         {% set swatch_colour = pclass.make_CSS_style() %}
                         <div class="d-flex flex-row justify-content-start align-items-center gap-2">
@@ -114,7 +114,7 @@
                             </div>
                         {% endif %}
                     </div>
-                    <div class="col-2"><a class="text-decoration-none small link-secondary" href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a></div>
+                    <div class="col-2"><a class="text-decoration-none small link-secondary" href="mailto:{{ config.convenor_email }}">{% if not published %}<s>{% endif %}{{ config.convenor_name }}{% if not published %}</s>{% endif %}</a></div>
                     <div class="col-6">
                         {% if published %}
                             {% set sel_state = config.selector_lifecycle %}

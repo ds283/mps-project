@@ -36,7 +36,7 @@ from ..database import db
 from ..limiter import limiter
 from ..models import User, FacultyData, StudentData, StudentBatch, StudentBatchItem, EnrollmentRecord, \
     DegreeProgramme, DegreeType, ProjectClass, ResearchGroup, Role, TemporaryAsset, TaskRecord, BackupRecord, \
-    AssetLicense, WorkflowMixin, faculty_affiliations
+    AssetLicense, WorkflowMixin, faculty_affiliations, validate_nonce
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.conversions import is_integer, is_boolean
 from ..shared.sqlalchemy import func
@@ -652,7 +652,7 @@ def batch_create_users():
 
                 object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
                 with AssetUploadManager(asset, bytes=batch_file.stream.read(), storage=object_store,
-                                        length=batch_file.content_length) as upload_mgr:
+                                        length=batch_file.content_length, validate_nonce=validate_nonce) as upload_mgr:
                     pass
 
                 asset.grant_user(current_user)

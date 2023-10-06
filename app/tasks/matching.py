@@ -7,13 +7,15 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+
+import base64
+import itertools
 from datetime import datetime
 from io import BytesIO
 from os import path
 from pathlib import Path
 from uuid import uuid4
 
-import itertools
 import pulp
 import pulp.apis as pulp_apis
 from celery import group, chain
@@ -27,7 +29,7 @@ from ..database import db
 from ..models import MatchingAttempt, TaskRecord, LiveProject, SelectingStudent, \
     User, EnrollmentRecord, MatchingRecord, SelectionRecord, ProjectClass, GeneratedAsset, MatchingEnumeration, \
     TemporaryAsset, FacultyData, ProjectClassConfig, SubmissionRecord, SubmissionPeriodRecord, MatchingRole, \
-    SubmissionPeriodDefinition, SubmittingStudent, SubmissionRole
+    SubmissionPeriodDefinition, SubmittingStudent, SubmissionRole, validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
@@ -2445,6 +2447,7 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
     object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
 
     def make_asset(name, source_path: Path, target_name: str):
+        # AssetUploadManager will populate most fields later
         asset = GeneratedAsset(timestamp=now,
                                expiry=None,
                                target_name=target_name,
@@ -2455,7 +2458,7 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
 
         with open(source_path, 'rb') as f:
             with AssetUploadManager(asset, bytes=BytesIO(f.read()), storage=object_store,
-                                    length=size, mimetype='text/plain') as upload_mgr:
+                                    length=size, mimetype='text/plain', validate_nonce=validate_nonce) as upload_mgr:
                 pass
 
         asset.grant_user(user)
@@ -2996,8 +2999,10 @@ def register_matching_tasks(celery):
                 object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
                 def copy_asset(old_asset):
                     old_storage = AssetCloudAdapter(old_asset, object_store)
-                    new_key = old_storage.duplicate()
+                    new_key, new_nonce = old_storage.duplicate(validate_nonce=validate_nonce)
+                    new_base64_nonce = base64.urlsafe_b64encode(new_nonce).decode('ascii')
 
+                    # must duplicate all fields, including those usually managed by AssetUploadManager
                     new_asset = GeneratedAsset(timestamp=now,
                                                expiry=None,
                                                unique_name=new_key,
@@ -3005,7 +3010,13 @@ def register_matching_tasks(celery):
                                                mimetype=old_asset.mimetype,
                                                target_name=old_asset.target_name,
                                                parent_asset_id=old_asset.parent_asset_id,
-                                               license_id=old_asset.license_id)
+                                               license_id=old_asset.license_id,
+                                               lost=False,
+                                               unattached=False,
+                                               bucket=old_asset.bucket,
+                                               comment=old_asset.comment,
+                                               encryption=old_asset.encryption,
+                                               nonce=new_base64_nonce)
 
                     # TODO: find a way to perform a deep copy without exposing implementation details
                     new_asset.access_control_list = old_asset.access_control_list

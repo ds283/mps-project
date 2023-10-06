@@ -8,12 +8,14 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import base64
 from pathlib import Path
 from uuid import uuid4
 
 from flask import current_app
-from .cloud_object_store import ObjectStore, ObjectMeta
 
+import app.shared.cloud_object_store.encryption_types as encryptions
+from .cloud_object_store import ObjectStore, ObjectMeta
 
 _DEFAULT_STREAMING_CHUNKSIZE = 1024 * 1024
 
@@ -85,15 +87,34 @@ class AssetCloudAdapter:
         - `stream(chunksize=_DEFAULT_STREAMING_CHUNKSIZE)`: Streams the asset data in chunks
 
     """
-    def __init__(self, asset, storage: ObjectStore, key_attr: str='unique_name', size_attr: str='filesize'):
+    def __init__(self, asset, storage: ObjectStore, key_attr: str='unique_name', size_attr: str='filesize',
+                 encryption_attr: str='encyption', nonce_attr: str='nonce'):
         self._asset = asset
         self._storage = storage
+        self._storage_encrypted = self._storage.encrypted
 
         self._key_attr = key_attr
         self._size_attr = size_attr
 
+        self._encryption_attr = encryption_attr
+        self._nonce_attr = nonce_attr
+
         self._key = getattr(self._asset, self._key_attr)
         self._size = getattr(self._asset, self._size_attr)
+
+        self._encryption = getattr(self._asset, self._encryption_attr)
+        self._nonce = None
+
+        if self._encryption is not None and self._encryption != encryptions.ENCRYPTION_NONE:
+            if not self._storage_encrypted:
+                raise RuntimeError('AssetCloudAdapter: asset was stored with encryption, but storage is not encrypted')
+
+            if self._storage.encryption_type != self._encryption:
+                raise RuntimeError('AssetCloudAdapter: asset was stored with an encryption that differs from the storage')
+
+            if self._storage.uses_nonce:
+                base64_nonce = getattr(self._asset, self._nonce_attr)
+                self._nonce = base64.decodebytes(base64_nonce)
 
 
     def record(self):
@@ -106,17 +127,34 @@ class AssetCloudAdapter:
 
 
     def get(self):
-        return self._storage.get(self._key)
+        if self._encryption == encryptions.ENCRYPTION_NONE:
+            return self._storage.get(self._key, None, no_encryption=True)
+
+        return self._storage.get(self._key, self._nonce)
 
 
     def delete(self):
         self._storage.delete(self._key)
 
 
-    def duplicate(self):
+    def duplicate(self, validate_nonce):
         new_key = str(uuid4())
-        self._storage.copy(self._key, new_key)
-        return new_key
+
+        # if the file is not encrypted then we can duplicate it directly using an API call.
+        # Otherwise, we want to re-encrypt it using a new nonce, so that we do not duplicate nonces.
+        # That means we have to download and re-upload using a new nonce.
+
+        # no need to check if storage is encrypted; if it isn't, and we are set to ENCRYPTION_NONE, an exception
+        # will have been raised in the constructor
+        if self._encryption == encryptions.ENCRYPTION_NONE:
+            new_nonce = None
+            self._storage.copy(self._key, new_key)
+        else:
+            meta: ObjectMeta = self._storage.head(self._key)
+            data: bytes = self.get()
+            new_nonce = self._storage.put(new_key, data, mimetype=meta.mimetype, validate_nonce=validate_nonce)
+
+        return new_key, new_nonce
 
 
     def download_to_scratch(self):
@@ -130,7 +168,13 @@ class AssetCloudAdapter:
         return AssetCloudScratchContextManager(scratch_path)
 
 
-    def stream(self, chunksize=_DEFAULT_STREAMING_CHUNKSIZE):
+    def stream(self, chunksize=_DEFAULT_STREAMING_CHUNKSIZE, no_encryption=False):
+        # no need to check if storage is encrypted; if it isn't, and we are set to ENCRYPTION_NONE, an exception
+        # will have been raised in the constructor
+        if self._encryption != encryptions.ENCRYPTION_NONE:
+            raise RuntimeError('AssetCloudAdapter: it is not possible to use streaming with an encrypted asset. '
+                               'Download the entire asset to obtain a decrypted copy.')
+
         # adapted from https://stackoverflow.com/questions/43215889/downloading-a-file-from-an-s3-bucket-to-the-users-computer
         offset = 0
         total_bytes = self._size
@@ -195,7 +239,8 @@ class AssetUploadManager:
     """
     def __init__(self, asset, bytes, storage: ObjectStore, key=None, length=None, mimetype=None,
                  key_attr: str='unique_name', size_attr: str='filesize',
-                 mimetype_attr: str='mimetype', comment: str=None):
+                 mimetype_attr: str='mimetype', encryption_attr: str='encryption',
+                 nonce_attr: str='nonce', comment: str=None, validate_nonce=None):
         self._asset = asset
 
         if key is None:
@@ -207,6 +252,9 @@ class AssetUploadManager:
         self._size_attr = size_attr
         self._mimetype_attr = mimetype_attr
 
+        self._encryption_attr = encryption_attr
+        self._nonce_attr = nonce_attr
+
         self._storage = storage
 
         setattr(self._asset, self._key_attr, self._key)
@@ -217,7 +265,13 @@ class AssetUploadManager:
         if mimetype is not None and self._mimetype_attr is not None:
             setattr(self._asset, self._mimetype_attr, mimetype)
 
-        self._storage.put(self._key, bytes, mimetype=mimetype)
+        nonce: bytes = self._storage.put(self._key, bytes, mimetype=mimetype, validate_nonce=validate_nonce)
+
+        if hasattr(self._asset, self._encryption_attr):
+            setattr(self._asset, self._encryption_attr, self._storage.encryption_type)
+        if hasattr(self._asset, self._nonce_attr):
+            base64_nonce = base64.urlsafe_b64encode(nonce).decode('ascii')
+            setattr(self._asset, self._nonce_attr, base64_nonce)
 
         meta: ObjectMeta = self._storage.head(self._key)
         if self._size_attr is not None:
@@ -233,11 +287,15 @@ class AssetUploadManager:
                       'backend ({cloud})'.format(user=self._asset.filesize, cloud=meta.size))
                 setattr(self._asset, self._size_attr, meta.size)
 
-        setattr(self._asset, 'lost', False)
-        setattr(self._asset, 'unattached', False)
+        if hasattr(self._asset, 'lost'):
+            setattr(self._asset, 'lost', False)
+        if hasattr(self._asset, 'unattached'):
+            setattr(self._asset, 'unattached', False)
 
-        setattr(self._asset, 'bucket', storage.database_key)
-        setattr(self._asset, 'comment', comment)
+        if hasattr(self._asset, 'bucket'):
+            setattr(self._asset, 'bucket', storage.database_key)
+        if hasattr(self._asset, 'comment'):
+            setattr(self._asset, 'comment', comment)
 
 
     def __enter__(self):

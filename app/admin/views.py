@@ -14,6 +14,7 @@ from collections import deque
 from datetime import date, datetime, timedelta
 from functools import partial
 from itertools import chain as itertools_chain
+from math import pi
 from pathlib import Path
 from typing import List
 from urllib.parse import urlsplit
@@ -25,9 +26,8 @@ from celery import chain, group
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, \
     stream_with_context, abort
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
-from math import pi
 from numpy import histogram
-from sqlalchemy import or_, update, and_
+from sqlalchemy import or_, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import cast
 from sqlalchemy.sql import func
@@ -73,9 +73,11 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset, \
     AssetLicense, SubmittedAssetDownloadRecord, GeneratedAssetDownloadRecord, SelectingStudent, EmailNotification, \
-    ProjectTagGroup, ProjectTag, SubmitterAttendanceData, MatchingRole, SubmissionAttachment, PeriodAttachment
+    ProjectTagGroup, ProjectTag, SubmitterAttendanceData, MatchingRole, SubmissionAttachment, PeriodAttachment, \
+    validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
-from ..shared.backup import get_backup_config, set_backup_config, compute_current_backup_count, compute_current_backup_size, remove_backup
+from ..shared.backup import get_backup_config, set_backup_config, compute_current_backup_count, \
+    compute_current_backup_size, remove_backup
 from ..shared.conversions import is_integer
 from ..shared.formatters import format_size
 from ..shared.forms.queries import ScheduleSessionQuery
@@ -9940,7 +9942,7 @@ def upload_schedule(schedule_id):
 
                     object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
                     with AssetUploadManager(asset, bytes=sol_file.stream.read(), storage=object_store,
-                                            length=sol_file.content_length) as upload_mgr:
+                                            length=sol_file.content_length, validate_nonce=validate_nonce) as upload_mgr:
                         pass
 
                     asset.grant_user(current_user)
@@ -10009,7 +10011,7 @@ def upload_match(match_id):
 
                     object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
                     with AssetUploadManager(asset, bytes=sol_file.stream.read(), storage=object_store,
-                                            length=sol_file.content_length) as upload_mgr:
+                                            length=sol_file.content_length, validate_nonce=validate_nonce) as upload_mgr:
                         pass
 
                     asset.grant_user(current_user)

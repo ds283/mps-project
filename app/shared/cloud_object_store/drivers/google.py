@@ -99,5 +99,6 @@ class GoogleCloudStorageDriver:
         data: ObjectMeta = ObjectMeta()
         data.location = blob.name
         data.size = blob.size
+        data.mimetype = blob.content_type
 
         return data

@@ -130,5 +130,6 @@ class AmazonS3CloudStorageDriver:
         data: ObjectMeta = ObjectMeta()
         data.location = key_str
         data.size = response['ContentLength']
+        data.mimetype = response['ContentType']
 
         return data

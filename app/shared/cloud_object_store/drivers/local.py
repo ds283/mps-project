@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from mimetypes import guess_type
 from pathlib import Path
 from typing import Dict
 from urllib.parse import SplitResult
@@ -124,5 +125,6 @@ class LocalFileSystemDriver:
         data: ObjectMeta = ObjectMeta()
         data.location = key
         data.size = abs_path.stat().st_size
+        data.mimetype, _ = guess_type(str(abs_path))
 
         return data

@@ -160,11 +160,15 @@
                                             {% if sel_state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
                                                 <div class="small text-success"><i class="fas fa-check-circle"></i> Ready to rollover</div>
                                                 {% if config.do_matching %}
-                                                    {% set match = config.allocated_match %}
-                                                    {% if match is not none %}
-                                                        <div class="small text-muted">Selected match: <strong>{{ match.name }}</strong></div>
+                                                    {% if config.select_in_previous_cycle %}
+                                                        {% set match = config.allocated_match %}
+                                                        {% if match is not none %}
+                                                            <div class="small text-muted">Selected matching: <strong>{{ match.name }}</strong></div>
+                                                        {% else %}
+                                                            <div class="small text-muted">No matching selected</div>
+                                                        {% endif %}
                                                     {% else %}
-                                                        <div class="small text-muted">No match selected</div>
+                                                        <div class="small text-muted">No matching, selection in same cycle</div>
                                                     {% endif %}
                                                 {% else %}
                                                     <div class="small text-muted">Not using matching</div>

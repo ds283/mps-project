@@ -88,7 +88,7 @@ class AssetCloudAdapter:
 
     """
     def __init__(self, asset, storage: ObjectStore, key_attr: str='unique_name', size_attr: str='filesize',
-                 encryption_attr: str='encyption', nonce_attr: str='nonce'):
+                 encryption_attr: str='encryption', nonce_attr: str='nonce'):
         self._asset = asset
         self._storage = storage
         self._storage_encrypted = self._storage.encrypted

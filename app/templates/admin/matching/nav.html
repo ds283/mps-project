@@ -16,7 +16,7 @@
         </li>
         <li class="nav-item">
             <a class="nav-link {% if pane == 'create' %}active{% endif %}"
-               href="{{ url_for('admin.create_match') }}">
+               href="{{ url_for('admin.create_match', year=year) }}">
                 Create new match
             </a>
         </li>

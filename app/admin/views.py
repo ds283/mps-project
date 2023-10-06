@@ -61,7 +61,7 @@ from .forms import GlobalConfig, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
     PublicScheduleFormFactory, CompareScheduleFormFactory, \
     AddAssetLicenseForm, EditAssetLicenseForm, AddProjectTagGroupForm, EditProjectTagGroupForm, \
-    AddProjectTagForm, EditProjectTagForm, EditSupervisorRolesForm
+    AddProjectTagForm, EditProjectTagForm, EditSupervisorRolesForm, SelectMatchingYearFormFactory
 from ..cache import cache
 from ..database import db
 from ..limiter import limiter
@@ -2742,8 +2742,8 @@ def confirm_global_rollover():
               '{yeara}&ndash;{yearb}.</strong></p>' \
               '<p class="mt-1">No project classes will be modified. Project class rollover must be initiated ' \
               'by individual module convenors.</p>' \
-              '<p class="mt-1">After the current academic year has been incremented, any unused project matchings ' \
-              'from the previous cycle will be removed. Also, a routine database maintenance process will be ' \
+              '<p class="mt-1">After the current academic year has been incremented, ' \
+              'a routine database maintenance process will be ' \
               'run.</p>' \
               '<p class="mt-2">This action cannot be undone.</p>'.format(yeara=next_year, yearb=next_year + 1)
     submit_label = 'Rollover to {yra}&ndash;{yrb}'.format(yra=next_year, yrb=next_year+1)
@@ -2761,7 +2761,6 @@ def perform_global_rollover():
     for each project class at a time decided by its convenor or an administrator)
     :return:
     """
-
     data = get_rollover_data()
     current_config = get_main_config()
 
@@ -2777,7 +2776,7 @@ def perform_global_rollover():
     next_year = current_year + 1
 
     try:
-        # create new MainConfig instance for next year, rolling over most current settings
+        # insert new MainConfig instance for next year, rolling over most current settings
         new_year = MainConfig(year=next_year,
                               enable_canvas_sync=current_config.enable_canvas_sync,
                               canvas_url=current_config.canvas_url)
@@ -2789,28 +2788,28 @@ def perform_global_rollover():
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
-    tk_name = 'Perform global rollover to academic year {yra}-{yrb}'.format(yra=next_year, yrb=next_year+1)
-    tk_description = 'Perform global rollover'
-    uuid = register_task(tk_name, owner=current_user, description=tk_description)
+    else:
+        tk_name = 'Perform global rollover to academic year {yra}-{yrb}'.format(yra=next_year, yrb=next_year+1)
+        tk_description = 'Perform global rollover'
+        uuid = register_task(tk_name, owner=current_user, description=tk_description)
 
-    celery = current_app.extensions['celery']
+        celery = current_app.extensions['celery']
 
-    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
-    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
-    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+        init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+        final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+        error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
 
-    # remove unused match records that belonged to the previous academic year
-    prune_matches = celery.tasks['app.tasks.rollover.prune_matches']
+        # need to perform a maintenance cycle to update students' academic years
+        maintenance_cycle = celery.tasks['app.tasks.maintenance.maintenance']
 
-    # need to perform a maintenance cycle to update students academic years
-    maintenance_cycle = celery.tasks['app.tasks.maintenance.maintenance']
+        # TODO: pruning of matching attempts must now be scheduled elsewhere in the lifecycle --
+        #  this has still to be done
 
-    # schedule all parts of the rollover+maintenance cycle
-    seq = chain(init.si(uuid, tk_name),
-                prune_matches.si(uuid, current_year, current_user.id),
-                maintenance_cycle.si(),
-                final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
-    seq.apply_async(task_id=uuid)
+        # schedule all parts of the rollover+maintenance cycle
+        seq = chain(init.si(uuid, tk_name),
+                    maintenance_cycle.si(),
+                    final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
+        seq.apply_async(task_id=uuid)
 
     return home_dashboard()
 
@@ -4188,51 +4187,61 @@ def notifications_ajax():
     return jsonify(data)
 
 
-@admin.route('/manage_matching')
+def _compute_allowed_matching_years(current_year):
+    # check which year we are going to offer, and whether any project classes are ready to match
+    pre_allowed_years = db.session.query(MatchingAttempt.year).distinct().all()
+    allowed_years = {y for y, in pre_allowed_years}
+
+    data = get_ready_to_match_data()
+    if data['matching_ready'] and not data['rollover_in_progress']:
+        allowed_years = allowed_years | {current_year}
+
+    return allowed_years, data
+
+
+@admin.route('/manage_matching', methods=['GET', 'POST'])
 @roles_required('root')
 def manage_matching():
     """
     Create the 'manage matching' dashboard view
     :return:
     """
+    current_year = get_current_year()
+    requested_year_arg = request.args.get('year', None)
+    flag, requested_year = is_integer(requested_year_arg)
 
-    # check that all projects are ready to match
-    data = get_ready_to_match_data()
+    allowed_years, data = _compute_allowed_matching_years(current_year)
 
-    if not data['matching_ready']:
-        flash('Automated matching is not yet available because some project classes are not ready', 'error')
+    if len(allowed_years) == 0:
+        if not data['matching_ready']:
+            flash('Automated matching is not yet available because some project classes are not ready', 'error')
+            return redirect(redirect_url())
+
+        if data['rollover_in_progress']:
+            flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
+            return redirect(redirect_url())
+
+        flash('Automated matching is not available because no years are currently eligible', category='info')
         return redirect(redirect_url())
 
-    if data['rollover_in_progress']:
-        flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
-        return redirect(redirect_url())
+    SelectMatchingYearForm = SelectMatchingYearFormFactory(allowed_years)
+    form = SelectMatchingYearForm(request.form)
 
-    info = get_matching_dashboard_data()
+    if flag and requested_year is not None and requested_year in allowed_years:
+        selected_year = requested_year
+    elif hasattr(form, 'selector') and form.selector.data is not None \
+            and form.selector.data in allowed_years:
+        selected_year = form.selector.data
+    else:
+        selected_year = max(allowed_years)
 
-    return render_template('admin/matching/manage.html', pane='manage', info=info)
+    if hasattr(form, 'selector'):
+        form.selector.data = selected_year
 
+    info = get_matching_dashboard_data(selected_year)
 
-@admin.route('/skip_matching')
-@roles_required('root')
-def skip_matching():
-    """
-    Mark current set of ProjectClassConfig instances to skip automated matching
-    :return:
-    """
-    pcs = db.session.query(ProjectClass) \
-        .filter_by(active=True) \
-        .order_by(ProjectClass.name.asc()).all()
-
-    for pclass in pcs:
-        # get current configuration record for this project class
-        config = pclass.most_recent_config
-
-        if config is not None:
-            config.skip_matching = True
-
-    db.session.commit()
-
-    return redirect(redirect_url())
+    return render_template('admin/matching/manage.html', pane='manage', info=info, form=form,
+                           year=selected_year)
 
 
 @admin.route('/matches_ajax')
@@ -4242,18 +4251,51 @@ def matches_ajax():
     Create the 'manage matching' dashboard view
     :return:
     """
+    current_year = get_current_year()
 
-    # check that all projects are ready to match
-    data = get_ready_to_match_data()
-
-    if not data['matching_ready'] or data['rollover_in_progress']:
+    allowed_years, data = _compute_allowed_matching_years(current_year)
+    if len(allowed_years) == 0:
         return jsonify({})
 
-    current_year = get_current_year()
-    matches = db.session.query(MatchingAttempt).filter_by(year=current_year).all()
+    selected_year = request.args.get('year', None)
+    if selected_year is None:
+        return jsonify({})
 
-    return ajax.admin.matches_data(matches, text='matching dashboard', url=url_for('admin.manage_matching'),
-                                   is_root=True)
+    matches = db.session.query(MatchingAttempt).filter_by(year=selected_year).all()
+
+    return ajax.admin.matches_data(matches, is_root=True, text='matching dashboard',
+                                   url=url_for('admin.manage_matching', year=selected_year))
+
+
+@admin.route('/skip_matching')
+@roles_required('root')
+def skip_matching():
+    """
+    Mark current set of ProjectClassConfig instances to skip automated matching
+    :return:
+    """
+    current_year = get_current_year()
+
+    pcs = db.session.query(ProjectClass) \
+        .filter_by(active=True) \
+        .order_by(ProjectClass.name.asc()).all()
+
+    for pclass in pcs:
+        # get current configuration record for this project class
+        config = pclass.most_recent_config
+
+        if config is not None and config.year == current_year:
+            config.skip_matching = True
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash('Can not skip matching due to a database error. Please contact a system administrator.',
+              'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
 
 
 @admin.route('/create_match', methods=['GET', 'POST'])
@@ -4263,19 +4305,17 @@ def create_match():
     Create the 'create match' dashboard view
     :return:
     """
+    current_year = get_current_year()
+    selected_year = request.args.get('year', current_year)
+
     # check that all projects are ready to match
     data = get_ready_to_match_data()
-    current_year = get_current_year()
 
-    if not data['matching_ready']:
-        flash('Automated matching is not yet available because some project classes are not ready', 'info')
-        return redirect(redirect_url())
-
-    if data['rollover_in_progress']:
+    if selected_year == current_year and data['rollover_in_progress']:
         flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
         return redirect(redirect_url())
 
-    info = get_matching_dashboard_data()
+    info = get_matching_dashboard_data(selected_year)
 
     base_id = request.args.get('base_id', None)
 
@@ -4283,6 +4323,12 @@ def create_match():
     base_match = None
     if base_id is not None:
         base_match = MatchingAttempt.query.get_or_404(base_id)
+
+        if base_match.year != selected_year:
+            flash(f'Cannot use base match "{base_match.name}" because it belongs to a different '
+                  f'academic year (base match year = {base_match.year}, selected year = {selected_year}',
+                  'info')
+            return redirect(redirect_url())
 
     NewMatchForm = NewMatchFormFactory(current_year, base_id=base_id, base_match=base_match)
     form = NewMatchForm(request.form)
@@ -4316,7 +4362,7 @@ def create_match():
         base_bias_control = getattr(form, 'base_bias', None)
         force_base_control = getattr(form, 'force_base', None)
 
-        attempt = MatchingAttempt(year=current_year,
+        attempt = MatchingAttempt(year=selected_year,
                                   base_id=base_id,
                                   base_bias=base_bias_control.data if base_bias_control is not None else None,
                                   force_base=force_base_control.data if force_base_control is not None else None,
@@ -4539,6 +4585,7 @@ def perform_terminate_match(id):
 
         db.session.delete(record)
         db.session.commit()
+
     except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not terminate matching task "{name}" due to a database error. '

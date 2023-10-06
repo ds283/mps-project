@@ -4,41 +4,41 @@
 <ul class='list-unstyled'>
     <li>
         {% if state > config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-            <i class='fas fa-check-circle fa-fw'></i>
+            <i class='fas fa-check-circle fa-fw text-success'></i>
         {% else %}
-            <i class='fas fa-times-circle fa-fw'></i>
+            <i class='fas fa-times-circle fa-fw text-danger'></i>
         {% endif %}
         Confirmation requests issued
     </li>
     <li>
         {% if state > config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-            <i class='fas fa-check-circle fa-fw'></i>
+            <i class='fas fa-check-circle fa-fw text-success'></i>
         {% else %}
-            <i class='fas fa-times-circle fa-fw'></i>
+            <i class='fas fa-times-circle fa-fw text-danger'></i>
         {% endif %}
         Confirmations returned
     </li>
     <li>
         {% if state > config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-            <i class='fas fa-check-circle fa-fw'></i>
+            <i class='fas fa-check-circle fa-fw text-success'></i>
         {% else %}
-            <i class='fas fa-times-circle fa-fw'></i>
+            <i class='fas fa-times-circle fa-fw text-danger'></i>
         {% endif %}
         Go Live
     </li>
     <li>
         {% if state > config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-            <i class='fas fa-check-circle fa-fw'></i>
+            <i class='fas fa-check-circle fa-fw text-success'></i>
         {% else %}
-            <i class='fas fa-times-circle fa-fw'></i>
+            <i class='fas fa-times-circle fa-fw text-danger'></i>
         {% endif %}
         Student selections
     </li>
     <li>
         {% if state > config.SELECTOR_LIFECYCLE_READY_MATCHING %}
-            <i class='fas fa-check-circle fa-fw'></i>
+            <i class='fas fa-check-circle fa-fw text-success'></i>
         {% else %}
-            <i class='fas fa-times-circle fa-fw'></i>
+            <i class='fas fa-times-circle fa-fw text-danger'></i>
         {% endif %}
         Perform matching
     </li>
@@ -49,17 +49,17 @@
 <ul class='list-unstyled'>
     <li>
         {% if state > config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
-            <i class='fas fa-check-circle fa-fw'></i>
+            <i class='fas fa-check-circle fa-fw text-success'></i>
         {% else %}
-            <i class='fas fa-times-circle fa-fw'></i>
+            <i class='fas fa-times-circle fa-fw text-danger'></i>
         {% endif %}
         Project completed
     </li>
     <li>
         {% if state > config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
-            <i class='fas fa-check-circle fa-fw'></i>
+            <i class='fas fa-check-circle fa-fw text-success'></i>
         {% else %}
-            <i class='fas fa-times-circle fa-fw'></i>
+            <i class='fas fa-times-circle fa-fw text-danger'></i>
         {% endif %}
         Feedback completed
     </li>
@@ -88,84 +88,105 @@
                 {% set submitter_lifecycle = config.submitter_lifecycle %}
                 {% set rollover_ready = selector_lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER and submitter_lifecycle == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
                 {% set pclass = config.project_class %}
+                {% set published = pclass.publish %}
                 <div class="row vertical-top root-dashboard-table">
                     <div class="col-4">
                         {% set swatch_colour = pclass.make_CSS_style() %}
                         <div class="d-flex flex-row justify-content-start align-items-center gap-2">
                             {{ medium_swatch(swatch_colour) }}
-                            <a class="text-decoration-none" href="{{ url_for('convenor.status', id=pclass.id) }}">{{ pclass.name }}</a>
+                            <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=pclass.id) }}">{{ pclass.name }}</a>
                         </div>
-                        <div class="mt-1 small text-muted d-flex flex-row justify-content-start align-items-start gap-2">
-                            <strong {% if rollover_ready %}class="text-danger"{% endif %}>{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</strong>
-                            {% if rollover_ready %}
-                                <span class="text-danger">Rollover available</span>
-                            {% else %}
-                                <span tabindex="0" data-bs-toggle="popover" title="Lifecycle status" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ selector_lifecycle_checklist(selector_lifecycle, config) }}">Selector <i class="fas fa-chevron-circle-right"></i></span>
-                                <span tabindex="0" data-bs-toggle="popover" title="Lifecycle status" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ submitter_lifecycle_checklist(submitter_lifecycle, config) }}">Submitter <i class="fas fa-chevron-circle-right"></i></span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-2"><a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a></div>
-                    <div class="col-6">
-                        {% set sel_state = config.selector_lifecycle %}
-                        {% set sub_state = config.submitter_lifecycle %}
-                        {% set published = pclass.publish %}
-                        {% if not published %}
-                            <span class="badge bg-danger"><i class="fas fa-eye-slash"></i> Not published</span>
-                        {% else %}
-                            {% if sub_state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
-                                <span class="badge bg-success">{{ config.current_period.display_name|safe }}</span>
-                            {% elif sub_state == config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
-                                <span class="badge bg-warning text-dark">Marking/feedback: {{ config.current_period.display_name|safe }}</span>
-                            {% elif sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
-                                <span class="badge bg-primary"><i class="fas fa-check"></i> Submissions complete</span>
-                            {% else %}
-                                <span class="badge bg-danger">Unknown submitted lifecycle state {{ sub_state }}</span>
-                            {% endif %}
-                            {% if sel_state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-                                <span class="badge bg-secondary"><i class="fas fa-times"></i> Confirmations not issued</span>
-                            {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                                <span class="badge bg-secondary"><i class="fas fa-times"></i> Not live</span>
-                                <span class="badge bg-primary"><i class="fas fa-clock"></i> Confirmations outstanding</span>
-                            {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                                <span class="badge bg-secondary"><i class="fas fa-times"></i> Not live</span>
-                                <span class="badge bg-success"><i class="fas fa-check"></i> GoLive ready</span>
-                            {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                <span class="badge bg-primary"><i class="fas fa-check"></i> Selection open</span>
-                            {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_MATCHING %}
-                                <span class="badge bg-primary"><i class="fas fa-bar"></i> Selection closed</span>
-                                <span class="badge bg-success"><i class="fas fa-check"></i> Matching ready</span>
-                            {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
-                                <span class="badge bg-primary"><i class="fas fa-bar"></i> Selection closed</span>
-                                {% if sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER and not (config.year < current_year) %}
-                                    <span class="badge bg-success"><i class="fas fa-check"></i> Rollover ready</span>
+                        {% if published %}
+                            <div class="mt-1 small text-muted d-flex flex-row justify-content-start align-items-start gap-2">
+                                <strong {% if rollover_ready %}class="text-danger"{% endif %}>{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</strong>
+                                {% if rollover_ready %}
+                                    <span class="text-danger">Rollover available</span>
                                 {% else %}
-                                    {% if config.do_matching %}
-                                        <span class="badge bg-success"><i class="fas fa-check"></i> Matching selected</span>
+                                    <span tabindex="0" data-bs-toggle="popover" title="Lifecycle status" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ selector_lifecycle_checklist(selector_lifecycle, config) }}">Selector <i class="fas fa-chevron-circle-right"></i></span>
+                                    <span tabindex="0" data-bs-toggle="popover" title="Lifecycle status" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ submitter_lifecycle_checklist(submitter_lifecycle, config) }}">Submitter <i class="fas fa-chevron-circle-right"></i></span>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="mt-1 small text-muted d-flex flex-row justify-content-start align-items-start gap-2">
+                                <span><i class="fas fa-eye-slash"></i> <strong>Not published</strong></span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-2"><a class="text-decoration-none small link-secondary" href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a></div>
+                    <div class="col-6">
+                        {% if published %}
+                            {% set sel_state = config.selector_lifecycle %}
+                            {% set sub_state = config.submitter_lifecycle %}
+                            {% set num_sel = config.number_selectors %}
+                            {% set num_sub = config.number_submitters %}
+                            {% set sel_pl = 's' %}
+                            {% if num_sel == 1 %}{% set sel_pl = '' %}{% endif %}
+                            {% set sub_pl = 's' %}
+                            {% if num_sub == 1 %}{% set sub_pl = '' %}{% endif %}
+                            <div>
+                                <div><span class="small"><strong>{{ num_sel }} selector{{ sel_pl }} | {{ num_sub }} submitter{{ sub_pl }}</strong></span></div>
+                                {% if sel_state <= config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+                                    {% if capacity < num_sel %}
+                                        <div><span class="small">Capacity {% if not bounded %}&ge; {% endif %}{{ capacity }}</span></div>
+                                    {% elif capacity < 1.15*num_sel %}
+                                        <div><span class="small">Capacity {% if not bounded %}&ge; {% endif %}{{ capacity }}</span></div>
+                                    {% else %}
+                                        <div><span class="small">Capacity {% if not bounded %}&ge; {% endif %}{{ capacity }}</span></div>
                                     {% endif %}
                                 {% endif %}
-                            {% else %}
-                                <span class="badge bg-danger">Unknown selector lifecycle state {{ sel_state }}</span>
-                            {% endif %}
-                        {% endif %}
-
-                        {% set num_sel = config.number_selectors %}
-                        {% set pl = 's' %}
-                        {% if num_sel == 1 %}{% set pl = '' %}{% endif %}
-                        <span class="badge bg-info">{{ num_sel }} selector{{ pl }}</span>
-
-                        {% set num_sub = config.number_submitters %}
-                        {% set pl = 's' %}
-                        {% if num_sub == 1 %}{% set pl = '' %}{% endif %}
-                        <span class="badge bg-info">{{ num_sub }} submitter{{ pl }}</span>
-
-                        {% if sel_state <= config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                            {% if capacity < num_sel %}
-                                <span class="badge bg-danger">Capacity {% if not bounded %}&ge; {% endif %}{{ capacity }}</span>
-                            {% elif capacity < 1.15*num_sel %}
-                                <span class="badge bg-warning text-dark">Capacity {% if not bounded %}&ge; {% endif %}{{ capacity }}</span>
-                            {% else %}
-                                <span class="badge bg-success">Capacity {% if not bounded %}&ge; {% endif %}{{ capacity }}</span>
+                            </div>
+                            {% if config.uses_submission or config.uses_selection %}
+                                <div class="row mt-1 bg-light">
+                                    {% if config.uses_submission %}
+                                        <div class="col-6">
+                                            <div><span class="small text-muted">Submission</span></div>
+                                            {% if sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
+                                                <div class="small"><i class="fas fa-check-circle"></i> <span class="text-success">Ready to rollover</span></div>
+                                            {% else %}
+                                                <div><strong>{{ config.current_period.display_name|safe }}</strong></div>
+                                                <div>
+                                                    {% if sub_state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
+                                                        <ul class="small list-unstyled"><li><i class="fas fa-clock"></i> Project activity underway</li></ul>
+                                                    {% elif sub_state == config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
+                                                        <ul class="small list-unstyled"><li><i class="fas fa-chevron-right"></i> Marking and feedback</li></ul>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                    {% if config.uses_selection %}
+                                        <div class="col-6">
+                                            <div><span class="small text-muted">Selection</span></div>
+                                            {% if sel_state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
+                                                <div class="small text-success"><i class="fas fa-check-circle"></i> Ready to rollover</div>
+                                            {% else %}
+                                                <div>
+                                                    {% if sel_state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                                                        <ul class="small list-unstyled">
+                                                            <li class="text-danger"><i class="fas fa-times-circle"></i> Not live</li>
+                                                            <li><i class="fas fa-times"></i> Confirmations not issued</li>
+                                                        </ul>
+                                                    {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                                                        <ul class="small list-unstyled">
+                                                            <li class="text-danger"><i class="fas fa-times-circle"></i> Not live</li>
+                                                            <li><i class="fas fa-clock"></i> Confirmations outstanding</li>
+                                                        </ul>
+                                                    {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+                                                        <ul class="small list-unstyled">
+                                                            <li class="text-success"><i class="fas fa-check-circle"></i> Ready to go live</li>
+                                                        </ul>
+                                                    {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                                        <ul class="small list-unstyled"><li><i class="fas fa-check-circle"></i> Selection open</li></ul>
+                                                    {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_MATCHING %}
+                                                        <ul class="small list-unstyled">
+                                                            <li class="text-success"><i class="fas fa-check-circle"></i> Matching ready</li>
+                                                        </ul>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </div>
                             {% endif %}
                         {% endif %}
                     </div>

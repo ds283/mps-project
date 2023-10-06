@@ -18,7 +18,7 @@ spec:
           containers:
           - command: ["/bin/bash"]
             args: ["-c", "/script/backup.sh"]
-            image: ghcr.io/zugao/mc-kubectl:v0.0.1
+            image: quay.io/ds283/mc-kubectl:master
             name: enginfprojects-assets-prod
             envFrom:
             - secretRef:

@@ -141,14 +141,14 @@
                                         <div class="col-6">
                                             <div><span class="small text-muted">Submission</span></div>
                                             {% if sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
-                                                <div class="small"><i class="fas fa-check-circle"></i> <span class="text-success">Ready to rollover</span></div>
+                                                <div class="small text-success"><i class="fas fa-check-circle"></i> Ready to rollover</div>
                                             {% else %}
-                                                <div><strong>{{ config.current_period.display_name|safe }}</strong></div>
+                                                <div class="text-dark"><strong>{{ config.current_period.display_name|safe }}</strong></div>
                                                 <div>
                                                     {% if sub_state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
-                                                        <ul class="small list-unstyled"><li><i class="fas fa-clock"></i> Project activity underway</li></ul>
+                                                        <ul class="small list-unstyled text-secondary"><li><i class="fas fa-clock"></i> Project activity underway</li></ul>
                                                     {% elif sub_state == config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
-                                                        <ul class="small list-unstyled"><li><i class="fas fa-chevron-right"></i> Marking and feedback</li></ul>
+                                                        <ul class="small list-unstyled text-secondary"><li><i class="fas fa-chevron-right"></i> Marking and feedback</li></ul>
                                                     {% endif %}
                                                 </div>
                                             {% endif %}

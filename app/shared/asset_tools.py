@@ -114,7 +114,7 @@ class AssetCloudAdapter:
 
             if self._storage.uses_nonce:
                 base64_nonce = getattr(self._asset, self._nonce_attr)
-                self._nonce = base64.decodebytes(base64_nonce)
+                self._nonce = base64.b64decode(base64_nonce)
 
 
     def record(self):

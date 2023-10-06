@@ -31,7 +31,7 @@ OBJECT_STORAGE_ASSETS_SECRET_KEY = os.environ.get("OBJECT_STORAGE_ASSETS_SECRET_
 
 # set up encryption pipeline for assets bucket
 OBJECT_STORAGE_ASSETS_ENCRYPT_KEY = os.environ.get("OBJECT_STORAGE_ASSETS_ENCRYPT_KEY")
-_assets_encrypt_key = base64.b64decode(OBJECT_STORAGE_ASSETS_ENCRYPT_KEY)
+_assets_encrypt_key = base64.urlsafe_b64decode(OBJECT_STORAGE_ASSETS_ENCRYPT_KEY)
 
 # create ObjectStore data block for assets bucket
 _assets_storage_options = _base_storage_options | {'access_key': OBJECT_STORAGE_ASSETS_ACCESS_KEY,
@@ -44,7 +44,7 @@ OBJECT_STORAGE_BACKUP_SECRET_KEY = os.environ.get("OBJECT_STORAGE_BACKUP_SECRET_
 
 # set up encryption pipeline for backup bucket
 OBJECT_STORAGE_BACKUP_ENCRYPT_KEY = os.environ.get("OBJECT_STORAGE_BACKUP_ENCRYPT_KEY")
-_backup_encrypt_key = base64.b64decode(OBJECT_STORAGE_BACKUP_ENCRYPT_KEY)
+_backup_encrypt_key = base64.urlsafe_b64decode(OBJECT_STORAGE_BACKUP_ENCRYPT_KEY)
 
 _backup_storage_options = _base_storage_options | {'access_key': OBJECT_STORAGE_BACKUP_ACCESS_KEY,
                                                    'secret_key': OBJECT_STORAGE_BACKUP_SECRET_KEY,

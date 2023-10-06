@@ -70,12 +70,12 @@
     {% set config_list = data['config_list'] %}
     {% set current_year = data['current_year'] %}
 
-    <p><span class="dashboard-project-title">Administrator dashboard</span></p>
-
+    <div class="dashboard-project-title">Administrator dashboard</div>
+    <div class="text-dark mt-2">Current academic year: <strong>{{ current_year }}&ndash;{{ current_year+1 }}</strong></div>
     <div class="card mt-3 mb-3 border-info">
         <div class="card-header bg-info">Status overview</div>
         <div class="card-body">
-            <div class="row vertical-top root-dashboard-table">
+            <div class="row vertical-top">
                 <div class="col-4"><strong>Name</strong></div>
                 <div class="col-2"><strong>Convenor</strong></div>
                 <div class="col-6"><strong>Status</strong></div>
@@ -86,15 +86,17 @@
                 {% set bounded = cdata['is_bounded'] %}
                 {% set selector_lifecycle = config.selector_lifecycle %}
                 {% set submitter_lifecycle = config.submitter_lifecycle %}
-                {% set rollover_ready = selector_lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER and submitter_lifecycle == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
+                {% set rollover_ready = selector_lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER and submitter_lifecycle == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER and config.year < current_year %}
                 {% set pclass = config.project_class %}
                 {% set published = pclass.publish %}
-                <div class="row vertical-top root-dashboard-table">
+                <div class="row vertical-top admin-card-row">
                     <div class="col-4">
                         {% set swatch_colour = pclass.make_CSS_style() %}
                         <div class="d-flex flex-row justify-content-start align-items-center gap-2">
-                            {{ medium_swatch(swatch_colour) }}
-                            <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=pclass.id) }}">{{ pclass.name }}</a>
+                            {% if published %}
+                                {{ medium_swatch(swatch_colour) }}
+                            {% endif %}
+                            <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=pclass.id) }}">{% if not published %}<s>{% endif %}{{ pclass.name }}{% if not published %}</s>{% endif %}</a>
                         </div>
                         {% if published %}
                             <div class="mt-1 small text-muted d-flex flex-row justify-content-start align-items-start gap-2">

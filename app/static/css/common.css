@@ -225,8 +225,16 @@ p.copyright {
     margin-bottom: 1rem;
 }
 
-.root-dashboard-table {
-    margin-bottom: 1rem;
+.admin-card-row {
+    border-bottom: solid 1px #dcdcdc;
+    padding-bottom: 1rem;
+    margin-bottom: 2rem;
+}
+
+.admin-card-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 
 .confirmation-table {

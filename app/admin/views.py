@@ -13,6 +13,7 @@ import re
 from collections import deque
 from datetime import date, datetime, timedelta
 from functools import partial
+from io import BytesIO
 from itertools import chain as itertools_chain
 from math import pi
 from pathlib import Path
@@ -24,7 +25,7 @@ from bokeh.models import Label
 from bokeh.plotting import figure
 from celery import chain, group
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, \
-    stream_with_context, abort
+    stream_with_context, abort, send_file
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 from numpy import histogram
 from sqlalchemy import or_, update
@@ -9835,12 +9836,17 @@ def download_generated_asset(asset_id):
         return redirect(redirect_url())
 
     storage = AssetCloudAdapter(asset, current_app.config['OBJECT_STORAGE_ASSETS'])
+    return_data = BytesIO()
+    with storage.download_to_scratch() as scratch_path:
+        file_path = scratch_path.path
 
-    return Response(storage.stream(),
-                    mimetype=asset.mimetype,
-                    headers={"Content-Disposition": "attachment;filename={name}".format(
-                        name=filename if filename is not None else asset.target_name),
-                        "Content-Length": asset.filesize})
+        with open(file_path, 'rb') as f:
+            return_data.write(f.read())
+        return_data.seek(0)
+
+    return send_file(return_data, mimetype=asset.mimetype,
+                     download_name=filename if filename else asset.target_name,
+                     as_attachment=True)
 
 
 @admin.route('/download_submitted_asset/<int:asset_id>')
@@ -9890,12 +9896,17 @@ def download_submitted_asset(asset_id):
         return redirect(redirect_url())
 
     storage = AssetCloudAdapter(asset, current_app.config['OBJECT_STORAGE_ASSETS'])
+    return_data = BytesIO()
+    with storage.download_to_scratch() as scratch_path:
+        file_path = scratch_path.path
 
-    return Response(storage.stream(),
-                    mimetype=asset.mimetype,
-                    headers={"Content-Disposition": "attachment;filename={name}".format(
-                        name=filename if filename is not None else asset.target_name),
-                        "Content-Length": asset.filesize})
+        with open(file_path, 'rb') as f:
+            return_data.write(f.read())
+        return_data.seek(0)
+
+    return send_file(return_data, mimetype=asset.mimetype,
+                     download_name=filename if filename else asset.target_name,
+                     as_attachment=True)
 
 
 @admin.route('/download_backup/<int:backup_id>')
@@ -9907,12 +9918,17 @@ def download_backup(backup_id):
     filename = request.args.get('filename', None)
 
     storage = AssetCloudAdapter(backup, current_app.config['OBJECT_STORAGE_BACKUP'], size_attr='archive_size')
+    return_data = BytesIO()
+    with storage.download_to_scratch() as scratch_path:
+        file_path = scratch_path.path
 
-    return Response(storage.stream(),
-                    mimetype='application/gzip',
-                    headers={"Content-Disposition": "attachment;filename={name}".format(
-                        name=filename if filename is not None else backup.unique_name),
-                        "Content-Length": backup.archive_size})
+        with open(file_path, 'rb') as f:
+            return_data.write(f.read())
+        return_data.seek(0)
+
+    return send_file(return_data, mimetype='application/gzip',
+                     download_name=filename if filename else backup.unique_name,
+                     as_attachment=True)
 
 
 @admin.route('/upload_schedule/<int:schedule_id>', methods=['GET', 'POST'])

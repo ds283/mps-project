@@ -112,12 +112,22 @@ class AssetCloudAdapter:
         self._encryption = getattr(self._asset, self._encryption_attr)
         self._nonce = None
 
+        if hasattr(self._asset, 'bucket'):
+            bucket = getattr(self._asset, 'bucket')
+            store_bucket = self._storage.database_key
+            if bucket != store_bucket:
+                raise RuntimeError(f'AssetCloudAdapter: asset was stored in bucket #{bucket}, but the '
+                                   f'object storage is #{store_bucket}')
+
         if self._encryption is not None and self._encryption != encryptions.ENCRYPTION_NONE:
             if not self._storage_encrypted:
-                raise RuntimeError('AssetCloudAdapter: asset was stored with encryption, but storage is not encrypted')
+                raise RuntimeError('AssetCloudAdapter: asset was stored with encryption, '
+                                   'but object storage is not encrypted')
 
             if self._storage.encryption_type != self._encryption:
-                raise RuntimeError('AssetCloudAdapter: asset was stored with an encryption that differs from the storage')
+                raise RuntimeError(f'AssetCloudAdapter: asset was stored with encryption type '
+                                   f'#{self._encryption}, but object storage has encryption type '
+                                   f'#{self._storage.encryption_type}')
 
             if self._storage.uses_nonce:
                 base64_nonce = getattr(self._asset, self._nonce_attr)

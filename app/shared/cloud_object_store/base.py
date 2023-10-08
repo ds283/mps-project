@@ -169,7 +169,7 @@ class ObjectStore:
         else:
             put_data: bytes = _as_bytes(data)
 
-        self._driver.put(_as_path(key), put_data, mimetype, nonce)
+        self._driver.put(_as_path(key), put_data, mimetype)
         return nonce
 
     def delete(self, key: PathLike) -> None:

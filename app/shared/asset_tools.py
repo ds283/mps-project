@@ -169,7 +169,7 @@ class AssetCloudAdapter:
         else:
             meta: ObjectMeta = self._storage.head(self._key)
             data: bytes = self.get()
-            new_nonce = self._storage.put(new_key, data, mimetype=meta.mimetype, validate_nonce=validate_nonce)
+            new_nonce: bytes = self._storage.put(new_key, data, mimetype=meta.mimetype, validate_nonce=validate_nonce)
 
         return new_key, new_nonce
 

@@ -25,3 +25,4 @@ build.sh
 restart.sh
 migrate.sh
 PyMuPDF-setup.py
+objectstore-data

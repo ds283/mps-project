@@ -862,8 +862,9 @@ def AssetMixinFactory(acl_name, acr_name):
         # is this asset encrypted?
         encryption = db.Column(db.Integer(), nullable=False, default=encryptions.ENCRYPTION_NONE)
 
-        # store nonce, if needed
-        nonce = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=True)
+        # store nonce, if needed. Ensure it is marked as unique, both because it should be,
+        # and also to generate an index (we need to check to ensure nonces are not reused)
+        nonce = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=True, unique=True)
 
 
         # access control list: which users are authorized to view or download this file?
@@ -11939,11 +11940,18 @@ class BackupRecord(db.Model):
     # the actual value in here is unreliable, because intermediate backups may have been thinned
     backup_size = db.Column(db.BigInteger())
 
+    # bucket associated with this asset
+    bucket = db.Column(db.Integer(), nullable=False, default=buckets.BACKUP_BUCKET)
+
+    # optional comment
+    comment = db.Column(db.Text())
+
     # is this record encrypted?
     encryption = db.Column(db.Integer(), nullable=False, default=encryptions.ENCRYPTION_NONE)
 
-    # store nonce, if needed
-    nonce = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=True)
+    # store nonce, if needed. Ensure it is marked as unique, both because it should be,
+    # and also to generate an index (we need to check to ensure nonces are not reused)
+    nonce = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=True, unique=True)
 
     def type_to_string(self):
         if self.type in self._type_index:

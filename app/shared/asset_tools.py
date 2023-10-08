@@ -12,6 +12,7 @@ import base64
 from pathlib import Path
 from uuid import uuid4
 
+import humanize
 from flask import current_app
 
 import app.shared.cloud_object_store.encryption_types as encryptions
@@ -274,13 +275,14 @@ class AssetUploadManager:
             recorded_size = getattr(self._asset, self._size_attr)
 
             if recorded_size is None or recorded_size == 0:
-                print('AssetUploadManager: self._asset has zero length; ObjectMeta reports '
-                      'length = {len}'.format(len=meta.size))
+                print(f'AssetUploadManager: self._asset has zero length; ObjectMeta reports '
+                      f'length = {humanize.naturalsize((meta.size))}')
                 setattr(self._asset, self._size_attr, meta.size)
 
             elif recorded_size != meta.size:
-                print('AssetUploadManager: user-supplied filesize ({user}) does not match ObjectMeta size reported from '
-                      'backend ({cloud})'.format(user=self._asset.filesize, cloud=meta.size))
+                print(f'AssetUploadManager: user-supplied filesize ({humanize.naturalsize(recorded_size)}) '
+                      f'does not match ObjectMeta size reported from cloud '
+                      f'backend ({humanize.naturalsize(meta.size)})')
                 setattr(self._asset, self._size_attr, meta.size)
 
         if hasattr(self._asset, 'lost'):

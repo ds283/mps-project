@@ -31,9 +31,22 @@ _manage_backups_menu = \
 </div>
 """
 
+# language=jinja2
+_name = \
+"""
+<div>{{ b.date.strftime("%a %d %b %Y %H:%M:%S") }}</div>
+<div class="mt-1 small text-muted">
+    {% if b.encryption == 0 %}
+        <i class="fas fa-lock-open"></i> Not encrypted
+    {% else %}
+        <i class="fas fa-lock"></i> Encrypted
+    {% endif %}
+</div>
+"""
+
 
 def backups_data(backups: List[BackupRecord]):
-    data = [{'date': b.date.strftime("%a %d %b %Y %H:%M:%S"),
+    data = [{'date': render_template_string(_name, b=b),
              'initiated': '<a class="text-decoration-none" '
                           'href="mailto:{e}">{name}</a>'.format(e=b.owner.email,
                                                                 name=b.owner.name) if b.owner is not None

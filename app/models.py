@@ -859,13 +859,15 @@ def AssetMixinFactory(acl_name, acr_name):
         # optional comment
         comment = db.Column(db.Text())
 
-        # is this asset encrypted?
+        # is this asset stored encrypted?
         encryption = db.Column(db.Integer(), nullable=False, default=encryptions.ENCRYPTION_NONE)
 
         # store nonce, if needed. Ensure it is marked as unique, both because it should be,
         # and also to generate an index (we need to check to ensure nonces are not reused)
         nonce = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=True, unique=True)
 
+        # is this asset stored compressed within the object store?
+        compressed = db.Column(db.Boolean(), nullable=False, default=False)
 
         # access control list: which users are authorized to view or download this file?
         @declared_attr
@@ -11952,6 +11954,13 @@ class BackupRecord(db.Model):
     # store nonce, if needed. Ensure it is marked as unique, both because it should be,
     # and also to generate an index (we need to check to ensure nonces are not reused)
     nonce = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=True, unique=True)
+
+    # is this asset compressed?
+    # note this is different to the question of whether the backup is stored in a compressed
+    # .tar.gz (which it is, with the default implementation). This field is used by
+    # AssetUploadManager and AssetCloudAdapter to decide whether transparent compression happens
+    # when storing in an object store
+    compressed = db.Column(db.Boolean(), nullable=False, default=False)
 
     def type_to_string(self):
         if self.type in self._type_index:

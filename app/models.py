@@ -7,7 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-
+import base64
 import json
 from collections.abc import Iterable
 from datetime import date, datetime, timedelta
@@ -39,6 +39,7 @@ from .shared.formatters import format_size, format_time, format_readable_time
 from .shared.sqlalchemy import get_count
 
 import app.shared.cloud_object_store.bucket_types as buckets
+import app.shared.cloud_object_store.encryption_types as encryptions
 
 # length of database string for typical fields, if used
 DEFAULT_STRING_LENGTH = 255
@@ -832,6 +833,7 @@ class AssetDownloadDataMixin():
     # target filename
     target_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
+
 def AssetMixinFactory(acl_name, acr_name):
 
     class AssetMixin():
@@ -856,6 +858,12 @@ def AssetMixinFactory(acl_name, acr_name):
 
         # optional comment
         comment = db.Column(db.Text())
+
+        # is this asset encrypted?
+        encryption = db.Column(db.Integer(), nullable=False, default=encryptions.ENCRYPTION_NONE)
+
+        # store nonce, if needed
+        nonce = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=True)
 
 
         # access control list: which users are authorized to view or download this file?
@@ -11931,6 +11939,11 @@ class BackupRecord(db.Model):
     # the actual value in here is unreliable, because intermediate backups may have been thinned
     backup_size = db.Column(db.BigInteger())
 
+    # is this record encrypted?
+    encryption = db.Column(db.Integer(), nullable=False, default=encryptions.ENCRYPTION_NONE)
+
+    # store nonce, if needed
+    nonce = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=True)
 
     def type_to_string(self):
         if self.type in self._type_index:
@@ -16832,3 +16845,18 @@ class DatabaseSchedulerEntry(db.Model):
 def _set_entry_changed_date(mapper, connection, target):
 
     target.date_changed = datetime.utcnow()
+
+
+def validate_nonce(nonce: bytes):
+    base64_nonce = base64.urlsafe_b64encode(nonce).decode('ascii')
+
+    if db.session.query(BackupRecord).filter_by(nonce=base64_nonce).first() is not None:
+        return False
+
+    if db.session.query(GeneratedAsset).filter_by(nonce=base64_nonce).first() is not None:
+        return False
+
+    if db.session.query(SubmittedAsset).filter_by(nonce=base64_nonce).first() is not None:
+        return False
+
+    return True

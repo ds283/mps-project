@@ -22,7 +22,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import SubmissionRecord, SubmittedAsset, User, ProjectClassConfig, GeneratedAsset, \
-    StudentData
+    StudentData, validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, \
     AssetUploadManager
 from ..shared.scratch import ScratchFileManager
@@ -276,7 +276,8 @@ def register_process_report_tasks(celery):
                     # document was not a PDF
                     record.processed_report = None
                 else:
-                    # generate asset record and upload to object store
+                    # generate asset record and upload to object store;
+                    # AssetUploadManager will populate most fields later
                     new_asset = GeneratedAsset(timestamp=datetime.now(),
                                                expiry=None,
                                                parent_asset_id=asset.id,
@@ -287,7 +288,7 @@ def register_process_report_tasks(celery):
                     with open(output_path.path, 'rb') as f:
                         with AssetUploadManager(new_asset, bytes=BytesIO(f.read()), storage=object_store,
                                                 length=output_path.path.stat().st_size,
-                                                mimetype=asset.mimetype) as upload_mgr:
+                                                mimetype=asset.mimetype, validate_nonce=validate_nonce) as upload_mgr:
                             pass
 
                     try:

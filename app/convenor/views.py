@@ -48,7 +48,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Bookmark, \
     ConvenorTask, ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask, SubmissionRole, MatchingRecord, \
-    MatchingRole
+    MatchingRole, validate_nonce
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
@@ -9228,6 +9228,7 @@ def upload_period_attachment(pid):
         if 'attachment' in request.files:
             attachment_file = request.files['attachment']
 
+            # AssetUploadManager will populate most fields later
             asset = SubmittedAsset(timestamp=datetime.now(),
                                    uploaded_id=current_user.id,
                                    expiry=None,
@@ -9237,7 +9238,7 @@ def upload_period_attachment(pid):
             object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
             with AssetUploadManager(asset, bytes=attachment_file.stream.read(), storage=object_store,
                                     length=attachment_file.content_length,
-                                    mimetype=attachment_file.content_type) as upload_mgr:
+                                    mimetype=attachment_file.content_type, validate_nonce=validate_nonce) as upload_mgr:
                 pass
 
             try:

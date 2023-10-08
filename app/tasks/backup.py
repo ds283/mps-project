@@ -30,7 +30,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .. import register_task
 from ..database import db
-from ..models import BackupRecord
+from ..models import BackupRecord, validate_nonce
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.backup import get_backup_config, compute_current_backup_count, compute_current_backup_size, remove_backup
 from ..shared.formatters import format_size
@@ -113,7 +113,8 @@ def register_backup_tasks(celery):
                 with open(archive_scratch_path, 'rb') as f:
                     with AssetUploadManager(data, bytes=BytesIO(f.read()), storage=object_store,
                                             key=key, length=this_archive_size,
-                                            mimetype='application/gzip', size_attr='archive_size') as upload_mgr:
+                                            mimetype='application/gzip', size_attr='archive_size',
+                                            validate_nonce=validate_nonce) as upload_mgr:
                         pass
 
                 try:
@@ -444,7 +445,8 @@ def register_backup_tasks(celery):
         """
         # don't execute if we are not on a live backup platform
         if not current_app.config.get('BACKUP_IS_LIVE', False):
-            raise Ignore()
+            self.update_state(state='SUCCESS', meta={'msg': 'Ignored because backup is not currently live'})
+            return
 
         try:
             success, msg = remove_backup(id)

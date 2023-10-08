@@ -22,7 +22,7 @@ from url_normalize import url_normalize
 
 from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SubmissionPeriodRecord, SubmissionRecord, SubmittingStudent, \
-    CanvasStudent, StudentData, User, SubmittedAsset, AssetLicense, MainConfig
+    CanvasStudent, StudentData, User, SubmittedAsset, AssetLicense, MainConfig, validate_nonce
 from ..shared.asset_tools import AssetUploadManager, AssetCloudAdapter
 from ..shared.utils import get_main_config
 
@@ -491,6 +491,7 @@ def register_canvas_tasks(celery):
 
         get_pdf_report = session.get(attachment['url'])
 
+        # AssetUploadManager will populate most fields later
         asset = SubmittedAsset(timestamp=datetime.now(),
                                uploaded_id=user_id,
                                expiry=None,
@@ -499,7 +500,7 @@ def register_canvas_tasks(celery):
 
         object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
         with AssetUploadManager(asset, bytes=get_pdf_report.content, storage=object_store, length=attachment['size'],
-                                mimetype=attachment['content-type']) as upload_mgr:
+                                mimetype=attachment['content-type'], validate_nonce=validate_nonce) as upload_mgr:
             pass
 
         adapter = AssetCloudAdapter(asset, object_store)

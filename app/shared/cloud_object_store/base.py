@@ -13,10 +13,10 @@ from pathlib import Path
 from typing import Dict, Union, List, Optional
 from urllib.parse import urlsplit, SplitResult
 
-from .meta import ObjectMeta
-from .drivers.local import LocalFileSystemDriver
-from .drivers.google import GoogleCloudStorageDriver
 from .drivers.amazons3 import AmazonS3CloudStorageDriver
+from .drivers.google import GoogleCloudStorageDriver
+from .drivers.local import LocalFileSystemDriver
+from .meta import ObjectMeta
 
 _drivers = {'file': LocalFileSystemDriver,
             'gs': GoogleCloudStorageDriver,
@@ -47,12 +47,32 @@ def _as_bytes(raw: BytesLike) -> bytes:
     raise ValueError(f"Cannot convert type {type(raw)} to type bytes.")
 
 
+class EncryptionPipeline:
+
+    @property
+    def uses_nonce(self) -> bool:
+        pass
+
+    @property
+    def database_key(self) -> int:
+        pass
+
+    def make_nonce(self) -> bytes:
+        pass
+
+    def encrypt(self, nonce: BytesLike, data: BytesLike) -> bytes:
+        pass
+
+    def decrypt(self, none: BytesLike, data: BytesLike) -> bytes:
+        pass
+
+
 class Driver:
 
     def get(self, key: PathLike) -> bytes:
         pass
 
-    def get_range(self, key: PathLike, start: int, length: int) -> bytes:
+    def get_range(self, key: PathLike, start: int, length: int) -> BytesLike:
         pass
 
     def put(self, key: PathLike, data: BytesLike, mimetype: Optional[str] = None) -> None:
@@ -82,6 +102,12 @@ class ObjectStore:
         if scheme not in _drivers:
             print('cloud_object_store: unsupported URI scheme "{scheme}"'.format(scheme=scheme))
 
+        self._encryption_pipeline: EncryptionPipeline
+        self._encryption_pipeline = None
+        if 'encryption_pipeline' in data:
+            self._encryption_pipeline = data['encryption_pipeline']
+            del data['encryption_pipeline']
+
         driver_type: Driver = _drivers[scheme]
         self._driver = driver_type(uri_elements, data)
 
@@ -89,19 +115,70 @@ class ObjectStore:
     def database_key(self) -> int:
         return self._database_key
 
-    def get(self, key: PathLike) -> bytes:
-        return self._driver.get(_as_path(key))
+    @property
+    def encrypted(self) -> bool:
+        return self._encryption_pipeline is not None
 
-    def get_range(self, key: PathLike, start: int, length: int) -> bytes:
+    @property
+    def uses_nonce(self) -> bool:
+        if not self.encrypted:
+            return None
+
+        return self._encryption_pipeline.uses_nonce
+
+    @property
+    def encryption_type(self) -> Optional[int]:
+        if not self.encrypted:
+            return None
+
+        return self._encryption_pipeline.database_key
+
+    def get(self, key: PathLike, nonce: Optional[BytesLike] = None, no_encryption=False) -> bytes:
+        data: bytes = self._driver.get(_as_path(key))
+
+        if self._encryption_pipeline is None or no_encryption:
+            return data
+
+        if self._encryption_pipeline.uses_nonce and nonce is None:
+            raise RuntimeError('ObjectStore: the encryption pipeline expects a nonce, but none was provided')
+
+        return self._encryption_pipeline.decrypt(nonce, data)
+
+    def get_range(self, key: PathLike, start: int, length: int, no_encryption=False) -> bytes:
+        if self.encrypted and not no_encryption:
+            raise RuntimeError('ObjectStore: you cannot use get_range() with an encrypted object store. '
+                               'Download the object completely using get() to decrypt it.')
+
         return self._driver.get_range(_as_path(key), start=start, length=length)
 
-    def put(self, key: PathLike, data: BytesLike, mimetype: Optional[str] = None) -> None:
-        return self._driver.put(_as_path(key), _as_bytes(data), mimetype)
+    def put(self, key: PathLike, data: BytesLike, mimetype: Optional[str] = None,
+            validate_nonce=None, no_encryption=False) -> Optional[bytes]:
+        nonce = None
+        if self._encryption_pipeline is not None and not no_encryption:
+            attempts = 0
+            while nonce is None:
+                if attempts > 100:
+                    raise RuntimeError('ObjectStore: failed to find acceptable nonce after 100 attempts')
+
+                nonce = self._encryption_pipeline.make_nonce()
+                if not validate_nonce(nonce):
+                    attempts += 1
+                    nonce = None
+
+            put_data: bytes = self._encryption_pipeline.encrypt(nonce, _as_bytes(data))
+        else:
+            put_data: bytes = _as_bytes(data)
+
+        self._driver.put(_as_path(key), put_data, mimetype)
+        return nonce
 
     def delete(self, key: PathLike) -> None:
         return self._driver.delete(_as_path(key))
 
     def copy(self, src: PathLike, dst: PathLike) -> None:
+        if self._encryption_pipeline is not None:
+            raise RuntimeError('ObjectStore: can not use copy with an encrypted store. '
+                               'Downnload and re-upload the file to generate a unique encrypted duplicate.')
         return self._driver.copy(_as_path(src), _as_path(dst))
 
     def list(self, prefix: Optional[PathLike] = None) -> Dict[str, ObjectMeta]:

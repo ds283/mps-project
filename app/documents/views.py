@@ -24,7 +24,8 @@ from .forms import UploadReportForm, UploadSubmitterAttachmentFormFactory, EditR
 from .utils import is_editable, is_deletable, is_listable, is_uploadable, is_admin
 from ..database import db
 from ..models import SubmissionRecord, SubmittedAsset, GeneratedAsset, SubmissionAttachment, Role, \
-    SubmissionPeriodRecord, ProjectClassConfig, ProjectClass, PeriodAttachment, User, AssetLicense, SubmittingStudent
+    SubmissionPeriodRecord, ProjectClassConfig, ProjectClass, PeriodAttachment, User, AssetLicense, SubmittingStudent, \
+    validate_nonce
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.utils import redirect_url
@@ -256,6 +257,7 @@ def upload_submitter_report(sid):
         if 'report' in request.files:
             report_file = request.files['report']
 
+            # AssetUploadManager will populate most fields later
             asset = SubmittedAsset(timestamp=datetime.now(),
                                    uploaded_id=current_user.id,
                                    expiry=None,
@@ -264,7 +266,8 @@ def upload_submitter_report(sid):
 
             object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
             with AssetUploadManager(asset, bytes=report_file.stream.read(), storage=object_store,
-                                    length=report_file.content_length, mimetype=report_file.content_type) as upload_mgr:
+                                    length=report_file.content_length, mimetype=report_file.content_type,
+                                    validate_nonce=validate_nonce) as upload_mgr:
                 pass
 
             try:
@@ -616,6 +619,7 @@ def upload_submitter_attachment(sid):
         if 'attachment' in request.files:
             attachment_file = request.files['attachment']
 
+            # AssetUploadManager will populate most fields later
             asset = SubmittedAsset(timestamp=datetime.now(),
                                    uploaded_id=current_user.id,
                                    expiry=None,
@@ -625,7 +629,8 @@ def upload_submitter_attachment(sid):
             object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
             with AssetUploadManager(asset, bytes=attachment_file.stream.read(), storage=object_store,
                                     length=attachment_file.content_length,
-                                    mimetype=attachment_file.content_type) as upload_mgr:
+                                    mimetype=attachment_file.content_type,
+                                    validate_nonce=validate_nonce) as upload_mgr:
                 pass
 
             try:

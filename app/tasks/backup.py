@@ -445,7 +445,8 @@ def register_backup_tasks(celery):
         """
         # don't execute if we are not on a live backup platform
         if not current_app.config.get('BACKUP_IS_LIVE', False):
-            raise Ignore()
+            self.update_state(state='SUCCESS', meta={'msg': 'Ignored because backup is not currently live'})
+            return
 
         try:
             success, msg = remove_backup(id)

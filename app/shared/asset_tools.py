@@ -253,11 +253,20 @@ class AssetUploadManager:
             setattr(self._asset, self._mimetype_attr, mimetype)
 
         nonce: bytes = self._storage.put(self._key, bytes, mimetype=mimetype, validate_nonce=validate_nonce)
+        if self._storage.encrypted and nonce is None:
+            raise RuntimeError('AssetUploadManager: object storage is marked as encrypted, but '
+                               'return nonce is None')
 
         if hasattr(self._asset, self._encryption_attr):
-            setattr(self._asset, self._encryption_attr, self._storage.encryption_type)
+            if self._storage.encrypted:
+                setattr(self._asset, self._encryption_attr, self._storage.encryption_type)
+            else:
+                setattr(self._asset, self._encryption_attr, encryptions.ENCRYPTION_NONE)
         if hasattr(self._asset, self._nonce_attr):
-            base64_nonce = base64.urlsafe_b64encode(nonce).decode('ascii')
+            if nonce is not None:
+                base64_nonce = base64.urlsafe_b64encode(nonce).decode('ascii')
+            else:
+                base64_nonce = None
             setattr(self._asset, self._nonce_attr, base64_nonce)
 
         meta: ObjectMeta = self._storage.head(self._key)

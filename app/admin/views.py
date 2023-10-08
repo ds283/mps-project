@@ -9926,9 +9926,9 @@ def download_backup(backup_id):
             return_data.write(f.read())
         return_data.seek(0)
 
+    fname = Path(Path(filename if filename else backup.unique_name).stem).with_suffix('.tar.gz')
     return send_file(return_data, mimetype='application/gzip',
-                     download_name=filename if filename else backup.unique_name,
-                     as_attachment=True)
+                     download_name=str(fname), as_attachment=True)
 
 
 @admin.route('/upload_schedule/<int:schedule_id>', methods=['GET', 'POST'])

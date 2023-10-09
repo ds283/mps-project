@@ -34,7 +34,7 @@ from ..shared.utils import get_current_year, get_count
 
 def register_maintenance_tasks(celery):
 
-    @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
+    @celery.task(bind=True, default_retry_delay=30)
     def maintenance(self):
         self.update_state(state='STARTED')
 
@@ -52,6 +52,13 @@ def register_maintenance_tasks(celery):
         schedule_enumeration_maintenance(self)
 
         submission_record_maintenance(self)
+
+        self.update_state(state='SUCCESS')
+
+
+    @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
+    def fix_unencrypted_assets(self):
+        self.update_state(state='STARTED')
 
         asset_maintenance(self, SubmittedAsset)
         asset_maintenance(self, TemporaryAsset)

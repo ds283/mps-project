@@ -16,10 +16,13 @@ from flask import current_app
 
 class ScratchFileManager:
 
-    def __init__(self):
+    def __init__(self, suffix=None):
         folder = Path(current_app.config.get('SCRATCH_FOLDER'))
         name = str(uuid4())
         self._path = folder / name
+
+        if suffix is not None:
+            self._path = self._path.with_suffix(suffix)
 
 
     def __enter__(self):

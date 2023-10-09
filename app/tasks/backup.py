@@ -58,7 +58,7 @@ def register_backup_tasks(celery):
                                                                  time=now.strftime("%H_%M_%S"),
                                                                  tag=tag, uuid=str(uuid4()))
 
-        with ScratchFileManager() as SQL_scratch:
+        with ScratchFileManager(suffix='.sql') as SQL_scratch:
             SQL_scratch_path = SQL_scratch.path
 
             self.update_state(state='STARTED', meta={'msg': 'Performing mysqldump on main database'})
@@ -81,12 +81,11 @@ def register_backup_tasks(celery):
 
             self.update_state(state='STARTED', meta={'msg': 'Compressing mysqldump output'})
 
-            with ScratchFileManager() as archive_scratch:
+            with ScratchFileManager(suffix='.tar.gz') as archive_scratch:
                 archive_scratch_path = archive_scratch.path
 
                 with tarfile.open(name=archive_scratch_path, mode="w:gz", format=tarfile.PAX_FORMAT) as archive:
                     archive.add(name=SQL_scratch_path, arcname="database.sql")
-
                     archive.close()
 
                 if not path.exists(archive_scratch_path) or not path.isfile(archive_scratch_path):

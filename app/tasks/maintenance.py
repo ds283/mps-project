@@ -663,8 +663,11 @@ def register_maintenance_tasks(celery):
         # ensure object is encrypted, if storage supports that
         if object_store.encrypted and record.encryption == encryptions.ENCRYPTION_NONE:
             storage: AssetCloudAdapter = AssetCloudAdapter(record, object_store, size_attr='archive_size')
-            new_key = Path(record.unique_name).stem
-            new_key = Path(new_key + '-new-upload').with_suffix('.tar.gz')
+            stem = Path(record.unique_name).stem
+            new_key = Path(stem + '-new-upload').with_suffix('.tar.gz')
+
+            print(f"Stem = {stem}")
+            print(f"New key = {new_key}")
 
             try:
                 with storage.download_to_scratch() as scratch_path:

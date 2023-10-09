@@ -285,7 +285,7 @@ class AssetUploadManager:
 
         if self._storage.encrypted and nonce is None:
             raise RuntimeError('AssetUploadManager: object storage is marked as encrypted, but '
-                               'return nonce is None')
+                               'returned nonce is empty')
 
         if hasattr(self._asset, self._encryption_attr):
             if self._storage.encrypted:

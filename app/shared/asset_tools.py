@@ -11,6 +11,7 @@
 import base64
 from io import BytesIO
 from pathlib import Path
+from typing import Optional
 from uuid import uuid4
 
 import humanize
@@ -165,6 +166,7 @@ class AssetCloudAdapter:
 
     def duplicate(self, validate_nonce):
         new_key = str(uuid4())
+        put_result = {}
 
         # if the file is not encrypted then we can duplicate it directly using an API call.
         # Otherwise, we want to re-encrypt it using a new nonce, so that we do not duplicate nonces.
@@ -173,14 +175,13 @@ class AssetCloudAdapter:
         # no need to check if storage is encrypted; if it isn't, and we are set to ENCRYPTION_NONE, an exception
         # will have been raised in the constructor
         if self._encryption == encryptions.ENCRYPTION_NONE:
-            new_nonce = None
             self._storage.copy(self._key, new_key)
         else:
             meta: ObjectMeta = self._storage.head(self._key)
             data: bytes = self.get()
-            new_nonce: bytes = self._storage.put(new_key, data, mimetype=meta.mimetype, validate_nonce=validate_nonce)
+            put_result = self._storage.put(new_key, data, mimetype=meta.mimetype, validate_nonce=validate_nonce)
 
-        return new_key, new_nonce
+        return new_key, put_result
 
 
     def download_to_scratch(self):
@@ -241,6 +242,7 @@ class AssetUploadManager:
                  key_attr: str='unique_name', size_attr: str='filesize',
                  mimetype_attr: str='mimetype', encryption_attr: str='encryption',
                  nonce_attr: str='nonce', compressed_attr: str='compressed',
+                 encrypted_size_attr: str='encrypted_size', compressed_size_attr: str='compressed_size',
                  comment: str=None, validate_nonce=None):
         self._asset = asset
 
@@ -255,8 +257,10 @@ class AssetUploadManager:
 
         self._encryption_attr = encryption_attr
         self._nonce_attr = nonce_attr
+        self._encrypted_size_attr = encrypted_size_attr
 
         self._compressed_attr = compressed_attr
+        self._compressed_size_attr = compressed_size_attr
 
         self._storage = storage
 
@@ -274,7 +278,11 @@ class AssetUploadManager:
         if mimetype is not None and self._mimetype_attr is not None:
             setattr(self._asset, self._mimetype_attr, mimetype)
 
-        nonce: data = self._storage.put(self._key, data, mimetype=mimetype, validate_nonce=validate_nonce)
+        put_result = self._storage.put(self._key, data, mimetype=mimetype, validate_nonce=validate_nonce)
+        nonce: Optional[bytes] = None
+        if 'nonce' in put_result:
+            nonce = put_result['nonce']
+
         if self._storage.encrypted and nonce is None:
             raise RuntimeError('AssetUploadManager: object storage is marked as encrypted, but '
                                'return nonce is None')
@@ -284,27 +292,34 @@ class AssetUploadManager:
                 setattr(self._asset, self._encryption_attr, self._storage.encryption_type)
             else:
                 setattr(self._asset, self._encryption_attr, encryptions.ENCRYPTION_NONE)
-        if hasattr(self._asset, self._nonce_attr):
-            if nonce is not None:
-                base64_nonce = base64.urlsafe_b64encode(nonce).decode('ascii')
-            else:
-                base64_nonce = None
-            setattr(self._asset, self._nonce_attr, base64_nonce)
 
-        if hasattr(self._asset, self._compressed_attr):
+            if hasattr(self._asset, self._nonce_attr):
+                if nonce is not None:
+                    base64_nonce = base64.urlsafe_b64encode(nonce).decode('ascii')
+                else:
+                    base64_nonce = None
+                setattr(self._asset, self._nonce_attr, base64_nonce)
+
+            if hasattr(self._asset, self._encrypted_size_attr):
+                setattr(self._asset, self._encrypted_size_attr, put_result.get('encrypted_size', None))
+
+        if self._storage.compressed and hasattr(self._asset, self._compressed_attr):
             setattr(self._asset, self._compressed_attr, self._storage.compressed)
+
+            if hasattr(self._asset, self._compressed_size_attr):
+                setattr(self._asset, self._compressed_size_attr, put_result.get('compressed_size', None))
 
         meta: ObjectMeta = self._storage.head(self._key)
         if self._size_attr is not None:
             if length is None or length == 0:
-                print(f'AssetUploadManager: self._asset has zero length; ObjectMeta reports '
+                print(f'AssetUploadManager: self._asset has zero use-supplied length; ObjectMeta reports '
                       f'length = {humanize.naturalsize((meta.size))}')
                 setattr(self._asset, self._size_attr, meta.size)
 
-            elif length != meta.size:
-                print(f'AssetUploadManager: user-supplied filesize ({humanize.naturalsize(length)}) '
+            if 'compressed_size' in put_result and put_result['compressed_size'] != meta.size:
+                print(f'AssetUploadManager: stored filesize ({put_result["compressed_size"]} bytes) '
                       f'does not match ObjectMeta size reported from cloud '
-                      f'backend ({humanize.naturalsize(meta.size)}). This is normal is encryption is being used.')
+                      f'backend ({meta.size} bytes).')
 
         if hasattr(self._asset, 'lost'):
             setattr(self._asset, 'lost', False)

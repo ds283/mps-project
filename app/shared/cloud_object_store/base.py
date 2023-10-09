@@ -146,12 +146,13 @@ class ObjectStore:
 
     def get(self, key: PathLike, nonce: Optional[BytesLike] = None, no_encryption=False,
             decompress=None, initial_buf_size=None) -> bytes:
-        if self._encryption_pipeline.uses_nonce and nonce is None:
-            raise RuntimeError('ObjectStore: the encryption pipeline expects a nonce, but none was provided')
-
         data: bytes = self._driver.get(_as_path(key))
 
         if self._encryption_pipeline is not None and not no_encryption:
+            if self._encryption_pipeline.uses_nonce and nonce is None:
+                raise RuntimeError('ObjectStore: the configured encryption pipeline expects a nonce, '
+                                   'but none was provided')
+
             decrypt_data: bytes = self._encryption_pipeline.decrypt(nonce, data)
         else:
             decrypt_data: bytes = data
@@ -177,8 +178,12 @@ class ObjectStore:
 
     def put(self, key: PathLike, data: BytesLike, mimetype: Optional[str] = None,
             validate_nonce=None, no_encryption=False, no_compress=False) -> Optional[bytes]:
+        compressed_size = None
+        encrypted_size = None
+
         if self.compressed and not no_compress:
             compress_data: bytes = zlib_compress(_as_bytes(data))
+            compressed_size = len(compress_data)
         else:
             compress_data: bytes = _as_bytes(data)
 
@@ -195,11 +200,14 @@ class ObjectStore:
                     nonce = None
 
             put_data: bytes = self._encryption_pipeline.encrypt(nonce, compress_data)
+            encrypted_size = len(put_data)
         else:
             put_data: bytes = compress_data
 
         self._driver.put(_as_path(key), put_data, mimetype)
-        return nonce
+        return {'nonce': nonce,
+                'encrypted_size': encrypted_size,
+                'compressed_size': compressed_size}
 
     def delete(self, key: PathLike) -> None:
         return self._driver.delete(_as_path(key))

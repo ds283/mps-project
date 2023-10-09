@@ -311,10 +311,11 @@ def register_backup_tasks(celery):
 
         # query database for backup records, and queue a retry if it fails
         try:
-            records = db.session.query(BackupRecord).all()
+            records: List[BackupRecord] = db.session.query(BackupRecord).all()
 
             for record in records:
-                if record.unique_key not in contents:
+                record: BackupRecord
+                if record.unique_name not in contents:
                     db.session.delete(record)
 
             db.session.commit()

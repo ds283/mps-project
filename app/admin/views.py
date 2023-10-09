@@ -9929,7 +9929,7 @@ def download_backup(backup_id):
     fname = Path(filename if filename else backup.unique_name)
     while fname.suffix:
         fname = fname.with_suffix('')
-    fname = fname.with_suffiz('.tar.gz')
+    fname = fname.with_suffix('.tar.gz')
     return send_file(return_data, mimetype='application/gzip',
                      download_name=str(fname), as_attachment=True)
 

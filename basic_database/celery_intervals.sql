@@ -6,3 +6,5 @@ INSERT INTO celery_intervals (id, every, period) VALUES (9, 10, 'minutes');
 INSERT INTO celery_intervals (id, every, period) VALUES (10, 30, 'seconds');
 INSERT INTO celery_intervals (id, every, period) VALUES (11, 10, 'seconds');
 INSERT INTO celery_intervals (id, every, period) VALUES (12, 4, 'weeks');
+INSERT INTO celery_intervals (id, every, period) VALUES (13, 3, 'hours');
+INSERT INTO celery_intervals (id, every, period) VALUES (14, 2, 'weeks');

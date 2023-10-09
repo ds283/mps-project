@@ -10,6 +10,7 @@
 
 from datetime import datetime
 from io import BytesIO
+from pathlib import Path
 from typing import List, Iterable, Mapping, Union
 
 from celery import group
@@ -662,13 +663,15 @@ def register_maintenance_tasks(celery):
         # ensure object is encrypted, if storage supports that
         if object_store.encrypted and record.encryption == encryptions.ENCRYPTION_NONE:
             storage: AssetCloudAdapter = AssetCloudAdapter(record, object_store, size_attr='archive_size')
+            new_key = Path(record.key).stem
+            new_key = Path(new_key + '-new-upload').with_suffix('.tar.gz')
 
             try:
                 with storage.download_to_scratch() as scratch_path:
                     scratch_path: AssetCloudScratchContextManager
 
                     with open(scratch_path.path, 'rb') as f:
-                        with AssetUploadManager(record, data=BytesIO(f.read()), storage=object_store,
+                        with AssetUploadManager(record, data=BytesIO(f.read()), storage=object_store, key=str(new_key),
                                                 length=record.archive_size, size_attr='archive_size',
                                                 mimetype='application/gzip', validate_nonce=validate_nonce) as upload_mgr:
                             pass

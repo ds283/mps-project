@@ -103,7 +103,7 @@ def register_backup_tasks(celery):
                     current_backup_size = 0
 
                 data = BackupRecord(owner_id=owner_id,
-                                    date=datetime.now(),
+                                    date=now,
                                     type=type,
                                     description=description,
                                     db_size=uncompressed_size,

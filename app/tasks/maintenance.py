@@ -663,10 +663,14 @@ def register_maintenance_tasks(celery):
         # ensure object is encrypted, if storage supports that
         if object_store.encrypted and record.encryption == encryptions.ENCRYPTION_NONE:
             storage: AssetCloudAdapter = AssetCloudAdapter(record, object_store, size_attr='archive_size')
-            stem = Path(record.unique_name).stem
-            new_key = Path(stem + '-new-upload').with_suffix('.tar.gz')
 
-            print(f"Stem = {stem}")
+            old_key: Path = Path(record.unique_name)
+            while old_key.suffix:
+                old_key = old_key.with_suffix('')
+
+            new_key = Path(str(old_key) + '-encrypted').with_suffix('.tar.gz')
+
+            print(f"Old key after stripping = {old_key}")
             print(f"New key = {new_key}")
 
             try:

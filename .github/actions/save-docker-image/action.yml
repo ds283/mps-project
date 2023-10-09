@@ -44,7 +44,7 @@ runs:
       uses: docker/build-push-action@v4
       with:
         push: ${{ github.event_name != 'pull_request' }}
-        platforms: linux/amd64,linux/arm64
+        platforms: linux/amd64
         context: ${{ inputs.input-context }}
         file: ${{ inputs.input-docker-file }}
         tags: ${{ steps.meta.outputs.tags }}

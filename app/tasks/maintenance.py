@@ -619,7 +619,7 @@ def register_maintenance_tasks(celery):
 
                     with open(mgr.path, 'rb') as f:
                         with AssetUploadManager(asset, data=BytesIO(f.read()), storage=object_store,
-                                                length=asset.size,
+                                                length=asset.filesize,
                                                 mimetype=asset.mimetype if hasattr(asset, 'mimetype') else None,
                                                 validate_nonce=validate_nonce) as upload_mgr:
                             pass
@@ -663,7 +663,7 @@ def register_maintenance_tasks(celery):
         # ensure object is encrypted, if storage supports that
         if object_store.encrypted and record.encryption == encryptions.ENCRYPTION_NONE:
             storage: AssetCloudAdapter = AssetCloudAdapter(record, object_store, size_attr='archive_size')
-            new_key = Path(record.key).stem
+            new_key = Path(record.unique_name).stem
             new_key = Path(new_key + '-new-upload').with_suffix('.tar.gz')
 
             try:

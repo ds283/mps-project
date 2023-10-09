@@ -2457,7 +2457,7 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
         size = source_path.stat().st_size
 
         with open(source_path, 'rb') as f:
-            with AssetUploadManager(asset, bytes=BytesIO(f.read()), storage=object_store,
+            with AssetUploadManager(asset, data=BytesIO(f.read()), storage=object_store,
                                     length=size, mimetype='text/plain', validate_nonce=validate_nonce) as upload_mgr:
                 pass
 

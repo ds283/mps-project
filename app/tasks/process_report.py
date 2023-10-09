@@ -286,7 +286,7 @@ def register_process_report_tasks(celery):
 
                     object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
                     with open(output_path.path, 'rb') as f:
-                        with AssetUploadManager(new_asset, bytes=BytesIO(f.read()), storage=object_store,
+                        with AssetUploadManager(new_asset, data=BytesIO(f.read()), storage=object_store,
                                                 length=output_path.path.stat().st_size,
                                                 mimetype=asset.mimetype, validate_nonce=validate_nonce) as upload_mgr:
                             pass

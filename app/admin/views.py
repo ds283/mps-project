@@ -9957,7 +9957,7 @@ def upload_schedule(schedule_id):
                     asset = TemporaryAsset(timestamp=now, expiry=now + timedelta(days=1))
 
                     object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-                    with AssetUploadManager(asset, bytes=sol_file.stream.read(), storage=object_store,
+                    with AssetUploadManager(asset, data=sol_file.stream.read(), storage=object_store,
                                             length=sol_file.content_length, validate_nonce=validate_nonce) as upload_mgr:
                         pass
 
@@ -10026,7 +10026,7 @@ def upload_match(match_id):
                     asset = TemporaryAsset(timestamp=now, expiry=now + timedelta(days=1))
 
                     object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-                    with AssetUploadManager(asset, bytes=sol_file.stream.read(), storage=object_store,
+                    with AssetUploadManager(asset, data=sol_file.stream.read(), storage=object_store,
                                             length=sol_file.content_length, validate_nonce=validate_nonce) as upload_mgr:
                         pass
 

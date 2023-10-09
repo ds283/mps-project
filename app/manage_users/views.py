@@ -651,7 +651,7 @@ def batch_create_users():
                 asset = TemporaryAsset(timestamp=now, expiry=now + timedelta(days=1))
 
                 object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-                with AssetUploadManager(asset, bytes=batch_file.stream.read(), storage=object_store,
+                with AssetUploadManager(asset, data=batch_file.stream.read(), storage=object_store,
                                         length=batch_file.content_length, validate_nonce=validate_nonce) as upload_mgr:
                     pass
 

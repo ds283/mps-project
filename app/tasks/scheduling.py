@@ -1028,7 +1028,7 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
 
         object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
         with open(source_path, 'rb') as f:
-            with AssetUploadManager(asset, bytes=BytesIO(f.read()), storage=object_store,
+            with AssetUploadManager(asset, data=BytesIO(f.read()), storage=object_store,
                                     length=size, mimetype='text/plain', validate_nonce=validate_nonce) as upload_mgr:
                 pass
 

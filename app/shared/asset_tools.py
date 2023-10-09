@@ -9,6 +9,7 @@
 #
 
 import base64
+from io import BytesIO
 from pathlib import Path
 from uuid import uuid4
 
@@ -96,10 +97,11 @@ class AssetCloudAdapter:
             Streams the asset from the object store.
     """
     def __init__(self, asset, storage: ObjectStore, key_attr: str='unique_name', size_attr: str='filesize',
-                 encryption_attr: str='encryption', nonce_attr: str='nonce'):
+                 encryption_attr: str='encryption', nonce_attr: str='nonce', compressed_attr: str='compressed'):
         self._asset = asset
         self._storage = storage
         self._storage_encrypted = self._storage.encrypted
+        self._storage_compressed = self._storage.compressed
 
         self._key_attr = key_attr
         self._size_attr = size_attr
@@ -107,10 +109,15 @@ class AssetCloudAdapter:
         self._encryption_attr = encryption_attr
         self._nonce_attr = nonce_attr
 
+        self._compressed_attr = compressed_attr
+
         self._key = getattr(self._asset, self._key_attr)
+
+        # size refers to the size of the asset before compression and encryption
         self._size = getattr(self._asset, self._size_attr)
 
         self._encryption = getattr(self._asset, self._encryption_attr)
+        self._compressed = getattr(self._asset, self._compressed_attr)
         self._nonce = None
 
         if hasattr(self._asset, 'bucket'):
@@ -146,9 +153,10 @@ class AssetCloudAdapter:
 
     def get(self):
         if self._encryption == encryptions.ENCRYPTION_NONE:
-            return self._storage.get(self._key, None, no_encryption=True)
+            return self._storage.get(self._key, None, no_encryption=True,
+                                     decompress=self._compressed, initial_buf_size=self._size)
 
-        return self._storage.get(self._key, self._nonce)
+        return self._storage.get(self._key, self._nonce, decompress=self._compressed, initial_buf_size=self._size)
 
 
     def delete(self):
@@ -193,6 +201,10 @@ class AssetCloudAdapter:
             raise RuntimeError('AssetCloudAdapter: it is not possible to use streaming with an encrypted asset. '
                                'Download the entire asset to obtain a decrypted copy.')
 
+        if self._compressed:
+            raise RuntimeError('AssetCloudAdapter: it is not possible to use streaming with a compressed asset. '
+                               'Download the entire asset to obtain a decompressed copy.')
+
         # adapted from https://stackoverflow.com/questions/43215889/downloading-a-file-from-an-s3-bucket-to-the-users-computer
         offset = 0
         total_bytes = self._size
@@ -212,7 +224,7 @@ class AssetUploadManager:
     The AssetUploadManager class is responsible for managing the upload of assets to the object store.
 
     :param asset: The asset to be uploaded.
-    :param bytes: The byte data of the asset.
+    :param data: The byte data of the asset.
     :param storage: The object store where the asset will be uploaded.
     :param key: The unique key of the asset.
     :param length: The length of the asset in bytes.
@@ -225,10 +237,11 @@ class AssetUploadManager:
     :param comment: A comment to be associated with the asset.
     :param validate_nonce: A flag indicating whether to validate the nonce during encryption.
     """
-    def __init__(self, asset, bytes, storage: ObjectStore, key=None, length=None, mimetype=None,
+    def __init__(self, asset, data, storage: ObjectStore, key=None, length=None, mimetype=None,
                  key_attr: str='unique_name', size_attr: str='filesize',
                  mimetype_attr: str='mimetype', encryption_attr: str='encryption',
-                 nonce_attr: str='nonce', comment: str=None, validate_nonce=None):
+                 nonce_attr: str='nonce', compressed_attr: str='compressed',
+                 comment: str=None, validate_nonce=None):
         self._asset = asset
 
         if key is None:
@@ -243,9 +256,17 @@ class AssetUploadManager:
         self._encryption_attr = encryption_attr
         self._nonce_attr = nonce_attr
 
+        self._compressed_attr = compressed_attr
+
         self._storage = storage
 
         setattr(self._asset, self._key_attr, self._key)
+
+        if length is None:
+            if isinstance(data, bytes):
+                length = len(data)
+            elif isinstance(data, BytesIO):
+                length = data.getbuffer().nbytes
 
         if length is not None and self._size_attr is not None:
             setattr(self._asset, self._size_attr, length)
@@ -253,7 +274,7 @@ class AssetUploadManager:
         if mimetype is not None and self._mimetype_attr is not None:
             setattr(self._asset, self._mimetype_attr, mimetype)
 
-        nonce: bytes = self._storage.put(self._key, bytes, mimetype=mimetype, validate_nonce=validate_nonce)
+        nonce: data = self._storage.put(self._key, data, mimetype=mimetype, validate_nonce=validate_nonce)
         if self._storage.encrypted and nonce is None:
             raise RuntimeError('AssetUploadManager: object storage is marked as encrypted, but '
                                'return nonce is None')
@@ -270,20 +291,20 @@ class AssetUploadManager:
                 base64_nonce = None
             setattr(self._asset, self._nonce_attr, base64_nonce)
 
+        if hasattr(self._asset, self._compressed_attr):
+            setattr(self._asset, self._compressed_attr, self._storage.compressed)
+
         meta: ObjectMeta = self._storage.head(self._key)
         if self._size_attr is not None:
-            recorded_size = getattr(self._asset, self._size_attr)
-
-            if recorded_size is None or recorded_size == 0:
+            if length is None or length == 0:
                 print(f'AssetUploadManager: self._asset has zero length; ObjectMeta reports '
                       f'length = {humanize.naturalsize((meta.size))}')
                 setattr(self._asset, self._size_attr, meta.size)
 
-            elif recorded_size != meta.size:
-                print(f'AssetUploadManager: user-supplied filesize ({humanize.naturalsize(recorded_size)}) '
+            elif length != meta.size:
+                print(f'AssetUploadManager: user-supplied filesize ({humanize.naturalsize(length)}) '
                       f'does not match ObjectMeta size reported from cloud '
-                      f'backend ({humanize.naturalsize(meta.size)})')
-                setattr(self._asset, self._size_attr, meta.size)
+                      f'backend ({humanize.naturalsize(meta.size)}). This is normal is encryption is being used.')
 
         if hasattr(self._asset, 'lost'):
             setattr(self._asset, 'lost', False)

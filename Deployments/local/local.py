@@ -23,7 +23,8 @@ OBJECT_STORAGE_ENDPOINT_URL = os.environ.get("OBJECT_STORAGE_ENDPOINT_URL")
 OBJECT_STORAGE_REGION = os.environ.get("OBJECT_STORAGE_REGION")
 
 _base_storage_options = {'endpoint_url': OBJECT_STORAGE_ENDPOINT_URL,
-                         'region': OBJECT_STORAGE_REGION}
+                         'region': OBJECT_STORAGE_REGION,
+                         'compressed': True}
 
 # get credentials to access assets bucket
 OBJECT_STORAGE_ASSETS_ACCESS_KEY = os.environ.get("OBJECT_STORAGE_ASSETS_ACCESS_KEY")

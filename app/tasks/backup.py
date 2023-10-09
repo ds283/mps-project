@@ -111,7 +111,7 @@ def register_backup_tasks(celery):
                                     backup_size=current_backup_size + this_archive_size)
 
                 with open(archive_scratch_path, 'rb') as f:
-                    with AssetUploadManager(data, bytes=BytesIO(f.read()), storage=object_store,
+                    with AssetUploadManager(data, data=BytesIO(f.read()), storage=object_store,
                                             key=key, length=this_archive_size,
                                             mimetype='application/gzip', size_attr='archive_size',
                                             validate_nonce=validate_nonce) as upload_mgr:

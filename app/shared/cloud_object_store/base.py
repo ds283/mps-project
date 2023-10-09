@@ -12,6 +12,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import Dict, Union, List, Optional
 from urllib.parse import urlsplit, SplitResult
+from zlib import compress as zlib_compress
+from zlib import decompress as zlib_decompress
 
 from .drivers.amazons3 import AmazonS3CloudStorageDriver
 from .drivers.google import GoogleCloudStorageDriver
@@ -108,6 +110,11 @@ class ObjectStore:
             self._encryption_pipeline = data['encryption_pipeline']
             del data['encryption_pipeline']
 
+        if 'compressed' in data:
+            self._compressed = True
+        else:
+            self._compressed = False
+
         driver_type: Driver = _drivers[scheme]
         self._driver = driver_type(uri_elements, data)
 
@@ -133,26 +140,48 @@ class ObjectStore:
 
         return self._encryption_pipeline.database_key
 
-    def get(self, key: PathLike, nonce: Optional[BytesLike] = None, no_encryption=False) -> bytes:
-        data: bytes = self._driver.get(_as_path(key))
+    @property
+    def compressed(self) -> bool:
+        return self._compressed
 
-        if self._encryption_pipeline is None or no_encryption:
-            return data
-
+    def get(self, key: PathLike, nonce: Optional[BytesLike] = None, no_encryption=False,
+            decompress=None, initial_buf_size=None) -> bytes:
         if self._encryption_pipeline.uses_nonce and nonce is None:
             raise RuntimeError('ObjectStore: the encryption pipeline expects a nonce, but none was provided')
 
-        return self._encryption_pipeline.decrypt(nonce, data)
+        data: bytes = self._driver.get(_as_path(key))
+
+        if self._encryption_pipeline is not None and not no_encryption:
+            decrypt_data: bytes = self._encryption_pipeline.decrypt(nonce, data)
+        else:
+            decrypt_data: bytes = data
+
+        # if decompress is specified, it takes priority
+        # otherwise, we decompress depending on the value assigned to this object store
+        # note condition is not[ (decompress is None and self._compressed) or decompress ]
+        if (decompress is not None or not self._compressed) and not decompress:
+            return decrypt_data
+
+        return zlib_decompress(decrypt_data, bufsize=initial_buf_size)
 
     def get_range(self, key: PathLike, start: int, length: int, no_encryption=False) -> bytes:
         if self.encrypted and not no_encryption:
             raise RuntimeError('ObjectStore: you cannot use get_range() with an encrypted object store. '
                                'Download the object completely using get() to decrypt it.')
 
+        if self.compressed:
+            raise RuntimeError('ObjectStore: you cannot use get_range() with a compressed object store. '
+                               'Download the object completely using get() to decompress it.')
+
         return self._driver.get_range(_as_path(key), start=start, length=length)
 
     def put(self, key: PathLike, data: BytesLike, mimetype: Optional[str] = None,
-            validate_nonce=None, no_encryption=False) -> Optional[bytes]:
+            validate_nonce=None, no_encryption=False, no_compress=False) -> Optional[bytes]:
+        if self.compressed and not no_compress:
+            compress_data: bytes = zlib_compress(_as_bytes(data))
+        else:
+            compress_data: bytes = _as_bytes(data)
+
         nonce = None
         if self._encryption_pipeline is not None and not no_encryption:
             attempts = 0
@@ -165,9 +194,9 @@ class ObjectStore:
                     attempts += 1
                     nonce = None
 
-            put_data: bytes = self._encryption_pipeline.encrypt(nonce, _as_bytes(data))
+            put_data: bytes = self._encryption_pipeline.encrypt(nonce, compress_data)
         else:
-            put_data: bytes = _as_bytes(data)
+            put_data: bytes = compress_data
 
         self._driver.put(_as_path(key), put_data, mimetype)
         return nonce
@@ -179,6 +208,7 @@ class ObjectStore:
         if self._encryption_pipeline is not None:
             raise RuntimeError('ObjectStore: can not use copy with an encrypted store. '
                                'Downnload and re-upload the file to generate a unique encrypted duplicate.')
+
         return self._driver.copy(_as_path(src), _as_path(dst))
 
     def list(self, prefix: Optional[PathLike] = None) -> Dict[str, ObjectMeta]:

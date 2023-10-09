@@ -265,7 +265,7 @@ def upload_submitter_report(sid):
                                    license=form.license.data)
 
             object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-            with AssetUploadManager(asset, bytes=report_file.stream.read(), storage=object_store,
+            with AssetUploadManager(asset, data=report_file.stream.read(), storage=object_store,
                                     length=report_file.content_length, mimetype=report_file.content_type,
                                     validate_nonce=validate_nonce) as upload_mgr:
                 pass
@@ -627,7 +627,7 @@ def upload_submitter_attachment(sid):
                                    license=form.license.data)
 
             object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-            with AssetUploadManager(asset, bytes=attachment_file.stream.read(), storage=object_store,
+            with AssetUploadManager(asset, data=attachment_file.stream.read(), storage=object_store,
                                     length=attachment_file.content_length,
                                     mimetype=attachment_file.content_type,
                                     validate_nonce=validate_nonce) as upload_mgr:

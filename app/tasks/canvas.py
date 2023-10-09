@@ -499,7 +499,7 @@ def register_canvas_tasks(celery):
                                license=default_report_license)
 
         object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-        with AssetUploadManager(asset, bytes=get_pdf_report.content, storage=object_store, length=attachment['size'],
+        with AssetUploadManager(asset, data=get_pdf_report.content, storage=object_store, length=attachment['size'],
                                 mimetype=attachment['content-type'], validate_nonce=validate_nonce) as upload_mgr:
             pass
 

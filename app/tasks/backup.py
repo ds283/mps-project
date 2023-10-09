@@ -313,10 +313,21 @@ def register_backup_tasks(celery):
         try:
             records: List[BackupRecord] = db.session.query(BackupRecord).all()
 
+            # for each backup record we hold, test whether the counterpart object is in the object store
             for record in records:
                 record: BackupRecord
                 if record.unique_name not in contents:
+                    print(f'Backup "{record.unique_name}" has no counterpart in the object store: deleting')
                     db.session.delete(record)
+
+            # for each object in the object store, test whether there is a counterpart object
+            for item in contents.keys():
+                item: str
+                record: BackupRecord = db.session.query(BackupRecord).filter_by(unique_name=item).first()
+
+                if record is None:
+                    print(f'Object store item "{item}" has no counterpart backup record: deleting')
+                    object_store.delete(item)
 
             db.session.commit()
         except SQLAlchemyError as e:

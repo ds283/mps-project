@@ -680,7 +680,7 @@ class ScheduledTaskMixin():
                        ('app.tasks.popularity.update_popularity_data', 'Update LiveProject popularity data'),
                        ('app.tasks.popularity.thin', 'Thin LiveProject popularity data'),
                        ('app.tasks.maintenance.maintenance', 'Perform regular database maintenance'),
-                       ('app.tasks.maintenance.fix_unencrypted_assets', 'Test and fix for unencrypted assets'),
+                       ('app.tasks.maintenance.fix_unencrypted_assets', 'Test for and fix unencrypted assets'),
                        ('app.tasks.email_notifications.send_daily_notifications', 'Send daily email notifications'),
                        ('app.tasks.maintenance.asset_garbage_collection', 'Garbage collection for expired assets'),
                        ('app.tasks.batch_create.garbage_collection', 'Garbage collection for batch student import'),

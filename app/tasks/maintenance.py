@@ -8,8 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime, timedelta
-from typing import List, Iterable, Dict, Mapping, Union
+from datetime import datetime
+from io import BytesIO
+from typing import List, Iterable, Mapping, Union
 
 from celery import group
 from celery.exceptions import Ignore
@@ -18,19 +19,21 @@ from flask_mailman import EmailMessage
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
+import app.shared.cloud_object_store.encryption_types as encryptions
 from .. import register_task
 from ..database import db
 from ..models import User, Project, LiveProject, AssessorAttendanceData, SubmitterAttendanceData, \
     PresentationAssessment, GeneratedAsset, TemporaryAsset, ScheduleEnumeration, ProjectDescription, \
     MatchingEnumeration, SubmittedAsset, SubmissionRecord, ProjectClass, ProjectClassConfig, StudentData, \
-    DegreeProgramme, DegreeType
-from ..shared.asset_tools import AssetCloudAdapter
+    DegreeProgramme, DegreeType, BackupRecord, validate_nonce
+from ..shared.asset_tools import AssetCloudAdapter, AssetCloudScratchContextManager, AssetUploadManager
+from ..shared.cloud_object_store import ObjectStore
 from ..shared.utils import get_current_year, get_count
 
 
 def register_maintenance_tasks(celery):
 
-    @celery.task(bind=True, default_retry_delay=30)
+    @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
     def maintenance(self):
         self.update_state(state='STARTED')
 
@@ -48,6 +51,12 @@ def register_maintenance_tasks(celery):
         schedule_enumeration_maintenance(self)
 
         submission_record_maintenance(self)
+
+        asset_maintenance(self, SubmittedAsset)
+        asset_maintenance(self, TemporaryAsset)
+        asset_maintenance(self, GeneratedAsset)
+
+        backup_maintenance(self)
 
         self.update_state(state='SUCCESS')
 
@@ -573,3 +582,104 @@ def register_maintenance_tasks(celery):
                 raise self.retry()
 
         self.update_state(state='SUCCESS')
+
+
+    def asset_maintenance(self, RecordType):
+        try:
+            records = db.session.query(RecordType).all()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        task = group(assetrecord_maintenance.s(r.id, RecordType) for r in records)
+        task.apply_async()
+
+
+    @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
+    def assetrecord_maintenance(self, rec_id, RecordType):
+        try:
+            asset = db.session.query(RecordType).filter_by(id=rec_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if asset is None:
+            raise Ignore()
+
+        object_store: ObjectStore = current_app.config.get('OBJECT_STORAGE_ASSETS')
+
+        # ensure object is encrypted, if storage supports that
+        if object_store.encrypted and asset.encryption == encryptions.ENCRYPTION_NONE:
+            storage: AssetCloudAdapter = AssetCloudAdapter(asset, object_store)
+
+            try:
+                with storage.download_to_scratch() as mgr:
+                    mgr: AssetCloudScratchContextManager
+
+                    with open(mgr.path, 'rb') as f:
+                        with AssetUploadManager(asset, data=BytesIO(f.read()), storage=object_store,
+                                                length=asset.size,
+                                                mimetype=asset.mimetype if hasattr(asset, 'mimetype') else None,
+                                                validate_nonce=validate_nonce) as upload_mgr:
+                            pass
+
+                try:
+                    db.session.commit()
+                    storage.delete()
+                except SQLAlchemyError as e:
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    raise self.retry()
+
+            except FileNotFoundError:
+                print(f'!! Was not able to perform maintenance on asset #{asset.id}, '
+                      f'key="{asset.unique_name}"')
+
+
+    def backup_maintenance(self):
+        try:
+            records = db.session.query(BackupRecord).all()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        task = group(backuprecord_maintenance.s(r.id) for r in records)
+        task.apply_async()
+
+
+    @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
+    def backuprecord_maintenance(self, rec_id):
+        try:
+            record: BackupRecord = db.session.query(BackupRecord).filter_by(id=rec_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if record is None:
+            raise Ignore()
+
+        object_store: ObjectStore = current_app.config.get('OBJECT_STORAGE_BACKUP')
+
+        # ensure object is encrypted, if storage supports that
+        if object_store.encrypted and record.encryption == encryptions.ENCRYPTION_NONE:
+            storage: AssetCloudAdapter = AssetCloudAdapter(record, object_store, size_attr='archive_size')
+
+            try:
+                with storage.download_to_scratch() as scratch_path:
+                    scratch_path: AssetCloudScratchContextManager
+
+                    with open(scratch_path.path, 'rb') as f:
+                        with AssetUploadManager(record, data=BytesIO(f.read()), storage=object_store,
+                                                length=record.archive_size, size_attr='archive_size',
+                                                mimetype='application/gzip', validate_nonce=validate_nonce) as upload_mgr:
+                            pass
+
+                try:
+                    db.session.commit()
+                    storage.delete()
+                except SQLAlchemyError as e:
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    raise self.retry()
+
+            except FileNotFoundError:
+                print(f'!! Was not able to perform maintenance on backup record #{record.id}, '
+                      f'key="{record.unique_name}"')

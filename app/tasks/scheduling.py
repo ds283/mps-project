@@ -1453,8 +1453,11 @@ def register_scheduling_tasks(celery):
                 object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
                 def copy_asset(old_asset):
                     old_storage = AssetCloudAdapter(old_asset, object_store)
-                    new_key, new_nonce = old_storage.duplicate(validate_nonce=validate_nonce)
-                    new_base64_nonce = base64.urlsafe_b64encode(new_nonce).decode('ascii')
+                    new_key, put_result = old_storage.duplicate(validate_nonce=validate_nonce)
+
+                    new_base64_nonce = None
+                    if 'nonce' in put_result:
+                        new_base64_nonce = base64.urlsafe_b64encode(put_result['nonce']).decode('ascii')
 
                     # must duplicate all fields, including those usually managed by AssetUploadManager
                     new_asset = GeneratedAsset(timestamp=now,
@@ -1469,8 +1472,11 @@ def register_scheduling_tasks(celery):
                                                unattached=False,
                                                bucket=old_asset.bucket,
                                                comment=old_asset.comment,
-                                               encryption=old_asset.encryption,
-                                               nonce=new_base64_nonce)
+                                               encryption=object_store.encrypted,
+                                               encrypted_size=put_result.get('encrypted_size', None),
+                                               nonce=new_base64_nonce,
+                                               compressed=object_store.compressed,
+                                               compressed_size=put_result.get('compressed_size', None))
 
                     # TODO: find a way to perform a deep copy without exposing implementation details
                     new_asset.access_control_list = old_asset.access_control_list

@@ -177,8 +177,12 @@ class ObjectStore:
 
     def put(self, key: PathLike, data: BytesLike, mimetype: Optional[str] = None,
             validate_nonce=None, no_encryption=False, no_compress=False) -> Optional[bytes]:
+        compressed_size = None
+        encrypted_size = None
+
         if self.compressed and not no_compress:
             compress_data: bytes = zlib_compress(_as_bytes(data))
+            compressed_size = len(compress_data)
         else:
             compress_data: bytes = _as_bytes(data)
 
@@ -195,11 +199,14 @@ class ObjectStore:
                     nonce = None
 
             put_data: bytes = self._encryption_pipeline.encrypt(nonce, compress_data)
+            encrypted_size = len(put_data)
         else:
             put_data: bytes = compress_data
 
         self._driver.put(_as_path(key), put_data, mimetype)
-        return nonce
+        return {'nonce': nonce,
+                'encrypted_size': encrypted_size,
+                'compressed_size': compressed_size}
 
     def delete(self, key: PathLike) -> None:
         return self._driver.delete(_as_path(key))

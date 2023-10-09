@@ -844,7 +844,7 @@ def AssetMixinFactory(acl_name, acr_name):
         unique_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'),
                                 nullable=False, unique=True)
 
-        # filesize
+        # raw filesize (not compressed, not encrypted)
         filesize = db.Column(db.Integer())
 
         # has this asset been marked as lost by a maintenance task?
@@ -862,12 +862,18 @@ def AssetMixinFactory(acl_name, acr_name):
         # is this asset stored encrypted?
         encryption = db.Column(db.Integer(), nullable=False, default=encryptions.ENCRYPTION_NONE)
 
+        # file size after encryption
+        encrypted_size = db.Column(db.Integer())
+
         # store nonce, if needed. Ensure it is marked as unique, both because it should be,
         # and also to generate an index (we need to check to ensure nonces are not reused)
         nonce = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=True, unique=True)
 
         # is this asset stored compressed within the object store?
         compressed = db.Column(db.Boolean(), nullable=False, default=False)
+
+        # file size after compression
+        compressed_size = db.Column(db.Integer())
 
         # access control list: which users are authorized to view or download this file?
         @declared_attr
@@ -11934,7 +11940,7 @@ class BackupRecord(db.Model):
     # uncompressed database size, in bytes
     db_size = db.Column(db.BigInteger())
 
-    # compressed archive size, in bytes
+    # compressed archive size, in bytes (before encryption, before compression into object store)
     archive_size = db.Column(db.BigInteger())
 
     # total size of backups at this time, in bytes
@@ -11951,6 +11957,9 @@ class BackupRecord(db.Model):
     # is this record encrypted?
     encryption = db.Column(db.Integer(), nullable=False, default=encryptions.ENCRYPTION_NONE)
 
+    # file size after encryption
+    encrypted_size = db.Column(db.Integer())
+
     # store nonce, if needed. Ensure it is marked as unique, both because it should be,
     # and also to generate an index (we need to check to ensure nonces are not reused)
     nonce = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=True, unique=True)
@@ -11961,6 +11970,9 @@ class BackupRecord(db.Model):
     # AssetUploadManager and AssetCloudAdapter to decide whether transparent compression happens
     # when storing in an object store
     compressed = db.Column(db.Boolean(), nullable=False, default=False)
+
+    # file size after asset compression
+    compressed_size = db.Column(db.Integer())
 
     def type_to_string(self):
         if self.type in self._type_index:

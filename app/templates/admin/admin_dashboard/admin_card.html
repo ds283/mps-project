@@ -96,7 +96,7 @@
                             {% if published %}
                                 {{ medium_swatch(swatch_colour) }}
                             {% endif %}
-                            <a class="text-decoration-none link-dark" href="{{ url_for('convenor.status', id=pclass.id) }}">{% if not published %}<s>{% endif %}{{ pclass.name }}{% if not published %}</s>{% endif %}</a>
+                            <a class="text-decoration-none link-primary" href="{{ url_for('convenor.status', id=pclass.id) }}">{% if not published %}<s>{% else %}<strong>{% endif %}{{ pclass.name }}{% if not published %}</s>{% else %}</strong>{% endif %}</a>
                         </div>
                         {% if published %}
                             <div class="mt-1 small text-muted d-flex flex-row justify-content-start align-items-start gap-2">
@@ -110,7 +110,7 @@
                             </div>
                         {% else %}
                             <div class="mt-1 small text-muted d-flex flex-row justify-content-start align-items-start gap-2">
-                                <span><i class="fas fa-eye-slash"></i> <strong>Not published</strong></span>
+                                <span class="text-danger"><i class="fas fa-eye-slash"></i> Not published</span>
                             </div>
                         {% endif %}
                     </div>
@@ -145,7 +145,7 @@
                                             {% if sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
                                                 <div class="small text-success"><i class="fas fa-check-circle"></i> Ready to rollover</div>
                                             {% else %}
-                                                <div class="text-primary"><strong>{{ config.current_period.display_name|safe }}</strong></div>
+                                                <div class="text-info"><strong>{{ config.current_period.display_name|safe }}</strong></div>
                                                 <div>
                                                     {% if sub_state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
                                                         <ul class="small list-unstyled text-secondary"><li><i class="fas fa-clock"></i> Project activity underway</li></ul>

@@ -67,7 +67,7 @@ _key = \
 <div class="small">{{ b.unique_name }}</div>
 {% if b.last_validated %}
     <div class="mt-1 small text-muted">
-        Last validated {{ b.last_validated.strftime("%a %d %b %Y %H:%M:%S") }}
+        <i class="fas fa-check-circle"></i> Last validated {{ b.last_validated.strftime("%a %d %b %Y %H:%M:%S") }}
     </div>
 {% endif %}
 """
@@ -92,6 +92,13 @@ _description = \
 """
 
 
+# language=jinja2
+_type = \
+"""
+<div class="small">{{ b.type_to_string() }}</div>
+"""
+
+
 def backups_data(backups: List[BackupRecord]):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
@@ -100,7 +107,7 @@ def backups_data(backups: List[BackupRecord]):
                           'href="mailto:{e}">{name}</a>'.format(e=b.owner.email,
                                                                 name=b.owner.name) if b.owner is not None
                           else '<span class="badge bg-secondary">Nobody</span>',
-             'type': b.type_to_string(),
+             'type': render_template_string(_type, b=b),
              'description': render_template_string(_description, b=b, simple_label=simple_label),
              'key': render_template_string(_key, b=b),
              'db_size': b.readable_db_size,

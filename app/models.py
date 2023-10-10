@@ -11948,6 +11948,9 @@ class BackupRecord(db.Model):
     # the actual value in here is unreliable, because intermediate backups may have been thinned
     backup_size = db.Column(db.BigInteger())
 
+    # is this backup locked to prevent deletion?
+    locked = db.Column(db.Boolean(), default=False)
+
     # bucket associated with this asset
     bucket = db.Column(db.Integer(), nullable=False, default=buckets.BACKUP_BUCKET)
 
@@ -11999,6 +12002,24 @@ class BackupRecord(db.Model):
     @property
     def readable_total_backup_size(self):
         return format_size(self.backup_size) if self.backup_size is not None else "<unset>"
+
+
+class BackupLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):
+
+    __tablename__ = 'backup_labels'
+
+
+    # unique identifier used as primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # name of label
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
+
+
+    def make_label(self, text=None):
+        label_text = text if text is not None else self.display_name
+
+        return self._make_label(text=label_text)
 
 
 class TaskRecord(db.Model, TaskWorkflowStatesMixin):

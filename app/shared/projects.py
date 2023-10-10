@@ -7,6 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+
 from collections.abc import Iterable
 from datetime import datetime
 
@@ -25,6 +26,7 @@ def create_new_tags(form):
     matched, unmatched = form.tags.data
 
     if len(unmatched) > 0:
+        now = datetime.now()
         default_group = db.session.query(ProjectTagGroup).filter_by(default=True).first()
         if default_group is None:
 
@@ -43,7 +45,7 @@ def create_new_tags(form):
                                      colour=None,
                                      active=True,
                                      creator_id=current_user.id,
-                                     creation_timestamp=datetime.now())
+                                     creation_timestamp=now)
                 try:
                     db.session.add(new_tag)
                     matched.append(new_tag)

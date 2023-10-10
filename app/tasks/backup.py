@@ -101,13 +101,18 @@ def register_backup_tasks(celery):
                 if current_backup_size is None:
                     current_backup_size = 0
 
+                # bucket, comment, encryption, encrypted_sie, compressed, compressed_size
+                # fields will be populated by AssetUploadManager
                 data = BackupRecord(owner_id=owner_id,
                                     date=now,
                                     type=type,
                                     description=description,
                                     db_size=uncompressed_size,
                                     archive_size=this_archive_size,
-                                    backup_size=current_backup_size + this_archive_size)
+                                    backup_size=current_backup_size + this_archive_size,
+                                    locked=False,
+                                    last_validated=None,
+                                    labels=[])
 
                 with open(archive_scratch_path, 'rb') as f:
                     with AssetUploadManager(data, data=BytesIO(f.read()), storage=object_store,
@@ -150,9 +155,11 @@ def register_backup_tasks(celery):
         now = datetime.now()
 
         # query database for backup records, and queue a retry if it fails
+        # note we only thin scheduled backups; other types are retained
         try:
             records: List[BackupRecord] = db.session.query(BackupRecord) \
-                .filter_by(type=BackupRecord.SCHEDULED_BACKUP) \
+                .filter(BackupRecord.type == BackupRecord.SCHEDULED_BACKUP,
+                        ~BackupRecord.locked) \
                 .order_by(BackupRecord.date.desc()).all()
 
         except SQLAlchemyError as e:
@@ -318,6 +325,8 @@ def register_backup_tasks(celery):
                 if record.unique_name not in contents:
                     print(f'Backup "{record.unique_name}" has no counterpart in the object store: deleting')
                     db.session.delete(record)
+                else:
+                    record.last_validated = datetime.now()
 
             # for each object in the object store, test whether there is a counterpart object
             for item in contents.keys():

@@ -1772,6 +1772,13 @@ matching_role_list_original = db.Table('matching_to_roles_original',
                                        db.Column('role_id', db.Integer(), db.ForeignKey('matching_roles.id'), primary_key=True))
 
 
+## BACKUP LABELS
+
+backup_record_to_labels = db.Table('backups_to_labels',
+                                   db.Column('backup_id', db.Integer(), db.ForeignKey('backups.id'), primary_key=True),
+                                   db.Column('label_id', db.Integer(), db.ForeignKey('backup_labels.id'), primary_key=True))
+
+
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
@@ -11948,6 +11955,16 @@ class BackupRecord(db.Model):
     # the actual value in here is unreliable, because intermediate backups may have been thinned
     backup_size = db.Column(db.BigInteger())
 
+    # is this backup locked to prevent deletion?
+    locked = db.Column(db.Boolean(), default=False)
+
+    # last time this backup was validated in the object store
+    last_validated = db.Column(db.DateTime())
+
+    # applied labels
+    labels = db.relationship('BackupLabel', secondary=backup_record_to_labels, lazy='dynamic',
+                             backref=db.backref('backups', lazy='dynamic'))
+
     # bucket associated with this asset
     bucket = db.Column(db.Integer(), nullable=False, default=buckets.BACKUP_BUCKET)
 
@@ -11999,6 +12016,23 @@ class BackupRecord(db.Model):
     @property
     def readable_total_backup_size(self):
         return format_size(self.backup_size) if self.backup_size is not None else "<unset>"
+
+
+class BackupLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):
+
+    __tablename__ = 'backup_labels'
+
+
+    # unique identifier used as primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # name of label
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
+
+
+    def make_label(self, text=None):
+        label_text = text if text is not None else self.name
+        return self._make_label(text=label_text)
 
 
 class TaskRecord(db.Model, TaskWorkflowStatesMixin):

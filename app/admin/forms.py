@@ -30,7 +30,8 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, \
     ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules, \
     BuildPossibleOfficeContacts, BuildOfficeContactName, BuildPossibleApprovers, BuildApproverName, \
-    GetActiveProjectTagGroups, GetActiveFaculty, BuildActiveFacultyName
+    GetActiveProjectTagGroups, GetActiveFaculty, BuildActiveFacultyName, GetActiveBackupLabels, BuildBackupLabelName
+from ..shared.forms.widgets import BasicTagSelectField
 from ..shared.forms.wtf_validators import valid_json, NotOptionalIf, \
     globally_unique_group_name, unique_or_original_group_name, \
     globally_unique_group_abbreviation, unique_or_original_group_abbreviation, \
@@ -1582,3 +1583,13 @@ def SelectMatchingYearFormFactory(allowed_years):
         selector = SelectField('Select year', choices=allowed_years, coerce=int)
 
     return SelectMatchingYearForm
+
+
+class ApplyBackupLabelsForm(Form):
+    labels = BasicTagSelectField('Add labels to identify this backup',
+                                 query_factory=GetActiveBackupLabels, get_label=BuildBackupLabelName,
+                                 description='Use labels to identify backups with specific properties, or '
+                                             'to collect backups into groups.',
+                                 blank_text='Add labels...')
+
+    submit = SubmitField('Apply labels')

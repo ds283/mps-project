@@ -23,7 +23,7 @@ from ..shared.forms.queries import GetActiveFaculty, BuildActiveFacultyName, Cur
     AllResearchGroups, CurrentUserProjectClasses, AllProjectClasses, GetSupervisorRoles, GetSkillGroups, \
     AvailableProjectDescriptionClasses, ProjectDescriptionClasses, GetMaskableRoles, GetDestinationProjects, \
     GetDestinationProjectsPClass, GetActiveTags, BuildTagName, BuildTagGroup
-from ..shared.forms.widgets import TagSelectField
+from ..shared.forms.widgets import GroupedTagSelectField
 from ..shared.forms.wtf_validators import globally_unique_project, unique_or_original_project, project_unique_label, \
     project_unique_or_original_label
 
@@ -51,10 +51,10 @@ def ProjectMixinFactory(convenor_editing: bool, uses_tags: bool, uses_research_g
                     raise ValidationError('This project is not generic. Please assign an owner.')
 
         if uses_tags:
-            tags = TagSelectField('Add tags to help classify your project', query_factory=GetActiveTags,
-                                  get_label=BuildTagName, get_group=BuildTagGroup,
-                                  description='Use tags to help students understand the general area of '
-                                              'your project, and what it might involve. Separate tags '
+            tags = GroupedTagSelectField('Add tags to help classify your project', query_factory=GetActiveTags,
+                                         get_label=BuildTagName, get_group=BuildTagGroup,
+                                         description='Use tags to help students understand the general area of '
+                                              'your project and what it might involve. Separate tags '
                                               'with commas or semicolons.')
 
             @staticmethod

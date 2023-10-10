@@ -62,7 +62,7 @@ from .forms import GlobalConfig, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
     PublicScheduleFormFactory, CompareScheduleFormFactory, \
     AddAssetLicenseForm, EditAssetLicenseForm, AddProjectTagGroupForm, EditProjectTagGroupForm, \
-    AddProjectTagForm, EditProjectTagForm, EditSupervisorRolesForm, SelectMatchingYearFormFactory
+    AddProjectTagForm, EditProjectTagForm, EditSupervisorRolesForm, SelectMatchingYearFormFactory, ApplyBackupLabelsForm
 from ..cache import cache
 from ..database import db
 from ..limiter import limiter
@@ -78,7 +78,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import get_backup_config, set_backup_config, compute_current_backup_count, \
-    compute_current_backup_size, remove_backup
+    compute_current_backup_size, remove_backup, create_new_backup_labels
 from ..shared.conversions import is_integer
 from ..shared.formatters import format_size
 from ..shared.forms.queries import ScheduleSessionQuery
@@ -3903,6 +3903,7 @@ def confirm_delete_all_backups():
 
     action_url = url_for('admin.delete_all_backups')
     message = '<p>Please confirm that you wish to delete all backups.</p>' \
+              '<p>Locked backups are not deleted.</p>' \
               '<p>This action cannot be undone.</p>'
     submit_label = 'Delete all'
 
@@ -3929,7 +3930,7 @@ def delete_all_backups():
     final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
     error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
 
-    backups = db.session.query(BackupRecord.id).all()
+    backups = db.session.query(BackupRecord.id).filter_by(~BackupRecord.locked).all()
     work_group = group(del_backup.si(id[0]) for id in backups)
 
     seq = chain(init.si(task_id, tk_name), work_group,
@@ -4008,7 +4009,13 @@ def confirm_delete_backup(id):
     Show confirmation box to delete a backup
     :return:
     """
-    backup = BackupRecord.query.get_or_404(id)
+    # backup_id is a BackupRecord instance
+    backup: BackupRecord = BackupRecord.query.get_or_404(id)
+
+    if backup.locked:
+        flash(f'Backup {backup.date.trftime("%a %d %b %Y %H:%M:%S")} cannot be deleted because it is locked.',
+              'info')
+        return redirect(redirect_url())
 
     title = 'Confirm delete'
     panel_title = 'Confirm delete of backup {d}'.format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
@@ -4025,10 +4032,19 @@ def confirm_delete_backup(id):
 @admin.route('/delete_backup/<int:id>')
 @roles_required('root')
 def delete_backup(id):
+    # backup_id is a BackupRecord instance
+    backup: BackupRecord = BackupRecord.query.get_or_404(id)
+
+    if backup.locked:
+        flash(f'Backup {backup.date.trftime("%a %d %b %Y %H:%M:%S")} cannot be deleted because it is locked.',
+              'info')
+        return redirect(redirect_url())
+
     success, msg = remove_backup(id)
 
     if not success:
-        flash('Could not delete backup: {msg}'.format(msg=msg), 'error')
+        flash(f'Could not delete backup. Backend message = "{msg}". Please contact a system administrator.',
+              'error')
 
     return redirect(url_for('admin.manage_backups'))
 
@@ -9908,7 +9924,6 @@ def download_submitted_asset(asset_id):
                      download_name=filename if filename else asset.target_name,
                      as_attachment=True)
 
-
 @admin.route('/download_backup/<int:backup_id>')
 @roles_required('root')
 def download_backup(backup_id):
@@ -9932,6 +9947,67 @@ def download_backup(backup_id):
     fname = fname.with_suffix('.tar.gz')
     return send_file(return_data, mimetype='application/gzip',
                      download_name=str(fname), as_attachment=True)
+
+
+@admin.route('/lock_backup/<int:backup_id>')
+@roles_required('root')
+def lock_backup(backup_id):
+    # backup_id is a BackupRecord instance
+    backup: BackupRecord = BackupRecord.query.get_or_404(backup_id)
+
+    try:
+        backup.locked = True
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not lock this backup because of a database error. '
+              'Please contact a system administrator', 'error')
+
+    return redirect(redirect_url())
+
+
+@admin.route('/unlock_backup/<int:backup_id>')
+@roles_required('root')
+def unlock_backup(backup_id):
+    # backup_id is a BackupRecord instance
+    backup: BackupRecord = BackupRecord.query.get_or_404(backup_id)
+
+    try:
+        backup.locked = False
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not lock this backup because of a database error. '
+              'Please contact a system administrator', 'error')
+
+    return redirect(redirect_url())
+
+
+@admin.route('/edit_backup_labels/<int:backup_id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_backup_labels(backup_id):
+    # backup_id is a BackupRecord instance
+    backup: BackupRecord = BackupRecord.query.get_or_404(backup_id)
+
+    form = ApplyBackupLabelsForm(obj=backup)
+
+    if form.validate_on_submit():
+        label_list = create_new_backup_labels(form)
+        backup.labels = label_list
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemy exception", exc_info=e)
+            flash('Could not save labels for this backup record due to a database error. '
+                  'Please contact a system administrator', 'error')
+
+        return redirect(url_for('admin.manage_backups'))
+
+    return render_template('admin/edit_backup_labels.html', backup=backup, form=form)
 
 
 @admin.route('/upload_schedule/<int:schedule_id>', methods=['GET', 'POST'])

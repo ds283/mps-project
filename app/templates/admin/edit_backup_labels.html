@@ -1,0 +1,42 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#labels').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                tags: true,
+                tokenSeparators: [',', ';'],
+                placeholder: 'Add labels...'
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Apply backup labels
+{% endblock %}
+
+{% block formtitle %}
+    Apply labels to backup <strong>{{ backup.date.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('admin.edit_backup_labels', backup_id=backup.id) }}" method="POST" name="labels_form">
+
+        {{ form.hidden_tag() }}
+        {{ wtf.render_field(form.labels) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}

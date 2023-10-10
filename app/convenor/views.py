@@ -3243,7 +3243,7 @@ def edit_project(id, pclass_id):
     form.project = project
 
     if form.validate_on_submit():
-        tag_list  = create_new_tags(form)
+        tag_list = create_new_tags(form)
 
         project.name = form.name.data
         project.owner = form.owner.data if not form.generic.data else None

@@ -1772,6 +1772,13 @@ matching_role_list_original = db.Table('matching_to_roles_original',
                                        db.Column('role_id', db.Integer(), db.ForeignKey('matching_roles.id'), primary_key=True))
 
 
+## BACKUP LABELS
+
+backup_record_to_labels = db.Table('backups_to_labels',
+                                   db.Column('backup_id', db.Integer(), db.ForeignKey('backups.id'), primary_key=True),
+                                   db.Column('label_id', db.Integer(), db.ForeignKey('backup_labels.id'), primary_key=True))
+
+
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
@@ -11950,6 +11957,13 @@ class BackupRecord(db.Model):
 
     # is this backup locked to prevent deletion?
     locked = db.Column(db.Boolean(), default=False)
+
+    # last time this backup was validated in the object store
+    last_validated = db.Column(db.DateTime())
+
+    # applied labels
+    labels = db.relationship('BackupLabel', secondary=backup_record_to_labels, lazy='dynamic',
+                             backref=db.backref('backups', lazy='dynamic'))
 
     # bucket associated with this asset
     bucket = db.Column(db.Integer(), nullable=False, default=buckets.BACKUP_BUCKET)

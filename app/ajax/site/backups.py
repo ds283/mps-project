@@ -9,7 +9,7 @@
 #
 from typing import List
 
-from flask import render_template_string
+from flask import render_template_string, get_template_attribute
 
 from ...models import BackupRecord
 
@@ -81,9 +81,10 @@ _description = \
 {% else %}
     <div><span class="badge bg-secondary">None</span></div>
 {% endif %}
-{% if b.labels|length > 0 %}
+{% set labels = b.labels.all() %}
+{% if labels|length > 0 %}
     <div class="mt-1 small">
-        {% for label in b.label %}
+        {% for label in labels %}
             {{ simple_label(label.make_label()) }}
         {% endfor %}
     </div>

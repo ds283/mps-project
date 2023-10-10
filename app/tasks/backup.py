@@ -155,9 +155,11 @@ def register_backup_tasks(celery):
         now = datetime.now()
 
         # query database for backup records, and queue a retry if it fails
+        # note we only thin scheduled backups; other types are retained
         try:
             records: List[BackupRecord] = db.session.query(BackupRecord) \
-                .filter_by(type=BackupRecord.SCHEDULED_BACKUP) \
+                .filter(BackupRecord.type == BackupRecord.SCHEDULED_BACKUP,
+                        ~BackupRecord.locked) \
                 .order_by(BackupRecord.date.desc()).all()
 
         except SQLAlchemyError as e:

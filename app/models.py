@@ -12031,8 +12031,7 @@ class BackupLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):
 
 
     def make_label(self, text=None):
-        label_text = text if text is not None else self.display_name
-
+        label_text = text if text is not None else self.name
         return self._make_label(text=label_text)
 
 

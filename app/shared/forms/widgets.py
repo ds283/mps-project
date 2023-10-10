@@ -144,3 +144,14 @@ class BasicTagSelectField(QuerySelectMultipleField):
             self.data = (value, []) if value is not None else None
         except (ValueError, TypeError):
             self.data = None
+
+    def iter_choices(self):
+        """
+        We should update how choices are iter to make sure that value from
+        internal list or tuple should be selected.
+        """
+        data = self.data
+        matched = data[0]
+
+        for pk, obj in self._get_object_list():
+            yield (pk, self.get_label(obj), obj in matched)

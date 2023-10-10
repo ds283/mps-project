@@ -18,7 +18,7 @@ from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData
     ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, \
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
     Building, Room, PresentationFeedback, FHEQ_Level, ScheduleSlot, PresentationSession, \
-    ScheduleAttempt, AssetLicense, ProjectTagGroup, ProjectTag
+    ScheduleAttempt, AssetLicense, ProjectTagGroup, ProjectTag, BackupLabel
 from ...models import project_pclasses, description_pclasses, roles_to_users
 
 
@@ -433,3 +433,11 @@ def BuildTagName(tag: ProjectTag):
 
 def BuildTagGroup(tag: ProjectTag):
     return tag.group.name if tag.group is not None else '<unknown>'
+
+
+def GetActiveBackupLabels():
+    return db.session.query(BackupLabel)
+
+
+def BuildBackupLabelName(label: BackupLabel):
+    return label.name

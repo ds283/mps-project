@@ -323,6 +323,8 @@ def register_backup_tasks(celery):
                 if record.unique_name not in contents:
                     print(f'Backup "{record.unique_name}" has no counterpart in the object store: deleting')
                     db.session.delete(record)
+                else:
+                    record.last_validated = datetime.now()
 
             # for each object in the object store, test whether there is a counterpart object
             for item in contents.keys():

@@ -8,19 +8,17 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from datetime import datetime
 
-from flask import current_app
+from flask import current_app, flash
+from flask_login import current_user
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 from .asset_tools import AssetCloudAdapter
-from ..database import db
-from ..models import BackupConfiguration, BackupRecord
-
 from .sqlalchemy import get_count
-
-from datetime import datetime
-from os import path, remove
+from ..database import db
+from ..models import BackupConfiguration, BackupRecord, BackupLabel
 
 
 def get_backup_config():
@@ -121,7 +119,10 @@ def remove_backup(id):
     record = db.session.query(BackupRecord).filter_by(id=id).first()
 
     if record is None:
-        return False, 'database record for backup {id} could not be found'.format(id=id)
+        return False, f'database record for backup #{id} could not be found'
+
+    if record.locked:
+        return False, f'backup #{id} is locked and cannot be deleted'
 
     object_store = current_app.config.get('OBJECT_STORAGE_BACKUP')
     storage = AssetCloudAdapter(record, object_store, size_attr='archive_size')
@@ -145,3 +146,24 @@ def remove_backup(id):
         pass
 
     return True, None
+
+
+def create_new_backup_labels(form):
+    matched, unmatched = form.labels.data
+
+    if len(unmatched) > 0:
+        now = datetime.now()
+        for label in unmatched:
+            new_label = BackupLabel(name=label,
+                                    colour=None,
+                                    creator_id=current_user.id,
+                                    creation_timestamp=now)
+            try:
+                db.session.add(new_label)
+                matched.append(new_label)
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                flash(f'Could not add newly defined label "{label}" due to a database error. '
+                      f'Please contact a system administrator.', 'error')
+
+    return matched

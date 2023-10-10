@@ -8,10 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from wtforms_alchemy import GroupedQuerySelectMultipleField
+from wtforms_alchemy import GroupedQuerySelectMultipleField, QuerySelectMultipleField
 
 
-class TagSelectField(GroupedQuerySelectMultipleField):
+class GroupedTagSelectField(GroupedQuerySelectMultipleField):
     def __init__(self,
                  label=None,
                  validators=None,
@@ -22,14 +22,14 @@ class TagSelectField(GroupedQuerySelectMultipleField):
                  blank_text='',
                  default=None,
                  **kwargs):
-        super().__init__(label,
-                         validators,
-                         query_factory,
-                         get_pk,
-                         get_label,
-                         get_group,
-                         blank_text,
-                         default,
+        super().__init__(label=label,
+                         validators=validators,
+                         query_factory=query_factory,
+                         get_pk=get_pk,
+                         get_label=get_label,
+                         get_group=get_group,
+                         blank_text=blank_text,
+                         default=default,
                          **kwargs)
 
     @property
@@ -87,3 +87,60 @@ class TagSelectField(GroupedQuerySelectMultipleField):
                     [self.get_pk(obj) for obj in matched or []]
                 )
             )
+
+
+class BasicTagSelectField(QuerySelectMultipleField):
+    def __init__(self,
+                 label=None,
+                 validators=None,
+                 query_factory=None,
+                 get_pk=None,
+                 get_label=None,
+                 blank_text='',
+                 default=None,
+                 **kwargs):
+        super().__init__(label=label,
+                         validators=validators,
+                         query_factory=query_factory,
+                         get_pk=get_pk,
+                         get_label=get_label,
+                         blank_text=blank_text,
+                         default=default,
+                         **kwargs)
+
+    @property
+    def data(self):
+        formdata = self._formdata
+
+        if formdata is not None:
+            data = []
+            for pk, obj in self._get_object_list():
+                if not formdata:
+                    break
+                elif pk in formdata:
+                    formdata.remove(pk)
+                    data.append(obj)
+
+            # any primary keys (tag labels) that did not get moved out of formdata are the new ones we
+            # wish to create, so aggregate these together with the matched set
+            self.data = (data, formdata)
+
+        return self._data
+
+    @data.setter
+    def data(self, value):
+        if isinstance(value, tuple):
+            self._data = value
+        else:
+            # assume we are just assigning the matched list, so the unmatched list should be set to empty
+            self._data = (value, [])
+        self._formdata = None
+
+    def pre_validate(self, form):
+        pass
+
+    def process_data(self, value):
+        try:
+            self.data = (value, []) if value is not None else None
+        except (ValueError, TypeError):
+            self.data = None

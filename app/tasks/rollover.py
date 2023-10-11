@@ -968,7 +968,7 @@ def register_rollover_tasks(celery):
 
                     # otherwise, check whether this student falls in the first-to-last window
                     elif config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ALL_YEARS:
-                        if academic_year < first_year or academic_year > last_year:
+                        if academic_year < first_year or academic_year >= last_year:
                             return False
 
                     else:
@@ -999,7 +999,7 @@ def register_rollover_tasks(celery):
                 if programme not in config.programmes:
                     return False
 
-                if academic_year < first_year or academic_year > last_year:
+                if academic_year < first_year or academic_year >= last_year:
                     return False
 
                 return True

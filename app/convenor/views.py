@@ -16,6 +16,7 @@ from uuid import uuid4
 
 import parse
 from celery import chain
+from celery.result import AsyncResult
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session, abort
@@ -35,9 +36,9 @@ from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, Ope
     EditPeriodRecordFormFactory, ChangeDeadlineFormFactory, TestOpenFeedbackForm, \
     EditProjectConfigFormFactory, AddConvenorStudentTask, EditConvenorStudentTask, AddConvenorGenericTask, \
     EditConvenorGenericTask, EditSubmissionPeriodRecordPresentationsForm, AddSubmitterRoleForm, EditRolesFormFactory
-from ..documents.forms import UploadPeriodAttachmentForm, EditPeriodAttachmentForm
 from ..admin.forms import LevelSelectorForm
 from ..database import db
+from ..documents.forms import UploadPeriodAttachmentForm, EditPeriodAttachmentForm
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionSettingsFormFactory, MoveDescriptionFormFactory, \
     PresentationFeedbackForm, SubmissionRoleFeedbackForm, SubmissionRoleResponseForm, \
@@ -5692,12 +5693,14 @@ def rollover(id, markers):
 
     year = get_current_year()
     if config.year == year:
-        flash('A rollover request was ignored. If you are attempting to rollover the academic year and '
-              'have not managed to do so, please contact a system administrator', 'error')
+        flash(f'A rollover request was ignored for project class "{config.name}" because its '
+              f'configuration already matches the current academic year. '
+              f'If you are attempting to rollover the academic year and believe that you '
+              f'have not managed to do so, please contact a system administrator.', 'error')
         return redirect(url) if url is not None else home_dashboard()
 
     if not config.project_class.active:
-        flash('{name} is not an active project class'.format(name=config.name), 'error')
+        flash(f'"{config.name}" is not an active project class, and cannot be rolled over.', 'error')
         return redirect(url) if url is not None else home_dashboard()
 
     blocking, num_blocking = config.get_blocking_tasks
@@ -5727,10 +5730,19 @@ def rollover(id, markers):
                          backup.si(current_user.id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
                                    description='Rollback snapshot for {proj} rollover to '
                                                '{yr}'.format(proj=config.name, yr=year)))
-    backup_task = backup_chain.apply_async()
-    backup_result = backup_task.wait(timeout=None, interval=0.5)
+    backup_result = backup_chain.apply_async()
+    backup_result.wait(timeout=None, interval=0.5)
 
-    rollover.apply_async(args=(task_id, use_markers, id, current_user.id), task_id=task_id,
+    # TODO: should prefer to set up a chain, and then return from the WSGI process so that we can
+    #  free up the web server thread. Not quite sure why this wasn't done, but maybe issues with chords?
+    #  We have seen that elsewhere with Celery.
+    if not backup_result.successful():
+        flash(f'Could not complete rollover for project class "{config.name}" because the preparatory '
+              f'backup task did not complete. Please contact a system administrator.', 'error')
+        return redirect(url) if url is not None else home_dashboard()
+
+    rollover_result: AsyncResult = \
+        rollover.apply_async(args=(task_id, use_markers, id, current_user.id), task_id=task_id,
                          link_error=rollover_fail.si(task_id, current_user.id))
 
     return redirect(url) if url is not None else home_dashboard()

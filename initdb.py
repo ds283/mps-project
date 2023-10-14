@@ -171,9 +171,11 @@ def initial_populate_database(app, inspector):
         for object in contents:
             object: str
             fname: Path = Path(object)
-            if fname.suffix in ['.tar', '.tar.gz', '.tar.bz2']:
+
+            full_suffix = ''.join(fname.suffixes)
+            if full_suffix in ['.tar', '.tar.gz', '.tar.bz2']:
                 tar_files.append(fname)
-            elif fname.suffix in ['.sql']:
+            elif full_suffix in ['.sql']:
                 sql_files.append(fname)
             else:
                 print(f'** ignored unmatched object in initial bucket with name "{object}"')
@@ -181,6 +183,7 @@ def initial_populate_database(app, inspector):
         if len(tar_files) > 1:
             print(f'** more than one tarfile was present in the initial object bucket')
 
+        if len(tar_files) > 0:
             if init_tarfile is not None and init_tarfile in tar_files:
                 print(f'** using tarfile {init_tarfile} specified in environment')
 

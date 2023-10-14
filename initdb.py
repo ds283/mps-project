@@ -46,7 +46,7 @@ def get_current_datetime():
         current_year = now.year-1
 
     return {'timestamp': now_str,
-            'main_year': current_year}
+            'main_year': str(current_year)}
 
 
 def execute_scripts(app, script, data):
@@ -78,7 +78,7 @@ def populate_table_if_empty(app, inspector, bucket: ObjectStore, table: str, sql
     count = out[0]
 
     if count == 0:
-        app.logger.info(f'** table "{table}" is empty, beginning to auto-populate using script "{sql_script}')
+        app.logger.info(f'** table "{table}" is empty, beginning to auto-populate using script "{sql_script}"')
 
         with ScratchFileManager(suffix='.sql') as scratch_path:
             with open(scratch_path.path, 'wb') as f:
@@ -129,7 +129,8 @@ def initial_populate_database(app, inspector):
     # query the bucket for a list of contents
     contents = init_bucket.list()
 
-    if '_lockfile' in contents:
+    lockfile_name = '_lockfile'
+    if lockfile_name in contents:
         print(f'** initdb bucket is locked; waiting for lock to be released')
         count = 0
         max_cycles = 100
@@ -145,7 +146,7 @@ def initial_populate_database(app, inspector):
                 break
 
             try:
-                data: ObjectMeta = init_bucket.head('_lockfile')
+                data: ObjectMeta = init_bucket.head(lockfile_name)
             except FileNotFoundError:
                 print(f'** initdb bucket lock has been released')
                 break
@@ -158,10 +159,10 @@ def initial_populate_database(app, inspector):
             self._data = 'lock'.encode()
 
         def __enter__(self):
-            self._bucket.put('_lockfile', self._data, mimetype='application/octet-stream')
+            self._bucket.put(lockfile_name, self._data, mimetype='application/octet-stream')
 
         def __exit__(self, exc_type, exc_val, exc_tb):
-            self._bucket.delete('_lockfile')
+            self._bucket.delete(lockfile_name)
 
     with LockFileManager(init_bucket) as lock:
         tar_files: List[Path] = []

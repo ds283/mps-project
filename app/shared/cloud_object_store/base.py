@@ -10,7 +10,7 @@
 
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, Union, List, Optional
+from typing import Dict, Union, List, Optional, Mapping
 from urllib.parse import urlsplit, SplitResult
 from zlib import compress as zlib_compress
 from zlib import decompress as zlib_decompress
@@ -111,7 +111,7 @@ class ObjectStore:
             del data['encryption_pipeline']
 
         if 'compressed' in data:
-            self._compressed = True
+            self._compressed = data['compressed']
         else:
             self._compressed = False
 
@@ -177,7 +177,7 @@ class ObjectStore:
         return self._driver.get_range(_as_path(key), start=start, length=length)
 
     def put(self, key: PathLike, data: BytesLike, mimetype: Optional[str] = None,
-            validate_nonce=None, no_encryption=False, no_compress=False) -> Dict[str]:
+            validate_nonce=None, no_encryption=False, no_compress=False) -> Mapping:
         compressed_size = None
         encrypted_size = None
 

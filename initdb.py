@@ -114,7 +114,7 @@ def tarfile_populate(app, bucket: ObjectStore, tarfile: Path):
                                f'not extract correctly from the archive')
 
         p: subprocess.CompletedProcess = \
-            subprocess.run(['mysql', "-h", db_hostname, f"-u{user}", f"-p{password}", database], stdin=fo)
+            subprocess.run(['mysql', "-h", db_hostname, f"-u{user}", f"-p{password}", database], input=fo.read())
 
         if p.returncode != 0:
             raise RuntimeError(f'!! mysql re-population did not complete successfully')

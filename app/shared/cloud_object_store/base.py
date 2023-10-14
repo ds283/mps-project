@@ -177,7 +177,7 @@ class ObjectStore:
         return self._driver.get_range(_as_path(key), start=start, length=length)
 
     def put(self, key: PathLike, data: BytesLike, mimetype: Optional[str] = None,
-            validate_nonce=None, no_encryption=False, no_compress=False) -> Optional[bytes]:
+            validate_nonce=None, no_encryption=False, no_compress=False) -> Dict[str]:
         compressed_size = None
         encrypted_size = None
 

@@ -15,7 +15,7 @@ from urllib.parse import SplitResult
 
 import boto3
 from botocore.client import BaseClient
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, UnknownKeyError
 
 from ..meta import ObjectMeta
 
@@ -125,6 +125,8 @@ class AmazonS3CloudStorageDriver:
         try:
             response = self._storage.head_object(Bucket=self._bucket_name, Key=key_str)
         except ClientError as e:
+            raise FileNotFoundError(str(e))
+        except UnknownKeyError as e:
             raise FileNotFoundError(str(e))
 
         data: ObjectMeta = ObjectMeta()

@@ -26,3 +26,4 @@ restart.sh
 migrate.sh
 PyMuPDF-setup.py
 objectstore-data
+basic_database

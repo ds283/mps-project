@@ -95,7 +95,9 @@ def tarfile_populate(app, bucket: ObjectStore, tarfile: Path):
     database = app.config['DATABASE_NAME']
     db_hostname = app.config['DATABASE_HOSTNAME']
 
-    with ScratchFileManager(suffix=tarfile.suffix) as scratch_path:
+    full_suffix = ''.join(tarfile.suffixes)
+
+    with ScratchFileManager(suffix=full_suffix) as scratch_path:
         with open(scratch_path.path, 'wb') as f:
             data: bytes = bucket.get(str(tarfile))
             f.write(data)

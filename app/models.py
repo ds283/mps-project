@@ -11427,14 +11427,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     @property
     def is_valid(self):
-        print('SubmissionRecord.is_valid for student id = {id}'.format(id=self.owner.student.id))
         flag, self._errors, self._warnings = _SubmissionRecord_is_valid(self.id)
         self._validated = True
-
-        if self.owner.student.id == 321:
-            print('Lily Joyce SubmissionRecord.is_valid: flag = {flag}'.format(flag=flag))
-            print('errors = {err}'.format(err=self._errors))
-            print('warnings = {warn}'.format(warn=self._warnings))
 
         return flag
 

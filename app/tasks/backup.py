@@ -70,10 +70,9 @@ def register_backup_tasks(celery):
             db_hostname = current_app.config['DATABASE_HOSTNAME']
 
             # dump database to SQL document
-            p = subprocess.Popen(
-                ["mysqldump", "-h", db_hostname, f"-u{user}", f"-p{password}", database, "--opt",
-                 "--skip-lock-tables", f"--result-file={str(SQL_scratch_path)}", ])
-            stdout, stderr = p.communicate()
+            p: subprocess.CompletedProcess = \
+                subprocess.run(["mysqldump", "-h", db_hostname, f"-u{user}", f"-p{password}", database, "--opt",
+                                "--skip-lock-tables", f"--result-file={str(SQL_scratch_path)}"])
 
             if not path.exists(SQL_scratch_path) or not path.isfile(SQL_scratch_path):
                 self.update_state(state='FAILURE', meta={'msg': 'mysqldump failed or did not produce a readable file'})

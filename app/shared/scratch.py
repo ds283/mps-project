@@ -24,15 +24,11 @@ class ScratchFileManager:
         if suffix is not None:
             self._path = self._path.with_suffix(suffix)
 
-
     def __enter__(self):
         return self
 
-
     def __exit__(self, type, value, traceback):
         self._path.unlink(missing_ok=True)
-
-
     @property
     def path(self):
         return self._path

@@ -8,61 +8,26 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime
-
 from sqlalchemy import text, inspect
-from sqlalchemy.exc import SQLAlchemyError
 from waitress import serve
 
 from app import create_app, db
+from initdb import initial_populate_database
 
 
-def execute_query(app, query):
-    try:
-        result = db.session.execute(text(query))
-    except SQLAlchemyError as e:
-        app.logger.info('** encountered exception while emplacing SQL line')
-        app.logger.info(f'     {query}')
-        app.logger.exception("SQLAlchemyError exception", exc_info=e)
+def has_table(inspector, table_name):
+    # if table does not exist, then fail
+    if not inspector.has_table(table_name):
+        return False
 
-
-def get_current_datetime_str():
-    now = datetime.now()
-    now_str = now.strftime('%Y-%m-%d %H:%M:%S')
-    return now_str
-
-
-def execute_scripts(app, script, now_str):
-    with open(script, 'r') as file:
-        while line := file.readline():
-            line_replace = line.replace('$$TIMESTAMP', now_str)
-            execute_query(app, line_replace)
-
-
-def populate_table(app, script):
-    now_str = get_current_datetime_str()
-
-    db.session.execute(text('SET FOREIGN_KEY_CHECKS = 0;'))
-    execute_scripts(app, script, now_str)
-    db.session.execute(text('SET FOREIGN_KEY_CHECKS = 1;'))
-
-    db.session.commit()
-
-
-def check_table(app, inspector, table_data):
-    name = table_data['table']
-    if not inspector.has_table(name):
-        app.logger.error(f'!! FATAL: database is missing the "{name}" table and is not ready. '
-                         f'Check that the Alembic migration script has run correctly.')
-        exit()
-
-    out = db.session.execute(text(f'SELECT COUNT(*) FROM {name};')).first()
+    # if table exists, but has no entries, then we should also fail
+    out = db.session.execute(text(f'SELECT COUNT(*) FROM {table_name};')).first()
     count = out[0]
 
     if count == 0:
-        app.logger.info(f'** table "{name}" is empty, beginning to auto-populate')
-        populate_table(app, table['script'])
+        return False
 
+    return True
 
 app = create_app()
 
@@ -70,33 +35,11 @@ with app.app_context():
     engine = db.engine
     inspector = inspect(engine)
 
-    tables = [
-        {'table': 'asset_licenses',
-         'script': 'basic_database/asset_licenses.sql'},
-        {'table': 'celery_crontabs',
-         'script': 'basic_database/celery_crontabs.sql'},
-        {'table': 'celery_intervals',
-         'script': 'basic_database/celery_intervals.sql'},
-        {'table': 'celery_schedules',
-         'script': 'basic_database/celery_schedules.sql'},
-        {'table': 'main_config',
-         'script': 'basic_database/main_config.sql'},
-        {'table': 'roles',
-         'script': 'basic_database/roles.sql'},
-        {'table': 'users',
-         'script': 'basic_database/users.sql'},
-        {'table': 'faculty_data',
-         'script': 'basic_database/faculty_data.sql'},
-        {'table': 'roles_users',
-         'script': 'basic_database/roles_users.sql'},
-        {'table': 'fheq_levels',
-         'script': 'basic_database/fheq_levels.sql'},
-        {'table': 'degree_types',
-         'script': 'basic_database/degree_types.sql'}
-    ]
-
-    for table in tables:
-        check_table(app, inspector, table)
-
+    # first inspect the main table; if this is empty then we assume that they database should be repopulated
+    if not has_table(inspector, 'main_config'):
+        # commit session to release any table locks; otherwise, if we are restoring from a mysqldump
+        # dump file which isues DROP TABLE statements, these will block against the table lock
+        db.session.commit()
+        initial_populate_database(app, inspector)
 
 serve(app, port=5000)

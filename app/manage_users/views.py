@@ -658,7 +658,7 @@ def batch_create_users():
                 asset.grant_user(current_user)
 
                 tk_name = "Process batch user list '{name}'".format(name=incoming_filename)
-                tk_description = 'Batch create students from a CSV file'
+                tk_description = 'Batch import students from a CSV file'
                 uuid = register_task(tk_name, owner=current_user, description=tk_description)
 
                 record = StudentBatch(name=batch_file.filename,
@@ -1020,7 +1020,7 @@ def import_batch(batch_id):
     record = StudentBatch.query.get_or_404(batch_id)
 
     tk_name = 'Import batch user list "{name}"'.format(name=record.name)
-    tk_description = 'Batch create students from a CSV file'
+    tk_description = 'Batch import students from a CSV file'
     uuid = register_task(tk_name, owner=current_user, description=tk_description)
 
     celery = current_app.extensions['celery']

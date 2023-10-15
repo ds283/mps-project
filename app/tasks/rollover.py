@@ -1018,7 +1018,7 @@ def register_rollover_tasks(celery):
                                                                           convert_to_submitter=False))
                 else:
                     count_disable = 0
-                
+
                 if count_sub == 0 and count_disable == 0:
                     selecting_config_id = old_config_id if config.select_in_previous_cycle else new_config_id
                     add_blank_submitter(student, selecting_config_id, new_config_id, autocommit=False,

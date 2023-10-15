@@ -1,7 +1,7 @@
 {% extends "manage_users/users_dashboard/nav.html" %}
 
 {% block title %}
-    Batch create students
+    Batch import students
 {% endblock %}
 
 {% block bodyblock %}
@@ -10,7 +10,7 @@
         <div class="col-10">
             <div class="card border-primary mt-3 mb-3">
                 <div class="card-header bg-primary text-white">
-                    Upload student list for batch user creation
+                    Upload student list for batch user import
                 </div>
                 <div class="card-body">
                     <form action="{{ url_for('manage_users.batch_create_users') }}" method="POST" enctype="multipart/form-data" name="batch_create_form">

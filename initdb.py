@@ -60,6 +60,8 @@ def execute_scripts(app, script, data):
 def sql_script_populate(app, script):
     data = get_current_datetime()
 
+    db.session.begin()
+
     db.session.execute(text('SET FOREIGN_KEY_CHECKS = 0;'))
     execute_scripts(app, script, data)
     db.session.execute(text('SET FOREIGN_KEY_CHECKS = 1;'))
@@ -74,8 +76,10 @@ def populate_table_if_empty(app, inspector, bucket: ObjectStore, table: str, sql
                          f'rebuild the database from a mysqldump dump.')
         exit()
 
+    db.session.begin()
     out = db.session.execute(text(f'SELECT COUNT(*) FROM {table};')).first()
     count = out[0]
+    db.session.commit()
 
     if count == 0:
         app.logger.info(f'** table "{table}" is empty, beginning to auto-populate using script "{sql_script}"')

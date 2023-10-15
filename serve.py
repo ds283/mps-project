@@ -37,6 +37,9 @@ with app.app_context():
 
     # first inspect the main table; if this is empty then we assume that they database should be repopulated
     if not has_table(inspector, 'main_config'):
+        # commit session to release any table locks; otherwise, if we are restoring from a mysqldump
+        # dump file which isues DROP TABLE statements, these will block against the table lock
+        db.session.commit()
         initial_populate_database(app, inspector)
 
 serve(app, port=5000)

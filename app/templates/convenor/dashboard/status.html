@@ -253,9 +253,9 @@
                                     <tr {% if tk_status_class is not none %}class="{{ tk_status_class }}"{% endif %}>
                                         <td>
                                             {% if tk_type == 1 or tk_type == 2 %}
-                                                <a href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
+                                                <a class="text-decoration-none link-primary" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
                                             {% elif tk_type == 3 %}
-                                                <a href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
+                                                <a class="text-decoration-none link-primary" href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
                                             {% else %}
                                                 {{ tk.description|truncate(40) }}
                                             {% endif %}
@@ -269,7 +269,7 @@
                                         <td>
                                             {% if tk_type == 1 or tk_type == 2 %}
                                                 <i class="fas fa-user-circle"></i>
-                                                <a class="text-decoration-none" href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.status', id=pclass.id), text='convenor dashboard') }}">
+                                                <a class="text-decoration-none link-dark" href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.status', id=pclass.id), text='convenor dashboard') }}">
                                                     {{ obj.student.user.name }}
                                                 </a>
                                             {% endif %}

@@ -61,7 +61,7 @@ from ..shared.forms.wtf_validators import valid_json, NotOptionalIf, \
     globally_unique_project_tag, unique_or_original_project_tag
 
 
-class GlobalConfig(Form):
+class GlobalConfigForm(Form):
 
     enable_canvas_sync = BooleanField('Enable Canvas integration globally')
 

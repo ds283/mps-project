@@ -39,7 +39,7 @@ from werkzeug.wrappers import Response
 import app.ajax as ajax
 from . import admin
 from .actions import estimate_CATS_load, availability_CSV_generator, pair_slots
-from .forms import GlobalConfig, \
+from .forms import GlobalConfigForm, \
     AddResearchGroupForm, EditResearchGroupForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
@@ -101,7 +101,7 @@ def global_config():
     :return:
     """
     config: MainConfig = get_main_config()
-    form: GlobalConfig = GlobalConfig(obj=config)
+    form: GlobalConfigForm = GlobalConfigForm(obj=config)
 
     if form.validate_on_submit():
         url = form.canvas_url.data

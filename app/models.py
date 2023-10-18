@@ -1794,7 +1794,9 @@ class MainConfig(db.Model):
     @validates('canvas_url')
     def _validate_canvas_url(self, key, value):
         self._canvas_root_API = None
-        self._canvas_root_URL =None
+        self._canvas_root_URL = None
+
+        return value
 
     # globally enable Canvas sync
     enable_canvas_sync = db.Column(db.Boolean(), default=False)

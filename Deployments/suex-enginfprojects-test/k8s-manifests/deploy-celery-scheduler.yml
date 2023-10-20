@@ -21,9 +21,12 @@ spec:
           imagePullPolicy: Always
           command: ["./launch_beat.sh"]
           resources:
-            requests:
+            limits:
               cpu: 100m
-              memory: 256Mi
+              memory: 512Mi
+            requests:
+              cpu: 25m
+              memory: 384Mi
           envFrom:
             - configMapRef:
                 name: enginfprojects-environment

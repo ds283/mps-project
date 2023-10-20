@@ -166,6 +166,16 @@ spec:
                   key: client_secret
             - name: FLOWER_OAUTH2_REDIRECT
               value: "https://test.enginfprojects.inf.susx.ac.uk/flower/login"
+          livenessProbe:
+            httpGet:
+              path: /flower/
+              port: 5000
+            initialDelaySeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /flower/
+              port: 5000
+            initialDelaySeconds: 15
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

@@ -169,7 +169,7 @@ spec:
             httpGet:
               path: /healthz/live
               port: 5000
-            initialDelaySeconds: 5
+            initialDelaySeconds: 10
             timeoutSeconds: 1
           readinessProbe:
             httpGet:

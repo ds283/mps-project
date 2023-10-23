@@ -128,6 +128,16 @@ spec:
                 secretKeyRef:
                   name: enginfprojects-backup-test-credentials
                   key: AWS_SECRET_ACCESS_KEY
+            - name: INITDB_STORAGE_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-initdb-test-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: INITDB_STORAGE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: enginfprojects-initdb-test-credentials
+                  key: AWS_SECRET_ACCESS_KEY
             - name: WORKER_QUEUES
               value: priority
             - name: DATABASE_URL
@@ -152,16 +162,19 @@ spec:
             readOnlyRootFilesystem: false
             runAsNonRoot: true
           volumeMounts:
-            - name: local-config
+            - name: instance-config
               mountPath: /mpsproject/app/instance/local.py
               subPath: local.py
+            - name: instance-config
+              mountPath: /mpsproject/app/initdb/initdb.py
+              subPath: initdb.py
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       volumes:
-        - name: local-config
+        - name: instance-config
           configMap:
-            name: enginfprojects-local
+            name: enginfprojects-instance
       restartPolicy: Always

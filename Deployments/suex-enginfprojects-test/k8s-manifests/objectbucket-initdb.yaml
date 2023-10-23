@@ -1,0 +1,11 @@
+apiVersion: appcat.vshn.io/v1
+kind: ObjectBucket
+metadata:
+  name: enginfprojects-initdb-test
+  namespace: suex-enginfprojects-test
+spec:
+  parameters:
+    bucketName: enginfprojects-initdb-test
+    region: ch-gva-2
+  writeConnectionSecretToRef:
+    name: enginfprojects-initdb-test-credentials

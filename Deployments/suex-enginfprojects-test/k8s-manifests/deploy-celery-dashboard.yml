@@ -168,14 +168,16 @@ spec:
               value: "https://test.enginfprojects.inf.susx.ac.uk/flower/login"
           livenessProbe:
             httpGet:
-              path: /flower/
+              path: /flower/healthcheck
               port: 5000
-            initialDelaySeconds: 10
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
           readinessProbe:
             httpGet:
-              path: /flower/
+              path: /flower/healthcheck
               port: 5000
-            initialDelaySeconds: 15
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

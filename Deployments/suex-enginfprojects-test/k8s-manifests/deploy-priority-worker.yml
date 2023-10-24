@@ -23,10 +23,11 @@ spec:
           command: ["./launch_celery.sh"]
           resources:
             limits:
-              memory: 2Gi
+              cpu: 500m
+              memory: 1280Mi
             requests:
-              cpu: 200m
-              memory: 768Mi
+              cpu: 100m
+              memory: 1024Mi
           envFrom:
             - configMapRef:
                 name: enginfprojects-environment

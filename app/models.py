@@ -7096,7 +7096,7 @@ class ProjectTagGroup(db. Model, ColouredLabelMixin, EditingMetadataMixin):
 
 
     def _make_label(self):
-        return self._make_label(text=self.name)
+        return super()._make_label(text=self.name)
 
 
     def enable(self):
@@ -9926,7 +9926,7 @@ class PresentationFeedback(db.Model):
     assessor = db.relationship('FacultyData', foreign_keys=[assessor_id], uselist=False,
                                backref=db.backref('presentation_feedback', lazy='dynamic'))
 
-    # PRESENTATION (IF USED)
+    # FEEDBACK (IF USED)
 
     # presentation positive feedback
     positive = db.Column(db.Text())

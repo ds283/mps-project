@@ -22,10 +22,11 @@ spec:
           imagePullPolicy: Always
           resources:
             limits:
+              cpu: 250m
               memory: 384Mi
             requests:
-              cpu: 100m
-              memory: 256Mi         
+              cpu: 25m
+              memory: 256Mi
           ports:
             - containerPort: 5000
           envFrom:
@@ -169,7 +170,7 @@ spec:
             httpGet:
               path: /healthz/live
               port: 5000
-            initialDelaySeconds: 5
+            initialDelaySeconds: 10
             timeoutSeconds: 1
           readinessProbe:
             httpGet:

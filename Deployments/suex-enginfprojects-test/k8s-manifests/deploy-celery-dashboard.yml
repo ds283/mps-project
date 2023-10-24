@@ -150,6 +150,8 @@ spec:
               value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
             - name: PROFILER_MONGO_URL
               value: mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOSTNAME):27017
+            - name: FLOWER_URL_PREFIX
+              value: "flower"
             - name: FLOWER_AUTH_PROVIDER
               value: "flower.views.auth.GithubLoginHandler"
             - name: FLOWER_AUTH

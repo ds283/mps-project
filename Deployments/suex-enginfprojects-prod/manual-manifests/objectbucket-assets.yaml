@@ -7,5 +7,6 @@ spec:
   parameters:
     bucketName: enginfprojects-assets-prod
     region: ch-gva-2
+    bucketDeletionPolicy: DeleteIfEmpty
   writeConnectionSecretToRef:
     name: enginfprojects-assets-prod-credentials

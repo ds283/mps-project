@@ -7,5 +7,6 @@ spec:
   parameters:
     bucketName: enginfprojects-initdb-prod
     region: ch-gva-2
+    bucketDeletionPolicy: DeleteIfEmpty
   writeConnectionSecretToRef:
     name: enginfprojects-initdb-prod-credentials

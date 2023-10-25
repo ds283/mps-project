@@ -24,6 +24,7 @@ for (( i = 1; i <= DAYS; i++ )); do
         parameters:
           bucketName: $DESTINATION_BUCKET
           region: ch-dk-2
+          bucketDeletionPolicy: DeleteIfEmpty
         writeConnectionSecretToRef:
           name: $DESTINATION_BUCKET-credentials
 EOF

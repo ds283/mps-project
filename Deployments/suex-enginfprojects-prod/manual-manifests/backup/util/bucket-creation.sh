@@ -22,6 +22,7 @@ for (( i = 1; i <= DAYS; i++ )); do
         namespace: $NAMESPACE
       spec:
         parameters:
+          bucketDeletionPolicy: DeleteIfEmpty
           bucketName: $DESTINATION_BUCKET
           region: ch-dk-2
         writeConnectionSecretToRef:

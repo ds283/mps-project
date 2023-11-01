@@ -9,6 +9,7 @@
 #
 
 import os
+import json
 
 DEBUG = False
 
@@ -17,13 +18,14 @@ DEBUG = False
 RATELIMIT_DEFAULT = "5000/hour;300/minute"
 
 # our own, hand-rolled profiler:
-# determine whether to use Werkzeug profiler to write a .prof to disc
+# determine whether to use Werkzeug profiler to write a .prof to disk
 # (from where we can use eg. SnakeViz as a GUI tool)
-PROFILE_TO_DISK = False
+PROFILE_TO_DISK = bool(int(os.environ.get('PROFILE_TO_DISK', 0)))
 PROFILE_DIRECTORY = os.environ.get('PROFILE_DIRECTORY')
+PORFILE_RESTRICTIONS = json.loads(os.environ.get('PROFILE_RESTRICTIONS', '[]'))
 
 # use Dozer to perform memory profiling?
-PROFILE_MEMORY = False
+PROFILE_MEMORY = bool(int(os.environ.get('PROFILE_MEMORY', 0)))
 
 # get SQLAlchemy to record metadata about query performance, so we can identify very slow queries
 SQLALCHEMY_RECORD_QUERIES = True

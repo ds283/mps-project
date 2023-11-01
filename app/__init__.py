@@ -176,9 +176,12 @@ def create_app():
     if app.config.get('PROFILE_TO_DISK', False):
         app.logger.info('-- configuring Werkzeug profiling')
         app.config['PROFILE'] = True
-        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=app.config.get('PROFILE_DIRECTORY'))
 
-        app.logger.info('Profiling to disk enabled')
+        profile_dir = app.config.get('PROFILE_DIRECTORY')
+        restrictions = app.config.get('PROFILE_RESTRICTIONS')
+        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=profile_dir)
+
+        app.logger.info('** Profiling to disk enabled (directory = {dir})'.format(dir=profile_dir))
 
     # configure Flask-Security, which needs access to the database models for User and Role
     app.logger.info('-- importing ORM models')
@@ -194,6 +197,8 @@ def create_app():
         # add to a particular view function.
         login = app.view_functions['security.login']
         forgot = app.view_functions['security.forgot_password']
+
+        app.logger.info('-- setting Flask-Limiter default limits')
         limiter.limit("50/day;5/minute")(login)
         limiter.limit("50/day;5/minute")(forgot)
 

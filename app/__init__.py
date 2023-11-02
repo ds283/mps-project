@@ -101,6 +101,8 @@ def read_configuration(app: Flask, config_name: str):
     app.config.from_pyfile('endpoint_profiler.py')
     app.config.from_pyfile('defaults.py')
     app.config.from_pyfile('mail.py')
+    app.config.from_pyfile('profiling.py')
+    app.config.from_pyfile('config.py')
 
     app.config.from_pyfile('local.py')
 
@@ -145,7 +147,9 @@ def create_app():
     app.config['SESSION_MONGODB'] = MongoClient(host=app.config['SESSION_MONGO_URL'])
 
     # we have two proxies -- we're behind both waitress and nginx
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2)
+    proxyfix_for = app.config.get('PROXYFIX_FOR', 0)
+    app.logger.info(f'-- patching Werkzeug to allow for {proxyfix_for}-level proxying')
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxyfix_for)
 
     if app.config.get('PROFILE_MEMORY', False):
         app.wsgi_app = Dozer(app.wsgi_app)
@@ -245,6 +249,9 @@ def create_app():
     tasks.register_background_tasks(celery)
     tasks.register_test_tasks(celery)
 
+    use_pyinstrument = app.config.get('PROFILE_PYINSTRUMENT')
+    if use_pyinstrument:
+        app.logger.info('-- endpoint profiling using PyInstrument enabled')
 
     @security.login_context_processor
     def login_context_processor():
@@ -259,7 +266,7 @@ def create_app():
 
     @app.before_request
     def before_request_handler():
-        if 'profile' in request.args:
+        if use_pyinstrument and 'profile' in request.args:
             g.profiler = Profiler()
             g.profiler.start()
 
@@ -272,14 +279,15 @@ def create_app():
                     current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
 
-    @app.after_request
-    def after_request_handler(response):
-        if not hasattr(g, "profiler"):
-            return response
+    if use_pyinstrument:
+        @app.after_request
+        def after_request_handler(response):
+            if not hasattr(g, 'profiler'):
+                return response
 
-        g.profiler.stop()
-        output_html = g.profiler.output_html()
-        return make_response(output_html)
+            g.profiler.stop()
+            output_html = g.profiler.output_html()
+            return make_response(output_html)
 
 
     @app.template_filter('latextomarkdown')

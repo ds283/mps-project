@@ -4880,9 +4880,16 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
 
     # 'projects' data member added by back reference from Project model
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._most_recent_config = None
+
 
     @orm.reconstructor
     def reconstruct(self):
+        self._most_recent_config = None
+
         with db.session.no_autoflush:
             self.validate_presentations()
 
@@ -4894,9 +4901,14 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
 
     @property
     def most_recent_config(self):
-        return db.session.query(ProjectClassConfig) \
+        # check whether we have a cached most recent ProjectClassConfig instance
+        if self._most_recent_config is not None:
+            return self._most_recent_config
+
+        self._most_recent_config = db.session.query(ProjectClassConfig) \
             .filter_by(pclass_id=self.id) \
             .order_by(ProjectClassConfig.year.desc()).first()
+        return self._most_recent_config
 
 
     def get_config(self, year):
@@ -6239,6 +6251,18 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
         self._canvas_course_URL = url_normalize(course_URL)
 
         return self._canvas_course_URL
+
+
+@listens_for(ProjectClassConfig, 'before_insert')
+def _ProjectClassConfig_insert_handler(mapper, connection, target: ProjectClassConfig):
+    with db.session.no_autoflush:
+        target.project_class._most_recent_config = None
+
+
+@listens_for(ProjectClassConfig, 'before_delete')
+def _ProjectClassConfig_delete_handler(mapper, connection, target: ProjectClassConfig):
+    with db.session.no_autoflush:
+        target.project_class._most_recent_config = None
 
 
 class SubmissionPeriodRecord(db.Model):

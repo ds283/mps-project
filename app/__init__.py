@@ -9,18 +9,16 @@
 #
 
 import os
-from sys import stderr
 from datetime import datetime
+from sys import stderr
 from urllib import parse
 
 import latex2markdown
 import redis
 from dozer import Dozer
-# from flask_debug_api import DebugAPIExtension
-from flask import Flask
+from flask import Flask, g, make_response
 from flask import current_app, request, session, render_template, has_request_context
 from flask_assets import Environment
-# from flask_qrcode import QRcode
 from flask_babel import Babel
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_healthz import Healthz
@@ -31,15 +29,16 @@ from flask_profiler import Profiler
 from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm, MailUtil
 from flask_sqlalchemy.record_queries import get_recorded_queries
 from flaskext.markdown import Markdown
+from pyinstrument import Profiler
 from pymongo import MongoClient
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.middleware.profiler import ProfilerMiddleware
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .flask_bleach import Bleach
 from .cache import cache
-from .instance.version import site_revision, site_copyright_dates
 from .database import db
+from .flask_bleach import Bleach
+from .instance.version import site_revision, site_copyright_dates
 from .limiter import limiter
 from .models import User, MessageOfTheDay, Notification
 from .shared.precompute import precompute_at_login
@@ -260,6 +259,10 @@ def create_app():
 
     @app.before_request
     def before_request_handler():
+        if 'profile' in request.args:
+            g.profiler = Profiler()
+            g.profiler.start()
+
         if current_user.is_authenticated:
             if request.endpoint is not None and 'ajax' not in request.endpoint:
                 try:
@@ -267,6 +270,16 @@ def create_app():
                     db.session.commit()
                 except SQLAlchemyError as e:
                     current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+
+    @app.after_request
+    def after_request_handler(response):
+        if not hasattr(g, "profiler"):
+            return response
+
+        g.profiler.stop()
+        output_html = g.profiler.output_html()
+        return make_response(output_html)
 
 
     @app.template_filter('latextomarkdown')

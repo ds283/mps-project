@@ -9,18 +9,16 @@
 #
 
 import os
-from sys import stderr
 from datetime import datetime
+from sys import stderr
 from urllib import parse
 
 import latex2markdown
 import redis
 from dozer import Dozer
-# from flask_debug_api import DebugAPIExtension
-from flask import Flask
+from flask import Flask, g, make_response
 from flask import current_app, request, session, render_template, has_request_context
 from flask_assets import Environment
-# from flask_qrcode import QRcode
 from flask_babel import Babel
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_healthz import Healthz
@@ -31,15 +29,16 @@ from flask_profiler import Profiler
 from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm, MailUtil
 from flask_sqlalchemy.record_queries import get_recorded_queries
 from flaskext.markdown import Markdown
+from pyinstrument import Profiler
 from pymongo import MongoClient
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.middleware.profiler import ProfilerMiddleware
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .flask_bleach import Bleach
 from .cache import cache
-from .instance.version import site_revision, site_copyright_dates
 from .database import db
+from .flask_bleach import Bleach
+from .instance.version import site_revision, site_copyright_dates
 from .limiter import limiter
 from .models import User, MessageOfTheDay, Notification
 from .shared.precompute import precompute_at_login
@@ -102,6 +101,8 @@ def read_configuration(app: Flask, config_name: str):
     app.config.from_pyfile('endpoint_profiler.py')
     app.config.from_pyfile('defaults.py')
     app.config.from_pyfile('mail.py')
+    app.config.from_pyfile('profiling.py')
+    app.config.from_pyfile('config.py')
 
     app.config.from_pyfile('local.py')
 
@@ -146,7 +147,9 @@ def create_app():
     app.config['SESSION_MONGODB'] = MongoClient(host=app.config['SESSION_MONGO_URL'])
 
     # we have two proxies -- we're behind both waitress and nginx
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2)
+    proxyfix_for = app.config.get('PROXYFIX_FOR', 0)
+    app.logger.info(f'-- patching Werkzeug to allow for {proxyfix_for}-level proxying')
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxyfix_for)
 
     if app.config.get('PROFILE_MEMORY', False):
         app.wsgi_app = Dozer(app.wsgi_app)
@@ -176,9 +179,12 @@ def create_app():
     if app.config.get('PROFILE_TO_DISK', False):
         app.logger.info('-- configuring Werkzeug profiling')
         app.config['PROFILE'] = True
-        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=app.config.get('PROFILE_DIRECTORY'))
 
-        app.logger.info('Profiling to disk enabled')
+        profile_dir = app.config.get('PROFILE_DIRECTORY')
+        restrictions = app.config.get('PROFILE_RESTRICTIONS')
+        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=profile_dir)
+
+        app.logger.info('** Profiling to disk enabled (directory = {dir})'.format(dir=profile_dir))
 
     # configure Flask-Security, which needs access to the database models for User and Role
     app.logger.info('-- importing ORM models')
@@ -194,6 +200,8 @@ def create_app():
         # add to a particular view function.
         login = app.view_functions['security.login']
         forgot = app.view_functions['security.forgot_password']
+
+        app.logger.info('-- setting Flask-Limiter default limits')
         limiter.limit("50/day;5/minute")(login)
         limiter.limit("50/day;5/minute")(forgot)
 
@@ -241,6 +249,9 @@ def create_app():
     tasks.register_background_tasks(celery)
     tasks.register_test_tasks(celery)
 
+    use_pyinstrument = app.config.get('PROFILE_PYINSTRUMENT')
+    if use_pyinstrument:
+        app.logger.info('-- endpoint profiling using PyInstrument enabled')
 
     @security.login_context_processor
     def login_context_processor():
@@ -255,6 +266,10 @@ def create_app():
 
     @app.before_request
     def before_request_handler():
+        if use_pyinstrument and 'profile' in request.args:
+            g.profiler = Profiler()
+            g.profiler.start()
+
         if current_user.is_authenticated:
             if request.endpoint is not None and 'ajax' not in request.endpoint:
                 try:
@@ -262,6 +277,17 @@ def create_app():
                     db.session.commit()
                 except SQLAlchemyError as e:
                     current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+
+    if use_pyinstrument:
+        @app.after_request
+        def after_request_handler(response):
+            if not hasattr(g, 'profiler'):
+                return response
+
+            g.profiler.stop()
+            output_html = g.profiler.output_html()
+            return make_response(output_html)
 
 
     @app.template_filter('latextomarkdown')

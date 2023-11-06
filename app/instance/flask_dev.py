@@ -8,17 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-import os
-
 DEBUG = True  # enable Flask debugger
 
 SQLALCHEMY_ECHO = False  # disable SQLAlchemy logging (takes a long time to emit all queries)
 
 DEBUG_TB_PROFILER_ENABLED = False  # enable/disable profiling in the Flask debug toolbar
 DEBUG_API_PREFIX = ''  # no special prefix for API (=Ajax) endpoints
-
-PROFILE_TO_DISK = False  # determine whether to use Werkzeug profiler to write a .prof to disc
-PROFILE_DIRECTORY = os.environ.get('PROFILE_DIRECTORY')
-
-# use Dozer to perform memory profiling?
-PROFILE_MEMORY = True

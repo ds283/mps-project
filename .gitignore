@@ -4,4 +4,4 @@ docker-compose.yml
 /nginx
 /app/static/gen
 /app/static/.webassets-cache
-/Deployments/kubenetes/k8s-manifests/secrets
+/Deployments/legacy/kubenetes/k8s-manifests/secrets

@@ -513,9 +513,12 @@ def create_app():
         from .public_browser import public_browser as public_browser_blueprint
         app.register_blueprint(public_browser_blueprint, url_prefix='/public')
 
-    # add Flask-profiler and rate limiter in production mode
+    # add endpoint profiler Flask-Profiler and rate limiter in production mode
     if config_name == 'production':
         # profiler needs to be added near the end, because it has to wrap all existing endpoints
+        # note Flask-Profiler is an endpoint profiler that tells us how long
+        # is taken to return from endpoints; it doesn't actually profile the running code.
+        # For that we need PROFILE_TO_DISK
         profiler = Profiler(app)
 
         # set up Flask-Limiter

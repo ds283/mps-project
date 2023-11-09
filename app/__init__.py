@@ -182,7 +182,7 @@ def create_app():
 
         profile_dir = app.config.get('PROFILE_DIRECTORY')
         restrictions = app.config.get('PROFILE_RESTRICTIONS')
-        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=profile_dir)
+        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=profile_dir, restrictions=restrictions)
 
         app.logger.info('** Profiling to disk enabled (directory = {dir})'.format(dir=profile_dir))
 

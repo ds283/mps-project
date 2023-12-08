@@ -11,8 +11,7 @@ bleach filter class for Flask.
 
 """
 
-from flask import Markup
-from jinja2 import pass_eval_context
+from markupsafe import Markup
 
 import bleach
 

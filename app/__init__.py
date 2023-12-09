@@ -424,8 +424,8 @@ def create_app():
 
             for query in get_recorded_queries():
                 if query.duration >= timeout:
-                    app.logger.warning("SLOW QUERY: %s\nParameters: %s\nDuration: %fs\nContext: %s\n" % (
-                    query.statement, query.parameters, query.duration, query.context))
+                    app.logger.warning("SLOW QUERY: %s\nParameters: %s\nDuration: %fs\nLocation: %s\n" % (
+                    query.statement, query.parameters, query.duration, query.location))
             return response
 
 

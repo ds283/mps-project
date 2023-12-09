@@ -28,7 +28,6 @@ from flask_migrate import Migrate
 from flask_profiler import Profiler
 from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm, MailUtil
 from flask_sqlalchemy.record_queries import get_recorded_queries
-from flaskext.markdown import Markdown
 from pyinstrument import Profiler
 from pymongo import MongoClient
 from sqlalchemy.exc import SQLAlchemyError
@@ -47,6 +46,7 @@ from .task_queue import make_celery, register_task, background_task
 from .thirdparty.flask_bootstrap5 import Bootstrap
 from .thirdparty.flask_rollbar import Rollbar
 from .thirdparty.flask_sessionstore import Session
+from .thirdparty.flask_markdown import Markdown
 
 
 class PatchedLoginForm(LoginForm):

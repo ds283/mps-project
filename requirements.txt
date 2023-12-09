@@ -39,7 +39,6 @@ Flask-HTTPAuth==4.8.0
 Flask-Limiter==3.5.0
 Flask-Login==0.6.3
 flask-mailman==1.0.0
-Flask-Markdown==0.3
 Flask-Migrate==4.0.5
 Flask-Principal==0.4.0
 flask-profiler @ git+https://github.com/ds283/flask-profiler.git@642c55c14725869eea3b290354f07bda139bdbf2

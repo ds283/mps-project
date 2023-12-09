@@ -36,17 +36,17 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .cache import cache
 from .database import db
-from app.thirdparty.flask_bleach import Bleach
 from .instance.version import site_revision, site_copyright_dates
 from .limiter import limiter
 from .models import User, MessageOfTheDay, Notification
 from .shared.precompute import precompute_at_login
 from .shared.utils import home_dashboard_url, get_global_context_data
 from .task_queue import make_celery, register_task, background_task
+from .thirdparty.flask_bleach import Bleach
 from .thirdparty.flask_bootstrap5 import Bootstrap
+from .thirdparty.flask_markdown import Markdown
 from .thirdparty.flask_rollbar import Rollbar
 from .thirdparty.flask_sessionstore import Session
-from .thirdparty.flask_markdown import Markdown
 
 
 class PatchedLoginForm(LoginForm):

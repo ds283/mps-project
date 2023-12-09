@@ -27,7 +27,7 @@ Deprecated==1.2.14
 dnspython==2.4.2
 Dozer==0.8
 email-validator==2.1.0.post1
-Flask==2.3.2
+Flask==3.0.0
 Flask-Assets==2.1.0
 flask-babel==4.0.0
 Flask-Caching==2.1.0
@@ -120,7 +120,7 @@ wcwidth==0.2.12
 webassets==2.0
 webencodings==0.5.1
 WebOb==1.8.7
-Werkzeug==2.3.6
+Werkzeug==3.0.1
 wrapt==1.16.0
 WTForms==3.1.1
 WTForms-Alchemy==0.18.0

@@ -5,8 +5,8 @@
     :copyright: (c) 2017 by Grey Li.
     :license: MIT, see LICENSE for more details.
 """
-from flask import current_app, Markup, Blueprint, url_for
-from flask_security import current_user
+from flask import current_app, Blueprint, url_for
+from markupsafe import Markup
 
 try:
     from wtforms.fields import HiddenField

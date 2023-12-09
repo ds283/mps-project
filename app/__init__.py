@@ -37,7 +37,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .cache import cache
 from .database import db
-from .flask_bleach import Bleach
+from app.thirdparty.flask_bleach import Bleach
 from .instance.version import site_revision, site_copyright_dates
 from .limiter import limiter
 from .models import User, MessageOfTheDay, Notification

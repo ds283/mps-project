@@ -38,6 +38,8 @@ def register_maintenance_tasks(celery):
     def maintenance(self):
         self.update_state(state='STARTED')
 
+        project_classes_maintenance(self)
+
         projects_maintenance(self)
         liveprojects_maintenance(self)
 
@@ -96,6 +98,18 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         task = group(assessor_attendance_record_maintenance.s(r.id) for r in records)
+        task.apply_async()
+
+
+    def project_classes_maintenance(self):
+        try:
+            records = db.session.query(ProjectClass).filter(ProjectClass.active,
+                                                            ProjectClass.publish).all()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        task = group(project_class_maintenance.s(p.id) for p in records)
         task.apply_async()
 
 
@@ -189,6 +203,28 @@ def register_maintenance_tasks(celery):
             raise Ignore()
 
         if record.maintenance():
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+        self.update_state(state='SUCCESS')
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def project_class_maintenance(self, pid):
+        try:
+            pclass = db.session.query(ProjectClass).filter_by(id=pid).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if pclass is None:
+            raise Ignore()
+
+        if pclass.maintenance():
             try:
                 db.session.commit()
             except SQLAlchemyError as e:

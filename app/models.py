@@ -4890,9 +4890,6 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     def reconstruct(self):
         self._most_recent_config = None
 
-        with db.session.no_autoflush:
-            self.validate_presentations()
-
 
     @property
     def submissions(self):
@@ -5021,59 +5018,12 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
         return self._make_label(text)
 
 
-    def validate_periods(self, minimum_expected=0):
-        if (self.periods is None or get_count(self.periods) == 0) and minimum_expected > 0:
-            if current_user is not None:
-                data = SubmissionPeriodDefinition(owner_id=self.id,
-                                                  period=1,
-                                                  name=None,
-                                                  number_markers=1 if self.uses_marker else 0,
-                                                  number_moderators=1 if self.uses_moderator else 0,
-                                                  start_date=None,
-                                                  has_presentation=self.uses_presentations,
-                                                  collect_presentation_feedback=True,
-                                                  collect_project_feedback=True,
-                                                  creator_id=current_user.id,
-                                                  creation_timestamp=datetime.now())
-                self.periods = [data]
-                db.session.commit()
-            else:
-                raise RuntimeError('Cannot insert missing SubmissionPeriodDefinition')
-
-        expected = 1
-        modified = False
-        for item in self.periods.order_by(SubmissionPeriodDefinition.period.asc()).all():
-            if item.period != expected:
-                item.period = expected
-                modified = True
-
-            expected += 1
-
-        if modified:
-            db.session.commit()
-
-
     def get_period(self, n):
         # note submission periods start at 1
         if n <= 0 or n > self.submissions:
             return None
 
         return self.periods.filter_by(period=n).one()
-
-
-    def validate_presentations(self):
-        if not self.uses_presentations:
-            return
-
-        self.validate_periods(minimum_expected=1)
-        number_with_presentations = get_count(self.periods.filter_by(has_presentation=True))
-
-        if number_with_presentations > 0:
-            return
-
-        data = self.periods.first()
-        data.has_presentation = True
-        db.session.commit()
 
 
     def module_available(self, module_id):
@@ -5098,6 +5048,69 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
                 return True
 
         return False
+
+
+    def validate_periods(self, minimum_expected=0):
+        # ensure that there is at least one period definition record, and that all records in the database
+        # have ascending serial numbers
+        modified: bool = False
+
+        if (self.periods is None or get_count(self.periods) == 0) and minimum_expected > 0:
+            if current_user is not None:
+                data = SubmissionPeriodDefinition(owner_id=self.id,
+                                                  period=1,
+                                                  name=None,
+                                                  number_markers=1 if self.uses_marker else 0,
+                                                  number_moderators=1 if self.uses_moderator else 0,
+                                                  start_date=None,
+                                                  has_presentation=self.uses_presentations,
+                                                  collect_presentation_feedback=True,
+                                                  collect_project_feedback=True,
+                                                  creator_id=current_user.id,
+                                                  creation_timestamp=datetime.now())
+                self.periods = [data]
+                modified = True
+            else:
+                raise RuntimeError('Cannot insert missing SubmissionPeriodDefinition')
+
+        expected = 1
+        for item in self.periods.order_by(SubmissionPeriodDefinition.period.asc()).all():
+            if item.period != expected:
+                item.period = expected
+                modified = True
+
+            expected += 1
+
+        return modified
+
+
+    def validate_presentations(self):
+        if not self.uses_presentations:
+            return False
+
+        modified: bool = False
+
+        modified = self.validate_periods(minimum_expected=1) or modified
+        number_with_presentations = get_count(self.periods.filter_by(has_presentation=True))
+
+        if number_with_presentations > 0:
+            return modified
+
+        data = self.periods.first()
+        data.has_presentation = True
+        modified = True
+
+        return modified
+
+
+    def maintenance(self):
+        modified = False
+
+        # no need to invoke validate_periods() separately since this is done as part of
+        # validate_presentations()
+        modified = self.validate_presentations() or modified
+
+        return modified
 
 
 @listens_for(ProjectClass, 'before_update')

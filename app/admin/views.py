@@ -2014,8 +2014,9 @@ def add_pclass():
                                                     canvas_assignment_id=None)
                     db.session.add(period)
 
+            db.session.flush()
+            modified: bool = data.validate_presentations()
             db.session.commit()
-            data.validate_presentations()
 
         except SQLAlchemyError as e:
             flash('Could not create new project class because of a database error. '
@@ -2121,8 +2122,9 @@ def edit_pclass(id):
             data.convenor.add_convenorship(data)
 
         try:
+            db.session.flush()
+            modified: bool = data.validate_presentations()
             db.session.commit()
-            data.validate_presentations()
         except SQLAlchemyError as e:
             db.session.rollback()
             flash('Could not save project class configuration because of a database error. '
@@ -2307,19 +2309,26 @@ def regenerate_period_records(id):
     """
 
     # get current set of submission period definitions and validate
-    data = ProjectClass.query.get_or_404(id)
-    data.validate_periods()
+    data: ProjectClass = ProjectClass.query.get_or_404(id)
 
-    # get current set of submission period records
+    # validate periods (ensure there is at least on period definition record, and that all definition
+    # records have continuous ascending serial numbers)
+    modified: bool = data.validate_periods()
+    if modified:
+        db.session.flush()
+
+    # get current set of submission period records and templates
     current_year = get_current_year()
     config = data.get_config(current_year)
 
-    ts = config.template_periods.all()
-    current = config.periods.order_by(SubmissionPeriodRecord.submission_period.asc()).all()
+    templates = config.template_periods.all()
+    records = config.periods.order_by(SubmissionPeriodRecord.submission_period.asc()).all()
 
-    while len(ts) > 0 and len(current) > 0:
-        t = ts.pop(0)
-        c = current.pop(0)
+    # work through existing recrods and templates in pairs, overwriting each record with the content
+    # of the corresponding template
+    while len(records) > 0:
+        t = templates.pop(0)
+        c = records.pop(0)
 
         c.submission_period = t.period
         c.name = t.name
@@ -2335,8 +2344,8 @@ def regenerate_period_records(id):
         c.talk_format = t.talk_format
 
     # do we need to generate new records?
-    while len(ts) > 0:
-        t = ts.pop(0)
+    while len(templates) > 0:
+        t = templates.pop(0)
 
         period = SubmissionPeriodRecord(config_id=config.id,
                                         name=t.name,
@@ -2396,16 +2405,22 @@ def regenerate_period_records(id):
                                           faculty_response_timestamp=None)
             db.session.add(sub_record)
 
-    while len(current) > 0:
-        c = current.pop(0)
+    while len(records) > 0:
+        c = records.pop(0)
 
         # remove any attached SubmissionRecords
         db.session.query(SubmissionRecord).filter_by(period_id=c.id, retired=False).delete()
-
         db.session.delete(c)
 
-    db.session.commit()
-    flash('Successfully updated submission period records for this project class', 'info')
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not update submission period records for this project class due to a '
+              'database error. Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+    else:
+        flash('Successfully updated submission period records for this project class', 'info')
 
     return redirect(redirect_url())
 
@@ -2464,8 +2479,9 @@ def add_period_definition(id):
         pclass.periods.append(pd)
 
         try:
+            db.session.flush()
+            modified: bool = pclass.validate_presentations()
             db.session.commit()
-            pclass.validate_presentations()
         except SQLAlchemyError as e:
             flash('Could not add new submission period definition because of a database error. '
                   'Please contact a system administrator.', 'error')
@@ -2521,8 +2537,9 @@ def edit_period_definition(id):
         pd.last_edit_timestamp = datetime.now()
 
         try:
+            db.session.flush()
+            modified: bool = pd.owner.validate_presentations()
             db.session.commit()
-            pd.owner.validate_presentations()
         except SQLAlchemyError as e:
             flash('Could not save changes because of a database error. '
                   'Please contact a system administrator.', 'error')
@@ -2549,8 +2566,9 @@ def delete_period_definition(id):
 
     try:
         db.session.delete(data)
+        db.session.flush()
+        modified: bool = pclass.validate_presentations()
         db.session.commit()
-        pclass.validate_presentations()
     except SQLAlchemyError as e:
         flash('Could not delete submission period definition because of a database error. '
               'Please contact a system administrator.', 'error')

@@ -7,28 +7,25 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from datetime import date
+from pathlib import Path
 from typing import List, Union
-
-from flask import current_app, render_template
-from flask_mailman import EmailMultiAlternatives, EmailMessage
-from sqlalchemy.exc import SQLAlchemyError
-from werkzeug.urls import url_quote
+from urllib.parse import quote
 
 from celery import group, chain
 from celery.exceptions import Ignore
+from dateutil import parser
+from flask import current_app, render_template
+from flask_mailman import EmailMultiAlternatives, EmailMessage
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import SubmissionPeriodRecord, SubmissionRecord, User, SubmittedAsset, ProjectClassConfig, \
-    ProjectClass, FacultyData, SubmittingStudent, StudentData, PeriodAttachment, SubmissionAttachment, \
+    ProjectClass, SubmittingStudent, StudentData, PeriodAttachment, SubmissionAttachment, \
     GeneratedAsset, SubmissionRole
 from ..shared.asset_tools import AssetCloudAdapter
-
 from ..task_queue import register_task
 
-from pathlib import Path
-from dateutil import parser
-
-from datetime import date
 
 def register_marking_tasks(celery):
 
@@ -345,7 +342,7 @@ def register_marking_tasks(celery):
             if filename is not None:
                 link = 'https://mpsprojects.sussex.ac.uk/admin/{endpoint}/' \
                        '{asset_id}?filename={fnam}'.format(endpoint=endpoint, asset_id=asset.id,
-                                                           fnam=url_quote(filename))
+                                                           fnam=quote(filename))
             else:
                 link = 'https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}'.format(endpoint=endpoint,
                                                                                       asset_id=asset.id)

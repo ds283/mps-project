@@ -259,7 +259,7 @@ def _submitter_element(sub_id, project_id):
             'supervisor': render_template_string(_owner, project=p),
             'group': render_template_string(_project_group, sel=None, project=p, config=config, simple_label=simple_label),
             'skills': render_template_string(_project_skills, sel=None, skills=p.ordered_skills, simple_label=simple_label),
-            'prefer': render_template_string(_project_prefer, project=p),
+            'prefer': render_template_string(_project_prefer, project=p, simple_label=simple_label),
             'menu': render_template_string(_submitter_menu, sub_id=sub_id, project=p)}
 
 

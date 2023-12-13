@@ -28,7 +28,6 @@ from flask_migrate import Migrate
 from flask_profiler import Profiler
 from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm, MailUtil
 from flask_sqlalchemy.record_queries import get_recorded_queries
-from flaskext.markdown import Markdown
 from pyinstrument import Profiler
 from pymongo import MongoClient
 from sqlalchemy.exc import SQLAlchemyError
@@ -37,14 +36,15 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .cache import cache
 from .database import db
-from .flask_bleach import Bleach
 from .instance.version import site_revision, site_copyright_dates
 from .limiter import limiter
 from .models import User, MessageOfTheDay, Notification
 from .shared.precompute import precompute_at_login
 from .shared.utils import home_dashboard_url, get_global_context_data
 from .task_queue import make_celery, register_task, background_task
+from .thirdparty.flask_bleach import Bleach
 from .thirdparty.flask_bootstrap5 import Bootstrap
+from .thirdparty.flask_markdown import Markdown
 from .thirdparty.flask_rollbar import Rollbar
 from .thirdparty.flask_sessionstore import Session
 
@@ -182,7 +182,7 @@ def create_app():
 
         profile_dir = app.config.get('PROFILE_DIRECTORY')
         restrictions = app.config.get('PROFILE_RESTRICTIONS')
-        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=profile_dir)
+        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=profile_dir, restrictions=restrictions)
 
         app.logger.info('** Profiling to disk enabled (directory = {dir})'.format(dir=profile_dir))
 
@@ -424,8 +424,8 @@ def create_app():
 
             for query in get_recorded_queries():
                 if query.duration >= timeout:
-                    app.logger.warning("SLOW QUERY: %s\nParameters: %s\nDuration: %fs\nContext: %s\n" % (
-                    query.statement, query.parameters, query.duration, query.context))
+                    app.logger.warning("SLOW QUERY: %s\nParameters: %s\nDuration: %fs\nLocation: %s\n" % (
+                    query.statement, query.parameters, query.duration, query.location))
             return response
 
 
@@ -513,9 +513,12 @@ def create_app():
         from .public_browser import public_browser as public_browser_blueprint
         app.register_blueprint(public_browser_blueprint, url_prefix='/public')
 
-    # add Flask-profiler and rate limiter in production mode
+    # add endpoint profiler Flask-Profiler and rate limiter in production mode
     if config_name == 'production':
         # profiler needs to be added near the end, because it has to wrap all existing endpoints
+        # note Flask-Profiler is an endpoint profiler that tells us how long
+        # is taken to return from endpoints; it doesn't actually profile the running code.
+        # For that we need PROFILE_TO_DISK
         profiler = Profiler(app)
 
         # set up Flask-Limiter

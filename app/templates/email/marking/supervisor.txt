@@ -5,8 +5,8 @@ email to the sending address is not monitored.
 
 Please find attached the marking materials for your {{ pclass.abbreviation }} student
 {{ student.user.first_name }} {{ student.user.last_name }} (candidate number {{ student.exam_number }}). You should ensure
-that only the candidate number is used to identify this project when
-discussing an agreed mark with the second marker.
+that only the candidate number is used to identify this project if
+discussing an agreed mark with an examiner.
 
 Title: {{ project.name }} {% if not project.generic and project.owner is not none and project.owner.id != role.user_id %}(project owner: {{ project.owner.user.name }}){% endif %}
 {% if supervisors|length > 0 -%}
@@ -54,19 +54,20 @@ regarding it. You may wish to use it to inform your opinion of whether there
 are any concerns regarding academic misconduct. Concerns relating to such
 misconduct should be raised based on your academic judgement and not on the
 similarity score alone. The similarity report is not provided to the project
-examiners. Please refer to the FAQs for markers provided at:
-
-  http://www.sussex.ac.uk/adqe/standards/examsandassessment/esubmission
+examiners.
 
 Your assessment of the project can be based on the submitted report,
-but also continuous assessment over the entire project period. Please record
-your assessments using this online form:
+but also continuous assessment over the entire project period.
 
-  https://universityofsussex.eu.qualtrics.com/jfe/form/SV_cHfXFOjPMsY9omq
+{% if role.external_marking_url and role.external_marking_url|length > 0 -%}
+Please record your assessments using this online form:
+
+  {{ role.external_marking_url|safe }}
 
 The form requests a short justification of the mark you assign in each
 category. Please also enter feedback for the student.
 
+{% endif -%}
 If the marks returned by examiners or other assigned supervision staff
 (if any) differ significantly, you may be asked to arrive at an agreed mark.
 If this happens you will be contacted by email.

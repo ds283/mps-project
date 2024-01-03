@@ -41,11 +41,15 @@
 
 <p>The convenor has requested that marking and feedback be completed by mid-day on {{ deadline.strftime("%a %d %b %Y") }}.</p>
 
-<p>A bundle of marking materials is attached (see manifest below). Your assessment of the project should be based <strong>only</strong> on the submitted report. Please record your assessments using <a href="https://universityofsussex.eu.qualtrics.com/jfe/form/SV_bpdT55z0Zsoy5gy">this online form</a>.</p>
+<p>A bundle of marking materials is attached (see manifest below). Your assessment of the project should be based <strong>only</strong> on the submitted report.</p>
 
-<ul><li><a href="https://universityofsussex.eu.qualtrics.com/jfe/form/SV_bpdT55z0Zsoy5gy">https://universityofsussex.eu.qualtrics.com/jfe/form/SV_cHfXFOjPMsY9omq</a></li></ul>
+{% if role.external_marking_url and role.external_marking_url|length > 0 -%}
+<p>Please record your assessments using <a href="{{ role.external_marking_url|safe }}">this online form</a>.</p>
+
+<ul><li><a href="{{ role.external_marking_url|safe }}">{{ role.external_marking_url|safe }}</a></li></ul>
 
 <p>The form requests a short justification of the mark you assign in each category. Please also enter feedback for the student.</p>
+{%- endif %}
 
 <p>If the marks returned by other examiners (if any) or assigned supervision staff differ significantly, you may be asked to arrive at an agreed mark. If this happens you will be contacted by email.</p>
 

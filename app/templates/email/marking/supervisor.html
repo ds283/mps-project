@@ -2,7 +2,7 @@
 
 <p><strong>This email is automated. Please do not reply to it directly, because email to the sending address is not monitored.</strong></p>
 
-<p>Please find attached the marking materials for your {{ pclass.abbreviation }} student {{ student.user.first_name }} {{ student.user.last_name }} (candidate number {{ student.exam_number }}). You should ensure that only the candidate number is used to identify this project when discussing an agreed mark with the second marker.</p>
+<p>Please find attached the marking materials for your {{ pclass.abbreviation }} student {{ student.user.first_name }} {{ student.user.last_name }} (candidate number {{ student.exam_number }}). You should ensure that only the candidate number is used to identify this project if discussing an agreed mark with an examiner.</p>
 
 <p>Title: {{ project.name }} {% if not project.generic and project.owner is not none and project.owner.id != role.user_id %}(project owner: {{ project.owner.user.name }}){% endif %}</p>
 {% if supervisors|length > 0 %}
@@ -36,13 +36,17 @@
 
 <p>The convenor has requested that marking and feedback be completed by mid-day on {{ deadline.strftime("%a %d %b %Y") }}.</p>
 
-<p>A bundle of marking materials is attached (see manifest below). This may include a similarity report prepared by Turnitin. These reports are provided for information only, and you do not need to take any special action regarding it. You may wish to use it to inform your opinion of whether there are any concerns regarding academic misconduct. Concerns relating to such misconduct should be raised based on your academic judgement and not on the similarity score alone. The similarity report is not provided to the project examiners. Please refer to the FAQs for markers <a href="http://www.sussex.ac.uk/adqe/standards/examsandassessment/esubmission">provided by ADQE</a>.</p>
+<p>A bundle of marking materials is attached (see manifest below). This may include a similarity report prepared by Turnitin. These reports are provided for information only, and you do not need to take any special action regarding it. You may wish to use it to inform your opinion of whether there are any concerns regarding academic misconduct. Concerns relating to such misconduct should be raised based on your academic judgement and not on the similarity score alone. The similarity report is not provided to the project examiners.</p>
 
-<p>Your assessment of the project can be based on the submitted report, but also continuous assessment over the entire project period. Please record your assessments using <a href="https://universityofsussex.eu.qualtrics.com/jfe/form/SV_cHfXFOjPMsY9omq">this online form</a>.</p>
+<p>Your assessment of the project can be based on the submitted report, but also continuous assessment over the entire project period.</p>
 
-<ul><li><a href="https://universityofsussex.eu.qualtrics.com/jfe/form/SV_cHfXFOjPMsY9omq">https://universityofsussex.eu.qualtrics.com/jfe/form/SV_cHfXFOjPMsY9omq</a></li></ul>
+{% if role.external_marking_url and role.external_marking_url|length > 0 -%}
+<p>Please record your assessments using <a href="{{ role.external_marking_url|safe }}">this online form</a>.</p>
+
+<ul><li><a href="{{ role.external_marking_url|safe }}">{{ role.external_marking_url|safe }}</a></li></ul>
 
 <p>The form requests a short justification of the mark you assign in each category. Please also enter feedback for the student.</p>
+{%- endif %}
 
 <p>If the marks returned by examiners or other assigned supervision staff (if any) differ significantly, you may be asked to arrive at an agreed mark. If this happens you will be contacted by email.</p>
 

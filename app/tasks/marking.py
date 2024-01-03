@@ -110,9 +110,12 @@ def register_marking_tasks(celery):
                                 period: SubmissionPeriodRecord, asset: GeneratedAsset, deadline: date,
                                 supervisors: List[SubmissionRole], markers: List[SubmissionRole],
                                 test_email: str, cc_convenor: bool, max_attachment: int) -> EmailMultiAlternatives:
-        filename_path: Path = Path(asset.filename)
-        extension: str = filename_path.suffix.lower()
+        if hasattr(asset, 'filename'):
+            filename_path: Path = Path(asset.filename)
+        else:
+            filename_path: Path = Path(asset.target_name)
 
+        extension: str = filename_path.suffix.lower()
         user: User = role.user
 
         print('-- preparing email to supervisor "{name}" for submitter '
@@ -156,9 +159,12 @@ def register_marking_tasks(celery):
                             period: SubmissionPeriodRecord, asset: GeneratedAsset, deadline: date,
                             supervisors: List[SubmissionRole], markers: List[SubmissionRole],
                             test_email: str, cc_convenor: bool, max_attachment: int) -> EmailMultiAlternatives:
-        filename_path: Path = Path(asset.filename)
-        extension: str = filename_path.suffix.lower()
+        if hasattr(asset, 'filename'):
+            filename_path: Path = Path(asset.filename)
+        else:
+            filename_path: Path = Path(asset.target_name)
 
+        extension: str = filename_path.suffix.lower()
         user: User = role.user
 
         print('-- preparing email to marker "{name}" for submitter '

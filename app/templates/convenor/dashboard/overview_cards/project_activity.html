@@ -73,7 +73,7 @@
     <div class="period-subtitle">Open for feedback</div>
     <form action="{{ url_for('convenor.open_feedback', id=config.id) }}" method="POST" name="feedback-form">
         {{ feedback_form.hidden_tag() }}
-        {{ date_field(feedback_form.feedback_deadline, 'deadline_datetimepicker') }}
+        {{ date_field(feedback_form.feedback_deadline, 'feedback_datetimepicker') }}
         {{ wtf.render_field(feedback_form.max_attachment) }}
         {{ wtf.render_field(feedback_form.cc_me) }}
         <div class="d-flex flex-row justify-content-end gap-2">

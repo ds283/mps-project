@@ -117,7 +117,7 @@ def OpenFeedbackFormFactory(submit_label='Open feedback period',
     class OpenFeedbackForm(Form):
 
         # deadline for feedback
-        feedback_deadline = DateTimeField(datebox_label, format='%d/%m/%Y %H:%M', validators=[InputRequired()])
+        feedback_deadline = DateTimeField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
 
         # CC emails to convenor?
         cc_me = BooleanField('CC myself in notification emails')

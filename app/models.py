@@ -10023,6 +10023,9 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
     # has a marking notification email been sent
     marking_email = db.Column(db.Boolean(), default=False)
 
+    # if an external marking link (e.g. to a Qualtrics form, Google form, etc.) is needed, it can be held here
+    external_marking_url = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
 
     # FEEDBACK TO STUDENT
 

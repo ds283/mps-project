@@ -43,7 +43,7 @@ Flask-Migrate==4.0.5
 Flask-Principal==0.4.0
 flask-profiler @ git+https://github.com/ds283/flask-profiler.git@642c55c14725869eea3b290354f07bda139bdbf2
 flask-redis==0.4.0
-Flask-Security-Too==5.3.2
+Flask-Security-Too==5.3.3
 Flask-SQLAlchemy==3.1.1
 Flask-WTF==1.2.1
 flower==2.0.1

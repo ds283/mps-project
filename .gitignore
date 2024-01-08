@@ -5,3 +5,4 @@ docker-compose.yml
 /app/static/gen
 /app/static/.webassets-cache
 /Deployments/legacy/kubenetes/k8s-manifests/secrets
+/latin1-fix-statements.sql

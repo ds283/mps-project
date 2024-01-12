@@ -23,8 +23,20 @@ EMAIL_IS_LIVE = True
 
 # Google Cloud Storage service account
 OBJECT_STORAGE_SERVICE_ACCOUNT_FILE = os.environ.get('OBJECT_STORAGE_SERVICE_ACCOUNT_FILE')
+
+# get cloud API audit configuration
+OBJECT_STORAGE_AUDIT_API = bool(int(os.environ.get("OBJECT_STORAGE_AUDIT_API", 0)))
+OBJECT_STORAGE_AUDIT_BACKEND_URI = os.environ.get("OBJECT_STORAGE_AUDIT_BACKEND_URI")
+OBJECT_STORAGE_AUDIT_BACKEND_DATABASE = os.environ.get("OBJECT_STORAGE_AUDIT_BACKEND_DATABASE")
+OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION = os.environ.get("OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION")
+
+# default storage options, inherited by all buckets
 _storage_options = {'google_service_account': OBJECT_STORAGE_SERVICE_ACCOUNT_FILE,
-                    'compressed': True}
+                    'compressed': True,
+                    'audit': OBJECT_STORAGE_AUDIT_API,
+                    'audit_database': OBJECT_STORAGE_AUDIT_BACKEND_DATABASE,
+                    'audit_collection': OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION,
+                    'audit_backend': OBJECT_STORAGE_AUDIT_BACKEND_URI}
 
 
 # ASSETS BUCKET

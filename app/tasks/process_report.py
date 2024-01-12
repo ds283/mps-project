@@ -261,7 +261,7 @@ def register_process_report_tasks(celery):
             raise Ignore()
 
         object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-        input_storage = AssetCloudAdapter(asset, object_store)
+        input_storage = AssetCloudAdapter(asset, object_store, audit_data=f'process_report.process #1 (record id #{record_id})')
 
         if not input_storage.exists():
             self.update_state('FAILURE', meta={'msg': 'Could not find report in object store'})
@@ -287,6 +287,7 @@ def register_process_report_tasks(celery):
                     object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
                     with open(output_path.path, 'rb') as f:
                         with AssetUploadManager(new_asset, data=BytesIO(f.read()), storage=object_store,
+                                                audit_data=f'process_report.process #2 (record id #{record_id})',
                                                 length=output_path.path.stat().st_size,
                                                 mimetype=asset.mimetype, validate_nonce=validate_nonce) as upload_mgr:
                             pass

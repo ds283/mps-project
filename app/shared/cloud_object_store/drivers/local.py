@@ -15,7 +15,6 @@ from urllib.parse import SplitResult
 
 from ..meta import ObjectMeta
 
-
 def _check_is_object(prefix: Path, leaf: Path) -> None:
     abs_path = prefix / leaf
 
@@ -27,7 +26,6 @@ def _check_is_object(prefix: Path, leaf: Path) -> None:
                            'object'.format(key=leaf))
 
     return abs_path
-
 
 def _check_prefix_ok(prefix: Path, leaf: Path) -> None:
     if leaf is not None:
@@ -43,7 +41,6 @@ def _check_prefix_ok(prefix: Path, leaf: Path) -> None:
 
     return abs_path
 
-
 def _check_not_exists(prefix: Path, leaf: Path) -> None:
     abs_path = prefix / leaf
 
@@ -53,7 +50,6 @@ def _check_not_exists(prefix: Path, leaf: Path) -> None:
 
     return abs_path
 
-
 class LocalFileSystemDriver:
 
     def __init__(self, uri: SplitResult, data: Dict):
@@ -62,7 +58,7 @@ class LocalFileSystemDriver:
             print('cloud_object_store: hostname is not supported for file:// handler '
                   '(hostname={name})'.format(name=uri.hostname))
 
-        self._root = Path(uri.path).resolve()
+        self._root: Path = Path(uri.path).resolve()
 
         if self._root.is_file():
             raise RuntimeError('cloud_object_store: supplied file:// root is a file, not a directory '
@@ -71,11 +67,20 @@ class LocalFileSystemDriver:
         if not self._root.exists():
             self._root.mkdir(parents=True)
 
+        self._bucket_name = str(self._root)
+
+    def get_driver_name(self):
+        return 'LocalFileSystem'
+
+    def get_bucket_name(self):
+        return self._bucket_name
+
+    def get_host_uri(self):
+        return None
 
     def get(self, key: Path) -> bytes:
         abs_path: Path = _check_is_object(self._root, key)
         return abs_path.read_bytes()
-
 
     def get_range(self, key: Path, start: int, length: int) -> bytes:
         abs_path: Path = _check_is_object(self._root, key)
@@ -83,17 +88,14 @@ class LocalFileSystemDriver:
             f.seek(start, 0)
             return f.read(length)
 
-
     def put(self, key: Path, data: bytes, mimetype: str = None) -> None:
         abs_path: Path = _check_not_exists(self._root, key)
         with open(abs_path, 'wb') as f:
             f.write(data)
 
-
     def delete(self, key: Path) -> None:
         abs_path: Path = _check_is_object(self._root, key)
         abs_path.unlink(missing_ok=True)
-
 
     def copy(self, src: Path, dst: Path) -> None:
         src_path: Path = _check_is_object(self._root, src)
@@ -101,8 +103,7 @@ class LocalFileSystemDriver:
 
         dst_path.write_bytes(src_path.read_bytes())
 
-
-    def list(self, prefix: Path=None) -> Dict[str, ObjectMeta]:
+    def list(self, prefix: Path = None) -> Dict[str, ObjectMeta]:
         abs_prefix: Path = _check_prefix_ok(self._root, prefix)
 
         data = {}
@@ -117,7 +118,6 @@ class LocalFileSystemDriver:
                 data[str(key)] = meta
 
         return data
-
 
     def head(self, key: Path) -> ObjectMeta:
         abs_path: Path = _check_is_object(self._root, key)

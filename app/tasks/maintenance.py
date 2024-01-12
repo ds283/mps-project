@@ -491,9 +491,11 @@ def register_maintenance_tasks(celery):
             asset_name = record.target_name if record.target_name is not None else record.unique_name
         else:
             asset_name = record.unique_name
+
         asset_type = RecordType.get_type()
 
-        storage = AssetCloudAdapter(record, current_app.config.get(storage_key))
+        storage = AssetCloudAdapter(record, current_app.config.get(storage_key),
+                                    audit_data=f'maintenance.asset_test_expiry (record type="{asset_type}", record id #{id})')
         try:
             storage.delete()
         except FileNotFoundError:
@@ -522,17 +524,19 @@ def register_maintenance_tasks(celery):
         if record is None:
             return
 
-        storage = AssetCloudAdapter(record, current_app.config.get(storage_key))
-
-        # check if asset exists in the object store
-        if storage.exists():
-            return
-
         if hasattr(record, 'target_name'):
             asset_name = record.target_name if record.target_name is not None else record.unique_name
         else:
             asset_name = record.unique_name
+
         asset_type = RecordType.get_type()
+
+        storage = AssetCloudAdapter(record, current_app.config.get(storage_key),
+                                    audit_data=f'maintenance.asset_test_lost (record type="{asset_type}", record id #{id})')
+
+        # check if asset exists in the object store
+        if storage.exists():
+            return
 
         print(f'** Detected lost {asset_type} object "{asset_name}" (id={record.id})')
         return {'type': f'{asset_type}',
@@ -651,17 +655,22 @@ def register_maintenance_tasks(celery):
             raise Ignore()
 
         object_store: ObjectStore = current_app.config.get('OBJECT_STORAGE_ASSETS')
+        asset_type = RecordType.get_type()
 
         # ensure object is encrypted, if storage supports that
         if object_store.encrypted and asset.encryption == encryptions.ENCRYPTION_NONE:
-            storage: AssetCloudAdapter = AssetCloudAdapter(asset, object_store)
+            storage: AssetCloudAdapter = \
+                AssetCloudAdapter(asset, object_store,
+                                  audit_data=f'maintenance.assetrecord_maintenance #1 (record type="{asset_type}", record id #{id})')
 
             try:
+                # download asset and then re-upload, which will transparently encrypt the asset
                 with storage.download_to_scratch() as mgr:
                     mgr: AssetCloudScratchContextManager
 
                     with open(mgr.path, 'rb') as f:
                         with AssetUploadManager(asset, data=BytesIO(f.read()), storage=object_store,
+                                                audit_data=f'maintenance.assetrecord_maintenance #2 (record type="{asset_type}", record id #{rec_id})',
                                                 length=asset.filesize,
                                                 mimetype=asset.mimetype if hasattr(asset, 'mimetype') else None,
                                                 validate_nonce=validate_nonce) as upload_mgr:
@@ -705,7 +714,9 @@ def register_maintenance_tasks(celery):
 
         # ensure object is encrypted, if storage supports that
         if object_store.encrypted and record.encryption == encryptions.ENCRYPTION_NONE:
-            storage: AssetCloudAdapter = AssetCloudAdapter(record, object_store, size_attr='archive_size')
+            storage: AssetCloudAdapter = AssetCloudAdapter(record, object_store,
+                                                           audit_data=f'maintenance.backuprecord_maintenance #1 (record if #{rec_id})',
+                                                           size_attr='archive_size')
 
             old_key: Path = Path(record.unique_name)
             while old_key.suffix:
@@ -721,8 +732,9 @@ def register_maintenance_tasks(celery):
                     scratch_path: AssetCloudScratchContextManager
 
                     with open(scratch_path.path, 'rb') as f:
-                        with AssetUploadManager(record, data=BytesIO(f.read()), storage=object_store, key=str(new_key),
-                                                length=record.archive_size, size_attr='archive_size',
+                        with AssetUploadManager(record, data=BytesIO(f.read()), storage=object_store,
+                                                audit_data=f'maintenance.backuprecord_maintenance #2 (record id #{rec_id})',
+                                                key=str(new_key), length=record.archive_size, size_attr='archive_size',
                                                 mimetype='application/gzip', validate_nonce=validate_nonce) as upload_mgr:
                             pass
 

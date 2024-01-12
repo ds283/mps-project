@@ -2419,8 +2419,8 @@ def _send_offline_email(celery, record: MatchingAttempt, user, lp_asset: Generat
 
     # TODO: will be problems when generated LP/MPS files are too large; should instead send a download link
     object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-    lp_storage = AssetCloudAdapter(lp_asset, object_store)
-    mps_storage = AssetCloudAdapter(mps_asset, object_store)
+    lp_storage: AssetCloudAdapter = AssetCloudAdapter(lp_asset, object_store, audit_data='matching._send_offline_email #1')
+    mps_storage: AssetCloudAdapter = AssetCloudAdapter(mps_asset, object_store, audit_data='matching._send_offline_email #2')
 
     msg.attach(filename=str('schedule.lp'), mimetype=lp_asset.mimetype, content=lp_storage.get())
     msg.attach(filename=str('schedule.mps'), mimetype=mps_asset.mimetype, content=mps_storage.get())
@@ -2458,6 +2458,7 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
 
         with open(source_path, 'rb') as f:
             with AssetUploadManager(asset, data=BytesIO(f.read()), storage=object_store,
+                                    audit_data=f'matching._write_LP_MPS_files (matching attempt #{record.id})',
                                     length=size, mimetype='text/plain', validate_nonce=validate_nonce) as upload_mgr:
                 pass
 
@@ -2690,7 +2691,7 @@ def register_matching_tasks(celery):
             raise Ignore()
 
         object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-        storage = AssetCloudAdapter(asset, object_store)
+        storage = AssetCloudAdapter(asset, object_store, audit_data=f'matching.process_offline_solution(matching id #{matching_id})')
 
         with storage.download_to_scratch() as scratch_path:
             with Timer() as create_time:
@@ -2998,7 +2999,7 @@ def register_matching_tasks(celery):
 
                 object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
                 def copy_asset(old_asset):
-                    old_storage = AssetCloudAdapter(old_asset, object_store)
+                    old_storage = AssetCloudAdapter(old_asset, object_store, audit_data=f'matching.duplicate.copy_asset (matching id #{id})')
                     new_key, put_result = old_storage.duplicate(validate_nonce=validate_nonce)
 
                     new_base64_nonce = None

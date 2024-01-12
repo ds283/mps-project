@@ -125,7 +125,8 @@ def remove_backup(id):
         return False, f'backup #{id} is locked and cannot be deleted'
 
     object_store = current_app.config.get('OBJECT_STORAGE_BACKUP')
-    storage = AssetCloudAdapter(record, object_store, size_attr='archive_size')
+    storage = AssetCloudAdapter(record, object_store,
+                                audit_data=f'remove_backup (backup id #{id})', size_attr='archive_size')
 
     # delete database record first; if this succeeds but the storage deletion doesn't, then the stored
     # file will be orphaned and hopefully will be picked up by garbage collection. This is better than the

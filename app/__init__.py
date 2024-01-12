@@ -138,12 +138,12 @@ def create_app():
     app.logger.info(f'{app_name} projects management web app starting (version {site_revision})...')
     app.logger.info(f'Copyright University of Sussex {site_copyright_dates}')
 
-    # create a long-lived Redis connection
-    app.logger.info('-- creating redis session')
+    # create a long-lived Redis connection for Flask-Caching
+    app.logger.info('-- creating Redis session for Flask-Caching')
     app.config['REDIS_SESSION'] = redis.Redis.from_url(url=app.config['CACHE_REDIS_URL'])
 
     # create long-lived Mongo connection for Flask-Sessionstore
-    app.logger.info('-- creating MongoDB session')
+    app.logger.info('-- creating MongoDB session for Flask-Sessionstore')
     app.config['SESSION_MONGODB'] = MongoClient(host=app.config['SESSION_MONGO_URL'])
 
     # we have two proxies -- we're behind both waitress and nginx

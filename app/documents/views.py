@@ -266,6 +266,7 @@ def upload_submitter_report(sid):
 
             object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
             with AssetUploadManager(asset, data=report_file.stream.read(), storage=object_store,
+                                    audit_data=f'upload_submitter_report (submission record id #{sid})',
                                     length=report_file.content_length, mimetype=report_file.content_type,
                                     validate_nonce=validate_nonce) as upload_mgr:
                 pass
@@ -628,6 +629,7 @@ def upload_submitter_attachment(sid):
 
             object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
             with AssetUploadManager(asset, data=attachment_file.stream.read(), storage=object_store,
+                                    audit_data=f'upload_submitter_attachment (submission record id #{sid})',
                                     length=attachment_file.content_length,
                                     mimetype=attachment_file.content_type,
                                     validate_nonce=validate_nonce) as upload_mgr:

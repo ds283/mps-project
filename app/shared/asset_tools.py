@@ -97,12 +97,15 @@ class AssetCloudAdapter:
         stream(self, chunksize=_DEFAULT_STREAMING_CHUNKSIZE, no_encryption=False):
             Streams the asset from the object store.
     """
-    def __init__(self, asset, storage: ObjectStore, key_attr: str='unique_name', size_attr: str='filesize',
-                 encryption_attr: str='encryption', nonce_attr: str='nonce', compressed_attr: str='compressed'):
+    def __init__(self, asset, storage: ObjectStore, audit_data: str, key_attr: str = 'unique_name',
+                 size_attr: str = 'filesize', encryption_attr: str = 'encryption', nonce_attr: str = 'nonce',
+                 compressed_attr: str = 'compressed'):
         self._asset = asset
         self._storage = storage
         self._storage_encrypted = self._storage.encrypted
         self._storage_compressed = self._storage.compressed
+
+        self._audit_data = audit_data
 
         self._key_attr = key_attr
         self._size_attr = size_attr
@@ -154,14 +157,15 @@ class AssetCloudAdapter:
 
     def get(self):
         if self._encryption == encryptions.ENCRYPTION_NONE:
-            return self._storage.get(self._key, None, no_encryption=True,
+            return self._storage.get(self._key, audit_data=self._audit_data, no_encryption=True,
                                      decompress=self._compressed, initial_buf_size=self._size)
 
-        return self._storage.get(self._key, self._nonce, decompress=self._compressed, initial_buf_size=self._size)
+        return self._storage.get(self._key, audit_data=self._audit_data , nonce=self._nonce,
+                                 decompress=self._compressed, initial_buf_size=self._size)
 
 
     def delete(self):
-        self._storage.delete(self._key)
+        self._storage.delete(self._key, audit_data=self._audit_data)
 
 
     def duplicate(self, validate_nonce):
@@ -175,11 +179,12 @@ class AssetCloudAdapter:
         # no need to check if storage is encrypted; if it isn't, and we are set to ENCRYPTION_NONE, an exception
         # will have been raised in the constructor
         if self._encryption == encryptions.ENCRYPTION_NONE:
-            self._storage.copy(self._key, new_key)
+            self._storage.copy(self._key, new_key, audit_data=self._audit_data)
         else:
-            meta: ObjectMeta = self._storage.head(self._key)
+            meta: ObjectMeta = self._storage.head(self._key, audit_data=self._audit_data)
             data: bytes = self.get()
-            put_result = self._storage.put(new_key, data, mimetype=meta.mimetype, validate_nonce=validate_nonce)
+            put_result = self._storage.put(new_key, audit_data=self._audit_data,
+                                           data=data, mimetype=meta.mimetype, validate_nonce=validate_nonce)
 
         return new_key, put_result
 
@@ -217,7 +222,7 @@ class AssetCloudAdapter:
             offset += length
             total_bytes -= length
 
-            yield self._storage.get_range(self._key, start=start, length=length)
+            yield self._storage.get_range(self._key, audit_data=self._audit_data, start=start, length=length)
 
 
 class AssetUploadManager:
@@ -238,7 +243,7 @@ class AssetUploadManager:
     :param comment: A comment to be associated with the asset.
     :param validate_nonce: A flag indicating whether to validate the nonce during encryption.
     """
-    def __init__(self, asset, data, storage: ObjectStore, key=None, length=None, mimetype=None,
+    def __init__(self, asset, data, storage: ObjectStore, audit_data: str, key=None, length=None, mimetype=None,
                  key_attr: str='unique_name', size_attr: str='filesize',
                  mimetype_attr: str='mimetype', encryption_attr: str='encryption',
                  nonce_attr: str='nonce', compressed_attr: str='compressed',
@@ -264,6 +269,8 @@ class AssetUploadManager:
 
         self._storage = storage
 
+        self._audit_data = audit_data
+
         setattr(self._asset, self._key_attr, self._key)
 
         if length is None:
@@ -278,7 +285,7 @@ class AssetUploadManager:
         if mimetype is not None and self._mimetype_attr is not None:
             setattr(self._asset, self._mimetype_attr, mimetype)
 
-        put_result = self._storage.put(self._key, data, mimetype=mimetype, validate_nonce=validate_nonce)
+        put_result = self._storage.put(self._key, audit_data=self._audit_data, data=data, mimetype=mimetype, validate_nonce=validate_nonce)
         nonce: Optional[bytes] = None
         if 'nonce' in put_result:
             nonce = put_result['nonce']
@@ -309,7 +316,7 @@ class AssetUploadManager:
             if hasattr(self._asset, self._compressed_size_attr):
                 setattr(self._asset, self._compressed_size_attr, put_result.get('compressed_size', None))
 
-        meta: ObjectMeta = self._storage.head(self._key)
+        meta: ObjectMeta = self._storage.head(self._key, audit_data=self._audit_data)
         if self._size_attr is not None:
             if length is None or length == 0:
                 print(f'AssetUploadManager: self._asset has zero use-supplied length; ObjectMeta reports '

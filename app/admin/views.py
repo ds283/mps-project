@@ -9869,7 +9869,8 @@ def download_generated_asset(asset_id):
               'error')
         return redirect(redirect_url())
 
-    storage = AssetCloudAdapter(asset, current_app.config['OBJECT_STORAGE_ASSETS'])
+    storage = AssetCloudAdapter(asset, current_app.config['OBJECT_STORAGE_ASSETS'],
+                                audit_data=f'download_generated_asset (asset id #{asset_id})')
     return_data = BytesIO()
     with storage.download_to_scratch() as scratch_path:
         file_path = scratch_path.path
@@ -9929,7 +9930,8 @@ def download_submitted_asset(asset_id):
               'error')
         return redirect(redirect_url())
 
-    storage = AssetCloudAdapter(asset, current_app.config['OBJECT_STORAGE_ASSETS'])
+    storage = AssetCloudAdapter(asset, current_app.config['OBJECT_STORAGE_ASSETS'],
+                                audit_data=f'download_submitted_asset (asset id #{asset_id})')
     return_data = BytesIO()
     with storage.download_to_scratch() as scratch_path:
         file_path = scratch_path.path
@@ -9950,7 +9952,9 @@ def download_backup(backup_id):
 
     filename = request.args.get('filename', None)
 
-    storage = AssetCloudAdapter(backup, current_app.config['OBJECT_STORAGE_BACKUP'], size_attr='archive_size')
+    storage = AssetCloudAdapter(backup, current_app.config['OBJECT_STORAGE_BACKUP'],
+                                audit_data=f'download_backup (backup id #{backup_id})',
+                                size_attr='archive_size')
     return_data = BytesIO()
     with storage.download_to_scratch() as scratch_path:
         file_path = scratch_path.path
@@ -10055,6 +10059,7 @@ def upload_schedule(schedule_id):
 
                     object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
                     with AssetUploadManager(asset, data=sol_file.stream.read(), storage=object_store,
+                                            audit_data=f'upload_schedule (schedule id #{schedule_id})',
                                             length=sol_file.content_length, validate_nonce=validate_nonce) as upload_mgr:
                         pass
 
@@ -10124,6 +10129,7 @@ def upload_match(match_id):
 
                     object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
                     with AssetUploadManager(asset, data=sol_file.stream.read(), storage=object_store,
+                                            audit_data=f'upload_match (match id #{match_id})',
                                             length=sol_file.content_length, validate_nonce=validate_nonce) as upload_mgr:
                         pass
 

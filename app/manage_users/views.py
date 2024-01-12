@@ -652,6 +652,7 @@ def batch_create_users():
 
                 object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
                 with AssetUploadManager(asset, data=batch_file.stream.read(), storage=object_store,
+                                        audit_data=f'batch_create_users',
                                         length=batch_file.content_length, validate_nonce=validate_nonce) as upload_mgr:
                     pass
 

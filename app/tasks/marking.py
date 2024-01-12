@@ -299,7 +299,7 @@ def register_marking_tasks(celery):
         # attach report or generate link for download later
         object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
 
-        report_storage = AssetCloudAdapter(report_asset, object_store)
+        report_storage = AssetCloudAdapter(report_asset, object_store, audit_data=f'marking._attach_documents #1 (submission record #{record.id})')
         current_size += _attach_asset(msg, report_storage, current_size, attached_documents, filename=report_filename,
                                       max_attached_size=max_attached_size, description="student's submitted report",
                                       endpoint='download_generated_asset')
@@ -312,7 +312,7 @@ def register_marking_tasks(celery):
                 if (role in ['marker'] and attachment.include_marker_emails) or \
                     (role in ['supervisor'] and attachment.include_supervisor_emails):
                     asset: SubmittedAsset = attachment.attachment
-                    asset_storage = AssetCloudAdapter(asset, object_store)
+                    asset_storage = AssetCloudAdapter(asset, object_store, audit_data=f'marking._attach_documents #2 (submission record #{record.id})')
 
                     current_size += _attach_asset(msg, asset_storage, current_size, attached_documents,
                                                   max_attached_size=max_attached_size, description=attachment.description,
@@ -324,7 +324,7 @@ def register_marking_tasks(celery):
                 if (role in ['marker'] and attachment.include_marker_emails) or \
                     (role in ['supervisor'] and attachment.include_supervisor_emails):
                     asset: SubmittedAsset = attachment.attachment
-                    asset_storage = AssetCloudAdapter(asset, object_store)
+                    asset_storage = AssetCloudAdapter(asset, object_store, audit_data=f'marking._attach_documents #3 (submission record #{record.id})')
 
                     current_size += _attach_asset(msg, asset_storage, current_size, attached_documents,
                                                   max_attached_size=max_attached_size, description=attachment.description,

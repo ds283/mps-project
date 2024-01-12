@@ -23,9 +23,19 @@ BACKUP_IS_LIVE = True
 OBJECT_STORAGE_ENDPOINT_URL = os.environ.get("OBJECT_STORAGE_ENDPOINT_URL")
 OBJECT_STORAGE_REGION = os.environ.get("OBJECT_STORAGE_REGION")
 
+# get cloud API audit configuration
+OBJECT_STORAGE_AUDIT_API = bool(int(os.environ.get("OBJECT_STORAGE_AUDIT_API", 0)))
+OBJECT_STORAGE_AUDIT_BACKEND_URI = os.environ.get("OBJECT_STORAGE_BACKEND_URI")
+OBJECT_STORAGE_AUDIT_BACKEND_DATABASE = os.environ.get("OBJECT_STORAGE_BACKEND_DATABASE")
+OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION = os.environ.get("OBJECT_STORAGE_BACKEND_COLLECTION")
+
 _base_storage_options = {'endpoint_url': OBJECT_STORAGE_ENDPOINT_URL,
                          'region': OBJECT_STORAGE_REGION,
-                         'compressed': True}
+                         'compressed': True,
+                         'audit': OBJECT_STORAGE_AUDIT_API,
+                         'audit_database': OBJECT_STORAGE_AUDIT_BACKEND_DATABASE,
+                         'audit_collection': OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION,
+                         'audit_backend': OBJECT_STORAGE_AUDIT_BACKEND_URI}
 
 # get credentials to access assets bucket
 OBJECT_STORAGE_ASSETS_ACCESS_KEY = os.environ.get("OBJECT_STORAGE_ASSETS_ACCESS_KEY")

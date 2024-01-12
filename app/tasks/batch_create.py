@@ -641,7 +641,7 @@ def register_batch_create_tasks(celery):
         progress_update(record.celery_id, TaskRecord.RUNNING, 10, "Inspecting uploaded user list...", autocommit=True)
 
         object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-        storage = AssetCloudAdapter(asset, object_store)
+        storage = AssetCloudAdapter(asset, object_store, audit_data=f'batch_create.students (student batch id #{record_id})')
         with storage.download_to_scratch() as scratch_path:
             with open(scratch_path.path, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)

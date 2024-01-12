@@ -11894,6 +11894,35 @@ class MessageOfTheDay(db.Model):
     dismissed_by = db.relationship('User', secondary=message_dismissals, lazy='dynamic')
 
 
+# class CloudAPIAuditRecord(db.Model):
+#     """
+#     Record a cloud API call: helps audit which calls are generating costs
+#     """
+#
+#     __tablename__ = 'cloud_api_audit'
+#
+#     # primary key
+#     id = db.Column(db.Integer(), primary_key=True)
+#
+#     # call type
+#     type = db.Column(db.String(DEFAULT_STRING_LENGTH), collation='utf8_general_ci')
+#
+#     # audit details
+#     data = db.Column(db.String(DEFAULT_STRING_LENGTH), collation='utf8_bin')
+#
+#     # driver name
+#     driver = db.Column(db.String(DEFAULT_STRING_LENGTH), collation='utf8_bin')
+#
+#     # bucket name
+#     bucket = db.Column(db.String(DEFAULT_STRING_LENGTH), collation='utf8_bin')
+#
+#     # host URI, if used
+#     uri = db.Column(db.String(DEFAULT_STRING_LENGTH), collation='utf8_bin')
+#
+#     # timestamp
+#     timestamp = db.Column(db.DateTime())
+
+
 class BackupConfiguration(db.Model):
     """
     Set details of the current backup configuration

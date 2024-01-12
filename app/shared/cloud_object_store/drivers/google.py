@@ -23,7 +23,6 @@ from ..meta import ObjectMeta
 class GoogleCloudStorageDriver:
 
     def __init__(self, uri: SplitResult, data: Dict):
-
         if data is None \
                 or not isinstance(data, dict) \
                 or 'google_service_account' not in data:
@@ -41,6 +40,14 @@ class GoogleCloudStorageDriver:
         self._bucket_name: str = uri.netloc
         self._bucket: Bucket = self._storage.get_bucket(self._bucket_name)
 
+    def get_driver_name(self):
+        return 'GoogleCloudStorage'
+
+    def get_bucket_name(self):
+        return self._bucket_name
+
+    def get_host_uri(self):
+        return None
 
     def get(self, key: Path) -> bytes:
         try:
@@ -49,20 +56,17 @@ class GoogleCloudStorageDriver:
         except NotFound as e:
             raise FileNotFoundError(str(e))
 
-
     def get_range(self, key: Path, start: int, length: int) -> bytes:
         try:
             blob: Blob = self._bucket.get_blob(str(key))
             # start is first byte returned, end is last byte returned (so need the -1)
-            return blob.download_as_bytes(start=start, end=start+length-1)
+            return blob.download_as_bytes(start=start, end=start + length - 1)
         except NotFound as e:
             raise FileNotFoundError(str(e))
-
 
     def put(self, key: Path, data: bytes, mimetype: str = None) -> None:
         blob = self._bucket.blob(str(key))
         blob.upload_from_string(data, content_type=mimetype)
-
 
     def delete(self, key: Path) -> None:
         try:
@@ -71,14 +75,12 @@ class GoogleCloudStorageDriver:
         except NotFound as e:
             raise FileNotFoundError(str(e))
 
-
     def copy(self, src: Path, dst: Path) -> None:
         try:
             blob: Blob = self._bucket.get_blob(str(src))
             self._bucket.copy_blob(blob, destination_bucket=self._bucket, new_name=str(dst))
         except NotFound as e:
             raise FileNotFoundError(str(e))
-
 
     def list(self, prefix: Path = None):
         if prefix is not None:
@@ -88,7 +90,6 @@ class GoogleCloudStorageDriver:
 
         data = {str(blob.name): self.head(blob.name) for blob in blobs}
         return data
-
 
     def head(self, key: Path) -> ObjectMeta:
         try:

@@ -19,10 +19,14 @@ from .drivers.amazons3 import AmazonS3CloudStorageDriver
 from .drivers.google import GoogleCloudStorageDriver
 from .drivers.local import LocalFileSystemDriver
 from .meta import ObjectMeta
+from .audit import AuditBackend
+from .audit_backends.mongodb import MongoDBAuditBackend
 
 _drivers = {'file': LocalFileSystemDriver,
             'gs': GoogleCloudStorageDriver,
             's3': AmazonS3CloudStorageDriver}
+
+_audit_backends = {'mongodb': MongoDBAuditBackend}
 
 
 PathLike = Union[str, List[str], Path]
@@ -53,20 +57,24 @@ class EncryptionPipeline:
 
     @property
     def uses_nonce(self) -> bool:
-        pass
+        raise NotImplementedError(
+            'The uses_nonce() method should be implemented by concrete EncryptionPipeline instances')
 
     @property
     def database_key(self) -> int:
-        pass
+        raise NotImplementedError(
+            'The database_key() method should be implemented by concrete EncryptionPipeline instances')
 
     def make_nonce(self) -> bytes:
         pass
 
     def encrypt(self, nonce: BytesLike, data: BytesLike) -> bytes:
-        pass
+        raise NotImplementedError(
+            'The encrypt() method should be implemented by concrete EncryptionPipeline instances')
 
     def decrypt(self, none: BytesLike, data: BytesLike) -> bytes:
-        pass
+        raise NotImplementedError(
+            'The decrypt() method should be implemented by concrete EncryptionPipeline instances')
 
 
 class Driver:
@@ -74,52 +82,83 @@ class Driver:
     def __init__(self, uri: SplitResult, data: Dict):
         pass
 
+    def get_driver_name(self):
+        raise NotImplementedError('The get_driver_name() method should be implemented by concrete Driver instances')
+
+    def get_bucket_name(self):
+        raise NotImplementedError('The get_bucket_name() method should be implemented by concrete Driver instances')
+
+    def get_host_uri(self):
+        raise NotImplementedError('The get_host_uri() method should be implemented by concrete Driver instances')
+
     def get(self, key: PathLike) -> bytes:
-        pass
+        raise NotImplementedError('The get() method should be implemented by concrete Driver instances')
 
     def get_range(self, key: PathLike, start: int, length: int) -> BytesLike:
-        pass
+        raise NotImplementedError('The get_range() method should be implemented by concrete Driver instances')
 
     def put(self, key: PathLike, data: BytesLike, mimetype: Optional[str] = None) -> None:
-        pass
+        raise NotImplementedError('The put() method should be implemented by concrete Driver instances')
 
     def delete(self, key: PathLike) -> None:
-        pass
+        raise NotImplementedError('The delete() method should be implemented by concrete Driver instances')
 
-    def list(self, prefix: Optional[PathLike] = None) -> List[ObjectMeta]:
-        pass
+    def list(self, prefix: Optional[PathLike] = None) -> Dict[str, ObjectMeta]:
+        raise NotImplementedError('The list() method should be implemented by concrete Driver instances')
 
     def copy(self, src: PathLike, dst: PathLike) -> None:
-        pass
+        raise NotImplementedError('The copy() method should be implemented by concrete Driver instances')
 
     def head(self, key: PathLike) -> ObjectMeta:
-        pass
+        raise NotImplementedError('The head() method should be implemented by concrete Driver instances')
 
 
 class ObjectStore:
 
-    def __init__(self, uri: PathLike, database_key: int, data: Dict=None):
+    def __init__(self, uri: PathLike, database_key: int, data: Dict):
         self._database_key = database_key
 
         uri_elements: SplitResult = urlsplit(uri)
 
         scheme = uri_elements.scheme
         if scheme not in _drivers:
-            print('cloud_object_store: unsupported URI scheme "{scheme}"'.format(scheme=scheme))
+            raise NotImplementedError(f'cloud_object_store: unsupported URI scheme "{scheme}"')
 
         self._encryption_pipeline: EncryptionPipeline
-        self._encryption_pipeline = None
+        self._encryption_pipeline = data.get('encryption_pipeline', None)
         if 'encryption_pipeline' in data:
-            self._encryption_pipeline = data['encryption_pipeline']
             del data['encryption_pipeline']
 
+        # enable/disable transparent compression based on user setting in data
+        self._compressed = data.get('compressed', False)
         if 'compressed' in data:
-            self._compressed = data['compressed']
-        else:
-            self._compressed = False
+            del data['compressed']
 
+        # generate driver instance
         driver_type: Type[Driver] = _drivers[scheme]
         self._driver = driver_type(uri_elements, data)
+
+        # cache bucketname and uri for use in audit
+        self._driver_name = self._driver.get_driver_name()
+        self._bucket_name = self._driver.get_bucket_name()
+        self._host_uri = self._driver.get_host_uri()
+
+        # enable/disable API auditing based on user setting in data
+        self._audit = data.get('audit', False)
+        if 'audit' in data:
+            del data['audit']
+
+        if 'audit_backend' in data and data['audit_backend'] is not None:
+            backend_uri_elements: SplitResult = urlsplit(data['audit_backend'])
+
+            backend_scheme = backend_uri_elements.scheme
+            if backend_scheme not in _audit_backends:
+                raise NotImplementedError(f'cloud_object_store: unsupported audit backend URI scheme "{backend_scheme}"')
+
+            audit_backend_type: Type[AuditBackend] = _audit_backends[backend_scheme]
+            self._audit_backend = audit_backend_type(backend_uri_elements, data)
+        else:
+            self._audit_backend = None
 
     @property
     def database_key(self) -> int:
@@ -130,7 +169,7 @@ class ObjectStore:
         return self._encryption_pipeline is not None
 
     @property
-    def uses_nonce(self) -> bool:
+    def uses_nonce(self) -> Optional[bool]:
         if not self.encrypted:
             return None
 
@@ -147,9 +186,14 @@ class ObjectStore:
     def compressed(self) -> bool:
         return self._compressed
 
-    def get(self, key: PathLike, nonce: Optional[BytesLike] = None, no_encryption=False,
+    def get(self, key: PathLike, audit_data: str, nonce: Optional[BytesLike] = None, no_encryption=False,
             decompress=None, initial_buf_size=None) -> bytes:
         data: bytes = self._driver.get(_as_path(key))
+
+        # generate audit record if auditing is enabled
+        if self._audit and self._audit_backend is not None:
+            self._audit_backend.store_audit_record('get', audit_data, driver=self._driver_name,
+                                                   bucket=self._bucket_name, host_uri=self._host_uri)
 
         if self._encryption_pipeline is not None and not no_encryption:
             if self._encryption_pipeline.uses_nonce and nonce is None:
@@ -168,7 +212,7 @@ class ObjectStore:
 
         return zlib_decompress(decrypt_data, bufsize=initial_buf_size)
 
-    def get_range(self, key: PathLike, start: int, length: int, no_encryption=False) -> bytes:
+    def get_range(self, key: PathLike, audit_data: str, start: int, length: int, no_encryption=False) -> bytes:
         if self.encrypted and not no_encryption:
             raise RuntimeError('ObjectStore: you cannot use get_range() with an encrypted object store. '
                                'Download the object completely using get() to decrypt it.')
@@ -177,9 +221,16 @@ class ObjectStore:
             raise RuntimeError('ObjectStore: you cannot use get_range() with a compressed object store. '
                                'Download the object completely using get() to decompress it.')
 
-        return self._driver.get_range(_as_path(key), start=start, length=length)
+        data = self._driver.get_range(_as_path(key), start=start, length=length)
 
-    def put(self, key: PathLike, data: BytesLike, mimetype: Optional[str] = None,
+        # generate audit record if auditing is enabled
+        if self._audit and self._audit_backend is not None:
+            self._audit_backend.store_audit_record('get_range', audit_data, driver=self._driver_name,
+                                                   bucket=self._bucket_name, host_uri=self._host_uri)
+
+        return data
+
+    def put(self, key: PathLike, audit_data: str, data: BytesLike, mimetype: Optional[str] = None,
             validate_nonce=None, no_encryption=False, no_compress=False) -> Mapping:
         compressed_size = None
         encrypted_size = None
@@ -208,22 +259,62 @@ class ObjectStore:
             put_data: bytes = compress_data
 
         self._driver.put(_as_path(key), put_data, mimetype)
+
+        # generate audit record if auditing is enabled
+        if self._audit and self._audit_backend is not None:
+            self._audit_backend.store_audit_record('put', audit_data, driver=self._driver_name,
+                                                   bucket=self._bucket_name, host_uri=self._host_uri)
+
         return {'nonce': nonce,
                 'encrypted_size': encrypted_size,
                 'compressed_size': compressed_size}
 
-    def delete(self, key: PathLike) -> None:
-        return self._driver.delete(_as_path(key))
+    def delete(self, key: PathLike, audit_data: str) -> None:
+        self._driver.delete(_as_path(key))
 
-    def copy(self, src: PathLike, dst: PathLike) -> None:
+        # generate audit record if auditing is enabled
+
+        # generate audit record if auditing is enabled
+        if self._audit and self._audit_backend is not None:
+            self._audit_backend.store_audit_record('delete', audit_data, driver=self._driver_name,
+                                                   bucket=self._bucket_name, host_uri=self._host_uri)
+
+    def copy(self, src: PathLike, dst: PathLike, audit_data: str) -> None:
         if self._encryption_pipeline is not None:
             raise RuntimeError('ObjectStore: can not use copy with an encrypted store. '
                                'Downnload and re-upload the file to generate a unique encrypted duplicate.')
 
-        return self._driver.copy(_as_path(src), _as_path(dst))
+        self._driver.copy(_as_path(src), _as_path(dst))
 
-    def list(self, prefix: Optional[PathLike] = None) -> Dict[str, ObjectMeta]:
-        return self._driver.list(prefix=prefix)
+        # generate audit record if auditing is enabled
 
-    def head(self, key: PathLike) -> ObjectMeta:
-        return self._driver.head(_as_path(key))
+        # generate audit record if auditing is enabled
+        if self._audit and self._audit_backend is not None:
+            self._audit_backend.store_audit_record('copy', audit_data, driver=self._driver_name,
+                                                   bucket=self._bucket_name, host_uri=self._host_uri)
+
+    def list(self, audit_data: str, prefix: Optional[PathLike] = None) -> Dict[str, ObjectMeta]:
+        data = self._driver.list(prefix=prefix)
+
+        # generate audit record if auditing is enabled
+        if self._audit:
+
+            # generate audit record if auditing is enabled
+            if self._audit and self._audit_backend is not None:
+                self._audit_backend.store_audit_record('list', audit_data, driver=self._driver_name,
+                                                       bucket=self._bucket_name, host_uri=self._host_uri)
+
+        return data
+
+    def head(self, key: PathLike, audit_data: str) -> ObjectMeta:
+        data = self._driver.head(_as_path(key))
+
+        # generate audit record if auditing is enabled
+        if self._audit:
+
+            # generate audit record if auditing is enabled
+            if self._audit and self._audit_backend is not None:
+                self._audit_backend.store_audit_record('head', audit_data, driver=self._driver_name,
+                                                       bucket=self._bucket_name, host_uri=self._host_uri)
+
+        return data

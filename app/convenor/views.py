@@ -9254,6 +9254,7 @@ def upload_period_attachment(pid):
 
             object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
             with AssetUploadManager(asset, data=attachment_file.stream.read(), storage=object_store,
+                                    audit_data=f'upload_period_attachment (period id #{pid})',
                                     length=attachment_file.content_length,
                                     mimetype=attachment_file.content_type, validate_nonce=validate_nonce) as upload_mgr:
                 pass

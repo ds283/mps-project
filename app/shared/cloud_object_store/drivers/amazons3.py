@@ -42,8 +42,21 @@ class AmazonS3CloudStorageDriver:
                                                          endpoint_url=data.get('endpoint_url', None),
                                                          region_name=data.get('region', None))
 
+        if 'endpoint_url' in data:
+            self._endpoint_url = data['endpoint_url']
+        else:
+            self._endpoint_url = None
+
         self._bucket_name: str = uri.netloc
 
+    def get_driver_name(self):
+        return 'AmazonS3CloudStorage'
+
+    def get_bucket_name(self):
+        return self._bucket_name
+
+    def get_host_uri(self):
+        return self._endpoint_url
 
     def get(self, key: Path) -> bytes:
         outstream = BytesIO()
@@ -61,21 +74,18 @@ class AmazonS3CloudStorageDriver:
 
         return outstream.getvalue()
 
-
     def get_range(self, key: Path, start: int, length: int) -> bytes:
         # see get() for the difference between download_fileobj() and get_object()
         try:
             response = self._storage.get_object(self._bucket_name, Key=str(key),
-                                                Range="bytes {start}-{end}".format(start=start, end=start+length-1))
+                                                Range="bytes {start}-{end}".format(start=start, end=start + length - 1))
         except ClientError as e:
             raise FileNotFoundError(str(e))
         return BytesIO(response['Body'].read()).getvalue()
 
-
     def put(self, key: Path, data: bytes, mimetype: str = None) -> None:
         self._storage.upload_fileobj(Fileobj=BytesIO(data), Bucket=self._bucket_name, Key=str(key),
                                      ExtraArgs={'ContentDisposition': mimetype})
-
 
     def delete(self, key: Path) -> None:
         try:
@@ -83,13 +93,11 @@ class AmazonS3CloudStorageDriver:
         except ClientError as e:
             raise FileNotFoundError(str(e))
 
-
     def copy(self, src: Path, dst: Path) -> None:
         try:
             self._storage.copy_object(Bucket=self._bucket_name, Key=str(dst), CopySource=str(src))
         except ClientError as e:
             raise FileNotFoundError(str(e))
-
 
     def list(self, prefix: Path = None):
         if prefix is not None:
@@ -118,7 +126,6 @@ class AmazonS3CloudStorageDriver:
             continuation_token = response['NextContinuationToken']
 
         return data
-
 
     def head(self, key: Path) -> ObjectMeta:
         key_str = str(key)

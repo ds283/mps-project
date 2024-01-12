@@ -991,8 +991,8 @@ def _send_offline_email(celery, record, user, lp_asset, mps_asset):
 
     # TODO: will be problems when generated LP/MPS files are too large; should instead send a download link
     object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-    lp_storage = AssetCloudAdapter(lp_asset, object_store)
-    mps_storage = AssetCloudAdapter(mps_asset, object_store)
+    lp_storage: AssetCloudAdapter = AssetCloudAdapter(lp_asset, object_store, audit_data='scheduling._send_offline_email #1')
+    mps_storage: AssetCloudAdapter = AssetCloudAdapter(mps_asset, object_store, audit_data='scheduling._send_offline_email #2')
 
     msg.attach(filename=str('schedule.lp'), mimetype=lp_asset.mimetype, content=lp_storage.get())
     msg.attach(filename=str('schedule.mps'), mimetype=mps_asset.mimetype, content=mps_storage.get())
@@ -1029,6 +1029,7 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
         object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
         with open(source_path, 'rb') as f:
             with AssetUploadManager(asset, data=BytesIO(f.read()), storage=object_store,
+                                    audit_data=f'scheduling._write_LP_MPS_files (schedule attempt #{record.id})',
                                     length=size, mimetype='text/plain', validate_nonce=validate_nonce) as upload_mgr:
                 pass
 
@@ -1037,8 +1038,8 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
 
         return asset
 
-    lp_asset = make_asset(lp_name, lp_path, 'matching.lp')
-    mps_asset = make_asset(mps_name, mps_path, 'matching.mps')
+    lp_asset = make_asset(lp_name, lp_path, 'schedule.lp')
+    mps_asset = make_asset(mps_name, mps_path, 'scheudle.mps')
 
     # delete unneded temporary files
     lp_path.unlink()
@@ -1257,7 +1258,7 @@ def register_scheduling_tasks(celery):
             raise Ignore()
 
         object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-        storage = AssetCloudAdapter(asset, object_store)
+        storage = AssetCloudAdapter(asset, object_store, audit_data=f'scheduling.process_offline_solution(schedule id #{schedule_id})')
         with storage.download_to_scratch() as scratch_path:
 
             with Timer() as create_time:
@@ -1452,7 +1453,7 @@ def register_scheduling_tasks(celery):
 
                 object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
                 def copy_asset(old_asset):
-                    old_storage = AssetCloudAdapter(old_asset, object_store)
+                    old_storage = AssetCloudAdapter(old_asset, object_store, audit_data=f'scheduling.duplicate.copy_asset (schedule id #{id})')
                     new_key, put_result = old_storage.duplicate(validate_nonce=validate_nonce)
 
                     new_base64_nonce = None

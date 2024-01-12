@@ -152,7 +152,7 @@ def initial_populate_database(app, inspector):
                 break
 
             try:
-                data: ObjectMeta = init_bucket.head(lockfile_name)
+                data: ObjectMeta = init_bucket.head(lockfile_name, audit_data='initial_populate_database')
             except FileNotFoundError:
                 print(f'** initdb bucket lock has been released')
                 break
@@ -165,10 +165,10 @@ def initial_populate_database(app, inspector):
             self._data = 'lock'.encode()
 
         def __enter__(self):
-            self._bucket.put(lockfile_name, self._data, mimetype='application/octet-stream')
+            self._bucket.put(lockfile_name, audit_data='LockFileManager', data=self._data, mimetype='application/octet-stream')
 
         def __exit__(self, exc_type, exc_val, exc_tb):
-            self._bucket.delete(lockfile_name)
+            self._bucket.delete(lockfile_name, audit_data='LockFileManager')
 
     with LockFileManager(init_bucket) as lock:
         tar_files: List[Path] = []

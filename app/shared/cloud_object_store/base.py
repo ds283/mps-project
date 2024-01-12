@@ -10,7 +10,7 @@
 
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, Union, List, Optional, Mapping
+from typing import Dict, Union, List, Optional, Mapping, Type
 from urllib.parse import urlsplit, SplitResult
 from zlib import compress as zlib_compress
 from zlib import decompress as zlib_decompress
@@ -71,6 +71,9 @@ class EncryptionPipeline:
 
 class Driver:
 
+    def __init__(self, uri: SplitResult, data: Dict):
+        pass
+
     def get(self, key: PathLike) -> bytes:
         pass
 
@@ -115,7 +118,7 @@ class ObjectStore:
         else:
             self._compressed = False
 
-        driver_type: Driver = _drivers[scheme]
+        driver_type: Type[Driver] = _drivers[scheme]
         self._driver = driver_type(uri_elements, data)
 
     @property

@@ -1,0 +1,12 @@
+apiVersion: appcat.vshn.io/v1
+kind: ObjectBucket
+metadata:
+  name: enginfprojects-telemetry-prod
+  namespace: suex-enginfprojects-prod
+spec:
+  parameters:
+    bucketName: enginfprojects-telemetry-prod
+    region: ch-gva-2
+    bucketDeletionPolicy: DeleteIfEmpty
+  writeConnectionSecretToRef:
+    name: enginfprojects-telemetry-prod-credentials

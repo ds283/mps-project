@@ -6292,7 +6292,9 @@ class SubmissionPeriodRecord(db.Model):
                              backref=db.backref('periods', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # submission period
-    # note this does not directly link to SubmissionPeriodDefinition
+    # note this does not directly link to SubmissionPeriodDefinition; it's a literal number that refers
+    # to the numerical position of the SubmissionPeriodDefinition record, but it isn't a link to the
+    # SubmissionPeriodDefinition primary key
     submission_period = db.Column(db.Integer(), index=True)
 
     # optional start date
@@ -6476,7 +6478,11 @@ class SubmissionPeriodRecord(db.Model):
         if self.feedback_deadline is None:
             return '<invalid>'
 
-        delta = self.feedback_deadline.date() - date.today()
+        today = date.today()
+        if today > self.feedback_deadline:
+            return 'in the past'
+
+        delta = self.feedback_deadline.date() - today
         return format_readable_time(delta)
 
 
@@ -6500,7 +6506,11 @@ class SubmissionPeriodRecord(db.Model):
         if self.hand_in_date is None:
             return '<invalid>'
 
-        delta = self.hand_in_date - date.today()
+        today = date.today()
+        if today > self.hand_in_date:
+            return 'in the past'
+
+        delta = self.hand_in_date - today
         return format_readable_time(delta)
 
 
@@ -14074,7 +14084,11 @@ class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequest
         if self.availability_deadline is None:
             return '<invalid>'
 
-        delta = self.availability_deadline - date.today()
+        today = date.today()
+        if today > self.availability_deadline:
+            return 'in the past'
+
+        delta = self.availability_deadline - today
         return format_readable_time(delta)
 
 

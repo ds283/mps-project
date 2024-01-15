@@ -7,6 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+
 import base64
 import os
 
@@ -14,21 +15,41 @@ from app.shared.cloud_object_store import ObjectStore
 import app.shared.cloud_object_store.bucket_types as buckets
 from app.shared.cloud_object_store.encryption.chacha20_poly1305 import ChaCha20_Poly1305
 
+
+# APP CONFIGURATION
 APP_NAME = 'mpsprojects'
 
-PREFERRED_URL_SCHEME = 'https'
+# branding labels
+BRANDING_LABEL = 'MPS projects management'
+BRANDING_LOGIN_LANDING_STRING = 'Welcome to the MPS projects portal'
+BRANDING_PUBLIC_LANDING_STRING = 'Welcome to the MPS public projects list'
 
+# public browser
+ENABLE_PUBLIC_BROWSER = True
+
+# features
 BACKUP_IS_LIVE = True
 EMAIL_IS_LIVE = True
 
-# Google Cloud Storage service account
-OBJECT_STORAGE_SERVICE_ACCOUNT_FILE = os.environ.get('OBJECT_STORAGE_SERVICE_ACCOUNT_FILE')
+
+# FLASK
+
+PREFERRED_URL_SCHEME = 'https'
+
+
+# CLOUD API AUDIT
 
 # get cloud API audit configuration
 OBJECT_STORAGE_AUDIT_API = bool(int(os.environ.get("OBJECT_STORAGE_AUDIT_API", 0)))
 OBJECT_STORAGE_AUDIT_BACKEND_URI = os.environ.get("OBJECT_STORAGE_AUDIT_BACKEND_URI")
 OBJECT_STORAGE_AUDIT_BACKEND_DATABASE = os.environ.get("OBJECT_STORAGE_AUDIT_BACKEND_DATABASE")
 OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION = os.environ.get("OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION")
+
+
+# OBJECT BUCKETS
+
+# Google Cloud Storage service account
+OBJECT_STORAGE_SERVICE_ACCOUNT_FILE = os.environ.get('OBJECT_STORAGE_SERVICE_ACCOUNT_FILE')
 
 # default storage options, inherited by all buckets
 _storage_options = {'google_service_account': OBJECT_STORAGE_SERVICE_ACCOUNT_FILE,
@@ -38,8 +59,7 @@ _storage_options = {'google_service_account': OBJECT_STORAGE_SERVICE_ACCOUNT_FIL
                     'audit_collection': OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION,
                     'audit_backend': OBJECT_STORAGE_AUDIT_BACKEND_URI}
 
-
-# ASSETS BUCKET
+# -- ASSETS BUCKET
 
 OBJECT_STORAGE_ASSETS_URI = os.environ.get("OBJECT_STORAGE_ASSETS_URI")
 
@@ -51,8 +71,7 @@ _assets_storage_options = _storage_options | {'encryption_pipeline': ChaCha20_Po
 
 OBJECT_STORAGE_ASSETS = ObjectStore(OBJECT_STORAGE_ASSETS_URI, buckets.ASSETS_BUCKET, _assets_storage_options)
 
-
-# BACKUP BUCKET
+# -- BACKUP BUCKET
 
 OBJECT_STORAGE_BACKUP_URI = os.environ.get("OBJECT_STORAGE_BACKUP_URI")
 
@@ -64,11 +83,10 @@ _backup_storage_options = _storage_options | {'encryption_pipeline': ChaCha20_Po
 
 OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, buckets.BACKUP_BUCKET, _backup_storage_options)
 
+# -- TELEMETRY BUCKET
 
-# BRANDING
+OBJECT_STORAGE_TELEMETRY_URI = os.environ.get("OBJECT_STORAGE_TELEMETRY_URI")
 
-BRANDING_LABEL = 'MPS projects management'
-BRANDING_LOGIN_LANDING_STRING = 'Welcome to the MPS projects portal'
-BRANDING_PUBLIC_LANDING_STRING = 'Welcome to the MPS public projects list'
+_telemetry_storage_options = _storage_options
 
-ENABLE_PUBLIC_BROWSER = True
+OBJECT_STORAGE_TELEMETRY = ObjectStore(OBJECT_STORAGE_TELEMETRY_URI, buckets.TELEMETRY_BUCKET, _telemetry_storage_options)

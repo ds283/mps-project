@@ -30,5 +30,5 @@ class ScratchFileManager:
     def __exit__(self, type, value, traceback):
         self._path.unlink(missing_ok=True)
     @property
-    def path(self):
+    def path(self) -> Path:
         return self._path

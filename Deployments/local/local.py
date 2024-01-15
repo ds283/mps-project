@@ -101,9 +101,9 @@ OBJECT_STORAGE_TELEMETRY_ACCESS_KEY = os.environ.get("OBJECT_STORAGE_TELEMETRY_A
 OBJECT_STORAGE_TELEMETRY_SECRET_KEY = os.environ.get("OBJECT_STORAGE_TELEMETRY_SECRET_KEY")
 
 _telemetry_storage_options = _base_storage_options | {'access_key': OBJECT_STORAGE_TELEMETRY_ACCESS_KEY,
-                                                      'secret_key': OBJECT_STORAGE_TELEMETRY_SECRET_KEY}
+                                                      'secret_key': OBJECT_STORAGE_TELEMETRY_SECRET_KEY,
+                                                      'compressed': False}
 
 # create ObjectStore for telemetry bucket
 OBJECT_STORAGE_TELEMETRY_URI = os.environ.get("OBJECT_STORAGE_TELEMETRY_URI")
 OBJECT_STORAGE_TELEMETRY = ObjectStore(OBJECT_STORAGE_TELEMETRY_URI, buckets.TELEMETRY_BUCKET, _telemetry_storage_options)
-

@@ -282,7 +282,7 @@ class ObjectStore:
     def copy(self, src: PathLike, dst: PathLike, audit_data: str) -> None:
         if self._encryption_pipeline is not None:
             raise RuntimeError('ObjectStore: can not use copy with an encrypted store. '
-                               'Downnload and re-upload the file to generate a unique encrypted duplicate.')
+                               'Download and re-upload the file to generate a unique encrypted duplicate.')
 
         self._driver.copy(_as_path(src), _as_path(dst))
 

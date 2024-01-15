@@ -690,7 +690,8 @@ class ScheduledTaskMixin():
                        ('app.tasks.system.process_pings', 'Process pings from front end instances'),
                        ('app.tasks.sessions.sift_sessions', 'Perform MongoDB session maintenance'),
                        ('app.tasks.canvas.canvas_user_checkin', 'Synchronize Canvas user database with submitter databases'),
-                       ('app.tasks.canvas.canvas_submission_checkin', 'Synchronize Canvas submission availability for active submission periods')]
+                       ('app.tasks.canvas.canvas_submission_checkin', 'Synchronize Canvas submission availability for active submission periods'),
+                       ('app.tasks.cloud_api_audit.send_api_events_to_telemetry', 'Send Cloud API audit events to telemetry object store')]
 
     task = SelectField('Task', choices=tasks_available)
 

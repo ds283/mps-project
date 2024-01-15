@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from operator import itemgetter
 from os import path
+from pathlib import Path
 from typing import List, Tuple
 from uuid import uuid4
 
@@ -45,10 +46,14 @@ def register_backup_tasks(celery):
 
         # don't execute if we are not on a live backup platform
         if not current_app.config.get('BACKUP_IS_LIVE', False):
+            self.update_state(state='FINISHED', meta={'msg': 'Backup is not live: did not run'})
             raise Ignore()
 
         # get backup object store
-        object_store = current_app.config['OBJECT_STORAGE_BACKUP']
+        object_store: ObjectStore = current_app.config.get('OBJECT_STORAGE_BACKUP')
+        if object_store is None:
+            self.update_state(state='FAILURE', meta={'msg': 'Backup ObjectStore bucket is not configured'})
+            raise Ignore()
 
         # construct unique key for backup object
         now = datetime.now()
@@ -59,9 +64,9 @@ def register_backup_tasks(celery):
                                                                  tag=tag, uuid=str(uuid4()))
 
         with ScratchFileManager(suffix='.sql') as SQL_scratch:
-            SQL_scratch_path = SQL_scratch.path
+            SQL_scratch_path: Path = SQL_scratch.path
 
-            self.update_state(state='STARTED', meta={'msg': 'Performing mysqldump on main database'})
+            self.update_state(state='PROGRESS', meta={'msg': 'Performing mysqldump on main database'})
 
             # get database details from configuration
             user = current_app.config['DATABASE_USER']
@@ -78,10 +83,10 @@ def register_backup_tasks(celery):
                 self.update_state(state='FAILURE', meta={'msg': 'mysqldump failed or did not produce a readable file'})
                 raise Ignore()
 
-            self.update_state(state='STARTED', meta={'msg': 'Compressing mysqldump output'})
+            self.update_state(state='PROGRESS', meta={'msg': 'Compressing mysqldump output'})
 
             with ScratchFileManager(suffix='.tar.gz') as archive_scratch:
-                archive_scratch_path = archive_scratch.path
+                archive_scratch_path: Path = archive_scratch.path
 
                 with tarfile.open(name=archive_scratch_path, mode="w:gz", format=tarfile.PAX_FORMAT) as archive:
                     archive.add(name=SQL_scratch_path, arcname="database.sql")

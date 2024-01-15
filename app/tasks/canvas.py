@@ -1,11 +1,11 @@
 #
-# Created by ds283$ on 05/05/2022$.
-# Copyright (c) 2022$ University of Sussex. All rights reserved.
+# Created by David Seery on 05/05/2022$.
+# Copyright (c) 2022 University of Sussex. All rights reserved.
 #
 # This file is part of the MPS-Project platform developed in
 # the School of Mathematics & Physical Sciences, University of Sussex.
 #
-# Contributors: ds283$ <$>
+# Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
 from datetime import datetime, timedelta

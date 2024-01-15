@@ -36,12 +36,12 @@ def register_session_tasks(celery):
 
             # first, if there are any sessions without an expiry date,
             # set their expiry to today plus 7 days
-            expriry_date = datetime.now() + timedelta(days=7)
+            expiry_date = datetime.now() + timedelta(days=7)
             with Timer() as expiry_timer:
-                result = collection.update_many({'expiration': None}, {'$set': {'expiration': expriry_date}}, upsert=False)
+                result = collection.update_many({'expiration': None}, {'$set': {'expiration': expiry_date}}, upsert=False)
             print('-- identified {matched} sessions without a valid expiry date'.format(matched=result.matched_count))
             print('-- modified {modified} sessions to expires on {date}'.format(modified=result.modified_count,
-                                                                                date=expriry_date))
+                                                                                date=expiry_date))
             print('-- elapsed time for query = {s}'.format(s=expiry_timer.interval))
 
             # second, determine whether there are any sessions that are stale and

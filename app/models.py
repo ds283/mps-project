@@ -1410,6 +1410,40 @@ class SubmissionRoleTypesMixin:
                     ROLE_EXTERNAL_EXAMINER: 'external examiner'}
 
 
+class SupervisionEventTypesMixin:
+    """
+    Single point of definition for supervision event types
+    """
+    EVENT_ONE_TO_ONE_MEETING = 0
+    EVENT_GROUP_MEETING = 1
+
+    _MIN_TYPE = EVENT_ONE_TO_ONE_MEETING
+    _MAX_TYPE= EVENT_GROUP_MEETING
+
+    _event_labels = {EVENT_ONE_TO_ONE_MEETING: '1-to-1 meeting',
+                     EVENT_GROUP_MEETING: 'group meeting'}
+
+
+class SupervisionEventAttendanceMixin:
+    """
+    Single point of definition for supervision event attendance states
+    """
+    ATTENDANCE_ON_TIME = 0
+    ATTENDANCE_LATE = 1
+    ATTENDANCE_NO_SHOW_NOTIFIED = 2
+    ATTENDANCE_NO_SHOW_UNNOTIFIED = 3
+    ATTENDANCE_RESCHEDULED = 4
+
+    _MIN_TYPE = ATTENDANCE_ON_TIME
+    _MAX_TYPE = ATTENDANCE_RESCHEDULED
+
+    _type_labels = {ATTENDANCE_ON_TIME: 'The meeting started on time',
+                    ATTENDANCE_LATE: 'The meeting started late',
+                    ATTENDANCE_NO_SHOW_NOTIFIED: 'The student did not attend, but I was notified in advance',
+                    ATTENDANCE_NO_SHOW_UNNOTIFIED: 'The student did not attend, and I was not notified in advance',
+                    ATTENDANCE_RESCHEDULED: 'This meeting was rescheduled'}
+
+
 class AssessorPoolChoicesMixin:
     """
     Single point of definition for assessor pool choices used during assessment scheduling
@@ -1661,6 +1695,25 @@ marker_matching_table = db.Table('match_config_markers',
 project_matching_table = db.Table('match_config_projects',
                                   db.Column('match_id', db.Integer(), db.ForeignKey('matching_attempts.id'), primary_key=True),
                                   db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True))
+
+
+# SUPERVISION ROLES, EVENTS
+
+# email log linking all emails to the supervision event they are associated with
+event_email_table = db.Table('supervision_event_emails',
+                             db.Column('event_id', db.Integer(), db.ForeignKey('supervision_events.id'), primary_key=True),
+                             db.Column('email_id', db.Integer(), db.ForeignKey('email_log.id'), primary_key=True))
+
+# email log linking reminder emails to the supervision event they are associated with
+# (we use this to ensure we respect faculty members' individual preferences for the frequency of contact)
+event_reminder_table = db.Table('supervision_event_reminders',
+                                db.Column('event_id', db.Integer(), db.ForeignKey('supervision_events.id'), primary_key=True),
+                                db.Column('email_id', db.Integer(), db.ForeignKey('email_log.id'), primary_key=True))
+
+# link members of the supervision team to a supervision event
+event_roles_table = db.Table('supervision_event_roles',
+                             db.Column('event_id', db.Integer(), db.ForeignKey('supervision_events.id'), primary_key=True),
+                             db.Column('submission_role_id', db.Integer(), db.ForeignKey('submission_roles.id'), primary_key=True))
 
 
 # PRESENTATIONS
@@ -6823,6 +6876,82 @@ class SubmissionPeriodRecord(db.Model):
         return messages
 
 
+class SubmissionPeriodUnit(db.Model, EditingMetadataMixin):
+    """
+    Capture details about a particular unit within a submission period.
+    Units can refer to any time period that is required, but in a typical Sussex semester they will usually
+    refer to weeks. Each unit can contain a number of default meetings.
+    """
+
+    __tablename__ = 'submission_period_units'
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # parent submission period
+    owner_id = db.Column(db.Integer(), db.ForeignKey('submission_periods.id'), nullable=False)
+    owner = db.relationship('SubmissionPeriodRecord', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('units', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+    # text name
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # unit start date (inclusive)
+    start_date = db.Column(db.Date())
+
+    # unit end date (inclusive)
+    end_date = db.Column(db.Date())
+
+
+class SupervisionEvent(db.Model, EditingMetadataMixin, SupervisionEventTypesMixin, SupervisionEventAttendanceMixin):
+    """
+    Capture details about a supervision event within a submission unit.
+    In a typical Sussex supervision arrangement, events will be 1-to-1 supervision meetings
+    """
+
+    __tablename__ = 'supervision_events'
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # parent submission unit
+    unit_id = db.Column(db.Integer(), db.ForeignKey('submission_period_units.id'), nullable=False)
+    unit = db.relationship('SubmissionPeriodUnit', foreign_keys=[unit_id], uselist=False,
+                           backref=db.backref('events', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+    # responsible event owner, usually the responsible supervisor, but does not have to be
+    owner_id = db.Column(db.Integer(), db.ForeignKey('submission_roles.id'))
+    owner = db.relationship('SubmissionRole', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('events', lazy='dynamic'))
+
+    # other attending members of the supervision team
+    team = db.relationship('SubmissionRole', secondary=event_roles_table, lazy='dynamic',
+                           backref=db.backref('events', lazy='dynamic'))
+
+    # event type identifier, drawn from SupervisionEventTypesMixing
+    event_types = [(SupervisionEventTypesMixin.EVENT_ONE_TO_ONE_MEETING, '1-to-1 meeting'),
+                   (SupervisionEventTypesMixin.EVENT_GROUP_MEETING, 'Group meeting')]
+    type = db.Column(db.Integer(), default=SupervisionEventTypesMixin.EVENT_ONE_TO_ONE_MEETING, nullable=False)
+
+    # attendance record
+    attendance_values = [(SupervisionEventAttendanceMixin.ATTENDANCE_ON_TIME, "The meeting started on time"),
+                         (SupervisionEventAttendanceMixin.ATTENDANCE_LATE, "The meeting started late"),
+                         (SupervisionEventAttendanceMixin.ATTENDANCE_NO_SHOW_NOTIFIED, "The student did not attend, but I was notified in advance"),
+                         (SupervisionEventAttendanceMixin.ATTENDANCE_NO_SHOW_UNNOTIFIED, "The student did not attend, and I was not notified in advance"),
+                         (SupervisionEventAttendanceMixin.ATTENDANCE_RESCHEDULED, "The meeting is being rescheduled")]
+    attendance = db.Column(db.Integer(), default=None, nullable=True)
+
+    # emails associated with this event
+    email_log = db.relationship('EmailLog', secondary=event_email_table, lazy='dynamic',
+                                backref=db.backref('events', lazy='dynamic'))
+
+    # reminder emails (specifically) associated with this event
+    reminder_log = db.relationship('EmailLog', secondary=event_reminder_table, lazy='dynamic',
+                                   backref=db.backref('events', lazy='dynamic'))
+
+
+
+
 class EnrollmentRecord(db.Model, EditingMetadataMixin):
     """
     Capture details about a faculty member's enrolment in a single project class
@@ -11915,19 +12044,19 @@ class MessageOfTheDay(db.Model):
 #     id = db.Column(db.Integer(), primary_key=True)
 #
 #     # call type
-#     type = db.Column(db.String(DEFAULT_STRING_LENGTH), collation='utf8_general_ci')
+#     type = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_general_ci'))
 #
 #     # audit details
-#     data = db.Column(db.String(DEFAULT_STRING_LENGTH), collation='utf8_bin')
+#     data = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 #
 #     # driver name
-#     driver = db.Column(db.String(DEFAULT_STRING_LENGTH), collation='utf8_bin')
+#     driver = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 #
 #     # bucket name
-#     bucket = db.Column(db.String(DEFAULT_STRING_LENGTH), collation='utf8_bin')
+#     bucket = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 #
 #     # host URI, if used
-#     uri = db.Column(db.String(DEFAULT_STRING_LENGTH), collation='utf8_bin')
+#     uri = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 #
 #     # timestamp
 #     timestamp = db.Column(db.DateTime())
